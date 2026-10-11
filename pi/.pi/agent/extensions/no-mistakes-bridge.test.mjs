@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
@@ -33,7 +33,10 @@ const {
 	buildTabLauncher,
 	stepAgentExtensionPaths,
 	STEP_AGENT_EXTENSIONS,
+	closeTabPaneCleanly,
 	probeSocket,
+	waitTabReady,
+	discoverSessionFile,
 	SessionEventTranslator,
 	ensureBridgeServer,
 	teardownBridgeForRun,
@@ -291,6 +294,22 @@ const {
 	assert.deepEqual(finished[1], { type: "agent_settled", aborted: false });
 }
 
+{
+	const translator = new SessionEventTranslator();
+	translator.feedRecord({ type: "message", message: {
+		role: "assistant", stopReason: "aborted",
+		content: [{ type: "toolCall", id: "error-tool", name: "no_mistakes_output" }],
+	} });
+	const events = translator.feedRecord({ type: "message", message: {
+		role: "toolResult", toolCallId: "error-tool", isError: true,
+		content: [{ type: "text", text: '{"findings":[]}' }],
+	} }).map(JSON.parse);
+	assert.equal(events.find((event) => event.type === "tool_execution_end").isError, true);
+	assert.deepEqual(JSON.parse(translator.finish().at(-1)), { type: "agent_settled", aborted: true });
+	translator.feedRecord({ type: "message", message: { role: "assistant", stopReason: "stop", content: [] } });
+	assert.equal(JSON.parse(translator.finish().at(-1)).aborted, false, "only the LAST assistant determines abort");
+}
+
 // ---------------------------------------------------------------------------
 // Pane report: label and CI transitions fire once per change, release on
 // run end, and the merge phase (checks already passed) is never CI-red.
@@ -309,6 +328,18 @@ function snapshot(currentPhase, phases) {
 	assert.equal(runPhaseLabel(snapshot("review")), "nm: review");
 	assert.equal(runPhaseLabel(snapshot("starting")), "nm: starting");
 	assert.ok(isCiPhaseActive(snapshot("ci")));
+assert.ok(
+	!isCiPhaseActive({ ...snapshot("ci"), outcome: "checks-passed" }),
+	"checks-passed ci monitoring (the merge watch) is not CI-red",
+);
+assert.ok(
+	isCiPhaseActive({
+		...snapshot("ci"),
+		outcome: "checks-passed",
+		phases: [{ name: "ci", status: "fixing" }],
+	}),
+	"an actively repairing ci step stays red even after checks once passed",
+);
 	assert.ok(!isCiPhaseActive(snapshot("merge")), "checks-passed monitoring is not CI-red");
 	assert.ok(!isCiPhaseActive(snapshot("review", [
 		{ name: "ci", status: "pending" },
@@ -392,6 +423,9 @@ await (async () => {
 // ---------------------------------------------------------------------------
 const shimPath = fileURLToPath(new URL("../../../bin/nm-herdr-pi.mjs", import.meta.url));
 const TEST_RUN_ID = "01M4KZ1QA7E1CSFXJM5B4W0240";
+
+await assert.rejects(waitTabReady("unused", () => true), /invocation cut/);
+await assert.rejects(discoverSessionFile({ paneId: "unused" }, {}, undefined, () => true), /invocation cut/);
 
 function startFakeBridge(sockPath, onHello) {
 	mkdirSync(join(sockPath, ".."), { recursive: true });
@@ -505,6 +539,23 @@ await (async () => {
 	rmSync(root, { recursive: true, force: true });
 })();
 
+await (async () => {
+	const root = makeShimRoot("nm-shim-truncated-", "#!/bin/sh\nexit 0\n");
+	const server = await startFakeBridge(join(root, "herdr-bridge", TEST_RUN_ID, "sock"), (sock) => {
+		sock.end(JSON.stringify({ type: "events", lines: ['{"type":"session","id":"truncated"}'] }) + "\n");
+	});
+	try {
+		const { child, stderr } = runShim({ root });
+		child.stdin.end("truncated turn");
+		const result = await awaitExit(child, 15000);
+		assert.equal(result.code, 1);
+		assert.match(Buffer.concat(stderr).toString(), /delivery truncated before agent_settled/);
+	} finally {
+		server.close();
+		rmSync(root, { recursive: true, force: true });
+	}
+})();
+
 // ---------------------------------------------------------------------------
 // The real bridge server (the exported module) hosting real shim connections.
 // Herdr and the tab's pi are stubbed at the process boundary with real pi's
@@ -593,6 +644,33 @@ if (command === "pane" && sub === "run") {
 	spawn("bash", [script], { stdio: "ignore", detached: true }).unref();
 	process.exit(0);
 }
+if (command === "pane" && sub === "send-keys") {
+	const pane = argv[2];
+	const keys = argv.slice(3).join(" ");
+	appendFileSync(join(stateDir, "keys.log"), JSON.stringify({ pane, keys }) + "\\n");
+	// A non-sticky pane models pi: ctrl+d on the idle prompt exits it. With
+	// HERDR_STUB_STICKY_PANE set, the pane ignores every key (a mid-turn pi
+	// that will not exit), forcing the fallback path.
+	if (!process.env.HERDR_STUB_STICKY_PANE && keys === "ctrl+d") {
+		const rec = readPane(pane);
+		if (rec) writeFileSync(paneFile(pane), JSON.stringify({ ...rec, exited: true }));
+	}
+	process.exit(0);
+}
+if (command === "pane" && sub === "process-info") {
+	const pane = argv[argv.indexOf("--pane") + 1];
+	const rec = readPane(pane);
+	if (!rec) process.exit(1);
+	const processes = rec.exited ? [] : [{ argv: ["pi"], pid: 4242 }];
+	log(rec.exited ? "process gone" : "process alive", pane);
+	emit({ process_info: { pane_id: pane, foreground_processes: processes } });
+	process.exit(0);
+}
+if (command === "pane" && sub === "release-agent") {
+	log("pane release-agent", argv[2]);
+	if (argv.slice(3).join(" ") !== "--source herdr:pi --agent pi") process.exit(1);
+	process.exit(0);
+}
 if (command === "pane" && sub === "close") {
 	const pane = argv[2];
 	rmSync(paneFile(pane), { force: true });
@@ -615,6 +693,10 @@ if (command === "agent" && sub === "get") {
 	process.exit(0);
 }
 if (command === "agent" && sub === "prompt") {
+	if (process.env.HERDR_STUB_PROMPT_FAIL) {
+		process.stderr.write("stub prompt rejected\\n");
+		process.exit(1);
+	}
 	const pane = argv[2];
 	const prompt = argv[3];
 	const rec = readPane(pane);
@@ -632,7 +714,12 @@ if (command === "agent" && sub === "prompt") {
 		records.push({ type: "message", message: { role: "system", content: "", sections: {} } });
 	}
 	records.push({ type: "message", message: { role: "user", content: [{ type: "text", text: prompt }] } });
-	records.push({ type: "message", message: ${JSON.stringify(STUB_ASSISTANT)} });
+	const assistant = ${JSON.stringify(STUB_ASSISTANT)};
+	if (process.env.HERDR_STUB_ABORTED) assistant.stopReason = "aborted";
+	for (let i = 0; i < Number(process.env.HERDR_STUB_BACKLOG ?? 0); i++) {
+		records.push({ type: "message", message: { role: "assistant", content: "x".repeat(8192), index: i } });
+	}
+	records.push({ type: "message", message: assistant });
 	appendFileSync(file, records.map((record) => JSON.stringify(record) + "\\n").join(""));
 	log("agent prompt", pane);
 	process.exit(0);
@@ -691,6 +778,124 @@ function readCalls(root) {
 	return readFileSync(path, "utf-8").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
 }
 
+function assertCleanClose(root, pane) {
+	const ops = readCalls(root).filter((call) => call.pane === pane).map((call) => call.op);
+	const gone = ops.lastIndexOf("process gone");
+	const released = ops.indexOf("pane release-agent");
+	const closed = ops.indexOf("pane close");
+	assert.ok(gone >= 0 && gone < released && released < closed, `exit → release → close: ${ops}`);
+}
+
+function readKeys(root) {
+	const path = join(root, "stub-state", "keys.log");
+	if (!existsSync(path)) return [];
+	return readFileSync(path, "utf-8").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
+}
+
+/** Create a live stub tab pane (no session, no turn) for direct pane ops. */
+function stubCreateTab(root, label) {
+	const out = execFileSync(
+		"herdr",
+		[
+			"tab", "create",
+			"--workspace", "ws-stub",
+			"--cwd", join(root, TEST_RUN_ID),
+			"--label", label,
+			"--no-focus",
+		],
+		{ encoding: "utf-8" },
+	);
+	return JSON.parse(out).result.root_pane.pane_id;
+}
+
+await (async () => {
+	// A stale probe may complete after teardown, but must never claim again.
+	const root = makeBridgeRoot("nm-bridge-generation-");
+	const restore = enterBridgeEnv(root);
+	try {
+		const dir = join(root, "herdr-bridge", TEST_RUN_ID);
+		mkdirSync(dir, { recursive: true });
+		const sock = join(dir, "sock");
+		writeFileSync(sock, "stale socket placeholder");
+		ensureBridgeServer(TEST_RUN_ID);
+		teardownBridgeForRun(TEST_RUN_ID);
+		await sleep(100);
+		assert.equal(readFileSync(sock, "utf8"), "stale socket placeholder", "late probe cannot unlink or resurrect a torn-down bridge");
+	} finally {
+		teardownBridgeForRun(TEST_RUN_ID);
+		restore();
+		rmSync(root, { recursive: true, force: true });
+	}
+})();
+
+await (async () => {
+	// Clean tab close: the tab's pi is asked to exit (Ctrl+D on its idle
+	// prompt) BEFORE the pane closes, so a terminated step agent never
+	// surfaces as an agent-killed notification. A pane that will not exit
+	// falls back to Ctrl+C then Ctrl+D, and the pane close is the last
+	// resort — never the default.
+	const root = makeBridgeRoot("nm-bridge-clean-");
+	const restore = enterBridgeEnv(root);
+	try {
+		// Idle tab: one ctrl+d, then the pane close; no ctrl+c ever.
+		const idle = stubCreateTab(root, "clean-close-idle");
+		closeTabPaneCleanly(idle, 600);
+		const idleKeys = readKeys(root).filter((entry) => entry.pane === idle);
+		assert.deepEqual(
+			idleKeys.map((entry) => entry.keys),
+			["ctrl+d"],
+			"an idle tab exits on a single ctrl+d",
+		);
+		assert.ok(
+			readCalls(root).some((call) => call.op === "pane close" && call.pane === idle),
+			"the exited pane is closed",
+		);
+
+		assertCleanClose(root, idle);
+
+		// Sticky pane (a mid-turn pi that ignores keys): ctrl+d, then the
+		// ctrl+c + ctrl+d fallback, then the pane close regardless.
+		process.env.HERDR_STUB_STICKY_PANE = "1";
+		let sticky;
+		try {
+			sticky = stubCreateTab(root, "clean-close-sticky");
+			closeTabPaneCleanly(sticky, 320);
+		} finally {
+			delete process.env.HERDR_STUB_STICKY_PANE;
+		}
+		const stickyKeys = readKeys(root).filter((entry) => entry.pane === sticky);
+		assert.deepEqual(
+			stickyKeys.map((entry) => entry.keys),
+			["ctrl+d", "ctrl+c", "ctrl+d"],
+			"a pane that ignores ctrl+d gets the ctrl+c abort then a retry",
+		);
+		assert.ok(
+			readCalls(root).some((call) => call.op === "pane close" && call.pane === sticky),
+			"the sticky pane is still closed after the budget",
+		);
+
+		assert.ok(!readCalls(root).some((call) => call.pane === sticky && call.op === "pane release-agent"),
+			"never release an agent that has not exited");
+
+		// Already-gone pane: no keys are sent; release precedes the close.
+		const gone = stubCreateTab(root, "clean-close-gone");
+		execFileSync("herdr", ["pane", "close", gone]);
+		const keysBefore = readKeys(root).length;
+		closeTabPaneCleanly(gone, 600);
+		assert.equal(
+			readKeys(root).length,
+			keysBefore,
+			"no keys are sent to a pane whose process is already gone",
+		);
+		assert.deepEqual(readCalls(root).filter((call) => call.pane === gone).slice(-2).map((call) => call.op),
+			["pane release-agent", "pane close"]);
+	} finally {
+		teardownBridgeForRun(TEST_RUN_ID);
+		restore();
+		rmSync(root, { recursive: true, force: true });
+	}
+})();
+
 await (async () => {
 	// A session-free (cold) step: the daemon launches the shim with
 	// `--mode json --no-session`. The tab's pi writes its session file only
@@ -739,12 +944,52 @@ await (async () => {
 			calls.some((call) => call.op === "pane close" && call.pane === created.pane),
 			"the cold tab closed after the turn settled",
 		);
+		assertCleanClose(root, created.pane);
 	} finally {
 		teardownBridgeForRun(TEST_RUN_ID);
 		restore();
 		rmSync(root, { recursive: true, force: true });
 	}
 })();
+
+for (const [knob, value] of [
+	["HERDR_STUB_ABORTED", "1"],
+	["HERDR_STUB_PROMPT_FAIL", "1"],
+	["HERDR_STUB_BACKLOG", "1300"], // > 10 MiB: multiple capped reads after settle
+]) {
+	const root = makeBridgeRoot("nm-bridge-delivery-");
+	const restore = enterBridgeEnv(root);
+	const previous = process.env[knob];
+	process.env[knob] = value;
+	try {
+		ensureBridgeServer(TEST_RUN_ID);
+		const { child, stdout, stderr } = runShim({ root, argv: ["--mode", "json", "--no-session"] });
+		child.stdin.end("delivery test");
+		const result = await awaitExit(child, 30000);
+		const err = Buffer.concat(stderr).toString();
+		const events = Buffer.concat(stdout).toString().trim().split("\n").filter(Boolean).map(JSON.parse);
+		if (knob === "HERDR_STUB_PROMPT_FAIL") {
+			assert.equal(result.code, 1, err);
+			assert.match(err, /bridge server:.*bridge:/);
+			assert.match(err, /stub prompt rejected/);
+			assert.ok(!events.some((event) => event.type === "agent_settled"));
+		} else {
+			assert.equal(result.code, 0, err);
+			assert.deepEqual(events.at(-1), { type: "agent_settled", aborted: knob === "HERDR_STUB_ABORTED" });
+			if (knob === "HERDR_STUB_BACKLOG") {
+				const indices = events.filter((event) => event.type === "message_end" && event.message.index !== undefined)
+					.map((event) => event.message.index);
+				assert.deepEqual(indices, Array.from({ length: Number(value) }, (_, i) => i), "all backlog records arrive in order");
+			}
+		}
+		assertCleanClose(root, readCalls(root).find((call) => call.op === "tab create").pane);
+	} finally {
+		teardownBridgeForRun(TEST_RUN_ID);
+		if (previous === undefined) delete process.env[knob]; else process.env[knob] = previous;
+		restore();
+		rmSync(root, { recursive: true, force: true });
+	}
+}
 
 await (async () => {
 	// A fixer round resuming a durable session (`--mode json --session
@@ -766,7 +1011,9 @@ await (async () => {
 	const restore = enterBridgeEnv(root);
 	try {
 		ensureBridgeServer(TEST_RUN_ID);
-		const prompt = "fixer round 2: apply the remedy";
+		const panes = [];
+		for (const round of [2, 3]) {
+		const prompt = `fixer round ${round}: apply the remedy`;
 		const { child, stdout, stderr } = runShim({
 			root,
 			argv: ["--mode", "json", "--session", fixerId],
@@ -794,18 +1041,13 @@ await (async () => {
 		], `resumed round stream; shim stderr: ${err}`);
 		assert.ok(!out.includes("prior round"), "the prior conversation is never re-emitted");
 		const calls = readCalls(root);
-		const created = calls.find((call) => call.op === "tab create");
-		assert.ok(created, "a visible tab was created for the fixer round");
-		assert.ok(
-			!calls.some((call) => call.op === "pane close" && call.pane === created.pane),
-			"the fixer tab stays open across rounds",
-		);
-		teardownBridgeForRun(TEST_RUN_ID);
-		assert.ok(
-			readCalls(root).some((call) => call.op === "pane close" && call.pane === created.pane),
-			"teardown closes the live fixer tab",
-		);
-		assert.ok(!existsSync(join(root, "herdr-bridge", TEST_RUN_ID)), "teardown removed the bridge dir");
+		const created = calls.filter((call) => call.op === "tab create").at(-1);
+		assert.ok(created, "a visible tab was created for each fixer round");
+		panes.push(created.pane);
+		assertCleanClose(root, created.pane);
+		if (round === 3) assert.ok(!out.includes("fixer round 2"), "second invocation never replays the first");
+		}
+		assert.equal(new Set(panes).size, 2, "each invocation owns a different pane");
 	} finally {
 		teardownBridgeForRun(TEST_RUN_ID);
 		restore();

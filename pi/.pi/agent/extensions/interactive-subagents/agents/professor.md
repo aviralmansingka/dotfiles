@@ -4,7 +4,6 @@ description: Interactive professor — refines one learning goal, then teaches t
 tools: read, write, edit, grep, find, ls, bash, web_search, web_fetch, ask_user_question, quiz, explain, run-command, hunk_open, nvim_open, lesson, mermaid, tuicr, tuicr_reply
 subagent_agents: researcher, tuicr-review
 skills: professor
-model: fireworks/accounts/fireworks/routers/glm-5p3-fast
 thinking: high
 system-prompt: append
 session-mode: lineage-only

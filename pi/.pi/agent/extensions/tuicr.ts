@@ -100,8 +100,30 @@ function reviewerRunning(name: string): boolean {
 // agent_end handler so an auto-exit subagent hosting a watcher (the
 // tuicr-review agent) parks in "waiting" instead of exiting after its
 // first turn — the same suppression ask_question and running children use.
+//
+// COMPOSITION: this is a SHARED slot — no-mistakes-pane.ts publishes its
+// run-tracking count under the same well-known symbol, and a session can
+// load both writers (the nm-orchestrator discovers them via agent-dir:
+// parent). A plain assignment would be last-writer-wins by readdir load
+// order, silently disabling whichever extension loaded first. So capture
+// the previous owner's function (a non-function previous value counts as 0)
+// and publish a wrapper that ADDS it to ours — both sources must be able to
+// keep the session open. no-mistakes-pane.ts composes symmetrically, so
+// either load order sums both counts.
 const KEEP_OPEN_COUNT_KEY = Symbol.for("pi-subagents/keep-open-count");
-(globalThis as any)[KEEP_OPEN_COUNT_KEY] = () => (watch ? 1 : 0);
+const previousKeepOpenCount: unknown = (globalThis as any)[KEEP_OPEN_COUNT_KEY];
+(globalThis as any)[KEEP_OPEN_COUNT_KEY] = (): number => {
+	let previous = 0;
+	if (typeof previousKeepOpenCount === "function") {
+		try {
+			const value = (previousKeepOpenCount as () => unknown)();
+			if (typeof value === "number" && value > 0) previous = value;
+		} catch {
+			// A broken previous owner must not mask this watcher's count.
+		}
+	}
+	return previous + (watch ? 1 : 0);
+};
 
 // The tool's execute closure needs the ExtensionAPI; captured at factory time.
 let piRef: ExtensionAPI | null = null;

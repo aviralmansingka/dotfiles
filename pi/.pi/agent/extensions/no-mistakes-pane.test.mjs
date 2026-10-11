@@ -54,6 +54,15 @@ writeFileSync(stubTui, [
 const tuiAlias = { "@earendil-works/pi-tui": stubTui };
 const jiti = createJiti(import.meta.url, { alias: tuiAlias });
 const { extractMarkedOutput, buildBackgroundScript, buildAttachScript, hasStartMarker, wantsTuiPane, TUI_SUBCOMMANDS } = jiti("./no-mistakes-pane/capture.ts");
+const {
+	orchestratorDelegationDecision,
+	orchestratorSpawnSucceeded,
+	buildOrchestratorTask,
+	orchestratorAckMessage,
+	orchestratorOwnedMessage,
+	orchestratorSurfaceMessage,
+	ORCHESTRATOR_AGENT,
+} = jiti("./no-mistakes-pane/orchestrate.ts");
 const { parseDurationMs, parseNoMistakesRunId, parseNoMistakesStatus, observeNoMistakesTiming, isObservableNoMistakesRun, summarizeNoMistakesSnapshot, phaseProgress } = jiti("./no-mistakes-pane/status.ts");
 const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 
@@ -1024,6 +1033,182 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		);
 	} finally {
 		rmSync(stubDir, { recursive: true, force: true });
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Orchestrator delegation policy: a Herdr captain delegates `run` to the
+// nm-orchestrator subagent; everything else — and every fallback context —
+// drives directly.
+// ---------------------------------------------------------------------------
+{
+	const base = {
+		subcommand: "run",
+		helpOnly: false,
+		insideSubagent: false,
+		hasSpawnApi: true,
+		hasTui: true,
+		cwd: "/repo",
+		orchestrators: new Map(),
+		isRunning: () => false,
+	};
+	assert.deepEqual(orchestratorDelegationDecision(base), { delegate: true }, "a Herdr captain run delegates");
+	assert.equal(
+		orchestratorDelegationDecision({ ...base, subcommand: "respond" }).reason,
+		"not-run-subcommand",
+		"only run delegates; respond never does (the orchestrator itself drives it)",
+	);
+	assert.equal(
+		orchestratorDelegationDecision({ ...base, subcommand: "status" }).reason,
+		"not-run-subcommand",
+		"read-only calls pass through",
+	);
+	assert.equal(
+		orchestratorDelegationDecision({ ...base, helpOnly: true }).reason,
+		"help-call",
+		"`run --help` is documentation, never a delegated run",
+	);
+	assert.equal(
+		orchestratorDelegationDecision({ ...base, insideSubagent: true }).reason,
+		"inside-subagent",
+		"delegation never nests: the orchestrator itself executes axi directly",
+	);
+	assert.equal(
+		orchestratorDelegationDecision({ ...base, hasSpawnApi: false }).reason,
+		"no-spawn-api",
+		"without interactive-subagents the captain drives directly",
+	);
+	assert.equal(
+		orchestratorDelegationDecision({ ...base, hasTui: false }).reason,
+		"no-tui",
+		"headless hosts drive directly",
+	);
+
+	const owned = new Map([["/repo", "nm-orchestrator"]]);
+	assert.deepEqual(
+		orchestratorDelegationDecision({ ...base, orchestrators: owned, isRunning: () => true }),
+		{ delegate: false, reason: "already-owned", owner: "nm-orchestrator" },
+		"a live orchestrator for the same cwd owns the run",
+	);
+	assert.equal(
+		orchestratorDelegationDecision({ ...base, orchestrators: owned, isRunning: () => false }).delegate,
+		true,
+		"a dead registry entry is replaced, never treated as ownership",
+	);
+	assert.equal(
+		orchestratorDelegationDecision({
+			...base,
+			orchestrators: new Map([["/other", "nm-orchestrator"]]),
+			isRunning: () => true,
+		}).delegate,
+		true,
+		"ownership is per-cwd: another worktree's orchestrator does not block this run",
+	);
+}
+
+// ---------------------------------------------------------------------------
+// Spawn-result classification: executeSubagent returns error results WITHOUT
+// throwing (mux-unavailable, unknown/unallowlisted agent, no-session-file).
+// Those must count as delegation failure — never as a "delegated" ack with a
+// phantom registry owner.
+// ---------------------------------------------------------------------------
+{
+	assert.equal(
+		orchestratorSpawnSucceeded({ details: { name: "nm-orchestrator" } }),
+		true,
+		"a resolved result with a spawn name is a success",
+	);
+	assert.equal(
+		orchestratorSpawnSucceeded({ isError: true, details: { name: "nm-orchestrator" } }),
+		false,
+		"an isError result is a failure even when it carries a name",
+	);
+	assert.equal(
+		orchestratorSpawnSucceeded({ details: { error: "mux unavailable" } }),
+		false,
+		"a details.error result (mux-unavailable) is a failure",
+	);
+	assert.equal(
+		orchestratorSpawnSucceeded({ details: {} }),
+		false,
+		"a result without details.name is a failure",
+	);
+	assert.equal(orchestratorSpawnSucceeded(undefined), false, "no result at all is a failure");
+}
+
+// ---------------------------------------------------------------------------
+// Orchestrator task and messages: verbatim args carried, boundary rules
+// stated, and every user-facing text names the owner.
+// ---------------------------------------------------------------------------
+{
+	const args = 'run --intent "ship the feature safely"';
+	const task = buildOrchestratorTask({ args, cwd: "/repo" });
+	assert.ok(task.includes(args), "the task carries the verbatim axi args");
+	assert.ok(task.includes("/repo"), "the task names the repository");
+	for (const rule of [
+		"no_mistakes_axi",
+		"GATE DECISION",
+		"respond --yes",
+		"--wait 27m",
+		"never edit code",
+		"outcome:",
+		"summary",
+	]) {
+		assert.ok(task.toLowerCase().includes(rule.toLowerCase()), `task covers: ${rule}`);
+	}
+
+	const ack = orchestratorAckMessage("nm-orchestrator-2");
+	assert.ok(ack.includes("nm-orchestrator-2"), "the ack names the actual spawned name");
+	assert.ok(ack.includes("summary"), "the ack tells the captain a summary steers back");
+
+	const owned = orchestratorOwnedMessage("nm-orchestrator", "respond");
+	assert.ok(owned.includes("subagent_message"), "the refusal points at steering, not double-driving");
+	assert.ok(owned.includes("abort"), "the refusal keeps abort as the escape hatch");
+
+	assert.ok(orchestratorSurfaceMessage("nm-orchestrator", false).includes("Focus"), "the /no-mistakes pointer directs the human to the orchestrator tab");
+	assert.ok(
+		orchestratorSurfaceMessage("nm-orchestrator", true).includes("yolo"),
+		"the yolo pointer explains consent lives in the orchestrator session",
+	);
+	assert.equal(ORCHESTRATOR_AGENT, "nm-orchestrator");
+}
+
+// ---------------------------------------------------------------------------
+// Keep-open slot composition: the shared pi-subagents/keep-open-count slot
+// has multiple publishers (tuicr.ts owns it too, and the nm-orchestrator
+// loads both extensions in one session). The pane module must ADD to any
+// previous owner's count, never replace it — whichever extension loads
+// last, both sources must be able to keep the session open.
+// ---------------------------------------------------------------------------
+{
+	const KEY = Symbol.for("pi-subagents/keep-open-count");
+	const WATCH_STATE = Symbol.for("pi-no-mistakes/watch-state");
+	const savedSlot = globalThis[KEY];
+	const savedState = globalThis[WATCH_STATE];
+	try {
+		// A previous owner (e.g. tuicr's watcher) already holds the slot.
+		let fakeOwnerCount = 2;
+		globalThis[KEY] = () => fakeOwnerCount;
+		globalThis[WATCH_STATE] = undefined;
+		// Fresh import of the pane module (caching disabled so module scope
+		// re-runs): it must capture the previous owner and compose, not clobber.
+		const freshJiti = createJiti(import.meta.url, { alias: tuiAlias, moduleCache: false, fsCache: false });
+		freshJiti("./no-mistakes-pane.ts");
+
+		const slot = globalThis[KEY];
+		assert.equal(typeof slot, "function", "the pane module publishes the slot function");
+		assert.equal(slot(), 2, "the previous owner's count survives the pane module's load");
+
+		// Additive: when both sides report, the slot returns the sum.
+		globalThis[WATCH_STATE] = { trackedRunId: "01TEST", calls: new Map() };
+		assert.equal(slot(), 3, "the pane's own run-tracking count adds to the previous owner's count");
+
+		// The pane side alone still keeps the session open.
+		fakeOwnerCount = 0;
+		assert.equal(slot(), 1, "the pane's own count parks the session on its own");
+	} finally {
+		globalThis[KEY] = savedSlot;
+		globalThis[WATCH_STATE] = savedState;
 	}
 }
 
