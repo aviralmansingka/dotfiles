@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -33,6 +33,8 @@ const {
 	buildTabLauncher,
 	probeSocket,
 	SessionEventTranslator,
+	ensureBridgeServer,
+	teardownBridgeForRun,
 } = jiti("./no-mistakes-pane/bridge.ts");
 const {
 	runPhaseLabel,
@@ -356,8 +358,8 @@ function startFakeBridge(sockPath, onHello) {
 	return new Promise((done) => server.listen(sockPath, () => done(server)));
 }
 
-function runShim({ root, extraEnv = {} }) {
-	const child = spawn(process.execPath, [shimPath], {
+function runShim({ root, extraEnv = {}, argv = [] }) {
+	const child = spawn(process.execPath, [shimPath, ...argv], {
 		cwd: join(root, TEST_RUN_ID),
 		env: {
 			...process.env,
@@ -450,4 +452,312 @@ await (async () => {
 	assert.equal(out, expected.join(""), `the daemon must receive the full stream; stderr: ${err}`);
 	server.close();
 	rmSync(root, { recursive: true, force: true });
+})();
+
+// ---------------------------------------------------------------------------
+// The real bridge server (the exported module) hosting real shim connections.
+// Herdr and the tab's pi are stubbed at the process boundary with real pi's
+// verified write ordering: a fresh (cold) tab boots idle with NO session
+// file; pi creates the session file only when `agent prompt` starts the
+// first turn. These scenarios drive the public surface end to end —
+// ensureBridgeServer, the socket protocol, the shim executable — and pin
+// the two live failures found against the real product:
+//   1. a cold step must bridge (prompt submitted BEFORE session discovery),
+//   2. the stream must carry the leading session event headless pi emits.
+// ---------------------------------------------------------------------------
+const COLD_SESSION_ID = "01cccccc-dddd-4ddd-8ddd-eeeeeeeeeeee";
+const STUB_ASSISTANT = {
+	role: "assistant",
+	stopReason: "stop",
+	model: "stub-m",
+	provider: "stub-p",
+	usage: { input: 3, output: 1 },
+	content: [{ type: "text", text: "stub tab turn done" }],
+};
+
+// The stub herdr CLI: exactly the command subset the bridge server drives
+// (pane get, tab create, pane run, pane close, agent get, agent prompt).
+// Written with plain string concatenation only, so the surrounding template
+// literal stays interpolation-free.
+const HERDR_STUB = `
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { join } from "node:path";
+
+const stateDir = process.env.HERDR_STUB_STATE;
+const sessionsRoot = join(process.env.PI_CODING_AGENT_DIR, "sessions");
+const parentPane = process.env.HERDR_PANE_ID;
+const argv = process.argv.slice(2);
+
+function log(op, pane) {
+	appendFileSync(join(stateDir, "calls.log"), JSON.stringify({ op, pane }) + "\\n");
+}
+function paneFile(pane) { return join(stateDir, "pane-" + pane + ".json"); }
+function booted(pane) { return existsSync(join(stateDir, "pane-" + pane + ".booted")); }
+function readPane(pane) {
+	try { return JSON.parse(readFileSync(paneFile(pane), "utf-8")); } catch { return null; }
+}
+function mangled(cwd) { return "--" + cwd.split("/").join("-") + "--"; }
+function sessionFileOf(cwd) {
+	const dir = join(sessionsRoot, mangled(cwd));
+	try {
+		const names = readdirSync(dir).filter((name) => name.endsWith(".jsonl")).sort();
+		return names.length ? join(dir, names[0]) : undefined;
+	} catch { return undefined; }
+}
+function emit(result) { process.stdout.write(JSON.stringify({ result })); }
+
+const command = argv[0];
+const sub = argv[1];
+
+if (command === "pane" && sub === "get") {
+	const pane = argv[2];
+	if (pane === parentPane) { emit({ pane: { workspace_id: "ws-stub" } }); process.exit(0); }
+	if (readPane(pane)) { emit({ pane: { pane_id: pane } }); process.exit(0); }
+	process.exit(1);
+}
+if (command === "tab" && sub === "create") {
+	const cwd = argv[argv.indexOf("--cwd") + 1];
+	const label = argv[argv.indexOf("--label") + 1];
+	const counterFile = join(stateDir, "counter");
+	let counter = 0;
+	try { counter = Number(readFileSync(counterFile, "utf-8")); } catch {}
+	counter += 1;
+	writeFileSync(counterFile, String(counter));
+	const pane = "w1:p" + counter;
+	writeFileSync(paneFile(pane), JSON.stringify({ pane, cwd, label }));
+	log("tab create", pane);
+	emit({ root_pane: { pane_id: pane } });
+	process.exit(0);
+}
+if (command === "pane" && sub === "run") {
+	const pane = argv[2];
+	const script = argv[4];
+	const rec = readPane(pane);
+	if (!rec) process.exit(1);
+	// The pane's process: the launcher execs the stub tab pi, which idles.
+	// Like real pi on a cold tab, no session file exists until the first
+	// turn starts.
+	writeFileSync(join(stateDir, "pane-" + pane + ".booted"), "");
+	spawn("bash", [script], { stdio: "ignore", detached: true }).unref();
+	process.exit(0);
+}
+if (command === "pane" && sub === "close") {
+	const pane = argv[2];
+	rmSync(paneFile(pane), { force: true });
+	rmSync(join(stateDir, "pane-" + pane + ".booted"), { force: true });
+	log("pane close", pane);
+	process.exit(0);
+}
+if (command === "agent" && sub === "get") {
+	const pane = argv[2];
+	const rec = readPane(pane);
+	const agent = {};
+	if (!rec || !booted(pane)) {
+		agent.agent_status = "booting";
+	} else {
+		agent.agent_status = "idle";
+		const session = sessionFileOf(rec.cwd);
+		if (session) agent.agent_session = { value: session };
+	}
+	emit({ agent });
+	process.exit(0);
+}
+if (command === "agent" && sub === "prompt") {
+	const pane = argv[2];
+	const prompt = argv[3];
+	const rec = readPane(pane);
+	if (!rec) process.exit(1);
+	// The turn: pi creates the session file for a fresh tab (this is the
+	// moment real pi first writes it) or appends to the resumed one, then
+	// writes this turn's records.
+	let file = sessionFileOf(rec.cwd);
+	const records = [];
+	if (!file) {
+		const dir = join(sessionsRoot, mangled(rec.cwd));
+		mkdirSync(dir, { recursive: true });
+		file = join(dir, Date.now() + "_" + "${COLD_SESSION_ID}" + ".jsonl");
+		records.push({ type: "session", id: "${COLD_SESSION_ID}", version: "3" });
+		records.push({ type: "message", message: { role: "system", content: "", sections: {} } });
+	}
+	records.push({ type: "message", message: { role: "user", content: [{ type: "text", text: prompt }] } });
+	records.push({ type: "message", message: ${JSON.stringify(STUB_ASSISTANT)} });
+	appendFileSync(file, records.map((record) => JSON.stringify(record) + "\\n").join(""));
+	log("agent prompt", pane);
+	process.exit(0);
+}
+process.exit(1);
+`;
+
+function makeBridgeRoot(prefix) {
+	const root = mkdtempSync(join(tmpdir(), prefix));
+	const stubDir = join(root, "stub-bin");
+	mkdirSync(stubDir);
+	// stub herdr: an sh wrapper execing the node stub with the absolute
+	// interpreter path (no PATH lookup, so CI hosts without a global herdr
+	// or node on PATH run this too)
+	writeFileSync(
+		join(stubDir, "herdr"),
+		"#!/bin/sh\nexec \"" + process.execPath + "\" \"" + join(stubDir, "herdr.mjs") + "\" \"$@\"\n",
+		{ mode: 0o755 },
+	);
+	writeFileSync(join(stubDir, "herdr.mjs"), HERDR_STUB.trimStart() + "\n");
+	// stub tab pi: the pane's interactive process; it idles and writes
+	// nothing (the stub herdr models pi's session-file timing instead)
+	writeFileSync(join(root, "stub-pi.sh"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+	mkdirSync(join(root, "pihome", "sessions"), { recursive: true });
+	mkdirSync(join(root, TEST_RUN_ID));
+	mkdirSync(join(root, "stub-state"));
+	return root;
+}
+
+/** Point the loaded bridge module at the stub world: a stub herdr first on
+ *  PATH, the Herdr pane env, and an isolated NM/pi home. Returns a restore
+ *  function so later scenarios in this file see the real environment. */
+function enterBridgeEnv(root) {
+	const saved = {};
+	for (const key of ["PATH", "HERDR_ENV", "HERDR_PANE_ID", "NM_HOME", "PI_CODING_AGENT_DIR", "NM_HERDR_REAL_PI", "HERDR_STUB_STATE"]) {
+		saved[key] = process.env[key];
+	}
+	process.env.PATH = join(root, "stub-bin") + ":" + (process.env.PATH ?? "");
+	process.env.HERDR_ENV = "1";
+	process.env.HERDR_PANE_ID = "w1:p0";
+	process.env.NM_HOME = root;
+	process.env.PI_CODING_AGENT_DIR = join(root, "pihome");
+	process.env.NM_HERDR_REAL_PI = join(root, "stub-pi.sh");
+	process.env.HERDR_STUB_STATE = join(root, "stub-state");
+	return () => {
+		for (const [key, value] of Object.entries(saved)) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+	};
+}
+
+function readCalls(root) {
+	const path = join(root, "stub-state", "calls.log");
+	if (!existsSync(path)) return [];
+	return readFileSync(path, "utf-8").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
+}
+
+await (async () => {
+	// A session-free (cold) step: the daemon launches the shim with
+	// `--mode json --no-session`. The tab's pi writes its session file only
+	// when the first turn starts, so the bridge must submit the daemon's
+	// prompt BEFORE it demands the session file — the opposite order never
+	// discovers a file and the step falls back headless (the live failure).
+	const root = makeBridgeRoot("nm-bridge-cold-");
+	const restore = enterBridgeEnv(root);
+	try {
+		ensureBridgeServer(TEST_RUN_ID);
+		const prompt = "cold step: review the widget";
+		const { child, stdout, stderr } = runShim({
+			root,
+			argv: ["--mode", "json", "--no-session"],
+		});
+		child.stdin.end(prompt);
+		const result = await awaitExit(child, 30000);
+		const out = Buffer.concat(stdout).toString("utf-8");
+		const err = Buffer.concat(stderr).toString("utf-8");
+		assert.equal(result.code, 0, `shim stderr: ${err}`);
+		const events = out.trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
+		assert.deepEqual(events, [
+			{ type: "session", id: COLD_SESSION_ID },
+			{ type: "message_end", message: { role: "user", content: [{ type: "text", text: prompt }] } },
+			{ type: "message_end", message: STUB_ASSISTANT },
+			{ type: "turn_end", message: STUB_ASSISTANT },
+			{
+				type: "agent_end",
+				messages: [
+					{ role: "system", content: "", sections: {} },
+					{ role: "user", content: [{ type: "text", text: prompt }] },
+					STUB_ASSISTANT,
+				],
+			},
+			{ type: "agent_settled", aborted: false },
+		], `cold step stream; shim stderr: ${err}`);
+		assert.equal(events[0].type, "session", "the stream starts with the session event, like headless pi");
+		const calls = readCalls(root);
+		const created = calls.find((call) => call.op === "tab create");
+		assert.ok(created, "a visible tab was created for the cold step");
+		assert.ok(
+			calls.some((call) => call.op === "agent prompt" && call.pane === created.pane),
+			"the daemon's prompt was submitted to the tab",
+		);
+		assert.ok(
+			calls.some((call) => call.op === "pane close" && call.pane === created.pane),
+			"the cold tab closed after the turn settled",
+		);
+	} finally {
+		teardownBridgeForRun(TEST_RUN_ID);
+		restore();
+		rmSync(root, { recursive: true, force: true });
+	}
+})();
+
+await (async () => {
+	// A fixer round resuming a durable session (`--mode json --session
+	// <uuid>`): the bridge seeds the translator from the file head and must
+	// emit the leading session event that headless pi prints — the prior
+	// conversation is never re-emitted, only this round's records stream.
+	const root = makeBridgeRoot("nm-bridge-resumed-");
+	const fixerId = "01aaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+	const runCwd = join(root, TEST_RUN_ID);
+	const sessionDir = join(root, "pihome", "sessions", "--" + runCwd.split("/").join("-") + "--");
+	const sessionFile = join(sessionDir, "1700000000_" + fixerId + ".jsonl");
+	mkdirSync(sessionDir, { recursive: true });
+	writeFileSync(sessionFile, [
+		JSON.stringify({ type: "session", id: fixerId, version: "3" }),
+		JSON.stringify({ type: "message", message: { role: "system", content: "", sections: {} } }),
+		JSON.stringify({ type: "message", message: { role: "user", content: [{ type: "text", text: "prior round prompt" }] } }),
+		JSON.stringify({ type: "message", message: { role: "assistant", stopReason: "stop", model: "stub-m", provider: "stub-p", usage: { input: 9, output: 9 }, content: [{ type: "text", text: "prior round done" }] } }),
+	].join("\n") + "\n");
+	const restore = enterBridgeEnv(root);
+	try {
+		ensureBridgeServer(TEST_RUN_ID);
+		const prompt = "fixer round 2: apply the remedy";
+		const { child, stdout, stderr } = runShim({
+			root,
+			argv: ["--mode", "json", "--session", fixerId],
+		});
+		child.stdin.end(prompt);
+		const result = await awaitExit(child, 30000);
+		const out = Buffer.concat(stdout).toString("utf-8");
+		const err = Buffer.concat(stderr).toString("utf-8");
+		assert.equal(result.code, 0, `shim stderr: ${err}`);
+		const events = out.trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
+		assert.deepEqual(events, [
+			{ type: "session", id: fixerId },
+			{ type: "message_end", message: { role: "user", content: [{ type: "text", text: prompt }] } },
+			{ type: "message_end", message: STUB_ASSISTANT },
+			{ type: "turn_end", message: STUB_ASSISTANT },
+			{
+				type: "agent_end",
+				messages: [
+					{ role: "system", content: "", sections: {} },
+					{ role: "user", content: [{ type: "text", text: prompt }] },
+					STUB_ASSISTANT,
+				],
+			},
+			{ type: "agent_settled", aborted: false },
+		], `resumed round stream; shim stderr: ${err}`);
+		assert.ok(!out.includes("prior round"), "the prior conversation is never re-emitted");
+		const calls = readCalls(root);
+		const created = calls.find((call) => call.op === "tab create");
+		assert.ok(created, "a visible tab was created for the fixer round");
+		assert.ok(
+			!calls.some((call) => call.op === "pane close" && call.pane === created.pane),
+			"the fixer tab stays open across rounds",
+		);
+		teardownBridgeForRun(TEST_RUN_ID);
+		assert.ok(
+			readCalls(root).some((call) => call.op === "pane close" && call.pane === created.pane),
+			"teardown closes the live fixer tab",
+		);
+		assert.ok(!existsSync(join(root, "herdr-bridge", TEST_RUN_ID)), "teardown removed the bridge dir");
+	} finally {
+		teardownBridgeForRun(TEST_RUN_ID);
+		restore();
+		rmSync(root, { recursive: true, force: true });
+	}
 })();

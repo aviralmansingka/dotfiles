@@ -531,23 +531,53 @@ async function runInvocation(
 
 	try {
 		await waitTabReady(tab.paneId);
-		const sessionFile = await discoverSessionFile(tab, hello, sessionId);
 		const translator = new SessionEventTranslator(sessionId);
-		applyPreface(translator, sessionFile, sessionId);
 
-		const fd = openSync(sessionFile, "r");
-		let offset = statSync(sessionFile).size;
-		const streamNew = () => {
-			offset = streamNewRecords(fd, offset, (record) => {
-				for (const line of translator.feedRecord(record)) send({ type: "events", lines: [line] });
-			});
-		};
+		let sessionFile: string | undefined;
+		let fd: number | undefined;
+		let offset = 0;
+		if (sessionId) {
+			// Resumed fixer session: the durable session file already exists,
+			// so seed the translator from its head now (the emitted session
+			// event line goes to the shim, like a headless pi startup) and
+			// stream only records appended after this point — the prior
+			// conversation is never re-emitted.
+			sessionFile = await discoverSessionFile(tab, hello, sessionId);
+			for (const line of applyPreface(translator, sessionFile, sessionId)) {
+				send({ type: "events", lines: [line] });
+			}
+			fd = openSync(sessionFile, "r");
+			offset = statSync(sessionFile).size;
+		}
 
+		// A fresh tab writes its session file only when its first turn starts
+		// (verified live: an idle tab pi has an empty session dir), so the
+		// daemon's prompt must be in flight before discovery can ever succeed
+		// — for a cold step the opposite order always times out.
 		const submit = execFileAsync(
 			"herdr",
 			["agent", "prompt", tab.paneId, hello.prompt, "--wait", "--timeout", String(TURN_SETTLE_TIMEOUT_MS)],
 			{ timeout: TURN_SETTLE_TIMEOUT_MS + 30_000, maxBuffer: 1024 * 1024 },
 		);
+		// A failure before the race below (discovery fatal, daemon cut)
+		// must not leave the in-flight prompt as an unhandled rejection.
+		submit.catch(() => {});
+
+		if (!sessionId) {
+			// Cold step: the whole fresh session file is this one turn, so the
+			// stream starts at byte 0 and the head records (session header,
+			// system message, this turn's user record) flow through the
+			// translator in file order.
+			sessionFile = await discoverSessionFile(tab, hello, sessionId);
+			fd = openSync(sessionFile, "r");
+		}
+
+		const streamNew = () => {
+			offset = streamNewRecords(fd!, offset, (record) => {
+				for (const line of translator.feedRecord(record)) send({ type: "events", lines: [line] });
+			});
+		};
+
 		let settled = false;
 		const polling = (async () => {
 			while (!cut.flag && !settled) {
@@ -562,13 +592,13 @@ async function runInvocation(
 			// The daemon cut the invocation (timeout/cancel): kill the tab so a
 			// retry or later --session resume never meets a second writer.
 			closeTab(tab);
-			closeSync(fd);
+			closeSync(fd!);
 			socket.end();
 			return;
 		}
 		streamNew();
 		for (const line of translator.finish()) send({ type: "events", lines: [line] });
-		closeSync(fd);
+		closeSync(fd!);
 		socket.end();
 		if (sessionless) closeTab(tab);
 	} catch (err) {
@@ -657,25 +687,27 @@ async function discoverSessionFile(tab: TabHandle, hello: Hello, sessionId?: str
 
 /** Seed the translator from the head of the session file: the `session`
  *  header (its id) and the system message record (replayed inside
- *  agent_end). For a resumed session the head also holds the whole prior
+ *  agent_end). Returns the event lines the records emit — headless pi
+ *  prints the session event first, so the caller sends them before any
+ *  turn record. For a resumed session the head also holds the whole prior
  *  conversation, which must NOT be re-emitted — only the session id and the
- *  first system record are taken. For a fresh tab the head is just the
- *  session + system records, so they are fed through the translator like a
- *  headless pi startup would emit them. */
-function applyPreface(translator: SessionEventTranslator, sessionFile: string, sessionId?: string): void {
+ *  first system record are taken. */
+function applyPreface(translator: SessionEventTranslator, sessionFile: string, sessionId?: string): string[] {
+	const lines: string[] = [];
 	try {
 		const head = readHead(sessionFile, 512 * 1024);
 		let systemSeen = false;
 		for (const record of head.records) {
 			if (record?.type === "session") {
-				translator.feedRecord(record);
+				lines.push(...translator.feedRecord(record));
 			} else if (record?.type === "message" && (record as any).message?.role === "system" && !systemSeen) {
 				systemSeen = true;
-				translator.feedRecord(record);
+				lines.push(...translator.feedRecord(record));
 			}
 			if (systemSeen && sessionId) break; // resumed: preface done once both are found
 		}
 	} catch {}
+	return lines;
 }
 
 function readHead(path: string, maxBytes: number): { records: unknown[] } {
