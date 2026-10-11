@@ -61,6 +61,12 @@ export const shellEscape = surface.shellEscape;
 export const pollForExit = surface.pollForExit;
 export const __pollForExitTest__ = surface.__pollForExitTest__;
 
+/** Wait bounds for the exit poller and the index.ts watcher. Pure env
+ *  resolution (no surface behavior), so the herdr implementation is
+ *  re-exported directly — ./tmux.ts carries the identical contract. */
+export const getSubagentPollBounds = herdr.getSubagentPollBounds;
+export type SubagentPollBounds = herdr.SubagentPollBounds;
+
 /** Which surface is active — exposed for diagnostics/tests. */
 export const activeSurface: "herdr" | "tmux" | "none" = useHerdr
   ? "herdr"
