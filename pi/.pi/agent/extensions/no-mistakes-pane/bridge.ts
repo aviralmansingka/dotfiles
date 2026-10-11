@@ -53,8 +53,16 @@ const execFileAsync = promisify(execFile);
 
 export const BRIDGE_DIR_NAME = "herdr-bridge";
 export const TURN_SETTLE_TIMEOUT_MS = 30 * 60_000;
-export const TAB_READY_TIMEOUT_MS = 30_000;
-export const SESSION_DISCOVER_TIMEOUT_MS = 10_000;
+/** TESTABILITY knobs, same family as NM_BRIDGE_POLL_MS: the tab-readiness
+ *  and session-discovery deadlines are env-overridable so the offline suite
+ *  can pin the expired paths in milliseconds. Defaults are unchanged. */
+function nmEnvMs(name: string, fallback: number): number {
+	const raw = process.env[name]?.trim();
+	const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
+	return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+export const TAB_READY_TIMEOUT_MS = nmEnvMs("NM_TAB_READY_TIMEOUT_MS", 30_000);
+export const SESSION_DISCOVER_TIMEOUT_MS = nmEnvMs("NM_SESSION_DISCOVER_TIMEOUT_MS", 10_000);
 /** Prompt/settle poll cadence. `NM_BRIDGE_POLL_MS` overrides it so the
  *  offline test suite can drive the settle loop fast (default 250 ms —
  *  same knob family as NM_HERDR_REAL_PI / NM_HERDR_BRIDGE_WAIT_MS). */

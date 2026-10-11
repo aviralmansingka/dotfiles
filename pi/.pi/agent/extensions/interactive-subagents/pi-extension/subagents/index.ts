@@ -31,7 +31,6 @@ import {
   shellEscape,
   readScreen,
   type PollResult,
-  type SubagentPollBounds,
 } from "./surface.ts";
 
 import {
@@ -769,6 +768,8 @@ interface SubagentResult {
   killed?: boolean;
   /** Provider/agent error message when auto-retry exhausted (overload, rate limit, etc.). */
   errorMessage?: string;
+  /** True when a death path (timeout/no-agent) still harvested partial output. */
+  partial?: boolean;
   /** Aggregate usage/model/tool stats parsed from the completed session file. */
   stats?: SessionStats;
 }
@@ -811,6 +812,68 @@ interface RunningSubagent {
 
 /** All currently running subagents, keyed by id. */
 const runningSubagents = new Map<string, RunningSubagent>();
+
+// ── Watcher deadline watchdog ──
+// Belt-and-braces for pollForExit's own hard deadline (which bounds every
+// wait by itself): every active watcher registers here with its surface,
+// deadline, and abort controller, and one sweep interval aborts anything
+// still pending past its deadline — a watcher wedged inside a pane read can
+// never outlive its deadline either. The watcher's loop then returns its
+// timeout result exactly once (pollForExit checks the deadline first on
+// every tick, and watchSubagent converts a deadline-elapsed abort into the
+// timeout result), so the completion steer fires once, never twice.
+interface ActiveWatcher {
+  surface: string;
+  deadline: number;
+  abort: AbortController;
+}
+const activeWatchers = new Map<string, ActiveWatcher>();
+let watchdogInterval: ReturnType<typeof setInterval> | null = null;
+
+function registerActiveWatcher(running: RunningSubagent, deadline: number): void {
+  activeWatchers.set(running.id, {
+    surface: running.surface,
+    deadline,
+    // Set by both spawn paths before watchSubagent starts; a fresh
+    // controller is a harmless fallback that aborts nothing.
+    abort: running.abortController ?? new AbortController(),
+  });
+  startWatchdog();
+}
+
+function unregisterActiveWatcher(id: string): void {
+  activeWatchers.delete(id);
+  if (activeWatchers.size === 0 && watchdogInterval) {
+    clearInterval(watchdogInterval);
+    watchdogInterval = null;
+    (globalThis as any)[WATCHDOG_INTERVAL_KEY] = null;
+  }
+}
+
+/** Abort every still-pending watcher whose deadline has passed. Idempotent
+ *  (aborting an already-aborted controller is a no-op) and safe to call
+ *  directly — the watcher converts the abort into its timeout result. */
+export function sweepExpiredSubagents(now = Date.now()): number {
+  let swept = 0;
+  for (const watcher of activeWatchers.values()) {
+    if (now >= watcher.deadline) {
+      watcher.abort.abort();
+      swept++;
+    }
+  }
+  return swept;
+}
+
+function startWatchdog(): void {
+  if (watchdogInterval) return;
+  // Sweep no faster than the poll cadence (so it stays cheap) and no slower
+  // than 5 s (so the belt-and-braces bound stays tight). The poll knob
+  // PI_SUBAGENT_POLL_MS speeds tests up automatically.
+  const pollMs = getSubagentPollBounds().pollMs;
+  const sweepMs = Math.max(50, Math.min(pollMs, 5000));
+  watchdogInterval = setInterval(() => sweepExpiredSubagents(), sweepMs);
+  (globalThis as any)[WATCHDOG_INTERVAL_KEY] = watchdogInterval;
+}
 
 function emitFinishedSubagentBackgroundUpdate(
   pi: ExtensionAPI,
@@ -1411,6 +1474,10 @@ export const __test__ = {
   resolveResultPresentation,
   resolveResumeLaunchBehavior,
   runningSubagents,
+  registerActiveWatcher,
+  unregisterActiveWatcher,
+  sweepExpiredSubagents,
+  activeWatchers,
   noMistakesWidgetStatus,
   noMistakesFindingLines,
   formatElapsed,
@@ -1867,20 +1934,42 @@ async function watchSubagent(
   signal: AbortSignal,
 ): Promise<SubagentResult> {
   const { name, task, surface, startTime, sessionFile } = running;
+  // The watcher is deadline-bounded twice: pollForExit enforces the deadline
+  // itself every tick, and the module watchdog sweeps this registration as
+  // belt-and-braces (aborting a watcher wedged inside a pane read).
+  const bounds = getSubagentPollBounds();
+  const deadline = startTime + bounds.maxWaitMs;
+  registerActiveWatcher(running, deadline);
 
   try {
-    const result = await pollForExit(surface, AbortSignal.any([signal, getModuleAbortSignal()]), {
-      interval: 1000,
-      sessionFile,
-      sentinelFile: running.sentinelFile,
-      onTick() {
-        observeRunningSubagent(running);
-        deliverPendingQuestion(running);
-      },
-    });
+    let result: PollResult;
+    try {
+      result = await pollForExit(surface, AbortSignal.any([signal, getModuleAbortSignal()]), {
+        interval: bounds.pollMs,
+        sessionFile,
+        sentinelFile: running.sentinelFile,
+        onTick() {
+          observeRunningSubagent(running);
+          deliverPendingQuestion(running);
+        },
+      });
+    } catch (err) {
+      if (signal.aborted && Date.now() >= deadline) {
+        // The watchdog sweep aborted a watcher already past its deadline:
+        // report the timeout, never a cancellation, so the captain sees why.
+        result = { reason: "timeout", exitCode: null };
+      } else {
+        throw err;
+      }
+    }
 
     const elapsed = Math.floor((Date.now() - startTime) / 1000);
     const killed = result.reason === "killed";
+    // timeout/no-agent carry a null exit code (nothing exited); the result
+    // records a failing code for the chip/presentation while `reason` keeps
+    // the truthful why.
+    const exitCode = result.exitCode ?? 1;
+    const deathReason = result.reason === "timeout" || result.reason === "no-agent";
 
     if (running.cli === "claude") {
       // Claude Code result extraction
@@ -1899,8 +1988,8 @@ async function watchSubagent(
       }
 
       if (!summary) {
-        summary = result.exitCode !== 0
-          ? `Claude Code exited with code ${result.exitCode}`
+        summary = exitCode !== 0
+          ? `Claude Code exited with code ${exitCode}`
           : "Claude Code exited without output";
       }
 
@@ -1912,31 +2001,42 @@ async function watchSubagent(
         try { unlinkSync(running.sentinelFile + ".transcript"); } catch {}
       }
 
-      closeFinishedSubagentSurface(running, { killed, exitCode: result.exitCode });
+      closeFinishedSubagentSurface(running, { killed, exitCode, reason: result.reason });
       runningSubagents.delete(running.id);
+      unregisterActiveWatcher(running.id);
 
-      return { name, task, summary, exitCode: result.exitCode, elapsed, ...(killed ? { killed: true, error: "pane killed" } : {}), ...(sessionId ? { claudeSessionId: sessionId } : {}) };
+      return { name, task, summary, exitCode, elapsed, reason: result.reason, ...(killed ? { killed: true, error: "pane killed" } : {}), ...(sessionId ? { claudeSessionId: sessionId } : {}) };
     }
 
-    // Pi subagent result extraction
+    // Pi subagent result extraction — one shared completion path for every
+    // outcome (clean, error, killed, agent-gone, no-agent, timeout): harvest
+    // the session file best-effort (a death path keeps whatever partial
+    // output exists), then the clean pane close, then deregister.
+    let partial: string | null = null;
+    if (!killed && existsSync(sessionFile)) {
+      try {
+        partial = findLastAssistantMessage(getNewEntries(sessionFile, 0));
+      } catch {
+        partial = null;
+      }
+    }
+    const partialAttached = deathReason && partial != null;
+
     let summary: string;
     if (killed) {
       summary = "Pane was closed before the subagent reported completion. No result was saved.";
-    } else if (existsSync(sessionFile)) {
-      const allEntries = getNewEntries(sessionFile, 0);
-      const lastAssistant = findLastAssistantMessage(allEntries);
-      summary = lastAssistant ??
+    } else if (deathReason) {
+      summary = partial ??
+        (result.reason === "timeout"
+          ? `Sub-agent timed out after ${formatElapsed(elapsed)}; no output was harvested from its session file.`
+          : "Sub-agent never started — no pi process ever appeared in its pane. No result was saved.");
+    } else {
+      summary = partial ??
         (result.errorMessage
           ? `Subagent error: ${result.errorMessage}`
-          : result.exitCode !== 0
-            ? `Sub-agent exited with code ${result.exitCode}`
+          : exitCode !== 0
+            ? `Sub-agent exited with code ${exitCode}`
             : "Sub-agent exited without output");
-    } else {
-      summary = result.errorMessage
-        ? `Subagent error: ${result.errorMessage}`
-        : result.exitCode !== 0
-          ? `Sub-agent exited with code ${result.exitCode}`
-          : "Sub-agent exited without output";
     }
 
     const stats = !killed && existsSync(sessionFile) ? summarizeSessionStats(sessionFile) : null;
@@ -1944,10 +2044,12 @@ async function watchSubagent(
 
     closeFinishedSubagentSurface(running, {
       killed,
-      exitCode: result.exitCode,
+      exitCode,
       errorMessage: result.errorMessage,
+      reason: result.reason,
     });
     runningSubagents.delete(running.id);
+    unregisterActiveWatcher(running.id);
 
     return {
       name,
@@ -1955,9 +2057,12 @@ async function watchSubagent(
       summary,
       sessionFile,
       ...(subagentSessionId ? { sessionId: subagentSessionId } : {}),
-      exitCode: result.exitCode,
+      exitCode,
       elapsed,
+      reason: result.reason,
+      ...(partialAttached ? { partial: true } : {}),
       ...(killed ? { killed: true, error: "pane killed" } : {}),
+      ...(deathReason ? { error: result.reason } : {}),
       ...(result.errorMessage ? { errorMessage: result.errorMessage } : {}),
       ...(stats ? { stats } : {}),
     };
@@ -1966,6 +2071,7 @@ async function watchSubagent(
       closeSurface(surface);
     } catch {}
     runningSubagents.delete(running.id);
+    unregisterActiveWatcher(running.id);
 
     if (signal.aborted) {
       return {
@@ -2030,6 +2136,15 @@ export default function subagentsExtension(pi: ExtensionAPI) {
       agent.abortController?.abort();
     }
     runningSubagents.clear();
+    // Watchdog teardown: no watcher stays registered and no sweep interval
+    // dangles past the session (the reload path clears it via the
+    // WATCHDOG_INTERVAL_KEY global).
+    activeWatchers.clear();
+    if (watchdogInterval) {
+      clearInterval(watchdogInterval);
+      watchdogInterval = null;
+      (globalThis as any)[WATCHDOG_INTERVAL_KEY] = null;
+    }
     noMistakesActivity = null;
   });
 
@@ -2198,9 +2313,15 @@ export default function subagentsExtension(pi: ExtensionAPI) {
                   name: running.name,
                   task: running.task,
                   agent: running.agent,
+                  // WHY the subagent ended — done/sentinel/error/killed/
+                  // agent-gone/no-agent/timeout — so the captain can tell a
+                  // completion from a death and a timeout from a kill.
+                  status: result.reason ??
+                    (result.killed ? "killed" : result.exitCode === 0 ? "done" : "error"),
                   exitCode: result.exitCode,
                   elapsed: result.elapsed,
                   sessionFile: result.sessionFile,
+                  ...(result.partial ? { partial: true } : {}),
                   ...(result.sessionId ? { sessionId: result.sessionId } : {}),
                   ...(result.errorMessage ? { errorMessage: result.errorMessage } : {}),
                   ...(result.killed ? { killed: true } : {}),
@@ -2663,14 +2784,20 @@ export default function subagentsExtension(pi: ExtensionAPI) {
             if (result.killed) {
               summary = "Pane was closed before the resumed subagent reported completion. No result was saved.";
             } else {
-              const allEntries = getNewEntries(sessionPath, entryCountBefore);
-              const lastAssistant = findLastAssistantMessage(allEntries);
-              summary = lastAssistant ??
-                (result.errorMessage
-                  ? `Subagent error: ${result.errorMessage}`
-                  : result.exitCode !== 0
-                    ? `Resumed session exited with code ${result.exitCode}`
-                    : "Resumed session exited without new output");
+              let newOutput: string | null = null;
+              try {
+                newOutput = findLastAssistantMessage(getNewEntries(sessionPath, entryCountBefore));
+              } catch {}
+              summary = newOutput ??
+                (result.reason === "timeout"
+                  ? `Resumed session timed out after ${formatElapsed(result.elapsed)}; no new output was harvested.`
+                  : result.reason === "no-agent"
+                    ? "Resumed session never started — no pi process ever appeared in its pane. No result was saved."
+                    : result.errorMessage
+                      ? `Subagent error: ${result.errorMessage}`
+                      : result.exitCode !== 0
+                        ? `Resumed session exited with code ${result.exitCode}`
+                        : "Resumed session exited without new output");
             }
             const displayedResult = { ...result, summary, sessionFile: sessionPath, sessionId: resumedSessionId };
             emitFinishedSubagentBackgroundUpdate(pi, running, displayedResult);
@@ -2684,10 +2811,13 @@ export default function subagentsExtension(pi: ExtensionAPI) {
                 details: {
                   name,
                   task: message,
+                  status: result.reason ??
+                    (result.killed ? "killed" : result.exitCode === 0 ? "done" : "error"),
                   exitCode: result.exitCode,
                   elapsed: result.elapsed,
                   sessionFile: sessionPath,
                   sessionId: resumedSessionId,
+                  ...(result.partial ? { partial: true } : {}),
                   ...(result.errorMessage ? { errorMessage: result.errorMessage } : {}),
                   ...(result.killed ? { killed: true } : {}),
                 },
