@@ -26,6 +26,49 @@ if ! command -v nvim >/dev/null 2>&1; then
 	unset _p
 fi
 
+# ── Launch provenance log ──────────────────────────────────────
+# Every launch appends one attributable line (space-separated
+# key=value pairs) to ~/.cache/pi/nvim-open-launches.log —
+# PI_NVIM_LAUNCH_LOG overrides the path. Mirrors buildLaunchLogLine
+# in the nvim-open extension. Best-effort only: a write failure must
+# never fail or delay the launch, so the whole body runs inside a
+# swallowed group.
+
+# Quote a value that would break key=value token scanning: empty, or
+# containing whitespace, quotes, backslash, or '='.
+log_quote() {
+	local value="$1"
+	case "$value" in
+		"" | *[[:space:]\"\'\\=]*)
+			local escaped="${value//\'/\'\\\'\'}"
+			printf "'%s'" "$escaped"
+			;;
+		*)
+			printf '%s' "$value"
+			;;
+	esac
+}
+
+# $1 outcome, $2 pane (split/failed only, default -), $3 socket (default -).
+log_launch() {
+	{
+		local outcome="$1" pane="${2:--}" socket="${3:--}" line log_path
+		log_path="${PI_NVIM_LAUNCH_LOG:-$HOME/.cache/pi/nvim-open-launches.log}"
+		line="ts=$(date -u +%Y-%m-%dT%H:%M:%SZ) pid=$$ route=script"
+		line="$line session=$(log_quote "${PI_SUBAGENT_SESSION:-${PI_SESSION_FILE:--}}")"
+		line="$line subagent=$(log_quote "${PI_SUBAGENT_NAME:--}")"
+		line="$line callerPane=$(log_quote "${HERDR_PANE_ID:--}")"
+		line="$line cwd=$(log_quote "$CWD")"
+		line="$line outcome=$outcome"
+		if [[ "$outcome" == "split" || "$outcome" == "failed" ]]; then
+			line="$line pane=$(log_quote "$pane") socket=$(log_quote "$socket")"
+		fi
+		line="$line files=${#FILES[@]}"
+		mkdir -p "$(dirname "$log_path")" 2>/dev/null || true
+		printf '%s\n' "$line" >>"$log_path"
+	} 2>/dev/null || true
+}
+
 # Check for vim or nvim before doing anything else.
 # If neither is installed, fail fast with a useful fallback.
 if ! command -v vim >/dev/null 2>&1 && ! command -v nvim >/dev/null 2>&1; then
@@ -78,49 +121,6 @@ fnameescape() {
 	# Backslash-escape: backslash, space, pipe, percent, hash, double-quote,
 	# single-quote, tab, newline, CR
 	printf '%s' "$path" | sed 's/[][\\ |%"'"'"'#\t\r\n]/\\&/g'
-}
-
-# ── Launch provenance log ──────────────────────────────────────
-# Every launch appends one attributable line (space-separated
-# key=value pairs) to ~/.cache/pi/nvim-open-launches.log —
-# PI_NVIM_LAUNCH_LOG overrides the path. Mirrors buildLaunchLogLine
-# in the nvim-open extension. Best-effort only: a write failure must
-# never fail or delay the launch, so the whole body runs inside a
-# swallowed group.
-
-# Quote a value that would break key=value token scanning: empty, or
-# containing whitespace, quotes, backslash, or '='.
-log_quote() {
-	local value="$1"
-	case "$value" in
-		"" | *[[:space:]\"\'\\=]*)
-			local escaped="${value//\'/\'\\\'\'}"
-			printf "'%s'" "$escaped"
-			;;
-		*)
-			printf '%s' "$value"
-			;;
-	esac
-}
-
-# $1 outcome, $2 pane (split/failed only, default -), $3 socket (default -).
-log_launch() {
-	{
-		local outcome="$1" pane="${2:--}" socket="${3:--}" line log_path
-		log_path="${PI_NVIM_LAUNCH_LOG:-$HOME/.cache/pi/nvim-open-launches.log}"
-		line="ts=$(date -u +%Y-%m-%dT%H:%M:%SZ) pid=$$ route=script"
-		line="$line session=$(log_quote "${PI_SUBAGENT_SESSION:-${PI_SESSION_FILE:--}}")"
-		line="$line subagent=$(log_quote "${PI_SUBAGENT_NAME:--}")"
-		line="$line callerPane=$(log_quote "${HERDR_PANE_ID:--}")"
-		line="$line cwd=$(log_quote "$CWD")"
-		line="$line outcome=$outcome"
-		if [[ "$outcome" == "split" || "$outcome" == "failed" ]]; then
-			line="$line pane=$(log_quote "$pane") socket=$(log_quote "$socket")"
-		fi
-		line="$line files=${#FILES[@]}"
-		mkdir -p "$(dirname "$log_path")" 2>/dev/null || true
-		printf '%s\n' "$line" >>"$log_path"
-	} 2>/dev/null || true
 }
 
 # Run herdr command, return JSON or null

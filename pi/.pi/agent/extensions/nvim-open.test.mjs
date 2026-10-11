@@ -706,7 +706,22 @@ esac
 `,
 		{ mode: 0o755 },
 	);
-	writeFileSync(join(shBin, "nvim"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+	// Provision a REAL editor into the fake bin when the host has one (CI
+	// pins nvim at /usr/local/bin/nvim): the .sh children's `command -v nvim`
+	// then resolves a genuine binary and the bob-path fallback dirs stay
+	// unused. Without a host nvim, a no-op fake still satisfies `command -v`.
+	// The fail-fast scenario's shUtilBin deliberately stays editor-free.
+	let realNvim = "";
+	try {
+		realNvim = execFileSync("sh", ["-c", "command -v nvim"], { encoding: "utf8" }).trim();
+	} catch {
+		realNvim = "";
+	}
+	if (realNvim) {
+		symlinkSync(realNvim, join(shBin, "nvim"));
+	} else {
+		writeFileSync(join(shBin, "nvim"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+	}
 	writeFileSync(
 		join(shBin, "tmux"),
 		`#!/bin/sh
