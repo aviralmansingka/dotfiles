@@ -968,7 +968,7 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		writeFileSync(join(stubDir, "sleep"), ["#!/bin/sh", "exit 0", ""].join("\n"));
 		chmodSync(join(stubDir, "sleep"), 0o755);
 
-		writeFileSync(scriptFile, buildAttachScript(doneFile, 240, "0.001"));
+		writeFileSync(scriptFile, buildAttachScript(doneFile, 240, "0.001", stubDir));
 		const ran = spawnSync("bash", [scriptFile], {
 			encoding: "utf-8",
 			env: { ...process.env, PATH: `${stubDir}:${process.env.PATH}`, DONE: doneFile, ATTACH_LOG: logFile },
@@ -1015,7 +1015,7 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 
 		// Done file already exists before the wrapper starts.
 		writeFileSync(doneFile, "");
-		writeFileSync(scriptFile, buildAttachScript(doneFile, 240, "0.001"));
+		writeFileSync(scriptFile, buildAttachScript(doneFile, 240, "0.001", stubDir));
 		const ran = spawnSync("bash", [scriptFile], {
 			encoding: "utf-8",
 			env: { ...process.env, PATH: `${stubDir}:${process.env.PATH}`, DONE: doneFile, ATTACH_LOG: logFile },
@@ -1057,7 +1057,7 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 
 		// Small retry budget: resolution never succeeds, so the wrapper exhausts
 		// it and exits without a single attach call.
-		writeFileSync(scriptFile, buildAttachScript(doneFile, 3, "0.001"));
+		writeFileSync(scriptFile, buildAttachScript(doneFile, 3, "0.001", stubDir));
 		const ran = spawnSync("bash", [scriptFile], {
 			encoding: "utf-8",
 			env: { ...process.env, PATH: `${stubDir}:${process.env.PATH}`, DONE: doneFile, ATTACH_LOG: logFile },

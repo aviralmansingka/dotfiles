@@ -92,8 +92,16 @@ export function buildBackgroundScript(
  * there is nothing left to watch). Bounded by `maxTries` × `intervalSec` so a
  * permanently-unattachable run does not spin forever.
  */
-export function buildAttachScript(doneFile: string, maxTries: number, intervalSec: string): string {
+export function buildAttachScript(
+	doneFile: string,
+	maxTries: number,
+	intervalSec: string,
+	runCwd: string,
+): string {
 	return [
+		`# Pin the run's worktree so axi status resolves the right branch even`,
+		`# if the invoking shell's cwd was deleted (getcwd failure class).`,
+		`cd ${shellQuote(runCwd)} 2>/dev/null || cd /`,
 		`DONE=${shellQuote(doneFile)}`,
 		`i=0`,
 		`while [ "$i" -lt ${maxTries} ]; do`,

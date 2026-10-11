@@ -1266,7 +1266,7 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 					if (sig.aborted) throw abortError(sig);
 					if (started && state.calls.has(call.key)) {
 						const attachScript = `${tmpdir()}/pi-nm-${token}.attach.sh`;
-						writeFileSync(attachScript, buildAttachScript(doneFile, ATTACH_MAX_TRIES, ATTACH_INTERVAL_SEC));
+						writeFileSync(attachScript, buildAttachScript(doneFile, ATTACH_MAX_TRIES, ATTACH_INTERVAL_SEC, ctx.cwd));
 						const opened = openWatchPane(state, cwd, subcommand, attachScript);
 						if (opened) {
 							call.paneId = opened.pane.paneId;
@@ -1392,7 +1392,7 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 			const token = randomUUID().replace(/-/g, "");
 			const doneFile = `${tmpdir()}/pi-nm-${token}.done`;
 			const attachScript = `${tmpdir()}/pi-nm-${token}.attach.sh`;
-			writeFileSync(attachScript, buildAttachScript(doneFile, ATTACH_MAX_TRIES, ATTACH_INTERVAL_SEC));
+			writeFileSync(attachScript, buildAttachScript(doneFile, ATTACH_MAX_TRIES, ATTACH_INTERVAL_SEC, ctx.cwd));
 			const opened = openWatchPane(state, ctx.cwd, "re-open", attachScript);
 			if (!opened) {
 				unlinkSafe(attachScript);
