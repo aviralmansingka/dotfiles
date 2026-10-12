@@ -70,6 +70,18 @@ to attribute orphan editor panes; panes with no log line were launched outside p
 `annotate-review.open` lost its chord to the picker; the reply reviewer keeps
 `prefix+shift+o`.
 
+## terminal-browser
+
+The agent skill is repo-owned at `agents/.agents/skills/terminal-browser` (vendored
+from upstream v0.13.4). The binary's own skill linking is declined via
+`~/.local/state/terminal-browser/skills-choice`, so it never replaces the
+stow-managed symlink — keep `TERMINAL_BROWSER_SKIP_SETUP=1` on any installer or
+`herdr plugin install` run (the plugin's build step runs the installer, whose
+explicit `setup` ignores the decline). The pinned herdr plugin
+(`zenbu-labs/terminal-browser/herdr-plugin`) and the macOS cask are provisioned
+by `install.sh`. Ubuntu 24.04 hosts need one interactive `terminal-browser setup`
+(sudo) for the AppArmor userns profile.
+
 ## no-mistakes Herdr bridge invariants
 
 The no-mistakes daemon's step agents run as visible Herdr subagent tabs when the triggering
