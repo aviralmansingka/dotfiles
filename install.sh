@@ -33,6 +33,15 @@ fi
 echo "==> Installing packages from Brewfile"
 brew bundle --file="$DOTFILES_DIR/Brewfile"
 
+# terminal-browser ships an agent skill and its first run (or `terminal-browser
+# setup`) symlinks ~/.agents/skills/terminal-browser into its own app dist.
+# This repo already vendors that skill (agents/.agents/skills/terminal-browser,
+# stowed into ~/.agents/skills), so decline the binary's own link to keep the
+# stow-managed symlink authoritative across upgrades.
+TB_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/terminal-browser"
+mkdir -p "$TB_STATE"
+printf 'no\n' > "$TB_STATE/skills-choice"
+
 ####################
 #  2. CLI tools    #
 ####################

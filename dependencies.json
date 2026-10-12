@@ -161,7 +161,8 @@
   "casks": {
     "terminal": [
       "ghostty",
-      "nikitabobko/tap/aerospace"
+      "nikitabobko/tap/aerospace",
+      "terminal-browser"
     ],
     "containers": [
       "docker"
