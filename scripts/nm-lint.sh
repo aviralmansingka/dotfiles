@@ -78,10 +78,15 @@ else
 fi
 
 echo "== python syntax (py_compile)"
-if command -v python3 >/dev/null 2>&1; then
+# Prefer a modern interpreter when present: this repo's python uses 3.12+
+# syntax (f-string backslashes), which the macOS system python3 (3.9)
+# rejects. CI runners ship python3 >= 3.12 and fall through to it unchanged;
+# no downloads, offline-safe.
+py3=$(command -v python3.13 || command -v python3.12 || command -v python3 || true)
+if [ -n "$py3" ]; then
   while IFS= read -r f; do
     [ -n "$f" ] || continue
-    python3 -m py_compile "$f" || { echo "FAIL $f"; fail=1; }
+    "$py3" -m py_compile "$f" || { echo "FAIL $f"; fail=1; }
   done < <(git ls-files '*.py')
 else
   echo "FAIL: python3 not found on PATH; python syntax checks cannot run" >&2

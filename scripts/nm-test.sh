@@ -39,6 +39,11 @@ while [ $# -gt 0 ]; do
 done
 
 have() { command -v "$1" >/dev/null 2>&1; }
+# Prefer a modern interpreter when present: this repo's python uses 3.12+
+# syntax (f-string backslashes), which the macOS system python3 (3.9)
+# rejects. CI runners ship python3 >= 3.12 and fall through to it unchanged;
+# no downloads, offline-safe.
+py3=$(command -v python3.13 || command -v python3.12 || command -v python3 || true)
 
 # --- selection logic (mirrors the ci.yml changes job) ------------------------
 # Fixed area gates (arrays kept in sync with ci.yml's changes job).
@@ -224,7 +229,7 @@ fi
 run_entry() {
   case "$1" in
     *.sh) timeout 120 bash "$1" ;;
-    *.py) timeout 120 python3 "$1" ;;
+    *.py) timeout 120 "$py3" "$1" ;;
     *.mjs) timeout 120 node "$1" ;;
     *) timeout 120 "$1" ;;
   esac
@@ -249,9 +254,9 @@ fi
 
 # --- telegram daemon unittests ----------------------------------------------
 if [ "$run_telegram" -eq 1 ]; then
-  if have python3; then
+  if [ -n "$py3" ]; then
     echo "== pi/bin telegram daemon unittests"
-    if timeout 120 python3 -m unittest discover -s pi/bin -p 'test_pi_telegram_daemon.py'; then
+    if timeout 120 "$py3" -m unittest discover -s pi/bin -p 'test_pi_telegram_daemon.py'; then
       echo "PASS pi-telegram-daemon"
     else
       echo "FAIL pi-telegram-daemon"

@@ -56,7 +56,7 @@ const {
 	orchestratorSurfaceMessage,
 	ORCHESTRATOR_AGENT,
 } = jiti("./no-mistakes-pane/orchestrate.ts");
-const { parseDurationMs, parseNoMistakesRunId, parseNoMistakesStatus, observeNoMistakesTiming, isObservableNoMistakesRun, summarizeNoMistakesSnapshot, phaseProgress } = jiti("./no-mistakes-pane/status.ts");
+const { parseDurationMs, parseNoMistakesRunId, parseNoMistakesStatus, observeNoMistakesTiming, isObservableNoMistakesRun, summarizeNoMistakesSnapshot, phaseProgress, errorRemediation } = jiti("./no-mistakes-pane/status.ts");
 const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 
 function runIdAt(timestamp, suffix = "0".repeat(16)) {
@@ -69,6 +69,18 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 	}
 	return prefix + suffix;
 }
+
+// ---------------------------------------------------------------------------
+// Error remediation: daemon-level failures map to the exact next action, so
+// a failed dispatch steers with instructions instead of a bare error.
+// ---------------------------------------------------------------------------
+assert.match(errorRemediation('error: "step review failed: agent review: daemon shutting down"'), /fresh run/);
+assert.match(errorRemediation('error: "start daemon: connect to daemon socket: dial unix /Users/x/.no-mistakes/socket: connect: connection refused"'), /doctor/);
+assert.match(errorRemediation('error: "parse global config: yaml: unmarshal errors:\n  line 2: field model not found"'), /version skew/);
+assert.match(errorRemediation('error: repo not initialized (run \'no-mistakes init\' first)'), /init/);
+assert.equal(errorRemediation('error: no step is awaiting approval'), "",
+	"a step-local error keeps the generic guidance");
+assert.equal(errorRemediation("gate:\n  step: review"), "");
 
 // ---------------------------------------------------------------------------
 // AXI status observation: parse the daemon-owned run without changing it and
@@ -389,8 +401,10 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		assert.doesNotMatch(messages[1].message.content, /parked at this gate/);
 
 		// 6. Timeout: a stuck background client is disconnected and the timeout
-		//    is steered, never silently dropped.
-		writeStub(["sleep 5", "exit 0"]);
+		//    is steered, never silently dropped. The stub daemon answers
+		//    `axi status` instantly (healthy — the preflight must pass) while the
+		//    run itself hangs for 5s against the 0.2s caller timeout.
+		writeStub(['if [ "$2" = "status" ]; then exit 0; fi', "sleep 5", "exit 0"]);
 		const stuckAck = await tool.execute(
 			"stuck-1",
 			{ args: "run", timeoutMs: 0.2 },
@@ -409,6 +423,115 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		assert.equal(messages.length, 3, "shutdown stops the watcher without stray steers");
 	} finally {
 		globalThis.setInterval = savedSetInterval;
+		globalThis.clearInterval = savedClearInterval;
+		process.env.PATH = savedPath;
+		rmSync(stubDir, { recursive: true, force: true });
+		globalThis[Symbol.for("pi-no-mistakes/watch-state")] = undefined;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Preflight: a state-changing pipeline call probes `axi status` first — an
+// unreachable daemon, a config version skew, or a missing gate fails the
+// call in one roundtrip, before any pane or background client is spawned.
+// `run --help` (documentation, not a run) and read-only calls bypass it.
+// ---------------------------------------------------------------------------
+{
+	const stubDir = mkdtempSync(join(tmpdir(), "pi-nm-preflight-"));
+	const savedPath = process.env.PATH;
+	const savedInterval = globalThis.setInterval;
+	const savedClearInterval = globalThis.clearInterval;
+	const handlersForPreflight = new Map();
+	let tick;
+	let tool;
+	const messages = [];
+	const writeStub = (body) => {
+		writeFileSync(join(stubDir, "no-mistakes"), ["#!/bin/sh", ...body, ""].join("\n"));
+		chmodSync(join(stubDir, "no-mistakes"), 0o755);
+	};
+	try {
+		globalThis.setInterval = (callback) => {
+			tick = callback;
+			return { unref() {} };
+		};
+		globalThis.clearInterval = () => {};
+		// The daemon is unreachable: `axi status` exits 1 with the connection
+		// error, exactly like the 2026-09 census failures.
+		writeStub([
+			'if [ "$1" = "axi" ] && [ "$2" = "status" ]; then',
+			"  printf '%s\\n' 'error: \"start daemon: connect to daemon socket: dial unix /Users/x/.no-mistakes/socket: connect: connection refused\"'",
+			"  exit 1",
+			"fi",
+			"printf '%s\\n' 'gate:'",
+			"  step: review",
+			"exit 0",
+		]);
+		process.env.PATH = `${stubDir}:${savedPath}`;
+
+		noMistakesPane({
+			on(name, handler) { handlersForPreflight.set(name, handler); },
+			registerTool(value) { tool = value; },
+			registerCommand() {},
+			registerMessageRenderer() {},
+			events: { emit() {}, on() { return () => {}; } },
+			exec() { return Promise.resolve({ code: 0, stdout: "" }); },
+			sendMessage(message, options) { messages.push({ message, options }); },
+		});
+
+		const failure = await tool.execute(
+			"pre-run-1",
+			{ args: 'run --intent "ship it"', timeoutMs: 60 },
+			undefined,
+			undefined,
+			{ cwd: stubDir, hasUI: false },
+		);
+		assert.equal(failure.details.status, "error");
+		assert.match(failure.details.message, /preflight failed/);
+		assert.match(failure.content[0].text, /preflight failed/);
+		assert.match(failure.content[0].text, /connection refused/);
+		assert.match(failure.content[0].text, /doctor/,
+			"the preflight failure names the remediation");
+
+		// No background client was spawned: the watcher has nothing in flight
+		// (no timer was even armed), so no result ever steers for the refused call.
+		for (let i = 0; i < 4; i++) { if (tick) await tick(); await new Promise(setImmediate); }
+		assert.equal(messages.length, 0, "no background run was spawned for the refused call");
+
+		// `run --help` is documentation, not a run: the preflight is bypassed
+		// and the call starts normally (the stub prints a gate TOON for it).
+		const helpAck = await tool.execute(
+			"pre-help-1",
+			{ args: "run --help", timeoutMs: 60 },
+			undefined,
+			undefined,
+			{ cwd: stubDir, hasUI: false },
+		);
+		assert.equal(helpAck.details.status, "started",
+			"run --help bypasses the preflight");
+
+		// Read-only inspection is never preflighted either.
+		const statusAck = await tool.execute(
+			"pre-status-1",
+			{ args: "status", timeoutMs: 60 },
+			undefined,
+			undefined,
+			{ cwd: stubDir, hasUI: false },
+		);
+		assert.equal(statusAck.details.status, "started",
+			"status bypasses the preflight");
+
+		// Drain the two bypassed calls so no in-flight background client leaks
+		// into the next block, then stop the watcher like every block here.
+		const sleepReal = (ms) => new Promise((done) => setTimeout(done, ms));
+		const deadline = Date.now() + 4000;
+		while (messages.length < 2 && Date.now() < deadline) {
+			await tick();
+			await sleepReal(25);
+		}
+		assert.equal(messages.length, 2, "both bypassed calls steered their results");
+		handlersForPreflight.get("session_shutdown")();
+	} finally {
+		globalThis.setInterval = savedInterval;
 		globalThis.clearInterval = savedClearInterval;
 		process.env.PATH = savedPath;
 		rmSync(stubDir, { recursive: true, force: true });
@@ -1244,11 +1367,14 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		globalThis[REG_KEY] = new Map();
 		globalThis[WATCH_KEY] = undefined;
 		// Stub no-mistakes: `attach --help` fails, so the direct-driving
-		// fallback path stays headless (no pane wait); the axi call sleeps long
-		// enough that the watcher never steers during this block.
+		// fallback path stays headless (no pane wait); `axi status` answers
+		// instantly (healthy daemon — the preflight must pass) while the axi
+		// pipeline call sleeps long enough that the watcher never steers during
+		// this block.
 		writeFileSync(join(stubDir, "no-mistakes"), [
 			"#!/bin/sh",
 			'if [ "$1" = "attach" ]; then exit 1; fi',
+			'if [ "$1" = "axi" ] && [ "$2" = "status" ]; then exit 0; fi',
 			"sleep 5",
 			"exit 0",
 			"",
@@ -1389,7 +1515,10 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 	let tick;
 	let statusStdout = reviewStatus;
 	const stubDir = mkdtempSync(join(tmpdir(), "pi-nm-report-"));
-	const nmHome = join(stubDir, "nm-home");
+	// Short /tmp base for NM_HOME: the bridge socket lives at
+	// <NM_HOME>/herdr-bridge/<26-char run id>/sock and must fit macOS's
+	// 104-char sun_path — a deep /var/folders tmpdir blows that budget.
+	const nmHome = mkdtempSync(join("/tmp", "nm-home-"));
 	const herdrLogPath = join(stubDir, "herdr-calls.log");
 	const savedSetInterval = globalThis.setInterval;
 	const savedClearInterval = globalThis.clearInterval;
@@ -1418,6 +1547,7 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		writeFileSync(join(stubDir, "no-mistakes"), [
 			"#!/bin/sh",
 			'if [ "$1" = "attach" ]; then exit 1; fi',
+			'if [ "$1" = "axi" ] && [ "$2" = "status" ]; then exit 0; fi',
 			"sleep 5",
 			"exit 0",
 			"",
@@ -1510,6 +1640,7 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		}
 		globalThis[WATCH_KEY] = undefined;
 		rmSync(stubDir, { recursive: true, force: true });
+		rmSync(nmHome, { recursive: true, force: true });
 	}
 }
 
