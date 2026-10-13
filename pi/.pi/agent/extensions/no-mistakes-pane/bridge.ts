@@ -479,7 +479,7 @@ export const STEP_AGENT_EXTENSIONS: readonly string[] = [
 	"builtin:codemode",
 	"usage.ts",
 	"rounded-bar-footer.ts",
-	"thinking-blank.ts",
+	"thinking-title.ts",
 	"tool-call-renderer-public.ts",
 ];
 
