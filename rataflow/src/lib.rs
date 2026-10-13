@@ -337,6 +337,9 @@ pub fn build_flow(spec: &Spec) -> Result<Graph> {
             if let Some(route) = routes.get(index) {
                 content = content.with_route(*route);
             }
+            // One accent per edge, cycled like the node borders, so
+            // parallel arrows stay traceable through crossings.
+            content = content.with_color(accents[index % accents.len()]);
             let mut built = built.with_content(content);
             if spec_edge.flow_speed().is_some() {
                 built = built.with_animated(true);

@@ -16,7 +16,7 @@ use std::collections::HashSet;
 use rataflow::{EdgeContent, EdgePathContext, EdgeRenderContext, HandlePosition, Path, Position, StepEdge};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::Style;
+use ratatui::style::{Color, Style};
 use ratatui::symbols::merge::MergeStrategy;
 
 /// Dots space themselves `3 × speed` cells apart: fast edges carry a
@@ -58,6 +58,7 @@ pub struct FlowEdge {
     speed: Option<f64>,
     phase: usize,
     route: Option<Route>,
+    color: Option<Color>,
 }
 
 impl FlowEdge {
@@ -76,6 +77,7 @@ impl FlowEdge {
             speed: Some(speed),
             phase: 0,
             route: None,
+            color: None,
         }
     }
 
@@ -83,6 +85,13 @@ impl FlowEdge {
     /// specs; without one the library's step router draws the edge.
     pub fn with_route(mut self, route: Route) -> Self {
         self.route = Some(route);
+        self
+    }
+
+    /// Paints the edge with its own accent so parallel arrows can be told
+    /// apart at crossings. Without one the edge stays muted gray.
+    pub fn with_color(mut self, color: Color) -> Self {
+        self.color = Some(color);
         self
     }
 
@@ -95,101 +104,27 @@ impl FlowEdge {
 
     fn render_flowing(&self, ctx: &EdgeRenderContext, speed: f64, phase: usize, buf: &mut Buffer) {
         let palette = ctx.theme.palette();
-        let stroke_style = Style::default().fg(if ctx.selected {
-            palette.accent
-        } else {
-            palette.muted
+        let stroke_style = Style::default().fg(match (self.color, ctx.selected) {
+            // A colored edge keeps its own hue; selection wins either way;
+            // plain edges stay muted gray.
+            (Some(color), false) => color,
+            (_, true) => palette.accent,
+            (None, false) => palette.muted,
         });
-        let dot_style = Style::default().fg(palette.accent);
+        let dot_style = Style::default().fg(self.color.unwrap_or(palette.accent));
         let label_style = Style::default().fg(palette.text);
 
         // Terminal-space polyline, endpoints shifted so the markers sit on
         // the side the line actually leaves and enters — the same offsets
-        // rataflow's own renderer applies.
-        let mut points: Vec<(i32, i32)> = ctx
-            .path
-            .points
-            .iter()
-            .map(|p| ctx.world_to_terminal(*p))
-            .collect();
-        if points.len() < 2 {
-            return;
-        }
-        let source_offset = ctx.path.source_position.edge_endpoint_render_offset();
-        let target_offset = ctx.path.target_position.edge_endpoint_render_offset();
-        if let Some(first) = points.first_mut() {
-            first.0 += source_offset.0;
-            first.1 += source_offset.1;
-        }
-        if let Some(last) = points.last_mut() {
-            last.0 += target_offset.0;
-            last.1 += target_offset.1;
-        }
-
-        // Step paths are orthogonal by construction; guard anyway and fall
-        // back to the static render rather than mis-draw a diagonal.
-        if points
-            .windows(2)
-            .any(|w| w[0].0 != w[1].0 && w[0].1 != w[1].1)
-        {
+        // rataflow's own renderer applies. Non-orthogonal paths fall back
+        // to the library renderer.
+        let Some(points) = edge_points(ctx) else {
             self.step.render(ctx, buf);
             return;
-        }
+        };
+        draw_edge(&points, ctx, stroke_style, label_style, buf);
 
         let area = buf.area;
-        let in_area = |x: i32, y: i32| {
-            x >= area.x as i32
-                && x < (area.x + area.width) as i32
-                && y >= area.y as i32
-                && y < (area.y + area.height) as i32
-        };
-
-        // Corners first (collected, not drawn) so segments can skip them
-        // and the corner pass can merge — same two-pass shape as rataflow's
-        // step renderer, so crossing edges still combine into junctions.
-        let mut corners: Vec<((i32, i32), char)> = Vec::new();
-        for w in points.windows(3) {
-            if let Some(ch) = corner_char(w[0], w[1], w[2]) {
-                corners.push(((w[1].0, w[1].1), ch));
-            }
-        }
-        let corner_cells: HashSet<(i32, i32)> = corners.iter().map(|(cell, _)| *cell).collect();
-
-        // Solid line segments.
-        for w in points.windows(2) {
-            let (from, to) = (w[0], w[1]);
-            if from.1 == to.1 {
-                let (lo, hi) = (from.0.min(to.0), from.0.max(to.0));
-                for x in lo..=hi {
-                    if corner_cells.contains(&(x, from.1)) || !in_area(x, from.1) {
-                        continue;
-                    }
-                    buf[(x as u16, from.1 as u16)]
-                        .merge_symbol("─", MergeStrategy::Fuzzy)
-                        .set_style(stroke_style);
-                }
-            } else {
-                let (lo, hi) = (from.1.min(to.1), from.1.max(to.1));
-                for y in lo..=hi {
-                    if corner_cells.contains(&(from.0, y)) || !in_area(from.0, y) {
-                        continue;
-                    }
-                    buf[(from.0 as u16, y as u16)]
-                        .merge_symbol("│", MergeStrategy::Fuzzy)
-                        .set_style(stroke_style);
-                }
-            }
-        }
-
-        // Corners on top, merged so crossings with other edges combine.
-        for ((x, y), ch) in corners {
-            if !in_area(x, y) {
-                continue;
-            }
-            buf[(x as u16, y as u16)]
-                .merge_symbol(&ch.to_string(), MergeStrategy::Fuzzy)
-                .set_style(stroke_style);
-        }
 
         // The flowing dots. Distance from the source decides which cells
         // carry a dot, so the train always moves source → target. The
@@ -213,7 +148,9 @@ impl FlowEdge {
                 if cell == first || cell == last {
                     continue;
                 }
-                if (distance as f64 - offset).rem_euclid(spacing) < 1.0 && in_area(cell.0, cell.1) {
+                if (distance as f64 - offset).rem_euclid(spacing) < 1.0
+                    && point_in_area(area, cell.0, cell.1)
+                {
                     buf[(cell.0 as u16, cell.1 as u16)]
                         .set_char(DOT)
                         .set_style(dot_style);
@@ -231,7 +168,7 @@ impl FlowEdge {
             HandlePosition::Top => '▲',
             HandlePosition::Bottom => '▼',
         };
-        if in_area(last.0, last.1) {
+        if point_in_area(area, last.0, last.1) {
             buf[(last.0 as u16, last.1 as u16)]
                 .set_char(arrow)
                 .set_style(stroke_style);
@@ -243,6 +180,147 @@ impl FlowEdge {
             let (lx, ly) = ctx.world_to_terminal(ctx.path.label_position);
             draw_label(label, lx, ly, label_style, area, buf);
         }
+    }
+
+    /// The same polyline as `render_flowing` minus the dots — the static
+    /// form of a colored edge.
+    fn render_static(&self, ctx: &EdgeRenderContext, buf: &mut Buffer) {
+        let palette = ctx.theme.palette();
+        let stroke_style = Style::default().fg(match (self.color, ctx.selected) {
+            (Some(color), false) => color,
+            (_, true) => palette.accent,
+            (None, false) => palette.muted,
+        });
+        let label_style = Style::default().fg(palette.text);
+        let Some(points) = edge_points(ctx) else {
+            self.step.render(ctx, buf);
+            return;
+        };
+        draw_edge(&points, ctx, stroke_style, label_style, buf);
+    }
+}
+
+/// Terminal-space polyline for the edge in `ctx`, endpoints shifted so the
+/// markers sit on the side the line actually leaves and enters — the same
+/// offsets rataflow's own renderer applies. `None` when the path is too
+/// short or not orthogonal; callers fall back to the library renderer.
+fn edge_points(ctx: &EdgeRenderContext) -> Option<Vec<(i32, i32)>> {
+    let mut points: Vec<(i32, i32)> = ctx
+        .path
+        .points
+        .iter()
+        .map(|p| ctx.world_to_terminal(*p))
+        .collect();
+    if points.len() < 2 {
+        return None;
+    }
+    let source_offset = ctx.path.source_position.edge_endpoint_render_offset();
+    let target_offset = ctx.path.target_position.edge_endpoint_render_offset();
+    if let Some(first) = points.first_mut() {
+        first.0 += source_offset.0;
+        first.1 += source_offset.1;
+    }
+    if let Some(last) = points.last_mut() {
+        last.0 += target_offset.0;
+        last.1 += target_offset.1;
+    }
+    // Step paths are orthogonal by construction; guard anyway.
+    if points
+        .windows(2)
+        .any(|w| w[0].0 != w[1].0 && w[0].1 != w[1].1)
+    {
+        return None;
+    }
+    Some(points)
+}
+
+/// True when `(x, y)` falls inside `area`.
+fn point_in_area(area: Rect, x: i32, y: i32) -> bool {
+    x >= area.x as i32
+        && x < (area.x + area.width) as i32
+        && y >= area.y as i32
+        && y < (area.y + area.height) as i32
+}
+
+/// Draws one edge polyline: segments, corners, the end arrow, and the
+/// label. Corners are collected first so segments can skip them and the
+/// corner pass can merge — same two-pass shape as rataflow's step
+/// renderer, so crossing edges still combine into junctions.
+fn draw_edge(
+    points: &[(i32, i32)],
+    ctx: &EdgeRenderContext,
+    stroke_style: Style,
+    label_style: Style,
+    buf: &mut Buffer,
+) {
+    let area = buf.area;
+
+    let mut corners: Vec<((i32, i32), char)> = Vec::new();
+    for w in points.windows(3) {
+        if let Some(ch) = corner_char(w[0], w[1], w[2]) {
+            corners.push(((w[1].0, w[1].1), ch));
+        }
+    }
+    let corner_cells: HashSet<(i32, i32)> = corners.iter().map(|(cell, _)| *cell).collect();
+
+    // Solid line segments.
+    for w in points.windows(2) {
+        let (from, to) = (w[0], w[1]);
+        if from.1 == to.1 {
+            let (lo, hi) = (from.0.min(to.0), from.0.max(to.0));
+            for x in lo..=hi {
+                if corner_cells.contains(&(x, from.1)) || !point_in_area(area, x, from.1) {
+                    continue;
+                }
+                buf[(x as u16, from.1 as u16)]
+                    .merge_symbol("─", MergeStrategy::Fuzzy)
+                    .set_style(stroke_style);
+            }
+        } else {
+            let (lo, hi) = (from.1.min(to.1), from.1.max(to.1));
+            for y in lo..=hi {
+                if corner_cells.contains(&(from.0, y)) || !point_in_area(area, from.0, y) {
+                    continue;
+                }
+                buf[(from.0 as u16, y as u16)]
+                    .merge_symbol("│", MergeStrategy::Fuzzy)
+                    .set_style(stroke_style);
+            }
+        }
+    }
+
+    // Corners on top, merged so crossings with other edges combine.
+    for ((x, y), ch) in corners {
+        if !point_in_area(area, x, y) {
+            continue;
+        }
+        buf[(x as u16, y as u16)]
+            .merge_symbol(&ch.to_string(), MergeStrategy::Fuzzy)
+            .set_style(stroke_style);
+    }
+
+    // End marker: the closed arrow rotated to point into the target —
+    // the default `StepEdge` marker, replicated because rataflow keeps
+    // its char-for-position helper crate-private.
+    if let Some(&last) = points.last() {
+        let arrow = match ctx.path.target_position.opposite() {
+            HandlePosition::Left => '◀',
+            HandlePosition::Right => '▶',
+            HandlePosition::Top => '▲',
+            HandlePosition::Bottom => '▼',
+        };
+        if point_in_area(area, last.0, last.1) {
+            buf[(last.0 as u16, last.1 as u16)]
+                .set_char(arrow)
+                .set_style(stroke_style);
+        }
+    }
+
+    // Label, centered on the path's label position — same placement
+    // rule as rataflow's edge renderer.
+    if let Some(label) = ctx.label {
+        let (lx, ly) = ctx.world_to_terminal(ctx.path.label_position);
+        draw_label(label, lx, ly, label_style, area, buf);
     }
 }
 
@@ -289,7 +367,7 @@ impl EdgeContent for FlowEdge {
     fn render(&self, ctx: &EdgeRenderContext, buf: &mut Buffer) {
         match self.speed {
             Some(speed) => self.render_flowing(ctx, speed, self.phase, buf),
-            None => self.step.render(ctx, buf),
+            None => self.render_static(ctx, buf),
         }
     }
 }
