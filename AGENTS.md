@@ -82,6 +82,19 @@ explicit `setup` ignores the decline). The pinned herdr plugin
 by `install.sh`. Ubuntu 24.04 hosts need one interactive `terminal-browser setup`
 (sudo) for the AppArmor userns profile.
 
+## visualization and artifact skills
+
+`artifact` (vendored from upstream careerhackeralex/visualize v0.3.0, MIT, renamed)
+builds single-file HTML artifacts — decks, dashboards, infographics — and routes
+graph-shaped requests to `visualize` by default. `visualize` is the ratatui-only skill:
+live node graphs from a JSON spec through `rataflow-view` (crate in `rataflow/`, a thin
+wrapper on the `rataflow` crate) in a herdr pane (`pane split` + `pane run`). Chat
+replies use the mermaid tool; static ANSI and PNG belong to the mermaid skill. Open
+panes through the herdr CLI, never raw tmux, and never paste pane art into chat.
+install.sh builds the binary (`cargo install --path rataflow --locked`);
+`scripts/test-rataflow.py` is the offline CI suite, with `RATAFLOW_BUILD=1` adding the
+cargo tests as a local pre-merge gate.
+
 ## no-mistakes Herdr bridge invariants
 
 The no-mistakes daemon's step agents run as visible Herdr subagent tabs when the triggering

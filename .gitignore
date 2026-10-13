@@ -7,6 +7,9 @@ nvim/.config/github-copilot/
 __pycache__/
 pi/.pi/agent/extensions/tool-call-renderer-thinking-prototype.html
 
+# rataflow-view build artifacts
+/rataflow/target/
+
 git/.config/lazygit/state.yml
 
 Brewfile.lock.json

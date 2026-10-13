@@ -102,6 +102,9 @@ echo "==> Installing cargo tools (eza, bob-nvim)"
 cargo install eza
 cargo install bob-nvim
 
+echo "==> Installing rataflow-view (live node-graph viewer)"
+cargo install --path "$DOTFILES_DIR/rataflow" --locked
+
 echo "==> Installing neovim nightly via bob"
 bob use nightly
 
