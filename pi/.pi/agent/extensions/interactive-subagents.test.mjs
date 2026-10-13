@@ -974,8 +974,9 @@ assert.equal(
 		);
 		assert.equal(hooks.buildPiReadyPrompt({ effectiveSkills: "", task: "Plain." }), "Plain.");
 
-		// Minimized widget (ctrl+s): the full box collapses to one line that
-		// counts every live state; names and per-agent rows disappear.
+		// Minimized widget: the full box collapses to one line that counts
+		// every live state; names and per-agent rows disappear. (No keybind
+		// since pi 1.2.0; the render path and toggle hook remain tested.)
 		{
 			const now = Date.now();
 			const mkState = (over = {}) => ({
@@ -1038,7 +1039,7 @@ assert.equal(
 			assert.match(pipelined[0], /Activities/);
 			assert.match(pipelined[0], /2 active: 1 active · 1 waiting/);
 
-			// The ctrl+s handler flips module state; the next render picks it up.
+			// The toggle hook flips module state; the next render picks it up.
 			assert.equal(hooks.toggleWidgetMinimized(), true);
 			assert.equal(hooks.toggleWidgetMinimized(), false);
 		}
@@ -1095,14 +1096,9 @@ assert.equal(
 			getAllTools: () => [],
 		};
 		index.default(loadPi);
-		// The widget minimize toggle registers on ctrl+s and flips state.
-		const minimizeShortcut = loadShortcuts.get("ctrl+s");
-		assert.ok(minimizeShortcut, "ctrl+s shortcut is registered");
-		assert.match(minimizeShortcut.description, /minimize/i);
-		const probeA = hooks.toggleWidgetMinimized();
-		minimizeShortcut.handler({ ui: { notify() {} } });
-		const probeB = hooks.toggleWidgetMinimized();
-		assert.equal(probeA, probeB, "the shortcut handler flipped the state exactly once");
+		// The widget minimize keybind was removed (pi 1.2.0 conflict);
+		// loading must register no shortcuts.
+		assert.equal(loadShortcuts.size, 0, "no shortcuts are registered");
 		const listTool = loadTools.find((tool) => tool.name === "subagents_list");
 		assert.ok(listTool, "the subagents_list tool is registered");
 		const theme = {

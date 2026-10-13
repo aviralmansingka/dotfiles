@@ -996,8 +996,8 @@ let statusInterval: ReturnType<typeof setInterval> | null = null;
 /** Collapsed widget mode: one summary line instead of the full box. */
 let widgetMinimized = false;
 
-/** Toggle the collapsed mode and report the new state. Exposed for the
- *  ctrl+s shortcut; the next updateWidget() render picks the shape up. */
+/** Toggle the collapsed mode and report the new state; the next
+ *  updateWidget() render picks the shape up. */
 function toggleWidgetMinimized(): boolean {
   widgetMinimized = !widgetMinimized;
   return widgetMinimized;
@@ -2474,20 +2474,10 @@ async function watchSubagent(
 
 export default function subagentsExtension(pi: ExtensionAPI) {
   latestPi = pi;
-  // Ctrl+S toggles the status widget between the full box and a one-line
-  // count summary. Pi's own Ctrl+S defaults are scoped to pickers (session
-  // tree sort, model selector save, thinking save), so the main-editor key
-  // is free for this. The preference resets with the session, not per run.
-  pi.registerShortcut("ctrl+s", {
-    description: "Minimize or expand the subagents status widget",
-    handler: (ctx: ExtensionContext) => {
-      const minimized = toggleWidgetMinimized();
-      updateWidget();
-      if (runningSubagents.size === 0 && !noMistakesActivity) {
-        ctx?.ui?.notify?.(minimized ? "Subagents widget minimized" : "Subagents widget expanded", "info");
-      }
-    },
-  });
+  // No ctrl+s registration here: pi 1.2.0 records a startup conflict
+  // diagnostic for any extension shortcut that claims a built-in key
+  // (ctrl+s is built-in for app.thinking.save / app.session.toggleSort).
+  // The minimized-widget render path stays; only the keybinding is gone.
   pi.events.on(NO_MISTAKES_ACTIVITY_UPDATE_EVENT, (data: unknown) => {
     const payload = data && typeof data === "object" ? data as { snapshot?: unknown } : {};
     const snapshot = payload.snapshot;
