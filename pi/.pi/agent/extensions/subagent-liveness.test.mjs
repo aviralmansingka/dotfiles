@@ -619,6 +619,7 @@ esac
 			registerTool: (tool) => registeredTools.set(tool.name, tool),
 			registerCommand() {},
 			registerMessageRenderer() {},
+			registerShortcut() {},
 			getAllTools: () => [],
 			on: (name, handler) => { handlers[name] = handler; },
 			events: { on() {}, emit() {} },

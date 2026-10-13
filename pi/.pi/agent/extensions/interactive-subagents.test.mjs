@@ -974,6 +974,75 @@ assert.equal(
 		);
 		assert.equal(hooks.buildPiReadyPrompt({ effectiveSkills: "", task: "Plain." }), "Plain.");
 
+		// Minimized widget (ctrl+s): the full box collapses to one line that
+		// counts every live state; names and per-agent rows disappear.
+		{
+			const now = Date.now();
+			const mkState = (over = {}) => ({
+				source: "pi",
+				startTimeMs: now - 60_000,
+				firstObservationAtMs: now - 60_000,
+				lastActivityAtMs: now - 5_000,
+				lastActivitySequence: 3,
+				localOverrideAtMs: null,
+				localOverrideSequence: null,
+				activeNow: false,
+				activeSinceMs: null,
+				activeScope: null,
+				waitingSinceMs: null,
+				phase: "active",
+				latestEvent: "tool",
+				activityLabel: null,
+				snapshotState: "present",
+				snapshotProblemSinceMs: null,
+				snapshotError: null,
+				currentKind: "active",
+				...over,
+			});
+			const mkAgent = (name, statusState, agent) => ({
+				id: name,
+				toolCallId: "",
+				name,
+				task: "t",
+				surface: "herdr:1",
+				startTime: now - 60_000,
+				sessionFile: "/tmp/none.jsonl",
+				statusState,
+				interactive: true,
+				...(agent ? { agent } : {}),
+			});
+			const agents = [
+				mkAgent("scout", mkState()),
+				mkAgent("planner", mkState({ phase: "waiting", waitingSinceMs: now - 10_000 })),
+				mkAgent(
+					"worker-2",
+					mkState({
+						snapshotState: "missing",
+						lastActivityAtMs: null,
+						firstObservationAtMs: now - 120_000,
+					}),
+				),
+			];
+			const expanded = hooks.renderSubagentWidgetLines(agents, 80);
+			assert.equal(expanded.length, 5, "expanded box: top + one row per agent + bottom");
+			assert.ok(expanded.some((line) => line.includes("planner")), "expanded rows name each agent");
+
+			const minimized = hooks.renderSubagentWidgetLines(agents, 80, null, true);
+			assert.equal(minimized.length, 1, "minimized widget is exactly one line");
+			assert.match(minimized[0], /3 running: 1 active · 1 waiting · 1 stalled/);
+			assert.ok(!minimized[0].includes("planner"), "minimized line drops agent names");
+
+			// Pipeline mode: the no-mistakes row joins the counts under the
+			// Activities title and the active word.
+			const pipelined = hooks.renderSubagentWidgetLines([agents[0]], 80, pipelineActivity, true);
+			assert.match(pipelined[0], /Activities/);
+			assert.match(pipelined[0], /2 active: 1 active · 1 waiting/);
+
+			// The ctrl+s handler flips module state; the next render picks it up.
+			assert.equal(hooks.toggleWidgetMinimized(), true);
+			assert.equal(hooks.toggleWidgetMinimized(), false);
+		}
+
 		// Loadout REPLAY behavior: a recorded allowlist naming a tool with no
 		// backing extension still lands in --tools but gets no -e helper pair
 		// (the resume path replays snapshots exactly). A PROFILE can no longer
@@ -1014,16 +1083,26 @@ assert.equal(
 		const loadHandlers = new Map();
 		const loadSent = [];
 		const loadNotifications = [];
+		const loadShortcuts = new Map();
 		const loadPi = {
 			registerTool: (tool) => loadTools.push(tool),
 			registerCommand: (name, def) => loadCommands.set(name, def),
 			registerMessageRenderer: () => {},
+			registerShortcut: (key, def) => loadShortcuts.set(key, def),
 			sendMessage: (message, options) => loadSent.push({ message, options }),
 			on: (event, handler) => loadHandlers.set(event, handler),
 			events: { on() {}, emit() {} },
 			getAllTools: () => [],
 		};
 		index.default(loadPi);
+		// The widget minimize toggle registers on ctrl+s and flips state.
+		const minimizeShortcut = loadShortcuts.get("ctrl+s");
+		assert.ok(minimizeShortcut, "ctrl+s shortcut is registered");
+		assert.match(minimizeShortcut.description, /minimize/i);
+		const probeA = hooks.toggleWidgetMinimized();
+		minimizeShortcut.handler({ ui: { notify() {} } });
+		const probeB = hooks.toggleWidgetMinimized();
+		assert.equal(probeA, probeB, "the shortcut handler flipped the state exactly once");
 		const listTool = loadTools.find((tool) => tool.name === "subagents_list");
 		assert.ok(listTool, "the subagents_list tool is registered");
 		const theme = {
@@ -1719,6 +1798,7 @@ esac
 			registerTool: (tool) => registeredTools.set(tool.name, tool),
 			registerCommand() {},
 			registerMessageRenderer() {},
+			registerShortcut() {},
 			on: (name, handler) => { handlers[name] = handler; },
 			events: { on() {}, emit() {} },
 			getAllTools: () => [],
