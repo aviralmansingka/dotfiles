@@ -175,10 +175,13 @@ esac
 		// no-agent, bounded, and pollForExit itself closes nothing.
 		process.env.LIV_PROC_MODE = "shell";
 		const noAgentStart = Date.now();
+		// Grace 400ms (not 120ms): each poll spawns the stub herdr (a node
+		// process, ~50-80ms on macOS), and the >=2 process-info assertion below
+		// needs at least two completed polls even on slow hosts.
 		const noAgent = await withTimeout(
 			herdr.pollForExit("wL:p2", new AbortController().signal, {
 				interval: 20,
-				startupGraceMs: 120,
+				startupGraceMs: 400,
 				maxWaitMs: 60_000,
 			}),
 			4000,

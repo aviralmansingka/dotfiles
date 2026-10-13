@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,7 +19,10 @@ for (const [, specifier] of source.matchAll(/from\s+["']([^"']+)["']/g)) {
   assert.ok(specifier.startsWith("node:") || ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui", "./shell-classify.mjs"].includes(specifier));
 }
 
-const tempRoot = mkdtempSync(join(tmpdir(), "tool-call-renderer-public-test-"));
+// realpath: git rev-parse reports the physical repo root (/private/var/...
+// on macOS), so the fixture must use the same spelling or the renderer
+// cannot shorten absolute paths against it.
+const tempRoot = mkdtempSync(join(realpathSync(tmpdir()), "tool-call-renderer-public-test-"));
 let shutdown;
 try {
   const stubAgent = join(tempRoot, "agent.cjs");

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -8,7 +8,9 @@ import { resolveJiti } from "./test-lib/jiti.mjs";
 const require = createRequire(import.meta.url);
 const { jitiPath } = resolveJiti();
 const { createJiti } = require(jitiPath);
-const root = mkdtempSync(join(tmpdir(), "python-tool-test-"));
+// realpath: the spawned python's os.getcwd() reports the physical path
+// (/private/var/... on macOS), so the fixture must use the same spelling.
+const root = mkdtempSync(join(realpathSync(tmpdir()), "python-tool-test-"));
 try {
 	// typebox stub: parameter schemas only need to load, not validate here.
 	const typebox = join(root, "typebox.cjs");

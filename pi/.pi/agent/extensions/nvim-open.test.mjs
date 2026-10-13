@@ -648,9 +648,30 @@ try {
 	mkdirSync(shUtilBin, { recursive: true });
 	mkdirSync(shHome, { recursive: true });
 	mkdirSync(shTmp, { recursive: true });
-	for (const utility of ["timeout", "dirname", "sed", "mktemp", "mkdir", "date", "id", "seq", "sleep", "flock", "python3", "cat"]) {
-		const real = execFileSync("sh", ["-c", `command -v ${utility}`], { encoding: "utf8" }).trim();
-		assert.ok(real, `host provides ${utility} for the nvim-open.sh tests`);
+	// Dual mode per docs/ci-tests/README.md: a missing host tool SKIPs with a
+	// message locally (macOS ships neither timeout nor flock) and FAILs under
+	// STRICT=1 (CI, where the tools exist). The sh-suite below is this file's
+	// last section and cannot run without them, so the skip exits the file.
+	const hostUtilities = ["timeout", "dirname", "sed", "mktemp", "mkdir", "date", "id", "seq", "sleep", "flock", "python3", "cat"];
+	const onPath = (utility) => {
+		try {
+			return execFileSync("sh", ["-c", `command -v ${utility}`], { encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] }).trim();
+		} catch {
+			return ""; // command -v exits 1 when the tool is absent
+		}
+	};
+	const missing = hostUtilities.filter((utility) => !onPath(utility));
+	if (missing.length > 0) {
+		if (process.env.STRICT === "1") {
+			assert.fail(`host provides the nvim-open.sh utilities (missing: ${missing.join(", ")})`);
+		}
+		console.log(`SKIP nvim-open.sh section: host lacks ${missing.join(", ")}`);
+		rmSync(shRoot, { recursive: true, force: true });
+		console.log("nvim-open tests passed (sh section skipped)");
+		process.exit(0);
+	}
+	for (const utility of hostUtilities) {
+		const real = onPath(utility);
 		symlinkSync(real, join(shUtilBin, utility));
 		symlinkSync(real, join(shBin, utility));
 	}

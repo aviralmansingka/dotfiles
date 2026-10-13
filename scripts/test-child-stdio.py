@@ -82,10 +82,6 @@ INTENTIONAL_INHERIT = {
     # Test harness: stderr passthrough lands in the suite runner's log.
     "pi/.pi/agent/extensions/nvim-open.test.mjs": [
         {
-            "needle": "command -v ${utility}",
-            "reason": "test harness: fake-bin probe via real sh; stderr goes to the runner log, not a user TTY",
-        },
-        {
             "needle": "command -v bash",
             "reason": "test harness: fake-bin probe via real sh; stderr goes to the runner log, not a user TTY",
         },
