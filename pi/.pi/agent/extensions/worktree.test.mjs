@@ -17,6 +17,12 @@ import { join } from "node:path";
 import { resolveJiti } from "./test-lib/jiti.mjs";
 
 const require = createRequire(import.meta.url);
+
+// #291 class guard: every captured child call pipes stdio so child
+// stderr never inherits the TTY (scripts/test-child-stdio.py enforces this).
+const gitx = (args, opts = {}) =>
+	execFileSync("git", args, { stdio: ["pipe", "pipe", "pipe"], ...opts });
+
 const { jitiPath } = resolveJiti();
 const { createJiti } = require(jitiPath);
 
@@ -168,13 +174,13 @@ esac
 
 	function makeRepo() {
 		const dir = mkdtempSync(join(tmpdir(), "worktree-repo-"));
-		execFileSync("git", ["-C", dir, "init", "-q", "-b", "main"]);
-		execFileSync("git", ["-C", dir, "config", "user.email", "t@example.com"]);
-		execFileSync("git", ["-C", dir, "config", "user.name", "t"]);
-		execFileSync("git", ["-C", dir, "commit", "-q", "--allow-empty", "-m", "init"]);
+		gitx(["-C", dir, "init", "-q", "-b", "main"]);
+		gitx(["-C", dir, "config", "user.email", "t@example.com"]);
+		gitx(["-C", dir, "config", "user.name", "t"]);
+		gitx(["-C", dir, "commit", "-q", "--allow-empty", "-m", "init"]);
 		// git rev-parse --show-toplevel (used by the tool) reports the
 		// realpath; normalize the fixture once so every argv comparison matches.
-		return execFileSync("git", ["-C", dir, "rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
+		return gitx(["-C", dir, "rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
 	}
 
 	const run = (params, cwd) => tool.execute("t", params, undefined, undefined, { cwd });
@@ -219,7 +225,7 @@ esac
 				"--branch", "feat/dark-mode", "--base", "main", "--no-focus",
 			], "create is unfocused and based on local main");
 			assert.equal(
-				execFileSync("git", ["-C", repo, "config", "--local", "--get", "branch.feat/dark-mode.piWorktree"], { encoding: "utf8" }).trim(),
+				gitx(["-C", repo, "config", "--local", "--get", "branch.feat/dark-mode.piWorktree"], { encoding: "utf8" }).trim(),
 				"pi-worktree",
 				"the fresh branch is ownership-marked like gh-dash marks PR branches",
 			);
@@ -244,7 +250,7 @@ esac
 			spawnCalls.length = 0;
 			const repo = makeRepo();
 			const linkedPath = join(root, "linked-checkout");
-			execFileSync("git", ["-C", repo, "worktree", "add", "-q", "-b", "feat/other", linkedPath]);
+			gitx(["-C", repo, "worktree", "add", "-q", "-b", "feat/other", linkedPath]);
 			process.env.WT_TEST_BRANCH = "feat/from-linked";
 			const { isError } = await finish(
 				run({ branch: "from-linked", task: "t" }, linkedPath),
@@ -306,8 +312,8 @@ esac
 			spawnCalls.length = 0;
 			const repo = makeRepo();
 			const reusePath = join(root, "reuse-checkout");
-			execFileSync("git", ["-C", repo, "worktree", "add", "-q", "-b", "feat/reuse", reusePath]);
-			execFileSync("git", ["-C", repo, "config", "--local", "branch.feat/reuse.piWorktree", "pi-worktree"]);
+			gitx(["-C", repo, "worktree", "add", "-q", "-b", "feat/reuse", reusePath]);
+			gitx(["-C", repo, "config", "--local", "branch.feat/reuse.piWorktree", "pi-worktree"]);
 			const { text, isError, details } = await finish(
 				run({ branch: "reuse", task: "Continue the work." }, repo),
 			);
@@ -326,7 +332,7 @@ esac
 		// Refusals: unowned worktree, unowned branch, gone directory.
 		{
 			const repo = makeRepo();
-			execFileSync("git", ["-C", repo, "worktree", "add", "-q", "-b", "feat/foreign", join(root, "foreign-checkout")]);
+			gitx(["-C", repo, "worktree", "add", "-q", "-b", "feat/foreign", join(root, "foreign-checkout")]);
 			clearCalls();
 			const { isError, text } = await finish(run({ branch: "foreign", task: "t" }, repo));
 			assert.equal(isError, true);
@@ -335,7 +341,7 @@ esac
 		}
 		{
 			const repo = makeRepo();
-			execFileSync("git", ["-C", repo, "branch", "feat/loose"]);
+			gitx(["-C", repo, "branch", "feat/loose"]);
 			clearCalls();
 			const { isError, text } = await finish(run({ branch: "loose", task: "t" }, repo));
 			assert.equal(isError, true);
@@ -344,8 +350,8 @@ esac
 		{
 			const repo = makeRepo();
 			const gonePath = join(root, "gone-checkout");
-			execFileSync("git", ["-C", repo, "worktree", "add", "-q", "-b", "feat/gone", gonePath]);
-			execFileSync("git", ["-C", repo, "config", "--local", "branch.feat/gone.piWorktree", "pi-worktree"]);
+			gitx(["-C", repo, "worktree", "add", "-q", "-b", "feat/gone", gonePath]);
+			gitx(["-C", repo, "config", "--local", "branch.feat/gone.piWorktree", "pi-worktree"]);
 			rmSync(gonePath, { recursive: true, force: true });
 			clearCalls();
 			const { isError, text } = await finish(run({ branch: "gone", task: "t" }, repo));
@@ -358,8 +364,8 @@ esac
 			clearCalls();
 			spawnCalls.length = 0;
 			const repo = makeRepo();
-			execFileSync("git", ["-C", repo, "branch", "feat/owned"]);
-			execFileSync("git", ["-C", repo, "config", "--local", "branch.feat/owned.piWorktree", "pi-worktree"]);
+			gitx(["-C", repo, "branch", "feat/owned"]);
+			gitx(["-C", repo, "config", "--local", "branch.feat/owned.piWorktree", "pi-worktree"]);
 			process.env.WT_TEST_BRANCH = "feat/owned";
 			const { isError, details } = await finish(run({ branch: "owned", task: "t" }, repo));
 			assert.equal(isError, false);
