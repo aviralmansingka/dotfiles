@@ -84,6 +84,13 @@ These rules are load-bearing:
   keep parking for the user), so an orphaned sibling pane can never hold the tab open after
   its session is done; the nvim-open extension likewise closes editor panes it created when
   a subagent session shuts down, while captain sessions leave editor panes open for the human.
+- Subagent tab ownership is durable: the spawner's name registry (`subagent-registry.json`)
+  marks each child `running` with its pane id until its result steer lands. A parent process
+  death (deadline tab close, crash) leaves children ownerless — session_start adoption probes
+  each still-marked pane: alive re-adopts it under a fresh watcher (result delivered, tab
+  closed on real completion), dead finalizes it now (harvest, deliver, close the tab).
+  `subagent_message` probes the same mark before resuming, so a live orphan is steered, never
+  duplicated onto one session file.
 - Pane state surfaces are Herdr's sanctioned ones only: `pane report-metadata --state-label`
   for display and the `herdr:blocked` event for the CI red state. Never report pane state
   from another source or impersonate a `herdr:` source - a second source cannot override the

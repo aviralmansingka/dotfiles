@@ -157,6 +157,25 @@ export interface NameRegistryEntry {
   sessionFile: string;
   /** Canonical session header id (kept for display/lineage). */
   sessionId: string | null;
+  /** Root pane id of the subagent's surface. Set at spawn/resume so a
+   *  restarted parent can probe the pane and adopt or finalize the run. */
+  paneId?: string | null;
+  /** True from spawn/resume until the watcher delivers its result. A stale
+   *  true (parent died mid-run) is self-healing: the next session_start
+   *  probes the pane — alive adopts it, dead finalizes and closes the tab. */
+  running?: boolean;
+  /** Epoch-ms spawn (or resume) time, for elapsed reporting at adoption. */
+  spawnedAt?: number | null;
+  /** Epoch-ms time the result steer was delivered. Informational. */
+  resultDeliveredAt?: number | null;
+  /** Interactive (parking) subagents are steered by the human, not reaped. */
+  interactive?: boolean | null;
+  /** Agent could spawn its own children (orchestrator-class). */
+  canSpawnChildren?: boolean | null;
+  /** Non-pi CLI runner (e.g. "claude"). Adoption skips these: the liveness
+   *  probe matches the pi process, so a live claude session would read as
+   *  "no agent" and get finalized while it still runs. */
+  cli?: string | null;
 }
 
 export type NameRegistry = Record<string, NameRegistryEntry>;
@@ -211,6 +230,31 @@ export function resolveNameInRegistry(
 ): NameRegistryEntry | null {
   const entry = readNameRegistry(artifactDir)[name];
   return entry && typeof entry.sessionFile === "string" ? entry : null;
+}
+
+/**
+ * Patch selected fields of an existing registry entry (spawn/resume state,
+ * completion marks). Atomic like registerName; a no-op when the name is not
+ * registered. Callers pass only the fields that changed.
+ */
+export function updateNameRegistryEntry(
+  artifactDir: string,
+  name: string,
+  patch: Partial<NameRegistryEntry>,
+): void {
+  try {
+    const registry = readNameRegistry(artifactDir);
+    const entry = registry[name];
+    if (!entry || typeof entry.sessionFile !== "string") return;
+    registry[name] = { ...entry, ...patch };
+    const p = nameRegistryPath(artifactDir);
+    const tmp = `${p}.tmp-${process.pid}-${Math.random().toString(16).slice(2, 8)}`;
+    writeFileSync(tmp, JSON.stringify(registry, null, 2), "utf8");
+    renameSync(tmp, p);
+  } catch {
+    // Best-effort: a failed patch only means adoption may re-probe a dead
+    // entry later (self-healing) — it never breaks the caller's flow.
+  }
 }
 
 export function uniqueSubagentName(base: string, taken: ReadonlySet<string>): string {

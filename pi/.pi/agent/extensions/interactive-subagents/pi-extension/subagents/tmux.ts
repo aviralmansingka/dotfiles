@@ -407,6 +407,40 @@ function timeoutResult(): PollResult {
 
 // ── Liveness fallback ──
 
+/** Result of probing a subagent pane for adoption — same contract as
+ *  ./herdr.ts (pane existence + pi-agent foreground presence). */
+export interface PaneAgentProbe {
+  paneExists: boolean;
+  agentAlive: boolean | null;
+}
+
+/** One-shot pane probe for adoption decisions (see index.ts). A pane whose
+ *  id no longer resolves makes display-message fail → paneExists false; a
+ *  successful pid read followed by a failed `ps` sweep → agentAlive null
+ *  (callers treat null as alive so a missing ps never finalizes a run). */
+export async function probePaneAgent(
+  paneId: string,
+  signal?: AbortSignal,
+): Promise<PaneAgentProbe> {
+  let panePid = 0;
+  try {
+    const { stdout } = await execFileAsync(
+      "tmux",
+      ["display-message", "-p", "-t", paneId, "#{pane_pid}"],
+      { encoding: "utf8", signal },
+    );
+    panePid = Number.parseInt(stdout.trim(), 10);
+  } catch {
+    return { paneExists: false, agentAlive: null };
+  }
+  if (!Number.isFinite(panePid) || panePid <= 0) {
+    return { paneExists: false, agentAlive: null };
+  }
+  const processes = await paneForegroundProcessesAsync(paneId, signal);
+  if (processes === null) return { paneExists: true, agentAlive: null };
+  return { paneExists: true, agentAlive: processes.some(isPiForegroundProcess) };
+}
+
 /** True when a foreground-process entry is the subagent pane's pi agent.
  *  Same matcher as ./herdr.ts (name or argv[0] basename). */
 export function isPiForegroundProcess(proc: { name?: string; argv?: string[] }): boolean {

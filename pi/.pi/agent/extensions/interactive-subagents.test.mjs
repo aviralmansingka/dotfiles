@@ -1856,4 +1856,519 @@ esac
 	}
 }
 
+
+// ---------------------------------------------------------------------------
+// Orphaned-subagent adoption — the deadline-close incident class. A parent
+// process killed mid-run leaves child tabs running with no watcher; the
+// durable registry running mark + session_start adoption must finalize the
+// dead ones (harvest → result steer → tab close → mark finished) and adopt
+// the live ones (fresh watcher → result on real completion), and
+// subagent_message must steer a live orphan instead of resuming a duplicate.
+// Offline and deterministic: fake herdr bin + staged registry/session files,
+// poll cadence shrunk through PI_SUBAGENT_POLL_MS.
+// ---------------------------------------------------------------------------
+{
+	const adoptRoot = mkdtempSync(join(tmpdir(), "subagent-adopt-"));
+	const adoptBin = join(adoptRoot, "bin");
+	const adoptCapture = join(adoptRoot, "calls");
+	const adoptSessionDir = join(adoptRoot, "sessions");
+	const adoptConfigDir = join(adoptRoot, "agent-config");
+	mkdirSync(adoptBin, { recursive: true });
+	mkdirSync(adoptSessionDir, { recursive: true });
+	mkdirSync(join(adoptConfigDir, "extensions", "web-search"), { recursive: true });
+	mkdirSync(join(adoptConfigDir, "extensions", "web-fetch"), { recursive: true });
+	writeFileSync(join(adoptConfigDir, "extensions", "web-search", "index.ts"), "export {};\n");
+	writeFileSync(join(adoptConfigDir, "extensions", "web-fetch", "index.ts"), "export {};\n");
+	for (const file of ["mermaid.ts", "tuicr.ts"]) {
+		writeFileSync(join(adoptConfigDir, "extensions", file), "export {};\n");
+	}
+	const parentSessionFile = join(adoptSessionDir, "parent.jsonl");
+	writeFileSync(
+		parentSessionFile,
+		JSON.stringify({ type: "session", version: 3, id: "adopt-parent", cwd: adoptRoot, timestamp: new Date().toISOString() }) + "\n",
+	);
+	// Fake herdr: pane existence, process-info, screen, and tab/pane creation
+	// all read per-call state from env so each scenario restages cheaply.
+	writeFileSync(
+		join(adoptBin, "herdr"),
+		`#!/bin/sh
+printf '%s\\n' "$@" >> "$ADOPT_CAPTURE"
+printf '%s\\n' --call-- >> "$ADOPT_CAPTURE"
+case "$1:$2" in
+	pane:get)
+		if [ "$ADOPT_PANE_GONE" = 1 ] && [ "$3" = "wO:p1" ]; then exit 1; fi
+		printf '%s\\n' '{"result":{"pane":{"pane_id":"wO:p1","tab_id":"wO:t1","workspace_id":"wO"}}}'
+		;;
+	pane:process-info)
+		case "$(cat "$ADOPT_PROC" 2>/dev/null)" in
+			pi) printf '%s\\n' '{"result":{"process_info":{"foreground_processes":[{"name":"pi","pid":301,"argv":["pi"]}]}}}' ;;
+			fail) exit 1 ;;
+			*) printf '%s\\n' '{"result":{"process_info":{"foreground_processes":[{"name":"zsh","pid":300,"argv":["zsh"]}]}}}' ;;
+		esac
+		;;
+	pane:read) printf '%s\\n' "$ADOPT_SCREEN" ;;
+	tab:create) printf '%s\\n' '{"result":{"root_pane":{"pane_id":"wO:p9"}}}' ;;
+	pane:run|pane:close|tab:close|agent:prompt) printf '%s\\n' '{"result":{}}' ;;
+	agent:get) printf '%s\\n' '{"result":{"agent":{"agent_status":"idle"}}}' ;;
+	*) printf '%s\\n' '{"result":{}}' ;;
+esac
+`,
+		{ mode: 0o755 },
+	);
+	const artifactDirOf = () => join(adoptSessionDir, "artifacts", "adopt-parent");
+	const registryPath = () => join(artifactDirOf(), "subagent-registry.json");
+	/** Stage one registry entry + its child session file. */
+	const stageEntry = (name, { ran = true, extra = {} } = {}) => {
+		const childFile = join(adoptSessionDir, `${name}.jsonl`);
+		const lines = [
+			JSON.stringify({ type: "session", version: 3, id: `child-${name}`, cwd: adoptRoot, timestamp: new Date().toISOString() }),
+			JSON.stringify({ type: "message", id: "u1", message: { role: "user", content: [{ type: "text", text: "Do the work." }] } }),
+		];
+		if (ran) {
+			lines.push(
+				JSON.stringify({
+					type: "message",
+					id: "a1",
+					message: {
+						role: "assistant",
+						model: "test-model",
+						content: [{ type: "text", text: `Finished: ${name} report ready.` }],
+						usage: { input: 5, output: 7, totalTokens: 12, cost: { total: 0.1 } },
+					},
+				}),
+			);
+		}
+		writeFileSync(childFile, lines.join("\n") + "\n");
+		mkdirSync(artifactDirOf(), { recursive: true });
+		const registry = existsSync(registryPath()) ? JSON.parse(readFileSync(registryPath(), "utf8")) : {};
+		registry[name] = {
+			sessionFile: childFile,
+			sessionId: `child-${name}`,
+			paneId: "wO:p1",
+			running: true,
+			spawnedAt: Date.now() - 45_000,
+			interactive: false,
+			canSpawnChildren: false,
+			...extra,
+		};
+		writeFileSync(registryPath(), JSON.stringify(registry, null, 2));
+		return childFile;
+	};
+	const adoptCalls = () =>
+		readFileSync(adoptCapture, "utf8")
+			.split("--call--\n")
+			.filter(Boolean)
+			.map((call) => call.trim().split("\n"));
+	const savedAdoptEnv = {
+		PATH: process.env.PATH,
+		HERDR_ENV: process.env.HERDR_ENV,
+		HERDR_PANE_ID: process.env.HERDR_PANE_ID,
+		HERDR_WORKSPACE_ID: process.env.HERDR_WORKSPACE_ID,
+		TMUX: process.env.TMUX,
+		TMUX_PANE: process.env.TMUX_PANE,
+		PI_CODING_AGENT_DIR: process.env.PI_CODING_AGENT_DIR,
+		PI_SUBAGENT_AGENT: process.env.PI_SUBAGENT_AGENT,
+		PI_SUBAGENT_ALLOWED: process.env.PI_SUBAGENT_ALLOWED,
+		PI_SUBAGENT_POLL_MS: process.env.PI_SUBAGENT_POLL_MS,
+		PI_SUBAGENT_MAX_WAIT_MS: process.env.PI_SUBAGENT_MAX_WAIT_MS,
+		PI_SUBAGENT_STARTUP_GRACE_MS: process.env.PI_SUBAGENT_STARTUP_GRACE_MS,
+		PI_SUBAGENT_PROCINFO_FAIL_LIMIT: process.env.PI_SUBAGENT_PROCINFO_FAIL_LIMIT,
+		PI_SUBAGENT_SHELL_READY_DELAY_MS: process.env.PI_SUBAGENT_SHELL_READY_DELAY_MS,
+	};
+	try {
+		process.env.PATH = `${adoptBin}:${savedAdoptEnv.PATH}`;
+		process.env.HERDR_ENV = "1";
+		process.env.HERDR_PANE_ID = "wO:p0";
+		delete process.env.HERDR_WORKSPACE_ID;
+		delete process.env.TMUX;
+		delete process.env.TMUX_PANE;
+		process.env.PI_CODING_AGENT_DIR = adoptConfigDir;
+		delete process.env.PI_SUBAGENT_AGENT;
+		delete process.env.PI_SUBAGENT_ALLOWED;
+		process.env.PI_SUBAGENT_POLL_MS = "30";
+		process.env.PI_SUBAGENT_MAX_WAIT_MS = "4000";
+		process.env.PI_SUBAGENT_STARTUP_GRACE_MS = "2000";
+		process.env.PI_SUBAGENT_PROCINFO_FAIL_LIMIT = "2";
+		process.env.PI_SUBAGENT_SHELL_READY_DELAY_MS = "5";
+		process.env.ADOPT_CAPTURE = adoptCapture;
+		process.env.ADOPT_SCREEN = "";
+
+		const adoptJiti = createJiti(import.meta.url, {
+			moduleCache: false,
+			alias: {
+				"@earendil-works/pi-coding-agent": join(adoptRoot, "agent.cjs"),
+				"@earendil-works/pi-ai": join(adoptRoot, "ai.cjs"),
+				"@earendil-works/pi-tui": join(adoptRoot, "tui.cjs"),
+			},
+		});
+		writeFileSync(join(adoptRoot, "agent.cjs"), "exports.defineTool = (tool) => tool;\nexports.keyHint = () => 'hint';\n");
+		writeFileSync(join(adoptRoot, "ai.cjs"), "exports.Type = new Proxy({}, { get: () => (...args) => ({ args }) });\n");
+		writeFileSync(
+			join(adoptRoot, "tui.cjs"),
+			[
+				"exports.Box = class Box { constructor(...a) { this.a = a; } };",
+				"exports.Text = class Text { constructor(text) { this.text = text; } render() { return String(this.text).split('\\n'); } };",
+				"exports.truncateToWidth = (text, width) => String(text).slice(0, Math.max(0, width));",
+				"exports.visibleWidth = (text) => String(text).length;",
+				"",
+			].join("\n"),
+		);
+		const adoptModule = adoptJiti(
+			new URL("./interactive-subagents/pi-extension/subagents/index.ts", import.meta.url).href,
+		);
+
+		const waitFor = async (predicate, label, timeoutMs = 5000) => {
+			const deadline = Date.now() + timeoutMs;
+			while (Date.now() < deadline) {
+				if (predicate()) return;
+			await new Promise((r) => setTimeout(r, 25));
+			}
+			throw new Error(`${label} never became true`);
+		};
+
+		// -- Scenario A: pane gone, transcript ran → finalize, deliver, no close --
+		{
+			const sent = [];
+			const handlers = {};
+			const fakePi = {
+				registerTool() {},
+				registerCommand() {},
+				registerMessageRenderer() {},
+				on: (name, handler) => { handlers[name] = handler; },
+				events: { on() {}, emit() {} },
+				getAllTools: () => [],
+				sendMessage: (message, opts) => sent.push({ message, opts }),
+			};
+			adoptModule.default(fakePi);
+			stageEntry("gone-worker", { ran: true });
+			writeFileSync(join(adoptRoot, "proc"), "zsh\n");
+			process.env.ADOPT_PROC = join(adoptRoot, "proc");
+			process.env.ADOPT_PANE_GONE = "1";
+			const ctx = {
+				sessionManager: {
+					getSessionFile: () => parentSessionFile,
+					getSessionId: () => "adopt-parent",
+					getSessionDir: () => adoptSessionDir,
+				},
+				cwd: adoptRoot,
+			};
+			handlers.session_start?.({}, ctx);
+			await waitFor(() => sent.some((e) => e.message.customType === "subagent_result"), "finalize steer (pane gone)");
+			const steer = sent.find((e) => e.message.customType === "subagent_result");
+			assert.equal(steer.message.details.name, "gone-worker");
+			assert.equal(steer.message.details.status, "agent-gone");
+			assert.match(steer.message.content, /Recovered at parent restart/);
+			assert.match(steer.message.content, /Finished: gone-worker report ready\./, "harvested summary delivered");
+			assert.equal(steer.opts.deliverAs, "steer");
+			assert.equal(steer.opts.triggerTurn, true);
+			const callsA = adoptCalls();
+			assert.equal(
+				callsA.some((c) => c[0] === "tab" && c[1] === "close"),
+				false,
+				"no tab close for an already-gone pane",
+			);
+			const registryA = JSON.parse(readFileSync(registryPath(), "utf8"));
+			assert.equal(registryA["gone-worker"].running, false, "dead entry marked finished");
+			assert.ok(registryA["gone-worker"].resultDeliveredAt, "delivery time recorded");
+			handlers.session_shutdown?.({}, {});
+			delete process.env.ADOPT_PANE_GONE;
+		}
+
+		// -- Scenario B: pane alive, agent gone → deliver + close the whole tab --
+		{
+			const sent = [];
+			const handlers = {};
+			const fakePi = {
+				registerTool() {},
+				registerCommand() {},
+			registerMessageRenderer() {},
+				on: (name, handler) => { handlers[name] = handler; },
+				events: { on() {}, emit() {} },
+				getAllTools: () => [],
+				sendMessage: (message, opts) => sent.push({ message, opts }),
+			};
+			adoptModule.default(fakePi);
+			stageEntry("shell-worker", { ran: true });
+			handlers.session_start?.({}, {
+				sessionManager: {
+					getSessionFile: () => parentSessionFile,
+					getSessionId: () => "adopt-parent",
+					getSessionDir: () => adoptSessionDir,
+				},
+				cwd: adoptRoot,
+			});
+			await waitFor(() => sent.some((e) => e.message.customType === "subagent_result"), "finalize steer (pane alive)");
+			const steer = sent.find((e) => e.message.customType === "subagent_result");
+			assert.equal(steer.message.details.status, "agent-gone");
+			assert.match(steer.message.content, /Finished: shell-worker report ready\./);
+			assert.ok(
+				adoptCalls().some((c) => c[0] === "tab" && c[1] === "close" && c[2] === "wO:t1"),
+				"the live-pane-but-dead-agent tab closes whole",
+			);
+			const registryB = JSON.parse(readFileSync(registryPath(), "utf8"));
+			assert.equal(registryB["shell-worker"].running, false);
+			handlers.session_shutdown?.({}, {});
+		}
+
+		// -- Scenario C: pane alive, never ran → no-agent verdict, tab closed --
+		{
+			const sent = [];
+			const handlers = {};
+			const fakePi = {
+				registerTool() {},
+				registerCommand() {},
+				registerMessageRenderer() {},
+				on: (name, handler) => { handlers[name] = handler; },
+				events: { on() {}, emit() {} },
+				getAllTools: () => [],
+				sendMessage: (message, opts) => sent.push({ message, opts }),
+			};
+			adoptModule.default(fakePi);
+			stageEntry("never-ran", { ran: false });
+			handlers.session_start?.({}, {
+				sessionManager: {
+					getSessionFile: () => parentSessionFile,
+					getSessionId: () => "adopt-parent",
+					getSessionDir: () => adoptSessionDir,
+				},
+				cwd: adoptRoot,
+			});
+			await waitFor(() => sent.some((e) => e.message.customType === "subagent_result"), "no-agent finalize steer");
+			const steer = sent.find((e) => e.message.customType === "subagent_result");
+			assert.equal(steer.message.details.status, "no-agent");
+			assert.ok(
+				adoptCalls().some((c) => c[0] === "tab" && c[1] === "close" && c[2] === "wO:t1"),
+				"never-started tab closes whole",
+			);
+			const registryC = JSON.parse(readFileSync(registryPath(), "utf8"));
+			assert.equal(registryC["never-ran"].running, false);
+			handlers.session_shutdown?.({}, {});
+		}
+
+		// -- Scenario D: pane alive with pi → adopted watcher delivers on sentinel --
+		{
+			const sent = [];
+			const handlers = {};
+			const tools = new Map();
+			const fakePi = {
+				registerTool: (tool) => tools.set(tool.name, tool),
+				registerCommand() {},
+				registerMessageRenderer() {},
+				on: (name, handler) => { handlers[name] = handler; },
+				events: { on() {}, emit() {} },
+				getAllTools: () => [],
+				sendMessage: (message, opts) => sent.push({ message, opts }),
+			};
+			adoptModule.default(fakePi);
+			stageEntry("live-worker", { ran: true });
+			writeFileSync(join(adoptRoot, "proc"), "pi\n");
+			process.env.ADOPT_SCREEN = "__SUBAGENT_DONE_0__";
+			handlers.session_start?.({}, {
+				sessionManager: {
+					getSessionFile: () => parentSessionFile,
+					getSessionId: () => "adopt-parent",
+					getSessionDir: () => adoptSessionDir,
+				},
+				cwd: adoptRoot,
+			});
+			// Adoption probes pi → registers a fresh watcher → the sentinel on the
+			// screen completes it → result steer + whole-tab close + mark finished.
+			await waitFor(
+				() => sent.some((e) => e.message.customType === "subagent_result" && e.message.details.adopted),
+				"adopted completion steer",
+			);
+			const steer = sent.find(
+				(e) => e.message.customType === "subagent_result" && e.message.details.adopted,
+			);
+			assert.equal(steer.message.details.name, "live-worker");
+			assert.equal(steer.message.details.status, "sentinel");
+			assert.match(steer.message.content, /Finished: live-worker report ready\./);
+			assert.ok(
+				adoptCalls().some((c) => c[0] === "tab" && c[1] === "close" && c[2] === "wO:t1"),
+				"adopted completion closes the whole tab",
+			);
+			const registryD = JSON.parse(readFileSync(registryPath(), "utf8"));
+			assert.equal(registryD["live-worker"].running, false);
+			assert.equal(adoptModule.__test__.runningSubagents.size, 0, "adopted watcher deregistered");
+			process.env.ADOPT_SCREEN = "";
+			handlers.session_shutdown?.({}, {});
+		}
+
+		// -- Scenario E: durable guard steers a live orphan instead of resuming --
+		{
+			const sent = [];
+			const handlers = {};
+			const tools = new Map();
+			const fakePi = {
+				registerTool: (tool) => tools.set(tool.name, tool),
+				registerCommand() {},
+				registerMessageRenderer() {},
+				on: (name, handler) => { handlers[name] = handler; },
+				events: { on() {}, emit() {} },
+				getAllTools: () => [],
+				sendMessage: (message, opts) => sent.push({ message, opts }),
+			};
+			adoptModule.default(fakePi);
+			const childFile = stageEntry("stale-live", { ran: true });
+			// Loadout sidecar so the resume path WOULD be reachable if the guard failed.
+			writeFileSync(
+				`${childFile}.loadout.json`,
+				JSON.stringify({
+					agent: "worker",
+					toolAllowlist: null,
+					model: null,
+					thinking: null,
+					systemPromptMode: null,
+					identity: null,
+					spawnable: null,
+					autoExit: true,
+					cwd: adoptRoot,
+					agentDir: adoptConfigDir,
+				}),
+			);
+			const callsBefore = adoptCalls().length;
+			const ack = await tools.get("subagent_message").execute(
+				"call-e",
+				{ name: "stale-live", message: "Status update please." },
+				new AbortController().signal,
+				undefined,
+				{
+					sessionManager: {
+						getSessionFile: () => parentSessionFile,
+						getSessionId: () => "adopt-parent",
+						getSessionDir: () => adoptSessionDir,
+					},
+					cwd: adoptRoot,
+				},
+			);
+			assert.match(ack.content[0].text, /Message delivered to running subagent/, "live orphan is steered, not resumed");
+			const callsE = adoptCalls().slice(callsBefore);
+			assert.equal(
+				callsE.some((c) => c[0] === "tab" && c[1] === "create"),
+				false,
+				"no resume tab was created for a live orphan",
+			);
+			assert.ok(
+				callsE.some(
+					(c) => c[0] === "pane" && c[1] === "run" && c[2] === "wO:p1" && c[3]?.includes("Status update please."),
+				),
+				"the steer targets the original pane",
+			);
+			const registryE = JSON.parse(readFileSync(registryPath(), "utf8"));
+			assert.equal(registryE["stale-live"].running, true, "steered orphan stays running");
+			handlers.session_shutdown?.({}, {});
+		}
+
+		// -- Scenario F: dead orphan falls through to a real resume --
+		{
+			const sent = [];
+			const handlers = {};
+			const tools = new Map();
+			const fakePi = {
+				registerTool: (tool) => tools.set(tool.name, tool),
+				registerCommand() {},
+				registerMessageRenderer() {},
+				on: (name, handler) => { handlers[name] = handler; },
+				events: { on() {}, emit() {} },
+				getAllTools: () => [],
+				sendMessage: (message, opts) => sent.push({ message, opts }),
+			};
+			adoptModule.default(fakePi);
+			// Re-install the module abort signal: E's session_shutdown aborted the
+			// shared controller, and the resume path's launch signal wraps it. Stage
+			// the dead entry AFTER session_start so adoption cannot finalize it first.
+			handlers.session_start?.({}, {
+				sessionManager: {
+					getSessionFile: () => parentSessionFile,
+					getSessionId: () => "adopt-parent",
+					getSessionDir: () => adoptSessionDir,
+				},
+				cwd: adoptRoot,
+			});
+			const childFile = stageEntry("stale-dead", { ran: true });
+			writeFileSync(
+				`${childFile}.loadout.json`,
+				JSON.stringify({
+					agent: "worker",
+					toolAllowlist: null,
+					model: null,
+					thinking: null,
+					systemPromptMode: null,
+					identity: null,
+					spawnable: null,
+					autoExit: true,
+					cwd: adoptRoot,
+					agentDir: adoptConfigDir,
+				}),
+			);
+			process.env.ADOPT_PANE_GONE = "1";
+			const callsBefore = adoptCalls().length;
+			const ack = await tools.get("subagent_message").execute(
+				"call-f",
+				{ name: "stale-dead", message: "Resume the work." },
+				new AbortController().signal,
+				undefined,
+				{
+					sessionManager: {
+						getSessionFile: () => parentSessionFile,
+						getSessionId: () => "adopt-parent",
+						getSessionDir: () => adoptSessionDir,
+					},
+					cwd: adoptRoot,
+				},
+			);
+			assert.match(ack.content[0].text, /resumed/, "dead orphan resumes in a fresh tab");
+			const callsF = adoptCalls().slice(callsBefore);
+			assert.ok(
+				callsF.some((c) => c[0] === "tab" && c[1] === "create"),
+				"the resume created a fresh tab",
+			);
+			const registryF = JSON.parse(readFileSync(registryPath(), "utf8"));
+			assert.equal(registryF["stale-dead"].running, true, "the resume rewrites the entry as running");
+			assert.equal(registryF["stale-dead"].paneId, "wO:p9", "the entry points at the new pane");
+			delete process.env.ADOPT_PANE_GONE;
+			handlers.session_shutdown?.({}, {});
+		}
+
+		// -- Scenario G: session_start with no surface / no session file is a no-op --
+		{
+			const handlers = {};
+			const fakePi = {
+				registerTool() {},
+				registerCommand() {},
+				registerMessageRenderer() {},
+				on: (name, handler) => { handlers[name] = handler; },
+				events: { on() {}, emit() {} },
+				getAllTools: () => [],
+				sendMessage: () => { throw new Error("adoption must not send anything"); },
+			};
+			adoptModule.default(fakePi);
+			// No sessionManager at all (the plain session_start({}, {}) shape).
+			handlers.session_start?.({}, {});
+			// Empty registry dir: session present, nothing registered.
+			const adoptEmpty = mkdtempSync(join(tmpdir(), "subagent-adopt-empty-"));
+			handlers.session_start?.({}, {
+				sessionManager: {
+					getSessionFile: () => join(adoptEmpty, "p.jsonl"),
+					getSessionId: () => "empty-session",
+					getSessionDir: () => adoptEmpty,
+				},
+				cwd: adoptEmpty,
+			});
+			await new Promise((r) => setTimeout(r, 100));
+			rmSync(adoptEmpty, { recursive: true, force: true });
+		}
+	} finally {
+		for (const [key, value] of Object.entries(savedAdoptEnv)) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+		delete process.env.ADOPT_CAPTURE;
+		delete process.env.ADOPT_PROC;
+		delete process.env.ADOPT_PANE_GONE;
+		delete process.env.ADOPT_SCREEN;
+		rmSync(adoptRoot, { recursive: true, force: true });
+	}
+}
+
 console.log("interactive-subagents surface smoke passed");

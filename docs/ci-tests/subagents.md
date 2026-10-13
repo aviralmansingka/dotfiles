@@ -42,6 +42,14 @@ multiplexer.
 - agent-gone end-to-end: the real tool execute spawns under a fake herdr;
   the liveness fallback fires; the session harvest produces the summary;
   the result arrives as a `subagent_result` steer with stats.
+- Orphaned-subagent adoption (the 2026-10-12 deadline-close incident): the
+  registry carries a durable `running` mark + pane id; session_start
+  adoption finalizes a dead orphan (pane gone → harvest + result steer, no
+  close; pane alive but agent gone → steer + whole-tab close; never-ran →
+  no-agent verdict + close), adopts a live orphan under a fresh watcher and
+  delivers its result at the real sentinel, and is a no-op without a surface
+  or session file; `subagent_message` steers a live orphan (no resume tab)
+  and resumes a dead one (fresh tab, registry rewritten for the new pane).
 - nvim-open.sh: the same lifecycle; no herdr or a scan error means tmux; the
   settle re-scan prevents a duplicate split; the per-tab flock serializes
   concurrent runs; missing flock still works; the key sanitizes ':'.
