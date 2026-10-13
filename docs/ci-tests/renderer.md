@@ -52,7 +52,7 @@ node pi/.pi/agent/extensions/tool-call-renderer-public.test.mjs
 node pi/.pi/agent/extensions/usage.test.mjs
 ```
 
-The suites `thinking-blank`, `web-fetch`, and `web-search` run the same way:
+The suites `thinking-title`, `web-fetch`, and `web-search` run the same way:
 jiti alias stubs, no network, no TTY, no pi install.
 
 ## Runtime and SLA
