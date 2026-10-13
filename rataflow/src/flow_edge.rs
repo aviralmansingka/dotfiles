@@ -13,7 +13,7 @@
 
 use std::collections::HashSet;
 
-use rataflow::{EdgeContent, EdgePathContext, EdgeRenderContext, HandlePosition, Path, StepEdge};
+use rataflow::{EdgeContent, EdgePathContext, EdgeRenderContext, HandlePosition, Path, Position, StepEdge};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
@@ -27,6 +27,24 @@ const SPACING_FACTOR: f64 = 3.0;
 /// The glyph drawn for a flowing dot.
 const DOT: char = '●';
 
+/// Explicit routing for layered top-to-bottom specs, computed by
+/// [`build_flow`](crate::build_flow). `src_off`/`tgt_off` place the attach
+/// points along the source's bottom and the target's top so parallel
+/// edges never share a handle, `lane` gives the horizontal run its own
+/// rows above the target so parallel runs never share a corridor, and
+/// `via` names a detour column for edges that cross intermediate layers.
+#[derive(Debug, Clone, Copy)]
+pub struct Route {
+    /// Attach point across the source width, 0.0..=1.0.
+    pub src_off: f64,
+    /// Attach point across the target width, 0.0..=1.0.
+    pub tgt_off: f64,
+    /// Horizontal lane index, counted upward from the row above the target.
+    pub lane: usize,
+    /// Detour column (world x) for edges that cross intermediate layers.
+    pub via: Option<f64>,
+}
+
 /// An edge that renders exactly like a [`StepEdge`] and, when flowing,
 /// draws animated dots along the line from source to target.
 ///
@@ -39,6 +57,7 @@ pub struct FlowEdge {
     step: StepEdge,
     speed: Option<f64>,
     phase: usize,
+    route: Option<Route>,
 }
 
 impl FlowEdge {
@@ -56,7 +75,15 @@ impl FlowEdge {
             step: StepEdge::default(),
             speed: Some(speed),
             phase: 0,
+            route: None,
         }
+    }
+
+    /// Attaches an explicit route computed by `build_flow` for layered
+    /// specs; without one the library's step router draws the edge.
+    pub fn with_route(mut self, route: Route) -> Self {
+        self.route = Some(route);
+        self
     }
 
     /// Sets the animation phase. The event loop advances it every
@@ -221,7 +248,42 @@ impl FlowEdge {
 
 impl EdgeContent for FlowEdge {
     fn compute_path(&self, ctx: &EdgePathContext) -> Path {
-        self.step.compute_path(ctx)
+        match (self.route, ctx.target_bounds) {
+            // Layered top-to-bottom routing: leave the source's bottom at
+            // this edge's own attach point, turn on this edge's own lane
+            // above the target, and detour around intermediate-layer boxes
+            // via `via` when the straight drop is blocked. Every edge owns
+            // its attach points and lanes, so parallel edges never merge
+            // into shared corridors.
+            (
+                Some(route),
+                Some(ref tgt),
+            ) if ctx.source_position == HandlePosition::Bottom
+                && ctx.target_position == HandlePosition::Top =>
+            {
+                let src = &ctx.source_bounds;
+                let sx = src.position.x + src.dimensions.width * route.src_off;
+                let tx = tgt.position.x + tgt.dimensions.width * route.tgt_off;
+                let sy = src.position.y + src.dimensions.height;
+                let ty = tgt.position.y;
+                let lane_y = ty - 1.0 - route.lane as f64;
+                let mut points = vec![Position::new(sx, sy)];
+                if let Some(vx) = route.via {
+                    let upper_y = sy + 1.0 + route.lane as f64;
+                    points.push(Position::new(sx, upper_y));
+                    points.push(Position::new(vx, upper_y));
+                    points.push(Position::new(vx, lane_y));
+                } else {
+                    points.push(Position::new(sx, lane_y));
+                }
+                points.push(Position::new(tx, lane_y));
+                points.push(Position::new(tx, ty));
+                // Drop consecutive duplicates so straight drops stay clean.
+                points.dedup();
+                Path::new(points, ctx.source_position, ctx.target_position)
+            }
+            _ => self.step.compute_path(ctx),
+        }
     }
 
     fn render(&self, ctx: &EdgeRenderContext, buf: &mut Buffer) {

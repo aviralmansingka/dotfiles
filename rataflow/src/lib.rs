@@ -12,7 +12,7 @@
 
 pub mod flow_edge;
 
-pub use flow_edge::FlowEdge;
+pub use flow_edge::{FlowEdge, Route};
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -306,8 +306,15 @@ pub fn build_flow(spec: &Spec) -> Result<Graph> {
     // direction, so it cannot put two differently-wired nodes — a border
     // leaf and a rack leaf — on the same line.
     let mut placed_by_layers = false;
+    let mut routes: Vec<Route> = Vec::new();
     if !spec.layers.is_empty() {
-        nodes = place_by_layers(nodes, spec);
+        // Pass 1 fixes the columns (horizontal placement is gap-independent).
+        // The route planner then measures spans, and pass 2 re-places with
+        // gaps sized to fit the lane count each gap must carry.
+        nodes = place_by_layers(nodes, spec, &HashMap::new());
+        let (planned, gap_lanes) = plan_routes(&nodes, spec);
+        nodes = place_by_layers(nodes, spec, &gap_lanes);
+        routes = planned;
         placed_by_layers = true;
     }
     let edges: Vec<Edge<FlowEdge>> = spec
@@ -323,10 +330,16 @@ pub fn build_flow(spec: &Spec) -> Result<Graph> {
             if let Some(label) = &spec_edge.label {
                 built = built.with_label(label.clone());
             }
-            if let Some(speed) = spec_edge.flow_speed() {
-                built = built
-                    .with_animated(true)
-                    .with_content(FlowEdge::flowing(speed));
+            let mut content = match spec_edge.flow_speed() {
+                Some(speed) => FlowEdge::flowing(speed),
+                None => FlowEdge::plain(),
+            };
+            if let Some(route) = routes.get(index) {
+                content = content.with_route(*route);
+            }
+            let mut built = built.with_content(content);
+            if spec_edge.flow_speed().is_some() {
+                built = built.with_animated(true);
             }
             built
         })
@@ -347,14 +360,31 @@ pub fn build_flow(spec: &Spec) -> Result<Graph> {
 /// Position nodes by the spec's `layers`. Each inner array is one layer,
 /// in declared order across the perpendicular axis; the layer index runs
 /// along the flow axis. `""` reserves a slot, so a layer can align its
-/// nodes under another layer's columns. Gaps equal the largest node
-/// height on both axes and the margin the smallest node dimension — the
-/// same numbers sugiyama's auto rule uses for ranks, applied compactly.
-fn place_by_layers(mut nodes: Vec<Node<TextContent>>, spec: &Spec) -> Vec<Node<TextContent>> {
+/// nodes under another layer's columns. `gap_lanes` maps each inter-layer
+/// gap (indexed by its upper layer) to the lane count it must fit; the
+/// gap grows beyond the default node height when lanes need the room.
+fn place_by_layers(
+    mut nodes: Vec<Node<TextContent>>,
+    spec: &Spec,
+    gap_lanes: &HashMap<usize, usize>,
+) -> Vec<Node<TextContent>> {
     let max_w = nodes.iter().map(|n| n.width).fold(0.0_f64, f64::max);
     let max_h = nodes.iter().map(|n| n.height).fold(0.0_f64, f64::max);
-    let gap = max_h.max(1.0);
+    let col_gap = max_h.max(1.0);
     let margin = max_w.min(max_h).max(1.0);
+
+    // Row baselines: each layer's boxes plus the sized gap below them.
+    // One spare row beyond the lanes keeps the runs clear of the boxes.
+    let gap = |index: usize| {
+        let lanes = gap_lanes.get(&index).copied().unwrap_or(0);
+        max_h.max((lanes + 1) as f64)
+    };
+    let mut row_y = Vec::with_capacity(spec.layers.len());
+    let mut y = margin;
+    for index in 0..spec.layers.len() {
+        row_y.push(y);
+        y += max_h + gap(index);
+    }
 
     let mut slots: HashMap<&str, (usize, usize)> = HashMap::new();
     for (layer_index, layer) in spec.layers.iter().enumerate() {
@@ -365,12 +395,28 @@ fn place_by_layers(mut nodes: Vec<Node<TextContent>>, spec: &Spec) -> Vec<Node<T
         }
     }
 
+    // Columns are as wide as their widest node, so narrow columns stay
+    // narrow and wide graphs fit the pane.
+    let col_count = slots.values().map(|&(_, col)| col + 1).max().unwrap_or(1);
+    let mut col_width = vec![0.0_f64; col_count];
+    for node in &nodes {
+        if let Some(&(_, col)) = slots.get(node.id.as_str()) {
+            col_width[col] = col_width[col].max(node.width);
+        }
+    }
+    let mut col_x = vec![0.0_f64; col_count];
+    let mut x = margin;
+    for col in 0..col_count {
+        col_x[col] = x;
+        x += col_width[col] + col_gap;
+    }
+
     for node in &mut nodes {
         let Some(&(layer, col)) = slots.get(node.id.as_str()) else {
             continue; // from_json rejects unplaced nodes; defensive only
         };
-        let along = margin + layer as f64 * (max_h + gap);
-        let across = margin + col as f64 * (max_w + gap);
+        let along = row_y[layer];
+        let across = col_x[col];
         let (x, y, source, target) = match spec.direction {
             Direction::TopToBottom => (
                 across,
@@ -392,6 +438,204 @@ fn place_by_layers(mut nodes: Vec<Node<TextContent>>, spec: &Spec) -> Vec<Node<T
     nodes
 }
 
+/// Per-edge routing for layered specs, computed after a first placement
+/// pass fixes the columns. Attach points spread across each node's
+/// outgoing and incoming edges; every horizontal run gets its own lane
+/// above the target row so parallel runs never share a corridor; edges
+/// that cross intermediate layers detour around boxes through a free
+/// column. Returns the routes in spec-edge order and, per inter-layer
+/// gap, the lane count that gap must fit.
+fn plan_routes(
+    nodes: &[Node<TextContent>],
+    spec: &Spec,
+) -> (Vec<Route>, HashMap<usize, usize>) {
+    let fallback = Route {
+        src_off: 0.5,
+        tgt_off: 0.5,
+        lane: 0,
+        via: None,
+    };
+
+    // id -> (x, width, layer) from the placed nodes.
+    let mut geom: HashMap<&str, (f64, f64, usize)> = HashMap::new();
+    for node in nodes {
+        geom.insert(node.id.as_str(), (node.position.x, node.width, 0));
+    }
+    for (layer, ids) in spec.layers.iter().enumerate() {
+        for id in ids {
+            if id.is_empty() {
+                continue;
+            }
+            if let Some(entry) = geom.get_mut(id.as_str()) {
+                entry.2 = layer;
+            }
+        }
+    }
+
+    // Out/in degrees drive the attach-point spread.
+    let mut out_count: HashMap<&str, usize> = HashMap::new();
+    let mut in_count: HashMap<&str, usize> = HashMap::new();
+    for edge in &spec.edges {
+        *out_count.entry(edge.from.as_str()).or_insert(0) += 1;
+        *in_count.entry(edge.to.as_str()).or_insert(0) += 1;
+    }
+    let mut out_slot: HashMap<&str, usize> = HashMap::new();
+    let mut in_slot: HashMap<&str, usize> = HashMap::new();
+
+    // Columns claimed by vertical runs; vias stay clear of them.
+    let mut columns: Vec<f64> = Vec::new();
+
+    // Pass A: geometry per edge — attach points, vias, and the horizontal
+    // spans each edge claims in its gaps.
+    struct Claim {
+        edge: usize,
+        gap: usize,
+        span: (f64, f64),
+    }
+    let mut claims: Vec<Claim> = Vec::new();
+    let mut lanes_needed: HashMap<usize, usize> = HashMap::new();
+
+    let mut routes = Vec::with_capacity(spec.edges.len());
+    for (index, edge) in spec.edges.iter().enumerate() {
+        let (Some(&(sx0, sw, s_layer)), Some(&(tx0, tw, t_layer))) =
+            (geom.get(edge.from.as_str()), geom.get(edge.to.as_str()))
+        else {
+            routes.push(fallback);
+            continue;
+        };
+        // Only downward, cross-layer edges get custom routes; anything
+        // else falls back to the library router.
+        if s_layer >= t_layer {
+            routes.push(fallback);
+            continue;
+        }
+        let n_out = out_count.get(edge.from.as_str()).copied().unwrap_or(1).max(1) as f64;
+        let n_in = in_count.get(edge.to.as_str()).copied().unwrap_or(1).max(1) as f64;
+        let k_out = {
+            let slot = out_slot.entry(edge.from.as_str()).or_insert(0);
+            let value = *slot;
+            *slot += 1;
+            value
+        };
+        let k_in = {
+            let slot = in_slot.entry(edge.to.as_str()).or_insert(0);
+            let value = *slot;
+            *slot += 1;
+            value
+        };
+        let src_off = (k_out + 1) as f64 / (n_out + 1.0);
+        let tgt_off = (k_in + 1) as f64 / (n_in + 1.0);
+        let sx = sx0 + sw * src_off;
+        let tx = tx0 + tw * tgt_off;
+        columns.push(sx);
+        columns.push(tx);
+
+        // Box x-spans in the layers strictly between source and target.
+        let mut blocked: Vec<(f64, f64)> = Vec::new();
+        for layer in spec.layers.iter().take(t_layer).skip(s_layer + 1) {
+            for id in layer {
+                if id.is_empty() {
+                    continue;
+                }
+                if let Some(&(bx, bw, _)) = geom.get(id.as_str()) {
+                    blocked.push((bx, bx + bw));
+                }
+            }
+        }
+        let needs_via = blocked.iter().any(|&(lo, hi)| sx >= lo && sx <= hi);
+        let via = if needs_via {
+            pick_via(&blocked, &columns, sx)
+        } else {
+            None
+        };
+        if let Some(v) = via {
+            columns.push(v);
+        }
+
+        if let Some(vx) = via {
+            claims.push(Claim {
+                edge: index,
+                gap: s_layer,
+                span: (sx.min(vx), sx.max(vx)),
+            });
+            claims.push(Claim {
+                edge: index,
+                gap: t_layer - 1,
+                span: (vx.min(tx), vx.max(tx)),
+            });
+        } else {
+            claims.push(Claim {
+                edge: index,
+                gap: t_layer - 1,
+                span: (sx.min(tx), sx.max(tx)),
+            });
+        }
+        routes.push(Route {
+            src_off,
+            tgt_off,
+            lane: 0,
+            via,
+        });
+    }
+
+    // Pass B: first-fit-decreasing — longest spans claim a lane first, so
+    // narrow spans slot into leftover space and the gap stays shallow.
+    let mut by_gap: HashMap<usize, Vec<(usize, (f64, f64))>> = HashMap::new();
+    for claim in claims {
+        if claim.span.0 == claim.span.1 {
+            continue; // degenerate: no horizontal run, no lane needed
+        }
+        by_gap.entry(claim.gap).or_default().push((claim.edge, claim.span));
+    }
+    for (gap_index, mut entries) in by_gap {
+        entries.sort_by(|a, b| {
+            let wa = (a.1 .1 - a.1 .0).partial_cmp(&(b.1 .1 - b.1 .0)).unwrap_or(std::cmp::Ordering::Equal);
+            wa.reverse()
+        });
+        let mut rows: Vec<Vec<(f64, f64)>> = Vec::new();
+        for (edge_index, span) in entries {
+            let lane = {
+                let mut chosen = rows.len();
+                for (index, claimed) in rows.iter_mut().enumerate() {
+                    if claimed.iter().all(|&(lo, hi)| span.1 <= lo || span.0 >= hi) {
+                        claimed.push(span);
+                        chosen = index;
+                        break;
+                    }
+                }
+                if chosen == rows.len() {
+                    rows.push(vec![span]);
+                }
+                chosen
+            };
+            let route = &mut routes[edge_index];
+            route.lane = route.lane.max(lane);
+            lanes_needed.insert(gap_index, lanes_needed.get(&gap_index).copied().unwrap_or(0).max(route.lane + 1));
+        }
+    }
+
+    (routes, lanes_needed)
+}
+
+/// Picks a free column near `near` that clears every blocked span and
+/// stays at least two cells from every claimed column, so this edge's
+/// vertical run never overlaps another edge's.
+fn pick_via(blocked: &[(f64, f64)], columns: &[f64], near: f64) -> Option<f64> {
+    let mut candidates: Vec<f64> = blocked
+        .iter()
+        .flat_map(|&(lo, hi)| [lo - 1.0, hi + 1.0])
+        .filter(|&x| !blocked.iter().any(|&(lo, hi)| x >= lo && x <= hi))
+        .filter(|&x| columns.iter().all(|&c| (c - x).abs() >= 2.0))
+        .collect();
+    candidates.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    candidates.into_iter().min_by(|a, b| {
+        (a - near)
+            .abs()
+            .partial_cmp(&(b - near).abs())
+            .unwrap_or(std::cmp::Ordering::Equal)
+    })
+}
+
 /// Draw one frame: a one-line header, then the graph on a plain canvas.
 /// The canvas is a flat fill of the theme background — no dot grid — and
 /// node boxes carry the same fill, so borders read as clean lines.
@@ -409,7 +653,16 @@ pub fn draw(frame: &mut Frame, flow: &mut Graph, header: &str) {
         .set_style(canvas, Style::default().bg(palette.canvas_bg));
     frame.render_widget(&mut *flow, canvas);
     frame.render_widget(Controls::new(flow), canvas);
-    frame.render_widget(MiniMap::new(flow), canvas);
+    // The minimap earns its corner only when the graph overflows the
+    // canvas. When everything fits at the capped zoom it only covers the
+    // bottom-right nodes.
+    let overflows = flow.nodes().any(|node| {
+        node.position.x + node.width > canvas.width as f64
+            || node.position.y + node.height > canvas.height as f64
+    });
+    if overflows {
+        frame.render_widget(MiniMap::new(flow), canvas);
+    }
 }
 
 #[cfg(test)]
