@@ -122,6 +122,19 @@ export function workerNameFor(branch: string): string {
 	return slug.length > WORKER_NAME_MAX ? slug.slice(0, WORKER_NAME_MAX) : slug;
 }
 
+/**
+ * The repo's PRIMARY checkout path. `git worktree list` lists the main
+ * worktree first, then each linked worktree. Herdr's `worktree create/open`
+ * must start "from the repo parent workspace": `--cwd` has to name the primary
+ * checkout, so a session running inside a linked worktree passes this, never
+ * its own toplevel.
+ */
+export function primaryCheckout(worktrees: WorktreeEntry[]): string {
+	const first = worktrees.find((w) => !w.bare);
+	if (!first) throw new Error("git worktree list reported no checkout");
+	return first.path;
+}
+
 // --- ownership -------------------------------------------------------------
 
 /** git-config key marking a branch as owned by this tool (gh-dash pattern). */
@@ -342,24 +355,27 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 				return fail(decision.reason, { branch });
 			}
 
-			// 5. Create or open — never focus-stealing.
+			// 5. Create or open — never focus-stealing. `--cwd` must name the
+			// repo's PRIMARY checkout: herdr refuses create/open from a linked
+			// worktree ("start from the repo parent workspace").
+			const herdrCwd = primaryCheckout(worktrees);
 			let response: Record<string, any>;
 			let mode: "created" | "created-existing" | "reused";
 			let worktreePath: string | undefined;
 			try {
 				if (decision.action === "open") {
-					response = herdr(["worktree", "open", "--cwd", repo, "--branch", branch, "--no-focus"]);
+					response = herdr(["worktree", "open", "--cwd", herdrCwd, "--branch", branch, "--no-focus"]);
 					mode = "reused";
 					worktreePath = decision.path;
 				} else if (decision.action === "create-branch") {
-					response = herdr(["worktree", "create", "--cwd", repo, "--branch", branch, "--no-focus"]);
+					response = herdr(["worktree", "create", "--cwd", herdrCwd, "--branch", branch, "--no-focus"]);
 					mode = "created-existing";
 				} else {
 					response = herdr([
 						"worktree",
 						"create",
 						"--cwd",
-						repo,
+							herdrCwd,
 						"--branch",
 						branch,
 						"--base",
@@ -386,7 +402,7 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 			) {
 				return fail(
 					`herdr returned an unexpected response (no root_pane.pane_id or worktree.path). ` +
-						`The worktree may exist — inspect it with \`herdr worktree list --cwd ${repo}\`.`,
+						`The worktree may exist — inspect it with \`herdr worktree list --cwd ${herdrCwd}\`.`,
 					{ branch, mode, herdrResponse: JSON.stringify(response).slice(0, 400) },
 				);
 			}
@@ -400,7 +416,7 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 				return fail(
 					`The worktree is ready at ${worktreePath} (branch ${branch}, pane ${rootPane}), but the worker ` +
 						`could not launch: the interactive-subagents extension is not loaded. Open it with ` +
-						`\`herdr worktree open --cwd ${repo} --branch ${branch}\` or work there directly.`,
+						`\`herdr worktree open --cwd ${herdrCwd} --branch ${branch}\` or work there directly.`,
 					{ branch, path: worktreePath, pane: rootPane, workspace: workspaceId },
 				);
 			}
@@ -420,7 +436,7 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 				return fail(
 					`The worktree is ready at ${worktreePath} (branch ${branch}, pane ${rootPane}), but the worker ` +
 						`launch failed: ${error?.message ?? String(error)}. The worktree stays — retry, or open it with ` +
-						`\`herdr worktree open --cwd ${repo} --branch ${branch}\`.`,
+						`\`herdr worktree open --cwd ${herdrCwd} --branch ${branch}\`.`,
 					{ branch, path: worktreePath, pane: rootPane, workspace: workspaceId },
 				);
 			}
@@ -429,7 +445,7 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 				return fail(
 					`The worktree is ready at ${worktreePath} (branch ${branch}, pane ${rootPane}), but the worker ` +
 						`did not start: ${subagent.error ?? "unknown spawn error"}. The worktree stays — retry, or open it ` +
-						`with \`herdr worktree open --cwd ${repo} --branch ${branch}\`.`,
+						`with \`herdr worktree open --cwd ${herdrCwd} --branch ${branch}\`.`,
 					{ branch, path: worktreePath, pane: rootPane, workspace: workspaceId },
 				);
 			}
@@ -451,7 +467,7 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 						`The worktree keeps the repo's shared Herdr workspace; its picker row is the one durable ` +
 						`session for that worktree. The worker's result arrives automatically as a steer message — ` +
 						`do not poll for it. After the work ships, tear down with /cleanup from a session in that ` +
-						`worktree, or reopen the row any time with \`herdr worktree open --cwd ${repo} --branch ${branch}\`.`,
+						`worktree, or reopen the row any time with \`herdr worktree open --cwd ${herdrCwd} --branch ${branch}\`.`,
 				},
 			],
 			details: {

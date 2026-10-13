@@ -236,6 +236,30 @@ esac
 			assert.equal(details.worker, "spawned");
 		}
 
+		// A session inside a linked worktree still addresses herdr through the
+		// repo's PRIMARY checkout (herdr: "New and open worktree actions start
+		// from the repo parent workspace") — never its own toplevel.
+		{
+			clearCalls();
+			spawnCalls.length = 0;
+			const repo = makeRepo();
+			const linkedPath = join(root, "linked-checkout");
+			execFileSync("git", ["-C", repo, "worktree", "add", "-q", "-b", "feat/other", linkedPath]);
+			process.env.WT_TEST_BRANCH = "feat/from-linked";
+			const { isError } = await finish(
+				run({ branch: "from-linked", task: "t" }, linkedPath),
+			);
+			assert.equal(isError, false);
+			const createCall = calls()[0];
+			assert.equal(createCall[1], "create");
+			assert.equal(
+				createCall[3], repo,
+				"--cwd names the primary checkout, not the linked worktree the session sits in",
+			);
+			assert.equal(createCall.includes(linkedPath), false);
+			assert.equal(spawnCalls[0].params.cwd, fakePath);
+		}
+
 		// A full <type>/<slug> branch is respected verbatim after normalization.
 		{
 			clearCalls();
