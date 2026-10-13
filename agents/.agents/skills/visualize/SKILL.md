@@ -124,8 +124,12 @@ open the pane. Inside Herdr (the normal case), split a sibling and launch:
 test "${HERDR_ENV:-}" = 1
 herdr pane split --current --direction right --ratio 0.5 --cwd "$PWD" --no-focus
 # the JSON response carries the new pane id at .result.pane.pane_id
-herdr pane run <pane-id> "rataflow-view <spec>"
+herdr pane run <pane-id> "rataflow-view <spec>; herdr pane close <pane-id>"
 ```
+
+- The launch command is self-cleaning: when the app exits — `q`, Esc, or
+  Ctrl+C — the pane's shell runs the trailing `herdr pane close` and the
+  pane removes itself. Substitute the real pane id in both places.
 
 - `--ratio 0.5` is an even split: the graph pane gets half of the current
   pane, never a narrowed sliver. Split direction follows the herdr
@@ -138,9 +142,10 @@ herdr pane run <pane-id> "rataflow-view <spec>"
   to move it, drag empty space to pan, scroll to zoom, `f` to fit, arrows
   or Tab to navigate, `q` (or Esc) to quit. Dragging from a node handle to
   another node creates an edge; dragging an edge end reconnects it.
-- Cleanup: once the graph is no longer needed, close the pane with
-  `herdr pane close <pane-id>` (after the human quit the app with `q`), or
-  let the human close it in the TUI.
+  Quitting closes the pane with the app.
+- Cleanup: automatic — the pane closes itself the moment the app exits.
+  Close it early with `herdr pane close <pane-id>` only when replacing
+  the graph with a new spec or when a pane wedges.
 - Outside Herdr (`HERDR_ENV` unset): say so and offer the mermaid tool
   instead. Never run rataflow-view in the agent's own pane — the bash tool
   has no TTY there, and the call blocks until it times out.
@@ -155,6 +160,9 @@ herdr pane run <pane-id> "rataflow-view <spec>"
   (`--direction down` gives a tall graph more room), or shrink the spec.
 - The human closed the pane while the app ran — nothing to clean up; the
   app exits with its pane.
+- The pane vanished while the human was still reading — the app exited
+  (`q`, Esc, Ctrl+C) and the pane closed itself with it. Relaunch the same
+  spec if they want it back.
 - The graph renders but is unreadable — close the pane and cut the spec
   down (see Sizing and hygiene), or re-split with more room.
 - Dots missing on a fast edge — the dot spacing grows with speed
