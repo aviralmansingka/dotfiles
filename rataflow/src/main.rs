@@ -14,7 +14,7 @@ use std::io::stdout;
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
-use rataflow::{EventResponse, FlowEvent};
+use rataflow::{EventResponse, FitViewOptions, FlowEvent};
 use rataflow_view::{ANIMATION_STEP_MS, FlowEdge, Graph, Spec, build_flow, draw};
 use ratatui::DefaultTerminal;
 use ratatui::crossterm::{
@@ -103,8 +103,18 @@ fn run() -> Result<()> {
 /// stepped every [`ANIMATION_STEP_MS`] — and pushes the phase into every
 /// edge, so the dots keep moving even when no input arrives. rataflow's
 /// own animation clock stays crate-private, so the phase lives here.
+/// Fit capped at zoom 1.0: node boxes keep their natural 3-row height
+/// (border + label + border). An uncapped fit zooms past 1.0 to fill the
+/// canvas, which inflates every box with blank interior rows.
+fn request_fit(flow: &mut Graph) {
+    flow.request_fit_view_with_options(FitViewOptions {
+        max_zoom: Some(1.0),
+        ..FitViewOptions::default()
+    });
+}
+
 fn live(terminal: &mut DefaultTerminal, flow: &mut Graph, header: &str) -> Result<()> {
-    flow.request_fit_view();
+    request_fit(flow);
     let mut last_tick = Instant::now();
     let mut anim_leftover_ms: u64 = 0;
     let mut anim_phase: usize = 0;
@@ -165,7 +175,7 @@ fn live(terminal: &mut DefaultTerminal, flow: &mut Graph, header: &str) -> Resul
                 CtEvent::Resize(..) => {
                     // A resize usually means the human changed the layout:
                     // refit so the whole graph stays visible.
-                    flow.request_fit_view();
+                    request_fit(flow);
                 }
                 _ => {}
             }
