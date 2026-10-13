@@ -33,6 +33,15 @@ fi
 echo "==> Installing packages from Brewfile"
 brew bundle --file="$DOTFILES_DIR/Brewfile"
 
+# terminal-browser ships an agent skill and its first run (or `terminal-browser
+# setup`) symlinks ~/.agents/skills/terminal-browser into its own app dist.
+# This repo already vendors that skill (agents/.agents/skills/terminal-browser,
+# stowed into ~/.agents/skills), so decline the binary's own link to keep the
+# stow-managed symlink authoritative across upgrades.
+TB_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/terminal-browser"
+mkdir -p "$TB_STATE"
+printf 'no\n' > "$TB_STATE/skills-choice"
+
 ####################
 #  2. CLI tools    #
 ####################
@@ -146,10 +155,20 @@ if command -v herdr >/dev/null 2>&1; then
         exit 1
     }
 
+    echo "==> Installing pinned Terminal Browser plugin"
+    # The plugin's build step runs the binary installer; without
+    # TERMINAL_BROWSER_SKIP_SETUP that installer runs `terminal-browser setup`,
+    # which symlinks ~/.agents/skills/terminal-browser into the app dist and
+    # replaces the stow-managed symlink this repo owns. The skills-choice=no
+    # seed above only guards implicit first runs, not explicit setup.
+    TERMINAL_BROWSER_SKIP_SETUP=1 herdr plugin install \
+        zenbu-labs/terminal-browser/herdr-plugin \
+        --ref 2165ae76c9639e3996829ab0e6d54ddbd4f06ad8 --yes
+
     echo "==> Installing Herdr Annotate and the protected custom reviewer"
     "$DOTFILES_DIR/scripts/install-herdr-annotate"
 else
-    echo "==> Herdr not found; skipping Herdr integrations (pi, codex, Flash, annotate)"
+    echo "==> Herdr not found; skipping Herdr integrations (pi, codex, Flash, annotate, Terminal Browser)"
 fi
 
 if [[ "$(uname -s)" == "Darwin" ]]; then

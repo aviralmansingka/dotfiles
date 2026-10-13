@@ -38,6 +38,7 @@ brew "zsh"
 # Terminal
 cask "ghostty"
 cask "nikitabobko/tap/aerospace"
+cask "terminal-browser"
 
 # Containers
 cask "docker"

@@ -213,6 +213,8 @@ settings.
 
 The widget tracks each sub-agent from a runtime activity snapshot written by the child: `starting`, `active` (turn/provider/tool work), `waiting` (open for input or another stage), `stalled` (no valid snapshot for too long), or `running` (fallback). Completion messages expand with `Ctrl+O`.
 
+Press `Ctrl+S` in the main editor to toggle the widget between the full box and a one-line count summary — e.g. `3 running: 1 active · 1 waiting · 1 stalled` — with an active No Mistakes pipeline counted in as well. Pi's own `Ctrl+S` defaults live inside pickers (session tree sort, model selector save), so there is no conflict; the toggle resets with the session.
+
 If a Herdr tab or tmux pane is closed before its completion sentinel appears, the run is marked failed instead of stalling forever. The parent receives a steer prompt asking whether to resume the saved session, launch a fresh sub-agent, or ignore it.
 
 The same widget shows an active No Mistakes pipeline when the sibling `no-mistakes-pane.ts` extension is

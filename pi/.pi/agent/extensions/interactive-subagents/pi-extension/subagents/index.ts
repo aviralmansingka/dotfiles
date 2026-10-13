@@ -992,6 +992,16 @@ let widgetInterval: ReturnType<typeof setInterval> | null = null;
 /** Interval timer for status transition checks. */
 let statusInterval: ReturnType<typeof setInterval> | null = null;
 
+/** Collapsed widget mode: one summary line instead of the full box. */
+let widgetMinimized = false;
+
+/** Toggle the collapsed mode and report the new state. Exposed for the
+ *  ctrl+s shortcut; the next updateWidget() render picks the shape up. */
+function toggleWidgetMinimized(): boolean {
+  widgetMinimized = !widgetMinimized;
+  return widgetMinimized;
+}
+
 function formatElapsedMMSS(startTime: number): string {
   const seconds = Math.floor((Date.now() - startTime) / 1000);
   const m = Math.floor(seconds / 60);
@@ -1059,15 +1069,44 @@ function borderBottom(width: number): string {
   return `${ACCENT}╰${"─".repeat(inner)}╯${RST}`;
 }
 
+/** One-line count summary for the minimized widget: every live status
+ *  kind with its count, most interesting first; zero counts are omitted. */
+function minimizedWidgetInfo(
+  agents: RunningSubagent[],
+  pipeline: NoMistakesActivity | null,
+  count: number,
+): string {
+  const counts = new Map<StatusSnapshot["kind"], number>();
+  const bump = (kind: StatusSnapshot["kind"]) => counts.set(kind, (counts.get(kind) ?? 0) + 1);
+  for (const agent of agents) {
+    bump(classifyStatus(agent.statusState, Date.now()).kind);
+  }
+  if (pipeline) bump(noMistakesIsWaiting(pipeline) ? "waiting" : "active");
+
+  const order: StatusSnapshot["kind"][] = ["active", "running", "waiting", "stalled", "starting"];
+  const parts = order
+    .filter((kind) => counts.get(kind))
+    .map((kind) => `${counts.get(kind)} ${kind}`);
+  const total = pipeline ? "active" : "running";
+  return parts.length > 0 ? `${count} ${total}: ${parts.join(" · ")}` : `${count} ${total}`;
+}
+
 function renderSubagentWidgetLines(
   agents: RunningSubagent[],
   width: number,
   pipeline: NoMistakesActivity | null = null,
+  minimized = false,
 ): string[] {
   const count = agents.length + (pipeline ? 1 : 0);
   const title = pipeline ? "Activities" : "Subagents";
-  const info = `${count} ${pipeline ? "active" : "running"}`;
 
+  // Minimized: the whole box collapses to its top border carrying the
+  // per-state counts — one line, no per-agent rows.
+  if (minimized) {
+    return [borderTop(title, minimizedWidgetInfo(agents, pipeline, count), width)];
+  }
+
+  const info = `${count} ${pipeline ? "active" : "running"}`;
   const lines: string[] = [borderTop(title, info, width)];
 
   for (const agent of agents) {
@@ -1121,6 +1160,7 @@ function updateWidget() {
             Array.from(runningSubagents.values()),
             width,
             noMistakesActivity,
+            widgetMinimized,
           );
         },
       };
@@ -1563,6 +1603,8 @@ export const __test__ = {
   contextWindowFor,
   formatUsageSegments,
   widgetIcon,
+  minimizedWidgetInfo,
+  toggleWidgetMinimized,
 };
 
 function startWidgetRefresh() {
@@ -2409,6 +2451,20 @@ async function watchSubagent(
 
 export default function subagentsExtension(pi: ExtensionAPI) {
   latestPi = pi;
+  // Ctrl+S toggles the status widget between the full box and a one-line
+  // count summary. Pi's own Ctrl+S defaults are scoped to pickers (session
+  // tree sort, model selector save, thinking save), so the main-editor key
+  // is free for this. The preference resets with the session, not per run.
+  pi.registerShortcut("ctrl+s", {
+    description: "Minimize or expand the subagents status widget",
+    handler: (ctx: ExtensionContext) => {
+      const minimized = toggleWidgetMinimized();
+      updateWidget();
+      if (runningSubagents.size === 0 && !noMistakesActivity) {
+        ctx?.ui?.notify?.(minimized ? "Subagents widget minimized" : "Subagents widget expanded", "info");
+      }
+    },
+  });
   pi.events.on(NO_MISTAKES_ACTIVITY_UPDATE_EVENT, (data: unknown) => {
     const payload = data && typeof data === "object" ? data as { snapshot?: unknown } : {};
     const snapshot = payload.snapshot;
@@ -2465,6 +2521,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
       (globalThis as any)[WATCHDOG_INTERVAL_KEY] = null;
     }
     noMistakesActivity = null;
+    widgetMinimized = false;
   });
 
   // The spawning tools are always registered here. Whether a child process can
