@@ -2458,4 +2458,279 @@ esac
 	}
 }
 
+// --- pane adoption (the worktree tool's `pane` override): the subagent
+// executes on an EXISTING Herdr root pane instead of a fresh tab ---
+// The worktree tool spawns workers with `pane` = a worktree session's root
+// pane through __pi_interactive_subagents.executeSubagent. The launch must
+// adopt that pane (never `tab create`), the guards must refuse the parent's
+// own pane, a pane that does not resolve, an agent-hosting pane, and a pane
+// whose cwd is not the spawn cwd; a failed adoption must leave the pane
+// open (we never close a pane we did not create); and a clean auto-exit must
+// still close the whole tab — which folds the worktree session row.
+{
+	const paneRoot = mkdtempSync(join(tmpdir(), "subagent-pane-adopt-"));
+	const paneBin = join(paneRoot, "bin");
+	const paneCapture = join(paneRoot, "calls");
+	const paneWorktree = mkdtempSync(join(paneRoot, "worktree"));
+	const paneOther = mkdtempSync(join(paneRoot, "other"));
+	const paneSessionDir = join(paneRoot, "sessions");
+	const paneConfigDir = join(paneRoot, "agent-config");
+	mkdirSync(paneBin, { recursive: true });
+	mkdirSync(paneSessionDir, { recursive: true });
+	mkdirSync(join(paneConfigDir, "extensions", "web-search"), { recursive: true });
+	mkdirSync(join(paneConfigDir, "extensions", "web-fetch"), { recursive: true });
+	writeFileSync(join(paneConfigDir, "extensions", "web-search", "index.ts"), "export {};\n");
+	writeFileSync(join(paneConfigDir, "extensions", "web-fetch", "index.ts"), "export {};\n");
+	for (const file of ["mermaid.ts", "tuicr.ts"]) {
+		writeFileSync(join(paneConfigDir, "extensions", file), "export {};\n");
+	}
+	const parentFile = join(paneSessionDir, "parent.jsonl");
+	writeFileSync(
+		parentFile,
+		JSON.stringify({ type: "session", version: 3, id: "pane-parent", cwd: paneRoot, timestamp: new Date().toISOString() }) + "\n",
+	);
+	writeFileSync(
+		join(paneBin, "herdr"),
+		`#!/bin/sh
+printf '%s\\n' "$@" >> "$PANE_ADOPT_CAPTURE"
+printf '%s\\n' --call-- >> "$PANE_ADOPT_CAPTURE"
+case "$1:$2" in
+	pane:get)
+		case "$PANE_ADOPT_MODE" in
+			missing) printf '%s\\n' '{}' ;;
+			agent) printf '{"result":{"pane":{"pane_id":"wA:p1","cwd":"%s","agent":"pi"}}}\\n' "$PANE_ADOPT_WORKTREE" ;;
+			cwd) printf '{"result":{"pane":{"pane_id":"wA:p1","cwd":"%s","agent":null}}}\\n' "$PANE_ADOPT_OTHER" ;;
+			*) printf '{"result":{"pane":{"pane_id":"wA:p1","tab_id":"wA:t1","workspace_id":"wA","cwd":"%s","agent":null}}}\\n' "$PANE_ADOPT_WORKTREE" ;;
+		esac
+		;;
+	tab:create) printf '%s\\n' '{"result":{"root_pane":{"pane_id":"wA:p9"}}' ;;
+	pane:run) printf '%s\\n' '{"result":{}}' ;;
+	agent:get) printf '%s\\n' '{"result":{"agent":{"agent_status":"idle"}}}' ;;
+	agent:prompt) printf '%s\\n' '{"result":{}}' ;;
+	pane:read) printf '%s\\n' "$PANE_ADOPT_SCREEN" ;;
+	pane:process-info) printf '%s\\n' '{"result":{"process_info":{"foreground_processes":[{"name":"zsh","pid":200,"argv":["zsh"]}]}}}' ;;
+	*) printf '%s\\n' '{"result":{}}' ;;
+esac
+`,
+		{ mode: 0o755 },
+	);
+	const savedPaneEnv = {
+		PATH: process.env.PATH,
+		HERDR_ENV: process.env.HERDR_ENV,
+		HERDR_PANE_ID: process.env.HERDR_PANE_ID,
+		TMUX: process.env.TMUX,
+		TMUX_PANE: process.env.TMUX_PANE,
+		PI_CODING_AGENT_DIR: process.env.PI_CODING_AGENT_DIR,
+		PI_SUBAGENT_AGENT: process.env.PI_SUBAGENT_AGENT,
+		PI_SUBAGENT_ALLOWED: process.env.PI_SUBAGENT_ALLOWED,
+		PI_SUBAGENT_POLL_MS: process.env.PI_SUBAGENT_POLL_MS,
+		PI_SUBAGENT_MAX_WAIT_MS: process.env.PI_SUBAGENT_MAX_WAIT_MS,
+		PI_SUBAGENT_SHELL_READY_DELAY_MS: process.env.PI_SUBAGENT_SHELL_READY_DELAY_MS,
+	};
+	try {
+		process.env.PATH = `${paneBin}:${savedPaneEnv.PATH}`;
+		process.env.HERDR_ENV = "1";
+		process.env.HERDR_PANE_ID = "wA:p0"; // the parent's own pane — adoption must refuse it
+		delete process.env.TMUX;
+		delete process.env.TMUX_PANE;
+		process.env.PI_CODING_AGENT_DIR = paneConfigDir;
+		delete process.env.PI_SUBAGENT_AGENT;
+		delete process.env.PI_SUBAGENT_ALLOWED;
+		process.env.PI_SUBAGENT_POLL_MS = "100";
+		process.env.PI_SUBAGENT_MAX_WAIT_MS = "4000";
+		process.env.PI_SUBAGENT_SHELL_READY_DELAY_MS = "1";
+		process.env.PANE_ADOPT_CAPTURE = paneCapture;
+		process.env.PANE_ADOPT_WORKTREE = paneWorktree;
+		process.env.PANE_ADOPT_OTHER = paneOther;
+		process.env.PANE_ADOPT_MODE = "";
+		process.env.PANE_ADOPT_SCREEN = "";
+
+		const sentMessages = [];
+		const registeredTools = new Map();
+		const handlers = {};
+		let steerResolve;
+		const steerDone = new Promise((resolve) => { steerResolve = resolve; });
+		const fakePi = {
+			registerTool: (tool) => registeredTools.set(tool.name, tool),
+			registerCommand() {},
+			registerMessageRenderer() {},
+			registerShortcut() {},
+			on: (name, handler) => { handlers[name] = handler; },
+			events: { on() {}, emit() {} },
+			getAllTools: () => [],
+			sendMessage: (message, opts) => {
+				sentMessages.push({ message, opts });
+				if (message.customType === "subagent_result") steerResolve();
+			},
+		};
+		const stubs = join(paneRoot, "stubs");
+		mkdirSync(stubs, { recursive: true });
+		writeFileSync(
+			join(stubs, "agent.cjs"),
+			"exports.defineTool = (tool) => tool;\nexports.keyHint = () => 'hint';\n",
+		);
+		writeFileSync(
+			join(stubs, "ai.cjs"),
+			"exports.Type = new Proxy({}, { get: () => (...args) => ({ args }) });\n",
+		);
+		writeFileSync(
+			join(stubs, "tui.cjs"),
+			[
+				"exports.Box = class Box { constructor(...a) { this.a = a; } };",
+				"exports.Text = class Text { constructor(text) { this.text = text; } render() { return String(this.text).split('\\n'); } };",
+				"exports.truncateToWidth = (text, width) => String(text).slice(0, Math.max(0, width));",
+				"exports.visibleWidth = (text) => String(text).length;",
+				"",
+			].join("\n"),
+		);
+		const paneIndex = createJiti(import.meta.url, {
+			moduleCache: false,
+			alias: {
+				"@earendil-works/pi-coding-agent": join(stubs, "agent.cjs"),
+				"@earendil-works/pi-ai": join(stubs, "ai.cjs"),
+				"@earendil-works/pi-tui": join(stubs, "tui.cjs"),
+			},
+		});
+		const paneModule = paneIndex(
+			new URL("./interactive-subagents/pi-extension/subagents/index.ts", import.meta.url).href,
+		);
+		paneModule.default(fakePi);
+		handlers.session_start?.({}, {});
+		const subagentTool = registeredTools.get("subagent");
+		assert.ok(subagentTool, "the subagent tool is registered");
+
+		const paneCalls = () => {
+			try {
+				return readFileSync(paneCapture, "utf8")
+					.split("--call--\n")
+					.filter(Boolean)
+					.map((call) => call.trim().split("\n"));
+			} catch {
+				return [];
+			}
+		};
+		const paneCtx = {
+			sessionManager: {
+				getSessionFile: () => parentFile,
+				getSessionId: () => "pane-parent",
+				getSessionDir: () => paneSessionDir,
+			},
+			cwd: paneRoot,
+		};
+
+		// Guards — each refusal must happen BEFORE any pane input or close.
+		await assert.rejects(
+			subagentTool.execute("g-parent", { agent: "worker", task: "x", cwd: paneWorktree, pane: "wA:p0" }, new AbortController().signal, undefined, paneCtx),
+			/parent session's own pane/,
+		);
+		process.env.PANE_ADOPT_MODE = "missing";
+		await assert.rejects(
+			subagentTool.execute("g-missing", { agent: "worker", task: "x", cwd: paneWorktree, pane: "wA:p1" }, new AbortController().signal, undefined, paneCtx),
+			/does not exist/,
+		);
+		process.env.PANE_ADOPT_MODE = "agent";
+		await assert.rejects(
+			subagentTool.execute("g-agent", { agent: "worker", task: "x", cwd: paneWorktree, pane: "wA:p1" }, new AbortController().signal, undefined, paneCtx),
+			/already hosts an agent/,
+		);
+		process.env.PANE_ADOPT_MODE = "cwd";
+		await assert.rejects(
+			subagentTool.execute("g-cwd", { agent: "worker", task: "x", cwd: paneWorktree, pane: "wA:p1" }, new AbortController().signal, undefined, paneCtx),
+			/does not match the spawn cwd/,
+		);
+		process.env.PANE_ADOPT_MODE = "";
+		const guardCalls = paneCalls();
+		assert.equal(
+			guardCalls.some((call) => call[0] === "pane" && call[1] === "run"),
+			false,
+			"no refused adoption typed into a pane",
+		);
+		assert.equal(
+			guardCalls.some((call) => (call[0] === "pane" || call[0] === "tab") && call[1] === "close"),
+			false,
+			"a failed adoption never closes the pane it did not create",
+		);
+
+		// Happy path — the worker adopts the pane; no tab is created.
+		const ack = await subagentTool.execute(
+			"call-adopt",
+			{ agent: "worker", task: "Adopt me.", cwd: paneWorktree, pane: "wA:p1" },
+			new AbortController().signal,
+			undefined,
+			paneCtx,
+		);
+		assert.equal(ack.details.status, "started");
+		const running = [...paneModule.__test__.runningSubagents.values()][0];
+		assert.ok(running, "the adopted subagent is registered as running");
+		assert.equal(running.surface, "wA:p1", "the surface is the adopted pane, not a fresh tab");
+		const launchCalls = paneCalls();
+		assert.equal(
+			launchCalls.some((call) => call[0] === "tab" && call[1] === "create"),
+			false,
+			"pane adoption never creates a tab",
+		);
+		assert.ok(
+			launchCalls.some((call) => call[0] === "pane" && call[1] === "run" && call[2] === "wA:p1"),
+			"the launch command was typed into the adopted pane",
+		);
+		assert.ok(
+			launchCalls.some((call) => call[0] === "agent" && call[1] === "prompt" && call[2] === "wA:p1"),
+			"the task was prompted into the adopted pane",
+		);
+
+		// Complete cleanly: sentinel on screen → harvest → steer → whole tab close.
+		writeFileSync(
+			running.sessionFile,
+			[
+				JSON.stringify({ type: "session", version: 3, id: "pane-child", cwd: paneWorktree, timestamp: new Date().toISOString() }),
+				JSON.stringify({ type: "message", id: "p1", message: { role: "user", content: [{ type: "text", text: "Adopt me." }] } }),
+				JSON.stringify({
+					type: "message",
+					id: "p2",
+					message: {
+						role: "assistant",
+						model: "test-model",
+						content: [{ type: "text", text: "Adopted and done." }],
+						usage: { input: 5, output: 7, totalTokens: 12, cost: { total: 0.1 } },
+					},
+				}),
+			].join("\n") + "\n",
+		);
+		process.env.PANE_ADOPT_SCREEN = "__SUBAGENT_DONE_0__";
+		await Promise.race([
+			steerDone,
+			new Promise((_, reject) => {
+				const timer = setTimeout(() => reject(new Error("adopted subagent_result steer never arrived")), 5000);
+				timer.unref?.();
+			})
+		]);
+		const steer = sentMessages.find((entry) => entry.message.customType === "subagent_result");
+		assert.ok(steer, "the adopted worker's completion arrived as a steer");
+		assert.equal(steer.message.details.exitCode, 0);
+		assert.match(steer.message.content, /Adopted and done\./);
+		const doneCalls = paneCalls();
+		assert.ok(
+			doneCalls.some((call) => call[0] === "tab" && call[1] === "close" && call[2] === "wA:t1"),
+			"a clean auto-exit closes the adopted pane's whole tab (the worktree row folds)",
+		);
+		assert.equal(
+			doneCalls.some((call) => call[0] === "pane" && call[1] === "close" && call[2] === "wA:p1"),
+			false,
+			"the adopted pane itself is not individually closed",
+		);
+		assert.equal(paneModule.__test__.runningSubagents.size, 0, "the finished worker is deregistered");
+
+		handlers.session_shutdown?.({}, {});
+	} finally {
+		for (const [key, value] of Object.entries(savedPaneEnv)) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+		for (const key of ["PANE_ADOPT_CAPTURE", "PANE_ADOPT_WORKTREE", "PANE_ADOPT_OTHER", "PANE_ADOPT_MODE", "PANE_ADOPT_SCREEN"]) {
+			delete process.env[key];
+		}
+		rmSync(paneRoot, { recursive: true, force: true });
+	}
+}
+
 console.log("interactive-subagents surface smoke passed");

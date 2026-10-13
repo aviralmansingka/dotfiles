@@ -43,6 +43,7 @@ export const closeTabForPane = surface.closeTabForPane;
 
 export const waitForAgentReady = herdr.waitForAgentReady;
 export const sendAgentPrompt = herdr.sendAgentPrompt;
+export const assertAdoptablePane = herdr.assertAdoptablePane;
 
 export async function withNewSurface<T>(
   name: string,

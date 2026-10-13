@@ -29,6 +29,7 @@ import {
   getSubagentPollBounds,
   closeSurface,
   closeTabForPane,
+  assertAdoptablePane,
   probePaneAgent,
   shellEscape,
   readScreen,
@@ -1621,12 +1622,34 @@ function startWidgetRefresh() {
  * sends it. Returns a RunningSubagent — does NOT poll.
  *
  * Call watchSubagent() on the returned object to observe completion.
+ *
+ * Internal `pane` override (never part of the model-facing SubagentParams
+ * schema): a sibling extension passing `{ ..., pane }` through
+ * `__pi_interactive_subagents.executeSubagent` makes the subagent adopt that
+ * existing Herdr pane instead of opening a fresh tab. The worktree tool uses
+ * this to run its worker in a worktree session's root pane. Model-issued
+ * calls cannot carry the field (it is not in the schema), and
+ * assertAdoptablePane refuses the parent's own pane, any agent-hosting pane,
+ * and any pane not already sitting in the spawn's cwd — so an adopted
+ * launch can only type into the intended worktree's first tab. On launch
+ * failure the adopted pane is left open: we never close a pane we did not
+ * create (withNewSurface closes only what it created).
  */
 async function launchSubagent(
-  params: typeof SubagentParams.static,
+  params: typeof SubagentParams.static & { pane?: unknown },
   ctx: { sessionManager: { getSessionFile(): string | null; getSessionId(): string; getSessionDir(): string }; cwd: string },
   signal: AbortSignal,
 ): Promise<RunningSubagent> {
+  const adoptPane = typeof params.pane === "string" ? params.pane.trim() : "";
+  if (adoptPane) {
+    if (activeSurface !== "herdr") {
+      throw new Error("Pane adoption is Herdr-only; this session runs on another surface");
+    }
+    const adoptDefs = params.agent ? loadAgentDefaults(params.agent) : null;
+    const { effectiveCwd } = resolveSubagentPaths(params, adoptDefs);
+    assertAdoptablePane(adoptPane, effectiveCwd ?? ctx.cwd);
+    return launchSubagentOnSurface(params, ctx, adoptPane, signal);
+  }
   return withNewSurface(params.name, (surface) => launchSubagentOnSurface(params, ctx, surface, signal));
 }
 

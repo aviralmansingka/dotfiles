@@ -44,6 +44,18 @@ The tuicr extension's `tuicr_review` uses this to start the bundled
 reports whether such a spawn is still running (tuicr refuses a second reviewer
 for the same review target — another PR or range still runs concurrently).
 
+An extra internal `pane` field makes the subagent adopt an existing Herdr pane
+instead of opening a fresh tab:
+`executeSubagent({ agent, name, task, cwd, pane }, ctx)`. The worktree tool
+(`worktree.ts`, a sibling extension) passes the root pane from `herdr worktree
+create/open` so its worker runs in the worktree session's first tab. The field
+is extension-only — it is not part of the model-facing `subagent` schema — and
+`assertAdoptablePane` refuses the parent session's own pane, any pane already
+hosting an agent, and any pane whose cwd is not the spawn's cwd. On a clean
+auto-exit the whole tab closes (the worktree session's picker row folds with
+it); on a failed launch the adopted pane is left open, because the spawner
+never closes a pane it did not create.
+
 ### Spawning
 
 ```typescript
