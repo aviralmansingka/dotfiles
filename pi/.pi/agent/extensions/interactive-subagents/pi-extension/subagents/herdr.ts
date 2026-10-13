@@ -510,6 +510,32 @@ async function paneExistsAsync(paneId: string, signal?: AbortSignal): Promise<bo
 
 // ── Liveness fallback ──
 
+/** Result of probing a subagent pane for adoption: does the pane still
+ *  exist, and is the pi agent still its foreground process? */
+export interface PaneAgentProbe {
+  /** False when the pane (or its whole tab) no longer resolves — the run
+   *  is over and only the transcript can supply a result. */
+  paneExists: boolean;
+  /** True when the pane's foreground processes include the pi agent.
+   *  Null when the process read fails — callers treat null as alive
+   *  (adopt) so a transient read can never finalize a live run. */
+  agentAlive: boolean | null;
+}
+
+/** One-shot pane probe for adoption decisions (see index.ts). Uses the
+ *  same reads as pollForExit's liveness fallback. */
+export async function probePaneAgent(
+  paneId: string,
+  signal?: AbortSignal,
+): Promise<PaneAgentProbe> {
+  if (!(await paneExistsAsync(paneId, signal))) {
+    return { paneExists: false, agentAlive: null };
+  }
+  const processes = await paneForegroundProcessesAsync(paneId, signal);
+  if (processes === null) return { paneExists: true, agentAlive: null };
+  return { paneExists: true, agentAlive: processes.some(isPiForegroundProcess) };
+}
+
 /** True when a foreground-process entry is the subagent pane's pi agent.
  *  herdr reports argv[0] as a bare name; also basename-match a full path. */
 export function isPiForegroundProcess(proc: { name?: string; argv?: string[] }): boolean {

@@ -29,6 +29,7 @@ import {
   getSubagentPollBounds,
   closeSurface,
   closeTabForPane,
+  probePaneAgent,
   shellEscape,
   readScreen,
   type PollResult,
@@ -43,6 +44,7 @@ import {
   readSubagentLoadout,
   registerName,
   resolveNameInRegistry,
+  updateNameRegistryEntry,
   seedSubagentSessionFile,
   summarizeSessionStats,
   uniqueSubagentName,
@@ -872,6 +874,11 @@ interface RunningSubagent {
    * subagent's pane (e.g. planner).
    */
   interactive: boolean;
+  /** Agent could spawn its own children (orchestrator-class). */
+  canSpawnChildren?: boolean;
+  /** Spawner session artifact dir hosting this subagent's registry entry —
+   *  the durable running mark is written there on completion. */
+  parentArtifactDir?: string;
 }
 
 /** All currently running subagents, keyed by id. */
@@ -985,6 +992,16 @@ let widgetInterval: ReturnType<typeof setInterval> | null = null;
 /** Interval timer for status transition checks. */
 let statusInterval: ReturnType<typeof setInterval> | null = null;
 
+/** Collapsed widget mode: one summary line instead of the full box. */
+let widgetMinimized = false;
+
+/** Toggle the collapsed mode and report the new state. Exposed for the
+ *  ctrl+s shortcut; the next updateWidget() render picks the shape up. */
+function toggleWidgetMinimized(): boolean {
+  widgetMinimized = !widgetMinimized;
+  return widgetMinimized;
+}
+
 function formatElapsedMMSS(startTime: number): string {
   const seconds = Math.floor((Date.now() - startTime) / 1000);
   const m = Math.floor(seconds / 60);
@@ -1052,15 +1069,44 @@ function borderBottom(width: number): string {
   return `${ACCENT}╰${"─".repeat(inner)}╯${RST}`;
 }
 
+/** One-line count summary for the minimized widget: every live status
+ *  kind with its count, most interesting first; zero counts are omitted. */
+function minimizedWidgetInfo(
+  agents: RunningSubagent[],
+  pipeline: NoMistakesActivity | null,
+  count: number,
+): string {
+  const counts = new Map<StatusSnapshot["kind"], number>();
+  const bump = (kind: StatusSnapshot["kind"]) => counts.set(kind, (counts.get(kind) ?? 0) + 1);
+  for (const agent of agents) {
+    bump(classifyStatus(agent.statusState, Date.now()).kind);
+  }
+  if (pipeline) bump(noMistakesIsWaiting(pipeline) ? "waiting" : "active");
+
+  const order: StatusSnapshot["kind"][] = ["active", "running", "waiting", "stalled", "starting"];
+  const parts = order
+    .filter((kind) => counts.get(kind))
+    .map((kind) => `${counts.get(kind)} ${kind}`);
+  const total = pipeline ? "active" : "running";
+  return parts.length > 0 ? `${count} ${total}: ${parts.join(" · ")}` : `${count} ${total}`;
+}
+
 function renderSubagentWidgetLines(
   agents: RunningSubagent[],
   width: number,
   pipeline: NoMistakesActivity | null = null,
+  minimized = false,
 ): string[] {
   const count = agents.length + (pipeline ? 1 : 0);
   const title = pipeline ? "Activities" : "Subagents";
-  const info = `${count} ${pipeline ? "active" : "running"}`;
 
+  // Minimized: the whole box collapses to its top border carrying the
+  // per-state counts — one line, no per-agent rows.
+  if (minimized) {
+    return [borderTop(title, minimizedWidgetInfo(agents, pipeline, count), width)];
+  }
+
+  const info = `${count} ${pipeline ? "active" : "running"}`;
   const lines: string[] = [borderTop(title, info, width)];
 
   for (const agent of agents) {
@@ -1114,6 +1160,7 @@ function updateWidget() {
             Array.from(runningSubagents.values()),
             width,
             noMistakesActivity,
+            widgetMinimized,
           );
         },
       };
@@ -1539,6 +1586,10 @@ export const __test__ = {
   resolveResultPresentation,
   resolveResumeLaunchBehavior,
   shouldCloseSubagentTab,
+  adoptOrphanedSubagents,
+  adoptSubagentIntoWatchers,
+  finalizeOrphanedSubagent,
+  registryEntryOwned,
   runningSubagents,
   registerActiveWatcher,
   unregisterActiveWatcher,
@@ -1552,6 +1603,8 @@ export const __test__ = {
   contextWindowFor,
   formatUsageSegments,
   widgetIcon,
+  minimizedWidgetInfo,
+  toggleWidgetMinimized,
 };
 
 function startWidgetRefresh() {
@@ -1727,6 +1780,7 @@ async function launchSubagentOnSurface(
       cli: "claude",
       sentinelFile,
       interactive: effectiveInteractive,
+      canSpawnChildren: false,
       statusState: createStatusState({
         source: "claude",
         startTimeMs: startTime,
@@ -1883,6 +1937,7 @@ async function launchSubagentOnSurface(
     launchScriptFile,
     activityFile,
     interactive: effectiveInteractive,
+    canSpawnChildren: grantSpawning,
     statusState: createStatusState({
       source: "pi",
       startTimeMs: startTime,
@@ -1932,6 +1987,231 @@ function closeFinishedSubagentSurface(
       closeSurface(running.surface);
     }
   } catch {}
+}
+
+// ── Orphaned-subagent adoption ──
+// Live incident (2026-10-12 research fan-out): a parent orchestrator was
+// closed at its 30-minute wait deadline; its process died instantly, taking
+// every in-flight child watcher with it. The children kept running in their
+// Herdr tabs, finished, and dropped to bare shells — but no watcher remained
+// to observe completion, deliver the result, or close the tab: five tabs
+// leaked permanently. Worse, the resumed parent's subagent_message resumed
+// still-running children by name (its in-memory running map was empty), so
+// two pi processes wrote one session file and the same work files at once.
+//
+// The fix is a durable running mark in the spawner's on-disk name registry
+// plus adoption at session_start: probe each still-marked-running pane —
+// alive adopts it back under a fresh watcher (result delivered + tab closed
+// on real completion), dead finalizes it now (harvest, deliver, close the
+// tab). subagent_message consults the same mark before resuming, so a live
+// orphan is steered, never duplicated. The mark is a hint, not a lease: a
+// stale `running: true` self-heals on the next session_start probe.
+
+/** True when some in-memory watcher already owns this name or session file
+ *  (this process, or a sibling session inside it). */
+function registryEntryOwned(sessionFile: string, name: string): boolean {
+  return Array.from(runningSubagents.values()).some(
+    (r) => r.name === name || (r.sessionFile && resolve(r.sessionFile) === resolve(sessionFile)),
+  );
+}
+
+/** Register an orphaned-but-live subagent back under a fresh watcher. The
+ *  watcher's completion path delivers the result steer and closes the tab,
+ *  exactly as for a spawn in this process. Elapsed counts from adoption (a
+ *  fresh maxWaitMs window); details.adopted marks the late watch. */
+function adoptSubagentIntoWatchers(
+  pi: ExtensionAPI,
+  opts: { artifactDir: string; name: string; entry: { sessionFile: string; interactive?: boolean | null; canSpawnChildren?: boolean | null } },
+  paneId: string,
+): RunningSubagent {
+  const id = Math.random().toString(16).slice(2, 10);
+  const now = Date.now();
+  const running: RunningSubagent = {
+    id,
+    toolCallId: "",
+    name: opts.name,
+    task: "(adopted at parent restart — see its session file)",
+    surface: paneId,
+    startTime: now,
+    sessionFile: opts.entry.sessionFile,
+    transcriptBaseline: existsSync(opts.entry.sessionFile) ? statSync(opts.entry.sessionFile).size : 0,
+    interactive: opts.entry.interactive ?? false,
+    canSpawnChildren: opts.entry.canSpawnChildren ?? false,
+    parentArtifactDir: opts.artifactDir,
+    statusState: createStatusState({ source: "pi", startTimeMs: now }),
+  };
+  runningSubagents.set(id, running);
+  startWidgetRefresh();
+  startStatusRefresh(pi);
+
+  const watcherAbort = new AbortController();
+  running.abortController = watcherAbort;
+  watchSubagent(running, watcherAbort.signal)
+    .then((result) => {
+      updateWidget();
+      emitFinishedSubagentBackgroundUpdate(pi, running, result);
+      const presentation = resolveResultPresentation(result, running.name);
+      pi.sendMessage(
+        {
+          customType: "subagent_result",
+          content: presentation,
+          display: true,
+          details: {
+            name: running.name,
+            task: running.task,
+            status: result.reason ??
+              (result.killed ? "killed" : result.exitCode === 0 ? "done" : "error"),
+            exitCode: result.exitCode,
+            elapsed: result.elapsed,
+            sessionFile: result.sessionFile,
+            adopted: true,
+            ...(result.sessionId ? { sessionId: result.sessionId } : {}),
+            ...(result.errorMessage ? { errorMessage: result.errorMessage } : {}),
+            ...(result.killed ? { killed: true } : {}),
+            ...(result.stats ? { stats: result.stats } : {}),
+          },
+        },
+        { triggerTurn: true, deliverAs: "steer" },
+      );
+      updateNameRegistryEntry(opts.artifactDir, running.name, {
+        running: false,
+        resultDeliveredAt: Date.now(),
+      });
+    })
+    .catch((err) => {
+      // Rejection paths leave the pane closed (the watcher's own catch
+      // closed it) — deliver the error and release the durable mark so the
+      // next restart does not probe a dead entry forever.
+      updateWidget();
+      pi.sendMessage(
+        {
+          customType: "subagent_result",
+          content: `Adopted sub-agent "${opts.name}" error: ${err?.message ?? String(err)}`,
+          display: true,
+          details: { name: opts.name, error: err?.message, adopted: true },
+        },
+        { triggerTurn: true, deliverAs: "steer" },
+      );
+      updateNameRegistryEntry(opts.artifactDir, opts.name, {
+        running: false,
+        resultDeliveredAt: Date.now(),
+      });
+    });
+  return running;
+}
+
+/** Finalize a dead orphaned entry: harvest its transcript, deliver the result
+ *  steer the original watcher never sent, close its tab when the pane still
+ *  exists, and clear the durable running mark. */
+function finalizeOrphanedSubagent(
+  pi: ExtensionAPI,
+  opts: {
+    artifactDir: string;
+    name: string;
+    entry: { sessionFile: string; spawnedAt?: number | null; sessionId?: string | null };
+    paneId: string;
+    paneExists: boolean;
+  },
+): void {
+  const name = opts.name;
+  const sessionFile = opts.entry.sessionFile;
+  let ran = false;
+  let summary: string | null = null;
+  let sessionId: string | null = opts.entry.sessionId ?? null;
+  try {
+    const entries = getNewEntries(sessionFile, 0);
+    ran = entries.some(
+      (e) => e.type === "message" && (e as { message?: { role?: string } }).message?.role === "assistant",
+    );
+    summary = findLastAssistantMessage(entries);
+    if (sessionId === null) sessionId = getSessionId(sessionFile);
+  } catch {}
+
+  if (opts.paneExists) {
+    // The run is over but the tab lives: close the whole tab so sibling
+    // panes die with it instead of holding it open on a bare shell.
+    try {
+      closeTabForPane(opts.paneId);
+    } catch {}
+  }
+  updateNameRegistryEntry(opts.artifactDir, name, {
+    running: false,
+    resultDeliveredAt: Date.now(),
+  });
+
+  const elapsed =
+    typeof opts.entry.spawnedAt === "number"
+      ? Math.max(0, Math.floor((Date.now() - opts.entry.spawnedAt) / 1000))
+      : 0;
+  const reason = ran ? "agent-gone" : opts.paneExists ? "no-agent" : "killed";
+  const result = {
+    name,
+    reason,
+    exitCode: ran ? 0 : 1,
+    elapsed,
+    killed: !ran && !opts.paneExists,
+    summary:
+      summary ??
+      (ran
+        ? "The subagent finished without a harvestable assistant message."
+        : opts.paneExists
+          ? "The subagent never started — no pi process was ever seen in its pane. No result was saved."
+          : "The pane was closed before the subagent reported completion. No result was saved."),
+    sessionFile,
+    ...(sessionId ? { sessionId } : {}),
+  };
+  const presentation = resolveResultPresentation(result, name);
+  pi.sendMessage(
+    {
+      customType: "subagent_result",
+      content:
+        `Recovered at parent restart — this sub-agent's original watcher died with its parent process; ` +
+        `its tab has been closed.\n\n${presentation}`,
+      display: true,
+      details: {
+        name,
+        status: reason,
+        exitCode: result.exitCode,
+        elapsed,
+        sessionFile,
+        adopted: true,
+        ...(sessionId ? { sessionId } : {}),
+        ...(result.killed ? { killed: true } : {}),
+      },
+    },
+    { triggerTurn: true, deliverAs: "steer" },
+  );
+}
+
+/** session_start hook: adopt or finalize every registry entry still marked
+ *  running. Fire-and-forget safe: a failed probe or harvest never breaks
+ *  session start. Idempotent: in-memory ownership and the running flag make
+ *  repeated calls (reload, multiple sessions per process) no-ops. */
+async function adoptOrphanedSubagents(pi: ExtensionAPI, ctx: unknown): Promise<void> {
+  if (!isMuxAvailable()) return;
+  const sm = (ctx as { sessionManager?: any } | undefined)?.sessionManager;
+  if (!sm || typeof sm.getSessionFile !== "function" || !sm.getSessionFile()) return;
+  if (typeof sm.getSessionDir !== "function" || typeof sm.getSessionId !== "function") return;
+
+  const artifactDir = getArtifactDir(sm.getSessionDir(), sm.getSessionId());
+  const registry = readNameRegistry(artifactDir);
+  for (const [name, entry] of Object.entries(registry)) {
+    if (entry.running !== true) continue;
+    if (typeof entry.sessionFile !== "string" || !existsSync(entry.sessionFile)) continue;
+    // Non-pi runners are skipped: the probe matches the pi process, so a
+    // live claude session would read as "no agent" and get finalized while
+    // it still runs. Their tabs keep parking for the user, as before.
+    if (entry.cli && entry.cli !== "pi") continue;
+    if (typeof entry.paneId !== "string" || entry.paneId.length === 0) continue;
+    if (registryEntryOwned(entry.sessionFile, name)) continue;
+
+    const probe = await probePaneAgent(entry.paneId);
+    if (probe.paneExists && (probe.agentAlive === true || probe.agentAlive === null)) {
+      adoptSubagentIntoWatchers(pi, { artifactDir, name, entry }, entry.paneId);
+    } else {
+      finalizeOrphanedSubagent(pi, { artifactDir, name, entry, paneId: entry.paneId, paneExists: probe.paneExists });
+    }
+  }
 }
 
 /**
@@ -2171,6 +2451,20 @@ async function watchSubagent(
 
 export default function subagentsExtension(pi: ExtensionAPI) {
   latestPi = pi;
+  // Ctrl+S toggles the status widget between the full box and a one-line
+  // count summary. Pi's own Ctrl+S defaults are scoped to pickers (session
+  // tree sort, model selector save, thinking save), so the main-editor key
+  // is free for this. The preference resets with the session, not per run.
+  pi.registerShortcut("ctrl+s", {
+    description: "Minimize or expand the subagents status widget",
+    handler: (ctx: ExtensionContext) => {
+      const minimized = toggleWidgetMinimized();
+      updateWidget();
+      if (runningSubagents.size === 0 && !noMistakesActivity) {
+        ctx?.ui?.notify?.(minimized ? "Subagents widget minimized" : "Subagents widget expanded", "info");
+      }
+    },
+  });
   pi.events.on(NO_MISTAKES_ACTIVITY_UPDATE_EVENT, (data: unknown) => {
     const payload = data && typeof data === "object" ? data as { snapshot?: unknown } : {};
     const snapshot = payload.snapshot;
@@ -2190,6 +2484,13 @@ export default function subagentsExtension(pi: ExtensionAPI) {
     if (!prevAbort || prevAbort.signal.aborted) {
       (globalThis as any)[POLL_ABORT_KEY] = new AbortController();
     }
+    // Adopt subagents orphaned by a prior process death (deadline tab close,
+    // crash, kill): their tabs keep running under the multiplexer but no
+    // watcher remains to deliver results or close them. Fire-and-forget —
+    // adoption must never break session start. Runs for every session start
+    // (startup/resume/reload/new); entries that are finished, foreign, or
+    // already owned make it a no-op.
+    adoptOrphanedSubagents(pi, ctx).catch(() => {});
   });
 
   // Clean up on session shutdown
@@ -2220,6 +2521,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
       (globalThis as any)[WATCHDOG_INTERVAL_KEY] = null;
     }
     noMistakesActivity = null;
+    widgetMinimized = false;
   });
 
   // The spawning tools are always registered here. Whether a child process can
@@ -2389,9 +2691,18 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         // Persist name → session so subagent_message({ name }) can resume this
         // subagent after it finishes (and after a pi restart). Done at launch,
         // not completion, so the handle exists even if the parent dies mid-run.
+        // The durable running mark + pane id let a restarted parent adopt the
+        // still-live pane (or finalize and close a finished one) instead of
+        // leaking its tab or resuming a duplicate session.
         registerName(parentArtifactDir, running.name, {
           sessionFile: running.sessionFile,
           sessionId: getSessionId(running.sessionFile),
+          paneId: running.surface,
+          running: true,
+          spawnedAt: running.startTime,
+          interactive: running.interactive,
+          canSpawnChildren: running.canSpawnChildren ?? false,
+          ...(running.cli ? { cli: running.cli } : {}),
         });
 
         // Create a separate AbortController for the watcher
@@ -2441,6 +2752,13 @@ export default function subagentsExtension(pi: ExtensionAPI) {
               },
               { triggerTurn: true, deliverAs: "steer" },
             );
+            // Durable completion mark: the registry entry stops being
+            // adoptable, so a later restarted parent neither re-delivers
+            // this result nor re-closes an already-closed tab.
+            updateNameRegistryEntry(parentArtifactDir, running.name, {
+              running: false,
+              resultDeliveredAt: Date.now(),
+            });
           })
           .catch((err) => {
             updateWidget();
@@ -2462,6 +2780,12 @@ export default function subagentsExtension(pi: ExtensionAPI) {
               },
               { triggerTurn: true, deliverAs: "steer" },
             );
+            // Every rejection path leaves the child's pane closed (the
+            // watcher's own catch closed it), so the entry is finished.
+            updateNameRegistryEntry(parentArtifactDir, running.name, {
+              running: false,
+              resultDeliveredAt: Date.now(),
+            });
           });
 
         // Seed the tree-renderer chip BEFORE the ack returns so the
@@ -2744,6 +3068,22 @@ export default function subagentsExtension(pi: ExtensionAPI) {
           }
         }
 
+        // Durable still-running guard: the registry says this name never
+        // delivered a result — its watcher may have died with a prior parent
+        // process while the subagent itself still runs in its pane (the
+        // deadline-close incident class). Probe the recorded pane: alive →
+        // adopt it back under a fresh watcher and steer; dead → fall through
+        // to the resume below, which rewrites the entry for the new run.
+        if (entry.running === true && typeof entry.paneId === "string" && entry.paneId.length > 0) {
+          if (!registryEntryOwned(sessionPath, requestedName)) {
+            const probe = await probePaneAgent(entry.paneId);
+            if (probe.paneExists && (probe.agentAlive === true || probe.agentAlive === null)) {
+              adoptSubagentIntoWatchers(pi, { artifactDir: parentArtifactDir, name: requestedName, entry }, entry.paneId);
+              return handleSubagentSteer({ name: requestedName, message: params.message });
+            }
+          }
+        }
+
         // Reconstruct the sandbox from the snapshot written at spawn time.
         // Without it we cannot safely resume: relaunching bare would keep normal
         // extension discovery but lose the model, spawn allowlist, and callable
@@ -2876,12 +3216,26 @@ export default function subagentsExtension(pi: ExtensionAPI) {
           launchScriptFile,
           activityFile,
           interactive,
+          canSpawnChildren: !!(loadout.spawnable && loadout.spawnable.length > 0),
+          parentArtifactDir,
           statusState: createStatusState({
             source: "pi",
             startTimeMs: startTime,
           }),
         };
         runningSubagents.set(id, running);
+        // Refresh the durable running mark for this run: the new pane id and
+        // spawn time replace the stale ones so a later restart adopts THIS
+        // pane, and subagent_message's still-running guard probes it instead
+        // of launching a second process on the same session file.
+        updateNameRegistryEntry(parentArtifactDir, name, {
+          paneId: surface,
+          running: true,
+          spawnedAt: startTime,
+          interactive,
+          canSpawnChildren: !!(loadout.spawnable && loadout.spawnable.length > 0),
+          resultDeliveredAt: null,
+        });
         startWidgetRefresh();
         startStatusRefresh(pi);
 
@@ -2937,6 +3291,12 @@ export default function subagentsExtension(pi: ExtensionAPI) {
               },
               { triggerTurn: true, deliverAs: "steer" },
             );
+            // Durable completion mark for this run (same contract as the
+            // spawn path): the entry stops being adoptable.
+            updateNameRegistryEntry(parentArtifactDir, name, {
+              running: false,
+              resultDeliveredAt: Date.now(),
+            });
           })
           .catch((err) => {
             updateWidget();
@@ -2949,6 +3309,12 @@ export default function subagentsExtension(pi: ExtensionAPI) {
               },
               { triggerTurn: true, deliverAs: "steer" },
             );
+            // Rejection paths leave the pane closed (the watcher's own catch
+            // closed it) — mark the entry finished.
+            updateNameRegistryEntry(parentArtifactDir, name, {
+              running: false,
+              resultDeliveredAt: Date.now(),
+            });
           });
 
         return {

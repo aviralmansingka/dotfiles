@@ -59,6 +59,8 @@ export async function withNewSurface<T>(
 
 export const shellEscape = surface.shellEscape;
 export const pollForExit = surface.pollForExit;
+export const probePaneAgent = surface.probePaneAgent;
+export type PaneAgentProbe = herdr.PaneAgentProbe;
 export const __pollForExitTest__ = surface.__pollForExitTest__;
 
 /** Wait bounds for the exit poller and the index.ts watcher. Pure env
