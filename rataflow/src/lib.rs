@@ -14,10 +14,10 @@ pub mod flow_edge;
 
 pub use flow_edge::FlowEdge;
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use anyhow::{Context, Result, bail};
-use rataflow::{Controls, Edge, Flow, MiniMap, Node, Sugiyama, TextContent, Theme};
+use rataflow::{Controls, Edge, Flow, HandlePosition, MiniMap, Node, Position, Sugiyama, TextContent, Theme};
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Color, Style};
@@ -94,6 +94,9 @@ pub struct Spec {
     pub direction: Direction,
     pub theme: ThemeKind,
     pub nodes: Vec<SpecNode>,
+    /// Explicit layer placement: each inner array is one layer, ids in
+    /// declared order. Empty when absent — sugiyama ranks the graph then.
+    pub layers: Vec<Vec<String>>,
     pub edges: Vec<SpecEdge>,
 }
 
@@ -104,6 +107,10 @@ struct RawSpec {
     theme: Option<String>,
     #[serde(default)]
     nodes: Vec<SpecNode>,
+    /// Optional explicit placement: each inner array is one layer, ids in
+    /// left-to-right (tb) or top-to-bottom (lr) order; "" reserves a slot.
+    #[serde(default)]
+    layers: Option<Vec<Vec<String>>>,
     edges: Vec<SpecEdge>,
 }
 
@@ -143,6 +150,42 @@ impl Spec {
             }
         }
 
+        let layers = raw.layers.unwrap_or_default();
+        if !layers.is_empty() {
+            // Every placed id must be a known node, each node may occupy
+            // one slot only, and every node must be placed — sugiyama is
+            // skipped entirely when layers are given.
+            let mut known: HashSet<&str> = raw.nodes.iter().map(|n| n.id.as_str()).collect();
+            for edge in &raw.edges {
+                known.insert(edge.from.as_str());
+                known.insert(edge.to.as_str());
+            }
+            let mut placed: HashSet<&str> = HashSet::new();
+            for (layer_index, layer) in layers.iter().enumerate() {
+                for id in layer {
+                    if id.is_empty() {
+                        continue; // "" reserves a slot without placing a node
+                    }
+                    if !known.contains(id.as_str()) {
+                        bail!(
+                            "layer {layer_index} places \"{id}\", which is not a node in this spec"
+                        );
+                    }
+                    if !placed.insert(id.as_str()) {
+                        bail!("node \"{id}\" appears in more than one layer slot");
+                    }
+                }
+            }
+            let unplaced: Vec<&str> = known
+                .iter()
+                .copied()
+                .filter(|id| !placed.contains(id))
+                .collect();
+            if !unplaced.is_empty() {
+                bail!("layers must place every node; unplaced: {unplaced:?}");
+            }
+        }
+
         let direction = match raw.direction.as_deref() {
             None | Some("tb") => Direction::TopToBottom,
             Some("lr") => Direction::LeftToRight,
@@ -161,6 +204,7 @@ impl Spec {
             direction,
             theme,
             nodes: raw.nodes,
+            layers,
             edges: raw.edges,
         })
     }
@@ -245,7 +289,7 @@ pub fn build_flow(spec: &Spec) -> Result<Graph> {
     }
 
     let accents = gruvbox_accents();
-    let nodes: Vec<Node<TextContent>> = labels
+    let mut nodes: Vec<Node<TextContent>> = labels
         .iter()
         .enumerate()
         .map(|(index, (id, label))| {
@@ -257,6 +301,15 @@ pub fn build_flow(spec: &Spec) -> Result<Graph> {
             node
         })
         .collect();
+
+    // Explicit layers pin each node's rank. Sugiyama ranks purely by edge
+    // direction, so it cannot put two differently-wired nodes — a border
+    // leaf and a rack leaf — on the same line.
+    let mut placed_by_layers = false;
+    if !spec.layers.is_empty() {
+        nodes = place_by_layers(nodes, spec);
+        placed_by_layers = true;
+    }
     let edges: Vec<Edge<FlowEdge>> = spec
         .edges
         .iter()
@@ -280,13 +333,63 @@ pub fn build_flow(spec: &Spec) -> Result<Graph> {
         .collect();
 
     let mut flow = Flow::with_graph(nodes, edges)?;
-    let layout = match spec.direction {
-        Direction::TopToBottom => Sugiyama::vertical(),
-        Direction::LeftToRight => Sugiyama::horizontal(),
-    };
-    flow.apply_layout(layout);
+    if !placed_by_layers {
+        let layout = match spec.direction {
+            Direction::TopToBottom => Sugiyama::vertical(),
+            Direction::LeftToRight => Sugiyama::horizontal(),
+        };
+        flow.apply_layout(layout);
+    }
     flow = flow.with_theme(spec.theme());
     Ok(flow)
+}
+
+/// Position nodes by the spec's `layers`. Each inner array is one layer,
+/// in declared order across the perpendicular axis; the layer index runs
+/// along the flow axis. `""` reserves a slot, so a layer can align its
+/// nodes under another layer's columns. Gaps equal the largest node
+/// height on both axes and the margin the smallest node dimension — the
+/// same numbers sugiyama's auto rule uses for ranks, applied compactly.
+fn place_by_layers(mut nodes: Vec<Node<TextContent>>, spec: &Spec) -> Vec<Node<TextContent>> {
+    let max_w = nodes.iter().map(|n| n.width).fold(0.0_f64, f64::max);
+    let max_h = nodes.iter().map(|n| n.height).fold(0.0_f64, f64::max);
+    let gap = max_h.max(1.0);
+    let margin = max_w.min(max_h).max(1.0);
+
+    let mut slots: HashMap<&str, (usize, usize)> = HashMap::new();
+    for (layer_index, layer) in spec.layers.iter().enumerate() {
+        for (col, id) in layer.iter().enumerate() {
+            if !id.is_empty() {
+                slots.insert(id.as_str(), (layer_index, col));
+            }
+        }
+    }
+
+    for node in &mut nodes {
+        let Some(&(layer, col)) = slots.get(node.id.as_str()) else {
+            continue; // from_json rejects unplaced nodes; defensive only
+        };
+        let along = margin + layer as f64 * (max_h + gap);
+        let across = margin + col as f64 * (max_w + gap);
+        let (x, y, source, target) = match spec.direction {
+            Direction::TopToBottom => (
+                across,
+                along,
+                HandlePosition::Bottom,
+                HandlePosition::Top,
+            ),
+            Direction::LeftToRight => (
+                along,
+                across,
+                HandlePosition::Right,
+                HandlePosition::Left,
+            ),
+        };
+        node.position = Position::new(x, y);
+        node.source_position = source;
+        node.target_position = target;
+    }
+    nodes
 }
 
 /// Draw one frame: a one-line header, then the graph on a plain canvas.

@@ -79,6 +79,9 @@ fn run() -> Result<()> {
             spec.flow_count(),
             spec.theme_label(),
         );
+        if !spec.layers.is_empty() {
+            println!("layers={} (explicit placement, sugiyama skipped)", spec.layers.len());
+        }
         return Ok(());
     }
 
