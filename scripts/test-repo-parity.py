@@ -786,7 +786,11 @@ def _build_docs_sandbox(base: Path) -> tuple:
     (root / "README.md").write_text(readme)
     tracked = {"README.md", "CLAUDE.md", "AGENTS.md"}
     (root / "CLAUDE.md").write_text("# stub\n")
-    (root / "AGENTS.md").write_text("# stub\n")
+    # Carry the UPSTREAM_DOC_REFS exemptions for AGENTS.md the way
+    # pi-live-config.md is carried below: a stub doc that still contains
+    # the exempted backticked refs, so the baseline stays faithful.
+    ag_refs = " ".join(f"`{tok}`" for tok in sorted(UPSTREAM_DOC_REFS.get("AGENTS.md", {})))
+    (root / "AGENTS.md").write_text(f"# stub\n{ag_refs}\n")
     # Materialize every top-level dir the table and refs can name, so the
     # unmutated sandbox is a faithful passing baseline.
     dirs = set(NON_PACKAGE_DIRS)
