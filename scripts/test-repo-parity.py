@@ -371,6 +371,7 @@ def check_claude_hooks(root: Path, tracked: set):
 NON_PACKAGE_DIRS = {
     "docs": "documentation tree, not a stow package",
     "ops": "ops tooling (terraform/packer/stt), not a stow package",
+    "rataflow": "Rust crate built by install.sh (cargo install --path), not a stow package",
     "scripts": "repo scripts and test suites, not a stow package",
     "testdata": "test fixtures, not a stow package",
 }
@@ -379,6 +380,12 @@ NON_PACKAGE_DIRS = {
 # tree. doc -> {ref: reason}. Remove an entry when the doc stops referencing
 # it (stale entries fail).
 UPSTREAM_DOC_REFS = {
+    "AGENTS.md": {
+        "agents/.agents/skills/terminal-browser": (
+            "tracked symlink into the terminal-browser app dist "
+            "(~/.local/share), not repo content; dangles in CI"
+        ),
+    },
     "docs/pi-live-config.md": {
         "docs/cli.md": "upstream pi package's installed docs/, not this repo's docs/",
         "docs/configuration.md": "upstream pi package's installed docs/",
