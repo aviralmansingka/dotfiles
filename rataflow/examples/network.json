@@ -1,0 +1,21 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "wan", "label": "WAN" },
+    { "id": "fw", "label": "Firewall" },
+    { "id": "core", "label": "Core switch" },
+    { "id": "web", "label": "Web tier" },
+    { "id": "cache", "label": "Redis" },
+    { "id": "db", "label": "DB tier" }
+  ],
+  "edges": [
+    { "from": "wan", "to": "fw", "label": "1 GbE", "flow": 1 },
+    { "from": "fw", "to": "core", "label": "10 GbE", "flow": 2 },
+    { "from": "core", "to": "web", "label": "10 GbE", "flow": 2 },
+    { "from": "core", "to": "cache", "label": "25 GbE", "flow": 3 },
+    { "from": "web", "to": "cache", "label": "session", "flow": 2 },
+    { "from": "web", "to": "db", "label": "queries", "flow": 1 },
+    { "from": "cache", "to": "db", "label": "fill", "flow": 1 }
+  ]
+}

@@ -27,9 +27,44 @@ fn check_flag_prints_a_summary_and_exits_zero() {
     );
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(
-        stdout.contains("ok: nodes=2 edges=1 direction=lr theme=gruvbox"),
+        stdout.contains("ok: nodes=2 edges=1 flows=0 direction=lr theme=gruvbox"),
         "stdout: {stdout}"
     );
+    std::fs::remove_file(path).ok();
+}
+
+#[test]
+fn check_flag_counts_flow_edges() {
+    let path = write_spec(
+        "flows",
+        r#"{"edges":[{"from":"a","to":"b","flow":true},
+                     {"from":"b","to":"c","flow":2}]}"#,
+    );
+    let out = Command::new(env!("CARGO_BIN_EXE_rataflow-view"))
+        .arg("--check")
+        .arg(&path)
+        .output()
+        .expect("run the binary");
+    assert!(out.status.success());
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("nodes=3 edges=2 flows=2"),
+        "stdout: {stdout}"
+    );
+    std::fs::remove_file(path).ok();
+}
+
+#[test]
+fn check_flag_rejects_a_non_positive_flow_speed() {
+    let path = write_spec("badflow", r#"{"edges":[{"from":"a","to":"b","flow":0}]}"#);
+    let out = Command::new(env!("CARGO_BIN_EXE_rataflow-view"))
+        .arg("--check")
+        .arg(&path)
+        .output()
+        .expect("run the binary");
+    assert!(!out.status.success(), "a bad flow speed must exit non-zero");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.contains("flow"), "stderr: {stderr}");
     std::fs::remove_file(path).ok();
 }
 

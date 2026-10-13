@@ -98,7 +98,8 @@ by `install.sh`. Ubuntu 24.04 hosts need one interactive `terminal-browser setup
 builds single-file HTML artifacts — decks, dashboards, infographics — and routes
 graph-shaped requests to `visualize` by default. `visualize` is the ratatui-only skill:
 live node graphs from a JSON spec through `rataflow-view` (crate in `rataflow/`, a thin
-wrapper on the `rataflow` crate) in a herdr pane (`pane split` + `pane run`). Chat
+wrapper on the `rataflow` crate) in a herdr pane (`pane split` + `pane run`) — gruvbox
+styling, plain background, and animated flow dots on edges with a `flow` speed. Chat
 replies use the mermaid tool; static ANSI and PNG belong to the mermaid skill. Open
 panes through the herdr CLI, never raw tmux, and never paste pane art into chat.
 install.sh builds the binary (`cargo install --path rataflow --locked`);

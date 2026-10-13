@@ -3,7 +3,7 @@
 //! pane so the human sees it beside the conversation:
 //!
 //! ```text
-//! herdr pane split --current --direction right --ratio 0.55 --no-focus
+//! herdr pane split --current --direction right --ratio 0.5 --no-focus
 //! herdr pane run <pane-id> "rataflow-view graph.json"
 //! ```
 //!
@@ -14,8 +14,9 @@ use std::io::stdout;
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
-use rataflow::{Background, Controls, EventResponse, Flow, FlowEvent, MiniMap, StepEdge};
-use rataflow_view::{Direction, Spec, build_flow};
+use rataflow::{EventResponse, FlowEvent};
+use rataflow_view::{ANIMATION_STEP_MS, FlowEdge, Graph, Spec, build_flow, draw};
+use ratatui::DefaultTerminal;
 use ratatui::crossterm::{
     event::{
         self, DisableMouseCapture, EnableMouseCapture, Event as CtEvent, KeyCode, KeyEventKind,
@@ -23,10 +24,6 @@ use ratatui::crossterm::{
     },
     execute,
 };
-use ratatui::layout::{Constraint, Layout};
-use ratatui::style::{Color, Style};
-use ratatui::widgets::Paragraph;
-use ratatui::{DefaultTerminal, Frame};
 
 const USAGE: &str = "\
 rataflow-view — render a JSON node/edge spec as a live node graph
@@ -37,7 +34,9 @@ usage:
   rataflow-view --help                 show this help
 
 spec fields: direction (tb|lr), theme (gruvbox|dark|light),
-nodes (id, label?), edges (from, to, label?)
+nodes (id, label?), edges (from, to, label?, flow?)
+flow: true or a positive speed — animated dots travel from \"from\" to \"to\";
+      the number is the speed (1 = 10 cells/second, 2 = twice that)
 ";
 
 fn main() {
@@ -70,13 +69,14 @@ fn run() -> Result<()> {
 
     if check_only {
         let direction = match spec.direction {
-            Direction::TopToBottom => "tb",
-            Direction::LeftToRight => "lr",
+            rataflow_view::Direction::TopToBottom => "tb",
+            rataflow_view::Direction::LeftToRight => "lr",
         };
         println!(
-            "ok: nodes={} edges={} direction={direction} theme={}",
+            "ok: nodes={} edges={} flows={} direction={direction} theme={}",
             flow.nodes().count(),
             spec.edges.len(),
+            spec.flow_count(),
             spec.theme_label(),
         );
         return Ok(());
@@ -98,13 +98,32 @@ fn run() -> Result<()> {
 /// The event loop: draw, then drain every pending input event before the
 /// next frame (raw mouse streams at up to 1000 Hz and lags visibly if the
 /// queue is not drained — the rataflow README's one operational gotcha).
-fn live(terminal: &mut DefaultTerminal, flow: &mut Flow, header: &str) -> Result<()> {
+///
+/// Each frame also advances the flow-dot clock — a 3-step phase counter
+/// stepped every [`ANIMATION_STEP_MS`] — and pushes the phase into every
+/// edge, so the dots keep moving even when no input arrives. rataflow's
+/// own animation clock stays crate-private, so the phase lives here.
+fn live(terminal: &mut DefaultTerminal, flow: &mut Graph, header: &str) -> Result<()> {
     flow.request_fit_view();
     let mut last_tick = Instant::now();
+    let mut anim_leftover_ms: u64 = 0;
+    let mut anim_phase: usize = 0;
     'app: loop {
         let now = Instant::now();
-        flow.tick_auto_pan(now - last_tick);
+        let elapsed = now - last_tick;
         last_tick = now;
+        flow.tick_auto_pan(elapsed);
+
+        anim_leftover_ms += elapsed.as_millis() as u64;
+        while anim_leftover_ms >= ANIMATION_STEP_MS {
+            anim_leftover_ms -= ANIMATION_STEP_MS;
+            // Unbounded on purpose: an ever-growing phase keeps dot motion
+            // free of wrap seams and aliasing at every speed.
+            anim_phase = anim_phase.wrapping_add(1);
+        }
+        for (_, content) in flow.edges_content_mut() {
+            content.set_phase(anim_phase);
+        }
 
         terminal.draw(|frame| draw(frame, flow, header))?;
 
@@ -130,7 +149,7 @@ fn live(terminal: &mut DefaultTerminal, flow: &mut Flow, header: &str) -> Result
                     for event in flow.handle_mouse_event(mouse).into_events() {
                         match event {
                             FlowEvent::ConnectionCompleted(connection) => {
-                                flow.add_edge_from_connection(connection, StepEdge::default());
+                                flow.add_edge_from_connection(connection, FlowEdge::plain());
                             }
                             FlowEvent::ReconnectionCompleted {
                                 edge_id,
@@ -158,28 +177,15 @@ fn live(terminal: &mut DefaultTerminal, flow: &mut Flow, header: &str) -> Result
     Ok(())
 }
 
-fn draw(frame: &mut Frame, flow: &mut Flow, header: &str) {
-    let areas = Layout::vertical([Constraint::Length(1), Constraint::Min(0)]).split(frame.area());
-    let (header_area, canvas) = (areas[0], areas[1]);
-
-    frame.render_widget(
-        Paragraph::new(header).style(Style::default().fg(Color::Rgb(80, 73, 69))),
-        header_area,
-    );
-    frame.render_widget(Background::new(flow), canvas);
-    frame.render_widget(&mut *flow, canvas);
-    frame.render_widget(Controls::new(flow), canvas);
-    frame.render_widget(MiniMap::new(flow), canvas);
-}
-
 fn header_line(spec: &Spec, node_count: usize, path: &str) -> String {
     let name = std::path::Path::new(path)
         .file_name()
         .and_then(|name| name.to_str())
         .unwrap_or(path);
     format!(
-        " rataflow-view · {name} · {node_count} nodes · {} edges · drag pan · scroll zoom · f fit · q quit · {}",
+        " rataflow-view · {name} · {node_count} nodes · {} edges · {} flows · drag pan · scroll zoom · f fit · q quit · {}",
         spec.edges.len(),
+        spec.flow_count(),
         spec.theme_label(),
     )
 }

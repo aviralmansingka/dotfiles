@@ -10,11 +10,11 @@
     { "id": "db", "label": "Postgres" }
   ],
   "edges": [
-    { "from": "cli", "to": "api" },
-    { "from": "api", "to": "auth", "label": "verify" },
-    { "from": "api", "to": "queue", "label": "enqueue" },
-    { "from": "queue", "to": "worker" },
-    { "from": "worker", "to": "db", "label": "write" },
+    { "from": "cli", "to": "api", "flow": 1 },
+    { "from": "api", "to": "auth", "label": "verify", "flow": 1 },
+    { "from": "api", "to": "queue", "label": "enqueue", "flow": 1 },
+    { "from": "queue", "to": "worker", "flow": 3 },
+    { "from": "worker", "to": "db", "label": "write", "flow": 2 },
     { "from": "auth", "to": "db", "label": "read" }
   ]
 }

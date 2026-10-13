@@ -11,9 +11,10 @@ run times. The script exits non-zero when any check fails. See
 docs/ci-tests/rataflow.md for scope and known gaps.
 
 Behavior lives in the Rust crate (spec parsing, graph building, headless
-rendering) and is covered by `cargo test`; this suite covers what an
-offline runner can verify: the manifest, the lockfile, the example spec,
-the skill's documented spec block, and the install/gitignore wiring.
+rendering, flow-dot animation) and is covered by `cargo test`; this suite
+covers what an offline runner can verify: the manifest, the lockfile, the
+example specs, the skill's documented spec block, and the
+install/gitignore wiring.
 
 Dual mode: TOML checks need python 3.11+ `tomllib` and SKIP with a notice
 on older interpreters (local macs ship 3.9); they FAIL under STRICT=1 (CI
@@ -41,11 +42,11 @@ except ImportError:  # python 3.9/3.10 (local macs)
     tomllib = None
 
 # Spec schema, mirrored from rataflow/src/lib.rs (the Rust code is the
-# source of truth for behavior; this mirror exists to validate the example
+# source of truth for behavior; this mirror exists to validate the examples
 # and the skill's documented block against drift).
 ALLOWED_TOP = {"direction", "theme", "nodes", "edges"}
 ALLOWED_NODE = {"id", "label"}
-ALLOWED_EDGE = {"from", "to", "label"}
+ALLOWED_EDGE = {"from", "to", "label", "flow"}
 DIRECTIONS = {"tb", "lr"}
 THEMES = {"gruvbox", "dark", "light"}
 
@@ -98,17 +99,35 @@ def validate_spec(doc):
             continue
         if not str(edge["from"]).strip() or not str(edge["to"]).strip():
             problems.append(f"edge {index} has an empty endpoint")
+        flow = edge.get("flow")
+        # bool first: in Python, bool is an int subclass.
+        if flow is not None and not (
+            isinstance(flow, bool)
+            or (isinstance(flow, (int, float)) and flow > 0)
+        ):
+            problems.append(
+                f"edge {index} flow must be true or a positive number"
+            )
     return problems
 
 
+def example_paths():
+    """Every example spec shipped in rataflow/examples/, sorted."""
+    root = REPO / "rataflow" / "examples"
+    return sorted(root.glob("*.json"))
+
+
 def check_example_spec():
-    rel = "rataflow/examples/pipeline.json"
-    path = REPO / rel
-    try:
-        doc = json.loads(path.read_text())
-    except Exception as exc:  # noqa: BLE001
-        return False, [f"{rel}: does not parse as JSON: {exc}"]
-    problems = [f"{rel}: {p}" for p in validate_spec(doc)]
+    """Every example in rataflow/examples/ parses and validates."""
+    problems = []
+    for path in example_paths():
+        rel = path.relative_to(REPO)
+        try:
+            doc = json.loads(path.read_text())
+        except Exception as exc:  # noqa: BLE001
+            problems.append(f"{rel}: does not parse as JSON: {exc}")
+            continue
+        problems += [f"{rel}: {p}" for p in validate_spec(doc)]
     return (not problems), problems
 
 
