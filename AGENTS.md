@@ -25,6 +25,16 @@ Treat repository, worktree, and session identity as three distinct concepts:
 - Keep internal Herdr agent names available for routing and lifecycle operations, but do not use them as the primary
   picker identity.
 
+## Worktree tool for change work
+
+Agents making repo changes do not work from `main`. `pi/.pi/agent/extensions/worktree.ts` registers the `worktree`
+tool: it creates or reuses `~/.herdr/worktrees/<repo>/<type>-<slug>` from local `main` (always `--no-focus`) and
+launches an auto-exit `worker` subagent in the worktree session's first tab, via `executeSubagent` with an internal
+`pane` override (guarded against the parent pane, agent-hosting panes, and cwd mismatches). The worker's result
+steers back automatically; on clean completion its tab closes and the picker row folds until `herdr worktree open`.
+Branches are ownership-marked (`branch.<b>.piWorktree` in git config, the gh-dash-open-pr pattern); anything the tool
+does not own is refused. Teardown after ship stays with `/cleanup`.
+
 ## Homelab STT and the RTX 3060
 
 The pi-stt speech-to-text worker runs natively on the homelab host; the libvirt VM / vfio-pci passthrough path was

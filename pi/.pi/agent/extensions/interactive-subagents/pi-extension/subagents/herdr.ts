@@ -9,7 +9,7 @@
 import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
 import { setTimeout as sleep } from "node:timers/promises";
-import { existsSync, readFileSync, rmSync, writeFileSync, mkdirSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -210,6 +210,58 @@ export function createSurfaceSplit(
   const pane = parsePaneId(stdout);
   rebalanceSurfaces(pane);
   return pane;
+}
+
+/**
+ * Validate that an existing pane can be adopted as a subagent surface
+ * instead of creating a fresh tab. The worktree tool passes a worktree
+ * session's root pane (from `herdr worktree create/open`) so the worker
+ * runs in that worktree's first tab.
+ *
+ * Refuses, in order:
+ *   - the parent session's own pane (`HERDR_PANE_ID`) — never type into
+ *     the pane that spawned us;
+ *   - a pane that does not resolve (`herdr pane get` returned no pane);
+ *   - a pane already hosting an agent — a live worker from any session, or
+ *     a human agent session open there;
+ *   - a pane whose cwd is not the spawn's effective cwd — an adopted
+ *     launch can only ever type into a pane already sitting in the
+ *     intended worktree, which is what makes the override safe to expose
+ *     to sibling extensions.
+ */
+export function assertAdoptablePane(paneId: string, expectCwd: string): void {
+  requireHerdr();
+  if (paneId === process.env.HERDR_PANE_ID) {
+    throw new Error("Refusing to adopt the parent session's own pane as a subagent surface");
+  }
+  const stdout = execFileSync("herdr", ["pane", "get", paneId], {
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  const pane = JSON.parse(stdout)?.result?.pane;
+  if (!pane || typeof pane.pane_id !== "string" || pane.pane_id.length === 0) {
+    // No pane_id-equality requirement: a moved pane keeps its old id as an
+    // alias, and `pane get` then reports the terminal's current pane_id.
+    throw new Error(`Pane ${paneId} does not exist (herdr pane get returned no such pane)`);
+  }
+  if (pane.agent != null && pane.agent !== "") {
+    throw new Error(
+      `Pane ${paneId} already hosts an agent (${pane.agent}) — not adopting it as a subagent surface`,
+    );
+  }
+  const paneCwd = typeof pane.cwd === "string" ? pane.cwd : null;
+  const resolveOrSelf = (p: string): string => {
+    try {
+      return realpathSync(p);
+    } catch {
+      return p;
+    }
+  };
+  if (!paneCwd || resolveOrSelf(paneCwd) !== resolveOrSelf(expectCwd)) {
+    throw new Error(
+      `Pane ${paneId} cwd (${paneCwd ?? "unknown"}) does not match the spawn cwd (${expectCwd}) — not adopting it`,
+    );
+  }
 }
 
 /**

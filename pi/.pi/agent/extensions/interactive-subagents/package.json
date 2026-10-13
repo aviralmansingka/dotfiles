@@ -1,6 +1,6 @@
 {
   "name": "pi-interactive-subagents-herdr",
-  "version": "3.7.2-herdr.1",
+  "version": "3.7.2-herdr.2",
   "description": "Interactive subagents for pi - spawn, orchestrate, and manage sub-agent sessions in Herdr or tmux (dotfiles fork with a Herdr surface layer)",
   "keywords": [
     "pi-package"
@@ -18,7 +18,8 @@
       "Added pi-extension/subagents/surface.ts — auto-detect dispatcher (Herdr via HERDR_ENV/HERDR_PANE_ID, else tmux via TMUX).",
       "index.ts imports ./surface.ts instead of ./tmux.ts; tmux.ts kept intact as the fallback surface.",
       "Remapped @mariozechner/* and @sinclair/typebox imports to @earendil-works/* (captain's pi publish names).",
-      "Herdr subagents launch as labeled tabs; tmux subagents remain split panes."
+      "Herdr subagents launch as labeled tabs; tmux subagents remain split panes.",
+      "Added pane adoption: executeSubagent accepts an internal `pane` override (used by the worktree tool) so a subagent adopts an existing Herdr root pane instead of opening a fresh tab; assertAdoptablePane refuses the parent's own pane, agent-hosting panes, and cwd mismatches, and a failed adoption never closes the pane."
     ]
   },
   "type": "module",
