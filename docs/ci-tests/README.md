@@ -45,6 +45,7 @@ Scripts, configs, infra (job `scripts-tests` + `ops-tests`):
 | Terraform invariants | test-terraform.sh | 17 (19 w/ TF_VALIDATE=1) | 0.1–12.7 s |
 | systemd + launchd units | test-service-units.py | 47 | ~0.5 s |
 | CI meta (structure, routing, gate matching, discovery) | test-ci-self.mjs | 20 synthetic gate cases | — |
+| rataflow-view + visualize/artifact skills | test-rataflow.py | 9 offline + 16 cargo (opt-in) | 0.05 s |
 
 Existing wired suites (pre-wave): auto-git-sync, gh-dash-open-pr,
 herdr-clean-handoff, herdr-flash-copy, herdr-annotate-install,
@@ -102,5 +103,5 @@ ci-meta · config-lint · install-smoke · journal · mermaid · nm-install ·
 no-mistakes (domain suite) · no-mistakes-ci (no-mistakes runbook) · nvim ·
 nvim-ask · nvim-dap · nvim-markdown · nvim-octo · nvim-picker ·
 nvim-plugin-configs · nvim-send · nvim-ui-shape · nvim-workspaces · ops ·
-python-tool · renderer · repo-config · repo-parity · run-command ·
+python-tool · rataflow · renderer · repo-config · repo-parity · run-command ·
 subagents · telegram · terminal · tuicr · user-input · zsh

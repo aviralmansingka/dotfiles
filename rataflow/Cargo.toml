@@ -1,0 +1,15 @@
+[package]
+name = "rataflow-view"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "MIT"
+description = "Live terminal node-graph viewer for JSON specs, built on the rataflow crate"
+publish = false
+
+[dependencies]
+rataflow = "0.1"
+ratatui = { version = "0.30", default-features = false, features = ["crossterm"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"

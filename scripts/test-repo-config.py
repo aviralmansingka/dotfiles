@@ -622,6 +622,7 @@ def check_claude_settings():
 HERDR_ALLOWED_KEYS = {
     "advanced.scrollback_limit_bytes",
     "experimental.switch_ascii_input_source_in_prefix",
+    "experimental.kitty_graphics",
     "keys.command.command",
     "keys.command.description",
     "keys.command.key",

@@ -371,6 +371,7 @@ def check_claude_hooks(root: Path, tracked: set):
 NON_PACKAGE_DIRS = {
     "docs": "documentation tree, not a stow package",
     "ops": "ops tooling (terraform/packer/stt), not a stow package",
+    "rataflow": "Rust crate built by install.sh (cargo install --path), not a stow package",
     "scripts": "repo scripts and test suites, not a stow package",
     "testdata": "test fixtures, not a stow package",
 }
@@ -379,6 +380,12 @@ NON_PACKAGE_DIRS = {
 # tree. doc -> {ref: reason}. Remove an entry when the doc stops referencing
 # it (stale entries fail).
 UPSTREAM_DOC_REFS = {
+    "AGENTS.md": {
+        "agents/.agents/skills/terminal-browser": (
+            "tracked symlink into the terminal-browser app dist "
+            "(~/.local/share), not repo content; dangles in CI"
+        ),
+    },
     "docs/pi-live-config.md": {
         "docs/cli.md": "upstream pi package's installed docs/, not this repo's docs/",
         "docs/configuration.md": "upstream pi package's installed docs/",
@@ -779,7 +786,11 @@ def _build_docs_sandbox(base: Path) -> tuple:
     (root / "README.md").write_text(readme)
     tracked = {"README.md", "CLAUDE.md", "AGENTS.md"}
     (root / "CLAUDE.md").write_text("# stub\n")
-    (root / "AGENTS.md").write_text("# stub\n")
+    # Carry the UPSTREAM_DOC_REFS exemptions for AGENTS.md the way
+    # pi-live-config.md is carried below: a stub doc that still contains
+    # the exempted backticked refs, so the baseline stays faithful.
+    ag_refs = " ".join(f"`{tok}`" for tok in sorted(UPSTREAM_DOC_REFS.get("AGENTS.md", {})))
+    (root / "AGENTS.md").write_text(f"# stub\n{ag_refs}\n")
     # Materialize every top-level dir the table and refs can name, so the
     # unmutated sandbox is a faithful passing baseline.
     dirs = set(NON_PACKAGE_DIRS)
