@@ -24,10 +24,21 @@ harness as a manual gate.
   relations may match in either orientation. `[*]` maps to the root
   pseudo-states. Invented nodes are named.
 - `diffArtContainment`. Every actor label and message text must appear in the art.
+- Renderer resolution. A bare `import("grok-mermaid")` cannot resolve from
+  a jiti-loaded extension, which silently demoted real sessions to the
+  mmdflux fallback — a renderer about 40 percent wider and taller than the
+  chat's. The suite pins `grokCandidates` (PI_MERMAID_GROK override first,
+  managed-install releases second, current version first) and proves a
+  broken override falls through to the managed copy.
+- `trimArt`. The displayed art is cut to its smallest bounding box:
+  trailing spaces, blank edge rows, and blank edge columns go. Interior
+  spacing stays. Width is the trimmed width, not the renderer's claim.
 - `renderWithGrok`. The suite stubs the renderer. It asserts the crash,
   no-art, and good-render shapes.
 - Width policy. `paneWidth` reads `PI_MERMAID_WIDTH` first. Values under 40
   are ignored. Fractions are floored. Stdout columns lose 4 pane columns.
+  Wide-but-fitting beats narrow: the tool guidance prefers a wide diagram
+  that fits the measured pane over a forced-tall one.
 - Execute paths. The suite runs the tool with fake `mmdflux` binaries. It
   asserts success, the LR-to-TD re-emit on width overrun, and every
   rejection: parse bug, mismatch, warnings, crash, environment failure,
@@ -46,9 +57,12 @@ export NODE_PATH=/tmp/mm-jiti/node_modules
 cd pi/.pi/agent/extensions && node mermaid.test.mjs
 ```
 
-The suite stays offline and deterministic. It stubs `grok-mermaid`, fakes
-`mmdflux` through `PI_MERMAID_MMDFLUX`, and restores every environment
-variable in a `finally` block.
+The suite stays offline and deterministic. It stubs `grok-mermaid` and pins
+it as the first resolver candidate via `PI_MERMAID_GROK`, fakes `mmdflux`
+through `PI_MERMAID_MMDFLUX`, and restores every environment variable in a
+`finally` block. The unavailable path also points
+`PI_MANAGED_INSTALL_ROOT` at an empty temp tree so the host's real managed
+copy cannot leak into the test.
 
 
 ## Runtime and SLA

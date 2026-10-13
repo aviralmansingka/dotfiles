@@ -92,7 +92,14 @@ audiences, who think in ownership boundaries.
   before sending:
   `node -e "import('.../grok-mermaid/dist/index.js').then(m => ...)"`
   from `~/.pi/agent/install/releases/<version>/node_modules/`.
-  Keep width under ~100 columns; prefer under 60.
+- Fit the pane you are in, not a fixed number: a fullscreen pane is wide
+  (170+ columns), so a wide diagram is correct there; a split pane is
+  narrow. Render at the size the content needs — do not shrink for the
+  sake of shrinking, and do not pad for the sake of width.
+- In pi chat the `mermaid` tool does this for you: it resolves the chat's
+  own grok-mermaid copy (from the pi managed install; `PI_MERMAID_GROK`
+  overrides), trims the art to its smallest bounding box, and gates pane
+  fit with zero warnings before displaying the transcript row.
 - grok-mermaid IGNORES inner subgraph `direction` settings: a
   serpentine previews as vertically stacked groups. The PNG from
   mermaid.ink still shows the true layout — say so when previewing.
@@ -115,7 +122,7 @@ audiences, who think in ownership boundaries.
 - The escapes are truecolor (`48;2;r;g;b` / `38;2;r;g;b`): they bake
   exact RGB and do not depend on the terminal's 16-color palette, so
   the gruvbox hexes land the same on every surface.
-- Keep width under ~100 columns (prefer under 60), same as pi chat.
+- Fit the destination pane, same rule as pi chat — no fixed column cap.
   Strip the escapes before measuring, or the count includes them:
   `mmdflux ... | sed $'s/\x1b\\[[0-9;]*m//g' | wc -L`.
 - Do not paste ANSI art into nvim buffers or pi chat: both show raw

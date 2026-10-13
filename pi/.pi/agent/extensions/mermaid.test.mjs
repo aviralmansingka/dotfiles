@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -36,6 +36,12 @@ writeFileSync(
 exports.render = (src) => (globalThis.__grokRender ? globalThis.__grokRender(src) : { width: 40, warnings: [], plain: ["stub art"] });
 `,
 );
+// Gate 3 resolves the chat renderer through explicit candidates — a bare
+// `import("grok-mermaid")` cannot resolve from a jiti-loaded extension,
+// which silently demoted real sessions to the mmdflux fallback. Pin the
+// stub as the first candidate (PI_MERMAID_GROK); restored at the end.
+const savedGrokEnv = process.env.PI_MERMAID_GROK;
+process.env.PI_MERMAID_GROK = stubGrok;
 
 const jiti = createJiti(import.meta.url, {
 	alias: {
@@ -58,6 +64,8 @@ const {
 	diffArtContainment,
 	renderWithGrok,
 	paneWidth,
+	trimArt,
+	grokCandidates,
 } = mermaidModule;
 const extension = mermaidModule.default;
 
@@ -271,6 +279,22 @@ if (savedWidth === undefined) delete process.env.PI_MERMAID_WIDTH;
 else process.env.PI_MERMAID_WIDTH = savedWidth;
 assert.ok(paneWidth() >= 40, "fallback pane width stays sane");
 
+// ── trimArt: the displayed art hugs its content ───────────────────────────
+
+assert.deepEqual(
+	trimArt("      ┌─────┐      \n\n      │ ART │      \n\n      └─────┘      "),
+	{ art: "┌─────┐\n\n│ ART │\n\n└─────┘", width: 7, height: 5 },
+	"blank edge columns are cut; interior blank rows stay",
+);
+assert.deepEqual(trimArt("no margin"), { art: "no margin", width: 9, height: 1 }, "already-tight art is untouched");
+assert.deepEqual(trimArt("   \n  \n"), { art: "", width: 0, height: 0 }, "blank art trims to nothing");
+assert.deepEqual(trimArt("a  \nb"), { art: "a\nb", width: 1, height: 2 }, "trailing spaces drop without moving columns");
+assert.deepEqual(
+	trimArt("  x\n\n  y\n     "),
+	{ art: "x\n\ny", width: 1, height: 3 },
+	"interior blank rows stay, edge blanks go",
+);
+
 // ── execute with fake gates ───────────────────────────────────────────────────
 
 // A fake mmdflux that echoes a fixed MMDS JSON matching okFlow's params.
@@ -293,7 +317,8 @@ try {
 	assert.equal(ok.isError, undefined, `structured call should pass: ${JSON.stringify(ok).slice(0, 200)}`);
 	assert.ok(ok.content[0].text.includes("```mermaid\nflowchart TD"), "result returns the validated fence");
 	assert.ok(ok.content[0].text.includes("Do not write the fence in your reply"), "result tells the model not to repeat the fence");
-	assert.equal(ok.details.width, 40);
+	assert.equal(ok.details.width, "stub art".length, "width is the trimmed art width, not the renderer's claim");
+	assert.equal(ok.details.engine, "grok-mermaid", "the chat renderer path names its engine");
 	assert.equal(ok.details.path, "structured");
 	assert.equal(typeof ok.details.ms, "number");
 	assert.equal(sentMessages.length, 1, "a successful diagram emits exactly one display message");
@@ -303,10 +328,12 @@ try {
 	assert.equal(sent.options.triggerTurn, false, "the display message must not trigger a turn");
 	assert.ok(sent.message.details.art.length > 0, "display message carries the rendered art");
 	assert.ok(sent.message.details.source.includes("flowchart TD"), "display message carries the source");
+	assert.equal(sent.message.details.engine, "grok-mermaid", "display message carries the engine");
 
-	// width overrun on LR re-emits TD locally and passes
+	// width overrun on LR re-emits TD locally and passes. The overrun must
+	// survive trimming, so the wide variant is 500 real columns of ink.
 	globalThis.__grokRender = (src) =>
-		src.includes("flowchart LR") ? { width: 500, warnings: [], plain: ["wide"] } : { width: 40, warnings: [], plain: ["fits"] };
+		src.includes("flowchart LR") ? { width: 500, warnings: [], plain: ["x".repeat(500)] } : { width: 40, warnings: [], plain: ["fits"] };
 	const lrOk = await run({
 		type: "flowchart",
 	direction: "LR",
@@ -319,7 +346,7 @@ try {
 	assert.ok(sentMessages[1].message.details.source.includes("flowchart TD"), "the displayed source is the TD variant");
 
 	// width overrun with no variant left reports both numbers
-	globalThis.__grokRender = () => ({ width: 500, warnings: [], plain: ["wide"] });
+	globalThis.__grokRender = () => ({ width: 500, warnings: [], plain: ["x".repeat(500)] });
 	const wide = await run({
 		type: "flowchart",
 		nodes: [{ id: "a", label: "Alpha" }, { id: "b", label: "Beta" }],
@@ -348,6 +375,25 @@ try {
 	assert.equal(crashed.isError, true);
 	assert.ok(crashed.details.error.includes("raw text"), `crash error names the raw-source fallback: ${crashed.details.error}`);
 	assert.equal(sentMessages.length, 2, "rejected diagrams emit no display message");
+
+	// displayed art is trimmed: blank margins and blank edge rows never ship,
+	// and the pane-fit gate judges the trimmed width, not the renderer's claim
+	globalThis.__grokRender = () => ({
+		width: 999,
+		warnings: [],
+		plain: ["      ┌─────┐      ", "", "      │ ART │      ", "", "      └─────┘      "],
+	});
+	const padded = await run({
+		type: "flowchart",
+		nodes: [{ id: "a", label: "Alpha" }, { id: "b", label: "Beta" }],
+		edges: [{ from: "a", to: "b", label: "uses" }],
+	});
+	assert.equal(padded.isError, undefined, `a 999-col claim with 7 cols of ink must pass: ${JSON.stringify(padded).slice(0, 200)}`);
+	assert.equal(padded.details.art, "┌─────┐\n\n│ ART │\n\n└─────┘", "the shipped art is the trimmed bounding box");
+	assert.equal(padded.details.width, 7, "the reported width is the trimmed width");
+	assert.equal(padded.details.engine, "grok-mermaid");
+	assert.equal(sentMessages.length, 3, "the trimmed diagram also emits its display message");
+	assert.equal(sentMessages[2].message.details.art, "┌─────┐\n\n│ ART │\n\n└─────┘", "the display row ships the trimmed art");
 } finally {
 	delete globalThis.__grokRender;
 	if (savedFlux === undefined) delete process.env.PI_MERMAID_MMDFLUX;
@@ -419,6 +465,9 @@ const collapsedRow = rowRenderer({ details: rowDetails }, { expanded: false, out
 assert.ok(collapsedRow.text.includes("ART"), "the transcript row shows the art");
 assert.ok(collapsedRow.text.includes("validated"), "the transcript row header marks validation");
 assert.ok(!collapsedRow.text.includes("```mermaid"), "collapsed row hides the source fence");
+const engineRow = rowRenderer({ details: { ...rowDetails, engine: "grok-mermaid" } }, { expanded: false, outputPad: 0 }, rowTheme);
+assert.ok(engineRow.text.includes("grok-mermaid"), "the transcript row names the rendering engine");
+assert.ok(!collapsedRow.text.includes("undefined"), "rows without an engine never print undefined");
 const expandedRow = rowRenderer({ details: rowDetails }, { expanded: true, outputPad: 0 }, rowTheme);
 assert.ok(expandedRow.text.includes("```mermaid"), "expanded row shows the source fence");
 assert.equal(
@@ -690,7 +739,10 @@ try {
 const stubGrokBroken = join(tempRoot, "grok-broken.cjs");
 writeFileSync(stubGrokBroken, "throw new Error('cannot import grok');\n");
 // jiti caches modules by resolved path, so the no-grok instance needs its
-// own copy of the source to pick up the different grok alias.
+// own copy of the source to pick up the different grok alias. Every
+// candidate must fail: the env override throws, the managed root is an
+// empty temp tree (no bundled grok to find), and the bare specifier hits
+// the broken alias.
 const noGrokSource = join(tempRoot, "mermaid-nogrok.ts");
 writeFileSync(noGrokSource, readFileSync(fileURLToPath(new URL("./mermaid.ts", import.meta.url)), "utf8"));
 const jitiNoGrok = createJiti(import.meta.url, {
@@ -702,46 +754,116 @@ const jitiNoGrok = createJiti(import.meta.url, {
 	},
 });
 const noGrokModule = jitiNoGrok(noGrokSource);
-const unavailable = await noGrokModule.renderWithGrok("flowchart TD\n  A --> B");
-assert.equal(unavailable.ok, false);
-assert.equal(unavailable.kind, "unavailable", "an unimportable chat renderer is reported as unavailable");
+const emptyManagedRoot = mkdtempSync(join(tmpdir(), "mermaid-empty-root-"));
+const savedRootEnv = process.env.PI_MANAGED_INSTALL_ROOT;
+const savedOverrideEnv = process.env.PI_MERMAID_GROK;
+process.env.PI_MANAGED_INSTALL_ROOT = emptyManagedRoot;
+process.env.PI_MERMAID_GROK = stubGrokBroken;
+try {
+	const unavailable = await noGrokModule.renderWithGrok("flowchart TD\n  A --> B");
+	assert.equal(unavailable.ok, false);
+	assert.equal(unavailable.kind, "unavailable", "an unimportable chat renderer is reported as unavailable");
 
-const sentNoGrok = [];
-const registeredNoGrok = [];
-noGrokModule.default({
-	registerTool(def) { registeredNoGrok.push(def); },
-	sendMessage(message, options) { sentNoGrok.push({ message, options }); },
-	registerMessageRenderer() {},
-});
-const toolNoGrok = registeredNoGrok[0];
+	const sentNoGrok = [];
+	const registeredNoGrok = [];
+	noGrokModule.default({
+		registerTool(def) { registeredNoGrok.push(def); },
+		sendMessage(message, options) { sentNoGrok.push({ message, options }); },
+		registerMessageRenderer() {},
+	});
+	const toolNoGrok = registeredNoGrok[0];
+	const okFlowParams = {
+		type: "flowchart",
+		nodes: [{ id: "a", label: "Alpha" }, { id: "b", label: "Beta" }],
+		edges: [{ from: "a", to: "b", label: "uses" }],
+	};
+	try {
+		process.env.PI_MERMAID_MMDFLUX = goodFlux;
+		const noGrokOk = await toolNoGrok.execute("id", okFlowParams, undefined, () => {}, {});
+		assert.equal(noGrokOk.isError, undefined, `success without the chat renderer: ${JSON.stringify(noGrokOk).slice(0, 200)}`);
+		assert.equal(noGrokOk.details.width, "fake art".length, "width falls back to the trimmed mmdflux text-art width");
+		assert.equal(noGrokOk.details.art, "fake art");
+		assert.equal(noGrokOk.details.engine, "mmdflux", "the fallback names its engine");
+		assert.ok(
+			noGrokOk.content[0].text.includes("mmdflux fallback"),
+			"the result says the fallback renderer was used",
+		);
+		assert.equal(sentNoGrok.length, 1, "the display row still ships without the chat renderer");
+
+		const wideFlux = join(tempRoot, "wide-mmdflux");
+		writeFileSync(
+			wideFlux,
+			`#!/bin/sh\nif [ "$2" = "mmds" ]; then echo '${fakeMmds}'; else head -c 200 /dev/zero | tr '\\0' 'x'; echo; fi\n`,
+		);
+		chmodSync(wideFlux, 0o755);
+		process.env.PI_MERMAID_MMDFLUX = wideFlux;
+		const noGrokWide = await toolNoGrok.execute("id", okFlowParams, undefined, () => {}, {});
+		assert.equal(noGrokWide.isError, true);
+		assert.ok(noGrokWide.details.error.includes("cols, pane is"), `wide art without the renderer names both numbers: ${noGrokWide.details.error}`);
+		assert.equal(sentNoGrok.length, 1, "the rejected diagram ships no display row");
+	} finally {
+		if (savedFlux === undefined) delete process.env.PI_MERMAID_MMDFLUX;
+		else process.env.PI_MERMAID_MMDFLUX = savedFlux;
+	}
+} finally {
+	if (savedRootEnv === undefined) delete process.env.PI_MANAGED_INSTALL_ROOT;
+	else process.env.PI_MANAGED_INSTALL_ROOT = savedRootEnv;
+	if (savedOverrideEnv === undefined) delete process.env.PI_MERMAID_GROK;
+	else process.env.PI_MERMAID_GROK = savedOverrideEnv;
+	rmSync(emptyManagedRoot, { recursive: true, force: true });
+}
+
+// ── candidate resolution: override first, managed install second ────────────
+
+// A broken env override falls through to the managed install's bundled copy —
+// the exact renderer the chat itself draws with. The fresh source copy gives
+// this instance its own (empty) renderer cache.
+{
+	const root = mkdtempSync(join(tmpdir(), "mermaid-grok-root-"));
+	const pkg = join(root, "releases", "9.9.9", "node_modules", "grok-mermaid");
+	mkdirSync(join(pkg, "dist"), { recursive: true });
+	writeFileSync(join(root, "current-version"), "9.9.9\n");
+	writeFileSync(join(pkg, "dist", "index.js"), "export const render = (src) => ({ width: 77, warnings: [], plain: ['managed art'] });\n");
+	const brokenOverride = join(tempRoot, "grok-broken-override.cjs");
+	writeFileSync(brokenOverride, "throw new Error('override is broken');\n");
+	const freshSource = join(tempRoot, "mermaid-fresh.ts");
+	writeFileSync(freshSource, readFileSync(fileURLToPath(new URL("./mermaid.ts", import.meta.url)), "utf8"));
+	const jitiFresh = createJiti(import.meta.url, {
+		alias: {
+			"@earendil-works/pi-coding-agent": stubAgent,
+			"@earendil-works/pi-tui": stubTui,
+			typebox: stubTypes,
+		},
+	});
+	const freshModule = jitiFresh(freshSource);
+	const savedRoot = process.env.PI_MANAGED_INSTALL_ROOT;
+	const savedOverride = process.env.PI_MERMAID_GROK;
+	try {
+		process.env.PI_MANAGED_INSTALL_ROOT = root;
+		process.env.PI_MERMAID_GROK = brokenOverride;
+		assert.deepEqual(
+			grokCandidates(),
+			[brokenOverride, join(pkg)],
+			"the env override leads, the current managed release follows",
+		);
+		const viaManaged = await freshModule.renderWithGrok("flowchart TD\n  A --> B");
+		assert.equal(viaManaged.ok, true, `a broken override falls through to the managed copy: ${JSON.stringify(viaManaged).slice(0, 200)}`);
+		assert.equal(viaManaged.width, 77);
+		assert.equal(viaManaged.art, "managed art");
+	} finally {
+		if (savedRoot === undefined) delete process.env.PI_MANAGED_INSTALL_ROOT;
+		else process.env.PI_MANAGED_INSTALL_ROOT = savedRoot;
+		if (savedOverride === undefined) delete process.env.PI_MERMAID_GROK;
+		else process.env.PI_MERMAID_GROK = savedOverride;
+		rmSync(root, { recursive: true, force: true });
+	}
+}
+
 const okFlowParams = {
 	type: "flowchart",
 	nodes: [{ id: "a", label: "Alpha" }, { id: "b", label: "Beta" }],
 	edges: [{ from: "a", to: "b", label: "uses" }],
 };
-try {
-	process.env.PI_MERMAID_MMDFLUX = goodFlux;
-	const noGrokOk = await toolNoGrok.execute("id", okFlowParams, undefined, () => {}, {});
-	assert.equal(noGrokOk.isError, undefined, `success without the chat renderer: ${JSON.stringify(noGrokOk).slice(0, 200)}`);
-	assert.equal(noGrokOk.details.width, "fake art".length, "width falls back to the mmdflux text-art width");
-	assert.equal(noGrokOk.details.art, "fake art");
-	assert.equal(sentNoGrok.length, 1, "the display row still ships without the chat renderer");
-
-	const wideFlux = join(tempRoot, "wide-mmdflux");
-	writeFileSync(
-		wideFlux,
-		`#!/bin/sh\nif [ "$2" = "mmds" ]; then echo '${fakeMmds}'; else head -c 200 /dev/zero | tr '\\0' 'x'; echo; fi\n`,
-	);
-	chmodSync(wideFlux, 0o755);
-	process.env.PI_MERMAID_MMDFLUX = wideFlux;
-	const noGrokWide = await toolNoGrok.execute("id", okFlowParams, undefined, () => {}, {});
-	assert.equal(noGrokWide.isError, true);
-	assert.ok(noGrokWide.details.error.includes("cols, pane is"), `wide art without the renderer names both numbers: ${noGrokWide.details.error}`);
-	assert.equal(sentNoGrok.length, 1, "the rejected diagram ships no display row");
-} finally {
-	if (savedFlux === undefined) delete process.env.PI_MERMAID_MMDFLUX;
-	else process.env.PI_MERMAID_MMDFLUX = savedFlux;
-}
 
 // ── environment failures and aborts are never retried ─────────────────────────
 
@@ -771,7 +893,7 @@ try {
 	const aborted = await runWithSignal(okFlowParams);
 	assert.equal(aborted.isError, true);
 	assert.ok(aborted.details.error.includes("aborted"), `a pre-aborted signal fails the call: ${aborted.details.error}`);
-	assert.equal(sentMessages.length, 2, "an aborted call ships no display row");
+	assert.equal(sentMessages.length, 3, "an aborted call ships no display row");
 } finally {
 	if (savedFlux === undefined) delete process.env.PI_MERMAID_MMDFLUX;
 	else process.env.PI_MERMAID_MMDFLUX = savedFlux;
@@ -926,5 +1048,7 @@ if (process.env.JITI_PATH) {
 	console.log("mermaid.test.mjs: skipping corpus skip-behavior check (JITI_PATH not set)");
 }
 
+if (savedGrokEnv === undefined) delete process.env.PI_MERMAID_GROK;
+else process.env.PI_MERMAID_GROK = savedGrokEnv;
 rmSync(tempRoot, { recursive: true, force: true });
 console.log("mermaid.test.mjs: all assertions passed");

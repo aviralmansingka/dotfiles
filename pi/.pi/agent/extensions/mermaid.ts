@@ -1,7 +1,8 @@
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { Type } from "typebox";
 import { Text } from "@earendil-works/pi-tui";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -17,9 +18,12 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 //      never retried; from `freeform` it is returned for one model retry).
 //   2. structure diff: MMDS JSON nodes/edges/labels must equal the params
 //      exactly — replaces the old nested checker against the real truth.
-//   3. grok-mermaid render — the chat's own renderer: must not crash, art
-//      width must fit the pane, and warnings must be empty (the chat blocks
-//      rendering on warnings). Width overrun re-emits TD once, locally.
+//   3. grok-mermaid render — the chat's own renderer, resolved from the pi
+//      managed install (PI_MERMAID_GROK overrides): must not crash, trimmed
+//      art width must fit the pane, and warnings must be empty (the chat
+//      blocks rendering on warnings). Width overrun re-emits TD once, locally.
+//      Displayed art is trimmed to its smallest bounding box, from either
+//      engine — no blank margins, no wasted rows or columns.
 // This replaces both inline fence generation (which shipped diagrams that
 // did not parse, warned, or overflowed the pane) and the v1 nested
 // gpt-6.1-sol writer/checker loop (8.5 min mean per call, 67% failure).
@@ -425,15 +429,88 @@ export type GrokRender =
 
 let grokRender: ((src: string) => any) | null | undefined;
 
+/** Managed-install release versions, current first, then newest-first. */
+function listReleases(root: string): string[] {
+	try {
+		const current = readFileSync(join(root, "current-version"), "utf8").trim();
+		const rest = readdirSync(join(root, "releases")).filter((v) => v !== current);
+		rest.sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+		return [current, ...rest].filter(Boolean);
+	} catch {
+		return [];
+	}
+}
+
+/** grok-mermaid locations to try, most authoritative first: the
+ *  PI_MERMAID_GROK override, then the managed pi install's bundled copies
+ *  (the exact renderer the chat itself draws with). A bare `import()`
+ *  specifier is appended by the caller as the last candidate. */
+export function grokCandidates(): string[] {
+	const list: string[] = [];
+	const env = process.env.PI_MERMAID_GROK;
+	if (env) list.push(env);
+	const root = process.env.PI_MANAGED_INSTALL_ROOT || join(homedir(), ".pi", "agent", "install");
+	for (const v of listReleases(root)) list.push(join(root, "releases", v, "node_modules", "grok-mermaid"));
+	return list;
+}
+
+/** Import one candidate: a package dir (its dist/index.js), a module file,
+ *  or a bare specifier. Returns the render function, or null when the
+ *  candidate loads but exports no render. Throws when it cannot load. */
+async function importGrok(candidate: string): Promise<((src: string) => any) | null> {
+	let target = candidate;
+	try {
+		if (statSync(candidate).isDirectory()) target = join(candidate, "dist", "index.js");
+	} catch {
+		// not a path on disk — a bare specifier, imported as-is
+	}
+	const mod: any = await import(target.includes("/") ? pathToFileURL(target).href : target);
+	return typeof mod?.render === "function" ? mod.render : null;
+}
+
 async function loadGrok(): Promise<((src: string) => any) | null> {
 	if (grokRender !== undefined) return grokRender;
-	try {
-		const mod: any = await import("grok-mermaid");
-		grokRender = typeof mod?.render === "function" ? mod.render : null;
-	} catch {
-		grokRender = null;
+	// A bare dynamic `import("grok-mermaid")` does not resolve from a
+	// jiti-loaded extension (its lookup path is the extension's own dir),
+	// which silently demoted every real session to the mmdflux fallback —
+	// the spacious renderer, ~40% wider and taller than the chat's. Try the
+	// explicit candidates first; keep the bare specifier as a last resort
+	// (it still resolves where an alias table maps it, e.g. under jiti in
+	// tests).
+	for (const candidate of [...grokCandidates(), "grok-mermaid"]) {
+		try {
+			const render = await importGrok(candidate);
+			if (render) {
+				grokRender = render;
+				return render;
+			}
+		} catch {
+			// try the next candidate
+		}
 	}
-	return grokRender;
+	grokRender = null;
+	return null;
+}
+
+/** Cut rendered art to the smallest box that holds every glyph: no trailing
+ *  spaces, no blank edge rows, no blank edge columns. Interior spacing —
+ *  the engine's lane gaps — is left alone. */
+export function trimArt(art: string): { art: string; width: number; height: number } {
+	const rows = art.split("\n").map((l) => l.replace(/[ \t]+$/, ""));
+	const first = rows.findIndex((l) => l.length > 0);
+	if (first === -1) return { art: "", width: 0, height: 0 };
+	let last = rows.length - 1;
+	while (rows[last].length === 0) last--;
+	const body = rows.slice(first, last + 1);
+	let lead = Infinity;
+	let tail = 0;
+	for (const l of body) {
+		if (!l) continue;
+		lead = Math.min(lead, l.length - l.replace(/^[ \t]+/, "").length);
+		tail = Math.max(tail, l.length);
+	}
+	const cut = body.map((l) => (l ? l.slice(lead, tail) : ""));
+	return { art: cut.join("\n"), width: tail - lead, height: cut.length };
 }
 
 /** Render with the chat's own renderer. Width and warnings mirror the chat's display rules. */
@@ -472,6 +549,8 @@ interface MermaidDetails {
 	paneWidth?: number;
 	ms?: number;
 	path?: "structured" | "freeform";
+	/** Which engine drew the displayed art: "grok-mermaid" or "mmdflux". */
+	engine?: string;
 	problems?: string[];
 	error?: string;
 }
@@ -490,7 +569,7 @@ const EdgeSchema = Type.Object({
 
 const MermaidParams = Type.Object({
 	type: Type.Optional(Type.Union(SUPPORTED_DIAGRAM_TYPES.map((t) => Type.Literal(t)), { description: `Diagram type: ${SUPPORTED_DIAGRAM_TYPES.join(", ")}.` })),
-	direction: Type.Optional(Type.Union([Type.Literal("TD"), Type.Literal("LR")], { description: "Layout direction. Prefer TD: the chat pane is narrow, height is free." })),
+	direction: Type.Optional(Type.Union([Type.Literal("TD"), Type.Literal("LR")], { description: "Layout direction. TD for deep trees; LR for pipelines and wide trees. The gate measures the art against the pane, so a wide diagram is fine when it fits." })),
 	nodes: Type.Optional(Type.Array(NodeSchema, { description: "flowchart nodes. Keep to ~7; cut before you crowd." })),
 	edges: Type.Optional(Type.Array(EdgeSchema, { description: "flowchart edges, as data. Never invent one." })),
 	groups: Type.Optional(Type.Array(Type.Object({
@@ -531,9 +610,10 @@ export default function (pi: ExtensionAPI) {
 	pi.registerMessageRenderer(MERMAID_DISPLAY_TYPE, (message, options, theme) => {
 		const details = message.details as MermaidDetails | undefined;
 		if (!details?.art) return undefined;
+		const engine = details.engine ? `, ${details.engine}` : "";
 		const header = theme.fg(
 			"muted",
-			`mermaid (validated: parse + structure + pane fit, ${details.ms} ms, ${details.width}/${details.paneWidth} cols)`,
+			`mermaid (validated: parse + structure + pane fit, ${details.ms} ms, ${details.width}/${details.paneWidth} cols${engine})`,
 		);
 		const body = options.expanded
 			? `${details.art}\n\n${theme.fg("dim", "```mermaid\n" + (details.source ?? "") + "\n```")}`
@@ -544,11 +624,12 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "mermaid",
 		description:
-			"Generate a Mermaid diagram that is guaranteed to render in the chat. Pass nodes and edges as structured data; the tool emits canonical Mermaid syntax and enforces three local gates before returning: strict parse (mmdflux), exact structure match against your params, and pane fit with zero warnings on the chat's own renderer (grok-mermaid). The validated diagram is displayed to the user automatically as a transcript row — never write the fence in your reply. All checks are local: the call returns in under a second.",
+			"Generate a Mermaid diagram that is guaranteed to render in the chat. Pass nodes and edges as structured data; the tool emits canonical Mermaid syntax and enforces three local gates before returning: strict parse (mmdflux), exact structure match against your params, and pane fit with zero warnings on the chat's own renderer (grok-mermaid). The displayed art is trimmed to the smallest box its content needs, from either renderer. The validated diagram is displayed to the user automatically as a transcript row — never write the fence in your reply. All checks are local: the call returns in under a second.",
 		promptGuidelines: [
 			"Call this tool instead of writing a mermaid fence inline.",
 			"Pass the diagram as data: type, direction, nodes, edges. Labels are copied verbatim; the tool never shortens them.",
-			"Keep diagrams small: about 7 nodes or fewer, short labels, prefer TD. The pane is narrow; height is free.",
+			"Keep diagrams compact: about 7 nodes or fewer. The tool trims blank margins, so the art renders at the size the content needs.",
+			"A wide diagram that fits the pane beats a tall one; the result reports width/paneWidth, so wide layouts are fine on wide panes.",
 			"On isError, fix exactly what the error names and call once more. Cut nodes or edges rather than shorten labels.",
 			"The tool displays the validated diagram in the transcript automatically; do not write the fence in your reply.",
 		],
@@ -577,7 +658,8 @@ export default function (pi: ExtensionAPI) {
 			const valid = validated?.ok ? validated.value : null;
 
 			const runGates = async (source: string, directionForVariant?: Direction): Promise<
-				{ ok: false; error: string; problems?: string[] } | { ok: true; width: number; warnings: string[]; art: string; mmdsArt: string }
+					| { ok: false; error: string; problems?: string[] }
+					| { ok: true; width: number; warnings: string[]; art: string; mmdsArt: string; engine: string }
 			> => {
 				// Gate 1: strict parse via mmdflux (MMDS output parses only on success).
 				const mmds = await runMmdflux(source, "mmds", signal);
@@ -610,21 +692,22 @@ export default function (pi: ExtensionAPI) {
 				if (!grok.ok) {
 					if (grok.kind === "unavailable") {
 						// Cannot guarantee chat rendering without the chat renderer; fall back
-						// to the mmdflux art width as the best local proxy and say so.
-						const w = Math.max(...textRun.art.split("\n").map((l) => l.length), 0);
-						if (w > pane) return { ok: false, error: `art is ${w} cols, pane is ${pane}. Cut nodes or shorten labels and call once more.` };
-						return { ok: true, width: w, warnings: [], art: textRun.art, mmdsArt: textRun.art };
+						// to the trimmed mmdflux art as the best local proxy and say so.
+						const trimmed = trimArt(textRun.art);
+						if (trimmed.width > pane) return { ok: false, error: `art is ${trimmed.width} cols, pane is ${pane}. Cut nodes or shorten labels and call once more.` };
+						return { ok: true, width: trimmed.width, warnings: [], art: trimmed.art, mmdsArt: textRun.art, engine: "mmdflux" };
 					}
 					return { ok: false, error: `the chat renderer crashed on this source, so the chat would show raw text: ${grok.error}. Simplify the diagram and call once more.` };
 				}
 				if (grok.warnings.length > 0) {
 					return { ok: false, error: `the chat renderer warns, so the chat would not draw it: ${grok.warnings.join("; ")}. Fix the named issue and call once more.` };
 				}
-				if (grok.width > pane) {
-					if (directionForVariant === "LR") return { ok: false, error: `WIDTH_OVERRUN:${grok.width}` };
-					return { ok: false, error: `art is ${grok.width} cols, pane is ${pane}. Cut nodes or shorten labels and call once more.` };
+				const trimmed = trimArt(grok.art);
+				if (trimmed.width > pane) {
+					if (directionForVariant === "LR") return { ok: false, error: `WIDTH_OVERRUN:${trimmed.width}` };
+					return { ok: false, error: `art is ${trimmed.width} cols, pane is ${pane}. Cut nodes or shorten labels and call once more.` };
 				}
-				return { ok: true, width: grok.width, warnings: grok.warnings, art: grok.art, mmdsArt: textRun.art };
+				return { ok: true, width: trimmed.width, warnings: grok.warnings, art: trimmed.art, mmdsArt: textRun.art, engine: "grok-mermaid" };
 			};
 
 			try {
@@ -655,7 +738,7 @@ export default function (pi: ExtensionAPI) {
 							display: true,
 							details: {
 								source, art: gates.art, width: gates.width, paneWidth: pane, ms,
-								path: freeformSource ? "freeform" : "structured",
+								path: freeformSource ? "freeform" : "structured", engine: gates.engine,
 							} satisfies MermaidDetails,
 						},
 						{ triggerTurn: false },
@@ -666,13 +749,14 @@ export default function (pi: ExtensionAPI) {
 				return {
 					content: textContent(
 						`Mermaid diagram validated: strict parse, exact structure match, ${gates.width}/${pane} cols, zero renderer warnings (${ms} ms).` +
-						(reEmittedTD ? " Re-emitted as TD to fit the pane; the fence below is TD." : "") + "\n\n" +
+						(reEmittedTD ? " Re-emitted as TD to fit the pane; the fence below is TD." : "") +
+						(gates.engine === "mmdflux" ? " Rendered via the mmdflux fallback; the chat renderer was not importable." : "") + "\n\n" +
 						"```mermaid\n" + source + "\n```\n\n" +
 						"The diagram is displayed to the user automatically as a transcript row. Do not write the fence in your reply.",
 					),
 					details: {
 						source, art: gates.art, width: gates.width, paneWidth: pane, ms,
-						path: freeformSource ? "freeform" : "structured",
+						path: freeformSource ? "freeform" : "structured", engine: gates.engine,
 					} satisfies MermaidDetails,
 				};
 			} catch (err: any) {
@@ -684,7 +768,8 @@ export default function (pi: ExtensionAPI) {
 		renderResult(result, _options, theme) {
 			const details = result.details as MermaidDetails | undefined;
 			if (details?.art) {
-				const header = `mermaid (validated: parse + structure + pane fit, ${details.ms} ms, ${details.width}/${details.paneWidth} cols)`;
+				const engine = details.engine ? `, ${details.engine}` : "";
+				const header = `mermaid (validated: parse + structure + pane fit, ${details.ms} ms, ${details.width}/${details.paneWidth} cols${engine})`;
 				return new Text(theme.fg("muted", header) + "\n" + details.art, 0, 0);
 			}
 			if (details?.error) {
