@@ -1,22 +1,28 @@
 #!/usr/bin/env python3
-"""Render-level guard for hidden thinking.
+"""Render-level guard for thinking-title rows.
 
-Opens a fixture session (thinking blocks between two bash calls) in a real
-pi TUI inside a PTY, replays the terminal stream, and asserts the rendered
-transcript shows exactly ONE blank line between the two tool rows and no
-Thinking label text. This catches a stale bundle (pi update dropped the
-patch) that state checks alone would miss.
+Opens a fixture session (a short and a long thinking block, each before a
+bash call) in a real pi TUI inside a PTY, replays the terminal stream, and
+asserts the rendered transcript shows each thinking run as ONE title row:
+the short block verbatim (codex-style), the long block as its first
+sentence. Between the two tool rows the gap must be exactly blank, title,
+blank. This catches deployment drift (extension not stowed, settings not
+synced, hideThinkingBlock back on) that state checks alone can miss.
+
+The spinner that animates while a run streams cannot be captured from a
+completed-session fixture; its rules are pinned in
+pi/.pi/agent/extensions/thinking-title.test.mjs instead.
 
 Run locally (needs the live pi install; no model call happens):
 
     uv run --with pyte scripts/test-pi-hidden-thinking-render.py
 
-Skips with exit 0 when pi, pyte, or hideThinkingBlock is unavailable.
+Skips with exit 0 when pi, pyte, or the extension is unavailable or when
+hideThinkingBlock is on (the transformer only runs on the visible path).
 """
 import json
 import os
 import pty
-import re
 import select
 import shutil
 import signal
@@ -29,6 +35,12 @@ import fcntl
 import termios
 
 ROWS, COLS = 100, 100
+
+SHORT_TITLE = "Planning the first command."
+LONG_FIRST_SENTENCE = (
+    "Checking the first result carefully before deciding whether the "
+    "second command is necessary"
+)
 
 
 def skip(reason: str) -> None:
@@ -55,17 +67,22 @@ def build_session(path: str) -> None:
     assistant = {"api": "openai-codex-responses", "provider": "openai-codex",
                  "model": "gpt-6-astra", "usage": usage, "thinkingLevel": "high"}
 
+    long_thinking = (
+        LONG_FIRST_SENTENCE + ". After that I will run the second command "
+        "with the same timeout and verify the output matches what the task "
+        "asked for before I write the final answer."
+    )
     lines = [
         {"type": "session", "version": 3, "id": "fixture-session", "timestamp": now, "cwd": "/tmp"},
         entry("e-user", "fixture-session", "user",
               [{"type": "text", "text": "Run echo one, then echo two, then reply done."}]),
         entry("e-a1", "e-user", "assistant",
-              [{"type": "thinking", "thinking": "Planning the first command carefully."},
+              [{"type": "thinking", "thinking": SHORT_TITLE},
                tool_one], stopReason="toolUse", **assistant),
         entry("e-r1", "e-a1", "toolResult",
               [{"type": "text", "text": "one\n"}], toolCallId="tc-one", toolName="bash"),
         entry("e-a2", "e-r1", "assistant",
-              [{"type": "thinking", "thinking": "Checking the first result before running the second command."},
+              [{"type": "thinking", "thinking": long_thinking},
                tool_two], stopReason="toolUse", **assistant),
         entry("e-r2", "e-a2", "toolResult",
               [{"type": "text", "text": "two\n"}], toolCallId="tc-two", toolName="bash"),
@@ -128,8 +145,10 @@ def main() -> None:
     if not os.path.exists(settings_path):
         skip(f"no pi settings at {settings_path}")
     settings = json.load(open(settings_path))
-    if settings.get("hideThinkingBlock") is not True:
-        skip("hideThinkingBlock is not true; the hidden-thinking contract is inactive")
+    if settings.get("hideThinkingBlock") is True:
+        skip("hideThinkingBlock is on; the thinking-title contract needs the visible markdown path")
+    if not any("+extensions/thinking-title.ts" == entry for entry in settings.get("extensions", [])):
+        skip("thinking-title.ts is not enabled in live settings; deploy first (merge + stow, or pi-settings-sync)")
 
     with tempfile.TemporaryDirectory(prefix="pi-hidden-thinking-render-") as tmp:
         session = os.path.join(tmp, "fixture.jsonl")
@@ -138,10 +157,6 @@ def main() -> None:
 
     rows = replay(raw)
     text = "\n".join(rows)
-
-    if "Thinking" in text:
-        print("FAIL: a Thinking label row rendered in the transcript")
-        sys.exit(1)
 
     def find(marker: str, start: int) -> int:
         for index in range(start, ROWS):
@@ -159,15 +174,31 @@ def main() -> None:
         print("FAIL: could not locate both tool rows; transcript was:\n" + text)
         sys.exit(1)
 
-    gap = rows[result_one + 1:call_two]
-    blanks = sum(1 for row in gap if not row)
-    if len(gap) != 1 or blanks != 1:
-        print(f"FAIL: {len(gap)} row(s) between the tool rows "
-              f"({blanks} blank); expected exactly 1 blank line")
+    # Deployment drift shows as full thinking text instead of title rows.
+    if LONG_FIRST_SENTENCE + ". After that" in text or "Planning the first command.\n\nPlanning" in text:
+        print("FAIL: full thinking text rendered — the thinking-title transformer did not run."
+              " Check extension deployment (scripts/test-pi-hidden-thinking.mjs) and that"
+              " hideThinkingBlock is off.")
         print("\n".join(f"{i:3d}|{rows[i]}" for i in range(call_one, call_two + 1)))
         sys.exit(1)
 
-    print("render check passed: exactly one blank line between the tool rows, no Thinking label")
+    gap = rows[result_one + 1:call_two]
+    if len(gap) != 3 or not gap[0] or gap[1] != LONG_FIRST_SENTENCE or not gap[2]:
+        print(f"FAIL: expected [blank, '{LONG_FIRST_SENTENCE}', blank] between the tool rows, got:")
+        print("\n".join(f"{i:3d}|{rows[i]}" for i in range(call_one, call_two + 1)))
+        sys.exit(1)
+
+    if find(SHORT_TITLE, 0) < 0:
+        print("FAIL: the short (codex-style) thinking block did not render verbatim as a title row")
+        print("\n".join(f"{i:3d}|{rows[i]}" for i in range(0, call_one + 1)))
+        sys.exit(1)
+
+    for row in rows:
+        if row.lstrip().startswith(("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")):
+            print("FAIL: a spinner frame rendered in a completed transcript")
+            sys.exit(1)
+
+    print("render check passed: title rows render, gap is blank/title/blank, no spinner frames")
     print("\n".join(f"{i:3d}|{rows[i]}" for i in range(call_one, call_two + 1)))
 
 

@@ -12,7 +12,7 @@ pi agent extensions (job `pi-tests`, gated on `pi/**` + `agents/**`):
 
 | Domain | Suite | Coverage | Runtime |
 |---|---|---|---|
-| Renderer core | tool-call-renderer-public.test.mjs (+ usage, thinking-blank, web-fetch, web-search) | stmts 97.2 %, branch 90.4 %; usage.ts 0→99.6 % (real-module import) | 2.5 s |
+| Renderer core | tool-call-renderer-public.test.mjs (+ usage, thinking-title, web-fetch, web-search) | stmts 97.2 %, branch 90.4 %; usage.ts 0→99.6 % (real-module import) | 2.5 s |
 | Python tool | python.test.mjs | stmts 96.9 %, funcs 100 % | 2.35 s |
 | No-mistakes | gate / pane / bridge tests | stmts 93.5 %, branch 79.5 % | 9.4 s |
 | Subagents + editor | interactive-subagents.test.mjs, nvim-open.test.mjs | nvim-open 98 %, herdr 99 %, session 93 %, tmux 91 % | 1.1 s |
@@ -52,7 +52,7 @@ pi-live-config, pi-hidden-thinking.
 
 ## Totals
 
-63 discovered tests. Local serial run ≈ 43 s; CI critical path ≈ 2–3 min
+64 discovered tests. Local serial run ≈ 43 s; CI critical path ≈ 2–3 min
 (setup dominates) — inside the 5-minute SLA. Two consecutive full rounds
 showed zero flakes.
 

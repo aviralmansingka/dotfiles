@@ -48,18 +48,26 @@ An already folded `.pi` or `agent` directory is rejected: first preserve its
 contents in a real directory instead of writing through it. Backups are local;
 remove old ones yourself after checking them.
 
-Hidden thinking renders nothing through two pieces that must both deploy:
-`extensions/thinking-blank.ts` sets the hidden-thinking label to an empty
-string, and `scripts/pi-patch-hidden-thinking` guards the bundle's structural
-spacer rows out of hidden runs. After every `pi update`, re-run that script —
-a new release directory drops the patch. It refuses to run when the bundle
-anchor changed, so a failed run means the script needs review, not a retry.
+Thinking rows render as spinner-then-title through one extension:
+`extensions/thinking-title.ts` registers a markdown transformer for the
+`assistant-thinking` zone, so it owns the row with no bundle patching and
+survives every `pi update`. Keep `hideThinkingBlock` off (the default): the
+hidden path renders one label shared by every row and cannot show
+per-block titles. While a run streams, the row is a spinner; once it
+closes, a short block (15 words or fewer) renders verbatim (codex-style
+blocks are already titles) and a longer block renders its first sentence,
+then the pinned `fireworks/deepseek-v4-flash-0731` model replaces it with a
+10-15 word title (never awaited inside a handler; failures keep the
+heuristic). `/titles` toggles title rows and full thinking text.
 
 Two tests guard the contract. `scripts/test-pi-hidden-thinking.mjs` (CI)
-drives the patch script against fixture bundles and checks live deployment
-state read-only. `scripts/test-pi-hidden-thinking-render.py` (local, no
-model call) renders a fixture session with thinking between two bash calls
-in a real TUI and asserts exactly one blank line between the tool rows:
+checks repo wiring and live deployment state read-only, including that the
+retired bundle patch stays retired. `pi/.pi/agent/extensions/
+thinking-title.test.mjs` (CI) pins the render rules and the nested title
+calls. `scripts/test-pi-hidden-thinking-render.py` (local, no model call)
+renders a fixture session with thinking between two bash calls in a real
+TUI and asserts each thinking row is one title line with a blank, title,
+blank gap between the tool rows:
 
 ```sh
 uv run --with pyte scripts/test-pi-hidden-thinking-render.py
