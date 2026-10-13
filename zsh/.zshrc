@@ -90,6 +90,10 @@ alias ls='eza --icons -l'
 alias inv='uv run inv'
 alias ghd='gh dash'
 
+# Pi: also send copies via OSC 52 after the local clipboard write. Covers
+# remote Herdr attaches that reach pi without SSH variables.
+export PI_CLIPBOARD_OSC52=1
+
 # Copy text/URLs into OSC52 clipboard (works in terminals that allow it)
 osc52-copy() {
   local text
