@@ -95,7 +95,8 @@
       "python3-pip": null,
       "golang": "go",
       "awscli": "awscli",
-      "bun": "bun"
+      "bun": "bun",
+      "neovim": null
     }
   },
   "os_specific": {
@@ -165,7 +166,7 @@
       "terminal-browser"
     ],
     "containers": [
-      "docker"
+      "docker-desktop"
     ],
     "fonts": [
       "font-jetbrains-mono-nerd-font",

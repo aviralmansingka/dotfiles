@@ -50,6 +50,6 @@ herdr plugin link "$root"
 
 # Same annotate id and state as Full, but no competing document link handler.
 herdr plugin install plannotator/herdr-annotate/lite \
-    --ref bccf884b874f5f39ccbef1bb6ac67625c5fb5d54 --yes
+    --ref ceab050b77bea07bbeabdfda5c138be8c9c5c517 --yes
 printf '\nProtected reviewer: %s\n' "$root"
 printf 'Review shortcuts must use annotate-review.last; annotate-review.open is unbound and prefix+o is the herdr-nvim file picker.\n'

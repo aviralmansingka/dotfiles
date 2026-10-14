@@ -16,7 +16,6 @@ brew "kubectx"
 brew "lazygit"
 brew "luarocks"
 brew "make"
-brew "neovim"
 brew "nodejs"
 brew "npm"
 brew "python3"
@@ -41,7 +40,7 @@ cask "nikitabobko/tap/aerospace"
 cask "terminal-browser"
 
 # Containers
-cask "docker"
+cask "docker-desktop"
 
 # Fonts
 cask "font-jetbrains-mono-nerd-font"

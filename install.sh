@@ -92,8 +92,7 @@ if ! command -v rustc &> /dev/null; then
     source "$HOME/.cargo/env"
 fi
 
-echo "==> Installing cargo tools (eza, bob-nvim)"
-cargo install eza
+echo "==> Installing cargo tools (bob-nvim; eza comes from the Brewfile)"
 cargo install bob-nvim
 
 echo "==> Installing rataflow-view (live node-graph viewer)"
@@ -145,7 +144,7 @@ if command -v herdr >/dev/null 2>&1; then
 
     echo "==> Installing pinned Herdr Flash"
     herdr plugin install youguanxinqing/herdr-flash \
-        --ref f18645409965ebd5617dac9153925b826272e3e5 --yes
+        --ref 233209cce0e91175aeb5d608778c859028a68a06 --yes
     flash_root="$(herdr plugin list --plugin youguanxinqing.herdr-flash --json | jq -er '.result.plugins[0].plugin_root')"
     [[ -x "$flash_root/bin/herdr-flash" ]] || {
         echo "Herdr Flash installation failed" >&2
