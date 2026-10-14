@@ -60,11 +60,12 @@ parse, keys, and repo-paths.
 - `ops/terraform` (7): dns.tf, github.tf, iam.tf, main.tf, oidc.tf,
   providers.tf, variables.tf.
 - `ops/devbox` (3): devbox.tf, providers.tf, variables.tf.
-- `systemd/.config/systemd/user` (10): dotfiles-auto-sync.service,
-  flight-checkin-reminders.service, flight-checkin-reminders.timer,
+- `systemd/.config/systemd/user` (6): dotfiles-auto-sync.service,
   pi-stt-worker.service, pi-telegram.service, pi-whatsapp.service,
-  pr-digest.service, pr-digest.timer, vault-auto-sync.service,
-  whatsapp-bridge.service (host-only ExecStart path, SKIP).
+  vault-auto-sync.service, whatsapp-bridge.service (host-only ExecStart
+  path, SKIP). The pr-digest and flight-checkin-reminders units were
+  removed together with their feature (the retired-units list in
+  README.md records them).
 - `launchd/Library/LaunchAgents` (3): com.aviral.dotfiles-auto-sync.plist,
   com.aviral.no-mistakes.plist, com.aviral.vault-auto-sync.plist.
 

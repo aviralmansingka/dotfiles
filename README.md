@@ -67,7 +67,7 @@ Then SSH in:
 ssh aviralmansingka@$(terraform -chdir=ops/devbox output -raw devbox_public_ip)
 ```
 
-The devbox comes with: zsh + Oh My Zsh, tmux + TPM, Neovim via bob, Rust toolchain, Go, Node.js, Python, kubectl, k9s, lazygit, Claude Code, and all dotfiles stowed.
+The devbox comes with: zsh + Oh My Zsh, tmux + TPM, Neovim via bob, Rust toolchain, Go, Node.js, Python, kubectl, k9s, lazygit, and all dotfiles stowed.
 
 To tear down:
 
@@ -83,7 +83,6 @@ terraform -chdir=ops/devbox destroy \
 | ------------ | --------------------------------------------------------------------------- |
 | `aerospace`  | AeroSpace tiling window manager                                             |
 | `agents`     | Shared agent skills                                                         |
-| `claude`     | Claude AI context files                                                     |
 | `ghostty`    | Ghostty terminal emulator                                                   |
 | `gh-dash`    | GitHub dashboard config and PR worktree launcher                            |
 | `herdr`      | Agent workspaces, notifications, and sound configuration                    |
@@ -91,7 +90,7 @@ terraform -chdir=ops/devbox destroy \
 | `launchd`    | macOS user LaunchAgents (vault and dotfiles auto-sync)                      |
 | `nvim`       | Neovim with LazyVim                                                         |
 | `starship`   | Starship prompt                                                             |
-| `systemd`    | User systemd units (vault/dotfiles auto-sync, Pi/WhatsApp/Telegram bridges, flight check-in reminders) |
+| `systemd`    | User systemd units (vault/dotfiles auto-sync, Pi/WhatsApp/Telegram bridges) |
 | `pi`         | Pi agent config, packages, themes, and messaging daemons                    |
 | `terminfo`   | Custom terminfo entries                                                     |
 | `tmux`       | Tmux configuration                                                          |
@@ -268,10 +267,10 @@ systemctl --user daemon-reload
 systemctl --user enable --now pi-telegram.service
 ```
 
-The `flight-checkin-reminders.timer` user unit (every 12h) scans Gmail for upcoming flight check-in windows via Pi and sends Telegram reminders. It runs `%h/vault/scripts/flight-checkin-reminders.py` through an explicit `/usr/bin/python3` because the vault checkout does not guarantee the executable bit; direct execution fails with `status=203/EXEC`. Enable it with `systemctl --user enable --now flight-checkin-reminders.timer`.
+Retired units, kept out of the tracked set on purpose (remove any live copies on the host):
 
-Retired reminder timers, kept out of the tracked units on purpose:
-
+- `pr-digest.service` / `pr-digest.timer` — daily merged-PR digest via Telegram; removed together with their digest script.
+- `flight-checkin-reminders.service` / `flight-checkin-reminders.timer` — Gmail flight check-in reminders via Pi and Telegram; the script lived in the vault checkout.
 - `honeymoon-message-drafts.timer` — built for the July 2026 honeymoon message plan; the trip is over, so the live unit was retired (see the disable/remove commands in the PR that tracked these notes).
 - `aug18-trip-flight-reminder.timer` — its script self-disables after its 2026-08-18 cutoff; remove the live unit after that date.
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# Paths: claude/** agents/** docs/** README.md CLAUDE.md AGENTS.md
-"""repo-parity regression suite — lockfiles, hook references, docs-vs-reality.
+# Paths: agents/** docs/** README.md AGENTS.md
+"""repo-parity regression suite — lockfiles, docs-vs-reality.
 
 Offline and deterministic: no network, no $HOME mutation, no sleeps, no pip
 installs (python3 stdlib only). Each check prints PASS or FAIL with the file
@@ -10,30 +10,25 @@ coverage inventory, and known gaps.
 
 Companion suite: scripts/test-repo-config.py already covers SKILL.md
 frontmatter well-formedness, install.sh<->stow parity, gh-dash config,
-pi/claude settings JSON validity (incl. the /home/<user> scan for
-claude/.claude), herdr TOML keys, and the Brewfile. This suite does not
-repeat those checks; it locks the surfaces that suite does not touch:
+pi settings JSON validity, herdr TOML keys, and the Brewfile. This suite
+does not repeat those checks; it locks the surfaces that suite does not
+touch:
 
-  P1 skills store parity     the .claude/skills symlink farm resolves
-                                  to tracked in-tree skill dirs; a returning
-                                  skills-lock.json must carry full parity
-  P2 claude hook resolution       every hook script path is tracked,
-                                  allowlisted-external, or fails (ses-A
-                                  dangling-hook class); no /Users/<user>
-                                  absolute home paths
+  P1 skills store parity     repo-owned skill dirs keep name==dirname;
+                                  the claude symlink-farm machinery (and
+                                  its skills-lock.json) must not return
   P4 docs accuracy lint           mechanical docs-vs-reality: stow table
                                   parity, stow-package count claims,
                                   `stow <pkg>` mentions, repo-anchored path
                                   references, markdown link targets
-  P5 negative sandbox self-test   sandbox copies prove each P1/P2/P4 check
+  P5 negative sandbox self-test   sandbox copies prove each P1/P4 check
                                   catches its regression class
 
-The P3 notion-cli behavior matrix was removed together with pi/bin/notion-cli
-in the dead-code cleanup.
+The P2 claude hook-resolution check was removed together with the claude
+stow package (Claude Code uninstalled from every host); the P3 notion-cli
+behavior matrix was removed with pi/bin/notion-cli in the dead-code cleanup.
 """
 
-import json
-import os
 import re
 import shlex
 import subprocess
@@ -91,28 +86,17 @@ def frontmatter_name(path: Path) -> str | None:
 
 
 # --------------------------------------------------------------------------
-# P1 — skills store parity (symlink farm + optional skills-lock.json)
+# P1 — skills store parity
 # --------------------------------------------------------------------------
 
-# Claude Code skills are exposed through tracked symlinks that must point
-# at the one real store: the tracked repo-owned dirs agents/.agents/skills/.
-#   .claude/skills/<name>        -> ../../agents/.agents/skills/<name>
-#     (project-level exposure, in-repo only)
-#   claude/.claude/skills/<name> -> ../../../agents/.agents/skills/<name>
-#     (stowed to $HOME/.claude/skills by the claude package)
-# Dangling symlinks anywhere in the farm are the B22 drift class: the old
-# 8 mattpocock-bundle symlinks pointed at external-fetch targets that the
-# captain's skill audit (commit 64a4a94, "lean toward pi-config minimalism")
-# deleted from the store; the symlinks and the orphaned skills-lock.json
-# (its fetch tool is referenced nowhere in the repo) were removed together.
-# skills-lock.json may return only with full lock<->symlink<->target parity
-# and zero dangling targets - enforced below so the drift cannot recur.
-SKILL_SYMLINK_RE = re.compile(r"^(claude/)?\.claude/skills/([^/]+)$")
-PROJECT_SKILL_TARGET_FMT = "../../agents/.agents/skills/{key}"
-STOWED_SKILL_TARGET_FMT = "../../../agents/.agents/skills/{key}"
+# The one real skill store is the tracked repo-owned dirs under
+# agents/.agents/skills/. The old Claude Code exposure layers (the
+# .claude/skills project farm and the claude/.claude/skills stowed farm,
+# plus their skills-lock.json) were removed together with the claude
+# stow package when Claude Code was uninstalled from every host (the B22
+# dangling-farm drift died with them). The durable rules: the store stays
+# healthy (name==dirname), and the claude-farm machinery must not return.
 REPO_SKILL_DIR_RE = re.compile(r"^agents/\.agents/skills/([^/]+)/SKILL\.md$")
-SKILLPATH_RE = re.compile(r"^skills/.+/SKILL\.md$")
-SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _repo_skill_dirs(tracked: set) -> list:
@@ -120,108 +104,20 @@ def _repo_skill_dirs(tracked: set) -> list:
                   if (m := REPO_SKILL_DIR_RE.match(t)))
 
 
-def _check_skills_lock(root: Path, tracked: set, problems: list) -> int:
-    """Full lockfile parity contract for a tracked skills-lock.json: schema,
-    lock<->symlink parity, resolvable in-tree targets (no dangling), and no
-    double-sourcing of repo-owned skill dirs. Returns the lock entry count."""
-    rel = "skills-lock.json"
-    path = root / rel
-    try:
-        lock = json.loads(read_text(path))
-    except Exception as exc:  # noqa: BLE001
-        problems.append(f"FAIL {rel}: does not parse as JSON: {exc}")
-        return 0
-    if lock.get("version") != 1:
-        problems.append(f"FAIL {rel}: version is {lock.get('version')!r}; expected 1")
-    skills = lock.get("skills")
-    if not isinstance(skills, dict) or not skills:
-        problems.append(f"FAIL {rel}: 'skills' is empty or not a mapping")
-        return 0
-    for key, entry in sorted(skills.items()):
-        where = f"{rel}:{key}"
-        if not isinstance(entry, dict):
-            problems.append(f"FAIL {where}: entry is not a mapping")
-            continue
-        for field in ("source", "sourceType"):
-            if not isinstance(entry.get(field), str) or not entry[field].strip():
-                problems.append(f"FAIL {where}: '{field}' is missing or empty")
-        if not isinstance(entry.get("skillPath"), str) or not SKILLPATH_RE.match(entry["skillPath"] or ""):
-            problems.append(f"FAIL {where}: skillPath {entry.get('skillPath')!r} "
-                            f"does not match 'skills/.../SKILL.md'")
-        if not isinstance(entry.get("computedHash"), str) or not SHA256_RE.match(entry["computedHash"] or ""):
-            problems.append(f"FAIL {where}: computedHash {entry.get('computedHash')!r} "
-                            f"is not a 64-char sha256 hex string")
-    for key in sorted(skills):
-        relsym = f".claude/skills/{key}"
-        if relsym not in tracked:
-            problems.append(f"FAIL {rel}:{key}: locked skill has no tracked "
-                            f"symlink at {relsym}")
-            continue
-        link = root / relsym
-        if not link.is_symlink():
-            problems.append(f"FAIL {relsym}: expected a symlink, found a regular file")
-            continue
-        target = os.readlink(link)
-        if target != PROJECT_SKILL_TARGET_FMT.format(key=key):
-            problems.append(f"FAIL {relsym}: symlink target is {target!r}; expected "
-                            f"{PROJECT_SKILL_TARGET_FMT.format(key=key)!r}")
-        skill_rel = f"agents/.agents/skills/{key}/SKILL.md"
-        if not (root / "agents" / ".agents" / "skills" / key).is_dir():
-            problems.append(f"FAIL {relsym}: symlink dangles - target "
-                            f"agents/.agents/skills/{key} does not exist in-tree "
-                            f"(B22 class; a fresh CI checkout must resolve "
-                            f"every locked skill)")
-        elif skill_rel not in tracked:
-            problems.append(f"FAIL {relsym}: target {skill_rel} exists but is "
-                            f"not tracked; an untracked fetch-tool target "
-                            f"dangles on every fresh checkout (B22 class)")
-    return len(skills)
-
 
 def check_skills_store(root: Path, tracked: set):
     problems = []
 
-    # (a) skills-lock.json was removed with the dangling mattpocock
-    # symlinks (B22). If it is ever tracked again it must satisfy the full
-    # parity contract above; an untracked leftover on disk fails too.
-    n_locked = 0
+    # (a) the claude-farm lockfile must not return, tracked or not.
     rel = "skills-lock.json"
     if rel in tracked:
-        n_locked = _check_skills_lock(root, tracked, problems)
+        problems.append(f"FAIL {rel}: tracked again; the claude skills farm "
+                        f"was removed with the claude package - vendor "
+                        f"skills into agents/.agents/skills/ instead")
     elif (root / rel).exists():
-        problems.append(f"FAIL {rel}: present on disk but not tracked; track it "
-                        f"(full parity required) or delete it")
+        problems.append(f"FAIL {rel}: present on disk but not tracked; delete it")
 
-    # (b) the symlink farm: every tracked symlink resolves to a tracked,
-    # in-tree repo-owned skill dir. No dangling entries anywhere.
-    farm = sorted(t for t in tracked if SKILL_SYMLINK_RE.match(t))
-    for relsym in farm:
-        key = SKILL_SYMLINK_RE.match(relsym).group(2)
-        stowed = relsym.startswith("claude/")
-        fmt = STOWED_SKILL_TARGET_FMT if stowed else PROJECT_SKILL_TARGET_FMT
-        link = root / relsym
-        if not link.is_symlink():
-            problems.append(f"FAIL {relsym}: expected a symlink, found a regular "
-                            f"file")
-            continue
-        target = os.readlink(link)
-        if target != fmt.format(key=key):
-            problems.append(f"FAIL {relsym}: symlink target is {target!r}; expected "
-                            f"{fmt.format(key=key)!r}")
-        skill_rel = f"agents/.agents/skills/{key}/SKILL.md"
-        if not (root / "agents" / ".agents" / "skills" / key).is_dir():
-            problems.append(f"FAIL {relsym}: symlink dangles - target "
-                            f"agents/.agents/skills/{key} does not exist in-tree "
-                            f"(B22 class)")
-        elif skill_rel not in tracked:
-            problems.append(f"FAIL {relsym}: target {skill_rel} is not tracked; the "
-                            f"store under agents/.agents/skills/ is the one real "
-                            f"location and must be git-tracked")
-
-    # (c) repo-owned skills: every tracked skill dir keeps name==dirname.
-    # (A returning lock means its skills are vendored into the tracked
-    # store - lock<->symlink<->target parity in (a)/(b) is the net; the old
-    # "double-sourced" rule applied to the removed external-fetch design.)
+    # (b) repo-owned skills: every tracked skill dir keeps name==dirname.
     repo_skills = _repo_skill_dirs(tracked)
     if not repo_skills:
         problems.append("FAIL agents/.agents/skills/: no tracked repo-owned "
@@ -234,130 +130,10 @@ def check_skills_store(root: Path, tracked: set):
 
     if problems:
         return False, problems
-    lock_msg = (f"{n_locked} locked skills carry full lock<->symlink<->target "
-                f"parity" if rel in tracked
-                else "no skills-lock.json (removed with the dangling "
-                     "mattpocock symlinks, B22)")
     return True, [
-        f"{len(farm)} tracked skill symlink(s) across .claude/skills/ and "
-        f"claude/.claude/skills/ all resolve to tracked in-tree skill dirs",
-        lock_msg,
         f"{len(repo_skills)} tracked skill dirs keep name==dirname",
-    ]
-
-
-# --------------------------------------------------------------------------
-# P2 — claude hook script resolution
-# --------------------------------------------------------------------------
-
-# Hook scripts that live under $HOME and are deliberately NOT tracked in
-# this repo. This allowlist is the durable record of a known gap, not an
-# endorsement; remove the entry in the same change that tracks the script
-# under claude/ (or removes the hook). The last entry
-# (.claude/hooks/herdr-agent-state.sh) was removed with the B22 fix: the
-# script was untracked, absent at ~/.claude/hooks on every audited host,
-# and referenced by nothing else, so the hook entry itself was deleted
-# from claude/.claude/settings.json. The gh-axi and chrome-devtools-axi
-# SessionStart hooks (bare PATH commands) were removed with the dead-code
-# cleanup; the tracked settings now hold no hooks at all. Re-adding an
-# external hook requires a new entry here in the same change.
-EXTERNAL_HOOK_ALLOWLIST = {}
-
-
-def hook_config_rels(tracked: set) -> list:
-    rels = []
-    for t in sorted(tracked):
-        if not t.endswith(".json"):
-            continue
-        parts = t.split("/")
-        if parts[-1].startswith("settings") and ".claude" in parts[:-1]:
-            rels.append(t)
-    return rels
-
-
-def iter_hook_commands(cfg: dict):
-    hooks = cfg.get("hooks")
-    if not isinstance(hooks, dict):
-        return
-    for event, groups in hooks.items():
-        if not isinstance(groups, list):
-            continue
-        for group in groups:
-            if not isinstance(group, dict):
-                continue
-            for hook in group.get("hooks", []) or []:
-                if isinstance(hook, dict) and hook.get("type") == "command" \
-                        and isinstance(hook.get("command"), str):
-                    yield event, hook["command"]
-
-
-def split_command(command: str) -> list:
-    try:
-        return shlex.split(command)
-    except ValueError:
-        return command.split()
-
-
-def check_claude_hooks(root: Path, tracked: set):
-    rels = hook_config_rels(tracked)
-    if not rels:
-        return False, ["FAIL claude/**: no tracked .claude/settings*.json "
-                       "config found"]
-    problems = []
-    used_external = set()
-    n_hooks = 0
-    for rel in rels:
-        path = root / rel
-        try:
-            cfg = json.loads(read_text(path))
-        except Exception as exc:  # noqa: BLE001
-            problems.append(f"FAIL {rel}: does not parse as JSON: {exc}")
-            continue
-        text = read_text(path)
-        # Absolute home paths: the /Users/<user> (macOS) form is not covered
-        # by any check in scripts/test-repo-config.py; the /home/<user> form
-        # for claude/** configs IS covered there (check_claude_settings), so
-        # it is scanned here only for configs that suite does not reach.
-        if re.search(r"/Users/[A-Za-z0-9._-]+/", text):
-            problems.append(f"FAIL {rel}: contains an absolute /Users/<user> "
-                            f"path; use $HOME instead")
-        if not rel.startswith("claude/") and re.search(r"/home/[A-Za-z0-9._-]+/", text):
-            problems.append(f"FAIL {rel}: contains an absolute /home/<user> "
-                            f"path; use $HOME instead")
-        for event, command in iter_hook_commands(cfg):
-            n_hooks += 1
-            for tok in split_command(command):
-                if "/" not in tok or tok.startswith("-"):
-                    continue  # bare PATH commands stay host-side (known gap)
-                if tok.startswith("$HOME/"):
-                    rest = tok[len("$HOME/"):]
-                    if (root / "claude" / rest).exists():
-                        continue  # resolves to a tracked file in the claude stow package
-                    if rest in EXTERNAL_HOOK_ALLOWLIST:
-                        used_external.add(rest)
-                        continue
-                    problems.append(
-                        f"FAIL {rel} [{event}]: hook command references "
-                        f"$HOME/{rest}, which is neither tracked under "
-                        f"claude/{rest} nor allowlisted as a documented "
-                        f"external script (ses-A dangling-hook class)")
-                elif tok.startswith("$"):
-                    continue
-                elif not (root / tok).exists():
-                    problems.append(f"FAIL {rel} [{event}]: hook command "
-                                    f"references {tok}, which does not exist "
-                                    f"in the repo")
-    for rest in sorted(set(EXTERNAL_HOOK_ALLOWLIST) - used_external):
-        problems.append(f"FAIL EXTERNAL_HOOK_ALLOWLIST: '{rest}' is stale "
-                        f"(no hook references it anymore): "
-                        f"{EXTERNAL_HOOK_ALLOWLIST[rest]}")
-    if problems:
-        return False, problems
-    return True, [
-        f"all {n_hooks} hook commands across {len(rels)} tracked configs "
-        f"resolve to tracked files or documented external scripts",
-        f"{len(used_external)} external hook script(s) allowlisted with "
-        f"reason; 0 absolute /Users/<user> paths",
+        "no skills-lock.json (claude-farm machinery removed with the "
+        "claude package)",
     ]
 
 
@@ -419,7 +195,7 @@ P4_EXEMPT_DOCS = {
 }
 
 def scoped_docs(tracked: set) -> list:
-    core = ["README.md", "CLAUDE.md", "AGENTS.md"]
+    core = ["README.md", "AGENTS.md"]
     extra = sorted(
         t for t in tracked
         if re.match(r"docs/[^/]+\.md$", t) and t not in P4_EXEMPT_DOCS
@@ -495,7 +271,7 @@ def stow_command_packages(text: str):
 def check_docs_accuracy(root: Path, tracked: set):
     problems = []
     docs = scoped_docs(tracked)
-    missing_core = [d for d in ("README.md", "CLAUDE.md", "AGENTS.md") if d not in tracked]
+    missing_core = [d for d in ("README.md", "AGENTS.md") if d not in tracked]
     if missing_core:
         problems.append(f"FAIL {', '.join(missing_core)}: core doc not tracked")
 
@@ -530,7 +306,7 @@ def check_docs_accuracy(root: Path, tracked: set):
     exempt_used = set()
     stow_mention_used = set()
     for doc in docs:
-        if doc not in tracked and doc in ("README.md", "CLAUDE.md", "AGENTS.md"):
+        if doc not in tracked and doc in ("README.md", "AGENTS.md"):
             continue
         path = root / doc
         if not path.exists():
@@ -614,45 +390,12 @@ def check_docs_accuracy(root: Path, tracked: set):
 # P5 — negative sandbox self-test
 # --------------------------------------------------------------------------
 
-def _build_lock_sandbox(base: Path, tracked: set) -> Path:
-    """A faithful passing baseline for the returning-lockfile contract: a
-    synthetic skills-lock.json whose locked skills each have a tracked
-    .claude/skills/<key> symlink AND a tracked, in-tree target dir under
-    agents/.agents/skills/ (no dangling targets - the B22 rule), plus two
-    repo-owned skill dirs the way agents/.agents/skills/ carries them."""
+def _build_skills_sandbox(base: Path, tracked: set) -> Path:
+    """A faithful passing baseline: two repo-owned skill dirs the way
+    agents/.agents/skills/ carries them (name==dirname), and no
+    skills-lock.json anywhere."""
     root = base / "repo"
     root.mkdir(parents=True)
-    lock_data = {
-        "version": 1,
-        "skills": {
-            "ask-matt": {
-                "source": "mattpocock/skills",
-                "sourceType": "github",
-                "skillPath": "skills/engineering/ask-matt/SKILL.md",
-                "computedHash": "0f843160e34a24f5bd12cdc7de7d40951e77fbdc05ce8f891b37ca32eac2c44d",
-            },
-            "teach": {
-                "source": "mattpocock/skills",
-                "sourceType": "github",
-                "skillPath": "skills/productivity/teach/SKILL.md",
-                "computedHash": "68999bb1a241384b2f921f3321d771b7d05eb6089087b70d88cee2aee3d75ccc",
-            },
-        },
-    }
-    (root / "skills-lock.json").write_text(json.dumps(lock_data, indent=2))
-    tracked.add("skills-lock.json")
-    for key in lock_data["skills"]:
-        sym = root / ".claude" / "skills" / key
-        sym.parent.mkdir(parents=True, exist_ok=True)
-        sym.symlink_to(f"../../agents/.agents/skills/{key}")
-        tracked.add(f".claude/skills/{key}")
-        # The locked skill's content must resolve in-tree (B22: a lock whose
-        # targets exist nowhere is exactly the removed drift).
-        skill_dir = root / "agents" / ".agents" / "skills" / key
-        skill_dir.mkdir(parents=True, exist_ok=True)
-        (skill_dir / "SKILL.md").write_text(
-            f"---\nname: {key}\ndescription: fetched skill\n---\nbody\n")
-        tracked.add(f"agents/.agents/skills/{key}/SKILL.md")
     for name in ("humanify", "nvim"):
         skill_dir = root / "agents" / ".agents" / "skills" / name
         skill_dir.mkdir(parents=True)
@@ -662,121 +405,20 @@ def _build_lock_sandbox(base: Path, tracked: set) -> Path:
     return root
 
 
-def _write_lock(root: Path, data: dict) -> None:
-    (root / "skills-lock.json").write_text(json.dumps(data, indent=2))
-
-
-def _negative_lock_cases():
-    def missing_symlink(root, tracked):
-        # A lock entry whose tracked .claude/skills symlink is gone.
-        key = sorted(json.loads(read_text(root / "skills-lock.json"))["skills"])[0]
-        (root / ".claude" / "skills" / key).unlink()
-        tracked.discard(f".claude/skills/{key}")
-
-    def dangling_target(root, tracked):
-        # The B22 class: the lock keeps its symlink, but the target dir
-        # exists nowhere in-tree.
-        key = sorted(json.loads(read_text(root / "skills-lock.json"))["skills"])[0]
-        skill_md = root / "agents" / ".agents" / "skills" / key / "SKILL.md"
-        skill_md.unlink()
-        tracked.discard(f"agents/.agents/skills/{key}/SKILL.md")
-        skill_md.parent.rmdir()
-
-    def bad_hash(root, tracked):
-        data = json.loads(read_text(root / "skills-lock.json"))
-        key = sorted(data["skills"])[0]
-        data["skills"][key]["computedHash"] = "abc123"
-        _write_lock(root, data)
-
-    def untracked_leftover(root, tracked):
-        # skills-lock.json on disk but not in the tracked set.
-        tracked.discard("skills-lock.json")
-
-    def wrong_target(root, tracked):
-        key = sorted(json.loads(read_text(root / "skills-lock.json"))["skills"])[0]
-        sym = root / ".claude" / "skills" / key
-        sym.unlink()
-        sym.symlink_to("../../agents/.agents/skills/somewhere-else")
-
-    def farm_dangle(root, tracked):
-        # A tracked stowed symlink whose target dir never existed.
-        sym = root / "claude" / ".claude" / "skills" / "ghost"
-        sym.parent.mkdir(parents=True, exist_ok=True)
-        sym.symlink_to("../../../agents/.agents/skills/ghost")
-        tracked.add("claude/.claude/skills/ghost")
-
+def _negative_skills_cases():
     def name_mismatch(root, tracked):
         p = root / "agents" / ".agents" / "skills" / "humanify" / "SKILL.md"
         p.write_text(p.read_text().replace("name: humanify", "name: wrong-name"))
 
-    def untracked_fetched_target(root, tracked):
-        # The old external-fetch pattern: the target dir exists on disk but
-        # is not tracked - it dangles on every fresh CI checkout.
-        key = sorted(json.loads(read_text(root / "skills-lock.json"))["skills"])[0]
-        tracked.discard(f"agents/.agents/skills/{key}/SKILL.md")
+    def lock_returns(root, tracked):
+        # The claude-farm lockfile returns, tracked: the durable ban fires.
+        (root / "skills-lock.json").write_text("{}\n")
+        tracked.add("skills-lock.json")
 
-    return [("lock: locked skill without symlink", missing_symlink,
-             "no tracked symlink"),
-            ("lock: dangling symlink target", dangling_target, "dangles"),
-            ("lock: untracked fetched target", untracked_fetched_target,
-             "not tracked"),
-            ("lock: malformed hash", bad_hash, "computedHash"),
-            ("lock: untracked leftover on disk", untracked_leftover,
-             "not tracked"),
-            ("lock: wrong symlink target", wrong_target, "symlink target is"),
-            ("farm: dangling stowed symlink", farm_dangle, "dangles"),
-            ("skills: frontmatter name mismatch", name_mismatch,
-             "frontmatter name is")]
-
-
-def _build_hooks_sandbox(base: Path) -> Path:
-    """A copy of the real tracked claude settings, as a passing baseline."""
-    root = base / "repo"
-    rel = "claude/.claude/settings.json"
-    (root / "claude" / ".claude").mkdir(parents=True)
-    (root / rel).write_text(read_text(REPO / rel))
-    return root
-
-
-def _rewrite_hooks(root: Path, mutate) -> None:
-    rel = root / "claude" / ".claude" / "settings.json"
-    cfg = json.loads(read_text(rel))
-    mutate(cfg)
-    rel.write_text(json.dumps(cfg, indent=2))
-
-
-def _negative_hooks_cases():
-    def dangling_hook(root):
-        def go(cfg):
-            cfg.setdefault("hooks", {}).setdefault("SessionStart", []).append({
-                "matcher": "*",
-                "hooks": [{"type": "command",
-                           "command": 'bash "$HOME/.claude/hooks/ghost.sh" session',
-                           "timeout": 10}],
-            })
-        _rewrite_hooks(root, go)
-
-    def mac_absolute_home(root):
-        def go(cfg):
-            cfg.setdefault("hooks", {}).setdefault("SessionStart", []).append({
-                "matcher": "*",
-                "hooks": [{"type": "command",
-                           "command": "bash /Users/joe/bin/hook.sh",
-                           "timeout": 10}],
-            })
-        _rewrite_hooks(root, go)
-
-    def stale_allowlist(root):
-        # An EXTERNAL_HOOK_ALLOWLIST entry no hook references anymore. The
-        # real allowlist is empty since the B22 fix, so the mutation injects
-        # a phantom entry into the module global; the runner restores it.
-        EXTERNAL_HOOK_ALLOWLIST[".claude/hooks/never-referenced.sh"] = \
-            "phantom entry for the negative sandbox"
-
-    return [("hooks: dangling hook script", dangling_hook, "neither tracked"),
-            ("hooks: /Users/<user> absolute path", mac_absolute_home,
-             "/Users/<user>"),
-            ("hooks: stale external allowlist", stale_allowlist, "stale")]
+    return [("skills: frontmatter name mismatch", name_mismatch,
+             "frontmatter name is"),
+            ("skills: skills-lock.json returns", lock_returns,
+             "tracked again")]
 
 
 def _build_docs_sandbox(base: Path) -> tuple:
@@ -784,8 +426,7 @@ def _build_docs_sandbox(base: Path) -> tuple:
     root.mkdir(parents=True)
     readme = read_text(REPO / "README.md")
     (root / "README.md").write_text(readme)
-    tracked = {"README.md", "CLAUDE.md", "AGENTS.md"}
-    (root / "CLAUDE.md").write_text("# stub\n")
+    tracked = {"README.md", "AGENTS.md"}
     # Carry the UPSTREAM_DOC_REFS exemptions for AGENTS.md the way
     # pi-live-config.md is carried below: a stub doc that still contains
     # the exempted backticked refs, so the baseline stays faithful.
@@ -862,9 +503,9 @@ def check_negative_sandbox(_root: Path, _tracked: set):
 
     with tempfile.TemporaryDirectory(prefix="repo-parity-neg-") as tmp:
         base = Path(tmp)
-        for label, mutate, want in _negative_lock_cases():
+        for label, mutate, want in _negative_skills_cases():
             tracked = set()
-            root = _build_lock_sandbox(
+            root = _build_skills_sandbox(
                 base / label.replace(" ", "_").replace(":", ""), tracked)
             err = baseline_ok(check_skills_store, root, tracked)
             if err:
@@ -874,21 +515,6 @@ def check_negative_sandbox(_root: Path, _tracked: set):
             err = run_and_expect(check_skills_store, root, tracked, want)
             if err:
                 failures.append(f"FAIL negative [{label}]: {err}")
-        saved_allowlist = dict(EXTERNAL_HOOK_ALLOWLIST)
-        for label, mutate, want in _negative_hooks_cases():
-            root = _build_hooks_sandbox(base / label.replace(" ", "_").replace(":", ""))
-            hooks_tracked = {"claude/.claude/settings.json"}
-            err = baseline_ok(check_claude_hooks, root, hooks_tracked)
-            if err:
-                failures.append(f"FAIL negative [{label}]: {err}")
-                continue
-            mutate(root)
-            err = run_and_expect(check_claude_hooks, root, hooks_tracked,
-                                 want)
-            if err:
-                failures.append(f"FAIL negative [{label}]: {err}")
-            EXTERNAL_HOOK_ALLOWLIST.clear()
-            EXTERNAL_HOOK_ALLOWLIST.update(saved_allowlist)
         for label, mutate, want in _negative_docs_cases():
             root, tracked = _build_docs_sandbox(base / label.replace(" ", "_").replace(":", ""))
             err = baseline_ok(check_docs_accuracy, root, tracked)
@@ -902,14 +528,16 @@ def check_negative_sandbox(_root: Path, _tracked: set):
 
     if failures:
         return False, failures
-    return True, ["all 16 sandbox mutations were caught by the matching check "
-                  "(8 skills-store, 3 hooks, 5 docs)"]
+    return True, ["all 7 sandbox mutations were caught by the matching check "
+                  "(2 skills-store, 5 docs)"]
 
 
 def _negative_docs_cases():
     def claim_bad_count(root):
         p = root / "README.md"
-        p.write_text(p.read_text() + "\nThis repo ships 15 stow packages.\n")
+        rows, _ = parse_stow_table(p.read_text())
+        p.write_text(p.read_text() +
+                     f"\nThis repo ships {len(rows) + 1} stow packages.\n")
 
     def add_fake_table_row(root):
         p = root / "README.md"
@@ -929,7 +557,7 @@ def _negative_docs_cases():
         p.write_text("\n".join(out))
 
     def add_fake_stow_command(root):
-        p = root / "CLAUDE.md"
+        p = root / "AGENTS.md"
         p.write_text(p.read_text() + "\n```\nstow ghostpkg\n```\n")
 
     def add_fake_path_ref(root):
@@ -957,7 +585,6 @@ def _negative_docs_cases():
 
 CHECKS = [
     ("P1 skills store parity", check_skills_store),
-    ("P2 claude hooks resolve", check_claude_hooks),
     ("P4 docs accuracy", check_docs_accuracy),
     ("P5 negative sandbox", check_negative_sandbox),
 ]

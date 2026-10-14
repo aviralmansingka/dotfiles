@@ -64,12 +64,6 @@ echo "==> Installing direnv"
 export bin_path="$HOME/.local/bin"
 curl -sfL https://direnv.net/install.sh | bash
 
-echo "==> Installing Claude Code"
-curl -fsSL https://claude.ai/install.sh | bash
-
-echo "==> Installing OpenCode"
-curl -fsSL https://opencode.ai/install | bash
-
 echo "==> Installing mmdflux (pinned release binary)"
 # Mermaid ASCII renderer for pi's mermaid-extension gates and nvim's
 # <leader>mm float. ~/.local/bin is the first candidate path in pi's

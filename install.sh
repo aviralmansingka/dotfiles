@@ -4,7 +4,7 @@ set -euo pipefail
 # Dotfiles installation script for macOS
 # Mirrors the provisioning pipeline in ops/packer/scripts/ adapted for macOS+Homebrew:
 #   1. System packages (Homebrew)
-#   2. CLI tools not in Homebrew (Claude Code, OpenCode)
+#   2. CLI tools not in Homebrew (Herdr, mmdflux, grok-mermaid)
 #   3. Rust toolchain + cargo tools
 #   4. Dotfiles deployment via stow
 #   5. Shell plugins (Oh My Zsh, zsh plugins; TPM self-bootstraps from .tmux.conf)
@@ -46,12 +46,6 @@ printf 'no\n' > "$TB_STATE/skills-choice"
 #  2. CLI tools    #
 ####################
 # Tools not available in Homebrew
-
-echo "==> Installing Claude Code"
-curl -fsSL https://claude.ai/install.sh | bash
-
-echo "==> Installing OpenCode"
-curl -fsSL https://opencode.ai/install | bash
 
 if ! command -v herdr >/dev/null 2>&1; then
     echo "==> Installing Herdr"

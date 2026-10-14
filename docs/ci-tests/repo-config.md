@@ -28,10 +28,11 @@ runs offline, never changes `$HOME`, and never uses the network.
   suite prints SKIP and passes.
 - **X13 config invariants.** `pi/.pi/agent/settings.json` holds valid
   JSON, sets `markdown.codeBlockIndent` to `""` (#166), and lists only
-  extensions that exist on disk. The Claude settings hold valid JSON
-  and name no removed profiles and no `/home/<user>` paths (#8, #9).
-  The herdr config parses as TOML and keeps only vendored keys
-  (#156-#158). Every `dependencies.json` pin is in the Brewfile (#212).
+  extensions that exist on disk. The herdr config parses as TOML and
+  keeps only vendored keys (#156-#158). Every `dependencies.json` pin
+  is in the Brewfile (#212). The former Claude-settings check was
+  removed together with the claude stow package in the Claude Code
+  uninstall.
 
 ## How to run
 
@@ -63,17 +64,11 @@ Checked: the files listed above, plus the Brewfile and the three
 
 ## Known gaps
 
-One stow-shaped directory has no `stow` line in `install.sh`:
-`claude/` (a plan document stows it; README lists it in the package
-table). The suite records it in `STOW_GAP_ALLOWLIST` and fails when a
-new directory joins. The former `kube/`, `tmuxinator/`, and `neovide/`
-gaps were removed together with their packages in the dead-code cleanup.
-
-Dry-run evidence for the claude decision: a simulated `stow claude`
-against an empty home plans one symlink and exits 0. Against a home
-with a real `~/.claude/settings.json` file, it conflicts and exits 1.
-On such a machine, `set -e` aborts `install.sh`. The captain must
-decide: stow these four packages, keep them manual, or delete them.
+The `STOW_GAP_ALLOWLIST` is empty: every stow-shaped directory has a
+`stow` line in `install.sh`. The former `kube/`, `tmuxinator/`,
+`neovide/`, and `claude/` gaps were removed together with their
+packages (claude in the Claude Code uninstall, which also removed the
+stow-claude dry-run evidence check).
 
 Two more gaps stay open. The gh-dash `C` binding overrides a gh-dash
 default key on purpose, so the suite does not compare keys against the

@@ -222,13 +222,11 @@ const synthetic = [
   { changed: ["starship/starship.toml"], entry: "scripts/test-config-lint.py", entryGlobs: ["starship/**"], job: "scripts" },
   { changed: ["install.sh", "Brewfile"], entry: "scripts/test-install-smoke.sh", entryGlobs: ["install.sh", "Brewfile"], job: "scripts" },
   { changed: ["scripts/install-no-mistakes"], entry: "scripts/test-nm-install.sh", entryGlobs: ["scripts/install-no-mistakes"], job: "scripts" },
-  { changed: ["claude/settings.json"], entry: "scripts/test-repo-parity.py", entryGlobs: ["claude/**"], job: "scripts" },
   { changed: ["nvim/.config/nvim/init.lua"], expect: { nvim: true, scripts: true } }, // install-smoke declares nvim/** (install.sh stows nvim)
   { changed: ["scripts/test-nvim-octo.sh"], expect: { nvim: true, scripts: true } }, // scripts/* fixed glob also hits; the scripts job just skips routed entries
   { changed: ["ops/terraform/main.tf"], expect: { ops: true } },
   { changed: ["pi/.pi/agent/settings.json"], expect: { pi: true, scripts: true } }, // repo-config + live-config declare pi/.pi/agent paths
   { changed: ["pi/bin/pi-stt-worker.py"], expect: { pi: true, scripts: true } }, // test-pi-stt declares pi/bin/pi-stt*
-  { changed: ["pi/bin/pr-digest.py"], expect: { pi: true, scripts: true } }, // test-child-stdio declares pi/bin/**
   { changed: ["pi/bin/pi-telegram-daemon.py"], expect: { pi: true, scripts: true } }, // test-child-stdio declares pi/bin/**
   { changed: ["pi/.pi/agent/extensions/usage.ts"], expect: { pi: true, scripts: true } }, // child-stdio + live-config declare pi/.pi/agent/**
   { changed: ["starship/starship.toml"], expect: { scripts: true } }, // test-config-lint declares starship/**

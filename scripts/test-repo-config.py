@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Paths: agents/.agents/skills/** pi/.pi/agent/settings.json claude/** herdr/.config/herdr/config.toml gh-dash/** nvim/.markdownlint-cli2.yaml install.sh Brewfile dependencies.json
+# Paths: agents/.agents/skills/** pi/.pi/agent/settings.json herdr/.config/herdr/config.toml gh-dash/** nvim/.markdownlint-cli2.yaml install.sh Brewfile dependencies.json
 """repo-config regression suite — CI surfaces X7, X8, X8b, X12, X13.
 
 Offline and deterministic: no network, no $HOME mutation, no sleeps.
@@ -196,17 +196,11 @@ def check_skill_frontmatter():
 
 # Top-level dirs that are stow-shaped (tracked root-level dot entries) but
 # have no `stow` line in install.sh. This allowlist is the durable record of
-# a known gap, not an endorsement:
-#   claude/     documented-manual deployment (docs/superpowers/plans/
-#               2026-05-09-bug-report-skill.md stows it by hand); README and
-#               CLAUDE.md disagree about the package list; captain decision
-#               pending (stow it, keep it manual, or delete it).
-# Remove an entry from this set in the same change that adds its stow line
-# (or deletes the package). The former kube/, tmuxinator/, and neovide/
-# entries were removed together with their packages in the dead-code cleanup.
-STOW_GAP_ALLOWLIST = {
-    "claude": "documented-manual deployment; README/CLAUDE.md disagree; decision pending",
-}
+# a known gap, not an endorsement. Remove an entry from this set in the
+# same change that adds its stow line (or deletes the package). The former
+# kube/, tmuxinator/, neovide/, and claude/ entries were removed together
+# with their packages (claude in the Claude Code uninstall).
+STOW_GAP_ALLOWLIST = {}
 
 STOW_OPTS_WITH_ARG = {"-d", "-t", "--dir", "--target"}
 
@@ -587,34 +581,6 @@ def check_pi_settings():
                   "every +extensions entry exists on disk"]
 
 
-def check_claude_settings():
-    rels = [f for f in git_files("claude", ".claude")
-            if re.search(r"(^|/)(settings[^/]*\.json)$", f)]
-    if not rels:
-        return False, ["no tracked claude settings JSON found"]
-    problems = []
-    for rel in rels:
-        path = REPO / rel
-        text = path.read_text()
-        try:
-            json.loads(text)
-        except Exception as exc:  # noqa: BLE001
-            problems.append(f"FAIL {rel}: does not parse as JSON: {exc}")
-            continue
-        if "dotfiles-ci" in text:
-            problems.append(
-                f"FAIL {rel}: references the removed dotfiles-ci profile "
-                f"(#8/#9)")
-        if re.search(r"/home/[A-Za-z0-9._-]+/", text):
-            problems.append(
-                f"FAIL {rel}: contains an absolute /home/<user> path; use "
-                f"$HOME instead (#8/#9)")
-    if problems:
-        return False, problems
-    return True, [f"all {len(rels)} tracked claude settings files are valid "
-                  f"JSON with no removed-profile or /home/<user> references"]
-
-
 # Keys actually used by herdr/.config/herdr/config.toml, vendored from the
 # current config (herdr 0.8.x era). Full schema validity against the herdr
 # binary stays host-only (#156-#158): when the config gains a key on
@@ -740,54 +706,6 @@ def check_brewfile_deps():
 
 
 # --------------------------------------------------------------------------
-# X8 known-gap evidence — stow claude dry run (informational, simulated)
-# --------------------------------------------------------------------------
-
-def check_stow_claude_evidence():
-    """Simulated `stow claude` against fake homes. Records the facts the
-    captain needs for the pending decision; never touches $HOME."""
-    if not shutil.which("stow"):
-        return "SKIP", ["stow is not on PATH; the claude dry-run evidence "
-                        "check is skipped"]
-    problems = []
-    notes = []
-    with tempfile.TemporaryDirectory(prefix="repo-config-stow-") as tmp:
-        used = Path(tmp) / "used-home"
-        (used / ".claude").mkdir(parents=True)
-        (used / ".claude" / "settings.json").write_text("live settings\n")
-        out = subprocess.run(
-            ["stow", "-n", "-d", str(REPO), "-t", str(used), "claude"],
-            capture_output=True, text=True, timeout=30,
-        )
-        if out.returncode != 1 or "conflicts" not in out.stdout + out.stderr:
-            problems.append(
-                "FAIL stow claude evidence: expected the simulated stow to "
-                "conflict with a real ~/.claude/settings.json; stow behavior "
-                "changed, re-check the evidence")
-        else:
-            notes.append("simulated `stow claude` conflicts with a real "
-                         "~/.claude/settings.json and exits 1 (install.sh "
-                         "would abort under set -e)")
-        fresh = Path(tmp) / "fresh-home"
-        fresh.mkdir()
-        out = subprocess.run(
-            ["stow", "-n", "-d", str(REPO), "-t", str(fresh), "claude"],
-            capture_output=True, text=True, timeout=30,
-        )
-        if out.returncode != 0:
-            problems.append(
-                f"FAIL stow claude evidence: simulated stow against an empty "
-                f"home failed ({out.returncode}): "
-                f"{(out.stdout + out.stderr).strip()[:200]}")
-        else:
-            notes.append("against an empty home the simulation plans one "
-                         "folding symlink and exits 0")
-    if problems:
-        return False, problems
-    return True, notes
-
-
-# --------------------------------------------------------------------------
 # Runner
 # --------------------------------------------------------------------------
 
@@ -798,10 +716,8 @@ CHECKS = [
     ("X12 markdownlint-config", check_markdownlint),
     ("X12 markdownlint-fix", check_markdownlint_fix),
     ("X13 pi-settings", check_pi_settings),
-    ("X13 claude-settings", check_claude_settings),
     ("X13 herdr-config", check_herdr_config),
     ("X13 brewfile-deps", check_brewfile_deps),
-    ("X8 stow-claude-evidence", check_stow_claude_evidence),
 ]
 
 

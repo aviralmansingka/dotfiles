@@ -2,57 +2,52 @@
 
 ## Purpose
 
-`scripts/test-repo-parity.py` guards the skills store (the
-`.claude/skills` symlink farm and, if it ever returns, the skills
-lockfile), the Claude hook references, and the user docs.
-Each check reproduces a failure class that already occurred. The
+`scripts/test-repo-parity.py` guards the skills store and the user
+docs. Each check reproduces a failure class that already occurred. The
 suite runs offline and never changes `$HOME`.
 
 ## Overview
 
 Two drift findings started this suite. The docs said 15 stow
 packages, but `install.sh` stowed about 13 (PR #11, prs-02). A Claude
-hook ran a script that did not exist (ses-A). This audit found two
+hook ran a script that did not exist (ses-A; the claude package itself
+was later removed in the Claude Code uninstall). This audit found two
 more items of the same class. The Known gaps section records all
 four items.
 
 ## What the suite covers
 
-- **P1 skills store parity.** Every tracked skill symlink
-  (`.claude/skills/<name>` project-level and
-  `claude/.claude/skills/<name>` stowed) points at the documented
-  relative target and resolves to a tracked, in-tree skill dir under
-  `agents/.agents/skills/` - no dangling entries anywhere. Every
-  tracked skill dir keeps `name` equal to its dir name.
-  `skills-lock.json` was removed with the dangling mattpocock-bundle
-  symlinks (B22: the captain's skill audit deleted the bundle, the
-  fetch tool was referenced nowhere, and the 8 symlinks resolved
-  nowhere - repo, host, or tool). If a lockfile ever returns it must
-  carry full lock<->symlink<->target parity with zero dangling or
-  untracked targets, and an untracked leftover on disk fails too.
-- **P2 Claude hooks resolve.** Every hook command in the tracked
-  `.claude/settings*.json` files that names a script path resolves
-  to a tracked file or to an `EXTERNAL_HOOK_ALLOWLIST` entry. A
-  `$HOME/...` reference resolves through the `claude` stow package.
-  No config holds an absolute `/Users/<user>` path.
+- **P1 skills store parity.** Every tracked skill dir under
+  `agents/.agents/skills/` keeps `name` equal to its dir name. The
+  Claude Code exposure layers (the `.claude/skills` project farm, the
+  `claude/.claude/skills` stowed farm, and `skills-lock.json`) were
+  removed together with the claude stow package when Claude Code was
+  uninstalled from every host (B22: the captain's skill audit had
+  already deleted the mattpocock bundle the farm pointed at). The
+  lockfile must not return, tracked or on disk; vendor skills into
+  `agents/.agents/skills/` instead.
 
-(The P3 notion-cli behavior matrix was removed together with
-`pi/bin/notion-cli` in the dead-code cleanup.)
-- **P4 docs accuracy.** For `README.md`, `CLAUDE.md`, `AGENTS.md`, and
+(The P2 claude hook-resolution check was removed together with the
+claude stow package in the Claude Code uninstall; the P3 notion-cli
+behavior matrix was removed with `pi/bin/notion-cli` in the dead-code
+cleanup.)
+- **P4 docs accuracy.** For `README.md`, `AGENTS.md`, and
   the tracked top-level `docs/*.md`: the README stow table lists every
   top-level dir except 5 exempted non-package dirs. A claim of the
   form "N stow packages" must equal the table count, and every
   `stow <pkg>` mention, repo-anchored path, and link target resolves.
-- **P5 negative sandbox.** A synthetic passing lockfile sandbox, the
-  real settings, and the real README pass first. The suite then
-  applies 16 mutations (8 skills-store, 3 hooks, 5 docs) and proves
-  that the matching check catches each one.
+- **P5 negative sandbox.** A synthetic passing skills sandbox and
+  the real README pass first. The suite then applies 7 mutations
+  (2 skills-store, 5 docs) and proves that the matching check catches
+  each one.
 
 ## How to run
 
 Run `./scripts/test-repo-parity.py`. Every FAIL names the file and the
 reason. The suite exits non-zero when any check fails. It needs `git`
-and Python 3.11 or newer, and installs nothing.
+and Python 3.11 or newer, and installs nothing. (Backticked
+f-string syntax in the companion repo-config suite needs 3.12+; the
+CI runners provide it.)
 
 ## Runtime and SLA
 
