@@ -83,6 +83,12 @@ export function buildBackgroundScript(
  * with `--run <id>`; attach is never invoked without an explicit id. When no
  * run is registered yet, resolution yields nothing and the loop retries.
  *
+ * The pinned `cd` also covers the deleted-cwd class: if the invoking shell
+ * sits in a removed worktree but the run's worktree is alive, the cd repairs
+ * branch resolution; if the RUN's worktree itself is gone there is nothing
+ * left to attach to, so the wrapper exits quietly instead of retrying from /
+ * (a dead pane must never spin for two minutes on a run that cannot exist).
+ *
  * attach needs an active run to attach to, and there is a startup race: the
  * background axi run may not have registered with the daemon yet when attach
  * first runs. attach is read-only w.r.t. the daemon, so this wrapper simply
@@ -101,7 +107,8 @@ export function buildAttachScript(
 	return [
 		`# Pin the run's worktree so axi status resolves the right branch even`,
 		`# if the invoking shell's cwd was deleted (getcwd failure class).`,
-		`cd ${shellQuote(runCwd)} 2>/dev/null || cd /`,
+		`# A run worktree that no longer exists means the run is over: exit.`,
+		`cd ${shellQuote(runCwd)} 2>/dev/null || exit 0`,
 		`DONE=${shellQuote(doneFile)}`,
 		`i=0`,
 		`while [ "$i" -lt ${maxTries} ]; do`,

@@ -605,7 +605,7 @@ assert.equal(errorRemediation("gate:\n  step: review"), "");
 			'  "pane neighbor")',
 			'    if [ "$4" = "right" ]; then echo \'{"result":{"neighbor":{"pane_id":"nm:p2"}}}\';',
 			'    else echo \'{"result":{"neighbor":{"pane_id":"other:p9"}}}\'; fi;;',
-			`  "pane get") if [ -f ${JSON.stringify(join(stubDir, "pane-gone"))} ]; then exit 1; fi; echo '{"result":{"pane":{}}}';;`,
+			`  "pane get") if [ -f ${JSON.stringify(join(stubDir, "pane-gone"))} ]; then exit 1; fi; if [ -f ${JSON.stringify(join(stubDir, "pane-cwd-dead"))} ]; then echo '{"result":{"pane":{"cwd":"/nonexistent-nm-dead-cwd"}}}'; else echo ${JSON.stringify(`{"result":{"pane":{"cwd":"${stubDir}"}}}`)}; fi;;`,
 			"esac",
 			"exit 0",
 			"",
@@ -900,6 +900,49 @@ assert.equal(errorRemediation("gate:\n  step: review"), "");
 		).render(200);
 		assert.match(restoredLines.join("\n"), /Ctrl\+O/, "toggling back restores the row");
 
+		// 9. A reused pane whose cwd no longer exists (the daemon removed the
+		//    run worktree between runs) is closed and replaced by a fresh split
+		//    — never typed into a shell sitting in a deleted directory, which
+		//    is what sprayed getcwd errors into the attach pane (2026-10-15).
+		rmSync(join(stubDir, "pane-gone"));
+		writeNmStub([
+			'if [ "$1" = "attach" ]; then exit 0; fi',
+			"sleep 0.05",
+			`printf '%s\\n' '${gateOutput.replace(/'/g, `'\\''`)}'`,
+			"exit 0",
+		]);
+		const reopenAck = await tool.execute(
+			"run-deadcwd-1",
+			{ args: 'run --intent "reopen pane"', timeoutMs: 60 },
+			undefined,
+			undefined,
+			{ cwd: stubDir, hasUI: true },
+		);
+		assert.equal(reopenAck.details.status, "started");
+		assert.equal(reopenAck.details.paneId, "nm:p2");
+		await pollUntil(() => messages.length >= 3);
+		syncHerdrLog();
+		const splitsBeforeDeadCwd = herdrLog.filter((line) => line === "pane split --current --direction right --cwd " + stubDir + " --no-focus").length;
+		assert.ok(splitsBeforeDeadCwd >= 2, "a fresh pane opened for the new run");
+
+		// Kill the pane's reported cwd: the next dispatch must NOT reuse it.
+		writeFileSync(join(stubDir, "pane-cwd-dead"), "");
+		const deadCwdAck = await tool.execute(
+			"run-deadcwd-2",
+			{ args: 'run --intent "dead cwd"', timeoutMs: 60 },
+			undefined,
+			undefined,
+			{ cwd: stubDir, hasUI: true },
+		);
+		assert.equal(deadCwdAck.details.status, "started");
+		assert.equal(deadCwdAck.details.paneId, "nm:p2", "the replacement pane gets the stub's pane id");
+		syncHerdrLog();
+		assert.ok(herdrLog.includes("pane close nm:p2"), "the dead-cwd pane is closed, not reused");
+		assert.ok(
+			herdrLog.filter((line) => line === "pane split --current --direction right --cwd " + stubDir + " --no-focus").length > splitsBeforeDeadCwd,
+			"a fresh pane is split when the reused pane's cwd is gone",
+		);
+
 		handlers.get("session_shutdown")();
 	} finally {
 		globalThis.setInterval = savedSetInterval;
@@ -1153,6 +1196,33 @@ assert.equal(errorRemediation("gate:\n  step: review"), "");
 }
 
 // ---------------------------------------------------------------------------
+// buildAttachScript: a run worktree that no longer exists means the run is
+// over — the wrapper exits quietly instead of retrying from / (a dead pane
+// must never spin on a run that cannot exist).
+// ---------------------------------------------------------------------------
+{
+	const stubDir = mkdtempSync(join(tmpdir(), "pi-nm-attach-dead-"));
+	try {
+		const doneFile = join(stubDir, "capture.done");
+		const scriptFile = join(stubDir, "attach.sh");
+		const callLog = join(stubDir, "calls.log");
+		const stubPath = join(stubDir, "no-mistakes");
+		// Any contact would land in the log — the assertion is that none does.
+		writeFileSync(stubPath, ["#!/bin/sh", `echo "$*" >> ${JSON.stringify(callLog)}`, "exit 1", ""].join("\n"));
+		chmodSync(stubPath, 0o755);
+		writeFileSync(scriptFile, buildAttachScript(doneFile, 240, "0.001", join(stubDir, "gone-worktree")));
+		const ran = spawnSync("bash", [scriptFile], {
+			encoding: "utf-8",
+			env: { ...process.env, PATH: `${stubDir}:${process.env.PATH}`, DONE: doneFile },
+		});
+		assert.equal(ran.status, 0, `dead-worktree wrapper exits 0; stderr: ${ran.stderr}`);
+		assert.ok(!existsSync(callLog), "the wrapper contacts nothing when the run worktree is gone");
+	} finally {
+		rmSync(stubDir, { recursive: true, force: true });
+	}
+}
+
+// ---------------------------------------------------------------------------
 // buildAttachScript: while axi status resolves no run id (the background run
 // has not registered with the daemon yet), attach is NEVER invoked — and
 // in particular never without an explicit --run id, which would latch onto
@@ -1352,6 +1422,7 @@ assert.equal(errorRemediation("gate:\n  step: review"), "");
 	const savedSubagentName = process.env.PI_SUBAGENT_NAME;
 	const savedPath = process.env.PATH;
 	const stubDir = mkdtempSync(join(tmpdir(), "pi-nm-delegate-"));
+	const herdrLogPath = join(stubDir, "herdr-calls.log");
 	// Two real worktree dirs: the tool spawns its background script with the
 	// call cwd, so the cwd must exist. Ownership keys are these resolved paths.
 	const dirA = join(stubDir, "repo-a");
@@ -1383,6 +1454,18 @@ assert.equal(errorRemediation("gate:\n  step: review"), "");
 		].join("\n"));
 		chmodSync(join(stubDir, "no-mistakes"), 0o755);
 		process.env.PATH = `${stubDir}:${savedPath}`;
+		// Hermetic herdr: this block must never reach a live server. Before the
+		// attach-probe cache was reset per factory call, a leaked "attach
+		// available" from an earlier block split a REAL pane into the hosting
+		// session's tab (2026-10-15 incident) — the stub fails every op and
+		// records that none was attempted.
+		writeFileSync(join(stubDir, "herdr"), [
+			"#!/bin/sh",
+			`echo "$*" >> ${JSON.stringify(herdrLogPath)}`,
+			"exit 1",
+			"",
+		].join("\n"));
+		chmodSync(join(stubDir, "herdr"), 0o755);
 		globalThis[SPAWN_KEY] = {
 			executeSubagent: async () => spawnResult,
 			isSubagentRunning: () => running,
@@ -1469,6 +1552,18 @@ assert.equal(errorRemediation("gate:\n  step: review"), "");
 		);
 		assert.equal(respondAck.details.status, "started",
 			"respond is not refused by a phantom registry owner (#286)");
+
+		// 5. Hermeticity: with this block's stub reporting attach unavailable
+		//    (and the per-factory cache reset), the fallback run never opens a
+		//    pane — no herdr pane op may run here, stubbed or real.
+		const herdrOps = existsSync(herdrLogPath)
+			? readFileSync(herdrLogPath, "utf-8").trim().split("\n").filter(Boolean)
+			: [];
+		assert.deepEqual(
+			herdrOps.filter((line) => line.startsWith("pane ")),
+			[],
+			"no pane op is ever attempted from this block (attach cache reset pin)",
+		);
 
 		handlers.get("session_shutdown")();
 	} finally {
