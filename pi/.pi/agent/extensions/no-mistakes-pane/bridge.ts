@@ -19,8 +19,10 @@
 //     — the daemon ignores session ids on cold turns). The tab runs
 //     `pi --no-extensions` plus the curated step-agent set
 //     (STEP_AGENT_EXTENSIONS: reporters, capability tools, tab chrome — never
-//     the parent's pipeline machinery). The daemon's prompt is
-//     submitted through `herdr agent prompt --wait`.
+//     the parent's pipeline machinery). The daemon's prompt is submitted
+//     through `herdr agent prompt`; settlement is detected from the tailed
+//     session file plus the pane's agent status, never from `--wait` (whose
+//     state matching races fast turns both ways).
 //   - The tab's session file is tailed and translated into pi json-mode
 //     events (message_end / turn_end / agent_end, plus the synthesized
 //     `no_mistakes_output` tool_execution_end for strict turns), streamed to
@@ -63,6 +65,11 @@ function nmEnvMs(name: string, fallback: number): number {
 }
 export const TAB_READY_TIMEOUT_MS = nmEnvMs("NM_TAB_READY_TIMEOUT_MS", 30_000);
 export const SESSION_DISCOVER_TIMEOUT_MS = nmEnvMs("NM_SESSION_DISCOVER_TIMEOUT_MS", 10_000);
+/** Deadline for the daemon's prompt to reach the tab agent's session file
+ *  (this turn's first user record). A submission that never lands means the
+ *  tab is wedged — fail the invocation fast instead of burning the whole
+ *  settle budget on a step that cannot run. */
+export const PROMPT_DELIVERY_TIMEOUT_MS = nmEnvMs("NM_PROMPT_DELIVERY_TIMEOUT_MS", 60_000);
 /** Prompt/settle poll cadence. `NM_BRIDGE_POLL_MS` overrides it so the
  *  offline test suite can drive the settle loop fast (default 250 ms —
  *  same knob family as NM_HERDR_REAL_PI / NM_HERDR_BRIDGE_WAIT_MS). */
@@ -172,6 +179,39 @@ export function buildTabLauncher(opts: {
 		...opts.extraExtensions.flatMap((path) => ["-e", path]),
 	].map(shellQuote).join(" ");
 	return ["#!/bin/bash", ...exports, `exec ${command}`, ""].join("\n");
+}
+
+/** One poll's settle decision for a bridged turn. Pure: pinned by the
+ *  offline suite. The session stream leads and the pane status lags, so a
+ *  growing file always means "wait", and only a quiet stream over a
+ *  completed pane settles. `blocked` is abnormal for a step agent (its
+ *  curated tool set cannot block on a human) and fails the invocation. */
+export function turnSettleDecision(input: {
+	turnStarted: boolean;
+	newBytes: boolean;
+	agentStatus: string | undefined;
+}): "wait" | "settled" | "blocked" {
+	if (!input.turnStarted || input.newBytes) return "wait";
+	switch (input.agentStatus) {
+		case "done":
+		case "idle":
+			return "settled";
+		case "blocked":
+			return "blocked";
+		default:
+			return "wait";
+	}
+}
+
+/** True for the record that proves the submitted prompt reached the tab
+ *  agent: this turn's user message. Pure: pinned by the offline suite. */
+export function isTurnStartRecord(record: unknown): boolean {
+	return Boolean(
+		record &&
+		typeof record === "object" &&
+		(record as { type?: unknown }).type === "message" &&
+		(record as { message?: { role?: unknown } }).message?.role === "user",
+	);
 }
 
 function firstText(content: unknown): string | undefined {
@@ -692,12 +732,21 @@ async function runInvocation(
 		// (verified live: an idle tab pi has an empty session dir), so the
 		// daemon's prompt must be in flight before discovery can ever succeed
 		// — for a cold step the opposite order always times out.
-		let settled = false;
+		//
+		// Settlement is detected from the session stream plus the pane's agent
+		// status, never from `agent prompt --wait`: its state matching races
+		// fast turns in both directions (reproduced 2026-10-13 — a 1.4s turn
+		// whose completion --wait never observed burned the whole caller
+		// timeout, and a second prompt matched the PREVIOUS done state in
+		// 1.2s, a false settle on fixer rounds). The submit call reports only
+		// acceptance; a rejected submission (agent_blocked) fails the
+		// invocation and the shim falls back headless, exactly as before.
+		let turnStarted = false;
 		void execFileAsync(
 			"herdr",
-			["agent", "prompt", tab.paneId, hello.prompt, "--wait", "--timeout", String(TURN_SETTLE_TIMEOUT_MS)],
-			{ timeout: TURN_SETTLE_TIMEOUT_MS + 30_000, maxBuffer: 1024 * 1024 },
-		).then(() => { settled = true; }, (err) => {
+			["agent", "prompt", tab.paneId, hello.prompt],
+			{ timeout: 30_000, maxBuffer: 1024 * 1024 },
+		).catch((err) => {
 			promptError = err instanceof Error ? err : new Error(String(err));
 		});
 
@@ -712,13 +761,43 @@ async function runInvocation(
 
 		const streamNew = () => {
 			offset = streamNewRecords(fd!, offset, (record) => {
+				if (isTurnStartRecord(record)) turnStarted = true;
 				for (const line of translator.feedRecord(record)) send({ type: "events", lines: [line] });
 			});
 		};
 
-		while (!isCut() && !settled) {
+		const submittedAt = Date.now();
+		let settled = false;
+		while (!isCut() && !settled && Date.now() - submittedAt < TURN_SETTLE_TIMEOUT_MS) {
 			await sleep(PROMPT_POLL_MS);
-			if (!isCut() && !settled) streamNew();
+			if (isCut()) break;
+			const before = offset;
+			streamNew();
+			if (!turnStarted) {
+				// Delivery deadline: a prompt that never reaches the session file
+				// means a wedged tab — fail fast, the headless fallback follows.
+				if (Date.now() - submittedAt >= PROMPT_DELIVERY_TIMEOUT_MS) {
+					throw new Error(
+						`the prompt never reached the tab agent's session within ${Math.round(PROMPT_DELIVERY_TIMEOUT_MS / 1000)}s`,
+					);
+				}
+				continue;
+			}
+			if (offset !== before) continue; // still streaming — status can lag records
+			const info = herdrJsonSync(["agent", "get", tab.paneId]) as
+				| { result?: { agent?: { agent_status?: unknown } } }
+				| null;
+			const agent = info?.result?.agent;
+			if (!agent) throw new Error("the tab agent is gone mid-turn (pane closed or crashed)");
+			const decision = turnSettleDecision({
+				turnStarted,
+				newBytes: false,
+				agentStatus: typeof agent.agent_status === "string" ? agent.agent_status : undefined,
+			});
+			if (decision === "settled") settled = true;
+			else if (decision === "blocked") {
+				throw new Error("tab agent is blocked mid-turn (read its pane before bridging)");
+			}
 		}
 		if (promptError) throw promptError;
 		if (cut.flag) {
@@ -727,6 +806,9 @@ async function runInvocation(
 			closeTab(tab);
 			socket.end();
 			return;
+		}
+		if (!settled) {
+			throw new Error(`turn did not settle within ${Math.round(TURN_SETTLE_TIMEOUT_MS / 1000)}s`);
 		}
 		// Drain the settled backlog, retaining the 4 MiB per-read cap. Bound
 		// work even if an unexpected writer keeps appending to the file.

@@ -39,6 +39,31 @@ while [ $# -gt 0 ]; do
 done
 
 have() { command -v "$1" >/dev/null 2>&1; }
+# Prefer a modern interpreter when present: this repo's python uses 3.12+
+# syntax (f-string backslashes), which the macOS system python3 (3.9)
+# rejects. CI runners ship python3 >= 3.12 and fall through to it unchanged;
+# no downloads, offline-safe.
+py3=$(command -v python3.13 || command -v python3.12 || command -v python3 || true)
+
+# Portable timeout: use coreutils timeout when present (CI/Linux), else a
+# background watcher that kills on the deadline — macOS ships neither
+# timeout nor bash 4, and the gate's Test step runs on macOS hosts too.
+with_timeout() {
+  local secs=$1; shift
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "$secs" "$@"
+    return $?
+  fi
+  "$@" &
+  local cmd_pid=$!
+  ( sleep "$secs" && kill -TERM "$cmd_pid" 2>/dev/null ) &
+  local watch_pid=$!
+  wait "$cmd_pid"
+  local rc=$?
+  kill -TERM "$watch_pid" 2>/dev/null
+  wait "$watch_pid" 2>/dev/null
+  return $rc
+}
 
 # --- selection logic (mirrors the ci.yml changes job) ------------------------
 # Fixed area gates (arrays kept in sync with ci.yml's changes job).
@@ -207,7 +232,7 @@ fi
 if [ "${#select_ext_tests[@]}" -gt 0 ]; then
   if have node; then
     for f in "${select_ext_tests[@]}"; do
-      if timeout 120 node "$f"; then
+      if with_timeout 120 node "$f"; then
         echo "PASS $f"
       else
         echo "FAIL $f"
@@ -223,15 +248,18 @@ fi
 # --- scripts tests -----------------------------------------------------------
 run_entry() {
   case "$1" in
-    *.sh) timeout 120 bash "$1" ;;
-    *.py) timeout 120 python3 "$1" ;;
-    *.mjs) timeout 120 node "$1" ;;
-    *) timeout 120 "$1" ;;
+    *.sh) with_timeout 120 bash "$1" ;;
+    *.py) with_timeout 120 "$py3" "$1" ;;
+    *.mjs) with_timeout 120 node "$1" ;;
+    *) with_timeout 120 "$1" ;;
   esac
 }
 if [ "${#select_scripts_tests[@]}" -gt 0 ]; then
-  # Dedupe (loader smoke may be added twice).
-  mapfile -t uniq_scripts < <(printf '%s\n' "${select_scripts_tests[@]}" | sort -u)
+  # Dedupe (loader smoke may be added twice); bash-3.2-safe (no mapfile).
+  uniq_scripts=()
+  while IFS= read -r f; do
+    [ -n "$f" ] && uniq_scripts+=("$f")
+  done < <(printf '%s\n' "${select_scripts_tests[@]}" | sort -u)
   for f in "${uniq_scripts[@]}"; do
     echo "== $f"
     rc=0; run_entry "$f" || rc=$?
@@ -249,9 +277,9 @@ fi
 
 # --- telegram daemon unittests ----------------------------------------------
 if [ "$run_telegram" -eq 1 ]; then
-  if have python3; then
+  if [ -n "$py3" ]; then
     echo "== pi/bin telegram daemon unittests"
-    if timeout 120 python3 -m unittest discover -s pi/bin -p 'test_pi_telegram_daemon.py'; then
+    if with_timeout 120 "$py3" -m unittest discover -s pi/bin -p 'test_pi_telegram_daemon.py'; then
       echo "PASS pi-telegram-daemon"
     else
       echo "FAIL pi-telegram-daemon"

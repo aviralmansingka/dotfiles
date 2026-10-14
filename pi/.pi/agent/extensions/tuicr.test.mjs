@@ -639,7 +639,13 @@ assert.equal(
 // the comment/session fixtures the fake CLI serves. No network, no panes.
 
 const require = createRequire(import.meta.url);
-const { jitiPath } = resolveJiti();
+// Same contract as the sibling suites (test-lib/jiti.mjs): re-derive
+// NODE_PATH from the resolved jiti root so typebox resolves when jiti comes
+// from pi's managed install — this file loads no-mistakes-pane.ts for the
+// keep-open composition, and that import needs typebox.
+const { jitiPath, nodePath } = resolveJiti();
+process.env.NODE_PATH = nodePath;
+require("node:module").Module._initPaths();
 const { createJiti } = require(jitiPath);
 
 const extRoot = mkdtempSync(join(tmpdir(), "tuicr-ext-test-"));
@@ -977,6 +983,9 @@ try {
 	stage({ listInitial: [s288], listAfter: [s288, s287] });
 	const prLaunch = await tuicrTool.execute("t-pr-launch", { repo: repoDir, scope: "pr", pr: 287 }, undefined, undefined, harness.ctx);
 	assert.equal(prLaunch.isError, undefined);
+	// The wrapper spawns detached, so its log line lands asynchronously —
+	// bounded poll before asserting (slow-host race, seen on macOS).
+	await until(() => wrapperCalls().length >= 1, "wrapper launch for the explicit pr target");
 	assert.deepEqual(wrapperCalls(), [`${repoDir} -- pr 287`], "wrapper receives the repo and the explicit pr target");
 	assert.equal(prLaunch.details.slug, "gh:owner/repo/pr/287", "the PR target resolves its own session, not PR-288's");
 	assert.equal(keepOpenCount(), 1);
@@ -989,6 +998,7 @@ try {
 	stage({ listInitial: [s288], listAfter: [s288, { slug: "wt-new", active: true }], branch: "main", openPrs: [] });
 	const wtLaunch = await tuicrTool.execute("t-wt-launch", { repo: repoDir }, undefined, undefined, harness.ctx);
 	assert.equal(wtLaunch.isError, undefined);
+	await until(() => wrapperCalls().length >= 1, "wrapper launch for the working-tree pane");
 	assert.deepEqual(wrapperCalls(), [`${repoDir} -- -w`], "the default with no open PR launches a working-tree pane");
 	assert.equal(wtLaunch.details.slug, "wt-new", "baseline diff owns the NEW session, not the pre-active one");
 	assert.equal(keepOpenCount(), 1);

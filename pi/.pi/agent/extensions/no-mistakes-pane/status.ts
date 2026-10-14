@@ -391,3 +391,23 @@ export function parseNoMistakesResult(
 	const run = parseNoMistakesStatus(output, observedAt);
 	return { gate, outcome, error, findings, help, run };
 }
+
+/** Remediation text for daemon-level failures observed in axi output.
+ *  Pure: pinned by the offline suite. Returns "" when the output carries no
+ *  known daemon-level failure — the call then fails for a step-local reason
+ *  and the generic error guidance applies. */
+export function errorRemediation(output: string): string {
+	if (/daemon shutting down/.test(output)) {
+		return "The no-mistakes daemon restarted mid-run and the run is now terminal. Inspect it with no_mistakes_axi `status`, then start a fresh run when ready.";
+	}
+	if (/connect to daemon socket|connection refused/.test(output)) {
+		return "The no-mistakes daemon is not reachable. Run `no-mistakes doctor` and start the daemon, then retry this call.";
+	}
+	if (/parse global config/.test(output)) {
+		return "The global config (~/.no-mistakes/config.yaml) does not parse with this no-mistakes version — a version skew. Fix or remove the stale field, then retry.";
+	}
+	if (/repo not initialized/.test(output)) {
+		return "This repository has no no-mistakes gate. Run `no-mistakes init` first, then retry.";
+	}
+	return "";
+}

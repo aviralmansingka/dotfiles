@@ -33,6 +33,7 @@ import {
 	parseNoMistakesResult,
 	parseNoMistakesStatus,
 	summarizeNoMistakesSnapshot,
+	errorRemediation,
 	type NoMistakesResultReport,
 	type NoMistakesSnapshot,
 } from "./no-mistakes-pane/status";
@@ -272,6 +273,36 @@ async function waitForStart(
 		}
 		if (Date.now() >= deadline) return false;
 		await sleep(POLL_MS, signal).catch(() => {});
+	}
+}
+
+/** Fast preflight for state-changing pipeline calls (`run` without
+ *  --help, `respond`): `axi status` must reach the daemon and parse the
+ *  global config, else the background run would fail after a pointless
+ *  attach-pane churn (the 2026-09 failure census: daemon connection
+ *  refused, config version skew, uninitialized repo — each surfaced only
+ *  after a pane had opened and died). `axi status` exits 0 with no run on
+ *  the branch, so a nonzero exit here is always a real defect. Returns the
+ *  failure text (CLI output + remediation), or undefined when healthy. */
+async function axiPreflightFailure(cwd: string): Promise<string | undefined> {
+	try {
+		await execFileAsync("no-mistakes", ["axi", "status"], { cwd, timeout: STATUS_TIMEOUT_MS });
+		return undefined;
+	} catch (err) {
+		const errWith = err as { stdout?: unknown; stderr?: unknown };
+		const output = [String(errWith.stdout ?? ""), String(errWith.stderr ?? "")]
+			.filter(Boolean)
+			.join("\n")
+			.trim();
+		const remediation =
+			errorRemediation(output) ||
+			"Run `no-mistakes doctor` and retry once it reports healthy.";
+		const detail = output || (err instanceof Error ? err.message : String(err));
+		return [
+			"no-mistakes axi preflight failed — the daemon is not healthy enough to start a run:",
+			detail,
+			remediation,
+		].join("\n");
 	}
 }
 
@@ -769,7 +800,11 @@ function resultGuidance(
 		return "Terminal outcome — read the output, address what it points at (commit fixes on the same branch), then start a fresh run or `rerun` as the help lines suggest. Do not leave the user at a failed outcome without retrying or explaining what blocks it.";
 	}
 	if (/^error:/m.test(r.output)) {
-		return "The call returned an error — read its `help` lines and act on them; re-submit through no_mistakes_axi once the cause is fixed.";
+		const remediation = errorRemediation(r.output);
+		return (
+			"The call returned an error — read its `help` lines and act on them; re-submit through no_mistakes_axi once the cause is fixed." +
+			(remediation ? " " + remediation : "")
+		);
 	}
 	return "";
 }
@@ -1136,9 +1171,10 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 			// TUI, without interactive-subagents, and on spawn failure, so
 			// headless hosts and non-Herdr contexts are unchanged.
 			const spawnApi = orchestratorSpawnApi();
+			const helpOnly = args.some((a) => a === "--help" || a === "-h");
 			const decision = orchestratorDelegationDecision({
 				subcommand,
-				helpOnly: args.some((a) => a === "--help" || a === "-h"),
+				helpOnly,
 				insideSubagent: Boolean(process.env.PI_SUBAGENT_NAME),
 				hasSpawnApi: Boolean(spawnApi),
 				hasTui: interactiveTuiSession && Boolean((ctx as { hasUI?: boolean })?.hasUI),
@@ -1194,6 +1230,21 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 					// to direct driving — the run must still start, but say so.
 					delegateNote = ` Orchestrator delegation failed (${err instanceof Error ? err.message : String(err)}); driving the run directly here instead.`;
 					}
+			}
+			// Preflight the daemon before any pane or background client is
+			// spawned: an unreachable daemon, a config version skew, or a missing
+			// gate fails here in one CLI roundtrip instead of after pane churn.
+			// Delegated runs skip it — the orchestrator session runs it on its own
+			// direct call.
+			if (!decision.delegate && ((subcommand === "run" && !helpOnly) || subcommand === "respond")) {
+				const failure = await axiPreflightFailure(cwd);
+				if (failure) {
+					return textResult(failure, {
+						status: "error",
+						subcommand,
+						message: "axi preflight failed",
+					});
+				}
 			}
 			const observesSession = resolve(cwd) === resolve(sessionCwd);
 			const timeoutMs = (params.timeoutMs ?? NM_PANE_TIMEOUT_MS / 1000) * 1000;

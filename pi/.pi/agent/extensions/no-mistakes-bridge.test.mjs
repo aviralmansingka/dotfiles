@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -35,6 +35,8 @@ const {
 	SessionEventTranslator,
 	ensureBridgeServer,
 	teardownBridgeForRun,
+	turnSettleDecision,
+	isTurnStartRecord,
 } = jiti("./no-mistakes-pane/bridge.ts");
 const {
 	runPhaseLabel,
@@ -57,6 +59,31 @@ const {
 }
 
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Settle decision: the stream leads, the pane status lags, and only a quiet
+// stream over a completed pane settles. Pins the two reproduced --wait
+// races: a pre-turn idle pane must never settle, and a growing file defers
+// to the stream even when the pane already reports done.
+// ---------------------------------------------------------------------------
+assert.equal(turnSettleDecision({ turnStarted: false, newBytes: false, agentStatus: "idle" }), "wait",
+	"a pre-turn idle pane never settles (stale --wait match class)");
+assert.equal(turnSettleDecision({ turnStarted: false, newBytes: false, agentStatus: "done" }), "wait",
+	"a pre-turn done pane never settles");
+assert.equal(turnSettleDecision({ turnStarted: true, newBytes: true, agentStatus: "done" }), "wait",
+	"a growing session file defers to the stream");
+assert.equal(turnSettleDecision({ turnStarted: true, newBytes: false, agentStatus: "done" }), "settled");
+assert.equal(turnSettleDecision({ turnStarted: true, newBytes: false, agentStatus: "idle" }), "settled");
+assert.equal(turnSettleDecision({ turnStarted: true, newBytes: false, agentStatus: "working" }), "wait");
+assert.equal(turnSettleDecision({ turnStarted: true, newBytes: false, agentStatus: "unknown" }), "wait");
+assert.equal(turnSettleDecision({ turnStarted: true, newBytes: false, agentStatus: undefined }), "wait");
+assert.equal(turnSettleDecision({ turnStarted: true, newBytes: false, agentStatus: "blocked" }), "blocked",
+	"a blocked step agent fails the invocation");
+assert.equal(isTurnStartRecord({ type: "message", message: { role: "user", content: "" } }), true);
+assert.equal(isTurnStartRecord({ type: "message", message: { role: "assistant", content: "" } }), false);
+assert.equal(isTurnStartRecord({ type: "session", id: "x" }), false);
+assert.equal(isTurnStartRecord(null), false);
+assert.equal(isTurnStartRecord("garbage"), false);
+
 // argv translation: interactive tab argv from the daemon's json-mode argv.
 // The daemon's contract (upstream internal/agent/pi.go buildArgs): operator
 // extras, then `--mode json`, then `--no-session` or `--session <uuid>`, and
@@ -471,7 +498,8 @@ function awaitExit(child, timeoutMs) {
 }
 
 function makeShimRoot(prefix, stubBody) {
-	const root = mkdtempSync(join(tmpdir(), prefix));
+	// /tmp base: the bridge socket path must fit macOS's 104-char sun_path.
+	const root = mkdtempSync(join("/tmp", prefix));
 	writeFileSync(join(root, "stub-pi.sh"), stubBody);
 	chmodSync(join(root, "stub-pi.sh"), 0o755);
 	mkdirSync(join(root, TEST_RUN_ID));
@@ -728,7 +756,13 @@ process.exit(1);
 `;
 
 function makeBridgeRoot(prefix) {
-	const root = mkdtempSync(join(tmpdir(), prefix));
+	// The bridge socket lives at <root>/herdr-bridge/<26-char run id>/sock,
+	// and a Unix domain socket path must fit macOS's 104-char sun_path. A
+	// deep mkdtemp under TMPDIR (/var/folders/... on macOS) blows that budget
+	// before the run id is even appended, so anchor the stub world at /tmp —
+	// short, writable, and present on every host this suite runs on.
+	const base = "/tmp";
+	const root = mkdtempSync(join(base, prefix));
 	const stubDir = join(root, "stub-bin");
 	mkdirSync(stubDir);
 	// stub herdr: an sh wrapper execing the node stub with the absolute
@@ -998,7 +1032,11 @@ await (async () => {
 	// conversation is never re-emitted, only this round's records stream.
 	const root = makeBridgeRoot("nm-bridge-resumed-");
 	const fixerId = "01aaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
-	const runCwd = join(root, TEST_RUN_ID);
+	// The shim reports its cwd as process.cwd(), which on macOS resolves
+	// symlinks (/tmp → /private/tmp) while join(root, …) keeps the logical
+	// spelling — the mangled session dir must use the physical form or the
+	// stub's session lookup misses it on every macOS host.
+	const runCwd = realpathSync(join(root, TEST_RUN_ID));
 	const sessionDir = join(root, "pihome", "sessions", "--" + runCwd.split("/").join("-") + "--");
 	const sessionFile = join(sessionDir, "1700000000_" + fixerId + ".jsonl");
 	mkdirSync(sessionDir, { recursive: true });
@@ -1187,7 +1225,10 @@ await (async () => {
 	try {
 		const { child, stdout, stderr } = runShim({ root, argv: [], cwd: plainDir });
 		child.stdin.end("killed turn");
-		for (let i = 0; i < 3; i++) await sleep(50); // let pi boot and trap
+		// Bounded boot wait: the passthrough child must exist before the signal
+		// is sent — 150ms raced slower hosts (the shim exited itself, childless,
+		// and the trap never fired). 1s covers node + spawn latency everywhere.
+		for (let i = 0; i < 20; i++) await sleep(50);
 		child.kill("SIGTERM");
 		const result = await awaitExit(child, 15000);
 		const out = Buffer.concat(stdout).toString("utf-8");
