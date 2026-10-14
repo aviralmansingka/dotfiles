@@ -1,6 +1,6 @@
 ---
 name: visualize
-description: Live, ratatui-rendered visualizations in terminal panes — today the rataflow node graph, laid out to fit on a single screen beside the chat text in fullscreen. Build a small JSON spec and open it with the rataflow-view binary in a herdr pane the human can drag, pan, and zoom. For HTML artifacts (decks, dashboards, infographics) use the artifact skill; for diagrams inside the chat reply use the mermaid tool; for static terminal art or PNG export use the mermaid skill.
+description: Live, ratatui-rendered visualizations in terminal panes — today the rataflow node graph, laid out to fit on a single screen beside the chat text in fullscreen, with slow dots flowing along its edges. Build a small JSON spec and open it with the rataflow-view binary in a herdr pane the human can drag, pan, and zoom. For HTML artifacts (decks, dashboards, infographics) use the artifact skill; for diagrams inside the chat reply use the mermaid tool; for static terminal art or PNG export use the mermaid skill.
 ---
 
 # visualize
@@ -11,7 +11,9 @@ Today this skill renders node graphs: the `rataflow-view` binary (crate at
 `rataflow/` in the dotfiles repo, built on the rataflow library) turns a
 JSON spec into a pane the human can drag, pan, and zoom. Lay the graph out
 so it fits on a single screen: in fullscreen the pane sits beside the chat
-text, and the whole graph must read without pan or zoom.
+text, and the whole graph must read without pan or zoom. Edges render as
+arrows; an optional `flow` field adds slow dots that travel source →
+target.
 
 ## Routing: pick the surface first
 
@@ -79,6 +81,10 @@ node, and `label` defaults to `id`:
 - `edges` is required and needs at least one entry. `from` and `to` must
   be non-empty. Node ids must be unique. Unknown fields are rejected and
   the error names the problem — fix what it names and re-run.
+- `flow` on an edge: `true` or a small positive number — dots travel
+  `from → to` along the line. One speed unit is about 10 cells per second;
+  keep values at or below 0.5 so motion stays slow. Dot spacing is fixed,
+  so slow edges are as sparse as fast ones.
 - `layers`: optional explicit placement — an array of arrays, one inner
   array per layer (a row in `tb`, a column in `lr`); the declared order
   runs across the perpendicular axis, and `""` reserves a slot so a
@@ -91,7 +97,8 @@ Styling is automatic and gruvbox-native (it matches the terminal): a plain
 background with no dot grid, node boxes filled with the canvas color so
 their rounded borders sit flush, and node borders cycling the gruvbox
 bright accents (yellow, orange, aqua, blue, purple, green). Selection uses the
-gruvbox yellow accent.
+gruvbox yellow accent. Edges attach at node borders with no marker dot —
+the only dots on the canvas are the flowing ones.
 
 ## Open the viewer
 
@@ -132,7 +139,7 @@ herdr pane run <pane-id> "rataflow-view <spec>; herdr pane close <pane-id>"
   pane — cut nodes or shorten labels and re-open.
 - Tell the human what appeared and where. Keys for the human: drag a node
   to move it, drag empty space to pan, scroll to zoom, `f` to fit, arrows
-  or Tab to navigate, `q` (or Esc) to quit. Dragging from a node handle to
+  or Tab to navigate, `q` (or Esc) to quit. Dragging from a node border to
   another node creates an edge; dragging an edge end reconnects it.
   Quitting closes the pane with the app.
 - Cleanup: automatic — the pane closes itself the moment the app exits.
