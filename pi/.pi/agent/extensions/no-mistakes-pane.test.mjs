@@ -304,8 +304,10 @@ assert.equal(errorRemediation("gate:\n  step: review"), "");
 			return { unref() {} };
 		};
 		globalThis.clearInterval = () => {};
-		// Background axi stub: short delay, then a gate TOON on stdout.
-		writeStub(["sleep 0.1", `printf '%s\\n' '${gateOutput.replace(/'/g, `'\\''`)}'`]);
+		// Background axi stub: `axi status` answers instantly (healthy daemon —
+		// the preflight must stay well inside the 500ms ack budget), the run
+		// itself sleeps briefly, then prints a gate TOON on stdout.
+		writeStub(['if [ "$1" = "axi" ] && [ "$2" = "status" ]; then exit 0; fi', "sleep 0.1", `printf '%s\\n' '${gateOutput.replace(/'/g, `'\\''`)}'`]);
 		process.env.PATH = `${stubDir}:${savedPath}`;
 
 		let statusStdout = gateStatus;
