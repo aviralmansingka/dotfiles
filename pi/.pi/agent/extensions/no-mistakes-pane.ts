@@ -971,9 +971,22 @@ function openWatchPane(
 	attachScript: string,
 ): { pane: NmPane; opened: boolean } | null {
 	if (state.pane) {
-		if (paneAlive(state.pane.paneId)) return { pane: state.pane, opened: false };
+		// A reused pane must still live in an existing directory: a pane left
+		// behind in a deleted worktree (the daemon removes run worktrees after
+		// runs) makes its shell print getcwd errors on the next pane run — the
+		// exact "pane opens, runs bash, fails" noise. Close it and split fresh.
+		const existing = herdrJsonSync(["pane", "get", state.pane.paneId]) as
+			| { result?: { pane?: { cwd?: string } } }
+			| null;
+		const existingCwd = existing?.result?.pane?.cwd;
+		if (existing && existingCwd && existsSync(existingCwd)) {
+			return { pane: state.pane, opened: false };
+		}
 		closeWatchPane(state);
 	}
+	// The run's own worktree may be gone too (dispatch from a deleted cwd):
+	// nothing to attach to, so stay headless rather than spawn a dead pane.
+	if (!existsSync(cwd)) return null;
 	const agent = getCurrentPane();
 	const split = herdrJsonSync([
 		"pane",
@@ -1123,6 +1136,14 @@ const NoMistakesAxiParams = Type.Object({
 let interactiveTuiSession = false;
 
 export default function noMistakesPane(pi: ExtensionAPI) {
+	// The attach probe is cached per module; a reload (or a second factory
+	// call in the same process — every block of the offline suite) must
+	// re-probe, or a stubbed "attach available" from one context leaks into
+	// the next (the 2026-10-15 live incident: the delegation block, whose
+	// stub reports attach unavailable, inherited a cached true and split a
+	// REAL Herdr pane into the hosting session's tab).
+	attachAvailableCache = undefined;
+
 	pi.on("session_start", (_event, ctx) => {
 		if (ctx?.mode === "tui") interactiveTuiSession = true;
 	});
