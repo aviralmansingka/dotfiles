@@ -79,6 +79,14 @@ node, and `label` defaults to `id`:
 - `edges` is required and needs at least one entry. `from` and `to` must
   be non-empty. Node ids must be unique. Unknown fields are rejected and
   the error names the problem — fix what it names and re-run.
+- `layers`: optional explicit placement — an array of arrays, one inner
+  array per layer (a row in `tb`, a column in `lr`); the declared order
+  runs across the perpendicular axis, and `""` reserves a slot so a
+  node can align under another layer's column. Every node must be placed
+  exactly once. With `layers` present, automatic ranking is skipped and
+  each column is only as wide as its widest node — the tightest way to
+  fit a pane.
+
 Styling is automatic and gruvbox-native (it matches the terminal): a plain
 background with no dot grid, node boxes filled with the canvas color so
 their rounded borders sit flush, and node borders cycling the gruvbox
@@ -113,9 +121,15 @@ herdr pane run <pane-id> "rataflow-view <spec>; herdr pane close <pane-id>"
   pane, never a narrowed sliver. Split direction follows the herdr
   geometry rule: `right` when the calling pane is wide, `down` when it is
   narrow or tall.
+- The viewer fits the graph on open and on resize, but never zooms past
+  100%: a spec that overflows the pane at natural size stays cut, and the
+  `f` key cannot shrink it. Fit is a property of the spec — shallow
+  chains, short labels, explicit `layers` — not of the viewer.
 - Verify the render with `herdr pane read <pane-id> --source visible`: the
   header line `rataflow-view · N nodes · M edges · …` proves the
-  app started and the pane is wide enough.
+  app started, and every node label appearing in that read proves the
+  graph fits. A missing or half-cut label means the spec overflows the
+  pane — cut nodes or shorten labels and re-open.
 - Tell the human what appeared and where. Keys for the human: drag a node
   to move it, drag empty space to pan, scroll to zoom, `f` to fit, arrows
   or Tab to navigate, `q` (or Esc) to quit. Dragging from a node handle to
@@ -149,9 +163,12 @@ herdr pane run <pane-id> "rataflow-view <spec>; herdr pane close <pane-id>"
 - `id` is a key: short, stable, unique. `label` is display text: a few
   words at most — node width follows its label.
 - Fit the whole graph on one screen in fullscreen, where the pane sits
-  beside the chat text: prefer under ~20 nodes and short labels, so the
-  graph reads without pan or zoom. For larger subjects, show a summary
-  graph first and offer detail graphs per region.
+  beside the chat text: prefer under ~20 nodes, short labels, and at most
+  ~7 layers deep, so the graph reads without pan or zoom. For larger
+  subjects, show a summary graph first and offer detail graphs per region.
+- Keep the bottom-left corner of the layout clear: the viewer's control
+  palette (zoom, fit, info) floats there and occludes whatever the spec
+  places underneath — reserve that slot with `""`.
 - Edge labels: a few words at most. Long labels widen the edge routes.
 - One graph per pane. When an updated spec replaces an old pane, close the
   old one first with `herdr pane close <pane-id>`, then open the new one.
