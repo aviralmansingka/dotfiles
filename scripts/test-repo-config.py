@@ -337,8 +337,9 @@ def guard_for_line(text, target_lineno):
         stripped = line.strip()
         if idx == target_lineno:
             return [label for label, on in guards if on]
-        if re.match(r"^if\s+!?\s*command -v (\S+)", stripped):
-            guards.append([f"cmd:{re.match(r'^if\s+!?\s*command -v (\S+)', stripped).group(1)}", True])
+        cmd_guard = re.match(r"^if\s+!?\s*command -v (\S+)", stripped)
+        if cmd_guard:
+            guards.append([f"cmd:{cmd_guard.group(1)}", True])
         elif re.match(r'^if\s*\[\[\s*"\$\(uname -s\)"\s*==\s*"Darwin"', stripped):
             guards.append(["darwin", True])
         elif stripped.startswith("if "):
@@ -638,7 +639,10 @@ HERDR_ALLOWED_KEYS = {
 
 
 def check_herdr_config():
-    import tomllib
+    try:
+        import tomllib  # python 3.11+
+    except ImportError:  # python 3.9/3.10 (local macs)
+        return "SKIP", ["needs Python 3.11+ (tomllib)"]
     rel = "herdr/.config/herdr/config.toml"
     path = REPO / rel
     try:

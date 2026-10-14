@@ -73,7 +73,9 @@ export JITI_PATH=/tmp/ci-jiti/node_modules/jiti/lib/jiti.cjs \
 - One extension suite: `node pi/.pi/agent/extensions/<name>.test.mjs`.
 - One scripts entry: `bash|python3|node scripts/test-<name>.*`.
 - No-mistakes pinned runners (same suites, offline): `scripts/nm-lint.sh`,
-  `scripts/nm-test.sh`.
+  `scripts/nm-test.sh`. Both run on Linux and on stock macOS bash 3.2: without
+  GNU `timeout` the test runner falls back to perl's exec+alarm guard, and
+  python suites SKIP their tomllib checks below Python 3.11.
 - Terraform validate (network-gated, opt-in): `TF_VALIDATE=1
   STRICT=1 scripts/test-terraform.sh`.
 

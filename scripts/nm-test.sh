@@ -65,6 +65,28 @@ with_timeout() {
   return $rc
 }
 
+# --- portable timeout --------------------------------------------------------
+# Linux ships GNU timeout; stock macOS does not. When the binary is missing,
+# fall back to perl's exec+alarm one-liner: the alarm(2) timer survives
+# exec, so the deadline kills the command itself. A timeout kill surfaces as
+# exit 142 (SIGALRM) instead of GNU's 124; both are nonzero and FAIL the
+# same way here. With neither timeout nor perl, run unguarded and say so
+# once — the suites still run, only the SLA guard is off.
+TIMEOUT_UNGUARDED_NOTICE=0
+if ! have timeout; then
+  if have perl; then
+    timeout() { perl -e 'alarm shift; exec @ARGV' "$@"; }
+  else
+    timeout() {
+      if [ "$TIMEOUT_UNGUARDED_NOTICE" -eq 0 ]; then
+        echo "NOTICE: no timeout and no perl on PATH; suites run without the SLA guard" >&2
+        TIMEOUT_UNGUARDED_NOTICE=1
+      fi
+      "$@"
+    }
+  fi
+fi
+
 # --- selection logic (mirrors the ci.yml changes job) ------------------------
 # Fixed area gates (arrays kept in sync with ci.yml's changes job).
 PI_FIXED=( 'pi/*' 'agents/*' '.github/workflows/ci.yml' )

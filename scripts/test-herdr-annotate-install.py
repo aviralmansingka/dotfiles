@@ -6,7 +6,14 @@ import hashlib
 import os
 import subprocess
 import tempfile
-import tomllib
+try:
+    import tomllib  # python 3.11+
+except ImportError:  # python 3.9/3.10 (local macs)
+    tomllib = None
+
+if tomllib is None:
+    print("SKIP: needs Python 3.11+ (tomllib) to verify the plugin manifest")
+    raise SystemExit(0)
 
 REPO = Path(__file__).resolve().parent.parent
 RECIPE = REPO / "ops/herdr-annotate-review"

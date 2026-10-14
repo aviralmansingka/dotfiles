@@ -21,7 +21,10 @@ Both mirror the jobs in `.github/workflows/ci.yml`. They discover targets
 with `git ls-files`, so a new test joins them without edits. Both run
 offline. `nm-test.sh` skips a suite when a tool is missing (exit 127) and
 never hangs; `nm-lint.sh` fails when a lint tool is missing — install the
-tool or report the gap.
+tool or report the gap. Both run on Linux and on stock macOS bash 3.2:
+without GNU `timeout`, `nm-test.sh` guards suites with perl's exec+alarm
+fallback (exit 142 on timeout instead of GNU's 124), and python suites
+SKIP their tomllib checks below Python 3.11.
 
 ## What the suites cover
 
