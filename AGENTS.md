@@ -35,6 +35,18 @@ steers back automatically; on clean completion its tab closes and the picker row
 Branches are ownership-marked (`branch.<b>.piWorktree` in git config, the gh-dash-open-pr pattern); anything the tool
 does not own is refused. Teardown after ship stays with `/cleanup`.
 
+## Remote subagents on devbox
+
+`pi/.pi/agent/extensions/remote.ts` registers `/remote <task>`: it spawns a pi subagent on the saved Herdr SSH
+machine `devbox` — chosen over homelab because its public IP answers from any network (a plane), while homelab needs
+Tailscale plus a healthy home uplink. The flow is machine API forwarding only: `agent list` (collision check) →
+`tab create --cwd ~ --no-focus` → `agent start --kind pi` → `agent prompt` (fire and forget). No cross-machine steer
+exists: results live on devbox and are read by attaching (`herdr --remote devbox` from a Mac, `ssh devbox` then `herdr`
+from a phone); bare `/remote` lists remote agents. The extension closes only tabs it created in the same run, and only
+when no agent ever started in them. devbox runs its own herdr server (`herdr machine add devbox` prepared it); its pi
+credentials are synced from the Mac (`auth.json`, `mcp*.json` under `/root/.pi/agent/`, tokens in `/root/.env`).
+Offline suite: `docs/ci-tests/remote.md`.
+
 ## Homelab STT and the RTX 3060
 
 The pi-stt speech-to-text worker runs natively on the homelab host; the libvirt VM / vfio-pci passthrough path was

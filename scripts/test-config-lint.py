@@ -63,8 +63,15 @@ def yaml_load_file(path: Path):
         "this suite never pip-installs")
 
 
+try:
+    import tomllib  # python 3.11+
+except ImportError:  # python 3.9/3.10 (local macs)
+    tomllib = None
+
+
 def toml_load_file(path: Path):
-    import tomllib
+    if tomllib is None:
+        raise RuntimeError("toml checks need Python 3.11+ (tomllib)")
     with path.open("rb") as fh:
         return tomllib.load(fh)
 
@@ -95,6 +102,8 @@ def run_ok(cmd, **kw):
 # --------------------------------------------------------------------------
 
 def check_toml_parse(repo):
+    if tomllib is None:
+        return "SKIP", ["needs Python 3.11+ (tomllib)"]
     files = [f for f in scope_files(repo) if f.endswith(".toml")]
     problems = []
     for rel in files:
@@ -173,6 +182,8 @@ FORMAT_TOKEN_RE = re.compile(r"\$\{?([A-Za-z0-9_-]+)\}?")
 
 
 def check_starship(repo):
+    if tomllib is None:
+        return "SKIP", ["needs Python 3.11+ (tomllib)"]
     files = [f for f in git_files(repo, "starship") if f.endswith(".toml")]
     if not files:
         return False, ["no tracked starship TOML found"]
@@ -247,6 +258,8 @@ def _aerospace_command_problems(rel, commands, problems):
 
 
 def check_aerospace(repo):
+    if tomllib is None:
+        return "SKIP", ["needs Python 3.11+ (tomllib)"]
     rel = "aerospace/.aerospace.toml"
     path = repo / rel
     if not git_files(repo, rel):
