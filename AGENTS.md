@@ -190,6 +190,19 @@ CUDA LSP needs the homelab/Linux CUDA Toolkit + a compile database.
 try to stub CUDA headers or silence the clangd CUDA diagnostics. Authoritative
 setup + homelab command: `docs/neovim-cuda-lsp.md`.
 
+## Herdr pane pty sever and the stdin-death guard
+
+Herdr (0.9.3) can silently close and reopen a pane's pty under a race around
+heavy mid-turn redraws — no server-log trace, pane process untouched. The
+pane's pi gets SIGHUP plus stdin EOF and, without protection, becomes an
+input-dead zombie that never exits (the "mermaid stuck input" incident;
+mermaid itself is exonerated — see BUGS.md). `pi/.pi/agent/extensions/stdin-death-guard.ts`
+converts stdin EOF on a tty into a recorded `stdin_eof_exit` entry plus
+`process.exit(129)` so herdr reaps the pane cleanly. Keep that guard loaded
+in every interactive session; it arms only when stdin is a real tty, so
+rpc/json/print modes are unaffected. Report, do not work around, any new
+herdr-side pty severance.
+
 ## Maintaining this file
 
 Keep this file for knowledge useful to almost every future agent session in this project.
