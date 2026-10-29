@@ -107,6 +107,19 @@ silently disables throttling and renders at the display rate; keep
 interactive `terminal-browser setup`
 (sudo) for the AppArmor userns profile.
 
+## Patched herdr graphics (flemx patch)
+
+The local herdr binary is patched with `flemx/herdr-graphics-patch` (macOS
+file transport for Kitty graphics, 64 MiB export cap, foldhash fingerprints).
+Reason: terminal-browser panes died with `pixel engine: unexpected end of file`
+within minutes on herdr 0.9.3 (upstream zenbu-labs/terminal-browser#165, #221;
+herdrdev/herdr#3946). Measured 2026-10-30 on a 126-col Retina pane (~22 MB
+frames): herdr server CPU halved, and the pane survived past the pre-patch
+death window. Restore or rebuild after any `herdr update` replaces the binary:
+`/tmp/herdr-graphics-patch/update-herdr.sh --restore|` rerun (needs Zig 0.16 +
+Rust 1.96.1, staged under `~/.cache/herdr-graphics-patch/tools/`). Drop the
+patch once herdr ships these fixes upstream (watch zenbu-labs #221).
+
 ## visualization and artifact skills
 
 `artifact` (vendored from upstream careerhackeralex/visualize v0.3.0, MIT, renamed)
