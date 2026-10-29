@@ -109,16 +109,24 @@ interactive `terminal-browser setup`
 
 ## Patched herdr graphics (flemx patch)
 
-The local herdr binary is patched with `flemx/herdr-graphics-patch` (macOS
+The local herdr binary is pinned at **0.9.3 + `flemx/herdr-graphics-patch`** (macOS
 file transport for Kitty graphics, 64 MiB export cap, foldhash fingerprints).
 Reason: terminal-browser panes died with `pixel engine: unexpected end of file`
-within minutes on herdr 0.9.3 (upstream zenbu-labs/terminal-browser#165, #221;
+within minutes on stock 0.9.3 (upstream zenbu-labs/terminal-browser#165, #221;
 herdrdev/herdr#3946). Measured 2026-10-30 on a 126-col Retina pane (~22 MB
 frames): herdr server CPU halved, and the pane survived past the pre-patch
-death window. Restore or rebuild after any `herdr update` replaces the binary:
-`/tmp/herdr-graphics-patch/update-herdr.sh --restore|` rerun (needs Zig 0.16 +
-Rust 1.96.1, staged under `~/.cache/herdr-graphics-patch/tools/`). Drop the
-patch once herdr ships these fixes upstream (watch zenbu-labs #221).
+death window. **Do not update herdr past 0.9.3 without re-measuring**: patched
+0.9.5 was tested and rejected — server CPU 0.81 s vs 0.45–0.53 s per 10 s on
+the same workload, and the engine's render surface shrank to a quarter width.
+The patch itself applies cleanly to 0.9.5 (`--version 0.9.5 --check` passes).
+Also tested and rejected: `render.presenter=patched` (partial frames) — visual
+artifacts under herdr on both 0.9.3+patch and 0.9.5+patch, plus higher CPU;
+keep `render.presenter=auto` until upstream PRs #157/#191 land. After any
+`herdr update` replaces the binary, re-run
+`/tmp/herdr-graphics-patch/update-herdr.sh --version 0.9.3` then
+`herdr-clean-handoff` (needs Zig 0.16 + Rust 1.96.1, staged under
+`~/.cache/herdr-graphics-patch/tools/`). Drop the patch once herdr ships these
+fixes upstream (watch zenbu-labs #221).
 
 ## visualization and artifact skills
 
