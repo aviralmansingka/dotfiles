@@ -82,10 +82,11 @@ ssh -o StrictHostKeyChecking=accept-new -p <port> root@<host>
 - With `idle_timeout` (default 120 s) the sandbox tears itself down about
   2 min after the last SSH connection closes — the ssh master's
   `ControlPersist` window matches, so nothing lingers on the Mac either.
-  **Caveat (observed 2026-10): on GPU nodes the idle timer does not reap
-  the sandbox** — a relay-side connection can stay established on port 22
-  and keep the box marked active. Run `devbox stop` when done with a GPU
-  box; the hard `timeout_hours` cap is the backstop.
+  This was measured on CPU (245 s end to end) and on GPU (128 s). One early
+  GPU run survived ~18 min with an unexplained lingering connection on
+  port 22; that observation is not reproducible and the idle timer has
+  reaped every GPU box since. Treat `devbox stop` as the habit for GPU
+  boxes (capacity is scarce), not as a workaround for a broken timer.
 - The hard `timeout_hours` cap (default 24 h) only bounds a continuously
   connected session.
 - `/persist` state survives every teardown path; the container filesystem
@@ -217,8 +218,8 @@ default and **cannot** be made nonpreemptible — a preempted sandbox loses
 only the running tmux session; `/persist` keeps everything else.
 
 **Run `devbox stop` when you finish with a GPU box.** Idle teardown does
-reap GPU sandboxes (measured 128 s after disconnect), but GPU capacity is
-scarce and a stuck box is expensive; stopping explicitly is the habit.
+reap GPU sandboxes (measured 128 s after disconnect); the explicit stop is a
+habit that protects scarce GPU capacity, not a workaround.
 The first GPU start after an image change can take several minutes while
 the large image hydrates on a fresh worker.
 

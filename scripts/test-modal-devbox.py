@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Paths: ops/modal-devbox/** devbox/** nvim/.config/nvim/lua/plugins/mason.lua scripts/test-modal-devbox.py scripts/modal-secrets-sync
+# Paths: ops/modal-devbox/** ops/packer/scripts/install_system_packages.sh devbox/** nvim/.config/nvim/lua/plugins/mason.lua scripts/test-modal-devbox.py scripts/modal-secrets-sync
 """modal-devbox suite — offline parity and hygiene gates for the Modal devbox.
 
 Offline and deterministic: no network, no Modal account, no `modal` binary,
@@ -59,6 +59,11 @@ pipeline and the research-verified Modal API surface:
   M15 CUDA runbook — the runbook documents the GPU workflow end to end:
       --gpu, nvcc --version, cuda-compile-db, clangd --check, and the
       explicit `devbox stop` rule for GPU boxes.
+  M16 wrapper behavior — EXECUTES devbox/.local/bin/devbox against stubbed
+      modal/ssh CLIs (in a throwaway tree) and asserts usage, unknown
+      subcommand, cold start via ::main with a cached CONNECT line, warm
+      reuse without a restart, --new bypassing the cache with flags
+      forwarded, and stop clearing the cache.
 
 Run `--selftest` to prove the checks fail on mutated copies (apt extras, GPU
 allowlist, late-git order, injected token) in a mktemp sandbox; the real
@@ -97,7 +102,7 @@ ALLOWED_MODES = {"dotenv", "file", "command"}
 EXPECTED_SECRET_NAMES = {
     "devbox-env", "devbox-mcp-browserbase", "devbox-mcp-google",
     "devbox-telegram", "devbox-whatsapp", "devbox-stt-client",
-    "devbox-pi-auth", "devbox-gh", "devbox-ssh", "devbox-aws",
+    "devbox-pi-auth", "devbox-gh", "devbox-aws",
 }
 
 SECRET_PATTERNS = (
@@ -310,13 +315,112 @@ def check_wrapper(root, _literals, _source):
         proc = subprocess.run(["bash", "-n", str(path)], capture_output=True, text=True, timeout=30)
         if proc.returncode != 0:
             errors.append(f"bash -n failed: {proc.stderr.strip()}")
-    for needle in ("devbox ssh", "devbox start", "devbox status", "devbox stop",
-                   "::main", "::status", "::stop", "nohup", "MODAL_DEVBOX_PY",
-                   "ops/modal-devbox/devbox.py", "^CONNECT ", "accept-new",
-                   "try_cached_ssh", "ConnectTimeout", "ControlMaster", "$CACHE",
-                   "::snapshot", "devbox snapshot"):
+    # Contract strings only: the couplings to devbox.py's entrypoints and the
+    # CONNECT line format. Behavior is proven by M16, not by grepping names.
+    for needle in ("::main", "::status", "::stop", "::snapshot", "^CONNECT ",
+                   "MODAL_DEVBOX_PY", "ops/modal-devbox/devbox.py"):
         if needle not in text:
             errors.append(f"wrapper must reference {needle!r}")
+    return errors
+
+
+def _stub_env(root):
+    """A PATH with stubbed modal/ssh/git-free CLIs for executing the wrapper."""
+    stub_bin = root / ".stub-bin"
+    stub_bin.mkdir(exist_ok=True)
+    log = root / ".stub-calls.log"
+    (stub_bin / "modal").write_text(
+        "#!/usr/bin/env bash\n"
+        f'echo "modal $*" >> "{log}"\n'
+        'case "$*" in\n'
+        '  *::main*) echo "CONNECT 127.0.0.1 2222";;\n'
+        '  *::stop*) echo "terminated sb-stub";;\n'
+        '  *::status*) echo "no devbox sandbox running";;\n'
+        "esac\nexit 0\n"
+    )
+    (stub_bin / "ssh").write_text(
+        "#!/usr/bin/env bash\n"
+        f'echo "ssh $*" >> "{log}"\n'
+        "exit 0\n"
+    )
+    for name in ("modal", "ssh"):
+        (stub_bin / name).chmod(0o755)
+    return stub_bin, log
+
+
+def check_wrapper_behavior(root, _literals, _source):
+    """M16 — execute the wrapper against stubbed modal/ssh and assert behavior:
+    usage, unknown subcommand, cached fast path, --new bypassing the cache,
+    and `stop` clearing the cache. This replaces name-grepping with evidence.
+
+    Runs in a throwaway mktemp tree: the harness writes stub CLIs, a state dir
+    and a cache, so it must never touch the real worktree (a leftover cache
+    would also make the cold-start assertion flap on the next run).
+    """
+    errors = []
+    if not shutil.which("bash"):
+        return errors  # macOS/Linux CI always has bash; skip quietly if not
+    work = Path(tempfile.mkdtemp(prefix="modal-devbox-m16-"))
+    try:
+        for rel in (WRAPPER, DEVBOX):
+            dest = work / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(root / rel, dest)
+        stub_bin, log = _stub_env(work)
+        state = work / ".state"
+        wrapper = work / WRAPPER
+        env = {"PATH": f"{stub_bin}:/usr/bin:/bin:/usr/sbin:/sbin",
+               "HOME": str(work), "XDG_STATE_HOME": str(state),
+               "MODAL_DEVBOX_PY": str(work / DEVBOX)}
+
+        def run(*args):
+            return subprocess.run(["bash", str(wrapper), *args], capture_output=True,
+                                  text=True, timeout=60, cwd=work, env=env)
+
+        def calls():
+            return log.read_text() if log.exists() else ""
+
+        def reset_log():
+            log.write_text("")
+
+        proc = run("--help")
+        if proc.returncode != 0 or "devbox ssh" not in proc.stdout:
+            errors.append(f"--help must print usage and exit 0 (rc={proc.returncode})")
+
+        proc = run("bogus")
+        if proc.returncode == 0 or "unknown subcommand" not in (proc.stderr + proc.stdout):
+            errors.append("an unknown subcommand must fail with a clear message")
+
+        cache = state / "modal-devbox/connect"
+        reset_log()
+        proc = run("ssh", "--", "true")
+        if proc.returncode != 0:
+            errors.append(f"a cold `devbox ssh` must succeed through the stub (rc={proc.returncode})\n{proc.stderr}")
+        if "::main" not in calls():
+            errors.append("a cold `devbox ssh` must start via devbox.py::main")
+        if "ssh -o" not in calls() or not cache.exists():
+            errors.append("a cold `devbox ssh` must cache the CONNECT line and attach")
+
+        reset_log()
+        run("ssh", "--", "true")
+        if "::main" in calls():
+            errors.append("a warm `devbox ssh` must reuse the cache, not restart the sandbox")
+        if "ssh -o" not in calls():
+            errors.append("a warm `devbox ssh` must still attach")
+
+        reset_log()
+        run("ssh", "--new", "--gpu", "T4", "--", "true")
+        if "::main" not in calls():
+            errors.append("start flags (--new) must bypass the cache and go through ::main")
+        if "--gpu T4" not in calls():
+            errors.append("start flags must be forwarded to ::main")
+
+        reset_log()
+        run("stop")
+        if cache.exists():
+            errors.append("`devbox stop` must clear the cached CONNECT line")
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
     return errors
 
 
@@ -462,11 +566,9 @@ def check_materialization(root, _literals, source):
         errors.append("devbox.py must splice manifest-generated calls over the entrypoint marker")
     if 'materialize_file "$HOME/' not in source or 'materialize_env "$HOME/' not in source:
         errors.append("devbox.py generator must emit materialize_env and materialize_file calls")
-    if any(not e.get("target") for e in manifest["secrets"]) and "if not target:" not in source:
-        errors.append("devbox.py generator must skip target-less entries (devbox-ssh is consumed by authorized_keys)")
+    if any(not e.get("target") for e in manifest["secrets"]):
+        errors.append("every manifest entry needs a target (the SSH key is per-launch, not synced)")
     for e in manifest["secrets"]:
-        if not e.get("target"):
-            continue
         if e["mode"] == "file" and not e.get("variable"):
             errors.append(f"manifest entry {e.get('name')!r}: file mode needs a variable")
         if e["mode"] != "file" and not e.get("variables"):
@@ -534,6 +636,7 @@ CHECKS = (
     ("M13 materialization", check_materialization),
     ("M14 CUDA variant", check_cuda_variant),
     ("M15 CUDA runbook", check_cuda_runbook),
+    ("M16 wrapper behavior", check_wrapper_behavior),
 )
 
 
@@ -575,7 +678,8 @@ def selftest():
             "git-early": lambda: _mutate(root, '"agents", "pi", "herdr",',
                                          '"agents", "pi", "herdr", "git",'),
             "wrapper-no-nohup": lambda: _mutate_wrapper(root, "nohup modal run", "runbg modal run"),
-            "wrapper-no-cache": lambda: _mutate_wrapper(root, "try_cached_ssh", "cached_attach"),
+            "wrapper-new-ignores-flags": lambda: _mutate_wrapper(
+                root, 'if [ "${#start_args[@]}" -eq 0 ]; then', 'if true; then'),
             "mason-missing": lambda: _mutate(root, '"starpls", "buildifier", "clang-format", "clangd", "codelldb",',
                                            '"starpls", "buildifier", "clang-format",'),
             "token-leak": lambda: _mutate(root, "MMDFLUX_VERSION = ",
@@ -608,7 +712,7 @@ def selftest():
         }
         expected_fail = {"clean": 0, "apt-extra": {"M1"}, "gpu-b200": {"M4"},
                          "git-early": {"M2"}, "token-leak": {"M5"},
-                         "wrapper-no-nohup": {"M9"}, "wrapper-no-cache": {"M9"},
+                         "wrapper-no-nohup": {"M16"}, "wrapper-new-ignores-flags": {"M16"},
                          "mason-missing": {"M10"}, "manifest-bad-mode": {"M11"},
                          "manifest-leak": {"M11"}, "manifest-extra-name": {"M11"},
                          "sync-no-trap": {"M12"}, "sync-cat-leak": {"M12"},
