@@ -16,6 +16,7 @@ Cookie refresh (expires every few weeks):
   A 401/403 on the articles stream means the cookie went stale.
 """
 
+import argparse
 import json
 import os
 import re
@@ -51,11 +52,14 @@ class Markdown(HTMLParser):
         elif tag == "br":
             self.out.append("\n")
         elif tag in ("p", "div", "section", "tr"):
-            self.out.append("\n\n")
+            # Inside a link keep text inline: a blank line breaks the
+            # CommonMark link construct and the preview renders the
+            # brackets literally.
+            self.out.append(" " if self.href else "\n\n")
         elif tag == "li":
-            self.out.append("\n- ")
+            self.out.append(" " if self.href else "\n- ")
         elif tag == "blockquote":
-            self.out.append("\n\n> ")
+            self.out.append(" " if self.href else "\n\n> ")
         elif tag in ("strong", "b"):
             self.out.append("**")
         elif tag in ("em", "i"):
@@ -64,7 +68,8 @@ class Markdown(HTMLParser):
             self.href = a["href"]
             self.out.append("[")
         elif tag == "img" and a.get("src"):
-            self.out.append(f"\n\n![{a.get('alt', '')}]({a['src']})\n\n")
+            img_md = f"![{a.get('alt', '')}]({a['src']})"
+            self.out.append(img_md if self.href else f"\n\n{img_md}\n\n")
         elif tag in ("td", "th"):
             self.out.append(" | ")
 
@@ -79,7 +84,7 @@ class Markdown(HTMLParser):
             self.out.append(f"]({self.href})")
             self.href = None
         elif tag in ("h1", "h2", "h3", "h4", "h5", "h6", "p", "blockquote", "ul", "ol", "table"):
-            self.out.append("\n\n")
+            self.out.append(" " if self.href else "\n\n")
 
     def handle_data(self, data):
         if not self.skip:
@@ -87,6 +92,8 @@ class Markdown(HTMLParser):
 
     def result(self):
         text = re.sub(r"[ \t]+", " ", "".join(self.out))
+        text = re.sub(r"\[ +", "[", text)
+        text = re.sub(r" +\]\(", "](", text)
         return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
@@ -94,8 +101,11 @@ def log(msg):
     stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     line = f"{stamp} {msg}"
     print(line)
-    with open(LOG, "a") as f:
-        f.write(line + "\n")
+    try:
+        with open(LOG, "a") as f:
+            f.write(line + "\n")
+    except OSError:  # e.g. --repair run off the sync host
+        pass
 
 
 def cookie_header():
@@ -194,7 +204,98 @@ def sync(stream, directory, label):
     return written
 
 
+def repair_file(path):
+    """Collapse links written with newlines or blank lines inside the text.
+
+    The old converter emitted block-level links as '[' + newlines + '](url)'.
+    CommonMark rejects a blank line inside link text, so viewers render the
+    brackets literally. This rewrites those constructs back onto one line.
+    """
+    with open(path) as f:
+        lines = f.read().split("\n")
+    out, i, in_code, changed = [], 0, False, False
+    pending = None  # {"prefix", "texts", "start", "orig"} for an open link
+    while i < len(lines):
+        line = lines[i]
+        if not pending and line.lstrip().startswith("```"):
+            in_code = not in_code
+            out.append(line)
+            i += 1
+            continue
+        if pending is not None:
+            if line.lstrip().startswith("```") or i - pending["start"] > 80:
+                out.extend(pending["orig"])  # not a link: restore raw lines
+                pending = None               # reprocess this line from the top
+                continue
+            elif "](" in line:
+                pre, post = line.split("](", 1)
+                pending["texts"].append(pre)
+                text = " ".join(t.strip() for t in pending["texts"] if t.strip())
+                head = pending["prefix"] + text + "]("
+                changed = True
+                if not in_code and post.rstrip().endswith("["):
+                    # same line opens the next link (chained anchors);
+                    # keep it pending so a bail can still flush the raw line
+                    pending = {"prefix": head + post.rstrip(), "texts": [""],
+                               "start": i, "orig": [line]}
+                else:
+                    out.append(head + post)
+                    pending = None
+                i += 1
+                continue
+            else:
+                pending["orig"].append(line)
+                pending["texts"].append(line)
+                i += 1
+                continue
+        opens = (not in_code) and (
+            line.rstrip().endswith("[")
+            or (line.lstrip().startswith("[") and "]" not in line)
+        )
+        if opens:
+            tail = line.rstrip()
+            k = tail.rfind("[")
+            pending = {"prefix": tail[:k + 1], "texts": [tail[k + 1:]],
+                       "start": i, "orig": [line]}
+            i += 1
+            continue
+        out.append(line)
+        i += 1
+    if pending is not None:  # unclosed at EOF: restore raw lines
+        out.extend(pending["orig"])
+    if changed:
+        with open(path, "w") as f:
+            f.write("\n".join(out))
+    return changed
+
+
+def repair(vault):
+    root = os.path.join(vault, "research/semianalysis")
+    fixed = 0
+    for dirpath, _, names in os.walk(root):
+        for name in sorted(names):
+            if not name.endswith(".md"):
+                continue
+            path = os.path.join(dirpath, name)
+            try:
+                if repair_file(path):
+                    fixed += 1
+                    log(f"repair: fixed links in {os.path.relpath(path, vault)}")
+            except Exception as e:
+                log(f"repair: FAILED {path}: {e}")
+    log(f"repair: {fixed} files fixed")
+    return fixed
+
+
 def main():
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--repair", action="store_true",
+                    help="rewrite broken multi-line links in existing files")
+    ap.add_argument("--vault", default=VAULT,
+                    help="vault root (default: %(default)s)")
+    args = ap.parse_args()
+    if args.repair:
+        return 0 if repair(args.vault) >= 0 else 1
     total = 0
     total += sync("posts", os.path.join(VAULT, "research/semianalysis"), "posts")
     total += sync("articles", os.path.join(VAULT, "research/semianalysis/institutional"),
