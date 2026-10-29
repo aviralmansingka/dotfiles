@@ -699,4 +699,17 @@ return {
       },
     },
   },
+
+  -- Gruvbox-material theme for the markdown-preview browser page.
+  -- CSS files replace the plugin's stock markdown.css / highlight.css
+  -- (server routes swap them in when these globals are set).
+  {
+    "iamcco/markdown-preview.nvim",
+    init = function()
+      local css_dir = vim.fn.stdpath("config") .. "/markdown-preview"
+      vim.g.mkdp_theme = "dark"
+      vim.g.mkdp_markdown_css = css_dir .. "/gruvbox-material.css"
+      vim.g.mkdp_highlight_css = css_dir .. "/gruvbox-highlight.css"
+    end,
+  },
 }
