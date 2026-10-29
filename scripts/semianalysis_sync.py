@@ -229,7 +229,7 @@ def repair_file(path):
     """
     with open(path) as f:
         lines = f.read().split("\n")
-    out, i, in_code, changed = [], 0, False, False
+    out, i, in_code = [], 0, False
     pending = None  # {"prefix", "texts", "start", "orig"} for an open link
     while i < len(lines):
         line = lines[i]
@@ -243,17 +243,21 @@ def repair_file(path):
                 out.extend(pending["orig"])  # not a link: restore raw lines
                 pending = None               # reprocess this line from the top
                 continue
-            elif "](" in line:
+            if line.lstrip().startswith("#"):  # a heading is never link text
+                out.extend(pending["orig"])
+                pending = None
+                continue
+            if line.lstrip().startswith("]("):  # closer starts the line
                 pre, post = line.split("](", 1)
                 pending["texts"].append(pre)
                 text = " ".join(t.strip() for t in pending["texts"] if t.strip())
                 head = pending["prefix"] + text + "]("
-                changed = True
                 if not in_code and post.rstrip().endswith("["):
                     # same line opens the next link (chained anchors);
-                    # keep it pending so a bail can still flush the raw line
+                    # carry all raw lines so a later bail restores them
                     pending = {"prefix": head + post.rstrip(), "texts": [""],
-                               "start": i, "orig": [line]}
+                               "start": pending["start"],
+                               "orig": pending["orig"] + [line]}
                 else:
                     out.append(head + post)
                     pending = None
@@ -265,7 +269,12 @@ def repair_file(path):
                 i += 1
                 continue
         k = last_unmatched_bracket(line) if not in_code else -1
-        if k >= 0:
+        # Only treat as a broken link opener when the unmatched '[' is at
+        # the start of the stripped line (e.g. '[ text') or at the end of
+        # the line (e.g. '](#a) ['). A mid-line unmatched '[' (table rows
+        # like '| [[name](url)') is a converter artifact; absorbing it
+        # would swallow following sections.
+        if k >= 0 and (k == len(line) - 1 or line.lstrip().startswith("[")):
             pending = {"prefix": line[:k + 1], "texts": [line[k + 1:]],
                        "start": i, "orig": [line]}
             i += 1
@@ -274,10 +283,12 @@ def repair_file(path):
         i += 1
     if pending is not None:  # unclosed at EOF: restore raw lines
         out.extend(pending["orig"])
-    if changed:
-        with open(path, "w") as f:
-            f.write("\n".join(out))
-    return changed
+    new_text = "\n".join(out)
+    if new_text == "\n".join(lines):  # content unchanged: no rewrite
+        return False
+    with open(path, "w") as f:
+        f.write(new_text)
+    return True
 
 
 def repair(vault):
