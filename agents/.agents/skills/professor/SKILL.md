@@ -293,8 +293,8 @@ step toward the goal), run:
      `ask_user_question` if there's genuinely no right answer.
 3. **Connect.** Make the dependency edge explicit — show exactly how this new
    node hangs off the ones already in place, so it's understood, not memorized.
-4. **Verify.** Confirm the node actually landed with one of the four
-   interaction types below — `quiz`, `explain`, run-command, or fix-code —
+4. **Verify.** Confirm the node actually landed with one of the three
+   interaction types below — `quiz`, `explain`, or run-command —
    picked per node.
    This applies to foundations just as much as derived steps. An unconfirmed
    unconditional truth is exactly as dangerous as an unconfirmed derived fact:
@@ -314,14 +314,14 @@ that's the whole point.
 
 ## Interaction types
 
-Four assessment instruments serve different jobs.
+Three assessment instruments serve different jobs.
 When you are **not confident where he is**, use quiz — options let you map the
 edge cheaply and diagnose which misconception he holds by which distractor he
 picks. When you are **somewhat comfortable** with where he sits, use explain —
 prose in his own words forces him to produce the concept and the terminology,
-not just recognize it. Reserve run-command and fix-code for the **Teach loop
+not just recognize it. Reserve run-command for the **Teach loop
 proper**, where the hands-on work lives. Most of Probe is quiz, with some
-explain; Teach mixes all four assessment instruments per node.
+explain; Teach mixes all three assessment instruments per node.
 
 ### lesson
 
@@ -379,17 +379,10 @@ without output is data too (nothing to paste, or something went wrong on his
 side), not disobedience. Predictions live inside this interaction (the tool's
 `prediction` parameter), not in a separate step.
 
-### fix-code
-
-Hand the human a broken artifact — a code file, a ruleset, a config, a command
-sequence — plus a check command. Success = the check passes (Rustlings-style).
-The teacher only sees the check output, so grading is objective. Works for
-command topics too: "make `nft list ruleset` show X."
-
-**Command-based verifies are not self-sufficient.** run-command and fix-code
-prove the hands, not the head. Follow them with quiz or explain as needed to
-cement the concept — explain is the stronger follow-up here, since it forces him
-to name the construct in his own words: the ruleset loads, but can he say which
+**Command-based verifies are not self-sufficient.** run-command proves the
+hands, not the head. Follow it with quiz or explain as needed to cement the
+concept — explain is the stronger follow-up here, since it forces him to name
+the construct in his own words: the ruleset loads, but can he say which
 netfilter hook it attached to and why that hook? Kernel-level understanding
 lives in that follow-up.
 
@@ -605,9 +598,6 @@ terminology. Don't offer to wrap up early.
 
 - **quiz**, **explain**, and **run-command** are extension tools —
   always invoke them as tools, never simulate them in chat.
-- **fix-code** is still a skill convention (hand him the artifact path + check
-  command in chat) until its extension exists; the oracle is still the check
-  command's exit, not your judgment.
 
 ## Session protocol
 
@@ -641,8 +631,6 @@ sessions:
 
 - **Failed run-command** — retry the command, or drop to quiz to diagnose the
   misconception first.
-- **fix-code follow-up style** — quiz debugging reasoning ("why did that fix
-  work?") vs. prediction ("what will the check output now?").
 
 ## What this skill does not do
 

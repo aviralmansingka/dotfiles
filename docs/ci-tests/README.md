@@ -16,14 +16,13 @@ pi agent extensions (job `pi-tests`, gated on `pi/**` + `agents/**`):
 | Python tool | python.test.mjs | stmts 96.9 %, funcs 100 % | 2.35 s |
 | No-mistakes | gate / pane / bridge tests | stmts 93.5 %, branch 79.5 % | 9.4 s |
 | Subagents + editor | interactive-subagents.test.mjs, nvim-open.test.mjs | nvim-open 98 %, herdr 99 %, session 93 %, tmux 91 % | 1.1 s |
-| Remote subagent | remote.test.mjs | remote.ts 98.5 % stmts, 81.8 % branch, 100 % funcs; fake-herdr argv sequences | 0.3 s |
 | User input | user-input/** (10 files) + quiz/explain/ask | overall 94.2 %; user-input/** 100/100 | 0.48 s |
 | Run-command | run-command.test.mjs | run-command.ts 95.6 %; nvim-terminal 100 % | 1.22 s |
 | Lesson journal | md-log / lesson / focus-buffer tests | 98 / 100 / 97 % | 3.1 s |
 | Mermaid v2 | mermaid.test.mjs | stmts 94.6 %, branch 81.2 %, funcs 100 % | 0.44 s |
 | Tuicr | tuicr.test.mjs | stmts 92.5 % | 1.7 s |
 | Telegram daemon | pi/bin unittest (155 cases) | daemon 75 % (mention gating was 0 %) | 1.1 s |
-| Loader | scripts/test-extension-loader.mjs | 26 factories + 23 nested + settings entries | 0.2 s |
+| Loader | scripts/test-extension-loader.mjs | 25 factories + 23 nested + settings entries | 0.2 s |
 | OpenGateway provider | opengateway.test.mjs | provider registration + model metadata | 0.13 s |
 
 Neovim (job `nvim-tests`, gated on `nvim/**`): offline headless harness
