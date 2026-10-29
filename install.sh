@@ -162,6 +162,13 @@ if command -v herdr >/dev/null 2>&1; then
         zenbu-labs/terminal-browser/herdr-plugin \
         --ref 2165ae76c9639e3996829ab0e6d54ddbd4f06ad8 --yes
 
+    echo "==> Pinning terminal-browser render.fps"
+    # Upstream issue zenbu-labs/terminal-browser#102: an fps of exactly 60
+    # silently disables throttling and renders at the display rate on
+    # high-refresh panels. Pin 30 (measured ~31 fps in-page) and keep the
+    # TERMINAL_BROWSER_FPS env var unset everywhere.
+    terminal-browser config set render.fps 30
+
     echo "==> Installing Herdr Annotate and the protected custom reviewer"
     "$DOTFILES_DIR/scripts/install-herdr-annotate"
 else
