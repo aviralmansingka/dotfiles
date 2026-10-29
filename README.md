@@ -115,6 +115,7 @@ Runbook with flags, costs, rebuilds, and snapshot capture:
 | `git`        | Git configuration                                                           |
 | `launchd`    | macOS user LaunchAgents (vault and dotfiles auto-sync)                      |
 | `nvim`       | Neovim with LazyVim                                                         |
+| `rex`        | Rex terminal client configuration                                           |
 | `starship`   | Starship prompt                                                             |
 | `systemd`    | User systemd units (vault/dotfiles auto-sync, Pi/WhatsApp/Telegram bridges) |
 | `pi`         | Pi agent config, packages, themes, and messaging daemons                    |
