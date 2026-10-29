@@ -74,6 +74,10 @@ pipeline and the research-verified Modal API surface:
       (ap-south), Sandbox.create forwards region=region or None, an unknown
       region fails fast with the allowed list, and the wrapper + runbook
       document the flag.
+  M19 resources and status — devbox.py extracts and CALLS _describe_resources
+      with full and empty tag sets (a behavior-preserving rename passes), hard
+      caps use Modal's (request, limit) tuple form, status renders the summary,
+      and the runbook documents the -limit flags and the status line.
 
 Run `--selftest` to prove the checks fail on mutated copies (apt extras, GPU
 allowlist, late-git order, injected token) in a mktemp sandbox; the real
@@ -719,6 +723,46 @@ def check_region_wiring(root, literals, source):
     return errors
 
 
+def _extract_function(source, name):
+    """Compile one top-level function out of devbox.py so the suite can call it
+    without importing the module (which imports modal)."""
+    tree = ast.parse(source)
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == name:
+            module = ast.Module(body=[node], type_ignores=[])
+            namespace = {}
+            exec(compile(module, "<extracted>", "exec"), namespace)  # noqa: S102
+            return namespace[name]
+    return None
+
+
+def check_resources_and_status(root, _literals, source):
+    """M19 — resources are recorded, limits are enforced through the tuple form,
+    and status renders them. The formatter is extracted and CALLED, so a rename
+    that keeps behavior passes and a broken format fails."""
+    errors = []
+    describe = _extract_function(source, "_describe_resources")
+    if describe is None:
+        return ["devbox.py must define _describe_resources(tags)"]
+    full = describe({"cpu": "4/8", "memory": "8192/16384", "gpu": "T4", "region": "ap-south"})
+    for needle in ("cpu=4/8", "mem=8192/16384MiB", "gpu=T4", "region=ap-south"):
+        if needle not in full:
+            errors.append(f"resource line must show {needle!r}, got {full!r}")
+    bare = describe({})
+    if bare.count("?") < 4:
+        errors.append("missing tags must degrade to '?' rather than raise")
+    for needle in ("(cpu, cpu_limit)", "(memory, memory_limit)"):
+        if needle not in source:
+            errors.append(f"hard caps must use Modal's (request, limit) tuple form: {needle}")
+    if "_describe_resources(" not in source.split("def status", 1)[-1]:
+        errors.append("status must render the resource summary")
+    readme = (root / RUNBOOK).read_text()
+    for needle in ("--cpu-limit", "--memory-limit", "devbox status"):
+        if needle not in readme:
+            errors.append(f"runbook must document {needle!r}")
+    return errors
+
+
 CHECKS = (
     ("M1 apt parity", check_apt_parity),
     ("M2 stow parity", check_stow_parity),
@@ -738,6 +782,7 @@ CHECKS = (
     ("M16 wrapper behavior", check_wrapper_behavior),
     ("M17 entrypoint behavior", check_entrypoint_behavior),
     ("M18 region wiring", check_region_wiring),
+    ("M19 resources and status", check_resources_and_status),
 )
 
 
@@ -808,6 +853,8 @@ def selftest():
                 root, ENTRYPOINT, 'mv "$1" "$2"                         # first boot: seed the volume',
                 ': # seeding removed'),
             "region-no-india": lambda: _mutate(root, '"ap", "ap-south")', '"ap")'),
+            "status-drops-region": lambda: _mutate(
+                root, 'f"region={tags.get(\'region\', \'?\')}")', 'f"")'),
             "cuda-nvcc-symlink": lambda: _mutate(
                 root, '"LD_LIBRARY_PATH": "/usr/local/cuda/lib64",',
                 '"LD_LIBRARY_PATH": "/usr/local/cuda/lib64",\n'
@@ -825,7 +872,8 @@ def selftest():
                          "cuda-cudnn": {"M14"}, "cuda-nvcc-symlink": {"M14"},
                          "cuda-runbook": {"M15"},
                          "entrypoint-no-seed": {"M17"},
-                         "region-no-india": {"M18"}}
+                         "region-no-india": {"M18"},
+                         "status-drops-region": {"M19"}}
         for label, mutate in cases.items():
             _make_sandbox(root)
             mutate()

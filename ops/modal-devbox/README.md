@@ -48,7 +48,16 @@ modal run ops/modal-devbox/devbox.py --timeout-hours 2   # shorter lease
 | `--idle-timeout` | 120 | Seconds after the last SSH disconnect before teardown (0 = never) |
 | `--new` | off | Force a fresh sandbox instead of adopting a running one |
 | `--ssh-key` | first `*.pub` found | Public key to authorize |
-| `--cpu` / `--memory` | 4 / 8192 | Container resources (MiB for memory) |
+| `--cpu` / `--memory` | 4 / 8192 | Reserved CPU cores and MiB — billed, and burstable |
+| `--cpu-limit` / `--memory-limit` | off | Hard cgroup caps on top of the reservation |
+
+Resources are **requests**, not caps: Modal bills 4 cores / 8 GiB and lets the
+box burst into spare host capacity (`nproc` inside shows the host otherwise).
+Pass the `-limit` flags for a hard ceiling — verified inside a capped box:
+`nproc` = 4, `cpu.cfs_quota_us` = 4000000, `memory.limit_in_bytes` = 8589934592.
+`devbox status` prints what each running box was created with, e.g.
+`cpu=4/4 mem=8192/8192MiB gpu=T4 region=ap-south` (`<request>/<limit>`, `none`
+and `default` when unset).
 
 First run builds the image (~15–30 min: apt, CLI tools, Rust + bob + Neovim
 nightly, dotfiles stow + Lazy sync, Oh My Zsh). Later runs start in seconds

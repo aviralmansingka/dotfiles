@@ -319,6 +319,18 @@ def _default_pubkey() -> str:
     return pubs[0].read_text().strip() if pubs else ""
 
 
+def _describe_resources(tags: dict) -> str:
+    """One-line resource summary from a sandbox's tags.
+
+    Sandboxes expose no cpu/memory/gpu/region attributes on the object, so
+    main() records them as tags at creation and status() reads them back here.
+    """
+    return (f"cpu={tags.get('cpu', '?')} "
+            f"mem={tags.get('memory', '?')}MiB "
+            f"gpu={tags.get('gpu', '?')} "
+            f"region={tags.get('region', '?')}")
+
+
 def _running_devboxes():
     """All live devbox sandboxes (tagged, not yet finished)."""
     return [sb for sb in modal.Sandbox.list(tags=SANDBOX_TAGS) if sb.poll() is None]
@@ -387,6 +399,8 @@ def main(
     ssh_key: str = "",
     cpu: float = DEFAULT_CPU,
     memory: int = DEFAULT_MEMORY_MB,
+    cpu_limit: float = 0.0,
+    memory_limit: int = 0,
     new: bool = False,
 ):
     """Start (or adopt) the devbox Sandbox and print its ssh command.
@@ -408,6 +422,10 @@ def main(
         sys.exit("timeout_hours must be within (0, 24]: Sandboxes cap at 24 h")
     if idle_timeout < 0:
         sys.exit("idle_timeout must be >= 0 seconds (0 disables idle teardown)")
+    if cpu_limit and cpu_limit < cpu:
+        sys.exit(f"--cpu-limit ({cpu_limit:g}) must be >= --cpu ({cpu:g})")
+    if memory_limit and memory_limit < memory:
+        sys.exit(f"--memory-limit ({memory_limit}) must be >= --memory ({memory})")
 
     pubkey = ssh_key or os.environ.get("DEVBOX_SSH_PUBLIC_KEY", "") or _default_pubkey()
     if not pubkey:
@@ -432,9 +450,23 @@ def main(
                 print(f"CONNECT {host} {port}")  # machine line for the devbox wrapper
                 print(f"  adopted        : {candidate.object_id} (already running)")
                 print(f"  connect        : ssh -o StrictHostKeyChecking=accept-new -p {port} root@{host}")
+                print(f"  resources      : {_describe_resources(_tags(candidate))}")
                 print(f"  teardown       : modal container stop {candidate.object_id} -y")
                 print()
                 return
+
+    # cpu/memory are REQUESTS (what you are billed for) and burstable. Passing
+    # (request, limit) adds a hard cgroup-style cap, which is what --cpu-limit
+    # and --memory-limit do.
+    cpu_arg = (cpu, cpu_limit) if cpu_limit else cpu
+    memory_arg = (memory, memory_limit) if memory_limit else memory
+    tags = dict(SANDBOX_TAGS)
+    tags.update({
+        "cpu": f"{cpu:g}" + (f"/{cpu_limit:g}" if cpu_limit else ""),
+        "memory": f"{memory}" + (f"/{memory_limit}" if memory_limit else ""),
+        "gpu": gpu or "none",
+        "region": region or "default",
+    })
 
     attached = _attached_secret_names()
     # Secret ordering: later entries win key clashes, so the per-launch
@@ -449,12 +481,12 @@ def main(
         + [modal.Secret.from_dict({"DEVBOX_SSH_PUBLIC_KEY": pubkey})],
         gpu=gpu or None,
         region=region or None,
-        cpu=cpu,
-        memory=memory,
+        cpu=cpu_arg,
+        memory=memory_arg,
         timeout=int(timeout_hours * 3600),
         idle_timeout=idle_timeout or None,
         unencrypted_ports=[22],
-        tags=SANDBOX_TAGS,
+        tags=tags,
     )
 
     try:
@@ -482,21 +514,33 @@ def main(
         print("terminated; /persist state kept")
 
 
+def _tags(sb) -> dict:
+    """A sandbox's tags, or {} when the server call fails (status stays useful)."""
+    try:
+        return sb.get_tags() or {}
+    except Exception:  # noqa: BLE001 — metadata must never break status
+        return {}
+
+
 @app.local_entrypoint()
 def status():
-    """List running devbox sandboxes with their ssh connection lines."""
+    """List running devbox sandboxes with their resources and ssh lines."""
     running = _running_devboxes()
     if not running:
         print("no devbox sandbox running")
         return
     for sb in running:
+        tags = _tags(sb)
         socket_ = _tunnel(sb)
         if socket_:
             host, port = socket_
             print(f"CONNECT {host} {port}")
-            print(f"  devbox sandbox : {sb.object_id}  ssh -o StrictHostKeyChecking=accept-new -p {port} root@{host}")
+            print(f"  devbox sandbox : {sb.object_id}")
+            print(f"  resources      : {_describe_resources(tags)}")
+            print(f"  ssh            : ssh -o StrictHostKeyChecking=accept-new -p {port} root@{host}")
         else:
-            print(f"  devbox sandbox : {sb.object_id}  (no tunnel on port 22)")
+            print(f"  devbox sandbox : {sb.object_id}  (starting; no tunnel on port 22 yet)")
+            print(f"  resources      : {_describe_resources(tags)}")
 
 
 @app.local_entrypoint()
