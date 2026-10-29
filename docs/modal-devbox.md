@@ -141,15 +141,18 @@ Baked into the image — change means rebuild, which is the deploy:
 On the volume at `/persist` — survives container death (`entrypoint.sh`
 links these on every boot; first boot seeds each from the image):
 
-- `~/.local/share/nvim` → `nvim-share` — lazy.nvim plugins + Mason tools
-- `~/.local/state/nvim` → `nvim-state` — shada, undo
-- `~/.local/share/bob` → `nvim-bob` — Neovim installs + bob's `used`
-  marker, so `bob use <version>` survives sandbox death (the entrypoint
-  repoints the `nvim` shim to bob's proxy)
 - `~/.cache` → `cache` — cargo, uv, pip caches
 - `~/repos` → `repos` — work checkouts (dotfiles itself clones per build)
 - `~/vault` → `vault` — obsidian.nvim's expected vault dir
 - `~/.zsh_history` → `zsh_history`
+
+Nvim is deliberately **not** on the volume. Its plugin tree, Mason tools, the
+Neovim install and nvim state were symlinked onto `/persist` at first, and
+every fresh sandbox paid for it: the volume is FUSE with a per-container page
+cache, so the first `nvim` start measured 4.3 s (190 ms warm). Those trees now
+come from the image's local disk with one headless prewarm at boot — first
+open ~120 ms, warm ~120 ms. The cost is that session-made plugin/Mason
+installs and nvim history do not persist; the image is the deploy path.
 
 tmux state is deliberately not persistent: sessions live only while the
 container runs. Volume commits are background (every few seconds) plus a

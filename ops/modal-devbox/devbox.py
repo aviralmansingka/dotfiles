@@ -76,8 +76,9 @@ STOW_PACKAGES = (
 # remotes to SSH, which would break the build-time HTTPS clones above.
 STOW_PACKAGES_LATE = ("git",)
 
-STOW_IGNORE = ("--ignore=node_modules", "--ignore=__pycache__")
+STOW_IGNORE = ("--ignore=node_modules", "--ignore=__pycache__", "--ignore=auth.json")
 MMDFLUX_VERSION = "v2.6.1"  # parity: install_cli_tools.sh pin
+PI_VERSION = "1.4.0"  # same version as the captain's managed install
 
 # Marker for devbox sandboxes: `devbox status`/`devbox stop` filter on it.
 SANDBOX_TAGS = {"kind": "devbox"}
@@ -138,6 +139,11 @@ def _build_image(root_image: "modal.Image") -> "modal.Image":
 
     # --- Phase 2: CLI tools (parity: install_cli_tools.sh, plus gh + gh-dash) ---
     tools = base.run_commands(
+        # Node 22: Ubuntu 24.04 ships Node 18, but the pi coding agent needs
+        # >=22.19 (and modern tooling expects it anyway). NodeSource replaces
+        # the apt nodejs/npm in place.
+        "curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs",
+        "node --version",
         "curl -sS https://starship.rs/install.sh | sh -s -- -y -b $HOME/.local/bin",
         "curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh",
         'LAZYGIT_VERSION=$(curl -s https://api.github.com/repos/jesseduffield/lazygit/releases/latest | jq -r ".tag_name" | sed "s/^v//")'
@@ -226,6 +232,13 @@ def _build_image(root_image: "modal.Image") -> "modal.Image":
         # interactive open throw a spurious mason "already installing" error
         # (verified empirically; a pristine state dir opens clean).
         "rm -rf /root/.local/state/nvim",
+        # pi coding agent (same package/version as the Mac's managed install).
+        # Config arrives via the stowed pi package; auth.json via the
+        # devbox-pi-auth secret at container start.
+        f"npm install -g @earendil-works/pi-coding-agent@{PI_VERSION}",
+        # pi extensions ship their own dependencies (parity: install.sh's
+        # npm ci for web-fetch).
+        "cd /root/.pi/agent/extensions/web-fetch 2>/dev/null && npm ci --ignore-scripts --no-fund --no-audit || echo 'WARN: no web-fetch extension deps'",
     )
 
     # --- Phase 5: git config last (parity: cleanup.sh — stow it after all HTTPS clones) ---
@@ -344,19 +357,42 @@ def _placement(sandbox) -> dict:
     return {"placement": f"{region}/{cloud}" if cloud else region}
 
 
+def _resource_cells(tags: dict) -> tuple:
+    """(cpu, mem, gpu, region, placement) from a sandbox's tags."""
+    return (tags.get("cpu", "?"),
+            f"{tags.get('memory', '?')}MiB",
+            tags.get("gpu", "?"),
+            tags.get("region", "?"),
+            tags.get("placement", "-"))
+
+
 def _describe_resources(tags: dict) -> str:
     """One-line resource summary from a sandbox's tags.
 
     Sandboxes expose no cpu/memory/gpu/region attributes on the object, so
     main() records them as tags at creation and status() reads them back here.
     """
-    parts = [f"cpu={tags.get('cpu', '?')}",
-             f"mem={tags.get('memory', '?')}MiB",
-             f"gpu={tags.get('gpu', '?')}",
-             f"region={tags.get('region', '?')}"]
-    if tags.get("placement"):
-        parts.append(f"placement={tags['placement']}")
+    cpu, mem, gpu, region, placement = _resource_cells(tags)
+    parts = [f"cpu={cpu}", f"mem={mem}", f"gpu={gpu}", f"region={region}"]
+    if placement != "-":
+        parts.append(f"placement={placement}")
     return " ".join(parts)
+
+
+def _status_table(rows) -> list:
+    """Aligned table from [(sandbox_id, tags, ssh_or_note)] — one row per box."""
+    header = ("SANDBOX", "CPU", "MEM", "GPU", "REGION", "PLACEMENT", "SSH")
+    table = [header]
+    for sandbox_id, tags, target in rows:
+        table.append((sandbox_id,) + _resource_cells(tags) + (target,))
+    widths = [max(len(str(row[i])) for row in table) for i in range(len(header))]
+    lines = []
+    for index, row in enumerate(table):
+        line = "  ".join(str(cell).ljust(widths[i]) for i, cell in enumerate(row)).rstrip()
+        lines.append(line)
+        if index == 0:
+            lines.append("  ".join("-" * widths[i] for i in range(len(header))))
+    return lines
 
 
 def _running_devboxes():
@@ -560,23 +596,21 @@ def _tags(sb) -> dict:
 
 @app.local_entrypoint()
 def _status() -> None:
-    """List running devbox sandboxes with their resources and ssh lines."""
+    """List running devbox sandboxes as a table (resources, placement, ssh)."""
     running = _running_devboxes()
     if not running:
         print("no devbox sandbox running")
         return
+    rows = []
     for sb in running:
-        tags = _tags(sb)
         socket_ = _tunnel(sb)
         if socket_:
             host, port = socket_
-            print(f"CONNECT {host} {port}")
-            print(f"  devbox sandbox : {sb.object_id}")
-            print(f"  resources      : {_describe_resources(tags)}")
-            print(f"  ssh            : ssh -o StrictHostKeyChecking=accept-new -p {port} root@{host}")
+            target = f"ssh -p {port} root@{host}"
         else:
-            print(f"  devbox sandbox : {sb.object_id}  (starting; no tunnel on port 22 yet)")
-            print(f"  resources      : {_describe_resources(tags)}")
+            target = "(starting; no tunnel yet)"
+        rows.append((sb.object_id, _tags(sb), target))
+    print("\n".join(_status_table(rows)))
 
 
 def _stop() -> None:

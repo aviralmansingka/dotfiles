@@ -104,8 +104,8 @@ RUNBOOK = "ops/modal-devbox/README.md"
 WRAPPER = "devbox/.local/bin/devbox"
 PACKER_APT_SCRIPT = "ops/packer/scripts/install_system_packages.sh"
 
-TUPLE_NAMES = ("PACKER_APT", "MODAL_APT_EXTRAS", "STOW_PACKAGES", "STOW_PACKAGES_LATE", "GPU_ALLOWLIST", "MASON_TOOLS", "REGION_ALLOWLIST")
-STRING_NAMES = ("DOTFILES_REPO", "DOTFILES_REF", "CUDA_BASE_IMAGE")
+TUPLE_NAMES = ("PACKER_APT", "MODAL_APT_EXTRAS", "STOW_PACKAGES", "STOW_PACKAGES_LATE", "STOW_IGNORE", "GPU_ALLOWLIST", "MASON_TOOLS", "REGION_ALLOWLIST")
+STRING_NAMES = ("DOTFILES_REPO", "DOTFILES_REF", "CUDA_BASE_IMAGE", "PI_VERSION")
 
 EXPECTED_GPU = ("", "T4", "L4", "A10", "L40S", "A100-40GB", "A100-80GB", "H100", "H200")
 EXPECTED_EXTRAS = {"openssh-server", "ca-certificates"}
@@ -285,7 +285,7 @@ def check_entrypoint(root, _literals, _source):
             errors.append(f"bash -n failed: {proc.stderr.strip()}")
     else:
         print("    SKIP bash -n (no bash on PATH)")
-    for needle in ("nvim-share", "nvim-state", "nvim-bob", "nvim-bin/nvim", "cache", "repos", "vault", "zsh_history"):
+    for needle in ("nvim-bin/nvim", "cache", "repos", "vault", "zsh_history"):
         if needle not in text:
             errors.append(f"entrypoint must link {needle!r} into /persist")
     if "exec /usr/sbin/sshd" not in text:
@@ -685,9 +685,6 @@ def check_entrypoint_behavior(root, _literals, _source):
                 break
 
         links = {
-            ".local/share/nvim": "nvim-share",
-            ".local/state/nvim": "nvim-state",
-            ".local/share/bob": "nvim-bob",
             ".cache": "cache",
             "repos": "repos",
             "vault": "vault",
@@ -700,10 +697,23 @@ def check_entrypoint_behavior(root, _literals, _source):
                 errors.append(f"$HOME/{rel} -> {path.readlink()} (expected {persist / target})")
         if not (home / ".zsh_history").is_symlink():
             errors.append("$HOME/.zsh_history must be linked into the volume")
-        # First boot seeded the image copy onto the volume; the volume's own
-        # cache copy won over the image's stale one.
-        if not (persist / "nvim-share/from-image.txt").exists():
-            errors.append("first boot must seed $HOME/.local/share/nvim onto the volume")
+        # Nvim's plugin tree, runtime and state must stay on the image's local
+        # disk: on the FUSE volume every fresh container paid seconds on the
+        # first start. Guard the regression, not just the current shape.
+        for rel in (".local/share/nvim", ".local/state/nvim", ".local/share/bob"):
+            if (home / rel).is_symlink():
+                errors.append(f"$HOME/{rel} must NOT be on the volume (slow nvim start)")
+        entrypoint_text = (root / ENTRYPOINT).read_text()
+        if "seed_and_restow" not in entrypoint_text:
+            errors.append("entrypoint must seed + restow the writable checkout")
+        # The probe returns early when nvim is absent, so compare on the source.
+        if "--headless +qa" not in entrypoint_text:
+            errors.append("entrypoint must prewarm nvim so the first open is fast")
+        # A writable dotfiles checkout is seeded into the volume on first boot.
+        if "repos/dotfiles" not in entrypoint_text:
+            errors.append("entrypoint must seed $HOME/repos/dotfiles for editing in-box")
+        # First boot seeds image content onto the volume (checked on .cache,
+        # the seeded dir that still lives there).
         if not (persist / "cache/from-volume.txt").exists():
             errors.append("the volume's existing cache contents must be kept")
         if (home / ".cache/stale.txt").exists():
@@ -740,17 +750,20 @@ def check_region_wiring(root, literals, source):
     return errors
 
 
-def _extract_function(source, name):
-    """Compile one top-level function out of devbox.py so the suite can call it
-    without importing the module (which imports modal)."""
+def _extract_function(source, name, helpers=()):
+    """Compile one top-level function (plus any helpers it calls) out of
+    devbox.py so the suite can call it without importing the module, which
+    imports modal."""
     tree = ast.parse(source)
-    for node in tree.body:
-        if isinstance(node, ast.FunctionDef) and node.name == name:
-            module = ast.Module(body=[node], type_ignores=[])
-            namespace = {}
-            exec(compile(module, "<extracted>", "exec"), namespace)  # noqa: S102
-            return namespace[name]
-    return None
+    wanted = list(helpers) + [name]
+    bodies = [node for node in tree.body
+              if isinstance(node, ast.FunctionDef) and node.name in wanted]
+    if not any(body.name == name for body in bodies):
+        return None
+    module = ast.Module(body=bodies, type_ignores=[])
+    namespace = {}
+    exec(compile(module, "<extracted>", "exec"), namespace)  # noqa: S102
+    return namespace[name]
 
 
 def check_resources_and_status(root, _literals, source):
@@ -758,7 +771,7 @@ def check_resources_and_status(root, _literals, source):
     and status renders them. The formatter is extracted and CALLED, so a rename
     that keeps behavior passes and a broken format fails."""
     errors = []
-    describe = _extract_function(source, "_describe_resources")
+    describe = _extract_function(source, "_describe_resources", helpers=("_resource_cells",))
     if describe is None:
         return ["devbox.py must define _describe_resources(tags)"]
     full = describe({"cpu": "4/8", "memory": "8192/16384", "gpu": "T4", "region": "ap-south"})
@@ -788,6 +801,58 @@ def check_resources_and_status(root, _literals, source):
     return errors
 
 
+def check_stow_repoint(root, literals, _source):
+    """M21 — the writable checkout is the live stow source, and the entrypoint's
+    package lists cannot drift from devbox.py's (the build stows from the image
+    clone; the entrypoint re-stows from ~/repos/dotfiles so edits take effect)."""
+    errors = []
+    entry = (root / ENTRYPOINT).read_text()
+    for var in ("STOW_IGNORE=", "STOW_PACKAGES=", "STOW_PACKAGES_LATE="):
+        if var not in entry:
+            errors.append(f"entrypoint must define {var[:-1]} for the restow")
+    if "seed_and_restow" not in entry:
+        errors.append("entrypoint must re-stow from the writable checkout")
+    if "stow -D -d \"$HOME/dotfiles\"" not in entry:
+        errors.append("entrypoint must unstow the image clone before restowing")
+    # Compare the shell lists with the Python constants.
+    def shell_list(name):
+        match = re.search(rf'^{name}="([^"]*)"', entry, re.MULTILINE)
+        return match.group(1).split() if match else []
+    expected_early = list(literals.get("STOW_PACKAGES", ()))
+    expected_late = list(literals.get("STOW_PACKAGES_LATE", ()))
+    if shell_list("STOW_PACKAGES") != expected_early:
+        errors.append(f"entrypoint STOW_PACKAGES must equal devbox.py's {expected_early}, "
+                      f"found {shell_list('STOW_PACKAGES')}")
+    if shell_list("STOW_PACKAGES_LATE") != expected_late:
+        errors.append(f"entrypoint STOW_PACKAGES_LATE must equal {expected_late}")
+    if shell_list("STOW_IGNORE") != list(literals.get("STOW_IGNORE", ())):
+        errors.append("entrypoint STOW_IGNORE must equal devbox.py's STOW_IGNORE")
+    return errors
+
+
+def check_pi_tooling(root, literals, source):
+    """M20 — the pi agent is installed, runnable, and keyed.
+
+    pi 1.4 needs Node >= 22 (Ubuntu 24.04 ships 18 — the first install crashed
+    with an ESM/compile-cache error before the NodeSource step was added), so
+    the node version and the pin are both guarded here.
+    """
+    errors = []
+    version = literals.get("PI_VERSION", "")
+    if not re.fullmatch(r"\d+\.\d+\.\d+", version or ""):
+        errors.append(f"PI_VERSION must pin x.y.z, found {version!r}")
+    if "@earendil-works/pi-coding-agent@" not in source or "PI_VERSION" not in source:
+        errors.append("the image must install @earendil-works/pi-coding-agent at PI_VERSION")
+    if "setup_22.x" not in source and "nodejs.org/dist" not in source:
+        errors.append("pi needs Node >= 22: the image must install a modern Node explicitly")
+    entry = (root / ENTRYPOINT).read_text()
+    if "FIREWORKS_API_KEY" not in entry:
+        errors.append("entrypoint must export FIREWORKS_API_KEY from pi's auth.json")
+    if "auth.json" not in entry:
+        errors.append("entrypoint must read pi's auth.json for that export")
+    return errors
+
+
 CHECKS = (
     ("M1 apt parity", check_apt_parity),
     ("M2 stow parity", check_stow_parity),
@@ -808,6 +873,8 @@ CHECKS = (
     ("M17 entrypoint behavior", check_entrypoint_behavior),
     ("M18 region wiring", check_region_wiring),
     ("M19 resources and status", check_resources_and_status),
+    ("M20 pi tooling", check_pi_tooling),
+    ("M21 stow repoint", check_stow_repoint),
 )
 
 
@@ -874,14 +941,15 @@ def selftest():
                 '        + [modal.Secret.from_name(n) for n in attached]],'),
             "cuda-cudnn": lambda: _mutate(root, '"nvidia/cuda:13.0.0-devel-ubuntu24.04"',
                                           '"nvidia/cuda:13.0.0-cudnn-devel-ubuntu24.04"'),
-            "entrypoint-no-seed": lambda: _mutate_file(
-                root, ENTRYPOINT, 'mv "$1" "$2"                         # first boot: seed the volume',
-                ': # seeding removed'),
+            "entrypoint-image-wins": lambda: _mutate_file(
+                root, ENTRYPOINT, 'rm -rf "$1"                          # volume wins over image-baked copy',
+                ': # keep the image copy'),
             "region-no-india": lambda: _mutate(root, '"ap", "ap-south")', '"ap")'),
             "status-launches-app": lambda: _mutate_wrapper(
                 root, 'if modpy="$(modal_python)" && "$modpy" "$PY" status; then', 'if false; then'),
+            "pi-old-node": lambda: _mutate(root, 'setup_22.x', 'setup_16.x'),
             "status-drops-region": lambda: _mutate(
-                root, '''f"region={tags.get('region', '?')}"]''', ']'),
+                root, '            tags.get("region", "?"),', '            "?",'),
             "cuda-nvcc-symlink": lambda: _mutate(
                 root, '"LD_LIBRARY_PATH": "/usr/local/cuda/lib64",',
                 '"LD_LIBRARY_PATH": "/usr/local/cuda/lib64",\n'
@@ -898,10 +966,11 @@ def selftest():
                          "entrypoint-no-0600": {"M13"}, "secrets-ephemeral-first": {"M13"},
                          "cuda-cudnn": {"M14"}, "cuda-nvcc-symlink": {"M14"},
                          "cuda-runbook": {"M15"},
-                         "entrypoint-no-seed": {"M17"},
+                         "entrypoint-image-wins": {"M17"},
                          "region-no-india": {"M18"},
                          "status-drops-region": {"M19"},
-                         "status-launches-app": {"M16"}}
+                         "status-launches-app": {"M16"},
+                         "pi-old-node": {"M20"}}
         for label, mutate in cases.items():
             _make_sandbox(root)
             try:
