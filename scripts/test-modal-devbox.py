@@ -50,6 +50,15 @@ pipeline and the research-verified Modal API surface:
       boots, mounts them via from_name, and appends the ephemeral
       DEVBOX_SSH_PUBLIC_KEY from_dict secret LAST (later entries win
       clashes).
+  M14 CUDA variant — CUDA_BASE_IMAGE is a pinned nvidia/cuda 13.x -devel
+      ubuntu24.04 tag (not -cudnn: that layer makes cold GPUs hydrate too
+      slowly to reach a tunnel); both variants go through one _build_image
+      call site; the CUDA image exports CUDA_HOME/PATH/LD_LIBRARY_PATH
+      instead of symlinking nvcc (a symlink breaks nvcc's argv[0]-relative
+      header lookup, losing <cuda_runtime.h>).
+  M15 CUDA runbook — the runbook documents the GPU workflow end to end:
+      --gpu, nvcc --version, cuda-compile-db, clangd --check, and the
+      explicit `devbox stop` rule for GPU boxes.
 
 Run `--selftest` to prove the checks fail on mutated copies (apt extras, GPU
 allowlist, late-git order, injected token) in a mktemp sandbox; the real
@@ -77,7 +86,7 @@ WRAPPER = "devbox/.local/bin/devbox"
 PACKER_APT_SCRIPT = "ops/packer/scripts/install_system_packages.sh"
 
 TUPLE_NAMES = ("PACKER_APT", "MODAL_APT_EXTRAS", "STOW_PACKAGES", "STOW_PACKAGES_LATE", "GPU_ALLOWLIST", "MASON_TOOLS")
-STRING_NAMES = ("DOTFILES_REPO", "DOTFILES_REF")
+STRING_NAMES = ("DOTFILES_REPO", "DOTFILES_REF", "CUDA_BASE_IMAGE")
 
 EXPECTED_GPU = ("", "T4", "L4", "A10", "L40S", "A100-40GB", "A100-80GB", "H100", "H200")
 EXPECTED_EXTRAS = {"openssh-server", "ca-certificates"}
@@ -219,7 +228,7 @@ def check_stow_parity(root, literals, _source):
 def check_layer_discipline(_root, _literals, source):
     errors = []
     layers = _count_run_commands(source)
-    comments = re.findall(r"^# --- Phase \d", source, re.MULTILINE)
+    comments = re.findall(r"^\s*# --- Phase \d", source, re.MULTILINE)
     if layers != len(comments):
         errors.append(f"{layers} run_commands layers but {len(comments)} Phase comments — pair them 1:1")
     if layers < 5:
@@ -304,7 +313,8 @@ def check_wrapper(root, _literals, _source):
     for needle in ("devbox ssh", "devbox start", "devbox status", "devbox stop",
                    "::main", "::status", "::stop", "nohup", "MODAL_DEVBOX_PY",
                    "ops/modal-devbox/devbox.py", "^CONNECT ", "accept-new",
-                   "try_cached_ssh", "ConnectTimeout", "ControlMaster", "$CACHE"):
+                   "try_cached_ssh", "ConnectTimeout", "ControlMaster", "$CACHE",
+                   "::snapshot", "devbox snapshot"):
         if needle not in text:
             errors.append(f"wrapper must reference {needle!r}")
     return errors
@@ -471,6 +481,43 @@ def check_materialization(root, _literals, source):
     return errors
 
 
+def check_cuda_variant(_root, literals, source):
+    """M14 — CUDA base pin, one shared layer builder, no nvcc symlink trap."""
+    errors = []
+    base = literals.get("CUDA_BASE_IMAGE", "")
+    if not re.fullmatch(r"nvidia/cuda:13\.\d+\.\d+[\w.-]*-devel-ubuntu24\.04", base):
+        errors.append(f"CUDA_BASE_IMAGE must pin a CUDA 13.x -devel ubuntu24.04 tag, found {base!r}")
+    if "cudnn" in base:
+        errors.append("CUDA_BASE_IMAGE must not be the -cudnn variant: the extra layers make "
+                      "cold GPU sandboxes hydrate too slowly to reach a tunnel")
+    for variant in ("cpu_image", "cuda_image"):
+        if not re.search(rf"^{variant} = _build_image\(", source, re.MULTILINE):
+            errors.append(f"{variant} must be built through _build_image(...)")
+    if not re.search(r"^def _build_image\(root_image", source, re.MULTILINE):
+        errors.append("_build_image(root_image) must exist and take the base image as a parameter")
+    cuda_env = re.search(r"\.env\(\s*\{(.*?)\}\s*\)", source, re.DOTALL)
+    block = source.split("cuda_image = _build_image", 1)[-1]
+    for var in ("CUDA_HOME", "PATH", "LD_LIBRARY_PATH"):
+        if var not in block:
+            errors.append(f"CUDA image must export {var} for non-interactive shells")
+    if "/usr/local/cuda/bin" not in block:
+        errors.append("CUDA PATH must include /usr/local/cuda/bin")
+    if re.search(r"ln -sf\s+/usr/local/cuda/bin", source):
+        errors.append("do not symlink nvcc into /usr/local/bin: nvcc resolves headers "
+                      "relative to argv[0] and loses <cuda_runtime.h>")
+    return errors
+
+
+def check_cuda_runbook(root, _literals, _source):
+    """M15 — the runbook documents the whole GPU/CUDA workflow."""
+    errors = []
+    readme = (root / RUNBOOK).read_text()
+    for needle in ("--gpu", "nvcc --version", "cuda-compile-db", "clangd --check", "devbox stop"):
+        if needle not in readme:
+            errors.append(f"runbook must document {needle!r}")
+    return errors
+
+
 CHECKS = (
     ("M1 apt parity", check_apt_parity),
     ("M2 stow parity", check_stow_parity),
@@ -485,6 +532,8 @@ CHECKS = (
     ("M11 manifest schema", check_manifest),
     ("M12 sync script", check_sync_script),
     ("M13 materialization", check_materialization),
+    ("M14 CUDA variant", check_cuda_variant),
+    ("M15 CUDA runbook", check_cuda_runbook),
 )
 
 
@@ -548,6 +597,14 @@ def selftest():
                 '        + [modal.Secret.from_dict({"DEVBOX_SSH_PUBLIC_KEY": pubkey})],',
                 'secrets=[[modal.Secret.from_dict({"DEVBOX_SSH_PUBLIC_KEY": pubkey})]\n'
                 '        + [modal.Secret.from_name(n) for n in attached]],'),
+            "cuda-cudnn": lambda: _mutate(root, '"nvidia/cuda:13.0.0-devel-ubuntu24.04"',
+                                          '"nvidia/cuda:13.0.0-cudnn-devel-ubuntu24.04"'),
+            "cuda-nvcc-symlink": lambda: _mutate(
+                root, '"LD_LIBRARY_PATH": "/usr/local/cuda/lib64",',
+                '"LD_LIBRARY_PATH": "/usr/local/cuda/lib64",\n'
+                '    },\n).add_local_file("x", "y").run_commands("ln -sf /usr/local/cuda/bin/* /usr/local/bin/"'
+                ').env({'),
+            "cuda-runbook": lambda: _mutate_file(root, RUNBOOK, "clangd --check", "clangd probe"),
         }
         expected_fail = {"clean": 0, "apt-extra": {"M1"}, "gpu-b200": {"M4"},
                          "git-early": {"M2"}, "token-leak": {"M5"},
@@ -555,7 +612,9 @@ def selftest():
                          "mason-missing": {"M10"}, "manifest-bad-mode": {"M11"},
                          "manifest-leak": {"M11"}, "manifest-extra-name": {"M11"},
                          "sync-no-trap": {"M12"}, "sync-cat-leak": {"M12"},
-                         "entrypoint-no-0600": {"M13"}, "secrets-ephemeral-first": {"M13"}}
+                         "entrypoint-no-0600": {"M13"}, "secrets-ephemeral-first": {"M13"},
+                         "cuda-cudnn": {"M14"}, "cuda-nvcc-symlink": {"M14"},
+                         "cuda-runbook": {"M15"}}
         for label, mutate in cases.items():
             _make_sandbox(root)
             mutate()
