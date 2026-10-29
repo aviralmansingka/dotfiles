@@ -3,8 +3,11 @@
 Run the dotfiles devbox identically on an ephemeral Modal worker, eventually
 with GPU hosts and SSH access. Branch: `feat/modal-devbox`. Status:
 phases 1–3 shipped on the Sandbox path (`ops/modal-devbox/`, runbook,
-`scripts/test-modal-devbox.py`); pending: phase 2 secrets-sync script, phase
-4 GPU/CUDA image, phase 4.5 snapshot workflow.
+`scripts/test-modal-devbox.py`), including phase 2 secrets-sync
+(`scripts/modal-secrets-sync` + `ops/modal-devbox/secrets-manifest.json`,
+in-container materialization, verified 2026-10: env files at 0600,
+`gh auth status` green in-container, oreilly MCP header resolves);
+pending: phase 4 GPU/CUDA image, phase 4.5 snapshot workflow.
 
 Research is complete and verified against current Modal docs
 (`ops/modal-devbox/research-modal-images.md`, Oct 2026). Every decision below
@@ -222,13 +225,23 @@ toolset (`MASON_TOOLS`, suite-checked against mason.lua) installed at build
 so first opens are clean, apt parity suite green, build logs via
 `modal image logs`.
 
-### Phase 2 — volume persistence (shipped, verified) + secrets (pending)
+### Phase 2 — volume persistence (shipped, verified) + secrets (shipped, verified 2026-10)
 
 Volume v2 at `/persist` + first-boot symlink bootstrap in `entrypoint.sh`.
 Verified: a marker under `/persist` survived two full sandbox deaths,
 `sync /persist` works from inside a session, image rebuilds leave the
-volume untouched. Pending: `scripts/modal-secrets-sync` + manifest,
-env-file materialization, `gh auth status` in-container.
+volume untouched. Secrets: `scripts/modal-secrets-sync` + manifest upload
+one Modal Secret per Mac source (`--from-json` payloads, `--force`
+idempotent, `--dry-run`/`--only`/`--aws`); the launcher probes which
+manifest secrets exist and mounts only those (fresh workspaces still
+boot), with the ephemeral per-launch SSH-key secret applied last.
+`entrypoint.sh` materializes values back to disk (`~/.env`,
+`~/.config/pi-*.env` at 0600, base64 files decoded at their targets,
+`GH_TOKEN`/`GITHUB_TOKEN` via a guarded `~/.zshenv` include — all
+container-local, never on `/persist`). Verified in-container: env files
+0600, `gh auth status` green, non-empty `GH_TOKEN`, oreilly MCP header
+resolves from `~/.env`. Rotation: re-sync + `devbox stop` (warm containers
+keep old values).
 
 ### Phase 3 — SSH + warm container (shipped, verified)
 
@@ -279,8 +292,9 @@ pi + extensions + skills inside the container, driven over SSH, with
    over `$HOME`, and first-boot seeding worked.
 3. Two SSH sessions in one container — closed (phase 3 smoke: tmux survived
    disconnect/reconnect through the same tunnel).
-4. Warm-container secret rotation — applies once the phase 2 secrets sync
-   lands; restart after rotate regardless.
+4. Warm-container secret rotation — live now that the phase 2 secrets sync
+   has landed: values freeze at container start, so rotate = re-sync +
+   `devbox stop` (documented in the runbook).
 5. `run_commands` build-step timeout is undocumented — keep the dotfiles layer
    lean; use `run_function` (1 h default, configurable) if a phase outgrows it.
 6. Snapshot image as a `@app.function` image (phase 4.5) — unverified.

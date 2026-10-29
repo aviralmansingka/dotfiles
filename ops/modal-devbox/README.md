@@ -113,6 +113,49 @@ no install prompts. Treesitter grammars compile on first use per filetype
 (same confirmation prompt as the Mac). Anything outside the list installs on
 demand and persists on the volume.
 
+## Secrets
+
+The devbox gets the same credentials as the Mac via Modal Secrets — one per
+source env file, plus gh and a couple of files. `scripts/modal-secrets-sync`
+is the only writer:
+
+```sh
+scripts/modal-secrets-sync --dry-run   # print the plan (names only, no values)
+scripts/modal-secrets-sync             # upload/overwrite every entry
+scripts/modal-secrets-sync --aws       # ... including the opt-in devbox-aws
+scripts/modal-secrets-sync --only devbox-gh   # a single entry
+```
+
+- The committed manifest (`ops/modal-devbox/secrets-manifest.json`) carries
+  secret **names**, source paths, and variable **names** — never values.
+  `scripts/test-modal-devbox.py` lints it (M11).
+- MODE `dotenv` normalizes `export KEY=...` lines; MODE `file` ships the file
+  base64-encoded in one variable; MODE `command` stores a command's stdout
+  (e.g. `gh auth token` → `GH_TOKEN`).
+- Missing sources are skipped with a warning (e.g. `devbox-ssh` on a machine
+  without `~/.ssh/id_ed25519.pub` — the per-launch ephemeral key secret
+  covers SSH anyway); a missing/unauthenticated `modal` CLI fails loudly.
+- At boot, `entrypoint.sh` materializes the values back onto disk for
+  config parity: `~/.env` and `~/.config/pi-*.env` (0600 — exactly what
+  `mcp.json` shell refs like `!. ~/.env; echo "Bearer $OREILLY_TOKEN"`
+  expect), `~/.pi/agent/auth.json` and `~/.aws/credentials` decoded at their
+  manifest targets, and `GH_TOKEN`/`GITHUB_TOKEN` exported into every shell
+  via a guarded include on the stowed `~/.zshenv`. All materialized files
+  are container-local: secret values never touch `/persist`.
+- The launcher mounts only manifest secrets that actually exist in the
+  workspace (probed at launch), so a fresh workspace still boots; the
+  per-launch ephemeral SSH-key secret is applied **last** and wins any
+  clash with `devbox-ssh`.
+
+**Rotation**: secret values are frozen into a container at its start — a
+warm devbox keeps serving old values after a re-sync. Rotate = re-run
+`scripts/modal-secrets-sync`, then `devbox stop` and start again.
+
+**Security model**: Modal secret values are write-only (no read-back via
+CLI, API, or dashboard), but any container running in the workspace can
+read every secret from its environment. This is a **personal workspace
+only** — never sync into a shared one.
+
 ## Rebuilds
 
 The image is code: change a layer in `devbox.py`, then the next
@@ -172,4 +215,5 @@ are the only freeze path (see the research report, §2).
 `ops/packer/scripts/install_system_packages.sh` (superset + exact extras
 `openssh-server`, `ca-certificates`), stow set vs repo packages, GPU
 allowlist, secret hygiene, entrypoint structure, dotfiles pin shape, runbook
-accuracy. `docs/ci-tests/modal-devbox.md` documents the suite.
+accuracy, manifest lint, sync-script structure, and materialization wiring
+(M1–M13). `docs/ci-tests/modal-devbox.md` documents the suite.
