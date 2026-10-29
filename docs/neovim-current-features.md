@@ -609,7 +609,8 @@ feat/nvim-mermaid change; `docs/neovim-mermaid-render.md` owns the full details.
 - Jumplist behavior is stack-based.
 - Insert-mode `<C-/>` exits insert mode.
 - The system clipboard is the default unnamed clipboard.
-- SSH clipboard copy works through OSC52.
+- SSH and mosh clipboard copy works through OSC52; inside tmux the
+  clipboard always follows the attached client.
 - SSH paste avoids remote terminal paste timeouts by using local Neovim registers.
 - Terminal-buffer paste honors nested bracketed-paste mode: opted-in programs receive markers so pasted newlines remain
   paste text; other programs receive raw text without control-sequence artifacts.

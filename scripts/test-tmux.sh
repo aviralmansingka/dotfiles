@@ -6,7 +6,8 @@
 #   - .tmux.conf keys: default-terminal is the 256-color value (not
 #     xterm-ghostty), escape-time 10, update-environment carries
 #     SSH_AUTH_SOCK + TERM, terminal-overrides carry RGB for both outer
-#     TERMs, terminal-features carry clipboard (OSC52) for xterm-ghostty,
+#     TERMs, terminal-features carry clipboard (OSC52) for every
+#     xterm-family client TERM (Ghostty, Blink, plain ssh),
 #     the intentional `unbind C-b` stays present (tripwire: deleting it
 #     re-captures C-b as a second prefix), prefix C-a send-prefix and the
 #     copy-mode-vi bindings stay intact.
@@ -230,8 +231,11 @@ chk_osc52_clipboard() {
     sock="$(boot_server "$1")" || return 1
     vals="$(q "$sock" show-options -s | grep '^terminal-features')"
     sc="$(opt_value "$sock" s set-clipboard)"
-    [[ "$vals" == *"xterm-ghostty:clipboard"* ]] \
-        || { echo "terminal-features lost xterm-ghostty:clipboard (OSC52 passthrough breaks under Ghostty)"; return 1; }
+    # tmux 3.4+ ships a builtin "xterm*:clipboard:..." composite entry, so a
+    # substring match cannot notice a deletion of our own line. Assert the
+    # exact bare appended entry instead.
+    echo "$vals" | awk '{print $2}' | grep -Fxq 'xterm*:clipboard' \
+        || { echo "terminal-features lost the explicit xterm*:clipboard entry (OSC52 passthrough breaks for Ghostty, Blink, and other xterm-family clients on tmux without builtin detection)"; return 1; }
     [[ "$sc" == "on" ]] \
         || { echo "set-clipboard is '$sc', expected on (OSC52 emit disabled)"; return 1; }
 }
@@ -446,7 +450,7 @@ sandbox() {
     sed '/^set -ag terminal-overrides ..xterm-ghostty:RGB.$/d' "$CONF" >"$m/nooverride.conf"
     expect_fail overrides-rgb chk_terminal_overrides_rgb "$m/nooverride.conf"
 
-    sed "/^set -as terminal-features ',xterm-ghostty:clipboard'$/d" "$CONF" >"$m/noclip.conf"
+    sed "/^set -as terminal-features ',xterm\*:clipboard'$/d" "$CONF" >"$m/noclip.conf"
     expect_fail osc52-clipboard chk_osc52_clipboard "$m/noclip.conf"
 
     sed 's/^bind -T copy-mode-vi v send-keys -X begin-selection$/bind -T copy-mode-vi v send-keys -X cursor-left/' "$CONF" >"$m/copymode.conf"

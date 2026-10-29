@@ -21,8 +21,10 @@ vim.opt.swapfile = false
 vim.opt.shortmess:append("A")
 
 -- OSC52 Clipboard Configuration
--- Supports both local and remote (SSH) development
--- Copy works over SSH via OSC52, paste uses local Neovim buffer to avoid timeouts
+-- Copy uses OSC52 for remote sessions and for any host without a local
+-- clipboard tool, so terminals like Blink (ssh or mosh from iPad/iPhone/Mac)
+-- get device-clipboard yanks. Paste reads the local unnamed register to
+-- avoid OSC52 response timeouts.
 vim.o.clipboard = "unnamedplus"
 
 local function paste()
@@ -32,8 +34,35 @@ local function paste()
   }
 end
 
-if vim.env.SSH_TTY then
-  -- SSH session: Use OSC52 for copy, local buffer for paste (no timeouts)
+-- OSC52 gate, in priority order:
+-- 1. Inside tmux: always OSC52. tmux (set-clipboard on) forwards to the
+--    client attached right now, so the clipboard follows ssh, mosh, and
+--    local attaches without restarting nvim — the env snapshot of a
+--    long-lived pane goes stale the moment it predates a mosh attach
+--    (mosh keeps SSH_CONNECTION from its ssh bootstrap, but a pane started
+--    earlier never sees it, and wl-copy on a desktop host then loses the
+--    provider race with no WAYLAND_DISPLAY to back it).
+-- 2. SSH_TTY (ssh with a TTY) or SSH_CONNECTION (mosh: its server is
+--    spawned over ssh, so SSH_CONNECTION survives into the session).
+-- 3. No local clipboard tool on the host: OSC52 is the only provider.
+local function osc52_copy()
+  if vim.env.TMUX then
+    return true
+  end
+  if vim.env.SSH_TTY or vim.env.SSH_CONNECTION then
+    return true
+  end
+  local providers = { "pbcopy", "wl-copy", "xclip", "xsel", "win32yank.exe", "clip.exe" }
+  for _, provider in ipairs(providers) do
+    if vim.fn.executable(provider) == 1 then
+      return false
+    end
+  end
+  return true
+end
+
+if osc52_copy() then
+  -- Remote or provider-less session: OSC52 copy, local buffer for paste
   vim.g.clipboard = {
     name = "OSC 52",
     copy = {
