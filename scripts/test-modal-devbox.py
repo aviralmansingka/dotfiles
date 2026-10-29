@@ -70,6 +70,10 @@ pipeline and the research-verified Modal API surface:
       volume, the first boot seeds the image copy onto the volume, an
       existing volume copy wins over the image copy, and a second run is
       idempotent.
+  M18 region wiring — REGION_ALLOWLIST offers both multipliers and Mumbai
+      (ap-south), Sandbox.create forwards region=region or None, an unknown
+      region fails fast with the allowed list, and the wrapper + runbook
+      document the flag.
 
 Run `--selftest` to prove the checks fail on mutated copies (apt extras, GPU
 allowlist, late-git order, injected token) in a mktemp sandbox; the real
@@ -96,7 +100,7 @@ RUNBOOK = "ops/modal-devbox/README.md"
 WRAPPER = "devbox/.local/bin/devbox"
 PACKER_APT_SCRIPT = "ops/packer/scripts/install_system_packages.sh"
 
-TUPLE_NAMES = ("PACKER_APT", "MODAL_APT_EXTRAS", "STOW_PACKAGES", "STOW_PACKAGES_LATE", "GPU_ALLOWLIST", "MASON_TOOLS")
+TUPLE_NAMES = ("PACKER_APT", "MODAL_APT_EXTRAS", "STOW_PACKAGES", "STOW_PACKAGES_LATE", "GPU_ALLOWLIST", "MASON_TOOLS", "REGION_ALLOWLIST")
 STRING_NAMES = ("DOTFILES_REPO", "DOTFILES_REF", "CUDA_BASE_IMAGE")
 
 EXPECTED_GPU = ("", "T4", "L4", "A10", "L40S", "A100-40GB", "A100-80GB", "H100", "H200")
@@ -688,6 +692,33 @@ def check_entrypoint_behavior(root, _literals, _source):
     return errors
 
 
+def check_region_wiring(root, literals, source):
+    """M18 — --region is offered, validated, forwarded, and documented.
+
+    Broad regions (us/eu/ap) are 1.15x and narrow ones 1.75x, so the allowlist
+    carries both, and ap-south (Mumbai) must stay for India-local work.
+    """
+    errors = []
+    regions = literals.get("REGION_ALLOWLIST")
+    if not regions:
+        return ["REGION_ALLOWLIST must be a module-level literal tuple"]
+    for required in ("", "ap-south", "ap", "us", "eu"):
+        if required not in regions:
+            errors.append(f"REGION_ALLOWLIST must offer {required!r}")
+    if not re.search(r"^\s*region=region or None,", source, re.MULTILINE):
+        errors.append("Sandbox.create must receive region=region or None")
+    if "unknown region" not in source:
+        errors.append("an unknown --region must fail fast with the allowed list")
+    wrapper = (root / WRAPPER).read_text()
+    if "--region" not in wrapper:
+        errors.append("the wrapper usage must advertise --region")
+    readme = (root / RUNBOOK).read_text()
+    for needle in ("--region", "ap-south"):
+        if needle not in readme:
+            errors.append(f"runbook must document {needle!r}")
+    return errors
+
+
 CHECKS = (
     ("M1 apt parity", check_apt_parity),
     ("M2 stow parity", check_stow_parity),
@@ -706,6 +737,7 @@ CHECKS = (
     ("M15 CUDA runbook", check_cuda_runbook),
     ("M16 wrapper behavior", check_wrapper_behavior),
     ("M17 entrypoint behavior", check_entrypoint_behavior),
+    ("M18 region wiring", check_region_wiring),
 )
 
 
@@ -775,6 +807,7 @@ def selftest():
             "entrypoint-no-seed": lambda: _mutate_file(
                 root, ENTRYPOINT, 'mv "$1" "$2"                         # first boot: seed the volume',
                 ': # seeding removed'),
+            "region-no-india": lambda: _mutate(root, '"ap", "ap-south")', '"ap")'),
             "cuda-nvcc-symlink": lambda: _mutate(
                 root, '"LD_LIBRARY_PATH": "/usr/local/cuda/lib64",',
                 '"LD_LIBRARY_PATH": "/usr/local/cuda/lib64",\n'
@@ -791,7 +824,8 @@ def selftest():
                          "entrypoint-no-0600": {"M13"}, "secrets-ephemeral-first": {"M13"},
                          "cuda-cudnn": {"M14"}, "cuda-nvcc-symlink": {"M14"},
                          "cuda-runbook": {"M15"},
-                         "entrypoint-no-seed": {"M17"}}
+                         "entrypoint-no-seed": {"M17"},
+                         "region-no-india": {"M18"}}
         for label, mutate in cases.items():
             _make_sandbox(root)
             mutate()

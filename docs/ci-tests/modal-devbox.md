@@ -74,6 +74,13 @@ and no `$HOME` mutation.
   ephemeral `DEVBOX_SSH_PUBLIC_KEY` `from_dict` secret **last** (later
   entries win key clashes — research §8.4).
 
+- **M18 region wiring.** `REGION_ALLOWLIST` offers both price tiers (`us`,
+  `eu`, `ap` at 1.15x) and the narrow names (`us-east`, `us-west`, `eu-west`,
+  `ap-south` at 1.75x), `ap-south` (Mumbai) stays available for India-local
+  work, `Sandbox.create` forwards `region=region or None`, an unknown region
+  fails fast naming the allowed list, and the wrapper usage + runbook document
+  the flag.
+
 ## Selftest
 
 `--selftest` rebuilds the checks against mutated mktemp copies (extra apt
@@ -83,14 +90,15 @@ fast path was renamed, a bad manifest mode, a value-looking manifest string,
 a name outside the inventory, a removed temp-cleanup trap, a `cat` of the
 temp payload in the sync script, 0644 instead of 0600 in the entrypoint, the
 ephemeral key secret mounted first, a `-cudnn` CUDA base, an `nvcc` symlink,
-and a runbook with `clangd --check` removed, and an entrypoint whose
-first-boot seeding was removed) and proves the matching checks
-fail; a clean copy must pass. The real worktree is never touched.
+and a runbook with `clangd --check` removed, an entrypoint whose
+first-boot seeding was removed, and a region list with Mumbai dropped) and
+proves the matching checks fail; a clean copy must pass. The real worktree is
+never touched.
 
 ## How to run
 
 ```sh
-scripts/test-modal-devbox.py              # suite (M1–M17)
+scripts/test-modal-devbox.py              # suite (M1–M18)
 scripts/test-modal-devbox.py --selftest   # prove checks fail on mutations
 ```
 

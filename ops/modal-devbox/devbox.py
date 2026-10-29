@@ -45,6 +45,13 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # see docs/modal-devbox.md for the price table).
 GPU_ALLOWLIST = ("", "T4", "L4", "A10", "L40S", "A100-40GB", "A100-80GB", "H100", "H200")
 
+# Container regions. Broad regions (us, eu, ap) give the widest scheduling pool
+# and a 1.15x price multiplier; narrow ones cost 1.75x but pin the box near you.
+# `ap-south` is Modal's Mumbai container region — the closest to India. (Modal
+# documents ap-south for routing; container regions accept the same names and
+# the server rejects anything it does not know.)
+REGION_ALLOWLIST = ("", "us", "us-east", "us-west", "eu", "eu-west", "ap", "ap-south")
+
 # apt parity: ops/packer/scripts/install_system_packages.sh, plus exactly the
 # Modal extras below (the parity suite enforces the extras set).
 PACKER_APT = (
@@ -374,6 +381,7 @@ def _wait_for_tunnel(sandbox, attempts: int = 120, pause: float = 1.0):
 @app.local_entrypoint()
 def main(
     gpu: str = "",
+    region: str = "",
     timeout_hours: float = 24.0,  # hard lifetime backstop; idle_timeout is the real control
     idle_timeout: int = 120,  # seconds after the last SSH disconnect before teardown
     ssh_key: str = "",
@@ -394,6 +402,8 @@ def main(
     """
     if gpu not in GPU_ALLOWLIST:
         sys.exit(f"unknown gpu {gpu!r}; allowed: {', '.join(GPU_ALLOWLIST)}")
+    if region not in REGION_ALLOWLIST:
+        sys.exit(f"unknown region {region!r}; allowed: {', '.join(REGION_ALLOWLIST)}")
     if not 0 < timeout_hours <= 24:
         sys.exit("timeout_hours must be within (0, 24]: Sandboxes cap at 24 h")
     if idle_timeout < 0:
@@ -438,6 +448,7 @@ def main(
         secrets=[modal.Secret.from_name(n) for n in attached]
         + [modal.Secret.from_dict({"DEVBOX_SSH_PUBLIC_KEY": pubkey})],
         gpu=gpu or None,
+        region=region or None,
         cpu=cpu,
         memory=memory,
         timeout=int(timeout_hours * 3600),
@@ -459,6 +470,8 @@ def main(
         print(f"  secrets        : {', '.join(attached) or 'none'} + per-launch ssh key")
         print(f"  teardown       : modal container stop {sandbox.object_id} -y (or Ctrl+C in a foreground terminal)")
         print(f"  lease          : {timeout_hours:g} h hard cap; /persist survives teardown")
+        if region:
+            print(f"  region         : {region} ({'1.15x' if region in ('us', 'eu', 'ap') else '1.75x'} price multiplier)")
         print(f"  idle           : dies {idle_timeout or 'never'}{' s' if idle_timeout else ''} after the last SSH disconnect")
         print()
         sandbox.wait(raise_on_termination=False)
