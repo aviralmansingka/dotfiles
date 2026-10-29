@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the SemiAnalysis vault sync hourly
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=120
+Unit=semianalysis-sync.service
+
+[Install]
+WantedBy=timers.target
