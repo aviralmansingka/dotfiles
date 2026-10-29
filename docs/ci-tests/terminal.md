@@ -24,8 +24,8 @@ offline and never contact the live tmux or herdr server.
   with no error output. This catches unknown commands and options.
 - Parsed values (a real `show-options` parse, not a grep): default-terminal
   tmux-256color, escape-time 10, update-environment with SSH_AUTH_SOCK and
-  TERM, RGB overrides for both outer TERMs, clipboard feature for
-  xterm-ghostty, set-clipboard on.
+  TERM, RGB overrides for both outer TERMs, clipboard feature for every
+  xterm-family client TERM (Ghostty, Blink, plain ssh), set-clipboard on.
 - Key tables: C-a runs send-prefix. C-b stays unbound. The copy-mode-vi
   keys v and y keep their actions.
 - Cross-terminal checks: the tmux overrides name the TERM the terminfo

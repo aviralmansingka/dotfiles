@@ -1,6 +1,6 @@
 # OSC52 Quick Start Guide
 
-Your OSC52 clipboard sharing is now fully configured across Ghostty, SSH, Tmux, and Neovim.
+Your OSC52 clipboard sharing is now fully configured across Ghostty, Blink, SSH/Mosh, Tmux, and Neovim.
 
 ## What You Can Do Now
 
@@ -37,6 +37,18 @@ nvim file.txt
 # Paste in browser, notes, IDE, etc. with: Cmd+V
 ```
 
+### From Blink (iPad / iPhone / Mac), ssh or mosh
+```bash
+# In Blink: connect with ssh or mosh
+mosh homelab
+
+# Same flow on the host: tmux, nvim
+nvim file.txt
+# Copy with: "+y
+
+# Text appears in the Blink device clipboard — paste with Blink's paste gesture
+```
+
 ## The Setup
 
 ### What Was Configured
@@ -45,8 +57,8 @@ nvim file.txt
 |-----------|--------|---------|
 | **Ghostty** | Added `shell-integration-features = cursor,sudo,title,ssh-env,ssh-terminfo` | Enables automatic TERM handling for remote servers |
 | **Tmux** | Added `set -s set-clipboard on` | Allows Neovim to use OSC52 (CRITICAL) |
-| **Tmux** | Added Ghostty terminal-features | Explicit clipboard support for Ghostty TERM |
-| **Neovim** | SSH-aware OSC52 config | Detects SSH sessions and uses copy-only OSC52 |
+| **Tmux** | Added `xterm*` terminal-features clipboard | Covers Ghostty, Blink (xterm-256color), and every xterm-family client |
+| **Neovim** | SSH/mosh/tmux-aware OSC52 config | Detects SSH_TTY or SSH_CONNECTION; inside tmux always OSC52; falls back to OSC52 when the host has no clipboard tool |
 
 ### Key Feature: Copy-Only Paste
 
@@ -209,24 +221,26 @@ nvim
 ## How It Works (Technical)
 
 ```
-Your Mac (Ghostty)
+Your device (Ghostty, Blink, ...)
   └─ OSC52 Support: ✓
 
-SSH Connection
-  └─ Passes OSC52 sequences: ✓ (transparent)
+SSH / Mosh Connection
+  └─ Passes OSC52 sequences: ✓ (transparent; mosh needs mosh-server 1.4.0+)
 
 Remote Tmux
   └─ allow-passthrough on: Forwards OSC52 ✓
   └─ set-clipboard on: Apps can use OSC52 ✓
 
 Remote Neovim
-  └─ Detects SSH_TTY environment variable ✓
+  └─ Detects SSH_TTY or SSH_CONNECTION (ssh / mosh) ✓
+  └─ Inside tmux: always OSC52 — follows the client attached right now ✓
+  └─ Falls back to OSC52 when no local clipboard tool exists ✓
   └─ Generates OSC52 sequence with copied text
 
-Back to Your Mac
+Back to Your device
   └─ OSC52 sequence arrives
-  └─ Ghostty decodes and copies to system clipboard
-  └─ Text available for Cmd+V
+  └─ The terminal decodes and copies to the device clipboard
+  └─ Text available for paste
 ```
 
 ## References
@@ -247,6 +261,6 @@ Back to Your Mac
 
 ---
 
-**Status**: ✅ All tests pass (15/15) - Ready to use!
+**Status**: ✅ All tests pass - Ready to use!
 
 Test it now with: `./scripts/test-osc52.sh`

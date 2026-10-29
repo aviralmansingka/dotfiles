@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # OSC52 Clipboard Configuration Testing Script
-# Tests OSC52 support across Ghostty, Tmux, and Neovim
+# Tests OSC52 support across terminals (Ghostty, Blink), Tmux, and Neovim.
+# Live-env manual suite (excluded from CI — see scripts/ci-tier2-exclusions.txt).
 # Usage: ./scripts/test-osc52.sh
 
 echo "╔════════════════════════════════════════════════════════════╗"
@@ -52,7 +53,7 @@ if [ -f ~/.config/ghostty/config ]; then
   grep -q "shell-integration-features" ~/.config/ghostty/config
   test_result $? "Ghostty: shell-integration-features configured"
 else
-  test_result 1 "Ghostty config file not found"
+  echo -e "${YELLOW}⚠${NC} Ghostty config not found (Ghostty is macOS-only; checks skipped)"
 fi
 
 echo ""
@@ -68,6 +69,10 @@ TMUX_CONF="$HOME/.tmux.conf"
 if [ ! -f "$TMUX_CONF" ] && [ -f "$HOME/.config/tmux/.tmux.conf" ]; then
   TMUX_CONF="$HOME/.config/tmux/.tmux.conf"
 fi
+# Prefer the repo checkout when present, so a worktree run tests the branch's
+# config; fall back to the stowed $HOME file on hosts without a checkout.
+REPO_CONF="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)/tmux/.tmux.conf"
+[ -f "$REPO_CONF" ] && TMUX_CONF="$REPO_CONF"
 
 if [ -f "$TMUX_CONF" ]; then
   test_result 0 "Tmux config file found: $TMUX_CONF"
@@ -81,8 +86,8 @@ if [ -f "$TMUX_CONF" ]; then
   grep -q "terminal-features.*clipboard" "$TMUX_CONF"
   test_result $? "Tmux: terminal-features clipboard"
 
-  grep -q "xterm-ghostty:clipboard" "$TMUX_CONF"
-  test_result $? "Tmux: Ghostty clipboard support"
+  grep -q "xterm\*:clipboard" "$TMUX_CONF"
+  test_result $? "Tmux: xterm* clipboard support (Ghostty, Blink, plain ssh)"
 else
   test_result 1 "Tmux config file not found"
 fi
@@ -98,7 +103,9 @@ if [ -n "$NVIM_PATH" ]; then
   NVIM_VERSION=$($NVIM_PATH --version | head -1)
   echo "$NVIM_VERSION"
 
-  if echo "$NVIM_VERSION" | grep -qE "0\.10|0\.11|0\.12"; then
+  NVIM_MINOR=$(echo "$NVIM_VERSION" | sed -n '1s/^NVIM v0\.\([0-9][0-9]*\).*/\1/p')
+  NVIM_MAJOR=$(echo "$NVIM_VERSION" | sed -n '1s/^NVIM v\([1-9][0-9]*\)\..*/\1/p')
+  if [ -n "$NVIM_MAJOR" ] || { [ -n "$NVIM_MINOR" ] && [ "$NVIM_MINOR" -ge 10 ]; }; then
     test_result 0 "Neovim 0.10+ (has native OSC52 support)"
   else
     test_result 1 "Neovim version may not support native OSC52"
@@ -108,6 +115,10 @@ else
 fi
 
 NVIM_CONF="$HOME/.config/nvim/lua/config/options.lua"
+# Prefer the repo checkout when present (worktree runs test the branch's
+# config); fall back to the stowed file on hosts without a checkout.
+REPO_NVIM_CONF="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)/nvim/.config/nvim/lua/config/options.lua"
+[ -f "$REPO_NVIM_CONF" ] && NVIM_CONF="$REPO_NVIM_CONF"
 if [ -f "$NVIM_CONF" ]; then
   test_result 0 "Neovim config file found"
 
@@ -116,6 +127,15 @@ if [ -f "$NVIM_CONF" ]; then
 
   grep -q "ssh-termtty" "$NVIM_CONF" || grep -q "SSH_TTY" "$NVIM_CONF"
   test_result $? "Neovim: SSH detection configured"
+
+  grep -q "SSH_CONNECTION" "$NVIM_CONF"
+  test_result $? "Neovim: mosh detection (SSH_CONNECTION survives into mosh sessions)"
+
+  grep -q "vim.env.TMUX" "$NVIM_CONF"
+  test_result $? "Neovim: OSC52 inside tmux (clipboard follows the attached client, no restart)"
+
+  grep -q "osc52_copy" "$NVIM_CONF" && grep -q "pbcopy" "$NVIM_CONF"
+  test_result $? "Neovim: provider fallback (OSC52 when host has no clipboard tool)"
 else
   test_result 1 "Neovim config file not found"
 fi
@@ -147,7 +167,12 @@ if [ -n "$SSH_TTY" ]; then
   echo -e "${GREEN}✓${NC} In SSH session (SSH_TTY=$SSH_TTY)"
   ((PASS++))
 else
-  echo -e "${YELLOW}⚠${NC} Not in SSH session (local development)"
+  if [ -n "$SSH_CONNECTION" ]; then
+    echo -e "${GREEN}✓${NC} Likely mosh session (SSH_CONNECTION set, no SSH_TTY) — OSC52 gate still fires"
+    ((PASS++))
+  else
+    echo -e "${YELLOW}⚠${NC} Not in SSH session (local development)"
+  fi
 fi
 
 if [ -n "$TMUX" ]; then
