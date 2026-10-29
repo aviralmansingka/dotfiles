@@ -1,0 +1,13 @@
+[Unit]
+Description=Sync new SemiAnalysis research into the vault
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/vault
+# Explicit interpreter: same guard against the 203/EXEC failure class that
+# vault-auto-sync.service documents for a missing exec bit.
+ExecStart=/usr/bin/python3 %h/dotfiles/scripts/semianalysis_sync.py
+StandardOutput=journal
+StandardError=journal
