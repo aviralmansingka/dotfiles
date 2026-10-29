@@ -81,6 +81,13 @@ and no `$HOME` mutation.
   fails fast naming the allowed list, and the wrapper usage + runbook document
   the flag.
 
+- **M19 resources and status.** Extracts `_describe_resources` from
+  `devbox.py` and calls it with a full tag set and with `{}` — a
+  behavior-preserving rename passes, a broken format fails. Also requires the
+  `(cpu, cpu_limit)` / `(memory, memory_limit)` tuple form (Modal's hard-cap
+  API), that `status` renders the summary, and that the runbook documents
+  `--cpu-limit`/`--memory-limit`.
+
 ## Selftest
 
 `--selftest` rebuilds the checks against mutated mktemp copies (extra apt
@@ -91,14 +98,14 @@ a name outside the inventory, a removed temp-cleanup trap, a `cat` of the
 temp payload in the sync script, 0644 instead of 0600 in the entrypoint, the
 ephemeral key secret mounted first, a `-cudnn` CUDA base, an `nvcc` symlink,
 and a runbook with `clangd --check` removed, an entrypoint whose
-first-boot seeding was removed, and a region list with Mumbai dropped) and
-proves the matching checks fail; a clean copy must pass. The real worktree is
-never touched.
+first-boot seeding was removed, and a region list with Mumbai dropped, and a resource line with the region
+field removed) and proves the matching checks fail; a clean copy must pass.
+The real worktree is never touched.
 
 ## How to run
 
 ```sh
-scripts/test-modal-devbox.py              # suite (M1–M18)
+scripts/test-modal-devbox.py              # suite (M1–M19)
 scripts/test-modal-devbox.py --selftest   # prove checks fail on mutations
 ```
 
