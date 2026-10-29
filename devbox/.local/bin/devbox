@@ -2,7 +2,6 @@
 # devbox — one command for the Modal devbox (ops/modal-devbox/devbox.py).
 #
 #   devbox ssh [flags] [-- cmd...]   connect; starts the sandbox if needed
-#   devbox start [flags]             start (backgrounded launcher), print line
 #   devbox status                    list running devbox sandboxes
 #   devbox stop                      terminate running devbox sandboxes
 #   devbox snapshot [name]           freeze the container fs into a named image
@@ -97,24 +96,91 @@ try_cached_ssh() {
     exit "$rc"
 }
 
+await_launcher() {
+    # await_launcher <pid> — poll START_LOG for CONNECT while the launcher
+    # lives; emits the line and returns 0 on success, 1 if it exits first.
+    local pid="$1" i line
+    for i in $(seq 1 3600); do
+        line="$(connect_line "$START_LOG")"
+        if [ -n "$line" ]; then printf '%s\n' "$line"; return 0; fi
+        kill -0 "$pid" 2>/dev/null || return 1
+        sleep 0.5
+    done
+    return 1
+}
+
+acquire_lock() {
+    # Portable start lock: `mkdir` is atomic everywhere, and macOS ships no
+    # flock(1). The holder records its pid; a lock whose pid is gone is stale
+    # and gets reclaimed (a crashed launcher must not wedge every later start).
+    local lock="$STATE_DIR/start.lock" waited=0 holder
+    while ! mkdir "$lock" 2>/dev/null; do
+        holder="$(cat "$lock/pid" 2>/dev/null || true)"
+        if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
+            rm -rf "$lock"
+            continue
+        fi
+        sleep 0.2
+        waited=$((waited + 1))
+        [ "$waited" -gt 9000 ] && die "timed out waiting for the devbox start lock"
+    done
+    echo $$ >"$lock/pid"
+}
+
+release_lock() {
+    [ -d "$STATE_DIR/start.lock" ] && rm -rf "$STATE_DIR/start.lock"
+    return 0
+}
+
 start_sandbox() {
     # start_sandbox <start-flags...> — backgrounded launcher, prints CONNECT.
-    local line=""
+    # The lock serializes starts: concurrent `devbox ssh` calls would otherwise
+    # spawn sibling launchers that truncate the shared START_LOG and race into
+    # creating duplicate sandboxes (double GPU billing).
+    local line="" pid_file="$STATE_DIR/launcher.pid" pid
     mkdir -p "$STATE_DIR"
+    acquire_lock
+    trap 'release_lock' EXIT INT TERM
+    # A sibling launcher may still be starting (slow cold image). Never
+    # truncate the log it is writing: wait for its CONNECT line instead.
+    if [ -f "$pid_file" ] && pid="$(cat "$pid_file")" && kill -0 "$pid" 2>/dev/null; then
+        if line="$(await_launcher "$pid")"; then
+            if [ "$#" -eq 0 ]; then
+                release_lock
+                printf '%s\n' "$line" >"$CACHE"
+                printf '%s\n' "$line"
+                return 0
+            fi
+            # Flags are present (--new etc.): the caller wants a fresh sandbox,
+            # so only borrow the sibling's log slot after it finished.
+        fi
+    fi
+    : >"$START_LOG"
     nohup modal run "$PY::main" "$@" >"$START_LOG" 2>&1 &
-    echo $! >"$STATE_DIR/launcher.pid"
+    echo $! >"$pid_file"
     local i
     for i in $(seq 1 3600); do  # bounded 30-min wait (0.5 s polls): cold builds are slow
         line="$(connect_line "$START_LOG")"
-        [ -n "$line" ] && { printf '%s\n' "$line" >"$CACHE"; printf '%s\n' "$line"; return 0; }
-        if ! kill -0 "$(cat "$STATE_DIR/launcher.pid")" 2>/dev/null; then
+        [ -n "$line" ] && { printf '%s\n' "$line" >"$CACHE"; release_lock; printf '%s\n' "$line"; return 0; }
+        if ! kill -0 "$(cat "$pid_file")" 2>/dev/null; then
             cat "$START_LOG" >&2
+            release_lock
             die "sandbox start failed (log: $START_LOG)"
         fi
         sleep 0.5
     done
+    release_lock
     die "no CONNECT line in $START_LOG"
 }
+
+ssh_from_line_probe() {
+    # ssh_from_line_probe <CONNECT-line> — non-interactive liveness probe.
+    local host port
+    read -r _ host port <<< "$1"
+    ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new \
+        -p "$port" "root@$host" true >/dev/null 2>&1
+}
+
 
 cmd="${1:-ssh}"
 [ "$#" -gt 0 ] && shift
@@ -122,7 +188,7 @@ cmd="${1:-ssh}"
 PY="$(resolve_py)" || die "cannot find ops/modal-devbox/devbox.py; set MODAL_DEVBOX_PY"
 
 case "$cmd" in
-    ssh|start)
+    ssh)
         # Split passthrough start flags (before --) from remote ssh args (after --).
         start_args=()
         remote_args=()
@@ -136,17 +202,16 @@ case "$cmd" in
                 remote_args+=("$arg")
             fi
         done
-        if [ "$cmd" = ssh ]; then
-            # Fast path: a live cached CONNECT line attaches in seconds.
+        if [ "${#start_args[@]}" -eq 0 ]; then
+            # Fast path: a live cached CONNECT line attaches in seconds. Skip it
+            # whenever start flags are present — they only apply at creation, so
+            # attaching to the old sandbox would silently ignore them
+            # (`--new` must really create a new one).
             try_cached_ssh ${remote_args[@]+"${remote_args[@]}"} || true
         fi
         # ::main adopts a running sandbox or creates one — one modal call total.
         line="$(start_sandbox ${start_args[@]+"${start_args[@]}"})"
-        if [ "$cmd" = ssh ]; then
-            ssh_from_line "$line" ${remote_args[@]+"${remote_args[@]}"}
-        else
-            printf '%s\n' "$line"
-        fi
+        ssh_from_line "$line" ${remote_args[@]+"${remote_args[@]}"}
         ;;
     status) exec modal run "$PY::status" ;;
     snapshot) exec modal run "$PY::snapshot" --name "${1:-devbox-snap}" ;;

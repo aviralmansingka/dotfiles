@@ -25,10 +25,13 @@ and no `$HOME` mutation.
 - **M4 GPU allowlist.** Exactly the research-verified set; B200/B300 stay
   excluded (CUDA 13.1+ constraint, compute-tier pricing).
 - **M5 secret hygiene.** No token/key literals (`sk-`, `ghp_`, `AKIA`,
-  private-key PEM, …) in `devbox.py`, `entrypoint.sh`, or the runbook.
+  private-key PEM, …) in `devbox.py`, `entrypoint.sh`, the runbook, or the
+  wrapper.
 - **M6 entrypoint structure.** `bash -n` clean; links `nvim-share`,
-  `nvim-state`, `cache`, `repos`, `vault` (obsidian.nvim), `zsh_history`
-  into `/persist`; execs sshd foreground with password auth off.
+  `nvim-state`, `nvim-bob` (nvim installs + bob's `used` marker),
+  `cache`, `repos`, `vault` (obsidian.nvim), `zsh_history` into `/persist`;
+  repoints the `nvim` shim at bob's proxy (`nvim-bin/nvim`); execs sshd
+  foreground with password auth off.
 - **M7 dotfiles pin.** `DOTFILES_REF` is a full 40-hex SHA on an HTTPS
   GitHub URL.
 - **M8 runbook accuracy.** The README mentions the real commands (`devbox ssh`,
@@ -36,11 +39,16 @@ and no `$HOME` mutation.
   and no shipped file references removed CLI groups (`modal proxy`,
   `modal attach`, `modal sandbox`, `interactive_snooze`). The research
   report is exempt — it documents their removal.
-- **M9 wrapper structure.** `bash -n` clean over `devbox/.local/bin/devbox`;
-  the `ssh`/`start`/`status`/`stop` subcommands, the nohup backgrounded
-  launcher, the `::main`/`::status`/`::stop` entrypoint refs, the
-  `MODAL_DEVBOX_PY` resolution fallback, the `CONNECT`-line contract, and
-  the cached-CONNECT fast path are all present.
+- **M9 wrapper contract.** `bash -n` clean over `devbox/.local/bin/devbox`;
+  the contract strings that couple it to `devbox.py` (`::main`, `::status`,
+  `::stop`, `::snapshot`, the `CONNECT` line format, `MODAL_DEVBOX_PY`) are
+  present. Behavior is proven by M16, not by grepping names.
+- **M16 wrapper behavior.** Executes the wrapper against stubbed `modal` and
+  `ssh` CLIs and asserts real behavior: `--help` usage, unknown-subcommand
+  failure, a cold `devbox ssh` starting via `::main` and caching the CONNECT
+  line, a warm attach reusing the cache without restarting, `--new` bypassing
+  the cache and forwarding start flags, and `devbox stop` clearing the cache.
+  This is the check that caught the `--new`-hit-the-cache bug.
 - **M10 mason tools.** `MASON_TOOLS` in devbox.py covers every
   `ensure_installed` entry in `nvim/.config/nvim/lua/plugins/mason.lua`
   (the suite's Paths include that file, so edits retrigger it) plus
@@ -70,21 +78,22 @@ and no `$HOME` mutation.
 
 `--selftest` rebuilds the checks against mutated mktemp copies (extra apt
 package, `B200` in the allowlist, `git` stowed early, an injected `ghp_`
-literal, a broken `--detach` in the wrapper, a bad manifest mode, a
-value-looking manifest string, a name outside the inventory, a removed
-temp-cleanup trap, a `cat` of the temp payload in the sync script, 0644
-instead of 0600 in the entrypoint, the ephemeral key secret mounted first)
-and proves the matching checks fail; a clean copy must pass. The real
-worktree is never touched.
+literal, a wrapper whose `nohup` launch was replaced, a wrapper whose cached
+fast path was renamed, a bad manifest mode, a value-looking manifest string,
+a name outside the inventory, a removed temp-cleanup trap, a `cat` of the
+temp payload in the sync script, 0644 instead of 0600 in the entrypoint, the
+ephemeral key secret mounted first, a `-cudnn` CUDA base, an `nvcc` symlink,
+and a runbook with `clangd --check` removed) and proves the matching checks
+fail; a clean copy must pass. The real worktree is never touched.
 
 ## How to run
 
 ```sh
-scripts/test-modal-devbox.py              # suite (M1–M13)
+scripts/test-modal-devbox.py              # suite (M1–M16)
 scripts/test-modal-devbox.py --selftest   # prove checks fail on mutations
 ```
 
-Runtime ≈ 0.02 s (M6 shells out to `bash -n`). Syntax coverage for
-`devbox.py` also comes free from `scripts/nm-lint.sh` (`py_compile` over
-tracked Python) and `bash -n` over tracked shell in
-`.github/workflows/ci.yml`.
+Runtime ≈ 0.6 s (M6/M9 shell out to `bash -n`; M16 executes the wrapper
+against stubbed `modal`/`ssh` CLIs). Syntax coverage for `devbox.py` also
+comes free from `scripts/nm-lint.sh` (`py_compile` over tracked Python) and
+`bash -n` over tracked shell in `.github/workflows/ci.yml`.

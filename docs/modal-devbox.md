@@ -61,7 +61,7 @@ The eight open questions, answered (details and citations in the report):
 | --- | --- | --- |
 | Container model | `modal.Sandbox` + `unencrypted_ports=[22]`, sshd baked in the image | User's pick: capture-ready (`snapshot_filesystem`), GPU-capable, and tunnel without holding a function input; `@app.function` + `modal.forward(22, unencrypted=True)` stays the documented alternative |
 | CPU base image | `modal.Image.from_registry("ubuntu:24.04", add_python="3.12")` | Parity with the devbox AMI and the homelab; `debian_slim` is Debian |
-| GPU base image | `nvidia/cuda:13.0.0-cudnn-devel-ubuntu24.04` (devel = nvcc + headers) | Host driver is 580.95.05 / Driver API 13.0; 12.x/13.x toolkits are compatible everywhere; only B300 forces ≥ 13.1 |
+| GPU base image | `nvidia/cuda:13.0.0-devel-ubuntu24.04` (plain `-devel`) | Host driver is 580.95.05+ / API 13.0; `-cudnn` adds GBs that make a cold box hydrate past the tunnel timeout, so it was rejected |
 | Image layers | one layer per Packer phase, stable-first: apt → CLI tools → rust/bob/nvim → dotfiles/OMZ | Per-layer caching; changing the dotfiles layer only rebuilds the tail |
 | Home | `$HOME=/root`, root user (verify empirically) | Modal containers run as root; stow targets `$HOME` so this is free |
 | Volume | `modal.Volume.from_name("devbox-persist", create_if_missing=True, version=2)` at `/persist`, `$HOME` dirs symlinked in at container start | A mount over `$HOME` would shadow image-baked dotfiles; v2 handles nvim/cargo/node file counts |

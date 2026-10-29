@@ -275,14 +275,13 @@ def _materialization_calls() -> str:
 
     Generated from the manifest (single source of truth): dotenv/command
     entries become env files at their target, file entries decode their
-    base64 payload to the target path. Entries without a target (devbox-ssh)
-    are consumed by the entrypoint's authorized_keys section instead.
+    base64 payload to the target path.
     """
     lines = []
     for entry in MANIFEST["secrets"]:
         target = entry.get("target", "")
         if not target:
-            continue
+            raise ValueError(f"manifest entry {entry.get('name')!r} has no target")
         if entry["mode"] == "file":
             lines.append(f'materialize_file "$HOME/{target}" {entry["variable"]}')
         else:  # dotenv | command: plain env-file targets
@@ -347,8 +346,16 @@ def _tunnel(sb):
     return getattr(tunnel, "tcp_socket", None) if tunnel is not None else None
 
 
+def _pick_primary(sandboxes):
+    """The newest running sandbox. Object ids are monotonic ULIDs, so the
+    maximum is the most recently created — deterministic even if duplicates
+    exist (a race the wrapper's start lock is designed to prevent)."""
+    return max(sandboxes, key=lambda sb: sb.object_id)
+
+
 def _wait_for_tunnel(sandbox, attempts: int = 120, pause: float = 1.0):
-    """Poll tunnels() until the port-22 TCP socket is up; return (host, port).
+    """Poll tunnels() until the port-22 TCP socket is up; return (host, port)
+    or None when the sandbox exits first, or the bound is exhausted.
 
     Each poll may itself block ~50 s inside tunnels(), so the bound is on
     attempts, not wall time; a CUDA image can need several minutes on a cold
@@ -359,9 +366,9 @@ def _wait_for_tunnel(sandbox, attempts: int = 120, pause: float = 1.0):
         if socket_:
             return socket_
         if sandbox.poll() is not None:
-            sys.exit("sandbox exited before its tunnel came up; check `modal container logs <id>`")
+            return None
         time.sleep(pause)
-    sys.exit("port-22 tunnel never came up; check `modal container logs <id>`")
+    return None
 
 
 @app.local_entrypoint()
@@ -400,8 +407,15 @@ def main(
         )
 
     if not new:
-        for candidate in _running_devboxes():
-            socket_ = _tunnel(candidate)
+        running = _running_devboxes()
+        if running:
+            # Adopt whatever is running even if its tunnel is not up yet: a
+            # cold CUDA image hydrates for minutes before the tunnel exists,
+            # and a second `devbox ssh` in that window used to create a
+            # duplicate sandbox (double GPU billing). Wait for the existing
+            # one; fall through to a fresh create only if it exits.
+            candidate = _pick_primary(running)
+            socket_ = _wait_for_tunnel(candidate)
             if socket_:
                 host, port = socket_
                 print()
@@ -414,8 +428,8 @@ def main(
 
     attached = _attached_secret_names()
     # Secret ordering: later entries win key clashes, so the per-launch
-    # ephemeral from_dict key secret goes LAST and always beats a stale
-    # devbox-ssh value for DEVBOX_SSH_PUBLIC_KEY (research §8.4).
+    # ephemeral from_dict secret goes LAST: it always wins and the synced
+    # secrets can never override the SSH key for this launch (research §8.4).
     sandbox = modal.Sandbox.create(
         "bash", "-c", ENTRYPOINT,
         app=app,
@@ -433,7 +447,10 @@ def main(
     )
 
     try:
-        host, port = _wait_for_tunnel(sandbox)
+        socket_ = _wait_for_tunnel(sandbox)
+        if not socket_:
+            sys.exit("port-22 tunnel never came up; check `modal container logs <id>`")
+        host, port = socket_
         print()
         print(f"CONNECT {host} {port}")  # machine line for the devbox wrapper
         print(f"  image          : {'cuda ' + CUDA_BASE_IMAGE if gpu else 'ubuntu:24.04'}")
@@ -497,7 +514,7 @@ def snapshot(name: str = "devbox-snap"):
     running = _running_devboxes()
     if not running:
         sys.exit("no devbox sandbox running: start one with `devbox ssh` first")
-    sandbox = running[0]
+    sandbox = _pick_primary(running)
     print(f"snapshotting {sandbox.object_id} ...")
     image = sandbox.snapshot_filesystem()
     image.publish(name)
