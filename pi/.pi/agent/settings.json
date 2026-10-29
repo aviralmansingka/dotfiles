@@ -1,6 +1,6 @@
 {
   "defaultProvider": "fireworks",
-  "defaultModel": "accounts/fireworks/routers/glm-5p3-fast",
+  "defaultModel": "accounts/fireworks/routers/deepseek-flash-latest",
   "defaultThinkingLevel": "max",
   "packages": [
     "npm:pi-mcp-adapter"
