@@ -23,3 +23,6 @@ rex.bind("ctrl+a>x", "pane.close")
 
 -- Type a literal C-a in the pane (tmux: bind C-a send-prefix)
 rex.bind("ctrl+a>ctrl+a", "pane.send_key", { key = "ctrl+a" })
+
+-- App UI (C-a b expands and minimizes the sidebar/tab viewer)
+rex.bind("ctrl+a>b", "client.sidebar.toggle")
