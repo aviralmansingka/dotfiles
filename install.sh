@@ -116,6 +116,7 @@ stow -d "$DOTFILES_DIR" -t "$HOME" nvim
 stow -d "$DOTFILES_DIR" -t "$HOME" starship
 stow -d "$DOTFILES_DIR" -t "$HOME" ghostty
 stow -d "$DOTFILES_DIR" -t "$HOME" aerospace
+stow -d "$DOTFILES_DIR" -t "$HOME" rex
 stow -d "$DOTFILES_DIR" -t "$HOME" gh-dash
 stow -d "$DOTFILES_DIR" -t "$HOME" tuicr
 stow -d "$DOTFILES_DIR" -t "$HOME" agents
@@ -214,6 +215,14 @@ if command -v tic &> /dev/null; then
     echo "==> Installing custom terminfo entries"
     mkdir -p ~/.terminfo
     tic -x -w "$DOTFILES_DIR/terminfo/xterm-ghostty.terminfo"
+fi
+
+# Rex ships its own terminfo entry (xterm-rex) and an agent skill; both are
+# once-per-account and idempotent. Skip silently when Rex is not installed.
+if command -v rex &>/dev/null; then
+    echo "==> Setting up Rex terminfo and agent skill"
+    rex terminfo setup
+    rex skill setup
 fi
 
 ####################
