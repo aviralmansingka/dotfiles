@@ -48,7 +48,8 @@ class Markdown(HTMLParser):
         if tag in ("script", "style", "noscript"):
             self.skip += 1
         elif tag in ("h1", "h2", "h3", "h4", "h5", "h6"):
-            self.out.append("\n\n" + "#" * int(tag[1]) + " ")
+            # A heading cannot live inside link text; keep it inline there
+            self.out.append(" " if self.href else "\n\n" + "#" * int(tag[1]) + " ")
         elif tag == "br":
             self.out.append("\n")
         elif tag in ("p", "div", "section", "tr"):
@@ -91,7 +92,7 @@ class Markdown(HTMLParser):
             self.out.append(data)
 
     def result(self):
-        text = re.sub(r"[ \t]+", " ", "".join(self.out))
+        text = re.sub(r"[ \t]+\n", "\n", "".join(self.out))  # MD009/MD012 noise
         text = re.sub(r"\[ +", "[", text)
         text = re.sub(r" +\]\(", "](", text)
         return re.sub(r"\n{3,}", "\n\n", text).strip()
@@ -220,6 +221,44 @@ def last_unmatched_bracket(line):
     return stack[-1] if stack else -1
 
 
+def normalize_lines(lines):
+    """Mechanical markdown conformance fixes, skipping fenced code blocks.
+
+    - MD009: strip trailing spaces
+    - MD012: collapse runs of blank lines to one
+    - MD037: remove spaces inside emphasis markers ('** text **')
+    - MD039: remove spaces inside link text ('[ text ](url)')
+    """
+    out, in_code = [], False
+    for line in lines:
+        if line.lstrip().startswith("```"):
+            in_code = not in_code
+            out.append(line.rstrip() if not in_code else line)
+            continue
+        if in_code:
+            out.append(line)
+            continue
+        line = line.rstrip()
+        # MD039: spaces inside link text
+        line = re.sub(r"\[\s+", "[", line)
+        line = re.sub(r"\s+\]\(", "](", line)
+        # MD037: spaces inside emphasis markers. Only double markers
+        # ('** text **', '__ text __'): single '*'/'_' pairs are usually
+        # multiplication or math in this corpus, and the paired requirement
+        # spares math like '2 ** 3' that has no closing pair.
+        line = re.sub(r"(\*\*|__) +(\S(?:[^*_\n]*\S)?) +\1", r"\1\2\1", line)
+        out.append(line)
+    # MD012: collapse blank runs (outside nothing else changed them)
+    collapsed, blank = [], False
+    for line in out:
+        is_blank = line.strip() == ""
+        if is_blank and blank:
+            continue
+        collapsed.append(line)
+        blank = is_blank
+    return collapsed
+
+
 def repair_file(path):
     """Collapse links written with newlines or blank lines inside the text.
 
@@ -228,7 +267,8 @@ def repair_file(path):
     brackets literally. This rewrites those constructs back onto one line.
     """
     with open(path) as f:
-        lines = f.read().split("\n")
+        raw = f.read()
+    lines = normalize_lines(raw.split("\n"))
     out, i, in_code = [], 0, False
     pending = None  # {"prefix", "texts", "start", "orig"} for an open link
     while i < len(lines):
@@ -243,8 +283,15 @@ def repair_file(path):
                 out.extend(pending["orig"])  # not a link: restore raw lines
                 pending = None               # reprocess this line from the top
                 continue
-            if line.lstrip().startswith("#"):  # a heading is never link text
-                out.extend(pending["orig"])
+            if line.lstrip().startswith("#"):  # heading inside a pending link
+                if pending["empty_open"]:
+                    # card pattern: ']' alone opened the link, the heading is
+                    # card content; absorb it without the '#' markers
+                    pending["orig"].append(line)
+                    pending["texts"].append(line.lstrip().lstrip("#").strip())
+                    i += 1
+                    continue
+                out.extend(pending["orig"])  # a real heading is never link text
                 pending = None
                 continue
             if line.lstrip().startswith("]("):  # closer starts the line
@@ -257,7 +304,8 @@ def repair_file(path):
                     # carry all raw lines so a later bail restores them
                     pending = {"prefix": head + post.rstrip(), "texts": [""],
                                "start": pending["start"],
-                               "orig": pending["orig"] + [line]}
+                               "orig": pending["orig"] + [line],
+                               "empty_open": True}
                 else:
                     out.append(head + post)
                     pending = None
@@ -276,7 +324,8 @@ def repair_file(path):
         # would swallow following sections.
         if k >= 0 and (k == len(line) - 1 or line.lstrip().startswith("[")):
             pending = {"prefix": line[:k + 1], "texts": [line[k + 1:]],
-                       "start": i, "orig": [line]}
+                       "start": i, "orig": [line],
+                       "empty_open": line[k + 1:].strip() == ""}
             i += 1
             continue
         out.append(line)
@@ -284,7 +333,7 @@ def repair_file(path):
     if pending is not None:  # unclosed at EOF: restore raw lines
         out.extend(pending["orig"])
     new_text = "\n".join(out)
-    if new_text == "\n".join(lines):  # content unchanged: no rewrite
+    if new_text == raw:  # content unchanged: no rewrite
         return False
     with open(path, "w") as f:
         f.write(new_text)
