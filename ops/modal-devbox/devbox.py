@@ -13,6 +13,7 @@ The launcher prints the ssh command once the tunnel is up. Ctrl+C (or the
 lease expiring) tears the sandbox down; /persist survives both.
 """
 
+import json
 import os
 import sys
 import time
@@ -21,6 +22,12 @@ from pathlib import Path
 import modal
 
 app = modal.App("devbox")
+
+# Secrets manifest: names, sources, variable names — never values. The sync
+# script (scripts/modal-secrets-sync) is the only writer of the Modal
+# Secrets it describes; devbox.py mounts every entry that exists in the
+# workspace and splices the materialization calls into the entrypoint.
+MANIFEST = json.loads((Path(__file__).resolve().parent / "secrets-manifest.json").read_text())
 
 # Persistent state: repos, caches, nvim data, zsh history. Volume v2 has
 # background commits (plus `sync /persist` from inside a session) and no
@@ -213,7 +220,33 @@ devbox_image = dotfiles.run_commands(
 
 # --- launcher ----------------------------------------------------------------------
 
-ENTRYPOINT = (Path(__file__).resolve().parent / "entrypoint.sh").read_text()
+def _materialization_calls() -> str:
+    """Bash calls spliced into the entrypoint over its marker line.
+
+    Generated from the manifest (single source of truth): dotenv/command
+    entries become env files at their target, file entries decode their
+    base64 payload to the target path. Entries without a target (devbox-ssh)
+    are consumed by the entrypoint's authorized_keys section instead.
+    """
+    lines = []
+    for entry in MANIFEST["secrets"]:
+        target = entry.get("target", "")
+        if not target:
+            continue
+        if entry["mode"] == "file":
+            lines.append(f'materialize_file "$HOME/{target}" {entry["variable"]}')
+        else:  # dotenv | command: plain env-file targets
+            lines.append(f'materialize_env "$HOME/{target}" ' + " ".join(entry["variables"]))
+    return "\n".join(lines)
+
+
+# entrypoint.sh ships per-launch (read into the Sandbox CMD), so manifest or
+# entrypoint changes need no image rebuild — the splice happens every run.
+ENTRYPOINT = (
+    (Path(__file__).resolve().parent / "entrypoint.sh")
+    .read_text()
+    .replace("#@devbox-materialize@#", _materialization_calls())
+)
 
 DEFAULT_CPU = 4.0
 DEFAULT_MEMORY_MB = 8192
@@ -233,6 +266,20 @@ def _default_pubkey() -> str:
 def _running_devboxes():
     """All live devbox sandboxes (tagged, not yet finished)."""
     return [sb for sb in modal.Sandbox.list(tags=SANDBOX_TAGS) if sb.poll() is None]
+
+
+def _attached_secret_names():
+    """Manifest secret names that exist in the workspace (probed, never assumed).
+
+    A fresh workspace without synced secrets still boots — probing misses
+    just mean the sandbox starts with the per-launch key secret only.
+    """
+    try:
+        present = {s.name for s in modal.Secret.objects.list()}
+    except Exception as exc:  # noqa: BLE001 — never block a boot on the probe
+        print(f"  warn           : could not probe workspace secrets ({exc}); starting without manifest secrets")
+        return []
+    return [e["name"] for e in MANIFEST["secrets"] if e["name"] in present]
 
 
 def _tunnel(sb):
@@ -302,12 +349,17 @@ def main(
                 print()
                 return
 
+    attached = _attached_secret_names()
+    # Secret ordering: later entries win key clashes, so the per-launch
+    # ephemeral from_dict key secret goes LAST and always beats a stale
+    # devbox-ssh value for DEVBOX_SSH_PUBLIC_KEY (research §8.4).
     sandbox = modal.Sandbox.create(
         "bash", "-c", ENTRYPOINT,
         app=app,
         image=devbox_image,
         volumes={"/persist": persist},
-        secrets=[modal.Secret.from_dict({"DEVBOX_SSH_PUBLIC_KEY": pubkey})],
+        secrets=[modal.Secret.from_name(n) for n in attached]
+        + [modal.Secret.from_dict({"DEVBOX_SSH_PUBLIC_KEY": pubkey})],
         gpu=gpu or None,
         cpu=cpu,
         memory=memory,
@@ -323,6 +375,7 @@ def main(
         print(f"CONNECT {host} {port}")  # machine line for the devbox wrapper
         print(f"  devbox sandbox : {sandbox.object_id}")
         print(f"  connect        : ssh -o StrictHostKeyChecking=accept-new -p {port} root@{host}")
+        print(f"  secrets        : {', '.join(attached) or 'none'} + per-launch ssh key")
         print(f"  teardown       : modal container stop {sandbox.object_id} -y (or Ctrl+C in a foreground terminal)")
         print(f"  lease          : {timeout_hours:g} h hard cap; /persist survives teardown")
         print(f"  idle           : dies {idle_timeout or 'never'}{' s' if idle_timeout else ''} after the last SSH disconnect")

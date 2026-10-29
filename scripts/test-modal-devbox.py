@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Paths: ops/modal-devbox/** devbox/** nvim/.config/nvim/lua/plugins/mason.lua scripts/test-modal-devbox.py
+# Paths: ops/modal-devbox/** devbox/** nvim/.config/nvim/lua/plugins/mason.lua scripts/test-modal-devbox.py scripts/modal-secrets-sync
 """modal-devbox suite — offline parity and hygiene gates for the Modal devbox.
 
 Offline and deterministic: no network, no Modal account, no `modal` binary,
@@ -35,6 +35,21 @@ pipeline and the research-verified Modal API surface:
   M10 mason tools — MASON_TOOLS covers every ensure_installed entry in
       nvim/.config/nvim/lua/plugins/mason.lua plus clangd/codelldb from the
       LazyVim lang extras.
+  M11 manifest schema — secrets-manifest.json is valid JSON covering the
+      planned inventory exactly; required keys per MODE; sources/targets
+      are relative paths under $HOME; unique names; no value-looking
+      strings (SECRET_PATTERNS).
+  M12 sync-script structure — scripts/modal-secrets-sync is executable and
+      bash -n clean; --dry-run/--only/--aws/--force, umask 077, mktemp dir
+      with a cleanup trap, --from-dotenv; never cats/echoes temp secret
+      files; no token literals.
+  M13 materialization wiring — entrypoint.sh defines the materialize_env /
+      materialize_file helpers (0600, base64 -d, guarded zshenv include) and
+      the marker line; devbox.py splices manifest-generated calls over the
+      marker, probes workspace secrets (objects.list) so a fresh workspace
+      boots, mounts them via from_name, and appends the ephemeral
+      DEVBOX_SSH_PUBLIC_KEY from_dict secret LAST (later entries win
+      clashes).
 
 Run `--selftest` to prove the checks fail on mutated copies (apt extras, GPU
 allowlist, late-git order, injected token) in a mktemp sandbox; the real
@@ -42,6 +57,7 @@ worktree is never touched.
 """
 
 import ast
+import json
 import re
 import shlex
 import shutil
@@ -54,6 +70,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 DEVBOX = "ops/modal-devbox/devbox.py"
 ENTRYPOINT = "ops/modal-devbox/entrypoint.sh"
+MANIFEST = "ops/modal-devbox/secrets-manifest.json"
+SYNC_SCRIPT = "scripts/modal-secrets-sync"
 RUNBOOK = "ops/modal-devbox/README.md"
 WRAPPER = "devbox/.local/bin/devbox"
 PACKER_APT_SCRIPT = "ops/packer/scripts/install_system_packages.sh"
@@ -64,6 +82,14 @@ STRING_NAMES = ("DOTFILES_REPO", "DOTFILES_REF")
 EXPECTED_GPU = ("", "T4", "L4", "A10", "L40S", "A100-40GB", "A100-80GB", "H100", "H200")
 EXPECTED_EXTRAS = {"openssh-server", "ca-certificates"}
 CORE_STOW = {"zsh", "tmux", "nvim", "starship", "git"}
+ALLOWED_MODES = {"dotenv", "file", "command"}
+# The planned inventory (docs/modal-devbox.md, "Secrets and MCP tokens").
+# Adding or removing a manifest entry means updating this set deliberately.
+EXPECTED_SECRET_NAMES = {
+    "devbox-env", "devbox-mcp-browserbase", "devbox-mcp-google",
+    "devbox-telegram", "devbox-whatsapp", "devbox-stt-client",
+    "devbox-pi-auth", "devbox-gh", "devbox-ssh", "devbox-aws",
+}
 
 SECRET_PATTERNS = (
     re.compile(r"sk-[A-Za-z0-9_-]{16,}"),
@@ -299,6 +325,152 @@ def check_mason_tools(root, literals, _source):
     return errors
 
 
+def _not_relative_under_home(path):
+    """True when path is absolute, ~-rooted, or escapes $HOME with .."""
+    if not path:
+        return False  # optional field
+    if path.startswith("/") or path.startswith("~") or path.startswith("\\"):
+        return True
+    return ".." in path.split("/")
+
+
+def check_manifest(root, _literals, _source):
+    """M11 — manifest schema lint (names/sources/variable names, never values)."""
+    errors = []
+    raw = (root / MANIFEST).read_text()
+    for pattern in SECRET_PATTERNS:
+        hit = pattern.search(raw)
+        if hit:
+            errors.append(f"{MANIFEST}: value-like literal {hit.group(0)[:12]}... — values never enter the repo")
+            break
+    try:
+        data = json.loads(raw)
+    except ValueError as exc:
+        return errors + [f"{MANIFEST}: invalid JSON: {exc}"]
+    entries = data.get("secrets")
+    if not isinstance(entries, list) or not entries:
+        return errors + [f"{MANIFEST}: must carry a non-empty 'secrets' list"]
+    names = []
+    for i, entry in enumerate(entries):
+        label = f"{MANIFEST} entry[{i}]"
+        if not isinstance(entry, dict):
+            errors.append(f"{label}: must be an object")
+            continue
+        for key in ("name", "mode"):
+            if not entry.get(key):
+                errors.append(f"{label}: missing required key {key!r}")
+        name, mode = entry.get("name", ""), entry.get("mode", "")
+        if mode not in ALLOWED_MODES:
+            errors.append(f"{label}: mode {mode!r} not in {sorted(ALLOWED_MODES)}")
+        if not re.fullmatch(r"devbox-[a-z0-9-]+", name):
+            errors.append(f"{label}: secret name {name!r} must look like devbox-<slug>")
+        names.append(name)
+        if mode in ("dotenv", "file") and not entry.get("source"):
+            errors.append(f"{label}: mode {mode!r} requires a source")
+        for field in ("source", "target"):
+            value = entry.get(field, "")
+            if value and _not_relative_under_home(value):
+                errors.append(f"{label}: {field} {value!r} must be a relative path under $HOME")
+        if mode == "dotenv" and not (isinstance(entry.get("variables"), list) and entry.get("variables")):
+            errors.append(f"{label}: dotenv entries need a non-empty variables list")
+        if mode == "dotenv" and not entry.get("target"):
+            errors.append(f"{label}: dotenv entries need a target (in-container env-file path)")
+        if mode == "file":
+            if not entry.get("variable"):
+                errors.append(f"{label}: file entries need a variable (base64 payload name)")
+            if not entry.get("target"):
+                errors.append(f"{label}: file entries need a target")
+        if mode == "command":
+            if not entry.get("command"):
+                errors.append(f"{label}: command entries need a command")
+            if not (isinstance(entry.get("variables"), list) and entry.get("variables")):
+                errors.append(f"{label}: command entries need a non-empty variables list")
+        variables = list(entry.get("variables") or [])
+        if entry.get("variable"):
+            variables.append(entry["variable"])
+        for var in variables:
+            if not re.fullmatch(r"[A-Z_][A-Z0-9_]*", var):
+                errors.append(f"{label}: invalid variable name {var!r}")
+        if "opt-in" in entry and not isinstance(entry["opt-in"], bool):
+            errors.append(f"{label}: opt-in must be a boolean")
+    dupes = sorted({n for n in names if names.count(n) > 1})
+    if dupes:
+        errors.append(f"{MANIFEST}: duplicate secret names: {dupes}")
+    missing = EXPECTED_SECRET_NAMES - set(names)
+    if missing:
+        errors.append(f"{MANIFEST}: planned inventory incomplete — missing: {sorted(missing)}")
+    extra = set(names) - EXPECTED_SECRET_NAMES
+    if extra:
+        errors.append(f"{MANIFEST}: entries outside the planned inventory: {sorted(extra)} "
+                      "(update EXPECTED_SECRET_NAMES when extending the inventory)")
+    return errors
+
+
+def check_sync_script(root, _literals, _source):
+    """M12 — sync-script structure: idempotent, temp-safe, value-silent."""
+    errors = []
+    path = root / SYNC_SCRIPT
+    text = path.read_text()
+    if not path.stat().st_mode & 0o111:
+        errors.append(f"{SYNC_SCRIPT} must be executable")
+    if shutil.which("bash"):
+        proc = subprocess.run(["bash", "-n", str(path)], capture_output=True, text=True, timeout=30)
+        if proc.returncode != 0:
+            errors.append(f"bash -n failed: {proc.stderr.strip()}")
+    else:
+        print("    SKIP bash -n (no bash on PATH)")
+    for needle in ("--dry-run", "--only", "--aws", "--force", "umask 077", "mktemp -d",
+                   "trap", "rm -rf", "--from-json", "secrets-manifest.json"):
+        if needle not in text:
+            errors.append(f"sync script must reference {needle!r}")
+    for pattern in SECRET_PATTERNS:
+        hit = pattern.search(text)
+        if hit:
+            errors.append(f"{SYNC_SCRIPT}: secret-like literal {hit.group(0)[:12]}...")
+            break
+    if re.search(r'\bcat\s+"\$', text):
+        errors.append("sync script must never cat/echo the temp dotenv files — values are a leak")
+    return errors
+
+
+def check_materialization(root, _literals, source):
+    """M13 — entrypoint materialization wiring + sandbox secret ordering."""
+    errors = []
+    entry = (root / ENTRYPOINT).read_text()
+    try:
+        manifest = json.loads((root / MANIFEST).read_text())
+    except ValueError:
+        return []  # M11 already reports invalid JSON
+    for needle in ("materialize_env()", "materialize_file()", 'chmod 600 "$path"',
+                   "base64 -d", "#@devbox-materialize@#",
+                   'source "$HOME/.config/devbox-env.sh"', 'grep -q "devbox-env.sh"'):
+        if needle not in entry:
+            errors.append(f"entrypoint must reference {needle!r} (secrets materialization)")
+    if 'printf \'export %s=%q\\n\'' not in entry:
+        errors.append("materialize_env must write export KEY=value lines")
+    if '.replace("#@devbox-materialize@#"' not in source:
+        errors.append("devbox.py must splice manifest-generated calls over the entrypoint marker")
+    if 'materialize_file "$HOME/' not in source or 'materialize_env "$HOME/' not in source:
+        errors.append("devbox.py generator must emit materialize_env and materialize_file calls")
+    if any(not e.get("target") for e in manifest["secrets"]) and "if not target:" not in source:
+        errors.append("devbox.py generator must skip target-less entries (devbox-ssh is consumed by authorized_keys)")
+    for e in manifest["secrets"]:
+        if not e.get("target"):
+            continue
+        if e["mode"] == "file" and not e.get("variable"):
+            errors.append(f"manifest entry {e.get('name')!r}: file mode needs a variable")
+        if e["mode"] != "file" and not e.get("variables"):
+            errors.append(f"manifest entry {e.get('name')!r}: env-file mode needs variables")
+    if "modal.Secret.objects.list()" not in source:
+        errors.append("devbox.py must probe existing workspace secrets (objects.list) so a fresh workspace boots")
+    if "modal.Secret.from_name" not in source:
+        errors.append("devbox.py must mount manifest secrets via modal.Secret.from_name")
+    if '+ [modal.Secret.from_dict({"DEVBOX_SSH_PUBLIC_KEY"' not in source:
+        errors.append("the ephemeral DEVBOX_SSH_PUBLIC_KEY from_dict secret must be appended AFTER the "
+                      "manifest secrets — later entries win key clashes (research §8.4)")
+    return errors
+
+
 CHECKS = (
     ("M1 apt parity", check_apt_parity),
     ("M2 stow parity", check_stow_parity),
@@ -310,6 +482,9 @@ CHECKS = (
     ("M8 runbook accuracy", check_runbook_accuracy),
     ("M9 wrapper structure", check_wrapper),
     ("M10 mason tools", check_mason_tools),
+    ("M11 manifest schema", check_manifest),
+    ("M12 sync script", check_sync_script),
+    ("M13 materialization", check_materialization),
 )
 
 
@@ -350,17 +525,37 @@ def selftest():
             "gpu-b200": lambda: _mutate(root, '"H100", "H200")', '"H100", "H200", "B200")'),
             "git-early": lambda: _mutate(root, '"agents", "pi", "herdr",',
                                          '"agents", "pi", "herdr", "git",'),
-            "wrapper-no-nohup": lambda: _mutate_wrapper(root, "nohup modal", "nohupx modal"),
-            "wrapper-no-cache": lambda: _mutate_wrapper(root, "try_cached_ssh", "try_cached_sshx"),
+            "wrapper-no-nohup": lambda: _mutate_wrapper(root, "nohup modal run", "runbg modal run"),
+            "wrapper-no-cache": lambda: _mutate_wrapper(root, "try_cached_ssh", "cached_attach"),
             "mason-missing": lambda: _mutate(root, '"starpls", "buildifier", "clang-format", "clangd", "codelldb",',
                                            '"starpls", "buildifier", "clang-format",'),
             "token-leak": lambda: _mutate(root, "MMDFLUX_VERSION = ",
                                           f'FAKE = "ghp_{"A" * 36}"  # MMDFLUX_VERSION = '),
+            "manifest-bad-mode": lambda: _mutate_file(root, MANIFEST, '"mode": "dotenv"', '"mode": "envfile"'),
+            "manifest-leak": lambda: _mutate_file(root, MANIFEST, '"source": ".env"',
+                                                   f'"source": "ghp_{"A" * 36}"'),
+            "manifest-extra-name": lambda: _mutate_file(root, MANIFEST, '"name": "devbox-env"',
+                                                          '"name": "devbox-totally-new"'),
+            "sync-no-trap": lambda: _mutate_file(root, SYNC_SCRIPT, "trap 'rm -rf \"$WORK\"' EXIT",
+                                                  '# trap removed'),
+            "sync-cat-leak": lambda: _mutate_file(root, SYNC_SCRIPT, 'modal secret create "$name"',
+                                                   'cat "$tmp" >&2; modal secret create "$name"'),
+            "entrypoint-no-0600": lambda: _mutate_file(root, ENTRYPOINT, 'chmod 600 "$path"',
+                                                        'chmod 644 "$path"', count=0),
+            "secrets-ephemeral-first": lambda: _mutate(
+                root,
+                'secrets=[modal.Secret.from_name(n) for n in attached]\n'
+                '        + [modal.Secret.from_dict({"DEVBOX_SSH_PUBLIC_KEY": pubkey})],',
+                'secrets=[[modal.Secret.from_dict({"DEVBOX_SSH_PUBLIC_KEY": pubkey})]\n'
+                '        + [modal.Secret.from_name(n) for n in attached]],'),
         }
         expected_fail = {"clean": 0, "apt-extra": {"M1"}, "gpu-b200": {"M4"},
                          "git-early": {"M2"}, "token-leak": {"M5"},
                          "wrapper-no-nohup": {"M9"}, "wrapper-no-cache": {"M9"},
-                         "mason-missing": {"M10"}}
+                         "mason-missing": {"M10"}, "manifest-bad-mode": {"M11"},
+                         "manifest-leak": {"M11"}, "manifest-extra-name": {"M11"},
+                         "sync-no-trap": {"M12"}, "sync-cat-leak": {"M12"},
+                         "entrypoint-no-0600": {"M13"}, "secrets-ephemeral-first": {"M13"}}
         for label, mutate in cases.items():
             _make_sandbox(root)
             mutate()
@@ -383,7 +578,7 @@ def selftest():
 
 
 def _make_sandbox(root):
-    for rel in (DEVBOX, ENTRYPOINT, RUNBOOK, WRAPPER, PACKER_APT_SCRIPT,
+    for rel in (DEVBOX, ENTRYPOINT, MANIFEST, SYNC_SCRIPT, RUNBOOK, WRAPPER, PACKER_APT_SCRIPT,
                 "nvim/.config/nvim/lua/plugins/mason.lua"):
         dest = root / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -410,6 +605,14 @@ def _mutate_wrapper(root, old, new):
     text = path.read_text()
     assert old in text, f"wrapper mutation anchor not found: {old!r}"
     path.write_text(text.replace(old, new))
+
+
+def _mutate_file(root, rel, old, new, count=1):
+    """count=1 replaces the first occurrence; count=0 replaces every occurrence."""
+    path = root / rel
+    text = path.read_text()
+    assert old in text, f"mutation anchor not found in {rel}: {old!r}"
+    path.write_text(text.replace(old, new) if count == 0 else text.replace(old, new, count))
 
 
 def _capture(fn):

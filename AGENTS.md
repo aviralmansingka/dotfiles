@@ -239,9 +239,11 @@ pinned dotfiles SHA; `scripts/test-modal-devbox.py` enforces apt parity (Packer 
 exactly `openssh-server`/`ca-certificates`), the stow set, the GPU allowlist, and secret
 hygiene — offline. Invariants: the image is code (new layers + rebuild, never a mutated
 running container; Sandbox `snapshot_filesystem()` is the only freeze path); `/persist`
-is the only mutable state; secret values never enter the repo or image (the SSH public
-key is injected per launch from the local key); no Modal account, network, or `modal`
-binary in CI. The stowed `devbox` package puts a `devbox` wrapper on `~/.local/bin`:
+is the only mutable state; `scripts/modal-secrets-sync` (driven by
+`ops/modal-devbox/secrets-manifest.json`, names/sources/variable names only) is the only
+writer of Modal Secrets — values never enter the repo, the image, or the volume, and the
+workspace stays personal (any container in it can read every secret); no Modal account,
+network, or `modal` binary in CI. The stowed `devbox` package puts a `devbox` wrapper on `~/.local/bin`:
 `devbox ssh` starts a sandbox if needed and attaches; `devbox status` / `devbox stop`
 manage the tagged sandboxes; `MODAL_DEVBOX_PY` overrides the app-file resolution.
 

@@ -45,18 +45,42 @@ and no `$HOME` mutation.
   `ensure_installed` entry in `nvim/.config/nvim/lua/plugins/mason.lua`
   (the suite's Paths include that file, so edits retrigger it) plus
   `clangd`/`codelldb` from the LazyVim lang extras.
+- **M11 manifest schema.** `ops/modal-devbox/secrets-manifest.json` is
+  valid JSON covering the planned inventory exactly (`devbox-env`,
+  `devbox-mcp-*`, `devbox-telegram`/`-whatsapp`/`-stt-client`,
+  `devbox-pi-auth`, `devbox-gh`, `devbox-ssh`, opt-in `devbox-aws`);
+  required keys per MODE (`dotenv`/`file`/`command`); sources and targets
+  are relative paths under `$HOME`; names unique; variable names are
+  valid; no value-looking strings (the suite's SECRET_PATTERNS).
+- **M12 sync-script structure.** `scripts/modal-secrets-sync` is executable
+  and `bash -n` clean; references `--dry-run`, `--only`, `--aws`, `--force`,
+  `umask 077`, `mktemp -d` with a cleanup `trap`/`rm -rf`, and
+  `--from-json`; never cats/echoes the temp payload files (values are a
+  leak); no token literals.
+- **M13 materialization wiring.** `entrypoint.sh` defines the
+  `materialize_env`/`materialize_file` helpers (0600 perms, `base64 -d`,
+  the guarded `~/.zshenv` include for `GH_TOKEN`) and the
+  `#@devbox-materialize@#` marker; `devbox.py` splices manifest-generated
+  calls over the marker, probes workspace secrets (`Secret.objects.list()`)
+  so a fresh workspace boots, mounts them via `from_name`, and appends the
+  ephemeral `DEVBOX_SSH_PUBLIC_KEY` `from_dict` secret **last** (later
+  entries win key clashes — research §8.4).
 
 ## Selftest
 
 `--selftest` rebuilds the checks against mutated mktemp copies (extra apt
 package, `B200` in the allowlist, `git` stowed early, an injected `ghp_`
-literal, a broken `--detach` in the wrapper) and proves the matching checks
-fail; a clean copy must pass. The real worktree is never touched.
+literal, a broken `--detach` in the wrapper, a bad manifest mode, a
+value-looking manifest string, a name outside the inventory, a removed
+temp-cleanup trap, a `cat` of the temp payload in the sync script, 0644
+instead of 0600 in the entrypoint, the ephemeral key secret mounted first)
+and proves the matching checks fail; a clean copy must pass. The real
+worktree is never touched.
 
 ## How to run
 
 ```sh
-scripts/test-modal-devbox.py              # suite
+scripts/test-modal-devbox.py              # suite (M1–M13)
 scripts/test-modal-devbox.py --selftest   # prove checks fail on mutations
 ```
 
