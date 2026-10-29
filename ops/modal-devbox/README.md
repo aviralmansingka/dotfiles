@@ -109,9 +109,6 @@ ssh -o StrictHostKeyChecking=accept-new -p <port> root@<host>
 
 | Path (in container) | Volume path | Contents |
 | --- | --- | --- |
-| `~/.local/share/nvim` | `nvim-share` | lazy.nvim plugins, Mason tools |
-| `~/.local/state/nvim` | `nvim-state` | shada, undo |
-| `~/.local/share/bob` | `nvim-bob` | Neovim installs + bob's `used` marker — `bob use <version>` survives sandbox death (the entrypoint repoints the `nvim` shim to bob's proxy) |
 | `~/.cache` | `cache` | cargo, uv, pip caches |
 | `~/repos` | `repos` | work checkouts |
 | `~/vault` | `vault` | obsidian.nvim vault (empty at first boot; populate it to use Obsidian tooling) |
@@ -121,11 +118,56 @@ Everything else is baked into the image and reset per sandbox. Volume v2
 commits run in the background every few seconds plus on shutdown; run
 `sync /persist` inside a session to flush on demand.
 
+**Nvim stays off the volume on purpose.** The plugin tree, Mason tools, the
+Neovim install and nvim's own state used to be symlinked onto `/persist`. That
+volume is FUSE with a per-container page cache, so every fresh sandbox paid
+seconds re-reading them: the first `nvim` start measured **4.3 s**, and 190 ms
+even once warm. They now come from the image's local disk, and the entrypoint
+prewarms one headless start at boot — first open **~120 ms**, warm ~120 ms
+(verified). The trade-off is that a plugin or Mason install made inside a
+session, and nvim history/undo, do not survive the sandbox; the image is the
+deploy path (or `devbox snapshot`). Repos, vault and shell history still
+persist. Old volumes may still hold `nvim-share`, `nvim-bob` and `nvim-state`
+directories — unused, safe to delete.
+
 Mason tooling: the central list from `nvim/.config/nvim/lua/plugins/mason.lua`
 (plus clangd/codelldb) is pre-installed at build time — first opens are clean,
 no install prompts. Treesitter grammars compile on first use per filetype
 (same confirmation prompt as the Mac). Anything outside the list installs on
-demand and persists on the volume.
+demand.
+
+## pi agent and your dotfiles checkout
+
+The image installs the **pi coding agent** at the same pinned version as your
+Mac (`PI_VERSION`, currently 1.4.0) on Node 22 — Ubuntu 24.04's Node 18 is too
+old and made the first build crash. Config comes from the stowed `pi` package,
+and provider auth from the `devbox-pi-auth` secret (`~/.pi/agent/auth.json`,
+0600). The entrypoint also exports `FIREWORKS_API_KEY` from that file into
+`~/.config/devbox-env.sh`, so any tool or SDK in the box sees it:
+
+```sh
+devbox ssh -- 'pi -p "Reply with exactly: DEVBOX_OK"'   # verified in-box
+```
+
+**A writable dotfiles checkout** is seeded on first boot at `~/repos/dotfiles`
+(copied from the image's pinned clone, so it carries `.git` and needs no
+network). It lives on the volume, so edits, branches and commits survive — and
+it is the **live stow source**: the entrypoint unstows the image clone and
+links everything from the checkout, so an edit there is in effect on the next
+session (verified: `settings.json`, `agents/.agents/skills`, `nvim`, `tmux`,
+`zsh` all resolve into `~/repos/dotfiles`). pi's extension dependencies are
+carried over (`npm ci` when a package lacks `node_modules`), so all extensions
+load — verified with a real call:
+
+```sh
+devbox ssh -- 'pi -p "Reply with exactly: STOWED_OK"'   # STOWED_OK
+```
+
+`~/.pi/agent/auth.json` is deliberately **not** stowed
+(`--ignore=auth.json`): it is runtime state written from the
+`devbox-pi-auth` secret, and linking a stray copy over it once cost pi its
+provider auth. To deploy an edit properly: push it, bump `DOTFILES_REF`, rebuild
+— the seeded checkout is per-volume and does not track the image pin.
 
 ## Secrets
 

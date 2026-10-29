@@ -84,11 +84,21 @@ SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/modal-devbox-%C"
 
 ssh_from_line() {
     # ssh_from_line <CONNECT-line> [remote-command...]
+    # The tunnel can exist a moment before sshd accepts on it, so a fresh start
+    # sometimes reports "Connection closed". Retry briefly on ssh's failure
+    # code (255) before giving up; a real session's exit code passes straight
+    # through.
     local line="$1"
     shift
-    local host port
+    local host port rc attempt
     read -r _ host port <<< "$line"
-    exec ssh "${SSH_OPTS[@]}" -p "$port" "root@$host" "$@"
+    for attempt in 1 2 3 4 5 6 7 8 9 10; do
+        rc=0
+        ssh "${SSH_OPTS[@]}" -p "$port" "root@$host" "$@" || rc=$?
+        [ "$rc" -ne 255 ] && exit "$rc"
+        [ "$attempt" -lt 10 ] && sleep 3
+    done
+    exit "$rc"
 }
 
 try_cached_ssh() {
