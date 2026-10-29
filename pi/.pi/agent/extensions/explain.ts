@@ -340,6 +340,7 @@ export default function explain(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "explain",
 		label: "explain",
+		exposure: "deferred",
 		description:
 			"Ask the user to answer one question in their own words. This is a prose check. It is harder than quiz because there are no options to recognize. Use it to test terminology, for example 'name the kernel construct this touches and why'. Use it also to find misconceptions that multiple choice cannot reach. You MUST supply `expected`: the claims a correct answer must contain. On submit, a grader model call grades the answer against those claims. It returns a verdict (correct, partially_correct, or incorrect) and per-quote terminology refinements. You keep control of the teaching that follows. For a question with a known set of correct options, use quiz. For a question with no right answer, use ask_user_question.",
 		promptSnippet:

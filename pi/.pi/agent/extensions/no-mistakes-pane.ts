@@ -1151,6 +1151,7 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "no_mistakes_axi",
 		label: "no-mistakes (background)",
+		exposure: "deferred",
 		description:
 			"Submit a `no-mistakes axi` subcommand (run/respond/status/logs/answer/abort/sync) to run detached in the background and return immediately — the session stays free and never blocks on a review/test/CI step. Use this INSTEAD of running `no-mistakes axi` in the bash tool. The structured TOON result (findings, gate, outcome, branch_sync, help) arrives later as a `no_mistakes_axi_result` steer message that triggers a new turn: read every one. Gate results carry the user's decision from the no-mistakes gate panel (or yolo standing consent) — submit the `respond` call it names until an `outcome:` arrives; without a decision, relay ask-user findings verbatim and wait. For `run`/`respond` a visible Herdr pane beside the agent shows the rich `no-mistakes` TUI of the same daemon run; it stays open while the run is parked at a gate, and `/no-mistakes` focuses or re-opens it. From a Herdr captain session, `run` is delegated to the nm-orchestrator subagent tab, which owns the attach pane, gate panels, and step-agent tabs and steers its final run summary back here — do not re-issue run or respond for a delegated run; steer that tab with subagent_message instead.",
 		promptSnippet:

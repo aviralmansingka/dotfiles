@@ -35,6 +35,18 @@ steers back automatically; on clean completion its tab closes and the picker row
 Branches are ownership-marked (`branch.<b>.piWorktree` in git config, the gh-dash-open-pr pattern); anything the tool
 does not own is refused. Teardown after ship stays with `/cleanup`.
 
+## Captain prompt budget: deferred tools
+
+Extension tools captains rarely call register with `exposure: "deferred"`: `quiz`, `explain`,
+`lesson`, `run-command`, `nvim_open`, `tuicr`, `tuicr_review`, `tuicr_reply`, `no_mistakes_axi`.
+Deferred tools stay out of the captain's system prompt, tool list, and rules. Subagent profiles
+activate what they need through their `tools:` allowlist — professor, tuicr-review, and
+nm-orchestrator already name these. Captains reach the rest through `tool_search`, enabled via
+`defaultTools` in `settings.json` (which also pins `+worktree`). Register new rarely-used tools
+deferred and name them in the profiles that need them. The MCP namespace proxies
+(`mcp__browserbase`, `mcp__oreilly`, `mcp__mcp`) stay direct: the adapter re-activates them and
+`mcp:<server>` references in tool-groups and slow-mode rely on them.
+
 ## Remote subagents on devbox
 
 `pi/.pi/agent/extensions/remote.ts` registers `/remote <task>`: it spawns a pi subagent on the saved Herdr SSH

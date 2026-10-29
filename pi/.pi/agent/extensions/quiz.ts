@@ -1110,6 +1110,7 @@ export default function quiz(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "quiz",
 		label: "quiz",
+		exposure: "deferred",
 		description:
 			"Ask the user a graded question. The question must have a known correct answer. The tool grades the answer and shows feedback. Answer mode: number shortcuts and j/k navigation. Enter shows feedback. Other is always the last choice. It reports an honest knowledge gap, not a guess. Tab opens steering mode. There the user types guidance. It ends the quiz and returns as `followUp`. Ctrl+P marks the quiz as too hard. It does not show the answer. There is no free-text answer mode. For a question without a correct answer, use ask_user_question.",
 		promptSnippet:
