@@ -23,7 +23,8 @@ pi agent extensions (job `pi-tests`, gated on `pi/**` + `agents/**`):
 | Mermaid v2 | mermaid.test.mjs | stmts 94.6 %, branch 81.2 %, funcs 100 % | 0.44 s |
 | Tuicr | tuicr.test.mjs | stmts 92.5 % | 1.7 s |
 | Telegram daemon | pi/bin unittest (155 cases) | daemon 75 % (mention gating was 0 %) | 1.1 s |
-| Loader | scripts/test-extension-loader.mjs | 24 factories + 22 nested + settings entries | 0.2 s |
+| Loader | scripts/test-extension-loader.mjs | 26 factories + 23 nested + settings entries | 0.2 s |
+| OpenGateway provider | opengateway.test.mjs | provider registration + model metadata | 0.13 s |
 
 Neovim (job `nvim-tests`, gated on `nvim/**`): offline headless harness
 (`nvim/.config/nvim/tests/ci/`) + ten entries `scripts/test-nvim-*.sh`;
@@ -54,7 +55,7 @@ pi-live-config, pi-hidden-thinking.
 
 ## Totals
 
-64 discovered tests. Local serial run ≈ 43 s; CI critical path ≈ 2–3 min
+79 discovered tests. Local serial run ≈ 43 s; CI critical path ≈ 2–3 min
 (setup dominates) — inside the 5-minute SLA. Two consecutive full rounds
 showed zero flakes.
 
