@@ -623,6 +623,7 @@ async function startTuicrReview(
 const tuicrBackgroundTool = defineTool({
 	name: "tuicr",
 	label: "Launch the tuicr pane and attach the comment watcher",
+	exposure: "deferred",
 	description:
 		"INTERNAL — the comment watcher. Launch the tuicr review pane in THIS session's own tab (splitting this pane) and attach the watcher, or attach to the active session matching the requested target. Comments then steer into THIS session as tuicr_review_comments messages. The tuicr-review subagent uses this tool to open the review pane in its own tab; a captain opening a review for the user should call tuicr_review instead. With attachOnly, never open a pane — fail while no session matches the requested target.",
 	promptSnippet: "Launch the tuicr pane in this session's tab and attach the comment watcher",
@@ -686,6 +687,7 @@ const tuicrBackgroundTool = defineTool({
 const tuicrReviewTool = defineTool({
 	name: "tuicr_review",
 	label: "Spawn the tuicr-review subagent for a review target",
+	exposure: "deferred",
 	description:
 		"Open a tuicr code review (working tree, a commit range, or a GitHub PR by number) by spawning the tuicr-review subagent. The requested target is always honored — an explicit PR attaches to that PR's session or opens a pane for it, never to an unrelated session. The SUBAGENT opens the tuicr pane inside its own tab, receives the user's comments, answers each one INSIDE the TUI with tuicr_reply, applies fixes for actionable comments, and when the user closes the TUI its summary of every comment and fix steers back to this session. A bare call with no target reviews the current branch's open PR (exactly one) or the working tree. Then ask the user whether to merge or review later. This is the preferred way to open any code review — never run a tuicr wrapper script through bash.",
 	promptSnippet: "Spawn the tuicr-review subagent; it opens the pane in its own tab and answers comments",
@@ -742,6 +744,7 @@ const tuicrReviewTool = defineTool({
 const tuicrReplyTool = defineTool({
 	name: "tuicr_reply",
 	label: "Reply in tuicr",
+	exposure: "deferred",
 	description: "Reply to user review comments inside tuicr as pi-agent. Posts the full response with a visible Re: reference; the chat shows only its leading line. Never use for preemptive self-review comments.",
 	promptSnippet: "Answer user review comments in tuicr",
 	promptGuidelines: [

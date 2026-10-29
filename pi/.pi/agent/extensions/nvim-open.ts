@@ -808,6 +808,7 @@ export async function openEditor(
 const nvimOpenTool = defineTool({
 	name: "nvim_open",
 	label: "Open Editor",
+	exposure: "deferred",
 	description:
 		"Open vim in the current Herdr tab: attach to the tab's herdr-nvim sidebar daemon when one is live, else send files to an existing editor pane in the tab, else launch a vertical split. With no files, opens or focuses the editor at the agent's cwd.",
 	promptSnippet: "Open vim in the current Herdr tab (sidebar daemon, existing editor, or vertical split)",

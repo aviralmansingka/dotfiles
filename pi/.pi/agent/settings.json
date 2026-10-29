@@ -2,6 +2,10 @@
   "defaultProvider": "fireworks",
   "defaultModel": "accounts/fireworks/routers/deepseek-flash-latest",
   "defaultThinkingLevel": "max",
+  "defaultTools": [
+    "+tool_search",
+    "+worktree"
+  ],
   "packages": [
     "npm:pi-mcp-adapter"
   ],

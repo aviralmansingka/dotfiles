@@ -709,6 +709,7 @@ export default function runCommand(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "run-command",
 		label: "run-command",
+		exposure: "deferred",
 		description:
 			"Use ONLY when the user has explicitly asked to learn about the commands being run — e.g., a /professor tutoring session, hands-on learning, or a 'teach me' request. In every other case, run commands directly via bash without asking the user; do NOT use this tool. When the user IS learning: have them run ONE command hands-on and report what they saw. A floating panel shows the command; y copies it for the manual terminal workflow, and r opens a Neovim terminal pane with `:term dm`, runs the command there, and captures output automatically. You receive the command and observed output together — grade output vs. prediction.",
 		promptSnippet:

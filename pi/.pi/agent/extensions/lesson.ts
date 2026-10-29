@@ -61,6 +61,7 @@ export default function lesson(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "lesson",
 		label: "lesson",
+		exposure: "deferred",
 		description:
 			"Write teaching content into the session's markdown journal. Then show it in the learner's editor as the current node: an in-memory scratch buffer that holds only this lesson. Each lesson gets its own buffer, so earlier nodes persist and the learner can cycle them in nvim. The tool returns immediately. The user reads at their own pace while you continue. Call this before quiz or explain when the question depends on content the user must read. Do not emit that content as ordinary assistant text next to the tool call. The trace collapses such text. Send one node per call. A batch of nodes hides the current one. The journal stays the durable append-only transcript; probe-stage checks go to a separate probe log. The quiz and explain `h` shortcuts focus the current node buffer, or the overview before the first lesson. `H` (Shift+H) opens the journal. In explain, bare `h` works before composing and at the verdict. `H` works at any time.",
 		promptSnippet:
