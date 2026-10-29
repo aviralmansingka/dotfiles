@@ -319,16 +319,44 @@ def _default_pubkey() -> str:
     return pubs[0].read_text().strip() if pubs else ""
 
 
+def _placement(sandbox) -> dict:
+    """Actual placement from the container's PID 1 environment.
+
+    The requested `region` tag is not proof of placement: an unset region, or a
+    broad one like `ap`, schedules wherever Modal has capacity. MODAL_REGION
+    and MODAL_CLOUD_PROVIDER are set on the container process (they do not
+    reach sshd sessions), so read them once at creation and record the answer
+    as a `placement` tag: "<region>/<cloud>".
+    """
+    try:
+        raw = sandbox.exec("cat", "/proc/1/environ").stdout.read()
+    except Exception:  # noqa: BLE001 — placement is a nicety, never fatal
+        return {}
+    found = {}
+    for entry in raw.split("\0"):
+        key, _, value = entry.partition("=")
+        if key in ("MODAL_REGION", "MODAL_CLOUD_PROVIDER") and value:
+            found[key] = value
+    region = found.get("MODAL_REGION", "")
+    cloud = found.get("MODAL_CLOUD_PROVIDER", "").replace("CLOUD_PROVIDER_", "").lower()
+    if not region:
+        return {}
+    return {"placement": f"{region}/{cloud}" if cloud else region}
+
+
 def _describe_resources(tags: dict) -> str:
     """One-line resource summary from a sandbox's tags.
 
     Sandboxes expose no cpu/memory/gpu/region attributes on the object, so
     main() records them as tags at creation and status() reads them back here.
     """
-    return (f"cpu={tags.get('cpu', '?')} "
-            f"mem={tags.get('memory', '?')}MiB "
-            f"gpu={tags.get('gpu', '?')} "
-            f"region={tags.get('region', '?')}")
+    parts = [f"cpu={tags.get('cpu', '?')}",
+             f"mem={tags.get('memory', '?')}MiB",
+             f"gpu={tags.get('gpu', '?')}",
+             f"region={tags.get('region', '?')}"]
+    if tags.get("placement"):
+        parts.append(f"placement={tags['placement']}")
+    return " ".join(parts)
 
 
 def _running_devboxes():
@@ -504,6 +532,14 @@ def main(
         print(f"  lease          : {timeout_hours:g} h hard cap; /persist survives teardown")
         if region:
             print(f"  region         : {region} ({'1.15x' if region in ('us', 'eu', 'ap') else '1.75x'} price multiplier)")
+        placement = _placement(sandbox)
+        if placement:
+            print(f"  placement      : {placement['placement']} (actual)")
+            tags.update(placement)
+            try:
+                sandbox.set_tags(tags)
+            except Exception:  # noqa: BLE001 — status can fall back to the request
+                pass
         print(f"  idle           : dies {idle_timeout or 'never'}{' s' if idle_timeout else ''} after the last SSH disconnect")
         print()
         sandbox.wait(raise_on_termination=False)
@@ -523,7 +559,7 @@ def _tags(sb) -> dict:
 
 
 @app.local_entrypoint()
-def status():
+def _status() -> None:
     """List running devbox sandboxes with their resources and ssh lines."""
     running = _running_devboxes()
     if not running:
@@ -543,8 +579,7 @@ def status():
             print(f"  resources      : {_describe_resources(tags)}")
 
 
-@app.local_entrypoint()
-def stop():
+def _stop() -> None:
     """Terminate every running devbox sandbox (final volume commit runs)."""
     running = _running_devboxes()
     if not running:
@@ -553,6 +588,19 @@ def stop():
     for sb in running:
         sb.terminate()
         print(f"terminated {sb.object_id}; /persist state kept")
+
+
+# The wrapper runs status/stop as plain scripts (see __main__), so they never
+# pay for an ephemeral App; the entrypoints below keep `modal run ::status`
+# working for anyone who prefers it.
+@app.local_entrypoint()
+def status():
+    _status()
+
+
+@app.local_entrypoint()
+def stop():
+    _stop()
 
 
 @app.local_entrypoint()
@@ -577,3 +625,13 @@ def snapshot(name: str = "devbox-snap"):
     image.publish(name)
     print(f"published {name} (from {sandbox.object_id}); boot it with Image.from_name({name!r})")
     print("note: mounted volumes are not captured — /persist keeps its own state")
+
+
+if __name__ == "__main__":
+    # Plain-script entry for the wrapper: `python devbox.py status|stop` runs
+    # without standing up an ephemeral App (no app URL, no "Created objects").
+    _cmds = {"status": _status, "stop": _stop}
+    _cmd = sys.argv[1] if len(sys.argv) > 1 else "status"
+    if _cmd not in _cmds:
+        sys.exit(f"usage: {sys.argv[0]} status|stop")
+    _cmds[_cmd]()

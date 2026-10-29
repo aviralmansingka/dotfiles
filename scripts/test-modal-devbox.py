@@ -357,7 +357,16 @@ def _stub_env(root):
         f'echo "ssh $*" >> "{log}"\n'
         "exit 0\n"
     )
-    for name in ("modal", "ssh"):
+    # Stub interpreter for the plain-script status/stop path (DEVBOX_PY).
+    (stub_bin / "modpy").write_text(
+        "#!/usr/bin/env bash\n"
+        f'echo "py $*" >> "{log}"\n'
+        'case "$*" in\n'
+        '  *" status") echo "no devbox sandbox running";;\n'
+        '  *" stop") echo "terminated sb-stub";;\n'
+        "esac\nexit 0\n"
+    )
+    for name in ("modal", "ssh", "modpy"):
         (stub_bin / name).chmod(0o755)
     return stub_bin, log
 
@@ -385,7 +394,8 @@ def check_wrapper_behavior(root, _literals, _source):
         wrapper = work / WRAPPER
         env = {"PATH": f"{stub_bin}:/usr/bin:/bin:/usr/sbin:/sbin",
                "HOME": str(work), "XDG_STATE_HOME": str(state),
-               "MODAL_DEVBOX_PY": str(work / DEVBOX)}
+               "MODAL_DEVBOX_PY": str(work / DEVBOX),
+               "DEVBOX_PY": str(stub_bin / "modpy")}
 
         def run(*args):
             return subprocess.run(["bash", str(wrapper), *args], capture_output=True,
@@ -433,6 +443,13 @@ def check_wrapper_behavior(root, _literals, _source):
         run("stop")
         if cache.exists():
             errors.append("`devbox stop` must clear the cached CONNECT line")
+        if "py " not in calls():
+            errors.append("`devbox stop` must use the plain-script path, not an ephemeral App")
+
+        reset_log()
+        run("status")
+        if "py " not in calls() or "modal run" in calls():
+            errors.append("`devbox status` must not launch a Modal App")
     finally:
         shutil.rmtree(work, ignore_errors=True)
     return errors
@@ -751,10 +768,18 @@ def check_resources_and_status(root, _literals, source):
     bare = describe({})
     if bare.count("?") < 4:
         errors.append("missing tags must degrade to '?' rather than raise")
+    pinned = describe({"cpu": "4", "memory": "8192", "gpu": "none",
+                       "region": "ap-south", "placement": "ap-south/gcp"})
+    if "placement=ap-south/gcp" not in pinned:
+        errors.append(f"a recorded placement must be shown, got {pinned!r}")
+    if "placement=" in bare:
+        errors.append("no placement tag must not print an empty placement field")
+    if "_placement(" not in source or "MODAL_REGION" not in source:
+        errors.append("placement must be read from the container (MODAL_REGION), not guessed")
     for needle in ("(cpu, cpu_limit)", "(memory, memory_limit)"):
         if needle not in source:
             errors.append(f"hard caps must use Modal's (request, limit) tuple form: {needle}")
-    if "_describe_resources(" not in source.split("def status", 1)[-1]:
+    if "_describe_resources(" not in source.split("def _status", 1)[-1]:
         errors.append("status must render the resource summary")
     readme = (root / RUNBOOK).read_text()
     for needle in ("--cpu-limit", "--memory-limit", "devbox status"):
@@ -853,8 +878,10 @@ def selftest():
                 root, ENTRYPOINT, 'mv "$1" "$2"                         # first boot: seed the volume',
                 ': # seeding removed'),
             "region-no-india": lambda: _mutate(root, '"ap", "ap-south")', '"ap")'),
+            "status-launches-app": lambda: _mutate_wrapper(
+                root, 'if modpy="$(modal_python)" && "$modpy" "$PY" status; then', 'if false; then'),
             "status-drops-region": lambda: _mutate(
-                root, 'f"region={tags.get(\'region\', \'?\')}")', 'f"")'),
+                root, '''f"region={tags.get('region', '?')}"]''', ']'),
             "cuda-nvcc-symlink": lambda: _mutate(
                 root, '"LD_LIBRARY_PATH": "/usr/local/cuda/lib64",',
                 '"LD_LIBRARY_PATH": "/usr/local/cuda/lib64",\n'
@@ -873,10 +900,18 @@ def selftest():
                          "cuda-runbook": {"M15"},
                          "entrypoint-no-seed": {"M17"},
                          "region-no-india": {"M18"},
-                         "status-drops-region": {"M19"}}
+                         "status-drops-region": {"M19"},
+                         "status-launches-app": {"M16"}}
         for label, mutate in cases.items():
             _make_sandbox(root)
-            mutate()
+            try:
+                mutate()
+            except AssertionError as exc:
+                # A stale mutation anchor must name the case, not abort silently
+                # midway and leave the remaining cases unproven.
+                print(f"FAIL selftest {label}: mutation could not be applied ({exc})")
+                failures += 1
+                continue
             out = _capture(lambda: run_checks(root))
             failed = {line.split()[1].split()[0] for line in out.splitlines()
                       if line.startswith("FAIL")}
