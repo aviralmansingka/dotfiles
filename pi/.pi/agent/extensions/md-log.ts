@@ -53,9 +53,17 @@ import {
 // Journal writes stay event-driven: tool_execution_start records lesson
 // content (and the current node), and tool_execution_end records quiz/explain
 // results — routed to the journal or the probes file by the call's stage.
+//
+// Practice (revision) entries ride the same journal: a posed problem's
+// submitted working and a concluded problem's outcome, verdict, attempt count,
+// and committed solution. Both are teaching-session entries, so they always
+// land in the journal — never in the probe log. A problem entry never carries
+// the model solution; only the conclude entry does.
 // ────────────────────────────────────────────────────────────────────────────
 
-const JOURNAL_TOOLS = new Set(["quiz", "explain"]);
+const JOURNAL_TOOLS = new Set(["quiz", "explain", "problem", "conclude"]);
+// Practice calls have no probe stage and route by their own result status.
+const PRACTICE_TOOLS = new Set(["problem", "conclude"]);
 const PROBE_STAGE = "probe";
 
 /** Session file `/a/b/xyz.jsonl` → journal `/a/b/xyz.md`. */
@@ -259,6 +267,88 @@ export function formatExplainEntry(details: ExplainDetails): string {
 			lines.push(`  - “${r.quote}” — ${r.issue} → ${r.correction}`);
 		}
 	}
+	lines.push("");
+	return lines.join("\n");
+}
+
+interface ProblemDetails {
+	status: string;
+	title?: string;
+	statement?: string;
+	mode?: string;
+	targets?: string[];
+	attempt?: number;
+	work?: string;
+}
+
+/** Markdown for one submitted practice attempt: the fresh statement and the
+ *  learner's own working, quoted. The model solution is deliberately absent —
+ *  it is not written down until the problem concludes. */
+export function formatProblemEntry(details: ProblemDetails): string {
+	const lines: string[] = [];
+	lines.push(`## ${details.title?.trim() || "Problem"}`);
+	lines.push("");
+	const meta = [
+		"Problem",
+		details.mode,
+		details.attempt ? `attempt ${details.attempt}` : undefined,
+		entryStamp(),
+	].filter(Boolean);
+	lines.push(`_${meta.join(" · ")}_`);
+	lines.push("");
+	lines.push("**Statement:**");
+	lines.push("");
+	lines.push((details.statement ?? "").trim());
+	if (details.targets?.length) {
+		lines.push("");
+		lines.push(`**Targets:** ${details.targets.join(", ")}`);
+	}
+	lines.push("");
+	lines.push("**Your working:**");
+	lines.push("");
+	if (details.work?.trim()) {
+		lines.push(`> ${details.work.trim().replace(/\n/g, "\n> ")}`);
+	} else {
+		lines.push("> _(submitted empty)_");
+	}
+	lines.push("");
+	return lines.join("\n");
+}
+
+interface ConcludeDetails {
+	status: string;
+	title?: string;
+	outcome?: string;
+	solution?: string;
+	attempts?: number;
+	targets?: string[];
+	mode?: string;
+	verdict?: string;
+}
+
+/** Markdown for one concluded practice problem: the outcome, the agent's
+ *  verdict, the attempt count, and the committed solution at last. */
+export function formatConcludeEntry(details: ConcludeDetails): string {
+	const attempts = details.attempts ?? 0;
+	const outcome = details.outcome || "concluded";
+	const lines: string[] = [];
+	lines.push(`## ${details.title?.trim() || "Problem"}`);
+	lines.push("");
+	lines.push(`_Problem concluded · ${outcome} · ${entryStamp()}_`);
+	lines.push("");
+	lines.push(`**Outcome:** ${outcome} · ${attempts} attempt${attempts === 1 ? "" : "s"}`);
+	if (details.verdict?.trim()) {
+		lines.push("");
+		lines.push(`**Verdict:** ${details.verdict.trim()}`);
+	}
+	if (details.targets?.length) {
+		lines.push("");
+		lines.push(`**Targets:** ${details.targets.join(", ")}`);
+	}
+	lines.push("");
+	lines.push("**Model solution (committed before posing):**");
+	lines.push("");
+	lines.push((details.solution ?? "").trim());
 	lines.push("");
 	return lines.join("\n");
 }
@@ -692,6 +782,7 @@ export default function mdLog(pi: ExtensionAPI) {
 			if (journal) currentNode.set(journal, args.title);
 			return;
 		}
+		if (PRACTICE_TOOLS.has(event.toolName)) return;
 		if (JOURNAL_TOOLS.has(event.toolName)) {
 			// Route the eventual verdict by the call's stage: probe entries
 			// land in the probe log, teaching entries in the journal.
@@ -703,6 +794,17 @@ export default function mdLog(pi: ExtensionAPI) {
 	pi.on("tool_execution_end", (event, ctx) => {
 		if (!JOURNAL_TOOLS.has(event.toolName)) return;
 		const details = event.result?.details;
+		// Practice entries always land in the journal: a closed problem writes
+		// nothing, a submitted attempt writes the working, a concluded problem
+		// writes the outcome and the committed solution.
+		if (PRACTICE_TOOLS.has(event.toolName)) {
+			if (event.toolName === "problem" && details?.status === "submitted") {
+				appendEntry(resolveJournalPath(ctx), formatProblemEntry(details as ProblemDetails), "Lesson journal");
+			} else if (event.toolName === "conclude" && details?.status === "concluded") {
+				appendEntry(resolveJournalPath(ctx), formatConcludeEntry(details as ConcludeDetails), "Lesson journal");
+			}
+			return;
+		}
 		if (!details?.question) return;
 		const entry =
 			event.toolName === "quiz"

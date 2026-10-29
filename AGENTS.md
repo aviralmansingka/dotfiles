@@ -38,7 +38,8 @@ does not own is refused. Teardown after ship stays with `/cleanup`.
 ## Captain prompt budget: deferred tools
 
 Extension tools captains rarely call register with `exposure: "deferred"`: `quiz`, `explain`,
-`lesson`, `run-command`, `nvim_open`, `tuicr`, `tuicr_review`, `tuicr_reply`, `no_mistakes_axi`.
+`problem`, `conclude`, `lesson`, `run-command`, `nvim_open`, `tuicr`, `tuicr_review`, `tuicr_reply`,
+`no_mistakes_axi`.
 Deferred tools stay out of the captain's system prompt, tool list, and rules. Subagent profiles
 activate what they need through their `tools:` allowlist — professor, tuicr-review, and
 nm-orchestrator already name these. Captains reach the rest through `tool_search`, enabled via

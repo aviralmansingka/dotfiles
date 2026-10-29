@@ -19,10 +19,11 @@ pi agent extensions (job `pi-tests`, gated on `pi/**` + `agents/**`):
 | User input | user-input/** (10 files) + quiz/explain/ask | overall 94.2 %; user-input/** 100/100 | 0.48 s |
 | Run-command | run-command.test.mjs | run-command.ts 95.6 %; nvim-terminal 100 % | 1.22 s |
 | Lesson journal | md-log / lesson / focus-buffer tests | 98 / 100 / 97 % | 3.1 s |
+| Practice (problem / conclude) | practice.test.mjs | demand, attempt, commitment, reveal, cancel, session keying, transcript renders | 0.05 s |
 | Mermaid v2 | mermaid.test.mjs | stmts 94.6 %, branch 81.2 %, funcs 100 % | 0.44 s |
 | Tuicr | tuicr.test.mjs | stmts 92.5 % | 1.7 s |
 | Telegram daemon | pi/bin unittest (155 cases) | daemon 75 % (mention gating was 0 %) | 1.1 s |
-| Loader | scripts/test-extension-loader.mjs | 25 factories + 23 nested + settings entries | 0.2 s |
+| Loader | scripts/test-extension-loader.mjs | 26 factories + 23 nested + settings entries | 0.2 s |
 | OpenGateway provider | opengateway.test.mjs | provider registration + model metadata | 0.13 s |
 
 Neovim (job `nvim-tests`, gated on `nvim/**`): offline headless harness
@@ -54,7 +55,7 @@ pi-live-config, pi-hidden-thinking.
 
 ## Totals
 
-79 discovered tests. Local serial run ≈ 43 s; CI critical path ≈ 2–3 min
+80 discovered tests. Local serial run ≈ 43 s; CI critical path ≈ 2–3 min
 (setup dominates) — inside the 5-minute SLA. Two consecutive full rounds
 showed zero flakes.
 
@@ -106,5 +107,5 @@ ci-meta · config-lint · install-smoke · journal · mermaid · nm-install ·
 no-mistakes (domain suite) · no-mistakes-ci (no-mistakes runbook) · nvim ·
 nvim-ask · nvim-dap · nvim-markdown · nvim-octo · nvim-picker ·
 nvim-plugin-configs · nvim-send · nvim-ui-shape · nvim-workspaces · ops ·
-python-tool · rataflow · renderer · repo-config · repo-parity · run-command ·
-subagents · telegram · terminal · tuicr · user-input · zsh
+practice · python-tool · rataflow · renderer · repo-config · repo-parity ·
+run-command · subagents · telegram · terminal · tuicr · user-input · zsh

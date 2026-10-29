@@ -33,6 +33,8 @@ const {
 	formatLessonEntry,
 	formatQuizEntry,
 	formatExplainEntry,
+	formatProblemEntry,
+	formatConcludeEntry,
 	buildExtractionPrompt,
 	resolveVaultDir,
 	buildOverview,
@@ -339,6 +341,70 @@ for (const status of ["cancelled", "unavailable"]) {
 	assert.ok(incompleteEntry.includes(`Explain · ${status}`));
 	assert.ok(!incompleteEntry.includes("I don't know"));
 }
+
+// ── practice entries (revision mode) ────────────────────────────────────────
+// A submitted attempt records the fresh statement and the learner's working,
+// quoted. The committed solution is not part of this entry: it is journaled
+// only by the conclude entry, after the learner can no longer generate.
+const problemEntry = formatProblemEntry({
+	status: "submitted",
+	title: "Locked door",
+	statement: "The latch is jammed and the household is out.",
+	mode: "recall",
+	targets: ["latch-spring", "service-key"],
+	attempt: 2,
+	work: "lever the spring\nwith the shim",
+});
+assert.ok(problemEntry.startsWith("## Locked door\n"), problemEntry);
+assert.match(problemEntry, /_Problem \u00b7 recall \u00b7 attempt 2 \u00b7 \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC_/);
+assert.ok(!/^## \d{4}/m.test(problemEntry), "no timestamp in the heading");
+assert.ok(problemEntry.includes("**Statement:**"));
+assert.ok(problemEntry.includes("The latch is jammed and the household is out."));
+assert.ok(problemEntry.includes("**Targets:** latch-spring, service-key"));
+assert.ok(problemEntry.includes("> lever the spring\n> with the shim"), "every working line is quoted");
+assert.ok(!problemEntry.includes("Model solution"), "a posed problem never carries the solution label");
+// Even a malformed result carrying the commitment must not journal it.
+const leakyProblem = formatProblemEntry({
+	status: "submitted",
+	title: "Locked door",
+	statement: "S",
+	attempt: 1,
+	work: "w",
+	solution: "KINDLE-THE-LAMP-SECRET",
+});
+assert.ok(!leakyProblem.includes("KINDLE-THE-LAMP-SECRET"), "the solution never appears before conclude");
+// Untitled and empty-working attempts still produce a readable entry.
+const bareProblem = formatProblemEntry({ status: "submitted", statement: "S" });
+assert.ok(bareProblem.startsWith("## Problem\n"), bareProblem);
+assert.ok(bareProblem.includes("> _(submitted empty)_"));
+
+const concludeEntry = formatConcludeEntry({
+	status: "concluded",
+	title: "Locked door",
+	outcome: "solved",
+	solution: "Kindle the lamp, then read the latch spring tension.",
+	attempts: 2,
+	targets: ["latch-spring"],
+	mode: "recall",
+	verdict: "clean run, no wasted move",
+});
+assert.ok(concludeEntry.startsWith("## Locked door\n"), concludeEntry);
+assert.match(concludeEntry, /_Problem concluded \u00b7 solved \u00b7 \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC_/);
+assert.ok(concludeEntry.includes("**Outcome:** solved \u00b7 2 attempts"));
+assert.ok(concludeEntry.includes("**Verdict:** clean run, no wasted move"));
+assert.ok(concludeEntry.includes("**Targets:** latch-spring"));
+assert.ok(concludeEntry.includes("**Model solution (committed before posing):**"));
+assert.ok(concludeEntry.includes("Kindle the lamp, then read the latch spring tension."));
+// One attempt reads singular, and an absent verdict adds no empty label.
+const shortConclude = formatConcludeEntry({
+	status: "concluded",
+	title: "Locked door",
+	outcome: "unsolved",
+	solution: "s",
+	attempts: 1,
+});
+assert.ok(shortConclude.includes("**Outcome:** unsolved \u00b7 1 attempt\n"), shortConclude);
+assert.ok(!shortConclude.includes("**Verdict:**"), "a missing verdict adds no label");
 
 // ── extension wiring ─────────────────────────────────────────────────────────
 
@@ -1069,6 +1135,88 @@ if (hasProc) {
 } else {
 	console.log("skip fake-editor L3 scenarios (no /proc — cannot fake the nvim listener)");
 }
+
+// ── practice entries in the journal (revision mode) ────────────────────────
+// A submitted attempt and a concluded problem both ride the teaching journal,
+// never the probe log. The committed solution appears only after conclude.
+const practiceSession = join(dir, "sub", "session-practice.jsonl");
+const practiceCtx = { sessionManager: { getSessionFile: () => practiceSession } };
+const committed = "Kindle the lamp, then read the latch spring tension.";
+handlers.get("tool_execution_end")(
+	{
+		toolCallId: "practice-pose",
+		toolName: "problem",
+		result: {
+			details: {
+				status: "submitted",
+				title: "Locked door",
+				statement: "The latch is jammed.",
+				mode: "recall",
+				targets: ["latch-spring"],
+				attempt: 1,
+				work: "lever the spring with the shim",
+			},
+		},
+	},
+	practiceCtx,
+);
+const practiceJournal = journalPathFor(practiceSession);
+const practiceContents = readFileSync(practiceJournal, "utf-8");
+assert.ok(practiceContents.startsWith("# Lesson journal"), "practice entries ride the teaching journal");
+assert.ok(practiceContents.includes("## Locked door"));
+assert.ok(practiceContents.includes("**Statement:**"));
+assert.ok(practiceContents.includes("The latch is jammed."));
+assert.ok(practiceContents.includes("> lever the spring with the shim"));
+assert.ok(!practiceContents.includes(committed), "the solution is never journaled before conclude");
+assert.ok(
+	!existsSync(probesPathFor(practiceJournal)),
+	"practice entries never reach a probe log",
+);
+
+// A closed problem (cancel) and a refused pose write nothing.
+handlers.get("tool_execution_end")(
+	{ toolCallId: "practice-cancel", toolName: "problem", result: { details: { status: "cancelled", title: "Locked door", attempt: 1 } } },
+	practiceCtx,
+);
+handlers.get("tool_execution_end")(
+	{ toolCallId: "practice-refused", toolName: "problem", result: { details: { status: "error", error: "already active" } } },
+	practiceCtx,
+);
+assert.equal(
+	readFileSync(practiceJournal, "utf-8"),
+	practiceContents,
+	"a closed or refused problem writes no journal entry",
+);
+
+// Conclude writes the outcome, the verdict, the attempt count, and the solution.
+handlers.get("tool_execution_end")(
+	{
+		toolCallId: "practice-conclude",
+		toolName: "conclude",
+		result: {
+			details: {
+				status: "concluded",
+				title: "Locked door",
+				outcome: "solved",
+				solution: committed,
+				attempts: 2,
+				targets: ["latch-spring"],
+				mode: "recall",
+				verdict: "clean run",
+			},
+		},
+	},
+	practiceCtx,
+);
+const concludedContents = readFileSync(practiceJournal, "utf-8");
+assert.ok(concludedContents.includes("_Problem concluded \u00b7 solved \u00b7 "));
+assert.ok(concludedContents.includes("**Outcome:** solved \u00b7 2 attempts"));
+assert.ok(concludedContents.includes("**Verdict:** clean run"));
+assert.ok(concludedContents.includes(committed), "conclude journals the committed solution");
+assert.ok(
+	concludedContents.indexOf(committed) > concludedContents.indexOf("> lever the spring"),
+	"the solution lands after the working, never before it",
+);
 
 rmSync(dir, { recursive: true, force: true });
 rmSync(tempRoot, { recursive: true, force: true });
