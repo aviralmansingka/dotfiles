@@ -123,6 +123,7 @@ stow -d "$DOTFILES_DIR" -t "$HOME" agents
 "$DOTFILES_DIR/scripts/pi-settings-sync"
 stow -d "$DOTFILES_DIR" -t "$HOME" pi
 stow -d "$DOTFILES_DIR" -t "$HOME" herdr
+stow -d "$DOTFILES_DIR" -t "$HOME" devbox
 
 echo "==> Installing Pi extension dependencies"
 npm ci --ignore-scripts --no-fund --no-audit \
