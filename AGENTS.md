@@ -101,7 +101,10 @@ stow-managed symlink — keep `TERMINAL_BROWSER_SKIP_SETUP=1` on any installer o
 `herdr plugin install` run (the plugin's build step runs the installer, whose
 explicit `setup` ignores the decline). The pinned herdr plugin
 (`zenbu-labs/terminal-browser/herdr-plugin`) and the macOS cask are provisioned
-by `install.sh`. Ubuntu 24.04 hosts need one interactive `terminal-browser setup`
+by `install.sh`, which also pins `render.fps=30` (upstream issue #102: fps 60
+silently disables throttling and renders at the display rate; keep
+`TERMINAL_BROWSER_FPS` unset everywhere). Ubuntu 24.04 hosts need one
+interactive `terminal-browser setup`
 (sudo) for the AppArmor userns profile.
 
 ## visualization and artifact skills
