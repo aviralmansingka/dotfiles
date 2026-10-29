@@ -10,10 +10,10 @@
 
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { resolveJiti } from "./test-lib/jiti.mjs";
 
 const require = createRequire(import.meta.url);
@@ -197,9 +197,16 @@ esac
 		PATH: process.env.PATH,
 		HERDR_ENV: process.env.HERDR_ENV,
 		HERDR_PANE_ID: process.env.HERDR_PANE_ID,
+		REX_SESSION: process.env.REX_SESSION,
+		REX_BLOCK: process.env.REX_BLOCK,
 	};
 	try {
 		process.env.PATH = `${bin}:${savedEnv.PATH}`;
+		// A real Rex shell that launches this suite exports REX_SESSION/REX_BLOCK,
+		// and ./worktree.ts prefers rex over herdr (innermost mux). Clear them so
+		// every simulated Herdr case below starts from a Herdr-only session.
+		delete process.env.REX_SESSION;
+		delete process.env.REX_BLOCK;
 		process.env.HERDR_ENV = "1";
 		process.env.HERDR_PANE_ID = "wT:p0";
 		process.env.WT_TEST_CAPTURE = capture;
@@ -413,7 +420,66 @@ esac
 			delete process.env.WT_TEST_FAIL_CREATE;
 		}
 
-		// Outside a git repo, and outside Herdr: clear refusals.
+		// Rex: no worktree CLI, so the tool runs git itself and the Rex surface
+		// opens the worker's tab instead of adopting a pane.
+		{
+			clearCalls();
+			spawnCalls.length = 0;
+			spawnMode = "ok";
+			const repo = makeRepo();
+			const homeRoot = mkdtempSync(join(tmpdir(), "worktree-home-"));
+			const savedHome = process.env.HOME;
+			delete process.env.HERDR_ENV;
+			delete process.env.HERDR_PANE_ID;
+			process.env.REX_SESSION = "session:test";
+			process.env.REX_BLOCK = "block:test";
+			process.env.HOME = homeRoot;
+			try {
+				const { isError, text, details } = await finish(
+					run({ branch: "dark-mode", task: "Ship dark mode." }, repo),
+				);
+				assert.equal(isError, false, text);
+				const expectedPath = join(
+					realpathSync(homeRoot),
+					".herdr",
+					"worktrees",
+					basename(repo),
+					"feat-dark-mode",
+				);
+				assert.equal(details.surface, "rex");
+				assert.equal(details.path, expectedPath, "the shared worktree root and <type>-<slug> naming");
+				assert.equal(existsSync(join(expectedPath, ".git")), true, "the checkout exists on disk");
+				assert.equal(details.pane, null, "Rex has no adoptable worktree pane");
+				assert.deepEqual(
+					Object.keys(spawnCalls[0].params).sort(),
+					["agent", "cwd", "name", "task"],
+					"the pane override is Herdr-only",
+				);
+				assert.equal(spawnCalls[0].params.cwd, expectedPath);
+				assert.equal(calls().length, 0, "Rex is created with git, never through Herdr");
+				assert.equal(
+					gitx(["-C", repo, "config", "--local", "--get", "branch.feat/dark-mode.piWorktree"], { encoding: "utf8" }).trim(),
+					"pi-worktree",
+					"the Rex path keeps the same ownership marker",
+				);
+
+				// Idempotent reuse: the second call opens the same checkout.
+				const again = await finish(run({ branch: "dark-mode", task: "t" }, repo));
+				assert.equal(again.isError, false, again.text);
+				assert.equal(again.details.mode, "reused");
+				assert.equal(again.details.path, expectedPath);
+			} finally {
+				if (savedHome === undefined) delete process.env.HOME;
+				else process.env.HOME = savedHome;
+				delete process.env.REX_SESSION;
+				delete process.env.REX_BLOCK;
+				process.env.HERDR_ENV = "1";
+				process.env.HERDR_PANE_ID = "wT:p0";
+				rmSync(homeRoot, { recursive: true, force: true });
+			}
+		}
+
+		// Outside a git repo, and outside Herdr/Rex: clear refusals.
 		{
 			const empty = mkdtempSync(join(tmpdir(), "worktree-empty-"));
 			const { isError, text } = await finish(run({ branch: "x", task: "t" }, empty));
@@ -426,7 +492,7 @@ esac
 			const repo = makeRepo();
 			const { isError, text } = await finish(run({ branch: "x", task: "t" }, repo));
 			assert.equal(isError, true);
-			assert.match(text, /requires a session inside Herdr/);
+			assert.match(text, /requires a session inside Herdr or Rex/);
 			process.env.HERDR_ENV = "1";
 		}
 	} finally {

@@ -34,12 +34,19 @@
  * --branch <b>` restores the row, and `/cleanup` (from a session in that
  * worktree) tears it down after ship.
  *
- * Herdr-only by design: `herdr worktree` drives the workspace API. The base
- * is the repo's LOCAL `main` by convention (the picker diffs against it);
- * pass `base` explicitly when a repo needs another branch.
+ * Two surfaces: Herdr carries a worktree API, so `herdr worktree create/open`
+ * does the checkout AND makes the pane the worker adopts. Rex has no worktree
+ * command, so this file creates the checkout with `git worktree add` itself
+ * and lets the Rex surface open the worker's tab. Both surfaces share one
+ * worktree root (`~/.herdr/worktrees/<repo>/<type>-<slug>`) so a checkout
+ * stays usable when the human switches multiplexers. The base is the repo's
+ * LOCAL `main` by convention (the picker diffs against it); pass `base`
+ * explicitly when a repo needs another branch.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, realpathSync } from "node:fs";
+import { homedir } from "node:os";
+import { basename, dirname, join } from "node:path";
 import { Type } from "typebox";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { parseWorktreeList, type WorktreeEntry } from "./cleanup.ts";
@@ -52,6 +59,20 @@ const DEFAULT_BRANCH_TYPE = "feat";
 const BRANCH_TYPES = ["feat", "fix", "explore", "chore", "task"] as const;
 const WORKER_NAME_MAX = 32;
 const OWNER_VALUE = "pi-worktree";
+
+/** Which multiplexer this session runs under, or null when neither applies. */
+export type MuxSurface = "herdr" | "rex";
+
+/**
+ * Detect the multiplexer. A Rex block (REX_SESSION + REX_BLOCK) wins over a
+ * stale HERDR_ENV inherited from an outer Herdr pane, because Rex owns the
+ * innermost tabs in that case.
+ */
+export function detectSurface(env: NodeJS.ProcessEnv = process.env): MuxSurface | null {
+	if (env.REX_SESSION && env.REX_BLOCK) return "rex";
+	if (env.HERDR_ENV === "1" && env.HERDR_PANE_ID) return "herdr";
+	return null;
+}
 
 // --- git helpers -----------------------------------------------------------
 
@@ -133,6 +154,32 @@ export function primaryCheckout(worktrees: WorktreeEntry[]): string {
 	const first = worktrees.find((w) => !w.bare);
 	if (!first) throw new Error("git worktree list reported no checkout");
 	return first.path;
+}
+
+/**
+ * Root that holds every worktree checkout, shared by both surfaces so the
+ * same checkout stays usable when the human switches multiplexers.
+ */
+export function worktreeRoot(primary: string): string {
+	return join(realHome(), ".herdr", "worktrees", basename(primary));
+}
+
+/**
+ * `$HOME` with symlinks resolved. git reports realpaths (`/private/var` on
+ * macOS) in `worktree list`, so a fresh create and a later reuse must agree on
+ * one spelling or the two paths look like different checkouts.
+ */
+function realHome(): string {
+	try {
+		return realpathSync(homedir());
+	} catch {
+		return homedir();
+	}
+}
+
+/** Checkout path for a branch: `<root>/<type>-<slug>` (slashes become hyphens). */
+export function worktreePathFor(primary: string, branch: string): string {
+	return join(worktreeRoot(primary), branch.replace(/\//g, "-"));
 }
 
 // --- ownership -------------------------------------------------------------
@@ -270,13 +317,13 @@ const WorktreeParams = Type.Object({
 
 const DESCRIPTION =
 	"Create or reuse a linked Git worktree from the repo's local main, and launch an auto-exit worker " +
-	"subagent that does the change work there — in the worktree session's first tab, unfocused. Use this " +
-	"instead of editing the main checkout: main stays the neutral checked-out branch, and the worktree " +
-	"joins the repo's shared Herdr workspace with its own picker row under the repository. The checkout " +
-	"lands at ~/.herdr/worktrees/<repo>/<branch>. The worker's result arrives automatically as a steer " +
-	"message when it finishes — never poll for it. After the work ships, tear down with /cleanup from a " +
-	"session in that worktree, or reopen the row with `herdr worktree open --cwd <repo> --branch <b>`. " +
-	"Herdr-only; refuses branches and worktrees the tool does not own.";
+	"subagent that does the change work there, unfocused. Use this instead of editing the main checkout: " +
+	"main stays the neutral checked-out branch and the worktree gets its own checkout and session. The " +
+	"checkout lands at ~/.herdr/worktrees/<repo>/<branch>. Under Herdr the worktree joins the repo's " +
+	"shared workspace with its own picker row; under Rex the worker opens in a labeled tab. The worker's " +
+	"result arrives automatically as a steer message when it finishes — never poll for it. After the work " +
+	"ships, tear down with /cleanup from a session in that worktree. Requires Herdr or Rex; refuses " +
+	"branches and worktrees the tool does not own.";
 
 export default function worktreeExtension(pi: ExtensionAPI): void {
 	pi.registerTool({
@@ -285,7 +332,7 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 		description: DESCRIPTION,
 		promptSnippet:
 			"Make repo changes with the worktree tool instead of editing the main checkout: it creates or reuses " +
-			"a linked worktree from local main and runs an auto-exit worker subagent in that worktree's first tab; " +
+			"a linked worktree from local main and runs an auto-exit worker subagent there; " +
 			"the worker's result steers back automatically.",
 		parameters: WorktreeParams,
 		annotations: {
@@ -303,11 +350,13 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 				details: { error: message, ...details },
 			});
 
-			// 1. Herdr guard — `herdr worktree` drives the workspace API.
-			if (process.env.HERDR_ENV !== "1" || !process.env.HERDR_PANE_ID) {
+			// 1. Surface guard — Herdr drives worktrees through its workspace API;
+			// Rex has no worktree command, so this file runs git directly there.
+			const surface = detectSurface();
+			if (!surface) {
 				return fail(
-					"The worktree tool requires a session inside Herdr — " +
-					"herdr worktree create/open drive the workspace API.",
+					"The worktree tool requires a session inside Herdr or Rex. " +
+					"Start pi in one of them, or create the worktree by hand with `git worktree add`.",
 				);
 			}
 
@@ -355,98 +404,136 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 				return fail(decision.reason, { branch });
 			}
 
-			// 5. Create or open — never focus-stealing. `--cwd` must name the
-			// repo's PRIMARY checkout: herdr refuses create/open from a linked
-			// worktree ("start from the repo parent workspace").
-			const herdrCwd = primaryCheckout(worktrees);
-			let response: Record<string, any>;
+			// 5. Create or open — never focus-stealing. Herdr wants `--cwd` to name
+			// the repo's PRIMARY checkout (it refuses create/open from a linked
+			// worktree); Rex needs no anchor at all and checks the tree out with git.
+			const primary = primaryCheckout(worktrees);
 			let mode: "created" | "created-existing" | "reused";
-			let worktreePath: string | undefined;
-			try {
-				if (decision.action === "open") {
-					response = herdr(["worktree", "open", "--cwd", herdrCwd, "--branch", branch, "--no-focus"]);
-					mode = "reused";
-					worktreePath = decision.path;
-				} else if (decision.action === "create-branch") {
-					response = herdr(["worktree", "create", "--cwd", herdrCwd, "--branch", branch, "--no-focus"]);
-					mode = "created-existing";
-				} else {
-					response = herdr([
-						"worktree",
-						"create",
-						"--cwd",
-							herdrCwd,
-						"--branch",
-						branch,
-						"--base",
-						base,
-						"--no-focus",
-					]);
-					markOwned(repo, branch);
-					mode = "created";
+			let worktreePath: string;
+			let rootPane: string | null = null;
+			let workspaceId: string | null = null;
+
+			if (surface === "rex") {
+				const target = worktreePathFor(primary, branch);
+				try {
+					if (decision.action === "open") {
+						worktreePath = decision.path;
+						mode = "reused";
+					} else {
+						mkdirSync(dirname(target), { recursive: true });
+						if (decision.action === "create-branch") {
+							git(repo, ["worktree", "add", target, branch]);
+							mode = "created-existing";
+						} else {
+							git(repo, ["worktree", "add", "-b", branch, target, base]);
+							markOwned(repo, branch);
+							mode = "created";
+						}
+						worktreePath = target;
+					}
+				} catch (error: any) {
+					return fail(error?.message ?? String(error), { branch, base, surface });
 				}
-			} catch (error: any) {
-				return fail(error?.message ?? String(error), { branch, base });
-			}
-			const result = response?.result ?? {};
-			const rootPane = result?.root_pane?.pane_id;
-			if (mode !== "reused") {
-				worktreePath = result?.worktree?.path;
-			}
-			const workspaceId = result?.workspace?.workspace_id;
-			if (
-				typeof rootPane !== "string" ||
-				rootPane.length === 0 ||
-				typeof worktreePath !== "string" ||
-				worktreePath.length === 0
-			) {
-				return fail(
-					`herdr returned an unexpected response (no root_pane.pane_id or worktree.path). ` +
-						`The worktree may exist — inspect it with \`herdr worktree list --cwd ${herdrCwd}\`.`,
-					{ branch, mode, herdrResponse: JSON.stringify(response).slice(0, 400) },
-				);
+			} else {
+				const herdrCwd = primary;
+				let response: Record<string, any>;
+				try {
+					if (decision.action === "open") {
+						response = herdr(["worktree", "open", "--cwd", herdrCwd, "--branch", branch, "--no-focus"]);
+						mode = "reused";
+						worktreePath = decision.path;
+					} else if (decision.action === "create-branch") {
+						response = herdr(["worktree", "create", "--cwd", herdrCwd, "--branch", branch, "--no-focus"]);
+						mode = "created-existing";
+					} else {
+						response = herdr([
+							"worktree",
+							"create",
+							"--cwd",
+								herdrCwd,
+							"--branch",
+							branch,
+							"--base",
+							base,
+							"--no-focus",
+						]);
+						markOwned(repo, branch);
+						mode = "created";
+					}
+				} catch (error: any) {
+					return fail(error?.message ?? String(error), { branch, base });
+				}
+				const result = response?.result ?? {};
+				const pane = result?.root_pane?.pane_id;
+				if (mode !== "reused") {
+					worktreePath = result?.worktree?.path;
+				}
+				workspaceId = result?.workspace?.workspace_id ?? null;
+				if (
+					typeof pane !== "string" ||
+					pane.length === 0 ||
+					typeof worktreePath !== "string" ||
+					worktreePath.length === 0
+				) {
+					return fail(
+						`herdr returned an unexpected response (no root_pane.pane_id or worktree.path). ` +
+							`The worktree may exist — inspect it with \`herdr worktree list --cwd ${herdrCwd}\`.`,
+						{ branch, mode, herdrResponse: JSON.stringify(response).slice(0, 400) },
+					);
+				}
+				rootPane = pane;
 			}
 
 			// 6. Spawn the worker through the interactive-subagents machinery.
-			// The `pane` override makes it adopt the worktree session's root pane;
-			// that machinery validates the pane, registers the name, and steers
-			// the completion back here automatically.
+			// Under Herdr the `pane` override makes it adopt the worktree session's
+			// root pane. Rex has no adoptable worktree pane, so the Rex surface
+			// opens a labeled tab in this session instead. Either way the machinery
+			// registers the name and steers the completion back here automatically.
+			const workerName = workerNameFor(branch);
+			const where =
+				surface === "herdr"
+					? `in the worktree session's first tab (${rootPane}), unfocused`
+					: `in a new Rex tab ("${workerName}") in this session, unfocused`;
+			const reopenHint =
+				surface === "herdr"
+					? `\`herdr worktree open --cwd ${primary} --branch ${branch}\``
+					: `\`rex new ${workerName} -c ${worktreePath} -- pi\``;
 			const spawnFn = (globalThis as any).__pi_interactive_subagents?.executeSubagent;
 			if (typeof spawnFn !== "function") {
 				return fail(
-					`The worktree is ready at ${worktreePath} (branch ${branch}, pane ${rootPane}), but the worker ` +
+					`The worktree is ready at ${worktreePath} (branch ${branch}), but the worker ` +
 						`could not launch: the interactive-subagents extension is not loaded. Open it with ` +
-						`\`herdr worktree open --cwd ${herdrCwd} --branch ${branch}\` or work there directly.`,
-					{ branch, path: worktreePath, pane: rootPane, workspace: workspaceId },
+						`${reopenHint} or work there directly.`,
+					{ branch, path: worktreePath, pane: rootPane, workspace: workspaceId, surface },
 				);
 			}
 			const agent = params.agent?.trim() || DEFAULT_AGENT;
-			const workerName = workerNameFor(branch);
-			const spawnParams = {
+			const spawnParams: Record<string, unknown> = {
 				agent,
 				name: workerName,
 				task: params.task,
 				cwd: worktreePath,
-				pane: rootPane,
 			};
+			// Pane adoption is Herdr-only; the Rex surface creates its own tab.
+			if (surface === "herdr") spawnParams.pane = rootPane;
 			let spawn: any;
 			try {
 				spawn = await spawnFn(spawnParams, ctx);
 			} catch (error: any) {
 				return fail(
-					`The worktree is ready at ${worktreePath} (branch ${branch}, pane ${rootPane}), but the worker ` +
+					`The worktree is ready at ${worktreePath} (branch ${branch}), but the worker ` +
 						`launch failed: ${error?.message ?? String(error)}. The worktree stays — retry, or open it with ` +
-						`\`herdr worktree open --cwd ${herdrCwd} --branch ${branch}\`.`,
-					{ branch, path: worktreePath, pane: rootPane, workspace: workspaceId },
+						`${reopenHint}.`,
+					{ branch, path: worktreePath, pane: rootPane, workspace: workspaceId, surface },
 				);
 			}
 			const subagent = spawn?.details ?? {};
 			if (subagent.error || subagent.status !== "started" || !subagent.sessionFile) {
 				return fail(
-					`The worktree is ready at ${worktreePath} (branch ${branch}, pane ${rootPane}), but the worker ` +
+					`The worktree is ready at ${worktreePath} (branch ${branch}), but the worker ` +
 						`did not start: ${subagent.error ?? "unknown spawn error"}. The worktree stays — retry, or open it ` +
-						`with \`herdr worktree open --cwd ${herdrCwd} --branch ${branch}\`.`,
-					{ branch, path: worktreePath, pane: rootPane, workspace: workspaceId },
+						`with ${reopenHint}.`,
+					{ branch, path: worktreePath, pane: rootPane, workspace: workspaceId, surface },
 				);
 			}
 
@@ -461,13 +548,11 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 						`Worktree ${mode === "reused" ? "reused" : "created"} and worker launched.\n` +
 						`- branch: ${branch}${mode === "created" ? ` (from ${base})` : ""}\n` +
 						`- path: ${worktreePath}\n` +
-						`- worker: subagent "${actualName}" (agent "${agent}", auto-exit) in the worktree ` +
-						`session's first tab (${rootPane}), unfocused\n` +
+						`- worker: subagent "${actualName}" (agent "${agent}", auto-exit) ${where}\n` +
 						`- session: ${subagent.sessionFile}\n\n` +
-						`The worktree keeps the repo's shared Herdr workspace; its picker row is the one durable ` +
-						`session for that worktree. The worker's result arrives automatically as a steer message — ` +
-						`do not poll for it. After the work ships, tear down with /cleanup from a session in that ` +
-						`worktree, or reopen the row any time with \`herdr worktree open --cwd ${herdrCwd} --branch ${branch}\`.`,
+						`The worker's result arrives automatically as a steer message — do not poll for it. ` +
+						`After the work ships, tear down with /cleanup from a session in that worktree, or reopen it any ` +
+						`time with ${reopenHint}.`,
 				},
 			],
 			details: {
@@ -477,6 +562,7 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 				pane: rootPane,
 				workspace: workspaceId ?? null,
 				worker: actualName,
+				surface,
 				mode,
 				subagent,
 			},

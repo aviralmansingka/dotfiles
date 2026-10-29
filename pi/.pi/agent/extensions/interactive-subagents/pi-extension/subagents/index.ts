@@ -136,7 +136,7 @@ const SubagentParams = Type.Object({
   name: Type.Optional(
     Type.String({
       description:
-        "Optional cosmetic label for the subagent's Herdr tab or tmux pane and widget row. Defaults to the agent name. " +
+        "Optional cosmetic label for the subagent's Herdr/Rex tab or tmux pane and widget row. Defaults to the agent name. " +
         "Has no effect on which agent runs — use `agent` for that.",
     }),
   ),
@@ -708,7 +708,7 @@ function muxUnavailableResult() {
     content: [
       {
         type: "text" as const,
-        text: `Subagents require a terminal multiplexer (Herdr or tmux). ${muxSetupHint()}`,
+        text: `Subagents require a terminal multiplexer (Herdr, Rex, or tmux). ${muxSetupHint()}`,
       },
     ],
     details: { error: "no multiplexer surface available" },
@@ -2549,15 +2549,15 @@ export default function subagentsExtension(pi: ExtensionAPI) {
       name: "subagent",
       label: "Subagent",
       description:
-        "Spawn a sub-agent in a dedicated Herdr tab or tmux pane. " +
-        "This is a fire-and-forget async tool: Herdr returns after the child is ready and its task is submitted; tmux returns after dispatch. The result is only an acknowledgement. " +
+        "Spawn a sub-agent in a dedicated Herdr or Rex tab, or a tmux pane. " +
+        "This is a fire-and-forget async tool: Herdr and Rex return after the child is ready and its task is submitted; tmux returns after dispatch. The result is only an acknowledgement. " +
         "When the sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +
         "DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT call subagents_list or any other tool to 'check' status. All of that is wasted work — the harness handles delivery for you. " +
         "DO NOT fabricate, assume, or summarize results after calling this tool. " +
         "After spawning, either end your turn immediately, or work on other independent tasks (including spawning more subagents in parallel). The harness will wake you with the result when it is ready.",
       promptSnippet:
-        "Spawn a sub-agent in a dedicated Herdr tab or tmux pane. " +
-        "This is a fire-and-forget async tool: Herdr returns after the child is ready and its task is submitted; tmux returns after dispatch. The result is only an acknowledgement. " +
+        "Spawn a sub-agent in a dedicated Herdr or Rex tab, or a tmux pane. " +
+        "This is a fire-and-forget async tool: Herdr and Rex return after the child is ready and its task is submitted; tmux returns after dispatch. The result is only an acknowledgement. " +
         "When the sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +
         "DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT call subagents_list or any other tool to 'check' status. All of that is wasted work — the harness handles delivery for you. " +
         "DO NOT fabricate, assume, or summarize results after calling this tool. " +

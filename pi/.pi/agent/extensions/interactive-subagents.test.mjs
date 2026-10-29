@@ -28,6 +28,16 @@ const { jitiPath } = resolveJiti({ extraFallbacks: [HOMEBREW_JITI, NVM_JITI] });
 const { createJiti } = require(jitiPath);
 const jiti = createJiti(import.meta.url);
 
+// Every surface is simulated explicitly below (fake herdr/tmux binaries on
+// PATH), and ./surface.ts resolves its surface once at module load. A real Rex
+// shell that launches this suite exports REX_SESSION/REX_BLOCK, which would
+// make ./rex.ts win that load and starve every fake. Clear them before the
+// first surface import so the suite is hermetic.
+const savedRexSession = process.env.REX_SESSION;
+const savedRexBlock = process.env.REX_BLOCK;
+delete process.env.REX_SESSION;
+delete process.env.REX_BLOCK;
+
 // --- Surface dispatcher loads cleanly and re-exports the index.ts contract ---
 const surface = jiti("./interactive-subagents/pi-extension/subagents/surface.ts");
 
@@ -2726,6 +2736,60 @@ esac
 			delete process.env[key];
 		}
 		rmSync(paneRoot, { recursive: true, force: true });
+	}
+}
+
+// --- Rex surface: selection and the nested-mux tie-break ---
+{
+	const savedRexSelectionEnv = {
+		REX_SESSION: process.env.REX_SESSION,
+		REX_BLOCK: process.env.REX_BLOCK,
+		HERDR_ENV: process.env.HERDR_ENV,
+		HERDR_PANE_ID: process.env.HERDR_PANE_ID,
+		TMUX: process.env.TMUX,
+		TERM: process.env.TERM,
+	};
+	const loadSurface = () =>
+		createJiti(import.meta.url, { moduleCache: false })(
+			"./interactive-subagents/pi-extension/subagents/surface.ts",
+		);
+	try {
+		// A Rex block selects the rex surface.
+		delete process.env.HERDR_ENV;
+		delete process.env.HERDR_PANE_ID;
+		delete process.env.TMUX;
+		process.env.TERM = "xterm-rex";
+		process.env.REX_SESSION = "session:test";
+		process.env.REX_BLOCK = "block:test";
+		const rexSelection = loadSurface();
+		assert.equal(rexSelection.activeSurface, "rex");
+		assert.equal(rexSelection.isMuxAvailable(), true);
+		assert.match(rexSelection.muxSetupHint(), /Rex/);
+
+		// tmux running inside a Rex block still splits with tmux: TERM names
+		// the innermost multiplexer, so the outer tmux owns the panes.
+		process.env.TMUX = "/tmp/tmux-501/default,1,0";
+		process.env.TERM = "tmux-256color";
+		assert.equal(loadSurface().activeSurface, "tmux");
+
+		// Rex running inside tmux splits with Rex (xterm-rex is innermost).
+		process.env.TMUX = "/tmp/tmux-501/default,1,0";
+		process.env.TERM = "xterm-rex";
+		assert.equal(loadSurface().activeSurface, "rex");
+
+		// Herdr still wins when it owns the pane and no other surface is set.
+		delete process.env.REX_SESSION;
+		delete process.env.REX_BLOCK;
+		delete process.env.TMUX;
+		delete process.env.TERM;
+		process.env.HERDR_ENV = "1";
+		process.env.HERDR_PANE_ID = "w44:p2";
+		assert.equal(loadSurface().activeSurface, "herdr");
+	} finally {
+		for (const [key, value] of Object.entries(savedRexSelectionEnv)) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
 	}
 }
 
