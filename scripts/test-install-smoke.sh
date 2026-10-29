@@ -63,6 +63,7 @@ agents=.agents
 pi=bin
 herdr=.config/herdr
 systemd=.config/systemd
+devbox=.local/bin/devbox
 git=.config/git
 '
 
