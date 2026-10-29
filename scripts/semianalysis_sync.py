@@ -204,6 +204,22 @@ def sync(stream, directory, label):
     return written
 
 
+def last_unmatched_bracket(line):
+    """Index of the last '[' with no matching ']' on the line, else -1."""
+    stack = []
+    escaped = False
+    for k, ch in enumerate(line):
+        if escaped:
+            escaped = False
+        elif ch == "\\":
+            escaped = True
+        elif ch == "[":
+            stack.append(k)
+        elif ch == "]" and stack:
+            stack.pop()
+    return stack[-1] if stack else -1
+
+
 def repair_file(path):
     """Collapse links written with newlines or blank lines inside the text.
 
@@ -248,14 +264,9 @@ def repair_file(path):
                 pending["texts"].append(line)
                 i += 1
                 continue
-        opens = (not in_code) and (
-            line.rstrip().endswith("[")
-            or (line.lstrip().startswith("[") and "]" not in line)
-        )
-        if opens:
-            tail = line.rstrip()
-            k = tail.rfind("[")
-            pending = {"prefix": tail[:k + 1], "texts": [tail[k + 1:]],
+        k = last_unmatched_bracket(line) if not in_code else -1
+        if k >= 0:
+            pending = {"prefix": line[:k + 1], "texts": [line[k + 1:]],
                        "start": i, "orig": [line]}
             i += 1
             continue
