@@ -165,7 +165,9 @@ def write_post(post, directory, stream):
     raw = post["content"]["rendered"]
     parser = Markdown()
     parser.feed(raw)
-    body = parser.result()
+    # Same conformance pipeline as --repair: one code path for new posts
+    # and existing files (whitespace, link text, emphasis, link collapse).
+    body = conform(parser.result())
     title = html.unescape(re.sub(r"<[^>]+>", "", post["title"]["rendered"])).strip()
     date = post["date"][:10]
     words = len(body.split())
@@ -259,16 +261,12 @@ def normalize_lines(lines):
     return collapsed
 
 
-def repair_file(path):
+def collapse_links(lines):
     """Collapse links written with newlines or blank lines inside the text.
 
-    The old converter emitted block-level links as '[' + newlines + '](url)'.
-    CommonMark rejects a blank line inside link text, so viewers render the
-    brackets literally. This rewrites those constructs back onto one line.
+    CommonMark rejects a blank line inside link text, so viewers render
+    such constructs literally. This rewrites them back onto one line.
     """
-    with open(path) as f:
-        raw = f.read()
-    lines = normalize_lines(raw.split("\n"))
     out, i, in_code = [], 0, False
     pending = None  # {"prefix", "texts", "start", "orig"} for an open link
     while i < len(lines):
@@ -332,7 +330,20 @@ def repair_file(path):
         i += 1
     if pending is not None:  # unclosed at EOF: restore raw lines
         out.extend(pending["orig"])
-    new_text = "\n".join(out)
+    return out
+
+
+def conform(text):
+    """Apply the full markdown conformance pipeline to converted text."""
+    lines = normalize_lines(text.split("\n"))
+    return "\n".join(collapse_links(lines))
+
+
+def repair_file(path):
+    """Bring one existing file up to the conformance pipeline (idempotent)."""
+    with open(path) as f:
+        raw = f.read()
+    new_text = conform(raw)
     if new_text == raw:  # content unchanged: no rewrite
         return False
     with open(path, "w") as f:
@@ -365,14 +376,19 @@ def main():
     ap.add_argument("--vault", default=VAULT,
                     help="vault root (default: %(default)s)")
     args = ap.parse_args()
+    vault = args.vault
     if args.repair:
-        return 0 if repair(args.vault) >= 0 else 1
+        repair(vault)
+        return 0
     total = 0
-    total += sync("posts", os.path.join(VAULT, "research/semianalysis"), "posts")
-    total += sync("articles", os.path.join(VAULT, "research/semianalysis/institutional"),
+    total += sync("posts", os.path.join(vault, "research/semianalysis"), "posts")
+    total += sync("articles", os.path.join(vault, "research/semianalysis/institutional"),
                   "articles")
     if total == 0:
         log("sync: nothing new")
+    # Drift correction: the same conformance pipeline runs over the whole
+    # tree on every sync, so converter gaps and hand edits converge too.
+    repair(vault)
     return 0
 
 
