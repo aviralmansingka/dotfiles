@@ -229,6 +229,22 @@ so rpc/json/print modes are unaffected, and it exits 129 only when no tty
 can be re-opened at all (a real pane close). Note `node:fs` no longer exports
 `execFileSync` on node 26 — take it from `node:child_process`.
 
+## Modal devbox
+
+`ops/modal-devbox/devbox.py` runs the dotfiles devbox as a Modal Sandbox: SSH over an
+unencrypted port-22 tunnel, `--gpu` for GPU hosts, persistent state on the
+`devbox-persist` Volume v2 at `/persist` (first boot moves mutable `$HOME` state onto
+the volume and symlinks back). The image mirrors the Packer phases on ubuntu:24.04 at a
+pinned dotfiles SHA; `scripts/test-modal-devbox.py` enforces apt parity (Packer set plus
+exactly `openssh-server`/`ca-certificates`), the stow set, the GPU allowlist, and secret
+hygiene — offline. Invariants: the image is code (new layers + rebuild, never a mutated
+running container; Sandbox `snapshot_filesystem()` is the only freeze path); `/persist`
+is the only mutable state; secret values never enter the repo or image (the SSH public
+key is injected per launch from the local key); no Modal account, network, or `modal`
+binary in CI. The stowed `devbox` package puts a `devbox` wrapper on `~/.local/bin`:
+`devbox ssh` starts a sandbox if needed and attaches; `devbox status` / `devbox stop`
+manage the tagged sandboxes; `MODAL_DEVBOX_PY` overrides the app-file resolution.
+
 ## Maintaining this file
 
 Keep this file for knowledge useful to almost every future agent session in this project.
