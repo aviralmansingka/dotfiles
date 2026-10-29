@@ -60,6 +60,7 @@ interface QuizResponse {
 	dontKnow: boolean;
 	tooHard?: boolean; // Ctrl+P: pause so the agent teaches and retries at a simpler level
 	answers: OptionAnswer[];
+	thinking?: string; // optional learner reasoning, entered between select and feedback
 	followUp?: string; // set when the captain submits Steering guidance instead of answering
 }
 
@@ -84,6 +85,7 @@ interface QuizResultDetails {
 	dontKnow?: boolean; // user selected the ungraded Other option instead of guessing
 	note?: string; // retained when rendering results from older sessions
 	followUp?: string; // set when the captain sent a follow-up instead of answering
+	thinking?: string; // the learner's optional reasoning, verbatim
 	explanation?: string;
 	message?: string;
 }
@@ -397,6 +399,7 @@ function buildResult(
 	title?: string,
 ) {
 	const { dontKnow, answers } = response;
+	const thinking = response.thinking?.trim() || undefined;
 	const selectedIndices = answers.map((a) => a.index);
 	// Other is ungraded and never counted as correct.
 	const correct = dontKnow ? false : isCorrect(selectedIndices, correctIndices);
@@ -414,6 +417,9 @@ function buildResult(
 		const selectedStr = answers.map((a) => `${a.index}. ${a.label}`).join(", ");
 		text = `User answered ${verdict}.\nSelected: ${selectedStr}\nCorrect: ${correctStr}`;
 	}
+	// The learner's own reasoning, when they wrote any. It rides its own line so
+	// the agent reads the model behind the answer, not just the verdict.
+	if (thinking) text += `\nThinking: ${thinking}`;
 	if (explanation) text += `\nExplanation: ${explanation}`;
 
 	return {
@@ -429,6 +435,7 @@ function buildResult(
 			options: displayedOptions,
 			correct,
 			dontKnow,
+			thinking,
 			explanation,
 		}),
 	};
@@ -590,6 +597,15 @@ function makeSteeringEditor(tui: any, theme: any): Editor {
 	return editor;
 }
 
+// The thinking phase's prompt box: the learner's optional reasoning. It gets
+// its own editor so guidance typed in steering mode never leaks in here.
+function pushThinkingPrompt(lines: string[], theme: any, width: number, editor: Editor): void {
+	lines.push(truncateToWidth(theme.fg("accent", "› your thinking (optional)"), width));
+	for (const line of editorInnerLines(editor, Math.max(1, width - 2))) {
+		lines.push(`  ${line}`);
+	}
+}
+
 // Visible mode indicator line. Always rendered in the bottom hint row so the
 // captain knows which mode is active before typing. The active mode is
 // accent-colored; the rest stay dim.
@@ -618,12 +634,14 @@ async function askSingleChoice(
 	return ctx.ui.custom<QuizResponse | null>(
 		(tui: any, theme: any, _kb: any, done: (result: QuizResponse | null) => void) => {
 			let optionIndex = 0;
-			let phase: "select" | "feedback" = "select";
+			let phase: "select" | "thinking" | "feedback" = "select";
 			let mode: InputMode = "answer";
 			let chosen: OptionAnswer | null = null;
 			let dontKnow = false;
+			let thinking = "";
 			let panelFocused = false;
 			const steeringEditor = makeSteeringEditor(tui, theme);
+			const thinkingEditor = makeSteeringEditor(tui, theme);
 			let cachedLines: string[] | undefined;
 			let cachedWidth = -1;
 
@@ -638,15 +656,45 @@ async function askSingleChoice(
 				refresh();
 			}
 
+			// Select → thinking → feedback. The thinking editor owns the keyboard for
+			// the whole phase: Enter submits it (empty is valid), Esc skips it.
+			function enterThinking() {
+				phase = "thinking";
+				thinkingEditor.focused = panelFocused;
+				refresh();
+			}
+
+			function submitThinking(value: string) {
+				thinking = value;
+				thinkingEditor.focused = false;
+				phase = "feedback";
+				refresh();
+			}
+
 			function response(): QuizResponse {
-				return dontKnow
+				const base: QuizResponse = dontKnow
 					? { dontKnow: true, answers: [] }
 					: { dontKnow: false, answers: chosen ? [chosen] : [] };
+				return thinking ? { ...base, thinking } : base;
 			}
 
 			function handleInput(data: string) {
 				if (phase === "feedback") {
 					if (matchesKey(data, Key.enter) || matchesKey(data, Key.escape)) done(response());
+					return;
+				}
+
+				if (phase === "thinking") {
+					if (matchesKey(data, Key.enter)) {
+						submitThinking(thinkingEditor.getText().trim());
+						return;
+					}
+					if (matchesKey(data, Key.escape)) {
+						submitThinking("");
+						return;
+					}
+					thinkingEditor.handleInput(data);
+					tui.requestRender();
 					return;
 				}
 
@@ -724,8 +772,7 @@ async function askSingleChoice(
 						chosen = { label: selected.label, value: selected.value, index: selected.index };
 						dontKnow = false;
 					}
-					phase = "feedback";
-					refresh();
+					enterThinking();
 					return;
 				}
 				if (matchesKey(data, Key.escape)) {
@@ -781,18 +828,22 @@ async function askSingleChoice(
 				pushDontKnowRow(top, theme, tw, mode === "answer" && optionIndex === dontKnowNav);
 
 				top.push("");
-				addWrapped(
-					top,
-					theme.fg("dim", mode === "answer"
-						? joinHints(modeIndicator(theme, mode), "Ctrl+P pause", NAVIGATION_HINT, numberShortcutHint(allOptions.length, "select"), "Enter feedback", "Tab steering", contextFileHint(contextFiles), lessonFileHint(), "Esc cancel")
-						: joinHints(modeIndicator(theme, mode), "type guidance", "Enter send", "Tab answer", "Esc answer")),
-					tw,
-					" ",
-				);
-
-				pushPromptLine(bottom, theme, bw, mode, steeringEditor);
+				if (phase === "thinking") {
+					addWrapped(top, theme.fg("dim", "Enter see verdict · Esc skip"), tw, " ");
+					pushThinkingPrompt(bottom, theme, bw, thinkingEditor);
+				} else {
+					addWrapped(
+						top,
+						theme.fg("dim", mode === "answer"
+							? joinHints(modeIndicator(theme, mode), "Ctrl+P pause", NAVIGATION_HINT, numberShortcutHint(allOptions.length, "select"), "Enter feedback", "Tab steering", contextFileHint(contextFiles), lessonFileHint(), "Esc cancel")
+							: joinHints(modeIndicator(theme, mode), "type guidance", "Enter send", "Tab answer", "Esc answer")),
+						tw,
+						" ",
+					);
+					pushPromptLine(bottom, theme, bw, mode, steeringEditor);
+				}
 				const framed = frameMerged(top, bottom, width, theme);
-				if (mode === "answer") {
+				if (mode === "answer" && phase === "select") {
 					cachedLines = framed;
 					cachedWidth = width;
 				}
@@ -804,11 +855,13 @@ async function askSingleChoice(
 				set focused(value: boolean) {
 					panelFocused = value;
 					steeringEditor.focused = value && mode === "steering";
+					thinkingEditor.focused = value && phase === "thinking";
 				},
 				render,
 				invalidate: () => {
 					cachedLines = undefined;
 					steeringEditor.invalidate();
+					thinkingEditor.invalidate();
 				},
 				handleInput,
 			};
@@ -844,10 +897,12 @@ async function askMultiChoice(
 	return ctx.ui.custom<QuizResponse | null>(
 		(tui: any, theme: any, _kb: any, done: (result: QuizResponse | null) => void) => {
 			let optionIndex = 0;
-			let phase: "select" | "feedback" = "select";
+			let phase: "select" | "thinking" | "feedback" = "select";
 			let mode: InputMode = "answer";
+			let thinking = "";
 			let panelFocused = false;
 			const steeringEditor = makeSteeringEditor(tui, theme);
+			const thinkingEditor = makeSteeringEditor(tui, theme);
 			let cachedLines: string[] | undefined;
 			let cachedWidth = -1;
 			const selected = new Map<string, OptionAnswer>();
@@ -868,9 +923,25 @@ async function askMultiChoice(
 				sortAnswers(Array.from(selected.values()).filter((a) => a.index !== DONT_KNOW_INDEX));
 
 			function response(): QuizResponse {
-				return choseDontKnow()
+				const base: QuizResponse = choseDontKnow()
 					? { dontKnow: true, answers: [] }
 					: { dontKnow: false, answers: realAnswers() };
+				return thinking ? { ...base, thinking } : base;
+			}
+
+			// Select → thinking → feedback. The thinking editor owns the keyboard for
+			// the whole phase: Enter submits it (empty is valid), Esc skips it.
+			function enterThinking() {
+				phase = "thinking";
+				thinkingEditor.focused = panelFocused;
+				refresh();
+			}
+
+			function submitThinking(value: string) {
+				thinking = value;
+				thinkingEditor.focused = false;
+				phase = "feedback";
+				refresh();
 			}
 
 			// Other is exclusive: choosing it clears real selections, and choosing
@@ -896,13 +967,26 @@ async function askMultiChoice(
 
 			function submit() {
 				if (selected.size === 0) return;
-				phase = "feedback";
-				refresh();
+				enterThinking();
 			}
 
 			function handleInput(data: string) {
 				if (phase === "feedback") {
 					if (matchesKey(data, Key.enter) || matchesKey(data, Key.escape)) done(response());
+					return;
+				}
+
+				if (phase === "thinking") {
+					if (matchesKey(data, Key.enter)) {
+						submitThinking(thinkingEditor.getText().trim());
+						return;
+					}
+					if (matchesKey(data, Key.escape)) {
+						submitThinking("");
+						return;
+					}
+					thinkingEditor.handleInput(data);
+					tui.requestRender();
 					return;
 				}
 
@@ -1040,18 +1124,22 @@ async function askMultiChoice(
 				}
 
 				top.push("");
-				addWrapped(
-					top,
-					theme.fg("dim", mode === "answer"
-						? joinHints(modeIndicator(theme, mode), "Ctrl+P pause", NAVIGATION_HINT, numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter feedback", "Tab steering", contextFileHint(contextFiles), lessonFileHint(), "Esc cancel")
-						: joinHints(modeIndicator(theme, mode), "type guidance", "Enter send", "Tab answer", "Esc answer")),
-					tw,
-					" ",
-				);
-
-				pushPromptLine(bottom, theme, bw, mode, steeringEditor);
+				if (phase === "thinking") {
+					addWrapped(top, theme.fg("dim", "Enter see verdict · Esc skip"), tw, " ");
+					pushThinkingPrompt(bottom, theme, bw, thinkingEditor);
+				} else {
+					addWrapped(
+						top,
+						theme.fg("dim", mode === "answer"
+							? joinHints(modeIndicator(theme, mode), "Ctrl+P pause", NAVIGATION_HINT, numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter feedback", "Tab steering", contextFileHint(contextFiles), lessonFileHint(), "Esc cancel")
+							: joinHints(modeIndicator(theme, mode), "type guidance", "Enter send", "Tab answer", "Esc answer")),
+						tw,
+						" ",
+					);
+					pushPromptLine(bottom, theme, bw, mode, steeringEditor);
+				}
 				const framed = frameMerged(top, bottom, width, theme);
-				if (mode === "answer") {
+				if (mode === "answer" && phase === "select") {
 					cachedLines = framed;
 					cachedWidth = width;
 				}
@@ -1063,11 +1151,13 @@ async function askMultiChoice(
 				set focused(value: boolean) {
 					panelFocused = value;
 					steeringEditor.focused = value && mode === "steering";
+					thinkingEditor.focused = value && phase === "thinking";
 				},
 				render,
 				invalidate: () => {
 					cachedLines = undefined;
 					steeringEditor.invalidate();
+					thinkingEditor.invalidate();
 				},
 				handleInput,
 			};
@@ -1112,11 +1202,12 @@ export default function quiz(pi: ExtensionAPI) {
 		label: "quiz",
 		exposure: "deferred",
 		description:
-			"Ask the user a graded question. The question must have a known correct answer. The tool grades the answer and shows feedback. Answer mode: number shortcuts and j/k navigation. Enter shows feedback. Other is always the last choice. It reports an honest knowledge gap, not a guess. Tab opens steering mode. There the user types guidance. It ends the quiz and returns as `followUp`. Ctrl+P marks the quiz as too hard. It does not show the answer. There is no free-text answer mode. For a question without a correct answer, use ask_user_question.",
+			"Ask the user a graded question. The question must have a known correct answer. The tool grades the answer and shows feedback. Answer mode: number shortcuts and j/k navigation. Enter opens the thinking step, where the user may type their reasoning. Enter again shows feedback, Esc skips the thinking step. Other is always the last choice. It reports an honest knowledge gap, not a guess. Tab opens steering mode. There the user types guidance. It ends the quiz and returns as `followUp`. Ctrl+P marks the quiz as too hard. It does not show the answer. There is no free-text answer mode. For a question without a correct answer, use ask_user_question.",
 		promptSnippet:
 			"Use quiz to test the user with a graded multiple-choice or multi-select question. Supply the correct answer and an explanation. For a question without a correct answer, use ask_user_question.",
 		promptGuidelines: [
 			"quiz is graded; ask_user_question is not. Use quiz when the question has a correct answer. Use ask_user_question for a preference, a decision, or open input.",
+			"An answer may carry a `thinking` field with the user's own reasoning. It is optional and often dictated speech. Read it in full before you grade or react: a right answer on a confused model is a warning, and a wrong answer with sound reasoning is progress.",
 			"Always pass `title`. Keep it under 40 characters. Name the node under test and the teaching goal. Example: 'Node E — ROV drop scope'. Never use 'Question 3'. The panel and the journal entry carry this title.",
 			"Write the question, the options, and the explanation in Simplified Technical English at full compliance. Use short sentences, the active voice, approved verbs, and one term per concept. The general 80% relaxation does not apply to quiz prose.",
 			'correctAnswer is required. Pass the option `value`, not a position number. Single-select: one string, for example "mercury". Multi-select: an array of strings, for example ["belize", "niue"].',
@@ -1308,6 +1399,10 @@ export default function quiz(pi: ExtensionAPI) {
 					? theme.fg("success", "Correct!")
 					: theme.fg("error", "Incorrect");
 			lines.push(verdict);
+
+			if (details.thinking) {
+				lines.push(theme.fg("muted", `Thinking: ${details.thinking}`));
+			}
 
 			if (details.note) {
 				lines.push(theme.fg("muted", `Note: ${details.note}`));

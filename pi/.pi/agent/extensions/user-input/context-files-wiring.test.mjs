@@ -184,7 +184,7 @@ exports.wrapTextWithAnsi = (text, width) => {
 		resetOpens();
 		const opened = await execute(
 			{ ...params, contextFiles: [" bench.py ", "", "fast.cu/h100/matmul.cu"] },
-			["o", "tick", "2", "enter", "enter"],
+			["o", "tick", "2", "enter", "enter", "enter"],
 		);
 		assert.equal(opened.result.details.status, "answered");
 		assert.equal(opened.result.details.answers[0].value, "beta");
@@ -203,7 +203,7 @@ exports.wrapTextWithAnsi = (text, width) => {
 		try {
 			const failing = await execute(
 				{ ...params, contextFiles: ["bench.py"] },
-				["o", "tick", "2", "enter", "enter"],
+				["o", "tick", "2", "enter", "enter", "enter"],
 			);
 			assert.ok(
 				failing.notifications.some(
@@ -226,7 +226,7 @@ exports.wrapTextWithAnsi = (text, width) => {
 	// Without contextFiles, `o` does nothing at all.
 	{
 		resetOpens();
-		const noFiles = await execute(params, ["o", "enter", "enter"]);
+		const noFiles = await execute(params, ["o", "enter", "enter", "enter"]);
 		assert.equal(noFiles.result.details.status, "answered");
 		assert.equal(openCalls().length, 0);
 	}

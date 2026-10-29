@@ -8,6 +8,7 @@ import {
 	statSync,
 	writeFileSync,
 } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, extname, join, resolve } from "node:path";
 
 import { openEditor } from "./nvim-open";
@@ -43,6 +44,11 @@ import {
 //                                   fall back to it.
 //
 // Override the journal location with PI_LESSON_JOURNAL=/path/to/file.md.
+//
+// /extract hands the journal to the professor skill's Knowledge extraction
+// contract, which turns propositions into permanent vault notes under
+// <vault>/2_knowledge/propositions. Override the vault root with
+// PI_VAULT_DIR=/path/to/vault (default ~/vault).
 //
 // Journal writes stay event-driven: tool_execution_start records lesson
 // content (and the current node), and tool_execution_end records quiz/explain
@@ -136,6 +142,7 @@ interface QuizDetails {
 	options?: Array<{ index: number; label: string }>;
 	correct?: boolean;
 	dontKnow?: boolean;
+	thinking?: string; // the learner's optional reasoning, verbatim
 	explanation?: string;
 	followUp?: string;
 	message?: string;
@@ -181,6 +188,12 @@ export function formatQuizEntry(details: QuizDetails): string {
 		} else {
 			lines.push(`- ${opt.index}. ${label}`);
 		}
+	}
+	if (details.thinking?.trim()) {
+		lines.push("");
+		lines.push("**Your thinking:**");
+		lines.push("");
+		lines.push(`> ${details.thinking.trim().replace(/\n/g, "\n> ")}`);
 	}
 	if (details.explanation) {
 		lines.push("");
@@ -559,6 +572,44 @@ export async function openJournalInEditor(
 	};
 }
 
+/** Vault root: PI_VAULT_DIR wins, else ~/vault. */
+export function resolveVaultDir(): string {
+	return process.env.PI_VAULT_DIR ?? join(homedir(), "vault");
+}
+
+/**
+ * The self-contained /extract prompt. Every path it needs is spelled out, so a
+ * fresh agent can run the extraction without the conversation that started it:
+ * the journal to read, the propositions directory to link or create in, and the
+ * Knowledge extraction contract that owns the note format and the procedure.
+ */
+export function buildExtractionPrompt(journalPath: string, vaultDir: string): string {
+	const propositions = join(vaultDir, "2_knowledge", "propositions");
+	const skill = join(homedir(), ".agents", "skills", "professor", "SKILL.md");
+	return [
+		"Turn this session's teaching journal into proposition notes in the vault.",
+		"",
+		`Journal: ${journalPath}`,
+		`Propositions directory: ${propositions}`,
+		`Contract: the "Knowledge extraction" section of ${skill}`,
+		"",
+		"Read the journal fully before you write anything. The source is the session journal only",
+		"(the lessons plus the teaching quiz/explain verdicts) — never the probe log, never the session transcript.",
+		"",
+		"Extract every proposition the teaching established: one claim each, minimal and precise.",
+		"Extract every chain: the premises used together, and what they imply.",
+		"",
+		`Link or create: for each proposition, grep ${propositions} for its statement and its aliases`,
+		"before you create anything. On a match, append the new verbatim alias and the new source to that note.",
+		"Never touch the review fields of an existing note, and never change its statement, its name, or its id.",
+		"On no match, create the missing note — and create premise notes too when a chain names one that does not exist.",
+		"Conservative rule: duplicates are acceptable, wrong merges are not.",
+		"",
+		"Follow the contract for the frontmatter, the body, and the Chains section.",
+		"Report one line: created N notes, updated M.",
+	].join("\n");
+}
+
 /**
  * Open the session's probe log in the user's editor pane. Used by the
  * /probes command.
@@ -600,6 +651,20 @@ export default function mdLog(pi: ExtensionAPI) {
 		handler: async (_args: string, ctx: any) => {
 			const result = await openProbesInEditor(ctx);
 			ctx?.ui?.notify?.(result.message, result.ok ? "info" : "warning");
+		},
+	});
+	// /extract hands the journal to the Knowledge extraction contract in the
+	// professor skill: propositions become permanent notes in the vault. It only
+	// supplies the paths — the contract owns the format and the procedure.
+	pi.registerCommand("extract", {
+		description: "Turn this session's journal into proposition notes in the vault",
+		handler: async (_args: string, ctx: any) => {
+			const journal = resolveJournalPath(ctx);
+			if (!journal) {
+				ctx.ui.notify("No session journal yet.", "warning");
+				return;
+			}
+			pi.sendUserMessage(buildExtractionPrompt(journal, resolveVaultDir()));
 		},
 	});
 

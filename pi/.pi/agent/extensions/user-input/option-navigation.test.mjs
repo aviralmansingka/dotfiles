@@ -197,6 +197,9 @@ exports.wrapTextWithAnsi = (text, width) => {
 		{ data: "\u001b[106u", selected: /> 2\. Beta/, hints: [/1-2 select/, /Ctrl\+P pause/, /Tab steering/, /h node · H journal/] },
 		{ data: "\u001b[107u", selected: /> 1\. Alpha/ },
 		{ data: "\u001b[57401;129u", selected: /> ● 2\. Beta[\s\S]*\n│ › answer/ },
+		// Enter opens the thinking step: the options stay, no verdict or
+		// explanation appears yet, and the learner may type their reasoning.
+		{ data: "enter", selected: /Enter see verdict · Esc skip[\s\S]*› your thinking \(optional\)/, notSelected: /Correct!|Beta is correct\./ },
 		{ data: "enter", selected: /\n│ › feedback/ },
 		{ data: "enter" },
 	]);
@@ -206,6 +209,7 @@ exports.wrapTextWithAnsi = (text, width) => {
 	// submit — Enter walks through feedback first. Contrast with ask, which submits.
 	const quizDigit = await execute(tools.quiz, quizParams, [
 		{ data: "2", selected: /● 2\. Beta/, notSelected: /> 2\. Beta/ },
+		{ data: "enter", selected: /› your thinking \(optional\)/ },
 		{ data: "enter", selected: /\n│ › feedback/ },
 		{ data: "enter" },
 	]);
@@ -217,6 +221,7 @@ exports.wrapTextWithAnsi = (text, width) => {
 		{ data: "k", selected: /> 1\. Alpha/, notSelected: /● 2\. Beta/ },
 		{ data: "enter" },
 		{ data: "enter" },
+		{ data: "enter" },
 	]);
 	assert.equal(movedAfterNumber.details.answers[0].value, "alpha");
 
@@ -224,6 +229,7 @@ exports.wrapTextWithAnsi = (text, width) => {
 		{ data: "\u001b[106u", selected: /> \[ \] 2\. Beta/, hints: [/1-2 toggle • Space toggle/, /h node · H journal/] },
 		{ data: "\u001b[107u", selected: /> \[ \] 1\. Alpha/ },
 		{ data: " " },
+		{ data: "enter", selected: /Enter see verdict · Esc skip/, notSelected: /Correct!|Beta is correct\./ },
 		{ data: "enter", selected: /\n│ › feedback/ },
 		{ data: "enter" },
 	]);
@@ -235,6 +241,7 @@ exports.wrapTextWithAnsi = (text, width) => {
 		{ data: "1", selected: /\[ \] 1\. Alpha/, notSelected: /\[x\] 1\. Alpha/ },
 		{ data: "2", selected: /\[x\] 2\. Beta/ },
 		{ data: "1", selected: /\[x\] 1\. Alpha/ },
+		{ data: "enter", selected: /› your thinking \(optional\)/ },
 		{ data: "enter", selected: /\n│ › feedback/ },
 		{ data: "enter" },
 	]);
@@ -244,6 +251,7 @@ exports.wrapTextWithAnsi = (text, width) => {
 		{ data: "k", selected: /2\. Beta[\s\S]*Other[\s\S]*Mode: Answer[\s\S]*› answer/ },
 		{ data: "j" },
 		{ data: "j" },
+		{ data: "enter", selected: /› your thinking \(optional\)/, notSelected: /You chose Other/ },
 		{ data: "enter", selected: /You chose Other \(I don't know\)[\s\S]*\n│ › feedback/ },
 		{ data: "enter" },
 	]);
@@ -252,6 +260,7 @@ exports.wrapTextWithAnsi = (text, width) => {
 	const quizMultiOther = await execute(tools.quiz, { ...quizParams, multiSelect: true }, [
 		{ data: "j" },
 		{ data: "j", selected: /> \[ \] Other[\s\S]*Mode: Answer/ },
+		{ data: "enter", selected: /› your thinking \(optional\)/, notSelected: /You chose Other/ },
 		{ data: "enter", selected: /You chose Other \(I don't know\)[\s\S]*\n│ › feedback/ },
 		{ data: "enter" },
 	]);
@@ -265,6 +274,7 @@ exports.wrapTextWithAnsi = (text, width) => {
 		{ data: "j", selected: /> \[ \] Other/ },
 		{ data: " ", selected: /\[ \] 1\. Alpha[\s\S]*\[x\] Other/, notSelected: /\[x\] 1\. Alpha/ },
 		{ data: "1", selected: /\[x\] 1\. Alpha[\s\S]*\[ \] Other/, notSelected: /\[x\] Other/ },
+		{ data: "enter", selected: /Enter see verdict · Esc skip/ },
 		{ data: "enter", selected: /\n│ › feedback/ },
 		{ data: "enter" },
 	]);

@@ -570,6 +570,11 @@ this protocol covers only what the tool can't do: **composition** and
   precision. If his language is loose — "the thing that does the network stuff"
   when the answer is "the netdev's IFF_UP flag via netlink" — correct it and
   teach him the exact terms.
+- **Read the `thinking` field first.** Every quiz answer may carry the learner's
+  `thinking` — the reasoning he typed before seeing the verdict. Read it in full
+  before grading or reacting. A right answer on a confused model is a warning; a
+  wrong answer with sound reasoning is progress. Thinking is often dictated
+  speech, so read it leniently for transcription noise.
 - **Correct assumptions explicitly.** A wrong answer reveals a misconception —
   name it, explain why it's wrong, and re-ask in a different form before moving
   on. Treat an ungraded Other (`dontKnow`) result as an honest signal to teach,
@@ -592,12 +597,75 @@ this protocol covers only what the tool can't do: **composition** and
 
 Only declare the session complete when every node in the plan's DAG is confirmed
 via its instrument and the human can talk about each concept in bounded
-terminology. Don't offer to wrap up early.
+terminology. Don't offer to wrap up early. After the mastery summary, offer
+`/extract` once; do not run it without an explicit yes.
 
 ### Instrument routing
 
 - **quiz**, **explain**, and **run-command** are extension tools —
   always invoke them as tools, never simulate them in chat.
+
+## Knowledge extraction
+
+`/extract` runs this contract.
+
+**Source.** The session journal only (lessons plus teaching quiz/explain
+verdicts). Never the probe log. Never the session transcript.
+
+**Output.** One note per proposition: `<vault>/2_knowledge/propositions/<slug>.md`.
+Slug is lowercase a-z, 0-9, hyphens. Created once and permanent.
+
+**Frontmatter on creation:**
+
+```yaml
+---
+id: <slug>
+aliases: ["<verbatim phrasing from the lesson>"]
+tags: [proposition, <topic-slug>]
+sources: ["[session](../../professor-lessons/<task>/session.md)"]
+created: YYYY-MM-DD
+review_due: YYYY-MM-DD      # creation date + 1 day
+review_streak: 0
+review_last: null
+review_result: new
+demonstrated: []
+last_rung: null
+needs_teach: false
+---
+```
+
+**Body:**
+
+```md
+# <Short Name>
+
+<The proposition at full precision. One claim. True on its own terms.>
+
+## Chains
+
+- [[premise-a]] + [[premise-b]] → <Short Name of this note>
+```
+
+`## Chains` holds only chains whose conclusion is this note; all premises of one
+chain stay on one line joined with ` + `. A chain with a single premise is one
+link. Omit the section when the note has no incoming chains.
+
+**Procedure.**
+1. Read the whole journal.
+2. List every proposition the teaching established: one claim each, minimal and
+   precise. List every chain: the premises used together, and what they imply.
+3. For each proposition, `grep` the propositions directory for its statement and
+   aliases before creating anything. On a match, update that note: append the new
+   verbatim alias and the new source. Never change its statement, name, id, or
+   review fields. Conservative rule: duplicates are acceptable, wrong merges are
+   not.
+4. Create the missing notes. Create premise notes too when a chain names one that
+   does not exist.
+5. Report one line: created N notes, updated M.
+
+**Rules.** No learner ratings, no understanding levels, no lesson prose, no quiz
+text. The statement is objective; the learner's thinking never enters the note.
+Reruns are safe: they only add aliases and sources. Never delete a note.
 
 ## Session protocol
 

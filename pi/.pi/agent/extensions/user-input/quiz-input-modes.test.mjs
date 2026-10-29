@@ -126,6 +126,9 @@ exports.wrapTextWithAnsi = (text, width) => {
 		{ data: "tab", selected: [/Mode: Answer[\s\S]*› answer/] },
 		{ data: "tab", selected: [/Mode: Steering[\s\S]*› █/] },
 		{ data: "escape", selected: [/Mode: Answer[\s\S]*› answer/] },
+		// Enter walks select → thinking → feedback; the verdict waits for the
+		// thinking step to finish.
+		{ data: "enter", selected: [/Enter see verdict · Esc skip/, /› your thinking \(optional\)/] },
 		{ data: "enter", selected: [/› feedback/] },
 		{ data: "enter" },
 	]);

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { HOMEBREW_JITI, NVM_JITI, resolveJiti } from "./test-lib/jiti.mjs";
 
@@ -33,6 +33,8 @@ const {
 	formatLessonEntry,
 	formatQuizEntry,
 	formatExplainEntry,
+	buildExtractionPrompt,
+	resolveVaultDir,
 	buildOverview,
 	lastLessonFromJournal,
 	openJournalInEditor,
@@ -168,6 +170,38 @@ assert.ok(quizEntry.includes("**Question:** What state does desiredState() repor
 assert.ok(quizEntry.includes("- ✓ **2.** blocked"), "selected-and-correct option is marked and bolded");
 assert.ok(quizEntry.includes("\n- 1. working"), "unselected incorrect option stays plain, no mark");
 assert.ok(quizEntry.includes("**Why:** blockedCount > 0 takes priority."));
+// The learner's optional thinking is journaled verbatim as a blockquote,
+// between the option list and the explanation.
+const thinkingQuiz = formatQuizEntry({
+	status: "answered",
+	title: "Node A — state priority",
+	question: "What state does desiredState() report?",
+	options: [
+		{ index: 1, label: "working" },
+		{ index: 2, label: "blocked" },
+	],
+	answers: [{ index: 2, label: "blocked" }],
+	correctIndices: [2],
+	correct: true,
+	thinking: "blocked wins because the counter is non-zero\nso it takes priority",
+	explanation: "blockedCount > 0 takes priority.",
+});
+assert.ok(thinkingQuiz.includes("\n**Your thinking:**\n\n> blocked wins"), thinkingQuiz);
+assert.ok(thinkingQuiz.includes("\n> so it takes priority"), "every thinking line is quoted");
+assert.ok(
+	thinkingQuiz.indexOf("**Your thinking:**") > thinkingQuiz.indexOf("- ✓ **2.** blocked"),
+	"thinking sits after the option list",
+);
+assert.ok(
+	thinkingQuiz.indexOf("**Your thinking:**") < thinkingQuiz.indexOf("**Why:**"),
+	"thinking sits before the explanation",
+);
+// An empty or missing thinking field adds nothing to the entry.
+assert.ok(!quizEntry.includes("**Your thinking:**"));
+assert.ok(
+	!formatQuizEntry({ status: "answered", question: "Q?", thinking: "   " }).includes("**Your thinking:**"),
+	"blank thinking is never journaled",
+);
 // Emphasis metacharacters in option labels are escaped (M*K is multiplication).
 const starredQuiz = formatQuizEntry({
 	status: "answered",
@@ -327,12 +361,47 @@ const pi = {
 };
 extension(pi);
 
-// The any-time commands: /lessons opens the journal, /probes the probe log.
-assert.equal(commands.size, 2);
+// The any-time commands: /lessons opens the journal, /probes the probe log,
+// /extract hands the journal to the vault extraction contract.
+assert.equal(commands.size, 3);
 assert.ok(commands.has("lessons"), "/lessons command should be registered");
 assert.equal(typeof commands.get("lessons").handler, "function");
 assert.ok(commands.has("probes"), "/probes command should be registered");
 assert.equal(typeof commands.get("probes").handler, "function");
+assert.ok(commands.has("extract"), "/extract command should be registered");
+assert.equal(typeof commands.get("extract").handler, "function");
+
+// /extract's prompt is self-contained: the journal to read, the propositions
+// directory to link or create in, and the skill section that owns the format.
+{
+	const prompt = buildExtractionPrompt("/sessions/session-abc.md", "/home/learner/vault");
+	assert.ok(prompt.includes("/sessions/session-abc.md"), "the prompt names the journal");
+	assert.ok(
+		prompt.includes("/home/learner/vault/2_knowledge/propositions"),
+		"the prompt names the propositions directory",
+	);
+	assert.ok(
+		prompt.includes(join(homedir(), ".agents", "skills", "professor", "SKILL.md")),
+		"the prompt names the professor skill",
+	);
+	assert.ok(prompt.includes("Knowledge extraction"), "the prompt names the contract section");
+	assert.match(prompt, /Read the journal fully/i);
+	assert.match(prompt, /review fields of an existing note/i);
+}
+
+// The vault root follows PI_VAULT_DIR, else ~/vault.
+{
+	const savedVault = process.env.PI_VAULT_DIR;
+	try {
+		delete process.env.PI_VAULT_DIR;
+		assert.equal(resolveVaultDir(), join(homedir(), "vault"));
+		process.env.PI_VAULT_DIR = "/tmp/other-vault";
+		assert.equal(resolveVaultDir(), "/tmp/other-vault", "PI_VAULT_DIR wins");
+	} finally {
+		if (savedVault === undefined) delete process.env.PI_VAULT_DIR;
+		else process.env.PI_VAULT_DIR = savedVault;
+	}
+}
 
 // The global shortcut: ctrl+h focuses the current view (node buffer, else
 // overview) — never the whole journal file.

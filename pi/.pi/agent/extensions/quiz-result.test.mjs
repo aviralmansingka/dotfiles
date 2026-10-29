@@ -88,13 +88,14 @@ const answered = await quizTool.execute(
 	params,
 	signal,
 	undefined,
-	contextFor(["enter", "enter"]),
+	contextFor(["enter", "enter", "enter"]),
 );
 assert.equal(answered.details.status, "answered");
 assert.equal(answered.details.title, params.title);
 assert.equal(answered.details.correct, true);
 assert.equal(answered.details.dontKnow, false);
 assert.equal(answered.details.followUp, undefined);
+assert.equal(answered.details.thinking, undefined, "a skipped thinking step adds no field");
 
 const tooHard = await quizTool.execute(
 	"too-hard-result",
@@ -117,7 +118,7 @@ const dontKnow = await quizTool.execute(
 	params,
 	signal,
 	undefined,
-	contextFor(["j", "j", "enter", "enter"]),
+	contextFor(["j", "j", "enter", "enter", "enter"]),
 );
 assert.equal(dontKnow.details.status, "answered");
 assert.equal(dontKnow.details.dontKnow, true);
@@ -161,6 +162,51 @@ assert.match(render(dontKnow), /✓ 1\. First/);
 assert.doesNotMatch(render(dontKnow), /✗/, "dontKnow never shows a wrong mark");
 assert.match(render(cancelled), /User cancelled the quiz/);
 assert.match(render(followUp), /Steering: wait/);
+
+// The thinking phase sits between select and feedback: select-Enter opens it,
+// Enter submits the learner's optional reasoning, and the verdict comes after.
+const withThinking = await quizTool.execute(
+	"thinking-result",
+	params,
+	signal,
+	undefined,
+	contextFor(["enter", "b", "e", "c", "a", "u", "s", "e", "enter", "enter"]),
+);
+assert.equal(withThinking.details.status, "answered");
+assert.equal(withThinking.details.correct, true, "typing reasoning never changes the verdict");
+assert.equal(withThinking.details.thinking, "because");
+{
+	const text = withThinking.content[0].text;
+	assert.match(text, /Thinking: because/);
+	assert.ok(text.indexOf("Thinking: because") > text.indexOf("Correct: "), "thinking follows the verdict lines");
+	assert.ok(text.indexOf("Thinking: because") < text.indexOf("Explanation: "), "thinking precedes the explanation");
+}
+assert.match(render(withThinking), /Thinking: because/);
+
+// Esc skips the thinking step: the answer still grades, with no thinking.
+const skippedThinking = await quizTool.execute(
+	"thinking-skipped",
+	params,
+	signal,
+	undefined,
+	contextFor(["enter", "escape", "enter"]),
+);
+assert.equal(skippedThinking.details.status, "answered");
+assert.equal(skippedThinking.details.thinking, undefined);
+assert.doesNotMatch(skippedThinking.content[0].text, /Thinking:/);
+assert.doesNotMatch(render(skippedThinking), /Thinking:/);
+
+// Multi-select takes the same thinking step before its verdict.
+const multiThinking = await quizTool.execute(
+	"thinking-multi",
+	{ ...params, multiSelect: true, correctAnswer: ["first"] },
+	signal,
+	undefined,
+	contextFor(["1", "enter", "o", "k", "enter", "enter"]),
+);
+assert.equal(multiThinking.details.status, "answered");
+assert.equal(multiThinking.details.thinking, "ok");
+assert.match(multiThinking.content[0].text, /Thinking: ok/);
 
 // renderResult fallbacks: no structured details at all, and older results
 // that predate details.options (marks come from the answers themselves).
@@ -239,7 +285,7 @@ const stringified = await quizTool.execute(
 	{ ...params, multiSelect: true, correctAnswer: '["first"]' },
 	signal,
 	undefined,
-	contextFor(["1", "enter", "enter"]),
+	contextFor(["1", "enter", "enter", "enter"]),
 );
 assert.equal(stringified.details.status, "answered");
 assert.equal(stringified.details.correct, true);
