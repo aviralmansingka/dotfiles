@@ -83,17 +83,18 @@ fast path was renamed, a bad manifest mode, a value-looking manifest string,
 a name outside the inventory, a removed temp-cleanup trap, a `cat` of the
 temp payload in the sync script, 0644 instead of 0600 in the entrypoint, the
 ephemeral key secret mounted first, a `-cudnn` CUDA base, an `nvcc` symlink,
-and a runbook with `clangd --check` removed) and proves the matching checks
+and a runbook with `clangd --check` removed, and an entrypoint whose
+first-boot seeding was removed) and proves the matching checks
 fail; a clean copy must pass. The real worktree is never touched.
 
 ## How to run
 
 ```sh
-scripts/test-modal-devbox.py              # suite (M1–M16)
+scripts/test-modal-devbox.py              # suite (M1–M17)
 scripts/test-modal-devbox.py --selftest   # prove checks fail on mutations
 ```
 
-Runtime ≈ 0.6 s (M6/M9 shell out to `bash -n`; M16 executes the wrapper
-against stubbed `modal`/`ssh` CLIs). Syntax coverage for `devbox.py` also
+Runtime ≈ 1 s (M6/M9 shell out to `bash -n`; M16 executes the wrapper and M17
+the entrypoint, both in throwaway trees). Syntax coverage for `devbox.py` also
 comes free from `scripts/nm-lint.sh` (`py_compile` over tracked Python) and
 `bash -n` over tracked shell in `.github/workflows/ci.yml`.

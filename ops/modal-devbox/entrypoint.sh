@@ -12,7 +12,10 @@
 # connect with StrictHostKeyChecking=accept-new.
 set -euo pipefail
 
-PERSIST=/persist
+# DEVBOX_PERSIST / DEVBOX_SKIP_SSHD exist so the offline suite can execute the
+# link semantics in a throwaway tree (no /persist mount, no host-key writes);
+# neither is set in a real sandbox.
+PERSIST="${DEVBOX_PERSIST:-/persist}"
 
 link_dir() {
     # link_dir <home-path> <persist-path>
@@ -117,6 +120,9 @@ if [ -f "$HOME/.config/devbox-env.sh" ] && ! grep -q "devbox-env.sh" "$HOME/.zsh
 fi
 
 # sshd: per-sandbox host keys, key-only root auth from the injected secret.
+if [ "${DEVBOX_SKIP_SSHD:-0}" = 1 ]; then
+    exit 0  # test hook: link + materialize done, skip host-key/sshd writes
+fi
 ssh-keygen -A
 mkdir -p /run/sshd "$HOME/.ssh"
 chmod 700 "$HOME/.ssh"

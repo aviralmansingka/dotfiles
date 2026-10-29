@@ -64,6 +64,12 @@ pipeline and the research-verified Modal API surface:
       subcommand, cold start via ::main with a cached CONNECT line, warm
       reuse without a restart, --new bypassing the cache with flags
       forwarded, and stop clearing the cache.
+  M17 entrypoint behavior — EXECUTES entrypoint.sh with DEVBOX_PERSIST and
+      DEVBOX_SKIP_SSHD pointed at a throwaway tree and asserts the /persist
+      semantics: every documented $HOME dir becomes a symlink into the
+      volume, the first boot seeds the image copy onto the volume, an
+      existing volume copy wins over the image copy, and a second run is
+      idempotent.
 
 Run `--selftest` to prove the checks fail on mutated copies (apt extras, GPU
 allowlist, late-git order, injected token) in a mktemp sandbox; the real
@@ -620,6 +626,68 @@ def check_cuda_runbook(root, _literals, _source):
     return errors
 
 
+def check_entrypoint_behavior(root, _literals, _source):
+    """M17 — execute entrypoint.sh in a throwaway tree and assert the /persist
+    bootstrap semantics the design rests on: first boot seeds the volume from
+    the image and symlinks $HOME into it, later boots let the volume win, and
+    a second run is idempotent. No root paths, no sshd writes."""
+    errors = []
+    if not shutil.which("bash"):
+        return errors
+    work = Path(tempfile.mkdtemp(prefix="modal-devbox-m17-"))
+    try:
+        home = work / "home"
+        persist = work / "persist"
+        home.mkdir()
+        persist.mkdir()
+        # Image-baked content on first boot, plus a volume copy for .cache that
+        # must beat the image's copy (volume-wins rule).
+        (home / ".local/share/nvim").mkdir(parents=True)
+        (home / ".local/share/nvim/from-image.txt").write_text("image")
+        (home / ".cache").mkdir()
+        (home / ".cache/stale.txt").write_text("image-copy")
+        (persist / "cache").mkdir()
+        (persist / "cache/from-volume.txt").write_text("volume")
+
+        env = {"PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "HOME": str(home),
+               "DEVBOX_PERSIST": str(persist), "DEVBOX_SKIP_SSHD": "1"}
+        for attempt in (1, 2):
+            proc = subprocess.run(["bash", str(root / ENTRYPOINT)], capture_output=True,
+                                  text=True, timeout=60, env=env)
+            if proc.returncode != 0:
+                errors.append(f"entrypoint run {attempt} failed (rc={proc.returncode}): "
+                              f"{proc.stderr.strip()[:200]}")
+                break
+
+        links = {
+            ".local/share/nvim": "nvim-share",
+            ".local/state/nvim": "nvim-state",
+            ".local/share/bob": "nvim-bob",
+            ".cache": "cache",
+            "repos": "repos",
+            "vault": "vault",
+        }
+        for rel, target in links.items():
+            path = home / rel
+            if not path.is_symlink():
+                errors.append(f"$HOME/{rel} must become a symlink into the volume")
+            elif path.readlink() != persist / target:
+                errors.append(f"$HOME/{rel} -> {path.readlink()} (expected {persist / target})")
+        if not (home / ".zsh_history").is_symlink():
+            errors.append("$HOME/.zsh_history must be linked into the volume")
+        # First boot seeded the image copy onto the volume; the volume's own
+        # cache copy won over the image's stale one.
+        if not (persist / "nvim-share/from-image.txt").exists():
+            errors.append("first boot must seed $HOME/.local/share/nvim onto the volume")
+        if not (persist / "cache/from-volume.txt").exists():
+            errors.append("the volume's existing cache contents must be kept")
+        if (home / ".cache/stale.txt").exists():
+            errors.append("the image copy must not shadow the volume's cache after linking")
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    return errors
+
+
 CHECKS = (
     ("M1 apt parity", check_apt_parity),
     ("M2 stow parity", check_stow_parity),
@@ -637,6 +705,7 @@ CHECKS = (
     ("M14 CUDA variant", check_cuda_variant),
     ("M15 CUDA runbook", check_cuda_runbook),
     ("M16 wrapper behavior", check_wrapper_behavior),
+    ("M17 entrypoint behavior", check_entrypoint_behavior),
 )
 
 
@@ -703,6 +772,9 @@ def selftest():
                 '        + [modal.Secret.from_name(n) for n in attached]],'),
             "cuda-cudnn": lambda: _mutate(root, '"nvidia/cuda:13.0.0-devel-ubuntu24.04"',
                                           '"nvidia/cuda:13.0.0-cudnn-devel-ubuntu24.04"'),
+            "entrypoint-no-seed": lambda: _mutate_file(
+                root, ENTRYPOINT, 'mv "$1" "$2"                         # first boot: seed the volume',
+                ': # seeding removed'),
             "cuda-nvcc-symlink": lambda: _mutate(
                 root, '"LD_LIBRARY_PATH": "/usr/local/cuda/lib64",',
                 '"LD_LIBRARY_PATH": "/usr/local/cuda/lib64",\n'
@@ -718,7 +790,8 @@ def selftest():
                          "sync-no-trap": {"M12"}, "sync-cat-leak": {"M12"},
                          "entrypoint-no-0600": {"M13"}, "secrets-ephemeral-first": {"M13"},
                          "cuda-cudnn": {"M14"}, "cuda-nvcc-symlink": {"M14"},
-                         "cuda-runbook": {"M15"}}
+                         "cuda-runbook": {"M15"},
+                         "entrypoint-no-seed": {"M17"}}
         for label, mutate in cases.items():
             _make_sandbox(root)
             mutate()
