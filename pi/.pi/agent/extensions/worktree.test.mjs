@@ -134,6 +134,43 @@ esac
 	);
 	mkdirSync(fakePath, { recursive: true });
 
+	// Fake rex: records argv and serves the session answers the Rex worktree
+	// path needs (`ls`, `session inspect`, `new`).
+	const rexCapture = join(root, "rex-calls");
+	writeFileSync(
+		join(bin, "rex"),
+		`#!/bin/sh
+printf '%s\\n' "$@" >> "$WT_REX_CAPTURE"
+printf '%s\\n' --call-- >> "$WT_REX_CAPTURE"
+case "$1" in
+	ls)
+		printf '%s\\n' "$WT_REX_LIST"
+		;;
+	session)
+		printf '%s\\n' "$WT_REX_INSPECT"
+		;;
+	new)
+		printf '%s\\n' "$WT_REX_NEW"
+		;;
+	*) printf '%s\\n' '{}' ;;
+esac
+`,
+		{ mode: 0o755 },
+	);
+	const rexCalls = () => {
+		try {
+			return readFileSync(rexCapture, "utf8")
+				.split("--call--\n")
+				.filter(Boolean)
+				.map((call) => call.trim().split("\n"));
+		} catch {
+			return [];
+		}
+	};
+	const clearRexCalls = () => {
+		try { rmSync(rexCapture); } catch {}
+	};
+
 	const spawnCalls = [];
 	let spawnMode = "ok";
 	globalThis.__pi_interactive_subagents = {
@@ -214,6 +251,8 @@ esac
 		process.env.WT_TEST_PATH = fakePath;
 		process.env.WT_TEST_OPEN_PANE = "wT:p2";
 		process.env.WT_TEST_OPEN_PATH = join(root, "open-worktree");
+		process.env.WT_REX_CAPTURE = rexCapture;
+		process.env.WT_REX_LIST = '{"sessions":[]}';
 
 		// Fresh create: exact herdr argv, ownership marker, spawn on the root pane.
 		{
@@ -420,10 +459,12 @@ esac
 			delete process.env.WT_TEST_FAIL_CREATE;
 		}
 
-		// Rex: no worktree CLI, so the tool runs git itself and the Rex surface
-		// opens the worker's tab instead of adopting a pane.
+		// Rex: no worktree CLI, so the tool runs git itself and creates one
+		// dedicated session per worktree; the worker adopts that session's first
+		// block instead of opening a tab in the caller's session.
 		{
 			clearCalls();
+			clearRexCalls();
 			spawnCalls.length = 0;
 			spawnMode = "ok";
 			const repo = makeRepo();
@@ -434,6 +475,12 @@ esac
 			process.env.REX_SESSION = "session:test";
 			process.env.REX_BLOCK = "block:test";
 			process.env.HOME = homeRoot;
+			const sessionCalls = [];
+			const savedCreator = globalThis.__pi_interactive_subagents.createWorktreeSession;
+			globalThis.__pi_interactive_subagents.createWorktreeSession = (label, cwd) => {
+				sessionCalls.push({ label, cwd });
+				return { session: "session:wt", pane: "block:wt" };
+			};
 			try {
 				const { isError, text, details } = await finish(
 					run({ branch: "dark-mode", task: "Ship dark mode." }, repo),
@@ -449,12 +496,19 @@ esac
 				assert.equal(details.surface, "rex");
 				assert.equal(details.path, expectedPath, "the shared worktree root and <type>-<slug> naming");
 				assert.equal(existsSync(join(expectedPath, ".git")), true, "the checkout exists on disk");
-				assert.equal(details.pane, null, "Rex has no adoptable worktree pane");
+				assert.deepEqual(
+					sessionCalls[0],
+					{ label: "dark-mode", cwd: expectedPath },
+					"one session per worktree, labeled by the branch slug and rooted at the checkout",
+				);
+				assert.equal(details.session, "session:wt");
+				assert.equal(details.pane, "block:wt");
 				assert.deepEqual(
 					Object.keys(spawnCalls[0].params).sort(),
-					["agent", "cwd", "name", "task"],
-					"the pane override is Herdr-only",
+					["agent", "cwd", "name", "pane", "task"],
+					"the worker adopts the worktree session's first block",
 				);
+				assert.equal(spawnCalls[0].params.pane, "block:wt");
 				assert.equal(spawnCalls[0].params.cwd, expectedPath);
 				assert.equal(calls().length, 0, "Rex is created with git, never through Herdr");
 				assert.equal(
@@ -469,6 +523,7 @@ esac
 				assert.equal(again.details.mode, "reused");
 				assert.equal(again.details.path, expectedPath);
 			} finally {
+				globalThis.__pi_interactive_subagents.createWorktreeSession = savedCreator;
 				if (savedHome === undefined) delete process.env.HOME;
 				else process.env.HOME = savedHome;
 				delete process.env.REX_SESSION;

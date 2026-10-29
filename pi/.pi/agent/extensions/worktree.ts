@@ -412,6 +412,7 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 			let worktreePath: string;
 			let rootPane: string | null = null;
 			let workspaceId: string | null = null;
+			let surfaceSession: string | null = null;
 
 			if (surface === "rex") {
 				const target = worktreePathFor(primary, branch);
@@ -434,6 +435,34 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 				} catch (error: any) {
 					return fail(error?.message ?? String(error), { branch, base, surface });
 				}
+
+				// One durable Rex session per worktree, matching the Herdr model: the
+				// worker adopts that session's first block instead of opening a tab in
+				// the caller's session. The creator is keyed by label, so a repeat
+				// call reuses the same session rather than piling up new ones.
+				const createSessionFn = (globalThis as any).__pi_interactive_subagents
+					?.createWorktreeSession;
+				if (typeof createSessionFn !== "function") {
+					return fail(
+						`The worktree is ready at ${worktreePath} (branch ${branch}), but no worktree session could be ` +
+							`created: the interactive-subagents extension is not loaded. Work there directly.`,
+						{ branch, path: worktreePath, surface },
+					);
+				}
+				const created = createSessionFn(workerNameFor(branch), worktreePath);
+				if (
+					!created ||
+					typeof created.pane !== "string" ||
+					typeof created.session !== "string"
+				) {
+					return fail(
+						`The worktree is ready at ${worktreePath} (branch ${branch}), but its Rex session could not be ` +
+							`created. Work there directly.`,
+						{ branch, path: worktreePath, surface },
+					);
+				}
+				rootPane = created.pane;
+				surfaceSession = created.session;
 			} else {
 				const herdrCwd = primary;
 				let response: Record<string, any>;
@@ -485,19 +514,19 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 			}
 
 			// 6. Spawn the worker through the interactive-subagents machinery.
-			// Under Herdr the `pane` override makes it adopt the worktree session's
-			// root pane. Rex has no adoptable worktree pane, so the Rex surface
-			// opens a labeled tab in this session instead. Either way the machinery
-			// registers the name and steers the completion back here automatically.
+			// The `pane` override makes it adopt the worktree session's root pane
+			// (Herdr) or first block (Rex) instead of opening its own surface. That
+			// machinery validates the pane, registers the name, and steers the
+			// completion back here automatically.
 			const workerName = workerNameFor(branch);
 			const where =
 				surface === "herdr"
 					? `in the worktree session's first tab (${rootPane}), unfocused`
-					: `in a new Rex tab ("${workerName}") in this session, unfocused`;
+					: `in the worktree session "${workerName}" (${surfaceSession}), unfocused`;
 			const reopenHint =
 				surface === "herdr"
 					? `\`herdr worktree open --cwd ${primary} --branch ${branch}\``
-					: `\`rex new ${workerName} -c ${worktreePath} -- pi\``;
+					: `the session picker in Rex (label "${workerName}")`;
 			const spawnFn = (globalThis as any).__pi_interactive_subagents?.executeSubagent;
 			if (typeof spawnFn !== "function") {
 				return fail(
@@ -514,8 +543,8 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 				task: params.task,
 				cwd: worktreePath,
 			};
-			// Pane adoption is Herdr-only; the Rex surface creates its own tab.
-			if (surface === "herdr") spawnParams.pane = rootPane;
+			// Pane adoption drives both Herdr panes and Rex blocks.
+			if (rootPane) spawnParams.pane = rootPane;
 			let spawn: any;
 			try {
 				spawn = await spawnFn(spawnParams, ctx);
@@ -561,6 +590,7 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 				path: worktreePath,
 				pane: rootPane,
 				workspace: workspaceId ?? null,
+				session: surfaceSession,
 				worker: actualName,
 				surface,
 				mode,

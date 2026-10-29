@@ -12,7 +12,7 @@
  */
 import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
@@ -120,6 +120,97 @@ function sessionArgs(): string[] {
   return session ? ["-s", session] : [];
 }
 
+/**
+ * Block ids are unique, but Rex resolves a block target inside ONE session:
+ * `rex capture -b <id>` fails with "block target not found" when the block
+ * belongs to another session. A block this module created on another session
+ * (see createSession) is remembered here, so every later call scopes to the
+ * right one. Blocks created elsewhere fall back to REX_SESSION.
+ */
+const blockSessions = new Map<string, string>();
+
+/** `-s` scope for a block-targeted call. */
+function scopeArgs(blockId: string): string[] {
+  const session = blockSessions.get(blockId) ?? process.env.REX_SESSION;
+  return session ? ["-s", session] : [];
+}
+
+/** `-s` scope plus `-b` target for a block-targeted call. */
+function blockArgs(blockId: string): string[] {
+  return [...scopeArgs(blockId), "-b", blockId];
+}
+
+/** Remember which session owns a block (needed for cross-session adoption). */
+export function rememberBlock(blockId: string, sessionId: string): void {
+  if (blockId && sessionId) blockSessions.set(blockId, sessionId);
+}
+
+/** Session id whose label matches exactly, or null. */
+function findSessionByLabel(label: string): string | null {
+  const list = rexJsonOrNull<{
+    sessions?: Array<{ session_id?: unknown; label?: unknown }>;
+  }>(["ls", "--json"]);
+  const hit = list?.sessions?.find(
+    (entry) => entry?.label === label && typeof entry.session_id === "string" && entry.session_id,
+  );
+  return typeof hit?.session_id === "string" ? hit.session_id : null;
+}
+
+/** First block of a session, or null when it has no windows left. */
+function rootBlockOf(sessionId: string): string | null {
+  const info = rexJsonOrNull<{
+    windows?: Array<{ layers?: Array<{ blocks?: Array<{ block_id?: unknown }> }> }>;
+  }>(["session", "inspect", sessionId, "--json"]);
+  const block = info?.windows?.[0]?.layers?.[0]?.blocks?.[0]?.block_id;
+  return typeof block === "string" && block !== "" ? block : null;
+}
+
+/**
+ * Create — or reuse — the dedicated Rex session for one worktree. A repeat
+ * call finds the existing session by label and adopts its first block, so
+ * repeated worktree calls never pile up empty sessions. `rex new` does not
+ * switch the app's visible session, so this never steals the human's focus.
+ * Returns the session id and its first block, and remembers the mapping so
+ * the subagent machinery can drive that block from the caller's session.
+ */
+export function createSession(
+  label: string,
+  cwd: string,
+): { session: string; pane: string } | null {
+  requireRex();
+  const name = sanitizeLabel(label);
+
+  const existing = findSessionByLabel(name);
+  if (existing) {
+    const pane = rootBlockOf(existing);
+    if (pane) {
+      rememberBlock(pane, existing);
+      return { session: existing, pane };
+    }
+  }
+
+  const out = rexSync(["new", name, "-c", cwd, "--window", name, "--json"]);
+  let parsed: { session_id?: unknown; initial_windows?: Array<{ block_ids?: unknown }> };
+  try {
+    parsed = JSON.parse(out);
+  } catch {
+    return null;
+  }
+  const session = parsed?.session_id;
+  const blocks = parsed?.initial_windows?.[0]?.block_ids;
+  const pane = Array.isArray(blocks) ? blocks[0] : undefined;
+  if (
+    typeof session !== "string" ||
+    session === "" ||
+    typeof pane !== "string" ||
+    pane === ""
+  ) {
+    return null;
+  }
+  rememberBlock(pane, session);
+  return { session, pane };
+}
+
 // ── Surface primitives ──
 
 /**
@@ -205,8 +296,8 @@ function sanitizeLabel(name: string): string {
  */
 export function sendCommand(surface: string, command: string): void {
   requireRex();
-  rexSync(["send", ...sessionArgs(), "-b", surface, "--", command]);
-  rexSync(["send-key", ...sessionArgs(), "-b", surface, "enter"]);
+  rexSync(["send", ...blockArgs(surface), "--", command]);
+  rexSync(["send-key", ...blockArgs(surface), "enter"]);
 }
 
 /**
@@ -255,21 +346,21 @@ function tailLines(text: string, lines: number): string {
  */
 export function readScreen(surface: string, lines = 50): string {
   requireRex();
-  const out = rexSync(["capture", ...sessionArgs(), "-b", surface, "--trim", "--unwrap"]);
+  const out = rexSync(["capture", ...blockArgs(surface), "--trim", "--unwrap"]);
   return tailLines(out, lines);
 }
 
 /** Read the recent screen contents of a block (async). */
 export async function readScreenAsync(surface: string, lines = 50): Promise<string> {
   requireRex();
-  const out = await rexAsync(["capture", ...sessionArgs(), "-b", surface, "--trim", "--unwrap"]);
+  const out = await rexAsync(["capture", ...blockArgs(surface), "--trim", "--unwrap"]);
   return tailLines(out, lines);
 }
 
 /** Close a block. */
 export function closeSurface(surface: string): void {
   requireRex();
-  rexSync(["block", "close", ...sessionArgs(), surface]);
+  rexSync(["block", "close", ...scopeArgs(surface), surface]);
 }
 
 /**
@@ -280,19 +371,19 @@ export function closeTabForPane(blockId: string): void {
   const inspected = rexJsonOrNull<{ block?: { window_id?: string } }>([
     "block",
     "inspect",
-    ...sessionArgs(),
+    ...scopeArgs(blockId),
     blockId,
     "--json",
   ]);
   const windowId = inspected?.block?.window_id;
   if (typeof windowId === "string" && windowId !== "") {
     try {
-      rexSync(["window", "close", ...sessionArgs(), windowId]);
+      rexSync(["window", "close", ...scopeArgs(blockId), windowId]);
       return;
     } catch {}
   }
   try {
-    rexSync(["block", "close", ...sessionArgs(), blockId]);
+    rexSync(["block", "close", ...scopeArgs(blockId), blockId]);
   } catch {}
 }
 
@@ -305,8 +396,8 @@ export interface PaneAgentProbe {
 }
 
 interface RexProcessInfo {
-  foreground?: { name?: string; argv0?: string; path?: string } | null;
-  ancestors?: Array<{ name?: string; argv0?: string; path?: string }>;
+  foreground?: { name?: string; argv0?: string; path?: string; cwd?: string } | null;
+  ancestors?: Array<{ name?: string; argv0?: string; path?: string; cwd?: string }>;
   last_exit?: number | null;
 }
 
@@ -318,7 +409,7 @@ async function readProcessInfo(
   try {
     const { stdout } = await execFileAsync(
       "rex",
-      ["block", "call", ...sessionArgs(), "-b", blockId, "process"],
+      ["block", "call", ...blockArgs(blockId), "process"],
       { encoding: "utf8", signal, maxBuffer: 8 * 1024 * 1024 },
     );
     const trimmed = stdout.trim();
@@ -347,7 +438,7 @@ function toProcessList(info: RexProcessInfo): Array<{ name?: string; argv?: stri
 /** True when the block still resolves. */
 async function blockExists(blockId: string, signal?: AbortSignal): Promise<boolean> {
   try {
-    await execFileAsync("rex", ["block", "inspect", ...sessionArgs(), blockId, "--json"], {
+    await execFileAsync("rex", ["block", "inspect", ...scopeArgs(blockId), blockId, "--json"], {
       encoding: "utf8",
       signal,
       maxBuffer: 8 * 1024 * 1024,
@@ -372,6 +463,52 @@ export async function probePaneAgent(
   const processes = toProcessList(info);
   if (processes.length === 0) return { paneExists: true, agentAlive: null };
   return { paneExists: true, agentAlive: processes.some(isPiForegroundProcess) };
+}
+
+/** Resolve a directory, or null when it does not exist. */
+function realDir(path: string): string | null {
+  try {
+    return realpathSync(path);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Refuse to adopt a block that is not a safe subagent surface: the parent's
+ * own block, a block where an agent already runs, a block that does not
+ * exist, or a shell sitting in a different directory than the launch expects.
+ * Same contract as the Herdr version, so index.ts can gate both identically.
+ */
+export function assertAdoptablePane(paneId: string, expectCwd: string): void {
+  requireRex();
+  if (paneId === process.env.REX_BLOCK) {
+    throw new Error("Refusing to adopt the parent session's own block as a subagent surface");
+  }
+  const info = rexJsonOrNull<RexProcessInfo>([
+    "block",
+    "call",
+    ...blockArgs(paneId),
+    "process",
+  ]);
+  if (!info) {
+    throw new Error(`Pane ${paneId} does not exist (rex block call returned no process)`);
+  }
+  const foreground = info.foreground;
+  const program = foreground?.argv0 ?? foreground?.name ?? "";
+  if (program === "pi") {
+    throw new Error(`Refusing to adopt ${paneId}: pi is already running there`);
+  }
+  const cwd = foreground?.cwd;
+  if (typeof cwd === "string" && cwd !== "" && expectCwd) {
+    const actual = realDir(cwd);
+    const expected = realDir(expectCwd);
+    if (actual && expected && actual !== expected) {
+      throw new Error(
+        `Refusing to adopt ${paneId}: its shell runs in ${actual}, not ${expected}`,
+      );
+    }
+  }
 }
 
 /** Foreground process tree, or null when the read fails. */

@@ -58,7 +58,28 @@ export const closeTabForPane = surface.closeTabForPane;
 
 export const waitForAgentReady = herdr.waitForAgentReady;
 export const sendAgentPrompt = herdr.sendAgentPrompt;
-export const assertAdoptablePane = herdr.assertAdoptablePane;
+
+/**
+ * Adoption validation, dispatched to the active surface. Herdr and Rex both
+ * drive an existing pane/block; tmux has no adoption path.
+ */
+export function assertAdoptablePane(paneId: string, expectCwd: string): void {
+  if (useRex) return rex.assertAdoptablePane(paneId, expectCwd);
+  if (useHerdr) return herdr.assertAdoptablePane(paneId, expectCwd);
+  throw new Error("Pane adoption requires Herdr or Rex; this session runs on another surface");
+}
+
+/**
+ * Create a dedicated session for a worktree — a Rex-only concept. Herdr gets
+ * its worktree session from `herdr worktree create`, and tmux has none, so
+ * both return null and the caller falls back to a plain surface.
+ */
+export function createWorktreeSession(
+  label: string,
+  cwd: string,
+): { session: string; pane: string } | null {
+  return useRex ? rex.createSession(label, cwd) : null;
+}
 
 export async function withNewSurface<T>(
   name: string,

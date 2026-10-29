@@ -30,6 +30,7 @@ import {
   closeSurface,
   closeTabForPane,
   assertAdoptablePane,
+  createWorktreeSession,
   probePaneAgent,
   shellEscape,
   readScreen,
@@ -1626,12 +1627,13 @@ function startWidgetRefresh() {
  * Internal `pane` override (never part of the model-facing SubagentParams
  * schema): a sibling extension passing `{ ..., pane }` through
  * `__pi_interactive_subagents.executeSubagent` makes the subagent adopt that
- * existing Herdr pane instead of opening a fresh tab. The worktree tool uses
- * this to run its worker in a worktree session's root pane. Model-issued
- * calls cannot carry the field (it is not in the schema), and
+ * existing pane/block instead of opening a fresh surface. The worktree tool
+ * uses this to run its worker in a worktree session's root pane (Herdr) or
+ * the first block of the worktree's own Rex session. Model-issued calls
+ * cannot carry the field (it is not in the schema), and
  * assertAdoptablePane refuses the parent's own pane, any agent-hosting pane,
  * and any pane not already sitting in the spawn's cwd — so an adopted
- * launch can only type into the intended worktree's first tab. On launch
+ * launch can only type into the intended worktree surface. On launch
  * failure the adopted pane is left open: we never close a pane we did not
  * create (withNewSurface closes only what it created).
  */
@@ -1642,8 +1644,8 @@ async function launchSubagent(
 ): Promise<RunningSubagent> {
   const adoptPane = typeof params.pane === "string" ? params.pane.trim() : "";
   if (adoptPane) {
-    if (activeSurface !== "herdr") {
-      throw new Error("Pane adoption is Herdr-only; this session runs on another surface");
+    if (activeSurface !== "herdr" && activeSurface !== "rex") {
+      throw new Error("Pane adoption requires Herdr or Rex; this session runs on another surface");
     }
     const adoptDefs = params.agent ? loadAgentDefaults(params.agent) : null;
     const { effectiveCwd } = resolveSubagentPaths(params, adoptDefs);
@@ -3352,6 +3354,12 @@ export default function subagentsExtension(pi: ExtensionAPI) {
   if (subagentsGlobal && typeof subagentsGlobal.executeSubagent !== "function") {
     subagentsGlobal.executeSubagent = (params: any, ctx: any) =>
       subagentTool.execute("", params, undefined, undefined, ctx);
+  }
+  // A worktree gets its own durable session under Rex. Expose the creator so
+  // the worktree tool can make one and adopt its first block.
+  if (subagentsGlobal && typeof subagentsGlobal.createWorktreeSession !== "function") {
+    subagentsGlobal.createWorktreeSession = (label: string, cwd: string) =>
+      createWorktreeSession(label, cwd);
   }
   // Liveness probe over the same running registry, so a sibling extension can
   // refuse a duplicate spawn while its subagent still runs (tuicr keeps one

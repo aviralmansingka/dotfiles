@@ -2793,4 +2793,109 @@ esac
 	}
 }
 
+// --- Rex session surface: reuse, creation, and cross-session scoping ---
+{
+	const savedRexSessionEnv = {
+		REX_SESSION: process.env.REX_SESSION,
+		REX_BLOCK: process.env.REX_BLOCK,
+		HERDR_ENV: process.env.HERDR_ENV,
+		HERDR_PANE_ID: process.env.HERDR_PANE_ID,
+		TMUX: process.env.TMUX,
+		TERM: process.env.TERM,
+		PATH: process.env.PATH,
+	};
+	const rexRoot = mkdtempSync(join(tmpdir(), "rex-session-test-"));
+	const rexBin = join(rexRoot, "bin");
+	const rexLog = join(rexRoot, "calls");
+	mkdirSync(rexBin, { recursive: true });
+	writeFileSync(
+		join(rexBin, "rex"),
+		`#!/bin/sh
+printf '%s\\n' "$*" >> "$REX_TEST_CAPTURE"
+case "$1" in
+	ls) printf '%s\\n' "$REX_TEST_LIST" ;;
+	new) printf '%s\\n' '{"session_id":"session:new","initial_windows":[{"block_ids":["block:new"]}]}' ;;
+	session) printf '%s\\n' '{"windows":[{"layers":[{"blocks":[{"block_id":"block:root"}]}]}]}' ;;
+	block) printf '%s\\n' "$REX_TEST_PROCESS" ;;
+	*) printf '%s\\n' '{}' ;;
+esac
+`,
+		{ mode: 0o755 },
+	);
+	const rexCallsFor = () => {
+		try {
+			return readFileSync(rexLog, "utf8").split("\n").filter(Boolean);
+		} catch {
+			return [];
+		}
+	};
+	const loadRex = () =>
+		createJiti(import.meta.url, { moduleCache: false })(
+			"./interactive-subagents/pi-extension/subagents/rex.ts",
+		);
+	try {
+		delete process.env.HERDR_ENV;
+		delete process.env.HERDR_PANE_ID;
+		delete process.env.TMUX;
+		process.env.TERM = "xterm-rex";
+		process.env.REX_SESSION = "session:caller";
+		process.env.REX_BLOCK = "block:caller";
+		process.env.PATH = `${rexBin}:${savedRexSessionEnv.PATH}`;
+		process.env.REX_TEST_CAPTURE = rexLog;
+
+		// An existing session with the same label is reused, never duplicated.
+		process.env.REX_TEST_LIST = '{"sessions":[{"session_id":"session:dark","label":"dark-mode"}]}';
+		const rex = loadRex();
+		const reused = rex.createSession("dark-mode", "/tmp/worktree");
+		assert.deepEqual(reused, { session: "session:dark", pane: "block:root" });
+		assert.equal(
+			rexCallsFor().some((call) => call.startsWith("new ")),
+			false,
+			"a labeled session means no second `rex new`",
+		);
+
+		// No match creates one session rooted at the worktree.
+		process.env.REX_TEST_LIST = '{"sessions":[]}';
+		const rex2 = loadRex();
+		const made = rex2.createSession("other-mode", "/tmp/other");
+		assert.deepEqual(made, { session: "session:new", pane: "block:new" });
+		assert.equal(
+			rexCallsFor().some((call) => call === "new other-mode -c /tmp/other --window other-mode --json"),
+			true,
+			"the new session is rooted at the worktree checkout",
+		);
+
+		// A block created on another session is addressed with that session's
+		// scope, or Rex reports "block target not found".
+		process.env.REX_TEST_PROCESS = '{"foreground":{"name":"zsh","argv0":"-zsh","cwd":"/tmp/other"}}';
+		rex2.closeTabForPane("block:new");
+		assert.equal(
+			rexCallsFor().some((call) => call.startsWith("block inspect -s session:new block:new")),
+			true,
+			"cross-session block calls carry -s",
+		);
+
+		// The parent's own block is never adoptable.
+		assert.throws(
+			() => rex2.assertAdoptablePane("block:caller", "/tmp/other"),
+			/parent session's own block/,
+		);
+		// A live agent is never adoptable.
+		process.env.REX_TEST_PROCESS = '{"foreground":{"name":"node","argv0":"pi","cwd":"/tmp/other"}}';
+		assert.throws(
+			() => rex2.assertAdoptablePane("block:new", "/tmp/other"),
+			/pi is already running/,
+		);
+	} finally {
+		for (const [key, value] of Object.entries(savedRexSessionEnv)) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+		for (const key of ["REX_TEST_CAPTURE", "REX_TEST_LIST", "REX_TEST_PROCESS"]) {
+			delete process.env[key];
+		}
+		rmSync(rexRoot, { recursive: true, force: true });
+	}
+}
+
 console.log("interactive-subagents surface smoke passed");
