@@ -167,36 +167,88 @@ first, dotfiles last — so config churn is cheap).
 - After an image rebuild, nvim plugins on the volume may lag the new config:
   run `:Lazy! sync` once inside nvim.
 
-## GPU
+## GPU and CUDA
 
-`--gpu T4` and friends; `nvidia-smi` works with zero setup (host driver),
-toolkits come from the image. The CUDA-devel base image for full
-`nvcc` + clangd CUDA LSP is the planned phase 4 work.
+`--gpu T4` and friends select the GPU variant. There are two images, both
+built from the same phase layers so the environment is identical:
+
+| `--gpu` | Image | CUDA toolkit |
+| --- | --- | --- |
+| empty | `ubuntu:24.04` | none (driver API only, via the host) |
+| any GPU | `nvidia/cuda:13.0.0-devel-ubuntu24.04` | `nvcc`, headers, libdevice |
+
+`nvidia-smi` works on both with zero setup (host driver). On the GPU variant
+`nvcc`, `cuda-compile-db`, `CUDA_HOME` and `LD_LIBRARY_PATH` are already set
+for every shell, including non-interactive `ssh host 'cmd'`.
+
+```sh
+devbox ssh --gpu T4 --new        # GPU variant, then connect
+devbox ssh --gpu T4 -- 'nvcc --version; nvidia-smi'
+```
+
+### Full CUDA LSP (compile database)
+
+clangd needs `--cuda-path` and a compile database; `scripts/cuda-compile-db`
+is baked into the image and writes `compile_commands.json` for every
+`.cu`/`.cuh` under a directory:
+
+```sh
+cd ~/repos/cuda-project
+cuda-compile-db . --arch sm_75            # or --arch sm_90 for H100
+git checkout -- . 2>/dev/null || true     # compile_commands.json is generated
+clangd --check=matmul.cu                  # expect "All checks completed, 0 errors"
+```
+
+Open the `.cu` file in nvim and CUDA-API hover/go-to-def/completion work —
+this is the bar `docs/neovim-cuda-lsp.md` sets and the Mac cannot meet. The
+regenerate step is needed when you add files or change arch.
 
 | GPU | ≈ $/hr | Notes |
 | --- | --- | --- |
-| T4 | $0.59 | cheapest interactive |
+| T4 | $0.59 | cheapest interactive; sm_75 |
 | L4 | $0.80 | good LSP-dev default |
 | A10 / L40S | $1.10 / $1.95 | |
 | A100-40 / -80 | $2.10 / $2.50 | |
-| H100 / H200 | $3.95 / $4.54 | real compute only |
+| H100 / H200 | $3.95 / $4.54 | real compute only; sm_90 |
 
 CPU default (4 cores / 8 GiB) ≈ $0.25/hr. Volume storage: $0.09/GiB-month,
 first 1 TiB free. Preemption: GPU functions/Sandboxes are preemptible by
 default and **cannot** be made nonpreemptible — a preempted sandbox loses
 only the running tmux session; `/persist` keeps everything else.
 
-## Capture (preview)
+**Run `devbox stop` when you finish with a GPU box.** Idle teardown does
+reap GPU sandboxes (measured 128 s after disconnect), but GPU capacity is
+scarce and a stuck box is expensive; stopping explicitly is the habit.
+The first GPU start after an image change can take several minutes while
+the large image hydrates on a fresh worker.
 
-Freeze a running sandbox's filesystem into a reusable image (phase 4.5):
+## Capture (install once, keep forever)
 
-```python
-snap = sandbox.snapshot_filesystem()   # inside the launcher / a helper script
-snap.publish("devbox-snap")
+Modal has no docker-commit for containers, but a **Filesystem Snapshot** is the
+sanctioned equivalent: it freezes the running sandbox's root filesystem into a
+reusable Image. Use it after installing something interactively that you want
+to keep without an image rebuild.
+
+```sh
+devbox ssh -- 'apt-get install -y htop'   # install interactively
+devbox snapshot devbox-snap               # freeze + publish a named image
+devbox stop
 ```
 
-There is no docker-commit for `@app.function` containers; Sandbox snapshots
-are the only freeze path (see the research report, §2).
+Boot it again with `modal.Image.from_name("devbox-snap")` in a small app, or
+reuse it in `devbox.py` by swapping the base image. Verified end to end: a file
+written at `/opt/probe/tool.txt` inside a sandbox appeared in a brand-new
+sandbox created from the published snapshot.
+
+Limits that matter:
+
+- **Mounted Volumes are not captured.** `/persist` already keeps its own state,
+  so nothing there needs freezing — that is why the two mechanisms complement
+  each other.
+- Snapshots default to a 30-day TTL. Publish a name to keep it around, and
+  delete stale ones (there is no list-snapshots API — track names yourself).
+- The freeze is a filesystem copy, not a process copy: running programs and
+tmux sessions do not survive into the restored sandbox.
 
 ## Troubleshooting
 

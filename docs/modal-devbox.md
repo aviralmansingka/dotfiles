@@ -251,34 +251,27 @@ sequential second connections landing in the same container, teardown via
 `modal container stop <id> -y` with the launcher exiting cleanly. The
 sandbox lives out its lease (max 24 h); re-run to renew.
 
-### Phase 4 — GPU + CUDA
+### Phase 4 — GPU + CUDA (shipped, verified)
 
-GPU parameter + CUDA devel base image. Acceptance:
+GPU variant on `nvidia/cuda:13.0.0-devel-ubuntu24.04`, sharing the same
+`_build_image` layer chain as the CPU variant. Verified on a T4:
+`nvcc` 13.0 compiles a `__nv_bfloat16` + `cudaMalloc` sample, `nvidia-smi`
+works with zero setup, and `clangd --check` reports "All checks completed,
+0 errors" with `--cuda-path` + libdevice resolved through
+`scripts/cuda-compile-db` — the bar `docs/neovim-cuda-lsp.md` sets and the
+Mac cannot meet. Two findings baked into the design: the `-cudnn-devel`
+base is too large to hydrate before the tunnel timeout (plain `-devel` is
+used), and symlinking `nvcc` into `/usr/local/bin` breaks its
+argv[0]-relative header lookup (image `PATH`/`CUDA_HOME` env instead).
 
-- `nvidia-smi` works with zero setup
-- `nvcc` compiles an H100 matmul sample
-- clangd gives full CUDA LSP per `docs/neovim-cuda-lsp.md` (`--cuda-path`,
-  libdevice, `__nv_bfloat16`)
-- the runbook carries the GPU price table (T4 ~$0.59/hr … H100 ~$3.95/hr,
-  B300 ~$7.10/hr) and the budget rule
-- the preemption caveat is documented: GPU functions cannot be
-  `nonpreemptible`; a preempted session loses only tmux, `/persist` survives
+### Phase 4.5 — Snapshot capture (shipped, verified)
 
-### Phase 4.5 — Sandbox capture experiment
-
-Run the devbox as a `modal.Sandbox` to unlock capture:
-`snapshot_filesystem()` → `image.publish("devbox-snap")`,
-`snapshot_directory("/root/repos")` for per-project state. GPU Sandboxes are
-confirmed (`Sandbox.create(gpu=...)`, `runtime="gvisor"` only), so the
-capture experiment runs on GPU too. Acceptance:
-
-- an interactively-installed tool survives into a new Sandbox via the
-  snapshot image
-- a GPU Sandbox snapshot→restore round-trip works (nvcc + nvidia-smi in the
-  restored container)
-- snapshot IDs are tracked (there is no list API) and old snapshots deleted
-- Function-use of a snapshot image is tested and the result recorded either
-  way (closes the research gap)
+`devbox snapshot [name]` freezes the running sandbox's container filesystem
+into a published named image (`snapshot_filesystem()` + `publish`). Verified:
+a marker file written interactively at `/opt/probe/tool.txt` was present in a
+brand-new sandbox created from the snapshot image. Mounted volumes are not
+captured (by design — `/persist` already persists), and a snapshot copies the
+filesystem, not processes.
 
 ### Phase 5 — stretch: agent harness in-container
 

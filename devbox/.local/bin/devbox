@@ -5,6 +5,7 @@
 #   devbox start [flags]             start (backgrounded launcher), print line
 #   devbox status                    list running devbox sandboxes
 #   devbox stop                      terminate running devbox sandboxes
+#   devbox snapshot [name]           freeze the container fs into a named image
 #
 # Flags before `--` pass to the sandbox start (e.g. --gpu T4,
 # --timeout-hours 2); anything after `--` becomes the remote command for
@@ -148,6 +149,7 @@ case "$cmd" in
         fi
         ;;
     status) exec modal run "$PY::status" ;;
+    snapshot) exec modal run "$PY::snapshot" --name "${1:-devbox-snap}" ;;
     stop)
         rm -f "$CACHE"  # the tunnel is gone; don't probe a dead endpoint
         exec modal run "$PY::stop"

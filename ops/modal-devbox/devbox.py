@@ -38,6 +38,7 @@ persist = modal.Volume.from_name("devbox-persist", create_if_missing=True, versi
 # the parity suite checks the pin's shape, not its value.
 DOTFILES_REPO = "https://github.com/aviralmansingka/dotfiles.git"
 DOTFILES_REF = "aef53ff5221f8fcfc63d9136184a425113baa708"
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # GPU choices the launcher accepts (B200/B300 stay excluded: the B300 needs
 # CUDA 13.1+ in the container and both are priced for compute, not LSP work —
@@ -111,112 +112,161 @@ _MASON_WAIT_LUA = (
     'return (vim.loop.now() - last) > 20000 and (vim.loop.now() - t0) > 60000 end, 1000)'
 )
 
-# --- Phase 1: apt system packages + zsh login shell (parity: install_system_packages.sh, cleanup.sh) ---
-base = (
-    modal.Image.from_registry("ubuntu:24.04", add_python="3.12")
-    .apt_install(*PACKER_APT, *MODAL_APT_EXTRAS)
-    .env({"SHELL": "/bin/zsh"})
-    # Packer's create_user.sh pre-created ~/.local/bin; the starship and
-    # mmdflux installers need it to exist.
-    .run_commands("mkdir -p /root/.local/bin", "chsh -s /bin/zsh root")
+def _build_image(root_image: "modal.Image") -> "modal.Image":
+    """Apply the five Packer-phase layers to a base image.
+
+    Shared by the CPU and CUDA variants so both environments stay
+    identical. Layer commands are unchanged strings, so each layer's
+    cache key is stable across the refactor.
+    """
+    # --- Phase 1: apt system packages + zsh login shell (parity: install_system_packages.sh, cleanup.sh) ---
+    base = (
+        root_image
+        .apt_install(*PACKER_APT, *MODAL_APT_EXTRAS)
+        .env({"SHELL": "/bin/zsh"})
+        # Packer's create_user.sh pre-created ~/.local/bin; the starship and
+        # mmdflux installers need it to exist.
+        .run_commands("mkdir -p /root/.local/bin", "chsh -s /bin/zsh root")
+    )
+
+    # --- Phase 2: CLI tools (parity: install_cli_tools.sh, plus gh + gh-dash) ---
+    tools = base.run_commands(
+        "curl -sS https://starship.rs/install.sh | sh -s -- -y -b $HOME/.local/bin",
+        "curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh",
+        'LAZYGIT_VERSION=$(curl -s https://api.github.com/repos/jesseduffield/lazygit/releases/latest | jq -r ".tag_name" | sed "s/^v//")'
+        ' && curl -Lo /tmp/lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"'
+        " && tar xzf /tmp/lazygit.tar.gz -C /tmp lazygit"
+        " && install /tmp/lazygit /usr/local/bin/lazygit",
+        "curl -Lo /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64"
+        " && chmod +x /usr/local/bin/yq",
+        "KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)"
+        " && curl -LO https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+        " && install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl",
+        "git clone https://github.com/ahmetb/kubectx /opt/kubectx"
+        " && ln -sf /opt/kubectx/kubectx /usr/local/bin/kubectx"
+        " && ln -sf /opt/kubectx/kubens /usr/local/bin/kubens",
+        'K9S_VERSION=$(curl -s https://api.github.com/repos/derailed/k9s/releases/latest | jq -r ".tag_name")'
+        ' && curl -Lo /tmp/k9s.tar.gz "https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_amd64.tar.gz"'
+        " && tar xzf /tmp/k9s.tar.gz -C /tmp k9s"
+        " && install /tmp/k9s /usr/local/bin/k9s",
+        'curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip'
+        " && unzip -q /tmp/awscliv2.zip -d /tmp && /tmp/aws/install && rm -rf /tmp/awscliv2.zip /tmp/aws",
+        "curl -LsSf https://astral.sh/uv/install.sh | sh",
+        "curl -sfL https://direnv.net/install.sh | bin_path=$HOME/.local/bin bash",
+        "curl -fsSL https://claude.ai/install.sh | bash",
+        "curl -fsSL https://opencode.ai/install | bash",
+        f"curl -fsSL -o /tmp/mmdflux.tar.gz https://github.com/kevinswiber/mmdflux/releases/download/mmdflux-{MMDFLUX_VERSION}/mmdflux-{MMDFLUX_VERSION}-linux-x86_64.tar.gz"
+        f" && tar xzf /tmp/mmdflux.tar.gz -C /tmp mmdflux"
+        f" && install -m 0755 /tmp/mmdflux $HOME/.local/bin/mmdflux"
+        " && rm -f /tmp/mmdflux.tar.gz /tmp/mmdflux",
+        "npm install -g grok-mermaid",
+        # gh via release tarball — the cli.github.com/apt repo 404s on Release
+        # (verified 2026-10); same pinned-tarball pattern as lazygit/k9s above.
+        'GH_VERSION=$(curl -s https://api.github.com/repos/cli/cli/releases/latest | jq -r ".tag_name" | sed "s/^v//")'
+        ' && curl -Lo /tmp/gh.tar.gz "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz"'
+        ' && tar xzf /tmp/gh.tar.gz -C /tmp'
+        ' && install /tmp/gh_${GH_VERSION}_linux_amd64/bin/gh /usr/local/bin/gh'
+        ' && rm -rf /tmp/gh.tar.gz /tmp/gh_${GH_VERSION}_linux_amd64',
+        "gh extension install dlvhdr/gh-dash || echo 'WARN: gh-dash extension skipped'",
+    )
+
+    # --- Phase 3: Rust toolchain + bob + Neovim nightly (parity: install_rust.sh) ---
+    rust = tools.run_commands(
+        "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y",
+        "$HOME/.cargo/bin/cargo install --locked eza bob-nvim",
+        "$HOME/.cargo/bin/bob use nightly",
+    )
+
+    # --- Phase 4: dotfiles stow + terminfo + Lazy sync + Oh My Zsh (parity: deploy_dotfiles.sh + install_shell_plugins.sh) ---
+    dotfiles = rust.run_commands(
+        f"git clone {DOTFILES_REPO} /root/dotfiles && git -C /root/dotfiles checkout {DOTFILES_REF}",
+        "rm -f /root/.zshenv /root/.zshrc /root/.bashrc /root/.bash_logout /root/.profile",
+        "cd /root/dotfiles && stow --target=/root " + " ".join(STOW_IGNORE) + " " + " ".join(STOW_PACKAGES),
+        "mkdir -p /root/.terminfo && tic -x -w /root/dotfiles/terminfo/xterm-ghostty.terminfo",
+        # obsidian.nvim (stowed config) hardcodes ~/vault; it must exist at
+        # build time for the headless run and at runtime (entrypoint links it
+        # into /persist).
+        "mkdir -p /root/vault",
+        # Lazy sync via the real bob-installed binary (Packer pattern: the
+        # ~/.local/bin shim is not guaranteed), then link it as the shim so
+        # interactive PATH (~/.local/bin) always has nvim.
+        "NVIM_BIN=$(find /root/.local/share/bob -type f -name nvim -path '*/bin/nvim' ! -path '*/nvim-bin/*' | head -1);"
+        ' if [ -z "$NVIM_BIN" ]; then echo "no nvim under /root/.local/share/bob:"; ls -laR /root/.local/share/bob /root/.local/bin; exit 1; fi;'
+        ' ln -sfn "$NVIM_BIN" /root/.local/bin/nvim;'
+        # Two headless passes: pass 1 syncs plugins (user specs like mason.lua
+        # and c.lua only register their ensure_installed lists on a startup that
+        # sees them installed); pass 2 is a full startup whose mason config
+        # installs everything, then waits until quiescent. The wait must be
+        # race-proof: installs are triggered from mason's ASYNC registry-refresh
+        # callback, which can fire after the luafile starts — so exit only after
+        # a >=60 s floor AND >=20 s with no install in flight (vim.wait pumps
+        # the event loop). A +qa that lands mid-install ships partial state, and
+        # any package left uninstalled gets double-triggered on the first
+        # interactive open (the "already installing" error). (Modal's image
+        # parser rejects multi-line commands, hence the one-line luafile.)
+        # Two headless passes: pass 1 syncs plugins (user specs like mason.lua
+        # and c.lua only register their ensure_installed lists on a startup that
+        # sees them installed); pass 2 runs the mason bootstrap luafile above.
+        " echo '" + _MASON_WAIT_LUA + "' > /tmp/mason-wait.lua;"
+        ' "$NVIM_BIN" --headless "+Lazy! sync" +qa;'
+        ' "$NVIM_BIN" --headless "+luafile /tmp/mason-wait.lua" +qa',
+        'sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended',
+        # OMZ wrote a template .zshrc: drop it and restore the stowed one.
+        "rm -f /root/.zshrc && cd /root/dotfiles && stow --target=/root " + " ".join(STOW_IGNORE) + " zsh",
+        "git clone https://github.com/zsh-users/zsh-autosuggestions /root/.oh-my-zsh/custom/plugins/zsh-autosuggestions",
+        "git clone https://github.com/zsh-users/zsh-syntax-highlighting.git /root/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting",
+        # Never ship build-session nvim state (shada etc.): it makes the first
+        # interactive open throw a spurious mason "already installing" error
+        # (verified empirically; a pristine state dir opens clean).
+        "rm -rf /root/.local/state/nvim",
+    )
+
+    # --- Phase 5: git config last (parity: cleanup.sh — stow it after all HTTPS clones) ---
+    image = dotfiles.run_commands(
+        "cd /root/dotfiles && stow --target=/root " + " ".join(STOW_IGNORE) + " " + " ".join(STOW_PACKAGES_LATE),
+    )
+    # Ship the clangd compile-database generator (works on both variants; it
+    # errors clearly when no CUDA toolkit is present).
+    # --- Phase 5b: ship the CUDA compile-db helper (not a Packer phase)
+    image = image.add_local_file(
+        str(REPO_ROOT / "scripts/cuda-compile-db"),
+        "/root/.local/bin/cuda-compile-db",
+        copy=True,
+    ).run_commands("chmod 0755 /root/.local/bin/cuda-compile-db")
+    return image
+
+
+# --- image variants ----------------------------------------------------------------
+# CPU: parity with the devbox AMI and the homelab.
+# CUDA: the NVIDIA devel base carries nvcc, the CUDA headers and libdevice, which
+# full clangd CUDA LSP needs (docs/neovim-cuda-lsp.md). The host driver is
+# 580.95.05+ / Driver API 13.0, and 12.x/13.x toolkits are host-compatible
+# (research report §6), so 13.0 pins to the driver without over-shooting.
+# Deliberately the plain -devel variant, not -cudnn-devel: cuDNN is not needed
+# for compiling or LSP, and the cuDNN layer adds several GB that make a cold
+# sandbox hydrate too slowly to reach a tunnel.
+CUDA_BASE_IMAGE = "nvidia/cuda:13.0.0-devel-ubuntu24.04"
+
+cpu_image = _build_image(modal.Image.from_registry("ubuntu:24.04", add_python="3.12"))
+cuda_image = _build_image(modal.Image.from_registry(CUDA_BASE_IMAGE, add_python="3.12")).run_commands(
+    # --- Phase 6: CUDA login environment (/etc/environment, then ENV)
+    # sshd gives each login a PAM-built environment, NOT the container's ENV —
+    # so the toolkit has to be exported where SSH sessions look: /etc/environment.
+    # Do NOT symlink nvcc into /usr/local/bin: nvcc resolves its headers
+    # relative to argv[0], so a symlink makes it lose <cuda_runtime.h>
+    # (verified: clangd still passed, nvcc compilation failed).
+    "printf 'CUDA_HOME=/usr/local/cuda\\n"
+    "PATH=\"/usr/local/cuda/bin:/usr/local/cuda/nvvm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"\\n"
+    "LD_LIBRARY_PATH=/usr/local/cuda/lib64\\n' > /etc/environment",
+).env(
+    {
+        "CUDA_HOME": "/usr/local/cuda",
+        "PATH": "/usr/local/cuda/bin:/usr/local/cuda/nvvm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "LD_LIBRARY_PATH": "/usr/local/cuda/lib64",
+    }
 )
 
-# --- Phase 2: CLI tools (parity: install_cli_tools.sh, plus gh + gh-dash) ---
-tools = base.run_commands(
-    "curl -sS https://starship.rs/install.sh | sh -s -- -y -b $HOME/.local/bin",
-    "curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh",
-    'LAZYGIT_VERSION=$(curl -s https://api.github.com/repos/jesseduffield/lazygit/releases/latest | jq -r ".tag_name" | sed "s/^v//")'
-    ' && curl -Lo /tmp/lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"'
-    " && tar xzf /tmp/lazygit.tar.gz -C /tmp lazygit"
-    " && install /tmp/lazygit /usr/local/bin/lazygit",
-    "curl -Lo /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64"
-    " && chmod +x /usr/local/bin/yq",
-    "KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)"
-    " && curl -LO https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
-    " && install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl",
-    "git clone https://github.com/ahmetb/kubectx /opt/kubectx"
-    " && ln -sf /opt/kubectx/kubectx /usr/local/bin/kubectx"
-    " && ln -sf /opt/kubectx/kubens /usr/local/bin/kubens",
-    'K9S_VERSION=$(curl -s https://api.github.com/repos/derailed/k9s/releases/latest | jq -r ".tag_name")'
-    ' && curl -Lo /tmp/k9s.tar.gz "https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_amd64.tar.gz"'
-    " && tar xzf /tmp/k9s.tar.gz -C /tmp k9s"
-    " && install /tmp/k9s /usr/local/bin/k9s",
-    'curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip'
-    " && unzip -q /tmp/awscliv2.zip -d /tmp && /tmp/aws/install && rm -rf /tmp/awscliv2.zip /tmp/aws",
-    "curl -LsSf https://astral.sh/uv/install.sh | sh",
-    "curl -sfL https://direnv.net/install.sh | bin_path=$HOME/.local/bin bash",
-    "curl -fsSL https://claude.ai/install.sh | bash",
-    "curl -fsSL https://opencode.ai/install | bash",
-    f"curl -fsSL -o /tmp/mmdflux.tar.gz https://github.com/kevinswiber/mmdflux/releases/download/mmdflux-{MMDFLUX_VERSION}/mmdflux-{MMDFLUX_VERSION}-linux-x86_64.tar.gz"
-    f" && tar xzf /tmp/mmdflux.tar.gz -C /tmp mmdflux"
-    f" && install -m 0755 /tmp/mmdflux $HOME/.local/bin/mmdflux"
-    " && rm -f /tmp/mmdflux.tar.gz /tmp/mmdflux",
-    "npm install -g grok-mermaid",
-    # gh via release tarball — the cli.github.com/apt repo 404s on Release
-    # (verified 2026-10); same pinned-tarball pattern as lazygit/k9s above.
-    'GH_VERSION=$(curl -s https://api.github.com/repos/cli/cli/releases/latest | jq -r ".tag_name" | sed "s/^v//")'
-    ' && curl -Lo /tmp/gh.tar.gz "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz"'
-    ' && tar xzf /tmp/gh.tar.gz -C /tmp'
-    ' && install /tmp/gh_${GH_VERSION}_linux_amd64/bin/gh /usr/local/bin/gh'
-    ' && rm -rf /tmp/gh.tar.gz /tmp/gh_${GH_VERSION}_linux_amd64',
-    "gh extension install dlvhdr/gh-dash || echo 'WARN: gh-dash extension skipped'",
-)
 
-# --- Phase 3: Rust toolchain + bob + Neovim nightly (parity: install_rust.sh) ---
-rust = tools.run_commands(
-    "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y",
-    "$HOME/.cargo/bin/cargo install --locked eza bob-nvim",
-    "$HOME/.cargo/bin/bob use nightly",
-)
-
-# --- Phase 4: dotfiles stow + terminfo + Lazy sync + Oh My Zsh (parity: deploy_dotfiles.sh + install_shell_plugins.sh) ---
-dotfiles = rust.run_commands(
-    f"git clone {DOTFILES_REPO} /root/dotfiles && git -C /root/dotfiles checkout {DOTFILES_REF}",
-    "rm -f /root/.zshenv /root/.zshrc /root/.bashrc /root/.bash_logout /root/.profile",
-    "cd /root/dotfiles && stow --target=/root " + " ".join(STOW_IGNORE) + " " + " ".join(STOW_PACKAGES),
-    "mkdir -p /root/.terminfo && tic -x -w /root/dotfiles/terminfo/xterm-ghostty.terminfo",
-    # obsidian.nvim (stowed config) hardcodes ~/vault; it must exist at
-    # build time for the headless run and at runtime (entrypoint links it
-    # into /persist).
-    "mkdir -p /root/vault",
-    # Lazy sync via the real bob-installed binary (Packer pattern: the
-    # ~/.local/bin shim is not guaranteed), then link it as the shim so
-    # interactive PATH (~/.local/bin) always has nvim.
-    "NVIM_BIN=$(find /root/.local/share/bob -type f -name nvim -path '*/bin/nvim' ! -path '*/nvim-bin/*' | head -1);"
-    ' if [ -z "$NVIM_BIN" ]; then echo "no nvim under /root/.local/share/bob:"; ls -laR /root/.local/share/bob /root/.local/bin; exit 1; fi;'
-    ' ln -sfn "$NVIM_BIN" /root/.local/bin/nvim;'
-    # Two headless passes: pass 1 syncs plugins (user specs like mason.lua
-    # and c.lua only register their ensure_installed lists on a startup that
-    # sees them installed); pass 2 is a full startup whose mason config
-    # installs everything, then waits until quiescent. The wait must be
-    # race-proof: installs are triggered from mason's ASYNC registry-refresh
-    # callback, which can fire after the luafile starts — so exit only after
-    # a >=60 s floor AND >=20 s with no install in flight (vim.wait pumps
-    # the event loop). A +qa that lands mid-install ships partial state, and
-    # any package left uninstalled gets double-triggered on the first
-    # interactive open (the "already installing" error). (Modal's image
-    # parser rejects multi-line commands, hence the one-line luafile.)
-    # Two headless passes: pass 1 syncs plugins (user specs like mason.lua
-    # and c.lua only register their ensure_installed lists on a startup that
-    # sees them installed); pass 2 runs the mason bootstrap luafile above.
-    " echo '" + _MASON_WAIT_LUA + "' > /tmp/mason-wait.lua;"
-    ' "$NVIM_BIN" --headless "+Lazy! sync" +qa;'
-    ' "$NVIM_BIN" --headless "+luafile /tmp/mason-wait.lua" +qa',
-    'sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended',
-    # OMZ wrote a template .zshrc: drop it and restore the stowed one.
-    "rm -f /root/.zshrc && cd /root/dotfiles && stow --target=/root " + " ".join(STOW_IGNORE) + " zsh",
-    "git clone https://github.com/zsh-users/zsh-autosuggestions /root/.oh-my-zsh/custom/plugins/zsh-autosuggestions",
-    "git clone https://github.com/zsh-users/zsh-syntax-highlighting.git /root/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting",
-    # Never ship build-session nvim state (shada etc.): it makes the first
-    # interactive open throw a spurious mason "already installing" error
-    # (verified empirically; a pristine state dir opens clean).
-    "rm -rf /root/.local/state/nvim",
-)
-
-# --- Phase 5: git config last (parity: cleanup.sh — stow it after all HTTPS clones) ---
-devbox_image = dotfiles.run_commands(
-    "cd /root/dotfiles && stow --target=/root " + " ".join(STOW_IGNORE) + " " + " ".join(STOW_PACKAGES_LATE),
-)
 
 # --- launcher ----------------------------------------------------------------------
 
@@ -283,20 +333,33 @@ def _attached_secret_names():
 
 
 def _tunnel(sb):
-    """(host, port) of the sandbox's port-22 tunnel, or None."""
-    tunnels = sb.tunnels()
+    """(host, port) of the sandbox's port-22 tunnel, or None.
+
+    tunnels() blocks up to ~50 s and then raises SandboxTimeoutError; that is
+    a normal "not ready yet" answer for a large image hydrating on a fresh
+    worker, not a fatal error — callers poll and treat it as None.
+    """
+    try:
+        tunnels = sb.tunnels()
+    except Exception:  # noqa: BLE001 — SandboxTimeoutError and friends mean "not yet"
+        return None
     tunnel = tunnels.get(22) if isinstance(tunnels, dict) else None
     return getattr(tunnel, "tcp_socket", None) if tunnel is not None else None
 
 
 def _wait_for_tunnel(sandbox, attempts: int = 120, pause: float = 1.0):
-    """Poll tunnels() until the port-22 TCP socket is up; return (host, port)."""
+    """Poll tunnels() until the port-22 TCP socket is up; return (host, port).
+
+    Each poll may itself block ~50 s inside tunnels(), so the bound is on
+    attempts, not wall time; a CUDA image can need several minutes on a cold
+    worker before its tunnel exists.
+    """
     for _ in range(attempts):
-        tunnels = sandbox.tunnels()
-        tunnel = tunnels.get(22) if isinstance(tunnels, dict) else None
-        socket_ = getattr(tunnel, "tcp_socket", None) if tunnel is not None else None
+        socket_ = _tunnel(sandbox)
         if socket_:
             return socket_
+        if sandbox.poll() is not None:
+            sys.exit("sandbox exited before its tunnel came up; check `modal container logs <id>`")
         time.sleep(pause)
     sys.exit("port-22 tunnel never came up; check `modal container logs <id>`")
 
@@ -356,7 +419,7 @@ def main(
     sandbox = modal.Sandbox.create(
         "bash", "-c", ENTRYPOINT,
         app=app,
-        image=devbox_image,
+        image=cpu_image if not gpu else cuda_image,
         volumes={"/persist": persist},
         secrets=[modal.Secret.from_name(n) for n in attached]
         + [modal.Secret.from_dict({"DEVBOX_SSH_PUBLIC_KEY": pubkey})],
@@ -373,6 +436,7 @@ def main(
         host, port = _wait_for_tunnel(sandbox)
         print()
         print(f"CONNECT {host} {port}")  # machine line for the devbox wrapper
+        print(f"  image          : {'cuda ' + CUDA_BASE_IMAGE if gpu else 'ubuntu:24.04'}")
         print(f"  devbox sandbox : {sandbox.object_id}")
         print(f"  connect        : ssh -o StrictHostKeyChecking=accept-new -p {port} root@{host}")
         print(f"  secrets        : {', '.join(attached) or 'none'} + per-launch ssh key")
@@ -415,3 +479,27 @@ def stop():
     for sb in running:
         sb.terminate()
         print(f"terminated {sb.object_id}; /persist state kept")
+
+
+@app.local_entrypoint()
+def snapshot(name: str = "devbox-snap"):
+    """Freeze the running devbox container filesystem into a named Image.
+
+    Modal has no docker-commit for Sandbox containers, but a Filesystem
+    Snapshot is the sanctioned equivalent: it captures the container's root
+    filesystem as a reusable Image. Mounted Volumes are NOT included —
+    /persist state already lives on the volume and needs no capture.
+
+    Use this after installing something interactively that you want to keep
+    without an image rebuild, then boot it with
+    `modal.Image.from_name("<name>")`.
+    """
+    running = _running_devboxes()
+    if not running:
+        sys.exit("no devbox sandbox running: start one with `devbox ssh` first")
+    sandbox = running[0]
+    print(f"snapshotting {sandbox.object_id} ...")
+    image = sandbox.snapshot_filesystem()
+    image.publish(name)
+    print(f"published {name} (from {sandbox.object_id}); boot it with Image.from_name({name!r})")
+    print("note: mounted volumes are not captured — /persist keeps its own state")

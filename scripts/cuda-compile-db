@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# cuda-compile-db — generate a clangd-usable compile_commands.json for CUDA.
+#
+# Usage:
+#   scripts/cuda-compile-db [DIR] [--arch sm_75] [--cuda-path /usr/local/cuda]
+#
+# Writes DIR/compile_commands.json with one entry per .cu/.cuh file under
+# DIR (recursive). `bear`/`compiledb` do not know nvcc, so the entries use
+# the clang++ driver with the flag set from the validated homelab recipe in
+# docs/neovim-cuda-lsp.md:
+#
+#   -x cuda -std=c++17 --cuda-path=<p> --cuda-gpu-arch=<arch> -ferror-limit=0
+#          [-I <p>/include/cccl]
+#
+# - --cuda-path points clangd at the real toolkit (headers + libdevice) —
+#   without it clangd reports "Cannot find CUDA installation" and
+#   "Cannot find libdevice".
+# - CUDA 13 splits CCCL out of --cuda-path (<cuda/barrier>, <cuda/atomic>);
+#   nvcc adds include/cccl itself, clangd does not, so the -I is emitted
+#   whenever that directory exists.
+# - -ferror-limit=0 stops clang's device pass from aborting the parse at
+#   the default 19-error limit (which kills hover/go-to-def for the rest
+#   of the file).
+# - --arch only affects clangd's analysis target (default sm_75, T4-class —
+#   the cheapest interactive GPU); the actual build still uses nvcc flags.
+#
+# Run it next to your CUDA sources, then verify with
+#   clangd --check=sample.cu
+# expecting no "Cannot find CUDA installation" / "libdevice" /
+# "unknown type name '__nv_bfloat16'" diagnostics.
+set -euo pipefail
+
+dir=.
+arch=sm_75
+cuda="${CUDA_PATH:-${CUDA_HOME:-/usr/local/cuda}}"
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --arch) arch="${2:?}"; shift 2 ;;
+        --cuda-path) cuda="${2:?}"; shift 2 ;;
+        -h|--help) sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --*) echo "cuda-compile-db: unknown flag: $1" >&2; exit 2 ;;
+        *) dir="$1"; shift ;;
+    esac
+done
+
+[ -f "$cuda/include/cuda.h" ] || {
+    echo "cuda-compile-db: no CUDA toolkit at $cuda (pass --cuda-path or set CUDA_PATH)" >&2
+    exit 1
+}
+dir="$(cd "$dir" && pwd)"
+
+flags=(-x cuda -std=c++17 "--cuda-path=$cuda" "--cuda-gpu-arch=$arch" -ferror-limit=0)
+if [ -d "$cuda/include/cccl" ]; then
+    flags+=("-I" "$cuda/include/cccl")
+fi
+
+out="$dir/compile_commands.json"
+printf '[' > "$out"
+first=1
+entries=0
+while IFS= read -r -d '' file; do
+    [ "$first" -eq 1 ] || printf ',' >> "$out"
+    first=0
+    entries=$((entries + 1))
+    printf '\n  { "directory": "%s", "file": "%s", "command": "clang++ %s %s" }' \
+        "$dir" "$file" "${flags[*]}" "$file" >> "$out"
+done < <(find "$dir" -type f \( -name '*.cu' -o -name '*.cuh' \) -print0 | sort -z)
+printf '\n]\n' >> "$out"
+
+if [ "$entries" -eq 0 ]; then
+    rm -f "$out"
+    echo "cuda-compile-db: no .cu/.cuh files under $dir" >&2
+    exit 1
+fi
+echo "wrote $out ($entries entries, arch=$arch, cuda=$cuda)"
