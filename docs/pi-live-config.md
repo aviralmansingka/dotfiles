@@ -168,6 +168,25 @@ Both Git and Stow ignore them, even when old copies remain in a checkout.
 The web-fetch extension's own package/lockfile stays tracked: it is source-owned,
 not Pi's runtime package-manager state.
 
+### Local model providers (nace)
+
+This host runs a local nace server at `http://127.0.0.1:8000/v1`, an
+OpenAI-compatible local server (MLX quants, `owned_by: nace`). The provider is
+wired in the **live, host-local** `~/.pi/agent/models.json` — never committed,
+per the ownership table above:
+
+- Provider `nace`: `api: "openai-completions"`, dummy literal `apiKey`
+  (the server ignores it; it only makes the model selectable),
+  `contextWindow` from the server's `/v1/models` `context_length`.
+- Only add models the server reports as `downloaded`; the catalog lists
+  not-yet-downloaded entries too. Re-check `/v1/models` after nace updates.
+- Add `nace/<model>` to `enabledModels` in `settings.local.json` (then sync)
+  so `Ctrl+P` cycling reaches it; `/model` lists it either way.
+- Verified against pi 1.4.0 defaults for localhost URLs: `developer` role,
+  `max_completion_tokens`, `reasoning_effort`, `store`, streaming tools, and
+  `reasoning_content` thinking deltas all pass through unchanged — no `compat`
+  overrides needed. Zero-cost `cost` disables cache warming by design.
+
 ### One-time migration of old live links
 
 **Before updating a deployed checkout that still owns these files**, preserve
