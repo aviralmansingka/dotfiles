@@ -237,6 +237,13 @@ open.
 
 The checked-in Pi config intentionally excludes `auth.json`, sessions, caches, and runtime state. MCP credentials should be provided out of band.
 
+The `opengateway` provider extension (`pi/.pi/agent/extensions/opengateway.ts`) registers the
+OpenGateway token gateway (opengateway.ai, UltraFast models served by Sionic AI) with one chat
+model: `deepseek/deepseek-v4.1-flash-ultrafast`. It authenticates with the
+`OPENGATEWAY_API_KEY` environment variable — add it to `~/.env` (never committed) and select the
+model with `/model`. Fireworks stays the default provider; cost metadata pins the gateway's list
+prices, which scheduled KST discount windows bill below.
+
 Install/update Pi packages and the local web-fetch dependencies:
 
 ```sh
