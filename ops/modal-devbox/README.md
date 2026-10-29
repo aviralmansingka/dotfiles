@@ -43,6 +43,7 @@ modal run ops/modal-devbox/devbox.py --timeout-hours 2   # shorter lease
 | Flag | Default | Meaning |
 | --- | --- | --- |
 | `--gpu` | `""` (CPU) | `T4 L4 A10 L40S A100-40GB A100-80GB H100 H200` |
+| `--region` | `""` (Modal picks) | `us`, `us-east`, `us-west`, `eu`, `eu-west`, `ap`, `ap-south` — 1.15x for broad, 1.75x for narrow |
 | `--timeout-hours` | 24 | Hard lifetime cap (backstop only — idle_timeout is the real control) |
 | `--idle-timeout` | 120 | Seconds after the last SSH disconnect before teardown (0 = never) |
 | `--new` | off | Force a fresh sandbox instead of adopting a running one |
@@ -167,6 +168,40 @@ first, dotfiles last — so config churn is cheap).
 - Debug rebuild without poisoning the cache: `MODAL_IGNORE_CACHE=1`
 - After an image rebuild, nvim plugins on the volume may lag the new config:
   run `:Lazy! sync` once inside nvim.
+
+## Region (running close to you)
+
+By default Modal places the box wherever it schedules best, usually the US, so
+an SSH session from India pays a long relay round trip. Pass `--region` to pin
+the container:
+
+```sh
+devbox ssh --region ap-south --new    # Mumbai, India — lowest latency
+```
+
+| `--region` | Where | Multiplier |
+| --- | --- | --- |
+| `ap-south` | Mumbai, India | 1.75x |
+| `ap` | broad Asia-Pacific pool (best availability) | 1.15x |
+| `eu-west` / `eu` | Dublin / broad EU | 1.75x / 1.15x |
+| `us-east` / `us-west` / `us` | Virginia / Oregon / broad US | 1.75x / 1.15x |
+
+Measured from this Mac (2026-10): a bare SSH handshake through the tunnel took
+**0.63 s with `--region ap-south`** versus **2.26 s** with the default
+placement, and the container's egress resolved to New Delhi, India. Interactive
+latency is the whole point of the flag, so prefer it for daily use.
+
+Notes:
+
+- `ap-south` guarantees Mumbai. `ap` is cheaper and schedules better, but the
+  box can land anywhere in the Asia-Pacific pool — use it when any nearby
+  region will do and the box must start quickly.
+- A multi-region list is also accepted by Modal; this wrapper keeps one value
+  so the CLI stays simple. Edit `__main__`'s `region=` call or pass your own
+  through `modal run ops/modal-devbox/devbox.py` if you need that.
+- `routing_region=` (the other Modal knob) does not apply to Sandboxes, so
+  `--region` is the whole story for SSH latency.
+- The multiplier applies to compute and GPU time, not the `/persist` volume.
 
 ## GPU and CUDA
 

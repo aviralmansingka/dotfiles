@@ -6,7 +6,7 @@
 #   devbox stop                      terminate running devbox sandboxes
 #   devbox snapshot [name]           freeze the container fs into a named image
 #
-# Flags before `--` pass to the sandbox start (e.g. --gpu T4,
+# Flags before `--` pass to the sandbox start (e.g. --gpu T4, --region ap-south,
 # --timeout-hours 2); anything after `--` becomes the remote command for
 # ssh. The app file is resolved from MODAL_DEVBOX_PY, a walk-up from the
 # current directory, or ~/dotfiles.
@@ -46,7 +46,7 @@ resolve_py() {
 }
 
 usage() {
-    sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 connect_line() {
