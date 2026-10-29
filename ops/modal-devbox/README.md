@@ -56,8 +56,11 @@ box burst into spare host capacity (`nproc` inside shows the host otherwise).
 Pass the `-limit` flags for a hard ceiling — verified inside a capped box:
 `nproc` = 4, `cpu.cfs_quota_us` = 4000000, `memory.limit_in_bytes` = 8589934592.
 `devbox status` prints what each running box was created with, e.g.
-`cpu=4/4 mem=8192/8192MiB gpu=T4 region=ap-south` (`<request>/<limit>`, `none`
-and `default` when unset).
+`cpu=4/4 mem=8192/8192MiB gpu=T4 region=ap-south placement=ap-south/gcp`
+(`<request>/<limit>`, `none` and `default` when unset). `region=` is what you
+asked for; `placement=` is where the container actually landed, read once from
+`MODAL_REGION`/`MODAL_CLOUD_PROVIDER` in the container's PID 1 environment —
+worth checking when you pass no region or the broad `ap`/`us`/`eu` pools.
 
 First run builds the image (~15–30 min: apt, CLI tools, Rust + bob + Neovim
 nightly, dotfiles stow + Lazy sync, Oh My Zsh). Later runs start in seconds

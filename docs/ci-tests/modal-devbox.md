@@ -43,12 +43,14 @@ and no `$HOME` mutation.
   the contract strings that couple it to `devbox.py` (`::main`, `::status`,
   `::stop`, `::snapshot`, the `CONNECT` line format, `MODAL_DEVBOX_PY`) are
   present. Behavior is proven by M16, not by grepping names.
-- **M16 wrapper behavior.** Executes the wrapper against stubbed `modal` and
-  `ssh` CLIs and asserts real behavior: `--help` usage, unknown-subcommand
-  failure, a cold `devbox ssh` starting via `::main` and caching the CONNECT
-  line, a warm attach reusing the cache without restarting, `--new` bypassing
-  the cache and forwarding start flags, and `devbox stop` clearing the cache.
-  This is the check that caught the `--new`-hit-the-cache bug.
+- **M16 wrapper behavior.** Executes the wrapper against stubbed `modal`,
+  `ssh` and interpreter CLIs and asserts real behavior: `--help` usage,
+  unknown-subcommand failure, a cold `devbox ssh` starting via `::main` and
+  caching the CONNECT line, a warm attach reusing the cache without
+  restarting, `--new` bypassing the cache and forwarding start flags,
+  `devbox stop` clearing the cache, and `status`/`stop` taking the
+  plain-script path instead of launching an ephemeral App. This is the check
+  that caught the `--new`-hit-the-cache bug.
 - **M10 mason tools.** `MASON_TOOLS` in devbox.py covers every
   `ensure_installed` entry in `nvim/.config/nvim/lua/plugins/mason.lua`
   (the suite's Paths include that file, so edits retrigger it) plus

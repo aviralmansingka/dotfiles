@@ -45,6 +45,21 @@ resolve_py() {
     return 1
 }
 
+# Interpreter that can import modal: the modal CLI's own venv python (its
+# shebang), so version parity is automatic. DEVBOX_PY overrides it for tests.
+modal_python() {
+    if [ -n "${DEVBOX_PY:-}" ]; then
+        printf '%s\n' "$DEVBOX_PY"
+        return 0
+    fi
+    local cli shebang
+    cli="$(command -v modal 2>/dev/null || true)"
+    [ -n "$cli" ] || return 1
+    shebang="$(sed -n '1s/^#!//p' "$cli" 2>/dev/null)"
+    shebang="${shebang% *}"   # drop any interpreter args
+    [ -x "$shebang" ] && printf '%s\n' "$shebang"
+}
+
 usage() {
     sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
 }
@@ -213,10 +228,19 @@ case "$cmd" in
         line="$(start_sandbox ${start_args[@]+"${start_args[@]}"})"
         ssh_from_line "$line" ${remote_args[@]+"${remote_args[@]}"}
         ;;
-    status) exec modal run "$PY::status" ;;
+    status)
+        # Plain script: no ephemeral App, no app URL. Fall back to `modal run`
+        # when the interpreter cannot be resolved or the import fails.
+        if modpy="$(modal_python)" && "$modpy" "$PY" status; then
+            exit 0
+        fi
+        exec modal run "$PY::status" ;;
     snapshot) exec modal run "$PY::snapshot" --name "${1:-devbox-snap}" ;;
     stop)
         rm -f "$CACHE"  # the tunnel is gone; don't probe a dead endpoint
+        if modpy="$(modal_python)" && "$modpy" "$PY" stop; then
+            exit 0
+        fi
         exec modal run "$PY::stop"
         ;;
     help|-h|--help) usage ;;
