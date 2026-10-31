@@ -77,18 +77,45 @@ terraform -chdir=ops/devbox destroy \
   -var="ssh_public_key=$(cat ~/.ssh/id_ed25519.pub)"
 ```
 
+### Option C: Modal Devbox (ephemeral, on-demand)
+
+An SSH-able Ubuntu 24.04 devbox on [Modal](https://modal.com), built from the same
+provisioning pipeline as the AWS devbox but running as an on-demand Sandbox:
+ephemeral container, persistent state on a Modal volume, GPU hosts one flag away.
+
+**Prerequisites:** the `modal` CLI installed and authenticated (`uv tool install modal && modal setup`).
+
+```sh
+devbox ssh                 # after install.sh stows the devbox package
+devbox ssh --gpu T4        # start with a GPU, then connect
+```
+
+Or the manual form from a checkout:
+
+```sh
+modal run ops/modal-devbox/devbox.py            # CPU devbox (foreground)
+modal run ops/modal-devbox/devbox.py --gpu T4   # GPU devbox
+```
+
+`devbox ssh` starts the sandbox if needed, prints the `ssh -p <port> root@<host>`
+line, and connects; `devbox stop` tears it down and `/persist` state survives.
+Runbook with flags, costs, rebuilds, and snapshot capture:
+`ops/modal-devbox/README.md`. Plan and research: `docs/modal-devbox.md`.
+
 ## Stow Packages
 
 | Package      | Description                                                                 |
 | ------------ | --------------------------------------------------------------------------- |
 | `aerospace`  | AeroSpace tiling window manager                                             |
 | `agents`     | Shared agent skills                                                         |
+| `devbox`     | Modal devbox CLI wrapper (`devbox ssh`)                                     |
 | `ghostty`    | Ghostty terminal emulator                                                   |
 | `gh-dash`    | GitHub dashboard config and PR worktree launcher                            |
 | `herdr`      | Agent workspaces, notifications, and sound configuration                    |
 | `git`        | Git configuration                                                           |
 | `launchd`    | macOS user LaunchAgents (vault and dotfiles auto-sync)                      |
 | `nvim`       | Neovim with LazyVim                                                         |
+| `rex`        | Rex terminal client configuration                                           |
 | `starship`   | Starship prompt                                                             |
 | `systemd`    | User systemd units (vault/dotfiles auto-sync, Pi/WhatsApp/Telegram bridges) |
 | `pi`         | Pi agent config, packages, themes, and messaging daemons                    |

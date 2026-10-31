@@ -128,6 +128,11 @@ What the validation actually required (differs from the bear recipe above):
   tree): one entry per file, driver `clang++`, flags
   `-x cuda -std=c++17 --cuda-path=/usr/local/cuda --cuda-gpu-arch=sm_90a
   -ferror-limit=0 -I /usr/local/cuda/include/cccl`.
+- That recipe ships as `scripts/cuda-compile-db`: it writes one `clang++`
+  entry per `.cu`/`.cuh` file under a directory (same flag set, arch
+  configurable, `-I .../include/cccl` added when CUDA 13 splits it out).
+  The Modal GPU devbox image bakes it in as `cuda-compile-db` — GPU
+  workflow: `ops/modal-devbox/README.md`.
 - **CUDA 13 split CCCL out of --cuda-path**: `<cuda/barrier>`,
   `<cuda/atomic>` etc. live under `/usr/local/cuda/include/cccl/cuda/...`.
   nvcc adds that directory itself; clangd does not. Without

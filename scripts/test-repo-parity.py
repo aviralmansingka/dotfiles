@@ -167,6 +167,34 @@ UPSTREAM_DOC_REFS = {
         "docs/configuration.md": "upstream pi package's installed docs/",
         "docs/settings.md": "upstream pi package's installed docs/",
     },
+    # The coupling audit is a point-in-time snapshot of the live
+    # ~/dotfiles tree (auto-committed 2026-10-29): its rows name files at
+    # their audit-time locations, some elided with '...'. Those paths were
+    # never tracked in git, so they cannot be 'fixed' to a current file
+    # without falsifying the audit record.
+    "docs/rex-herdr-coupling-audit.md": {
+        "herdr/.../herdr-flash/config.toml": (
+            "audit snapshot; elided path, never tracked in git"
+        ),
+        "tuicr/tuicr-wrapper-herdr.sh": (
+            "audit snapshot; live-tree path, never tracked in git"
+        ),
+        "nvim/nvim-open.sh": (
+            "audit snapshot; live-tree path, never tracked in git"
+        ),
+        "tuicr/SKILL.md": (
+            "audit snapshot; live-tree path, never tracked in git"
+        ),
+        "nvim/SKILL.md": (
+            "audit snapshot; live-tree path, never tracked in git"
+        ),
+        "docs/adr/0004-require-holder-consent...": (
+            "audit snapshot; elided path, never tracked in git"
+        ),
+        "docs/evidence/sidekick-.../README.md": (
+            "audit snapshot; elided path, never tracked in git"
+        ),
+    },
 }
 
 COUNT_CLAIM_RE = re.compile(r"(\d+)\s+stow(?:ed)?\s+packages?\b", re.I)
@@ -468,10 +496,13 @@ def _build_docs_sandbox(base: Path) -> tuple:
     # Carry the exemption docs so the sandbox matches the real suite's
     # scope: their refs/mentions are exempted, not required to exist.
     (root / "docs").mkdir(exist_ok=True)
-    (root / "docs" / "pi-live-config.md").write_text(
-        "Pi docs: see `docs/cli.md`, `docs/configuration.md`, "
-        "`docs/settings.md` from the installed package.\n")
-    tracked.add("docs/pi-live-config.md")
+    for doc, refs in UPSTREAM_DOC_REFS.items():
+        if doc == "AGENTS.md":
+            continue  # its refs are carried by the AGENTS.md stub above
+        p = root / doc
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("# stub\n" + " ".join(f"`{tok}`" for tok in sorted(refs)) + "\n")
+        tracked.add(doc)
     for (doc, pkg) in DOC_STOW_MENTION_ALLOWLIST:
         p = root / doc
         p.parent.mkdir(parents=True, exist_ok=True)

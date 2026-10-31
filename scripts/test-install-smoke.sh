@@ -50,9 +50,10 @@ newtmp() { mktemp -d "$TMPROOT/smoke.XXXXXX"; }
 declare -A SENTINEL=(
   [zsh]=".zshenv" [tmux]=".tmux.conf" [nvim]=".config/nvim"
   [starship]=".config/starship.toml" [ghostty]=".config/ghostty"
-  [aerospace]=".aerospace.toml" [gh-dash]=".config/gh-dash"
-  [tuicr]=".config/tuicr"
+  [aerospace]=".aerospace.toml" [rex]=".config/rex"
+  [gh-dash]=".config/gh-dash" [tuicr]=".config/tuicr"
   [agents]=".agents" [pi]="bin" [herdr]=".config/herdr"
+  [devbox]=".local/bin/devbox"
   [systemd]=".config/systemd"
   [git]=".config/git"
 )
