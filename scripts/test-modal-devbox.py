@@ -18,20 +18,20 @@ pipeline and the research-verified Modal API surface:
   M4  GPU allowlist — exactly the researched set; no B200/B300.
   M5  secret hygiene — no token/key literals in devbox.py, entrypoint.sh,
       the runbook, or the wrapper.
-  M6  entrypoint structure — bash -n clean; links nvim-share, nvim-state,
-      nvim-bob (nvim installs + used marker), cache, repos, vault
-      (obsidian.nvim), zsh_history into /persist; repoints the nvim shim to
-      bob's proxy; execs sshd with password auth off.
+  M6  entrypoint structure — bash -n clean; links cache, repos, vault
+      (obsidian.nvim) and zsh_history into /persist, keeps nvim/mason/bob
+      off the volume (M17 guards that); repoints the nvim shim to bob's
+      proxy; execs sshd with password auth off.
   M7  dotfiles pin — DOTFILES_REF is a full 40-hex SHA on an HTTPS GitHub URL.
   M8  runbook accuracy — README mentions the real commands (`devbox ssh`,
       `modal run ops/modal-devbox/devbox.py`, `modal container stop`,
       `--gpu`); no removed-CLI commands (modal proxy/attach/sandbox,
       interactive_snooze) in shipped files. The research report is exempt —
       it documents their removal.
-  M9  wrapper structure — bash -n clean; the subcommands ssh/start/status/
-      stop exist; ::main/::status/::stop refs, the nohup backgrounded
-      launcher, MODAL_DEVBOX_PY fallback, the CONNECT-line contract, and
-      the cached-CONNECT fast path (try_cached_ssh) all present.
+  M9  wrapper structure — bash -n clean; the contract strings that couple
+      it to devbox.py (::main/::status/::stop/::snapshot refs, the
+      CONNECT-line format, MODAL_DEVBOX_PY). Behavior is proven by M16,
+      not by grepping names.
   M10 mason tools — MASON_TOOLS covers every ensure_installed entry in
       nvim/.config/nvim/lua/plugins/mason.lua plus clangd/codelldb from the
       LazyVim lang extras.
@@ -63,13 +63,17 @@ pipeline and the research-verified Modal API surface:
       modal/ssh CLIs (in a throwaway tree) and asserts usage, unknown
       subcommand, cold start via ::main with a cached CONNECT line, warm
       reuse without a restart, --new bypassing the cache with flags
-      forwarded, and stop clearing the cache.
+      forwarded, and stop clearing the cache; an env-shebang modal CLI must
+      resolve to the interpreter it names, with no silent `modal run`
+      fallback.
   M17 entrypoint behavior — EXECUTES entrypoint.sh with DEVBOX_PERSIST and
       DEVBOX_SKIP_SSHD pointed at a throwaway tree and asserts the /persist
       semantics: every documented $HOME dir becomes a symlink into the
       volume, the first boot seeds the image copy onto the volume, an
       existing volume copy wins over the image copy, and a second run is
-      idempotent.
+      idempotent; with stow on PATH a second tree also proves pi's
+      auth.json never lands on the volume and ~/.pi/agent stays a real
+      container-local directory.
   M18 region wiring — REGION_ALLOWLIST offers both multipliers and Mumbai
       (ap-south), Sandbox.create forwards region=region or None, an unknown
       region fails fast with the allowed list, and the wrapper + runbook
@@ -78,6 +82,14 @@ pipeline and the research-verified Modal API surface:
       with full and empty tag sets (a behavior-preserving rename passes), hard
       caps use Modal's (request, limit) tuple form, status renders the summary,
       and the runbook documents the -limit flags and the status line.
+  M20 pi tooling — the image installs the pi agent at a pinned version on
+      Node >= 22, and the entrypoint exports FIREWORKS_API_KEY from pi's
+      auth.json.
+  M21 stow repoint — the entrypoint restows from the writable checkout, and
+      its package lists cannot drift from devbox.py's.
+  M22 snapshot secret scrub — the scrub-path builder is extracted and CALLED
+      against the real manifest, and snapshot scrubs those paths before it
+      freezes the filesystem.
 
 Run `--selftest` to prove the checks fail on mutated copies (apt extras, GPU
 allowlist, late-git order, injected token) in a mktemp sandbox; the real
@@ -85,6 +97,7 @@ worktree is never touched.
 """
 
 import ast
+import base64
 import json
 import re
 import shlex
@@ -450,6 +463,50 @@ def check_wrapper_behavior(root, _literals, _source):
         run("status")
         if "py " not in calls() or "modal run" in calls():
             errors.append("`devbox status` must not launch a Modal App")
+
+        # A pip-style modal CLI carries '#!/usr/bin/env <interpreter>': the
+        # wrapper must resolve the named interpreter on PATH. Exec'ing env
+        # itself cannot run the shebang-less devbox.py, and the wrapper used
+        # to fall back to an ephemeral App without warning.
+        interp = stub_bin / "devbox-modpy"
+        interp.write_text(
+            "#!/usr/bin/env bash\n"
+            f'echo "interp $*" >> "{log}"\n'
+            'case "$*" in *" status") echo "no devbox sandbox running";; esac\n'
+            "exit 0\n"
+        )
+        interp.chmod(0o755)
+        (stub_bin / "modal").write_text(
+            "#!/usr/bin/env devbox-modpy\n"
+            f'echo "modal $*" >> "{log}"\n'
+            "exit 0\n"
+        )
+        env.pop("DEVBOX_PY")
+        reset_log()
+        proc = run("status")
+        if proc.returncode != 0 or "interp " not in calls():
+            errors.append("status must run devbox.py through the modal CLI shebang's interpreter")
+        if "modal run" in calls():
+            errors.append("an env-shebang modal CLI must not silently fall back to an ephemeral App")
+
+        # A sibling launcher can be alive while its sandbox is already gone
+        # (preempted, idle-reaped, OOM). Its last CONNECT line sits in the log,
+        # and reusing it produced "Connection refused". The wrapper must probe
+        # the tunnel and start fresh instead.
+        state_dir = state / "modal-devbox"
+        state_dir.mkdir(parents=True, exist_ok=True)
+        sleeper = subprocess.Popen(["sleep", "60"])
+        try:
+            (state_dir / "launcher.pid").write_text(f"{sleeper.pid}\n")
+            (state_dir / "start.log").write_text("CONNECT 127.0.0.1 1\n")
+            if cache.exists():
+                cache.unlink()
+            reset_log()
+            run("ssh", "--", "true")
+            if "::main" not in calls():
+                errors.append("a dead sibling CONNECT line must be discarded, not reused")
+        finally:
+            sleeper.terminate()
     finally:
         shutil.rmtree(work, ignore_errors=True)
     return errors
@@ -720,6 +777,68 @@ def check_entrypoint_behavior(root, _literals, _source):
             errors.append("the image copy must not shadow the volume's cache after linking")
     finally:
         shutil.rmtree(work, ignore_errors=True)
+    # Second tree, with stow: prove pi's auth value never lands on the volume
+    # and ~/.pi/agent stays a real container-local directory. Without the
+    # scrub and the pre-created dir, stow folds ~/.pi onto the volume
+    # checkout and every pi runtime write — auth.json included — lands on
+    # /persist.
+    stow = shutil.which("stow")
+    if not stow:
+        print("    SKIP pi-auth placement probe (no stow on PATH)")
+        return errors
+    work = Path(tempfile.mkdtemp(prefix="modal-devbox-m17-stow-"))
+    try:
+        home, persist = work / "home", work / "persist"
+        home.mkdir()
+        persist.mkdir()
+        clone = home / "dotfiles"
+        pkg = clone / "pi"
+        (pkg / ".pi/agent").mkdir(parents=True)
+        (pkg / ".pi/agent/keybindings.json").write_text("{}\n")
+        settings = '{"theme": "gruvbox"}\n'
+        (pkg / ".pi/agent/settings.json").write_text(settings)
+        shutil.copy2(root / "pi/.stow-local-ignore", pkg / ".stow-local-ignore")
+        (clone / ".git").mkdir()
+        entry_text = (root / ENTRYPOINT).read_text()
+        names = set()
+        for var in ("STOW_PACKAGES", "STOW_PACKAGES_LATE"):
+            match = re.search(rf'^{var}="([^"]*)"', entry_text, re.MULTILINE)
+            names.update(match.group(1).split())
+        for name in names - {"pi"}:
+            (clone / name).mkdir()
+        # Image bake: stow folds ~/.pi onto the clone, and the spliced
+        # materializer then writes auth.json through that fold.
+        subprocess.run(["stow", "--dir", str(clone), "--target", str(home), "pi"],
+                       check=True, capture_output=True, timeout=30)
+        secret = '{"fireworks": {"key": "sk-test"}}'
+        (home / ".pi/agent/auth.json").write_text(secret)
+        env = {"PATH": f"{Path(stow).parent}:/usr/bin:/bin:/usr/sbin:/sbin",
+               "HOME": str(home), "DEVBOX_PERSIST": str(persist),
+               "DEVBOX_SKIP_SSHD": "1",
+               "DEVBOX_PI_AUTH_JSON": base64.b64encode(secret.encode()).decode()}
+        for attempt in (1, 2):
+            proc = subprocess.run(["bash", str(root / ENTRYPOINT)], capture_output=True,
+                                  text=True, timeout=60, env=env)
+            if proc.returncode != 0:
+                errors.append(f"stow-tree entrypoint run {attempt} failed (rc={proc.returncode}): "
+                              f"{proc.stderr.strip()[:200]}")
+                break
+        if (persist / "repos/dotfiles/pi/.pi/agent/auth.json").exists():
+            errors.append("pi's auth.json must never be seeded onto /persist")
+        real_auth = home / ".pi/agent/auth.json"
+        if real_auth.is_symlink() or not real_auth.is_file() or real_auth.read_text() != secret:
+            errors.append("$HOME/.pi/agent/auth.json must be a real container-local file "
+                          "holding the materialized secret")
+        if (home / ".pi").is_symlink():
+            errors.append("$HOME/.pi must be a real directory, not a fold onto the volume checkout")
+        kb = home / ".pi/agent/keybindings.json"
+        if not kb.is_symlink() or "repos/dotfiles" not in str(kb.resolve()):
+            errors.append("pi package entries must link into the writable checkout")
+        st = home / ".pi/agent/settings.json"
+        if st.is_symlink() or not st.is_file() or st.read_text() != settings:
+            errors.append("settings.json must stay a real file refreshed from the checkout")
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
     return errors
 
 
@@ -853,6 +972,105 @@ def check_pi_tooling(root, literals, source):
     return errors
 
 
+def check_snapshot_scrub(root, _literals, source):
+    """M22 — `devbox snapshot` must never publish materialized secret values.
+
+    The scrub-path builder is extracted and CALLED against the real manifest
+    (a behavior-preserving rename passes), and snapshot must scrub those
+    paths before it freezes the filesystem."""
+    errors = []
+    builder = _extract_function(source, "_secret_scrub_paths")
+    if builder is None:
+        return ["devbox.py must define _secret_scrub_paths(manifest)"]
+    try:
+        manifest = json.loads((root / MANIFEST).read_text())
+    except ValueError:
+        return [f"{MANIFEST}: invalid JSON; M11 reports it"]
+    expected = [f"/root/{e['target']}" for e in manifest["secrets"] if e.get("target")]
+    expected.append("/root/dotfiles/pi/.pi/agent/auth.json")
+    got = builder(manifest)
+    if got != expected:
+        errors.append(f"scrub paths must cover every manifest target plus the image-clone "
+                      f"auth.json, got: {got}")
+    # Execute snapshot() with stubs and check the ORDER of effects, rather than
+    # grepping for call strings (a behavior-preserving refactor must pass).
+    ns = {}
+    tree = ast.parse(source)
+    wanted = [n for n in tree.body
+              if isinstance(n, ast.FunctionDef)
+              and n.name in ("snapshot", "_secret_scrub_paths", "_running_devboxes", "_pick_primary")]
+    for node in wanted:
+        node.decorator_list = []  # @app.local_entrypoint() cannot resolve here
+    try:
+        exec(compile(ast.Module(body=wanted, type_ignores=[]), "<extracted>", "exec"), ns)  # noqa: S102
+    except Exception as exc:  # noqa: BLE001
+        return [f"could not compile snapshot() with its helpers: {exc}"]
+    if "snapshot" not in ns:
+        return ["devbox.py must define snapshot()"]
+
+    class _Proc:
+        def __init__(self, code):
+            self.code = code
+
+        def wait(self):
+            return self.code
+
+    class _Image:
+        def __init__(self, order):
+            self.order = order
+
+        def publish(self, name):
+            self.order.append("publish")
+
+    class _Sandbox:
+        def __init__(self, order, scrub_rc):
+            self.object_id = "sb-test"
+            self.order = order
+            self.scrub_rc = scrub_rc
+
+        def exec(self, *args):
+            self.order.append(("exec", args))
+            return _Proc(self.scrub_rc)
+
+        def snapshot_filesystem(self):
+            self.order.append("snapshot")
+            return _Image(self.order)
+
+    class _App:
+        def local_entrypoint(self):
+            return lambda fn: fn
+
+    def drive(scrub_rc):
+        order = []
+        sandbox = _Sandbox(order, scrub_rc)
+        ns.update({"app": _App(), "sys": __import__("sys"), "modal": None,
+                   "MANIFEST": manifest,
+                   "_running_devboxes": lambda: [sandbox],
+                   "_pick_primary": lambda running: running[0]})
+        try:
+            ns["snapshot"]("probe")
+        except SystemExit:
+            pass
+        return order
+
+    order = drive(0)
+    kinds = [step if isinstance(step, str) else step[0] for step in order]
+    if not kinds or kinds[0] != "exec" or kinds[1:2] != ["snapshot"]:
+        errors.append(f"snapshot must scrub before freezing, order was {kinds}")
+    if "publish" not in kinds or kinds.index("publish") < kinds.index("snapshot"):
+        errors.append("snapshot must publish only after the freeze")
+    scrubbed = [a for k, a in ((s[0], s[1]) for s in order if not isinstance(s, str))
+                if k == "exec"]
+    flat = " ".join(str(x) for a in scrubbed for x in a)
+    if "/root/.env" not in flat or "auth.json" not in flat:
+        errors.append("the scrub must cover materialized secrets (env files + auth.json)")
+    # A failed scrub must abort before the freeze and the publish.
+    aborted = [s if isinstance(s, str) else s[0] for s in drive(1)]
+    if "snapshot" in aborted or "publish" in aborted:
+        errors.append(f"a failed scrub must abort before snapshot/publish, got {aborted}")
+    return errors
+
+
 CHECKS = (
     ("M1 apt parity", check_apt_parity),
     ("M2 stow parity", check_stow_parity),
@@ -875,6 +1093,7 @@ CHECKS = (
     ("M19 resources and status", check_resources_and_status),
     ("M20 pi tooling", check_pi_tooling),
     ("M21 stow repoint", check_stow_repoint),
+    ("M22 snapshot secret scrub", check_snapshot_scrub),
 )
 
 
@@ -947,7 +1166,21 @@ def selftest():
             "region-no-india": lambda: _mutate(root, '"ap", "ap-south")', '"ap")'),
             "status-launches-app": lambda: _mutate_wrapper(
                 root, 'if modpy="$(modal_python)" && "$modpy" "$PY" status; then', 'if false; then'),
+            "sibling-dead-line-reused": lambda: _mutate_wrapper(
+                root, '[ "$#" -eq 0 ] && tunnel_alive "$line"', '[ "$#" -eq 0 ]'),
             "pi-old-node": lambda: _mutate(root, 'setup_22.x', 'setup_16.x'),
+            "snapshot-no-scrub": lambda: _mutate(
+                root, '    scrub = sandbox.exec("rm", "-f", *_secret_scrub_paths(MANIFEST))',
+                '    scrub = sandbox.exec("true")'),
+            "snapshot-scrub-after-freeze": lambda: _mutate(
+                root, '    scrub = sandbox.exec("rm", "-f", *_secret_scrub_paths(MANIFEST))\n'
+                      '    if scrub.wait() != 0:\n'
+                      '        sys.exit("could not scrub materialized secrets; refusing to snapshot")\n'
+                      '    image = sandbox.snapshot_filesystem()',
+                '    image = sandbox.snapshot_filesystem()\n'
+                      '    scrub = sandbox.exec("rm", "-f", *_secret_scrub_paths(MANIFEST))\n'
+                      '    if scrub.wait() != 0:\n'
+                      '        sys.exit("could not scrub materialized secrets; refusing to snapshot")'),
             "status-drops-region": lambda: _mutate(
                 root, '            tags.get("region", "?"),', '            "?",'),
             "cuda-nvcc-symlink": lambda: _mutate(
@@ -956,6 +1189,25 @@ def selftest():
                 '    },\n).add_local_file("x", "y").run_commands("ln -sf /usr/local/cuda/bin/* /usr/local/bin/"'
                 ').env({'),
             "cuda-runbook": lambda: _mutate_file(root, RUNBOOK, "clangd --check", "clangd probe"),
+            "wrapper-env-shebang": lambda: _mutate_wrapper(root, "*/env)", "*neverenv)"),
+            "scrub-no-clone-auth": lambda: _mutate(
+                root, 'paths.append("/root/dotfiles/pi/.pi/agent/auth.json")',
+                'paths.append("/root/dotfiles/pi/.pi/agent/unused.json")'),
+            "snapshot-no-scrub": lambda: _mutate(
+                root, 'scrub = sandbox.exec("rm", "-f", *_secret_scrub_paths(MANIFEST))',
+                'scrub = sandbox.exec("true")'),
+            # Both scrubs are defense-in-depth (pre-seed of the image clone, and
+            # the checkout after copying), so removing one alone cannot leak —
+            # the mutation has to take both scrub lines to prove the guard.
+            "entrypoint-auth-on-volume": lambda: (
+                _mutate_file(root, ENTRYPOINT, 'rm -f "$HOME/dotfiles/pi/.pi/agent/auth.json"',
+                             ': # pre-seed scrub removed'),
+                _mutate_file(root, ENTRYPOINT, 'rm -f "$src/pi/.pi/agent/auth.json"',
+                             ': # checkout scrub removed'),
+                _mutate_file(root, ENTRYPOINT, '--ignore=auth.json', '')),
+            "entrypoint-pi-fold": lambda: _mutate_file(
+                root, ENTRYPOINT, 'mkdir -p "$HOME/.pi/agent"',
+                ': # fold allowed'),
         }
         expected_fail = {"clean": 0, "apt-extra": {"M1"}, "gpu-b200": {"M4"},
                          "git-early": {"M2"}, "token-leak": {"M5"},
@@ -970,7 +1222,15 @@ def selftest():
                          "region-no-india": {"M18"},
                          "status-drops-region": {"M19"},
                          "status-launches-app": {"M16"},
-                         "pi-old-node": {"M20"}}
+                         "sibling-dead-line-reused": {"M16"},
+                         "snapshot-no-scrub": {"M22"},
+                         "snapshot-scrub-after-freeze": {"M22"},
+                         "pi-old-node": {"M20"},
+                         "wrapper-env-shebang": {"M16"},
+                         "scrub-no-clone-auth": {"M22"},
+                         "snapshot-no-scrub": {"M22"},
+                         "entrypoint-auth-on-volume": {"M17"},
+                         "entrypoint-pi-fold": {"M17"}}
         for label, mutate in cases.items():
             _make_sandbox(root)
             try:
@@ -1001,7 +1261,7 @@ def selftest():
 
 def _make_sandbox(root):
     for rel in (DEVBOX, ENTRYPOINT, MANIFEST, SYNC_SCRIPT, RUNBOOK, WRAPPER, PACKER_APT_SCRIPT,
-                "nvim/.config/nvim/lua/plugins/mason.lua"):
+                "nvim/.config/nvim/lua/plugins/mason.lua", "pi/.stow-local-ignore"):
         dest = root / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(REPO / rel, dest)

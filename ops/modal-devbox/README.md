@@ -79,7 +79,8 @@ ssh -o StrictHostKeyChecking=accept-new -p <port> root@<host>
 - Re-attaching with `devbox ssh` uses the cached tunnel line
   (`~/.local/state/modal-devbox/connect`) and connects in ~2–3 s; a stale
   cache self-heals via the status probe (`devbox stop` clears it).
-- First nvim open downloads Mason LSP servers into the volume (one-time).
+- First nvim open is ~120 ms: plugins and Mason tools ship in the image, and
+  the entrypoint prewarms one headless start at boot.
 - `tmux new -s main` — the tmux server survives SSH disconnects for the
   whole lease; reconnect and `tmux attach`.
 - Second door into the same container: `modal container list`, then
@@ -188,9 +189,10 @@ scripts/modal-secrets-sync --only devbox-gh   # a single entry
 - MODE `dotenv` normalizes `export KEY=...` lines; MODE `file` ships the file
   base64-encoded in one variable; MODE `command` stores a command's stdout
   (e.g. `gh auth token` → `GH_TOKEN`).
-- Missing sources are skipped with a warning (e.g. `devbox-ssh` on a machine
-  without `~/.ssh/id_ed25519.pub` — the per-launch ephemeral key secret
-  covers SSH anyway); a missing/unauthenticated `modal` CLI fails loudly.
+- Missing sources are skipped with a warning (e.g. no `~/.aws/credentials`
+  on a machine without AWS); SSH needs no synced secret — the launcher
+  injects the public key per-launch as an ephemeral Secret. A missing or
+  unauthenticated `modal` CLI fails loudly.
 - At boot, `entrypoint.sh` materializes the values back onto disk for
   config parity: `~/.env` and `~/.config/pi-*.env` (0600 — exactly what
   `mcp.json` shell refs like `!. ~/.env; echo "Bearer $OREILLY_TOKEN"`
@@ -200,8 +202,8 @@ scripts/modal-secrets-sync --only devbox-gh   # a single entry
   are container-local: secret values never touch `/persist`.
 - The launcher mounts only manifest secrets that actually exist in the
   workspace (probed at launch), so a fresh workspace still boots; the
-  per-launch ephemeral SSH-key secret is applied **last** and wins any
-  clash with `devbox-ssh`.
+  per-launch ephemeral SSH-key secret is applied **last**, so it always
+  wins key clashes.
 
 **Rotation**: secret values are frozen into a container at its start — a
 warm devbox keeps serving old values after a re-sync. Rotate = re-run
@@ -335,6 +337,10 @@ Limits that matter:
 - **Mounted Volumes are not captured.** `/persist` already keeps its own state,
   so nothing there needs freezing — that is why the two mechanisms complement
   each other.
+- **Materialized secret files are scrubbed before the freeze** (`~/.env`,
+  `~/.config/pi-*.env`, `devbox-env.sh`, `~/.aws/credentials`, pi's
+  `auth.json`), so the published image carries no secret values; a sandbox
+  booted from it through the devbox app re-materializes them at start.
 - Snapshots default to a 30-day TTL. Publish a name to keep it around, and
   delete stale ones (there is no list-snapshots API — track names yourself).
 - The freeze is a filesystem copy, not a process copy: running programs and
@@ -356,6 +362,8 @@ tmux sessions do not survive into the restored sandbox.
 `scripts/test-modal-devbox.py` (offline, no Modal account): apt parity against
 `ops/packer/scripts/install_system_packages.sh` (superset + exact extras
 `openssh-server`, `ca-certificates`), stow set vs repo packages, GPU
-allowlist, secret hygiene, entrypoint structure, dotfiles pin shape, runbook
-accuracy, manifest lint, sync-script structure, and materialization wiring
-(M1–M13). `docs/ci-tests/modal-devbox.md` documents the suite.
+allowlist, secret hygiene, entrypoint structure and behavior, wrapper
+behavior against stubbed CLIs, dotfiles pin shape, runbook accuracy, manifest
+lint, sync-script structure, materialization wiring, and the snapshot secret
+scrub (M1–M22, with a mutation selftest). `docs/ci-tests/modal-devbox.md`
+documents the suite.

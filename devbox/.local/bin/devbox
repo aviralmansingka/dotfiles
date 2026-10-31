@@ -52,12 +52,24 @@ modal_python() {
         printf '%s\n' "$DEVBOX_PY"
         return 0
     fi
-    local cli shebang
+    local cli line interp next
     cli="$(command -v modal 2>/dev/null || true)"
     [ -n "$cli" ] || return 1
-    shebang="$(sed -n '1s/^#!//p' "$cli" 2>/dev/null)"
-    shebang="${shebang% *}"   # drop any interpreter args
-    [ -x "$shebang" ] && printf '%s\n' "$shebang"
+    line="$(sed -n '1s/^#!//p' "$cli" 2>/dev/null)"
+    read -r interp line <<< "$line"   # interpreter, then its args
+    case "$interp" in
+        env|*/env)
+            # '#!/usr/bin/env python3': env names the interpreter to run, so
+            # resolve it on PATH — env itself cannot run a shebang-less script.
+            interp=""
+            while read -r next line <<< "$line" && [ -n "$next" ]; do
+                case "$next" in -*) continue ;; esac
+                interp="$(command -v "$next" 2>/dev/null || true)"
+                break
+            done
+            ;;
+    esac
+    [ -n "$interp" ] && [ -x "$interp" ] && printf '%s\n' "$interp"
 }
 
 usage() {
@@ -121,6 +133,17 @@ try_cached_ssh() {
     exit "$rc"
 }
 
+tunnel_alive() {
+    # tunnel_alive <CONNECT-line> — is host:port accepting connections?
+    # A bash /dev/tcp connect is enough: it proves the relay tunnel exists,
+    # without paying for an ssh handshake. (sshd may still be starting; the
+    # attach retry covers that.)
+    local host port
+    read -r _ host port <<< "$1"
+    [ -n "$host" ] && [ -n "$port" ] || return 1
+    ( exec 3<>"/dev/tcp/$host/$port" ) 2>/dev/null
+}
+
 await_launcher() {
     # await_launcher <pid> — poll START_LOG for CONNECT while the launcher
     # lives; emits the line and returns 0 on success, 1 if it exits first.
@@ -170,14 +193,20 @@ start_sandbox() {
     # truncate the log it is writing: wait for its CONNECT line instead.
     if [ -f "$pid_file" ] && pid="$(cat "$pid_file")" && kill -0 "$pid" 2>/dev/null; then
         if line="$(await_launcher "$pid")"; then
-            if [ "$#" -eq 0 ]; then
+            # The line only counts if its tunnel actually accepts connections:
+            # a sibling can be exiting (preempted, idle-reaped, OOM) while its
+            # last CONNECT line still sits in the log. Reusing a dead line
+            # attached to nothing and looked like "Connection refused".
+            if [ "$#" -eq 0 ] && tunnel_alive "$line"; then
                 release_lock
                 printf '%s\n' "$line" >"$CACHE"
                 printf '%s\n' "$line"
                 return 0
             fi
-            # Flags are present (--new etc.): the caller wants a fresh sandbox,
-            # so only borrow the sibling's log slot after it finished.
+            # Flags are present (--new etc.), or that sandbox is gone: start a
+            # fresh one. The sibling's line was already consumed above, so take
+            # the shared log slot back; a living sibling only appends teardown
+            # output from here.
         fi
     fi
     : >"$START_LOG"
@@ -197,15 +226,6 @@ start_sandbox() {
     release_lock
     die "no CONNECT line in $START_LOG"
 }
-
-ssh_from_line_probe() {
-    # ssh_from_line_probe <CONNECT-line> — non-interactive liveness probe.
-    local host port
-    read -r _ host port <<< "$1"
-    ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new \
-        -p "$port" "root@$host" true >/dev/null 2>&1
-}
-
 
 cmd="${1:-ssh}"
 [ "$#" -gt 0 ] && shift
@@ -254,5 +274,5 @@ case "$cmd" in
         exec modal run "$PY::stop"
         ;;
     help|-h|--help) usage ;;
-    *) die "unknown subcommand: $cmd (use ssh, start, status, stop)" ;;
+    *) die "unknown subcommand: $cmd (use ssh, status, stop, snapshot)" ;;
 esac

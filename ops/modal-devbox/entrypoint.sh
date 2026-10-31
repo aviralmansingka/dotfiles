@@ -7,8 +7,8 @@
 # the volume copy wins over image-baked copies.
 #
 # DEVBOX_SSH_PUBLIC_KEY arrives via a per-launch ephemeral Secret (applied
-# last in the Sandbox secrets list, so it wins any clash with the persistent
-# devbox-ssh Secret). Host keys are generated per sandbox (fresh each start):
+# last in the Sandbox secrets list, so it always wins key clashes). Host keys
+# are generated per sandbox (fresh each start):
 # connect with StrictHostKeyChecking=accept-new.
 set -euo pipefail
 
@@ -73,10 +73,14 @@ link_file "$HOME/.zsh_history"      "$PERSIST/zsh_history" # OMZ HISTFILE defaul
 # source: everything (pi extensions, agent skills, nvim/tmux/zsh config) is
 # linked out of it, so an edit here takes effect on the next session. Seeded
 # from the image's pinned clone on first boot, then owned by the volume.
-# Backgrounded: copying tens of MB onto the FUSE volume must not delay sshd
-# (foreground, it pushed readiness past the wrapper's connect retries).
+# Synchronous by design: the zshenv include and the FIREWORKS_API_KEY export
+# below must run after the restow, and the seed happens once — the wrapper's
+# connect retries cover the first boot while sshd waits.
 seed_and_restow() {
     local src="$HOME/repos/dotfiles"
+    # Never let the seed carry a secret onto the volume: scrub the image
+    # clone's materialized auth (a pre-reorder boot could have left one).
+    rm -f "$HOME/dotfiles/pi/.pi/agent/auth.json"
     if [ ! -e "$src" ] && [ -d "$HOME/dotfiles" ]; then
         cp -a "$HOME/dotfiles" "$src" || return 0
     fi
@@ -84,12 +88,24 @@ seed_and_restow() {
     command -v stow >/dev/null 2>&1 || return 0
     # auth.json is pi *runtime* state (the devbox-pi-auth secret writes it), not
     # package content; STOW_IGNORE keeps stow from linking a stray copy over it.
+    # It must never live in the checkout: /persist survives teardowns and the
+    # secret rotates, so scrub any copy the first-boot seed or an older boot left.
+    rm -f "$src/pi/.pi/agent/auth.json"
     # Unstow the image clone first: stow refuses to take over links it thinks
     # belong to another stow directory. Then link everything from the checkout.
     # git stays last (url.insteadOf rewrites HTTPS to SSH).
     stow -D -d "$HOME/dotfiles" -t "$HOME" $STOW_IGNORE $STOW_PACKAGES >/dev/null 2>&1 || true
+    # A real ~/.pi/agent (like the Mac layout) keeps every pi runtime write —
+    # auth.json, sessions, logs — on container-local disk instead of folding
+    # ~/.pi onto the volume checkout; stow links the package entries into it.
+    mkdir -p "$HOME/.pi/agent"
     stow -d "$src" -t "$HOME" $STOW_IGNORE $STOW_PACKAGES >/dev/null 2>&1 || true
     stow -d "$src" -t "$HOME" $STOW_IGNORE $STOW_PACKAGES_LATE >/dev/null 2>&1 || true
+    # settings.json is host state, never a live link (.stow-local-ignore);
+    # refresh the real copy from the checkout so edits land on the next boot.
+    if [ -f "$src/pi/.pi/agent/settings.json" ]; then
+        cp -a "$src/pi/.pi/agent/settings.json" "$HOME/.pi/agent/settings.json"
+    fi
     # pi's extension deps live per-directory; carry them over when the checkout
     # lacks them (a fresh clone/pull would not have node_modules).
     local ext
@@ -105,8 +121,8 @@ seed_and_restow() {
         materialize_file "$HOME/.pi/agent/auth.json" DEVBOX_PI_AUTH_JSON
     fi
     # Prewarm Neovim last, once the restow has pointed config at the checkout,
-    # so the warm cache covers the paths a session will actually load. This
-    # runs in the background subshell; sshd does not wait for it.
+    # so the warm cache covers the paths a session will actually load. It adds
+    # about a second to boot; sshd waits so the first session opens warm.
     local nvim_bin="$HOME/.local/bin/nvim"
     [ -x "$nvim_bin" ] || nvim_bin="$(command -v nvim 2>/dev/null || true)"
     if [ -n "$nvim_bin" ]; then
@@ -165,19 +181,24 @@ materialize_file() {
     chmod 600 "$path"
 }
 
-#@devbox-materialize@#
-
-# Now that secrets are materialized, seed the writable checkout and restow from
-# it (synchronous: the stow is fast, the 32 MB seed happens once). The restow
-# re-materializes provider auth itself, because relinking can move that path.
+# Seed the writable checkout and restow from it BEFORE secrets materialize.
+# Order matters for secret hygiene: at this point ~/.pi/agent is still a stow
+# fold into the image's dotfiles clone, so a materialized auth.json would be
+# written into /root/dotfiles and the first-boot copy would carry it onto the
+# durable volume (a window a background volume commit can catch). After this
+# function runs, ~/.pi/agent is a real container-local directory, so the
+# materialization below lands on disposable disk only.
 seed_and_restow >/dev/null 2>&1 || true
+
+#@devbox-materialize@#
 
 # GH_TOKEN/GITHUB_TOKEN (devbox-gh -> ~/.config/devbox-env.sh) reach every
 # zsh invocation — including non-interactive `ssh host 'cmd'` shells — via
-# a guarded include appended to the stowed ~/.zshenv. The stowed file is a
-# symlink into the container-local dotfiles clone (disposable, reset each
-# sandbox), so the append never touches the repo, the image, or the volume,
-# and it stays minimal PATH-only otherwise.
+# a guarded include appended to the stowed ~/.zshenv. After the restow that
+# file is a symlink into the volume checkout, so the include line itself
+# lands on /persist and survives teardowns; the guard keeps it to one line,
+# it carries no secret value, and the values stay in container-local 0600
+# files it sources.
 # pi's managed provider auth (devbox-pi-auth) holds the Fireworks key that pi
 # itself reads from auth.json. Also export it as FIREWORKS_API_KEY so any other
 # tool or SDK in the box picks it up; the value never leaves the container and

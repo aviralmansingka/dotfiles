@@ -67,7 +67,7 @@ The eight open questions, answered (details and citations in the report):
 | Home | `$HOME=/root`, root user (verify empirically) | Modal containers run as root; stow targets `$HOME` so this is free |
 | Volume | `modal.Volume.from_name("devbox-persist", create_if_missing=True, version=2)` at `/persist`, `$HOME` dirs symlinked in at container start | A mount over `$HOME` would shadow image-baked dotfiles; v2 handles nvim/cargo/node file counts |
 | Dotfiles in image | build-time clone of a pinned revision, then stow + Lazy sync | Public repo needs no token; keeps the image self-contained; live checkouts live on the volume |
-| SSH auth | public key only, from the `devbox-ssh` secret (`DEVBOX_SSH_PUBLIC_KEY`); never passwords | The unencrypted tunnel is public on the Internet; random port is not authentication |
+| SSH auth | public key only, injected per-launch as an ephemeral Secret (`DEVBOX_SSH_PUBLIC_KEY`); never passwords | The unencrypted tunnel is public on the Internet; random port is not authentication |
 | Secrets | `modal.Secret`, one per source env file; `scripts/modal-secrets-sync` is the only writer | Mirrors on-disk layout; rotation re-runs stay file-scoped |
 | Image is code | changes go through layers + rebuild; the only sanctioned captures are new layers or Sandbox snapshots | There is no docker-commit for function containers |
 
@@ -104,7 +104,7 @@ flowchart TD
     subgraph container["Devbox container (input held up to 24h)"]
         sshd["sshd (key auth)"]
         tmux["tmux server + zsh + nvim"]
-        links["symlinks: repos, caches, nvim state -> /persist"]
+        links["symlinks: repos, caches, vault, zsh history -> /persist"]
     end
     vol[("Volume v2 /persist")]
     mac["Mac"]
@@ -180,7 +180,7 @@ Inventory (key names only; values live on the Mac):
 | `~/.config/pi-stt-client.env` | PI_STT_ENDPOINT, PI_STT_TOKEN | `devbox-stt-client` | STT client pointing at the homelab worker |
 | `~/.pi/agent/auth.json` | fireworks API key; anthropic/openai/openai-codex OAuth (base64, must fit the 32 KiB value limit) | `devbox-pi-auth` | pi in-container (phase 5) |
 | `gh auth token` | GH_TOKEN | `devbox-gh` | gh, gh-dash, git push over HTTPS |
-| `~/.ssh/id_ed25519.pub` | DEVBOX_SSH_PUBLIC_KEY | `devbox-ssh` | `authorized_keys` in the container |
+| `~/.ssh/id_ed25519.pub` | DEVBOX_SSH_PUBLIC_KEY | per-launch ephemeral Secret (not synced) | `authorized_keys` in the container |
 | `~/.aws/credentials` | AWS access keys | `devbox-aws` (opt-in flag) | awscli when needed; terraform stays on the Mac |
 
 Materialization at container start keeps parity with the Mac:

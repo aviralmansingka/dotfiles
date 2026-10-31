@@ -637,6 +637,18 @@ def stop():
     _stop()
 
 
+def _secret_scrub_paths(manifest) -> list:
+    """Container paths that hold materialized secret values at snapshot time.
+
+    Every manifest target, plus the marker-time auth.json the baked stow link
+    drops into the image's dotfiles clone. All of them re-materialize on the
+    next boot through the devbox app.
+    """
+    paths = [f"/root/{e['target']}" for e in manifest["secrets"] if e.get("target")]
+    paths.append("/root/dotfiles/pi/.pi/agent/auth.json")
+    return paths
+
+
 @app.local_entrypoint()
 def snapshot(name: str = "devbox-snap"):
     """Freeze the running devbox container filesystem into a named Image.
@@ -645,6 +657,8 @@ def snapshot(name: str = "devbox-snap"):
     Snapshot is the sanctioned equivalent: it captures the container's root
     filesystem as a reusable Image. Mounted Volumes are NOT included —
     /persist state already lives on the volume and needs no capture.
+    Materialized secret files are scrubbed before the freeze, so the
+    published image carries no secret values.
 
     Use this after installing something interactively that you want to keep
     without an image rebuild, then boot it with
@@ -655,10 +669,14 @@ def snapshot(name: str = "devbox-snap"):
         sys.exit("no devbox sandbox running: start one with `devbox ssh` first")
     sandbox = _pick_primary(running)
     print(f"snapshotting {sandbox.object_id} ...")
+    scrub = sandbox.exec("rm", "-f", *_secret_scrub_paths(MANIFEST))
+    if scrub.wait() != 0:
+        sys.exit("could not scrub materialized secrets; refusing to snapshot")
     image = sandbox.snapshot_filesystem()
     image.publish(name)
     print(f"published {name} (from {sandbox.object_id}); boot it with Image.from_name({name!r})")
     print("note: mounted volumes are not captured — /persist keeps its own state")
+    print("note: materialized secret files were scrubbed before the freeze; they re-materialize on the next devbox boot")
 
 
 if __name__ == "__main__":
