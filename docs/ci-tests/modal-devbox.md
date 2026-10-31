@@ -27,11 +27,11 @@ and no `$HOME` mutation.
 - **M5 secret hygiene.** No token/key literals (`sk-`, `ghp_`, `AKIA`,
   private-key PEM, …) in `devbox.py`, `entrypoint.sh`, the runbook, or the
   wrapper.
-- **M6 entrypoint structure.** `bash -n` clean; links `nvim-share`,
-  `nvim-state`, `nvim-bob` (nvim installs + bob's `used` marker),
-  `cache`, `repos`, `vault` (obsidian.nvim), `zsh_history` into `/persist`;
-  repoints the `nvim` shim at bob's proxy (`nvim-bin/nvim`); execs sshd
-  foreground with password auth off.
+- **M6 entrypoint structure.** `bash -n` clean; links `cache`, `repos`,
+  `vault` (obsidian.nvim) and `zsh_history` into `/persist`, keeps
+  nvim/mason/bob off the volume (M17 guards that); repoints the `nvim` shim
+  at bob's proxy (`nvim-bin/nvim`); execs sshd foreground with password auth
+  off.
 - **M7 dotfiles pin.** `DOTFILES_REF` is a full 40-hex SHA on an HTTPS
   GitHub URL.
 - **M8 runbook accuracy.** The README mentions the real commands (`devbox ssh`,
@@ -51,6 +51,12 @@ and no `$HOME` mutation.
   `devbox stop` clearing the cache, and `status`/`stop` taking the
   plain-script path instead of launching an ephemeral App. This is the check
   that caught the `--new`-hit-the-cache bug.
+- **M17 entrypoint behavior.** Executes `entrypoint.sh` in a throwaway tree
+  and asserts the `/persist` semantics: documented `$HOME` dirs become
+  symlinks into the volume, the first boot seeds the image copy, an existing
+  volume copy wins, and a second run is idempotent. With stow available it
+  also proves pi's `auth.json` never lands on the volume and `~/.pi/agent`
+  stays a real container-local directory.
 - **M10 mason tools.** `MASON_TOOLS` in devbox.py covers every
   `ensure_installed` entry in `nvim/.config/nvim/lua/plugins/mason.lua`
   (the suite's Paths include that file, so edits retrigger it) plus
@@ -58,7 +64,7 @@ and no `$HOME` mutation.
 - **M11 manifest schema.** `ops/modal-devbox/secrets-manifest.json` is
   valid JSON covering the planned inventory exactly (`devbox-env`,
   `devbox-mcp-*`, `devbox-telegram`/`-whatsapp`/`-stt-client`,
-  `devbox-pi-auth`, `devbox-gh`, `devbox-ssh`, opt-in `devbox-aws`);
+  `devbox-pi-auth`, `devbox-gh`, opt-in `devbox-aws`);
   required keys per MODE (`dotenv`/`file`/`command`); sources and targets
   are relative paths under `$HOME`; names unique; variable names are
   valid; no value-looking strings (the suite's SECRET_PATTERNS).
@@ -75,6 +81,15 @@ and no `$HOME` mutation.
   so a fresh workspace boots, mounts them via `from_name`, and appends the
   ephemeral `DEVBOX_SSH_PUBLIC_KEY` `from_dict` secret **last** (later
   entries win key clashes — research §8.4).
+- **M14 CUDA variant.** `CUDA_BASE_IMAGE` is a pinned `nvidia/cuda` 13.x
+  `-devel` ubuntu24.04 tag (never `-cudnn`: those layers make a cold GPU box
+  hydrate past the tunnel timeout); both variants build through one
+  `_build_image` call site; the CUDA image exports
+  `CUDA_HOME`/`PATH`/`LD_LIBRARY_PATH` instead of symlinking nvcc (a symlink
+  breaks nvcc's argv[0]-relative header lookup).
+- **M15 CUDA runbook.** The runbook documents the GPU workflow end to end:
+  `--gpu`, `nvcc --version`, `cuda-compile-db`, `clangd --check`, and the
+  explicit `devbox stop` rule for GPU boxes.
 
 - **M18 region wiring.** `REGION_ALLOWLIST` offers both price tiers (`us`,
   `eu`, `ap` at 1.15x) and the narrow names (`us-east`, `us-west`, `eu-west`,
@@ -89,25 +104,31 @@ and no `$HOME` mutation.
   `(cpu, cpu_limit)` / `(memory, memory_limit)` tuple form (Modal's hard-cap
   API), that `status` renders the summary, and that the runbook documents
   `--cpu-limit`/`--memory-limit`.
+- **M20 pi tooling.** The image installs the pi agent at a pinned version on
+  Node >= 22 (Ubuntu 24.04 ships 18, too old for pi), and the entrypoint
+  exports `FIREWORKS_API_KEY` from pi's `auth.json`.
+- **M21 stow repoint.** The entrypoint restows every package from the
+  writable checkout, and its `STOW_PACKAGES`/`STOW_PACKAGES_LATE`/
+  `STOW_IGNORE` lists must equal devbox.py's constants.
+- **M22 snapshot secret scrub.** Extracts devbox.py's scrub-path builder and
+  calls it against the real manifest, and requires `snapshot` to scrub those
+  paths before freezing the filesystem — a published snapshot never carries
+  secret values.
 
 ## Selftest
 
-`--selftest` rebuilds the checks against mutated mktemp copies (extra apt
-package, `B200` in the allowlist, `git` stowed early, an injected `ghp_`
-literal, a wrapper whose `nohup` launch was replaced, a wrapper whose cached
-fast path was renamed, a bad manifest mode, a value-looking manifest string,
-a name outside the inventory, a removed temp-cleanup trap, a `cat` of the
-temp payload in the sync script, 0644 instead of 0600 in the entrypoint, the
-ephemeral key secret mounted first, a `-cudnn` CUDA base, an `nvcc` symlink,
-and a runbook with `clangd --check` removed, an entrypoint whose
-first-boot seeding was removed, and a region list with Mumbai dropped, and a resource line with the region
-field removed) and proves the matching checks fail; a clean copy must pass.
-The real worktree is never touched.
+`--selftest` rebuilds the checks against mutated mktemp copies — one mutation
+per guarded surface (apt extras, GPU allowlist, late-git order, injected
+tokens, wrapper launch and flag handling and env-shebang resolution, manifest
+schema and inventory, sync-script hygiene, entrypoint materialization and
+seeding, CUDA base and env, runbook content, region list, status rendering,
+pi tooling, snapshot scrub) — and proves the matching checks fail; a clean
+copy must pass. The real worktree is never touched.
 
 ## How to run
 
 ```sh
-scripts/test-modal-devbox.py              # suite (M1–M19)
+scripts/test-modal-devbox.py              # suite (M1–M22)
 scripts/test-modal-devbox.py --selftest   # prove checks fail on mutations
 ```
 

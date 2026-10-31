@@ -50,7 +50,7 @@ Scripts, configs, infra (job `scripts-tests` + `ops-tests`):
 | CI meta (structure, routing, gate matching, discovery) | test-ci-self.mjs | 20 synthetic gate cases | — |
 | Merge queue submit helper | test-gh-dash-enqueue-pr.sh | 8, fake gh boundary | 0.1 s |
 | rataflow-view + visualize/artifact skills | test-rataflow.py | 9 offline + 16 cargo (opt-in) | 0.05 s |
-| Modal devbox (apt/stow parity, GPU allowlist, secret hygiene) | test-modal-devbox.py | 15 + selftest | ~0.5 s |
+| Modal devbox (apt/stow parity, GPU allowlist, secret hygiene) | test-modal-devbox.py | 22 + selftest | ~1 s |
 
 Existing wired suites (pre-wave): auto-git-sync, gh-dash-open-pr,
 herdr-clean-handoff, herdr-flash-copy, herdr-annotate-install,
