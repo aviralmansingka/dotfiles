@@ -80,6 +80,26 @@ Copy `scenarios/cuda-event-timing.json` and edit:
 - `mode` — set `already-known` to check that the professor teaches nothing the
   learner holds.
 
+## Current results
+
+Same model on both arms (`fireworks/glm-5p3-fast`), 2026-11-02, one run per
+cell. Before is commit `f67576e5^`; after is this harness.
+
+| Scenario | Before | After |
+|---|---|---|
+| mtu-blackhole | 5/5 | 5/5 |
+| cuda-event-timing | 2/5, cut at the 900 s cap | 4/5 |
+| already-known | not measurable | 5/6, max question run 10 |
+
+The harness change moved validity, not the score. On MTU both versions pass.
+On CUDA the old learner could not answer a later node, so it never flipped and
+the run hit the cap; the new learner flips and the loop completes. The
+already-known scenario is new, and it found a real failure: ten questions in a
+row without a lesson.
+
+A sonnet batch before these changes scored CUDA 5, 5, 5 and MTU 5, 4, 3. Those
+MTU failures were the one-gap learner, not the skill.
+
 ## Honest limits
 
 - **Policy, not learning.** The checks measure whether the professor follows the
