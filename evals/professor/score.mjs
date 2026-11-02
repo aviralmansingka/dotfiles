@@ -10,7 +10,7 @@
 // A verify counts only on a question about the target fact, so a wrong answer
 // on an unrelated node cannot fail the check.
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const dir = process.argv[2];
@@ -118,6 +118,80 @@ if (task.mode === "cold-start") {
 	checks.entryQuestion = calls[0]?.t === "ask_user_question";
 }
 if (task.mode === "already-known") checks.noUnneededTeaching = !unneededTeaching;
+
+// Task-declared feature checks. Each one is opt-in, so a task scores only the
+// behaviors it can actually provoke.
+const workspace = (rel) => join(dir, "workspace", rel);
+
+if (Array.isArray(task.artifacts)) {
+	checks.artifactOk = task.artifacts.every((f) => existsSync(workspace(f)));
+}
+
+if (Array.isArray(task.planContains)) {
+	const planRel = task.planFile ?? `professor-lessons/${task.id}/session.md`;
+	const plan = existsSync(workspace(planRel)) ? readFileSync(workspace(planRel), "utf8") : "";
+	checks.planUpdated = plan.length > 0 && task.planContains.every((s) => plan.includes(s));
+}
+
+if (Array.isArray(task.bodyChecks)) {
+	checks.derivationOk = task.bodyChecks.every((bc) =>
+		calls.some((c) => c.t === "lesson" && c.body &&
+			bc.groups.every((g) => g.some((w) => c.body.toLowerCase().includes(w.toLowerCase())))),
+	);
+}
+
+if (task.channelCheck) {
+	// The visible text next to a question must stay connective. Teaching goes
+	// to the lesson tool, not the transcript.
+	const sessions = join(dir, "sessions");
+	let maxText = 0;
+	if (existsSync(sessions)) {
+		for (const name of readdirSync(sessions)) {
+			if (!name.endsWith(".jsonl")) continue;
+			for (const line of readFileSync(join(sessions, name), "utf8").split("\n")) {
+				if (!line.startsWith("{")) continue;
+				let o;
+				try { o = JSON.parse(line); } catch { continue; }
+				if (o.type !== "message") continue;
+				const msg = o.message ?? {};
+				if (msg.role !== "assistant") continue;
+				const items = msg.content ?? [];
+				const asks = items.some((i) => i?.type === "toolCall" && (i.name === "quiz" || i.name === "explain"));
+				if (!asks) continue;
+				const text = items.filter((i) => i?.type === "text").map((i) => i.text ?? "").join(" ").trim();
+				maxText = Math.max(maxText, text.length);
+			}
+		}
+	}
+	checks.lessonChannel = maxText <= Number(task.channelLimit ?? 700);
+}
+
+const interjectionAt = calls.findIndex((c) => c.t === "interjection");
+if (interjectionAt !== -1 && task.interjectionCheck) {
+	const after = calls.slice(interjectionAt + 1);
+	if (task.interjectionCheck === "repair") {
+		let questions = 0;
+		let taught = false;
+		for (const c of after) {
+			if (c.t === "lesson") { taught = true; break; }
+			if (isQuestion(c) && c.stage !== "probe") questions += 1;
+		}
+		checks.repairNotVolume = taught && questions <= 1;
+	}
+	if (task.interjectionCheck === "anchor") {
+		const next = after.find((c) => ["quiz", "explain", "lesson", "ask_user_question"].includes(c.t));
+		checks.goalAnchored = Boolean(next) && (next.t === "ask_user_question" || next.t === "lesson");
+	}
+}
+
+if (task.mode === "resume") {
+	// A resume skips the goal grill and the probe by design.
+	delete checks.contractBeforeProbe;
+	delete checks.probeBeforeTeach;
+	checks.resumeTeachesFirst = calls[0]?.t === "lesson";
+	checks.noRepeatCancelled = !task.cancelledTitle ||
+		!calls.some((c) => isQuestion(c) && (c.title ?? "").includes(task.cancelledTitle));
+}
 
 const score = Object.values(checks).filter(Boolean).length;
 const report = {

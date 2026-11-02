@@ -1,0 +1,37 @@
+{
+  "id": "handout-missing",
+  "topic": "CUDA event timing, with a handout at a fixed path.",
+  "goal": "Write professor-lessons/handout-missing/handout.md during plan, then teach.",
+  "target": "G1",
+  "artifacts": ["professor-lessons/handout-missing/handout.md"],
+  "grill": [
+    "I want a handout I can keep, at professor-lessons/handout-missing/handout.md.",
+    "Then teach me the timing boundary.",
+    "I can compute GFLOP/s but I do not trust my timings."
+  ],
+  "facts": [
+    {
+      "id": "K1",
+      "claim": "The host launches kernels asynchronously, so the launch returns before the kernel finishes.",
+      "keywords": ["host", "launch", "asynchronous", "return"],
+      "known": true
+    },
+    {
+      "id": "K2",
+      "claim": "A CUDA event is recorded in a stream and timestamped when the stream reaches it.",
+      "keywords": ["event", "stream", "timestamp"],
+      "known": true
+    },
+    {
+      "id": "G1",
+      "claim": "A host timer measures the enqueue cost, because the kernel runs later; only an in-stream event measures device progress.",
+      "wrong": "A host wall-clock timer around the launch measures how long the kernel ran on the device.",
+      "keywords": ["wall", "clock", "timer", "enqueue", "host"],
+      "teachGroups": [
+        ["enqueue", "host-side", "host side", "launch latency", "asynchronous"],
+        ["device-side", "device side", "device progress", "stream reaches", "same stream"]
+      ]
+    }
+  ],
+  "commandOutput": "matmul: 0.42 ms (host wall clock) / 0.97 ms (CUDA event pair)"
+}

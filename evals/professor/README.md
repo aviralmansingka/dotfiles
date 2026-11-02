@@ -75,6 +75,9 @@ Task modes change the check set:
   checks. The session is a survey, not a lesson.
 - **cold-start** — the learner's first message is `hi`, and `entryQuestion`
   checks that the first instrument call is `ask_user_question`.
+- **resume** — the workspace holds an existing `session.md`. The checks drop
+  the grill and probe rules, require a lesson first, and forbid repeating the
+  cancelled quiz title.
 
 **Metadata** — instrument hygiene, reported beside the policy score:
 
@@ -98,19 +101,36 @@ mix with the loop checks.
 | `already-known` | already-known | E9, no re-teach |
 | `ncp-diagnostic` | diagnostic | E8, survey without lessons |
 | `cold-start` | cold-start | E1, begin on the first turn |
+| `framing-complaint` | default | E2, repair not volume |
+| `goal-drift` | default | E3, re-anchor to the goal |
+| `derivation-gap` | default | E4, derive the constant |
+| `lesson-channel` | default | E5, teach through `lesson` |
+| `resume-cancel` | resume | E6, do not re-pose a cancelled quiz |
+| `scope-change` | default | E11, add a node on request |
+| `handout-missing` | default | E12, artifact really written |
+
+## Task fields
+
+| Field | Effect |
+|---|---|
+| `facts`, `target`, `grill` | the simulator profile and the goal-grill answers |
+| `mode` | `default`, `already-known`, `diagnostic`, `cold-start`, `resume` |
+| `commandOutput` | canned output for run-command |
+| `interjections` | `[{afterCall, text}]` — a real user turn at that call |
+| `interjectionCheck` | `repair` (one question then a lesson) or `anchor` (next call is a question about direction or a lesson) |
+| `bodyChecks` | `[{label, groups}]` — a lesson body must carry every group |
+| `channelCheck`, `channelLimit` | visible text beside a question must stay short |
+| `artifacts` | files that must exist in the workspace after the rollout |
+| `planFile`, `planContains` | the plan file must gain the named content |
+| `workspace` | fixture tree copied into the run workspace |
+| `vault` | proposition notes copied into the run vault |
+| `cancelledTitle` | a quiz title a resume must not repeat |
 
 ## Add a task
 
-Copy `tasks/cuda-event-timing.json` and edit:
-
-- `facts` — claims, keywords that identify a question about them, and `known`
-  for facts the simulator holds at the start.
-- `target` — the fact under test. Its `wrong` claim is the planted
-  misconception; its `teachGroups` are the keyword groups a lesson must carry to
-  unlock it. A lesson unlocks the fact when every group matches a word.
-- `grill` — the simulator's answers to the goal-grill questions, in order.
-- `mode` — set `already-known` to check that the professor teaches nothing the
-  simulator holds.
+Copy `tasks/cuda-event-timing.json` and edit `facts`, `target`, `grill`, and
+optionally the feature fields above. A task runs with the default check set
+unless its mode or fields add more.
 
 ## Current results
 

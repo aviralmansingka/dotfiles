@@ -76,8 +76,22 @@ json.dump({
 META
 
 # Hermetic workspace: an empty professor-lessons tree and a private vault, so
-# the real vault and its open arcs cannot leak into the run.
+# the real vault and its open arcs cannot leak into the run. A task may seed
+# both: `vault` copies proposition notes, `workspace` copies a fixture tree.
 mkdir -p "$out/workspace/professor-lessons"
+
+has_vault=$(python3 -c 'import json,sys; print("yes" if json.load(open(sys.argv[1])).get("vault") else "")' "$task_file")
+if [ -n "$has_vault" ]; then
+	while IFS= read -r note; do
+		[ -n "$note" ] || continue
+		[ -f "$here/vault/$note" ] && cp "$here/vault/$note" "$out/vault/2_knowledge/propositions/"
+	done < <(python3 -c 'import json,sys; print("\n".join(json.load(open(sys.argv[1])).get("vault", [])))' "$task_file")
+fi
+
+workspace_fixture=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("workspace",""))' "$task_file")
+if [ -n "$workspace_fixture" ]; then
+	cp -R "$here/fixtures/$workspace_fixture/." "$out/workspace/"
+fi
 
 topic=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["topic"])' "$task_file")
 mode=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("mode",""))' "$task_file")
@@ -88,6 +102,14 @@ else
 	topic_block="Topic: $topic"
 fi
 
+if [ "$mode" = "resume" ]; then
+	record_block="This rollout is a resume. Read the existing professor-lessons session file in this directory and continue from it. Do not restart the goal grill."
+elif [ -n "$has_vault" ]; then
+	record_block="The vault holds proposition notes for this topic. Start with the status read."
+else
+	record_block="There is no existing record for this topic."
+fi
+
 prompt=$(cat <<EOF
 $(cat "$out/professor/SKILL.md")
 
@@ -95,7 +117,7 @@ $(cat "$out/professor/SKILL.md")
 
 You are the professor agent in professor mode. Run the lesson directly with the learner in this session. Never launch a subagent; the researcher subagent is unavailable in this harness, so plan from what you already know and from the workspace.
 
-The learner is a real person. Ask one question at a time with the tools. Start with the status read, then Phase 0. There is no existing record for this topic.
+The learner is a real person. Ask one question at a time with the tools. Start with the status read, then Phase 0. $record_block
 
 The learner answers only through the quiz, explain, ask_user_question, and run-command tools. They cannot edit files or run commands by hand. Never ask them to. Work inside this directory only.
 

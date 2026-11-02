@@ -68,8 +68,8 @@ question text must change materially.
 **Not for** — judging whether the new framing is clearer. That needs a reader or
 a judge model.
 
-**Runs as** — a task instance with a scripted interjection: a simulator turn
-delivered at a fixed call index. Needs that feature.
+**Runs as** — `framing-complaint`: a task instance with a scripted interjection.
+The `repairNotVolume` check requires one question at most before a lesson.
 
 ---
 
@@ -92,8 +92,9 @@ quiz runs on the off-goal node.
 **Not for** — deciding whether a detour would have been valuable. Some detours
 are good; this check only catches the unannounced ones.
 
-**Runs as** — a task instance with a scripted interjection, plus a
-goal-vocabulary check. Needs both.
+**Runs as** — `goal-drift`: a task instance with a scripted interjection and the
+`goalAnchored` check. After the complaint the next call must ask direction or
+teach.
 
 ---
 
@@ -117,8 +118,8 @@ form a machine can test.
 
 **Not for** — judging whether the derivation is clear or complete.
 
-**Runs as** — a task instance with body assertions: required keyword groups
-in a lesson body. Needs that feature.
+**Runs as** — `derivation-gap`: a task instance with `bodyChecks`. A lesson body
+must carry the arithmetic that produces the constant.
 
 ---
 
@@ -141,8 +142,8 @@ short.
 
 **Not for** — whether the lesson is readable or well ordered.
 
-**Runs as** — a task instance with a text-versus-lesson check on the
-produced trajectory. Needs that check.
+**Runs as** — `lesson-channel`: a task instance with `channelCheck`. Visible text
+beside a question must stay under the limit.
 
 ---
 
@@ -166,9 +167,9 @@ the cancelled title.
 **Not for** — long-arc retention. It says nothing about what the learner
 remembered.
 
-**Runs as** — a prefix-conditioned rollout from the real trajectory, or a
-task instance whose workspace holds `session.md`, a delivered node, and a
-cancelled quiz. Needs the fixture or the replay runner.
+**Runs as** — `resume-cancel`: a task instance whose workspace holds `session.md`,
+a delivered node, and a cancelled quiz. The checks require a lesson first and no
+repeated cancelled title.
 
 ---
 
@@ -283,8 +284,8 @@ change.
 
 **Not for** — judging whether the new scope is wise.
 
-**Runs as** — a task instance with a plan-diff check on `session.md`. Needs
-that check.
+**Runs as** — `scope-change`: a task instance with `planContains`. The plan file
+must gain the requested node.
 
 ---
 
@@ -305,8 +306,8 @@ success report with no file is the failure.
 
 **Not for** — handout quality or length.
 
-**Runs as** — a task instance with a file assertion after the rollout. Needs
-that check.
+**Runs as** — `handout-missing`: a task instance with `artifacts`. The handout
+file must exist after the rollout.
 
 ---
 
@@ -315,21 +316,20 @@ that check.
 | Eval | Failure class | Check type | Task |
 |---|---|---|---|
 | E1 | entry | first instrument | `cold-start` |
-| E2 | repair | question run + text | none yet |
-| E3 | goal drift | goal vocabulary | none yet |
-| E4 | assertion | lesson body groups | none yet |
-| E5 | channel | text versus lesson | none yet |
-| E6 | resume | first instrument | none yet |
+| E2 | repair | question run | `framing-complaint` |
+| E3 | goal drift | next instrument | `goal-drift` |
+| E4 | assertion | lesson body groups | `derivation-gap` |
+| E5 | channel | text versus lesson | `lesson-channel` |
+| E6 | resume | first instrument | `resume-cancel` |
 | E7 | pacing | question run | every default task |
 | E8 | diagnosis | lesson count | `ncp-diagnostic` |
 | E9 | warm start | lesson keywords | `already-known` |
 | E10 | lab | prediction present | `cuda-event-timing`, `transpose-bandwidth` |
-| E11 | replanning | plan diff | none yet |
-| E12 | artifacts | file exists | none yet |
+| E11 | replanning | plan diff | `scope-change` |
+| E12 | artifacts | file exists | `handout-missing` |
 
-Six failure cases now have a task. The remaining six need the harness features
-named in their section: scripted interjections, body assertions, a text check,
-a resume fixture, a plan diff, and a file assertion.
+All twelve failure cases now have a task. The checks differ by task: policy
+checks run everywhere, and a task opts into the feature checks it can provoke.
 
 ## What this suite is good for
 

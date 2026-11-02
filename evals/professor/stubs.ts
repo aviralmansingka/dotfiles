@@ -12,6 +12,11 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { Type } from "typebox";
 
+interface Interjection {
+	afterCall: number;
+	text: string;
+}
+
 interface Fact {
 	id: string;
 	claim: string;
@@ -37,6 +42,19 @@ const statePath = process.env.EVAL_STATE ?? "/tmp/professor-eval-state.json";
 const maxCalls = Number(process.env.EVAL_MAX_CALLS ?? 80);
 
 const task: Task = JSON.parse(readFileSync(taskPath, "utf8"));
+
+let api: ExtensionAPI | undefined;
+const fired = new Set<number>();
+
+/** Deliver a scripted learner turn after a fixed instrument call. */
+function maybeInterject(): void {
+	for (const it of task.interjections ?? []) {
+		if (it.afterCall !== state.calls || fired.has(it.afterCall)) continue;
+		fired.add(it.afterCall);
+		log({ t: "interjection", afterCall: it.afterCall, text: it.text });
+		api?.sendUserMessage(it.text, { deliverAs: "steer" });
+	}
+}
 const target = task.facts.find((f) => f.id === task.target);
 
 interface LearnerState {
@@ -184,6 +202,7 @@ function overBudget(): boolean {
 }
 
 export default function stubs(pi: ExtensionAPI) {
+	api = pi;
 	pi.registerTool({
 		name: "quiz",
 		label: "quiz",
@@ -235,6 +254,7 @@ export default function stubs(pi: ExtensionAPI) {
 				right: isRight,
 			});
 			persist();
+			maybeInterject();
 			return {
 				content: [{
 					type: "text" as const,
@@ -280,6 +300,7 @@ export default function stubs(pi: ExtensionAPI) {
 				right,
 			});
 			persist();
+			maybeInterject();
 			return {
 				content: [{
 					type: "text" as const,
@@ -310,8 +331,10 @@ export default function stubs(pi: ExtensionAPI) {
 				unlocked,
 				flipped: unlocked.includes(task.target),
 				targetTaught,
+				body: body.slice(0, 4000),
 			});
 			persist();
+			maybeInterject();
 			return {
 				content: [{ type: "text" as const, text: `Lesson "${params.title}" shown. Learner waits.` }],
 				details: { status: "opened" },
@@ -341,6 +364,7 @@ export default function stubs(pi: ExtensionAPI) {
 					: task.grill.shift() ?? "Go ahead.";
 			log({ t: "ask_user_question", seq: state.grill, question: q.slice(0, 200), reply });
 			persist();
+			maybeInterject();
 			return {
 				content: [{ type: "text" as const, text: `Learner answered: ${reply}` }],
 				details: { answer: reply },

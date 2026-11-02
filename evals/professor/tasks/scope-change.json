@@ -1,0 +1,40 @@
+{
+  "id": "scope-change",
+  "topic": "Internet performance checks for a rack provider.",
+  "goal": "Add a BGP node when the learner asks, and show the plan change.",
+  "target": "G1",
+  "planFile": "professor-lessons/scope-change/session.md",
+  "planContains": ["BGP"],
+  "grill": [
+    "I need to explain the 13 internet checks.",
+    "I will use them in a customer review.",
+    "I do not understand BGP."
+  ],
+  "interjections": [
+    {"afterCall": 4, "text": "I don't really understand BGP either. can you make sure you offer lessons on BGP in addition to what you had planned."}
+  ],
+  "facts": [
+    {
+      "id": "K1",
+      "claim": "BGP picks paths by local preference, then AS path.",
+      "keywords": ["bgp", "path", "local", "preference"],
+      "known": true
+    },
+    {
+      "id": "K2",
+      "claim": "The suite measures 13 checks per provider.",
+      "keywords": ["13", "checks", "provider", "suite"],
+      "known": true
+    },
+    {
+      "id": "G1",
+      "claim": "BGP policy, not latency, decides the egress path, so a check must record the path it measured.",
+      "wrong": "BGP always picks the lowest-latency path.",
+      "keywords": ["bgp", "path", "latency", "policy"],
+      "teachGroups": [
+        ["local preference", "as path", "policy"],
+        ["not latency", "not the lowest", "not delay"]
+      ]
+    }
+  ]
+}
