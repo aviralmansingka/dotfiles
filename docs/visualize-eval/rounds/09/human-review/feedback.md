@@ -18,4 +18,39 @@ the captain and override judge verdicts where they conflict.
 
 ## Directives for round 10
 
-(captein to fill from chat)
+(owner, 2026-11-02, on the open round-09 tabs)
+
+1. network: "why couldn't the outgoing arrows from web-tier be rearranged so
+   that there is no overlap at all" — Captain's finding: the 1 bridge at
+   (32,34) is structural under this binary. Three downward relations
+   (web->cache, web->db, cache->db) plus core->cache all transit the single
+   free lane of the web<->cache rank gap; ports are engine-assigned at fixed
+   fan offsets, so the spec cannot widen or re-aim them. The two rejected
+   candidates prove the only cheaper layouts fail fit (lr = 110 cols; plain
+   tb = 67 rows). The remaining levers (reorder, merge) are forbidden by the
+   skill. Round-10 engine item: multi-lane rank gaps / port spreading.
+2. modal-machine-manager: "why is the diagram fully linear. There are
+   multiple other connections in various directions that flat out missing."
+   — Linearity is the lifecycle-machines recipe itself (one phase per rank,
+   boot readable in one direction). The missing relations (web, web->wapi,
+   pgrpc->db, pub->db; 16/17 components, 20/23 relations) were DROPPED under
+   budget exhaustion, not proven impossible — the judge said so explicitly.
+   A re-split (merging v2+v4 to free a view for the web/intake cluster) was
+   available. Skill fix for round 10: never-drop rule + re-split-before-drop.
+3. modal-runtime: "basically all detail from v4 is gone." — Round-08's
+   v4-data-plane content (backend/filesystem/blobnet/container with 'runs
+   user process' and 'image+volume data') moved into round-09's
+   v5-engine-tree, with labels shortened ('runs user proc', 'image/vol
+   data'). v4 became a thin 3-node fan. Net: the detail was redistributed
+   and abbreviated, not preserved verbatim; the seam-qualifier richness of
+   round-08's v1 seam views also thinned (v3 is a 2-node pair).
+
+## Best semantic recreation across rounds (captain analysis)
+
+Raw counts: r04 4P/8 (pipeline, network, server, datacenter) — but r04 was
+user-reverted for overall regression and judged by a different model.
+Best SHIPPED: r05 3P/8 (pipeline, network, server). Terra era: r08 2P > r09
+1P. Per case: pipeline P in every round (7/7); machine-mgr, gb300, homelab 0P
+across all seven rounds (never passed semantic). Judges differ per round
+(Astra r01, sol r02-07, terra r08-09) so cross-era counts are indicative
+only.
