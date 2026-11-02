@@ -7,7 +7,7 @@
 //!    sees a DAG while the renderer still draws the arrow the author wrote.
 //! 2. **Rank.** Longest-path ranking puts every node in a row; a balancing
 //!    sweep then moves each node to the feasible rank that shortens its
-//!    edges, with a heavy charge on how far a group's box would stretch.
+//!    edges.
 //! 3. **Order.** Nodes are reordered *within* their rank by barycenter
 //!    sweeps (median of the adjacent rank, down then up), the best order is
 //!    kept, and the search stops after four sweeps without improvement.
@@ -22,11 +22,12 @@
 //! 5. **Reserve.** The control palette's corner is kept free of node boxes,
 //!    so the legend never paints over a border.
 //!
-//! Group blocks are the one constraint ordering may not break: the members
-//! of a group stay contiguous in every rank and sibling groups keep one
-//! stable left-to-right order, so a group reads as one block wherever it
-//! appears. A group's hue derives from its NAME, so it keeps its color in
-//! every view of a case.
+//! A `group` is a logical tag, never a drawn box: it costs no cells and no
+//! border. It drives two things only. Group blocks are the one constraint
+//! ordering may not break: the members of a group stay contiguous in every
+//! rank and sibling groups keep one stable left-to-right order, so a group
+//! reads as one block wherever it appears. And a group's hue derives from its
+//! NAME, so it keeps its color in every view of a case.
 //!
 //! Two declarative constraints ride on top of the automatic passes:
 //!
@@ -62,16 +63,9 @@ const ALONG_GAP_PER_EDGE: i32 = 1;
 const MAX_SWEEPS: usize = 24;
 /// How many sweeps without improvement before the search stops.
 const SWEEP_PATIENCE: usize = 4;
-/// Charge for one rank that a group's box spans on top of the tightest
-/// possible span. Heavy enough to win against a two-rank edge saving.
-const GROUP_SPAN_CHARGE: i64 = 12;
 /// Bend penalties: 0, 0, 5, 12, 30, then doubling. A bend costs more than a
 /// crossing, and the curve makes two bends much worse than one.
 const BEND_PENALTY: [i64; 8] = [0, 0, 5, 12, 30, 60, 120, 240];
-/// Blank cells a grouped graph keeps at the top and left, so a region's
-/// border has its own cell instead of landing on a node.
-const REGION_MARGIN: f64 = 1.0;
-
 /// One node the layout must place.
 #[derive(Debug, Clone)]
 pub struct LayoutNode {
@@ -413,15 +407,10 @@ impl<'a> Engine<'a> {
         rank
     }
 
-    /// Moves each free node to the feasible rank that shortens its edges,
-    /// charging how far its group's box would stretch. A pinned node is not
-    /// a candidate: the spec's tier is not the engine's to move.
+    /// Moves each free node to the feasible rank that shortens its edges. A
+    /// pinned node is not a candidate: the spec's tier is not the engine's to
+    /// move.
     fn balance(&self, rank: &mut [usize], order: &[usize], pins: &[Option<usize>]) {
-        let group_of: Vec<Option<&str>> = self
-            .nodes
-            .iter()
-            .map(|node| node.group.as_deref())
-            .collect();
         for sweep in 0..8 {
             let mut changed = false;
             let pass: Vec<usize> = if sweep % 2 == 0 {
@@ -459,18 +448,6 @@ impl<'a> Engine<'a> {
                     }
                     for &s in &self.down[node] {
                         cost += (candidate as i64 - rank[s] as i64).abs();
-                    }
-                    if let Some(group) = group_of[node] {
-                        let mut low_group = candidate;
-                        let mut high_group = candidate;
-                        for (other, other_group) in group_of.iter().enumerate() {
-                            if other == node || *other_group != Some(group) {
-                                continue;
-                            }
-                            low_group = low_group.min(rank[other]);
-                            high_group = high_group.max(rank[other]);
-                        }
-                        cost += GROUP_SPAN_CHARGE * (high_group - low_group) as i64;
                     }
                     if cost < best_cost || (cost == best_cost && candidate < best) {
                         best_cost = cost;
@@ -689,7 +666,7 @@ impl<'a> Engine<'a> {
 
         // One global block order, decided once from the members' mean
         // positions across every rank: sibling groups keep this order in
-        // every rank, so their regions can never swap sides.
+        // every rank, so their blocks can never swap sides.
         let block_order: Vec<usize> = {
             let mut place: HashMap<usize, usize> = HashMap::new();
             for layer in layers.iter() {
@@ -839,17 +816,6 @@ impl<'a> Engine<'a> {
             let offset = ((widest - rank_span[rank_index]) / 2.0).round();
             for &id in layer {
                 across[id] = offset + across_pos[rank_index][&id];
-            }
-        }
-
-        // A region is drawn one cell outside its members, so a grouped graph
-        // keeps one blank cell at the top and left for that border.
-        if !group_names.is_empty() {
-            for value in across.iter_mut() {
-                *value += REGION_MARGIN;
-            }
-            for value in along.iter_mut() {
-                *value += REGION_MARGIN as i32;
             }
         }
 
@@ -1144,7 +1110,7 @@ fn reorder(
     // Each block keeps only an ANCHOR (its mean barycenter) from this
     // pass. The block SEQUENCE always comes from the caller's global
     // `block_order`, so sibling groups keep one stable left-to-right
-    // order in every rank and their regions can never swap sides.
+    // order in every rank and their blocks can never swap sides.
     let mut anchors: HashMap<usize, Ordered> = HashMap::new();
     for (group, list) in members.iter() {
         let mut total = 0.0;

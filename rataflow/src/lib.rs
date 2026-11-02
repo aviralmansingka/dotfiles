@@ -16,8 +16,8 @@ pub mod layout;
 pub mod router;
 
 pub use flow_edge::{
-    DEFAULT_DURATION_MS, DEFAULT_FLOW_RATE, DotMode, FlowEdge, MIN_DOT_CELLS, Region, Route,
-    Timing, dot_index,
+    DEFAULT_DURATION_MS, DEFAULT_FLOW_RATE, DotMode, FlowEdge, MIN_DOT_CELLS, Route, Timing,
+    dot_index,
 };
 
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -62,8 +62,9 @@ pub enum ThemeKind {
     Light,
 }
 
-/// One node. `label` defaults to `id` when omitted. `group` puts the node
-/// in a color family shared with every other node of the same group.
+/// One node. `label` defaults to `id` when omitted. `group` is a logical
+/// tag: it keeps the group's members in one contiguous block and gives them
+/// one name-derived color family. Nothing is drawn around them.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SpecNode {
@@ -522,7 +523,8 @@ impl Spec {
     }
 
     /// Node groups in declaration order of first appearance, with how many
-    /// declared nodes belong to each.
+    /// declared nodes belong to each. Purely a count of the logical tags: a
+    /// group owns ordering and hue, never a drawn box.
     pub fn groups(&self) -> Vec<(String, usize)> {
         let mut out: Vec<(String, usize)> = Vec::new();
         for node in &self.nodes {
@@ -769,10 +771,10 @@ pub struct Report {
     pub labels_ambiguous: usize,
     /// `(edge id, label)` for every dropped label.
     pub skipped_labels: Vec<(String, String)>,
-    /// Node groups in declaration order, with their member counts.
+    /// Node groups in declaration order, with their member counts. A group
+    /// is a logical tag: it orders sibling blocks and picks a hue family,
+    /// and nothing is drawn around its members.
     pub groups: Vec<(String, usize)>,
-    /// One bordered, titled region box per group, in the same order.
-    pub regions: Vec<Region>,
     /// Nodes the spec pinned to a declared rank through `layers`.
     pub pinned: usize,
     /// Edges whose declared `minlen` the pins cannot honor. Every entry is
@@ -887,7 +889,7 @@ pub fn build_flow_with_report(spec: &Spec) -> Result<(Graph, Report)> {
     // The engine places every spec, auto or pinned. `layers` pins ranks;
     // within a rank the barycenter pass still chooses the order.
     let pins = rank_pins(&nodes, spec);
-    // Structural specs (regions, minlen gaps, partial pins) go through the
+    // Structural specs (groups, minlen gaps, partial pins) go through the
     // engine; a fully pinned grid with none of those keeps its declared grid.
     let structured = !spec.groups().is_empty()
         || spec.edges.iter().any(|edge| edge.minlen() > 1)
@@ -975,15 +977,6 @@ pub fn build_flow_with_report(spec: &Spec) -> Result<(Graph, Report)> {
     // Route every edge on the character grid, then hand each plan to its
     // edge content by id.
     let boxes = node_boxes(&flow, spec);
-    // Region boxes come from the final member positions, so a region never
-    // guesses where its members are.
-    let regions = region_boxes(&boxes, spec);
-    if !regions.is_empty() {
-        let shared = std::sync::Arc::new(regions.clone());
-        for (_, content) in flow.edges_content_mut() {
-            content.set_regions(shared.clone());
-        }
-    }
     let index_of = |id: &str| boxes.iter().position(|b| b.id == id).unwrap_or(0);
     let edge_specs: Vec<router::EdgeSpec> = routes_spec
         .iter()
@@ -1026,19 +1019,11 @@ pub fn build_flow_with_report(spec: &Spec) -> Result<(Graph, Report)> {
         flow.set_handle_styles(&node.id, Some(border_handle_style()));
     }
 
-    // The disjointness pass may widen a box into blank space, so the
-    // reported extent has to cover the boxes that were pushed.
-    let mut extent = plan.extent;
-    for region in &regions {
-        extent.0 = extent.0.max(region.x + region.w);
-        extent.1 = extent.1.max(region.y + region.h);
-    }
-
     let report = Report {
         nodes: boxes.len(),
         edges: spec.edges.len(),
         routes: routes_spec.len(),
-        extent,
+        extent: plan.extent,
         shared_run: plan.shared_run,
         crossings: plan.crossings,
         touching_bends: plan.touching_bends,
@@ -1053,7 +1038,6 @@ pub fn build_flow_with_report(spec: &Spec) -> Result<(Graph, Report)> {
             .map(|(index, label)| (format!("e{index}"), label.clone()))
             .collect(),
         groups: spec.groups(),
-        regions,
         pinned: pins.iter().filter(|pin| pin.is_some()).count(),
         pins: conflicts,
         trunks: spec
@@ -1145,105 +1129,6 @@ fn routed_edges(spec: &Spec) -> Vec<RoutedEdge> {
         }
     }
     out
-}
-
-/// The bordered box each group draws around its members: the member bounds
-/// plus one cell of border on every side.
-///
-/// A final disjointness pass packs sibling boxes along the cross axis (the
-/// columns in `tb`, the rows in `lr`): siblings are walked in the order the
-/// engine holds their blocks -- the mean cross position of a group's members
-/// across every rank -- and each box is pushed clear of the previous one and
-/// then widened so no member leaves the box. Boxes keep the declaration order
-/// of their groups in the returned list. Painting is blank-cell-only, so a
-/// widened box never covers a member or an edge.
-fn region_boxes(boxes: &[router::NodeBox], spec: &Spec) -> Vec<Region> {
-    let group_of: HashMap<&str, &str> = spec
-        .nodes
-        .iter()
-        .filter_map(|node| Some((node.id.as_str(), node.group.as_deref()?)))
-        .collect();
-    // The cross axis is the one siblings share a rank slot along; the rank
-    // axis keeps each member's own extent.
-    let horizontal = !matches!(spec.direction, Direction::LeftToRight);
-    let cross = |b: &router::NodeBox| if horizontal { b.x } else { b.y };
-    let across = |b: &router::NodeBox| if horizontal { b.w } else { b.h };
-    let along = |b: &router::NodeBox| if horizontal { b.y } else { b.x };
-    let depth = |b: &router::NodeBox| if horizontal { b.h } else { b.w };
-
-    let mut regions: Vec<Region> = Vec::new();
-    // Per box: cross-axis first and last cell it may occupy, plus the mean
-    // cross position that decides the block order.
-    let mut faces: Vec<(i32, i32, f64)> = Vec::new();
-    for (name, _) in spec.groups() {
-        let members: Vec<&router::NodeBox> = boxes
-            .iter()
-            .filter(|member| group_of.get(member.id.as_str()).copied() == Some(name.as_str()))
-            .collect();
-        if members.is_empty() {
-            continue;
-        }
-        let low = members.iter().map(|b| cross(b)).min().unwrap_or(0);
-        let high = members
-            .iter()
-            .map(|b| cross(b) + across(b) - 1)
-            .max()
-            .unwrap_or(low);
-        let first = members.iter().map(|b| along(b)).min().unwrap_or(0);
-        let last = members
-            .iter()
-            .map(|b| along(b) + depth(b) - 1)
-            .max()
-            .unwrap_or(first);
-        let region = if horizontal {
-            Region::around(name.clone(), low, first, high, last)
-        } else {
-            Region::around(name.clone(), first, low, last, high)
-        };
-        let mean = members
-            .iter()
-            .map(|b| cross(b) as f64 + (across(b) as f64 - 1.0) / 2.0)
-            .sum::<f64>()
-            / members.len() as f64;
-        let span = if horizontal { region.w } else { region.h };
-        let lead = if horizontal { region.x } else { region.y };
-        faces.push((lead, lead + span, mean));
-        regions.push(region);
-    }
-
-    // The engine's one global block order, read back from the final member
-    // positions: mean cross position, then leftmost member, then name keeps
-    // the pass deterministic.
-    let mut order: Vec<usize> = (0..regions.len()).collect();
-    order.sort_by(|&a, &b| {
-        faces[a]
-            .2
-            .partial_cmp(&faces[b].2)
-            .unwrap_or(std::cmp::Ordering::Equal)
-            .then(faces[a].0.cmp(&faces[b].0))
-            .then(regions[a].name.cmp(&regions[b].name))
-    });
-
-    // Give each sibling its own band. A blank column between boxes is the
-    // goal; when the members leave no room for one the boxes fall back to
-    // adjacency, and as a last resort the border sits on the member's own
-    // column instead of dropping the member out of its box.
-    let mut cursor: Option<i32> = None;
-    for &index in &order {
-        let (wanted, high, _) = faces[index];
-        let start = cursor.map_or(wanted, |end| wanted.max(end));
-        let end = high.max(start + 3);
-        let region = &mut regions[index];
-        if horizontal {
-            region.x = start;
-            region.w = end - start;
-        } else {
-            region.y = start;
-            region.h = end - start;
-        }
-        cursor = Some(cursor.map_or(end, |prev| prev.max(end)));
-    }
-    regions
 }
 
 /// Node geometry in cell units, plus the declared layer (0 when the spec
@@ -1426,7 +1311,7 @@ fn place_by_layers(mut nodes: Vec<Node<TextContent>>, spec: &Spec) -> Vec<Node<T
 }
 
 /// Places nodes: the engine for anything structural, the round-05 grid for a
-/// spec that pins every node and declares no region or `minlen`.
+/// spec that pins every node and declares no group or `minlen`.
 fn place_nodes(
     nodes: Vec<Node<TextContent>>,
     spec: &Spec,
@@ -1892,9 +1777,6 @@ fn draw_frame(frame: &mut Frame, flow: &mut Graph, header: &str, controls: bool)
         .buffer_mut()
         .set_style(canvas, Style::default().bg(palette.canvas_bg));
     frame.render_widget(&mut *flow, canvas);
-    // Region boxes go on after the graph so they never cover a node or a
-    // route: every border cell is written only where the graph left a blank.
-    draw_regions(frame, flow, canvas);
     if controls {
         frame.render_widget(Controls::new(flow), canvas);
     }
@@ -1924,104 +1806,6 @@ fn draw_frame(frame: &mut Frame, flow: &mut Graph, header: &str, controls: bool)
             );
         }
     }
-}
-
-/// Draws every group's region box: a bordered, titled frame in the group's
-/// name-derived hue. Only blank cells are written, so a route that crosses a
-/// region border stays visible and passes through the frame.
-fn draw_regions(frame: &mut Frame, flow: &Graph, canvas: Rect) {
-    let Some(regions) = flow.edges().iter().find_map(|edge| edge.content.regions()) else {
-        return;
-    };
-    if regions.is_empty() {
-        return;
-    }
-    let palette = flow.theme.palette();
-    let buffer = frame.buffer_mut();
-    for region in regions {
-        let style = Style::default()
-            .fg(group_region_color(&region.name))
-            .bg(palette.canvas_bg);
-        let (x0, y0) = flow.world_to_terminal(Position::new(region.x as f64, region.y as f64));
-        let (x1, y1) = flow.world_to_terminal(Position::new(
-            (region.x + region.w - 1) as f64,
-            (region.y + region.h - 1) as f64,
-        ));
-        if x1 <= x0 || y1 <= y0 {
-            continue; // zoomed out of visibility, or clamped to nothing
-        }
-        for x in x0..=x1 {
-            put_region_glyph(buffer, canvas, x, y0, "─", style, false);
-            put_region_glyph(buffer, canvas, x, y1, "─", style, false);
-        }
-        for y in y0..=y1 {
-            put_region_glyph(buffer, canvas, x0, y, "│", style, false);
-            put_region_glyph(buffer, canvas, x1, y, "│", style, false);
-        }
-        for (x, y, glyph) in [(x0, y0, "╭"), (x1, y0, "╮"), (x0, y1, "╰"), (x1, y1, "╯")] {
-            put_region_glyph(buffer, canvas, x, y, glyph, style, false);
-        }
-        // `╭─ Name ────╮`: the title rides the top border and only replaces
-        // border cells, never a node or a route.
-        let title: Vec<String> = format!("─ {} ", region.name)
-            .chars()
-            .map(|ch| ch.to_string())
-            .collect();
-        // The title needs the cells between the two top corners, so the
-        // right corner stays clear: x0 + len(title) < x1.
-        if x0 + (title.len() as i32) < x1 {
-            for (offset, glyph) in title.iter().enumerate() {
-                put_region_glyph(
-                    buffer,
-                    canvas,
-                    x0 + 1 + offset as i32,
-                    y0,
-                    glyph,
-                    style,
-                    true,
-                );
-            }
-        }
-    }
-}
-
-/// Writes one region glyph on a blank canvas cell (or, for a title, over the
-/// border just drawn). Returns false when the cell belongs to the graph.
-fn put_region_glyph(
-    buffer: &mut ratatui::buffer::Buffer,
-    canvas: Rect,
-    x: i32,
-    y: i32,
-    glyph: &str,
-    style: Style,
-    over_border: bool,
-) -> bool {
-    let area = buffer.area;
-    if x < canvas.x as i32
-        || y < canvas.y as i32
-        || x >= (canvas.x + canvas.width) as i32
-        || y >= (canvas.y + canvas.height) as i32
-        || x < area.x as i32
-        || y < area.y as i32
-        || x >= (area.x + area.width) as i32
-        || y >= (area.y + area.height) as i32
-    {
-        return false;
-    }
-    let cell = &mut buffer[(x as u16, y as u16)];
-    let free = cell.symbol() == " " || (over_border && cell.symbol() == "─");
-    if !free {
-        return false;
-    }
-    cell.set_symbol(glyph);
-    cell.set_style(style);
-    true
-}
-
-/// The border hue of a group's region: the group's own name-derived family,
-/// one shade down so the frame reads as a frame and not as another node.
-pub fn group_region_color(group: &str) -> Color {
-    darken(group_color(group, 0), 0.35)
 }
 
 #[cfg(test)]
