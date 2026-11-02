@@ -68,7 +68,7 @@ const state: LearnerState = {
 // Instrument calls return a closing notice instead of a question, so a run
 // ends without an external kill.
 const CLOSING = "The learner has left the session. Stop asking questions and give the closing summary.";
-const closing = (): boolean => state.taught && state.afterFlip >= 3;
+const closing = (): boolean => state.taught && state.afterFlip >= 5;
 
 function persist(): void {
 	writeFileSync(statePath, JSON.stringify({ scenario: scenario.id, ...state }, null, 2));
@@ -101,12 +101,17 @@ function matches(text: string, keywords: string[]): boolean {
 	return overlap(text, keywords) >= Math.min(2, keywords.length);
 }
 
-function bestOption(options: { label?: string; value?: string }[], target: string): number {
+function bestOption(
+	options: { label?: string; value?: string; description?: string }[],
+	target: string,
+): number {
 	const targetTokens = new Set(tokens(target));
 	let best = 0;
 	let bestScore = -1;
 	options.forEach((o, i) => {
-		const text = `${o.label ?? ""} ${o.value ?? ""}`;
+		// Some models put the claim in `description` and use a bare letter as
+		// the label. Match on all three fields; the learner reads them all.
+		const text = `${o.label ?? ""} ${o.value ?? ""} ${o.description ?? ""}`;
 		let score = 0;
 		for (const t of tokens(text)) if (targetTokens.has(t)) score += 1;
 		if (score > bestScore) {
@@ -125,6 +130,10 @@ function answer(text: string): { pick: string; why: string } {
 		if (matches(text, fact.keywords)) return { pick: fact.claim, why: `known:${fact.id}` };
 	}
 	state.unrecognised += 1;
+	// After the correction lands, an unrecognised question still gets the
+	// right answer: the learner knows the claim, even when the question is
+	// phrased outside the scenario vocabulary.
+	if (state.taught) return { pick: scenario.gap.right, why: "unrecognised-taught" };
 	return { pick: scenario.gap.wrong, why: "unrecognised" };
 }
 
@@ -172,6 +181,7 @@ export default function stubs(pi: ExtensionAPI) {
 				hasContext: Array.isArray(params.contextFiles) && params.contextFiles.length > 0,
 				rule: why,
 				chosen: chosen?.label ?? null,
+				chosenText: `${chosen?.label ?? ""} ${chosen?.description ?? ""}`.trim().slice(0, 120),
 				right: isRight,
 			});
 			persist();
@@ -272,7 +282,7 @@ export default function stubs(pi: ExtensionAPI) {
 		async execute(_id: string, params: any) {
 			state.grill += 1;
 			const q = String(params.question ?? "");
-			const isApproval = /do you approve|approve this|approve the goal/i.test(q);
+			const isApproval = /approv/i.test(q) || /by the end of this session/i.test(q);
 			const reply = isApproval
 				? "Approve"
 				: state.taught

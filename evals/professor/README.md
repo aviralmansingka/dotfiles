@@ -65,6 +65,21 @@ Copy `scenarios/cuda-event-timing.json` and edit:
   when every group matches at least one word.
 - `grill` — the learner's answers to the goal-grill questions, in order.
 
+## Current results
+
+Split skill, `anthropic/claude-sonnet-4-5`, 2026-11-02, three runs per scenario:
+
+| Scenario | Scores | Median | Notes |
+|---|---|---|---|
+| cuda-event-timing | 5, 5, 5 | 5/5 | all five checks 3/3 |
+| mtu-blackhole | 5, 4, 3 | 4/5 | correction taught 3/3; verify 1/3; question run 2/3 |
+
+Across both scenarios the three structural checks — contract before probe,
+probe before teach, correction taught — pass 18 of 18. Completion is the weak
+point. Treat the MTU verify failures with care: the one-gap learner answers
+later nodes with the planted correction, so a follow-up question about a
+different node reads as wrong even when the professor taught it.
+
 ## Honest limits
 
 - **Policy, not learning.** The checks measure whether the professor follows the

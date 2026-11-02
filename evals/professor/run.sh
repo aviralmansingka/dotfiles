@@ -14,6 +14,10 @@
 #   state.json     the learner's final state
 #   stdout.txt     the professor's visible transcript
 #   sessions/      the pi session file
+#
+# Three "continue" follow-ups follow the opening prompt. The skill parks for
+# the learner after the probe report and after the plan; without them a headless
+# run ends at the first park with no teaching.
 #   score.json     metrics from score.mjs
 
 set -uo pipefail
@@ -36,7 +40,7 @@ if [ ! -f "$skill_dir/SKILL.md" ]; then
 fi
 
 tag=$(basename "$skill_dir")
-stamp=$(date +%Y%m%d-%H%M%S)
+stamp=$(date +%Y%m%d-%H%M%S)-$(printf %04x $RANDOM)
 out="$here/runs/$stamp-$scenario-$tag"
 mkdir -p "$out/workspace" "$out/vault/2_knowledge/propositions"
 cp -R "$skill_dir" "$out/professor"
@@ -81,13 +85,13 @@ EVAL_SCENARIO="$scenario_file" \
 EVAL_LOG="$out/calls.jsonl" \
 EVAL_STATE="$out/state.json" \
 PI_VAULT_DIR="$out/vault" \
-timeout 600 pi --print \
+timeout 900 pi --print \
 	--no-extensions -e "$here/stubs.ts" \
 	--skill "$out/professor" \
 	--tools read,bash,grep,find,ls,write,edit,quiz,explain,lesson,ask_user_question,run-command \
 	--session-dir "$out/sessions" \
 	--no-approve --no-mcp --model "$model" \
-	-- "$prompt" >"$out/stdout.txt" 2>"$out/stderr.txt"
+	-- "$prompt" "continue" "continue" "continue" >"$out/stdout.txt" 2>"$out/stderr.txt"
 status=$?
 
 node "$here/score.mjs" "$out" | tee "$out/score.txt"
