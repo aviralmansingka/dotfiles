@@ -66,7 +66,7 @@ families and `category_fit` carry over from round 08:
   pick a family to match the layout you already wanted; pick it from the
   source.
 
-Standing renderer rules, updated for the round-09 binary:
+Standing renderer rules, updated for the round-10 binary (new engine guarantees you should verify in your captures): mid-side attachment (a lone edge attaches at the MIDDLE cell of its side both ends; fans spread symmetrically about the middle), target-aligned port order, collision-free group hues (distinct families per case), lane-aware rank gaps, and inside-hop back edges.
 
 - **Structure is declared; geometry is derived.** You declare nodes, edges,
   groups, trunks and — only where the source states it — rank pins. Never
