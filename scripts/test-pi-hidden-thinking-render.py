@@ -52,6 +52,7 @@ import termios
 ROWS, COLS = 100, 100
 
 FINAL_TEXT = "fixture complete"
+OFF_USER_TEXT = "Run one command, then reply complete."
 SHORT_TITLE = "Planning the first command."
 LONG_FIRST_SENTENCE = (
     "Checking the first result carefully before deciding whether the "
@@ -67,6 +68,12 @@ REPO_EXTENSION = os.path.join(
 def skip(reason: str) -> None:
     print(f"SKIP: {reason}")
     sys.exit(0)
+
+
+def write_session(path: str, lines: list[dict]) -> None:
+    with open(path, "w") as handle:
+        for line in lines:
+            handle.write(json.dumps(line) + "\n")
 
 
 def build_session(path: str) -> None:
@@ -113,9 +120,41 @@ def build_session(path: str) -> None:
               [{"type": "thinking", "thinking": "  \n\t "},
                {"type": "text", "text": FINAL_TEXT}], stopReason="stop", **assistant),
     ]
-    with open(path, "w") as handle:
-        for line in lines:
-            handle.write(json.dumps(line) + "\n")
+    write_session(path, lines)
+
+
+def build_plain_session(path: str) -> None:
+    """Fixture with no thinking text at all: the "thinking off" shape.
+
+    The assistant turns carry a tool call and a final text block and no
+    thinking block. That is what a thinking level of off produces, and it is
+    the transcript the user reported.
+    """
+    now = "2026-01-01T00:00:00.000Z"
+
+    def entry(entry_id, parent, role, content, **extra):
+        message = {"role": role, "content": content, "timestamp": now, **extra}
+        return {"type": "message", "id": entry_id, "parentId": parent,
+                "timestamp": now, "message": message}
+
+    tool_one = {"type": "toolCall", "id": "tc-one", "name": "bash",
+                "arguments": {"command": "echo one", "timeout": 15}}
+    usage = {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0,
+             "totalTokens": 0, "cost": {"input": 0, "output": 0, "cacheRead": 0,
+                                        "cacheWrite": 0, "total": 0}}
+    assistant = {"api": "openai-codex-responses", "provider": "openai-codex",
+                 "model": "gpt-6-astra", "usage": usage, "thinkingLevel": "off"}
+    lines = [
+        {"type": "session", "version": 3, "id": "plain-session", "timestamp": now, "cwd": "/tmp"},
+        entry("p-user", "plain-session", "user",
+              [{"type": "text", "text": OFF_USER_TEXT}]),
+        entry("p-a1", "p-user", "assistant", [tool_one], stopReason="toolUse", **assistant),
+        entry("p-r1", "p-a1", "toolResult",
+              [{"type": "text", "text": "one\n"}], toolCallId="tc-one", toolName="bash"),
+        entry("p-a2", "p-r1", "assistant",
+              [{"type": "text", "text": FINAL_TEXT}], stopReason="stop", **assistant),
+    ]
+    write_session(path, lines)
 
 
 def capture(command: list[str], env: dict | None = None) -> bytes:
@@ -334,6 +373,54 @@ def check_hidden_rows(tmp: str, session: str) -> None:
           f" no doubled blank lines")
 
 
+def check_thinking_off_rows(tmp: str, session: str) -> None:
+    """Thinking off: an assistant turn with no thinking text adds no row.
+
+    This is the user's report: with thinking disabled, an extra bullet row
+    that says "thinking" showed up with no thinking text after it. The
+    fixture has no thinking text, so any such row or any extra blank line is
+    a regression. Both settings run: hidden rows and visible rows.
+    """
+    if not os.path.exists(REPO_EXTENSION):
+        print(f"SKIP thinking-off phase: no extension at {REPO_EXTENSION}")
+        return
+
+    for hidden in (False, True):
+        mode = "hidden" if hidden else "visible"
+        case_dir = os.path.join(tmp, f"off-agent-{mode}")
+        os.makedirs(case_dir, exist_ok=True)
+        with open(os.path.join(case_dir, "settings.json"), "w") as handle:
+            json.dump({"hideThinkingBlock": hidden}, handle)
+
+        env = dict(os.environ, PI_CODING_AGENT_DIR=case_dir)
+        raw = capture(["pi", "--session", session, "--tui-mode", "regular",
+                       "--offline", "-e", REPO_EXTENSION], env=env)
+        rows = replay(raw)
+
+        user_row = find(rows, OFF_USER_TEXT, 0)
+        final_row = find(rows, FINAL_TEXT, user_row + 1 if user_row >= 0 else 0)
+        if user_row < 0 or final_row < 0:
+            fail(f"thinking-off fixture ({mode} rows) did not render", rows, 0, ROWS - 1)
+        transcript = rows[user_row:final_row + 1]
+
+        for row in transcript:
+            if "thinking" in row.lower() or "✺" in row:
+                fail(f"thinking off with {mode} rows rendered a thinking row:"
+                     f" {row.strip()}", rows, user_row, final_row)
+
+        # Three blank rows is pi's own spacing from the user row to the first
+        # tool row (measured on 1.4.0 and 1.5.0). A fourth one is a stray row.
+        if max_blank_run(transcript) > 3:
+            fail(f"thinking off with {mode} rows added blank lines"
+                 f" (max {max_blank_run(transcript)}, allowed 3)", rows, user_row, final_row)
+
+        if not any("echo one" in row for row in transcript):
+            fail(f"thinking-off fixture ({mode} rows) lost the tool row", rows, user_row, final_row)
+
+    print("thinking-off phase passed: no thinking row and no extra blank line"
+          " with hidden and visible rows")
+
+
 def main() -> None:
     if not shutil.which("pi"):
         skip("pi is not on PATH")
@@ -342,10 +429,19 @@ def main() -> None:
     except ImportError:
         skip("pyte is missing; run with: uv run --with pyte scripts/test-pi-hidden-thinking-render.py")
 
+    version = pi_version()
+    shown = ".".join(str(part) for part in version) or "unknown"
+    label = expected_hidden_label(version)
+    print(f"pi {shown}: hidden thinking runs render "
+          + ("no row (empty label)" if not label else f"one '{label}' row per run"))
+
     with tempfile.TemporaryDirectory(prefix="pi-hidden-thinking-render-") as tmp:
         session = os.path.join(tmp, "fixture.jsonl")
         build_session(session)
+        plain_session = os.path.join(tmp, "plain-fixture.jsonl")
+        build_plain_session(plain_session)
         check_visible_rows(session)
+        check_thinking_off_rows(tmp, plain_session)
         check_hidden_rows(tmp, session)
 
     print("render check passed")
