@@ -1,0 +1,1 @@
+the mermaid diagrams being rendered are quite wide. I'd ideally like for them to be rendered to the minimum width and height that they need. I generally would prefer a wide diagram that fits on my screen if I'm in fullscreen
