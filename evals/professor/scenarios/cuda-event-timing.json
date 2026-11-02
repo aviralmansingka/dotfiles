@@ -2,37 +2,41 @@
   "id": "cuda-event-timing",
   "topic": "Time a CUDA kernel correctly: why a host wall-clock timer over-reports and a same-stream event does not.",
   "goal": "State why a same-stream CUDA event measures device progress while a host wall clock measures enqueue latency.",
-  "known": [
-    {
-      "id": "K1",
-      "claim": "The host launches kernels asynchronously, so the launch returns before the kernel finishes.",
-      "keywords": ["host", "launch", "asynchronous", "return"]
-    },
-    {
-      "id": "K2",
-      "claim": "A CUDA event is recorded in a stream and timestamped when the stream reaches it.",
-      "keywords": ["event", "stream", "timestamp"]
-    },
-    {
-      "id": "K3",
-      "claim": "A kernel launch is written into a stream, and the device consumes that stream.",
-      "keywords": ["kernel", "stream", "device", "consume"]
-    }
-  ],
-  "gap": {
-    "id": "G1",
-    "wrong": "A host wall-clock timer around the launch measures how long the kernel ran on the device.",
-    "right": "A host timer measures the enqueue cost, because the kernel runs later; only an in-stream event measures device progress.",
-    "keywords": ["wall", "clock", "timer", "enqueue", "host"]
-  },
+  "target": "G1",
   "grill": [
     "I want to time a matmul kernel on my H100 and compare it with cuBLAS.",
     "I will run it on the homelab GPU and report GFLOP/s.",
     "I can compute GFLOP/s from the formula, but I do not trust my timings."
   ],
-  "teachGroups": [
-    ["enqueue", "host-side", "host side", "launch latency", "asynchronous", "returns before"],
-    ["device-side", "device side", "device progress", "stream reaches", "same stream", "timestamp"]
+  "facts": [
+    {
+      "id": "K1",
+      "claim": "The host launches kernels asynchronously, so the launch returns before the kernel finishes.",
+      "keywords": ["host", "launch", "asynchronous", "return"],
+      "known": true
+    },
+    {
+      "id": "K2",
+      "claim": "A CUDA event is recorded in a stream and timestamped when the stream reaches it.",
+      "keywords": ["event", "stream", "timestamp"],
+      "known": true
+    },
+    {
+      "id": "K3",
+      "claim": "A kernel launch is written into a stream, and the device consumes that stream.",
+      "keywords": ["kernel", "stream", "device", "consume"],
+      "known": true
+    },
+    {
+      "id": "G1",
+      "claim": "A host timer measures the enqueue cost, because the kernel runs later; only an in-stream event measures device progress.",
+      "wrong": "A host wall-clock timer around the launch measures how long the kernel ran on the device.",
+      "keywords": ["wall", "clock", "timer", "enqueue", "host"],
+      "teachGroups": [
+        ["enqueue", "host-side", "host side", "launch latency", "asynchronous", "returns before"],
+        ["device-side", "device side", "device progress", "stream reaches", "same stream", "timestamp"]
+      ]
+    }
   ],
   "commandOutput": "matmul: 0.42 ms (host wall clock) / 0.97 ms (CUDA event pair)"
 }

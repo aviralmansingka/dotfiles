@@ -14,6 +14,7 @@
 #   state.json     the learner's final state
 #   stdout.txt     the professor's visible transcript
 #   sessions/      the pi session file
+#   meta.json      model, skill hash, git commit, date
 #
 # Three "continue" follow-ups follow the opening prompt. The skill parks for
 # the learner after the probe report and after the plan; without them a headless
@@ -58,6 +59,22 @@ for f in root.glob("*.md"):
         f.write_text(new)
 PY
 
+# Reproducibility header: a score with no model, skill hash, or commit cannot
+# be compared with a later run.
+skill_hash=$(cat "$out/professor"/*.md | shasum -a 256 | cut -d' ' -f1)
+git_sha=$(git -C "$repo" rev-parse --short HEAD 2>/dev/null || echo none)
+python3 - "$out/meta.json" "$model" "$skill_hash" "$git_sha" "$scenario" <<'META'
+import json, sys, datetime
+path, model, skill_hash, git_sha, scenario = sys.argv[1:]
+json.dump({
+    "model": model,
+    "skillHash": skill_hash,
+    "gitSha": git_sha,
+    "scenario": scenario,
+    "date": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+}, open(path, "w"), indent=2)
+META
+
 # Hermetic workspace: an empty professor-lessons tree and a private vault, so
 # the real vault and its open arcs cannot leak into the run.
 mkdir -p "$out/workspace/professor-lessons"
@@ -81,9 +98,10 @@ EOF
 
 echo "run: $out"
 cd "$out/workspace" || exit 1
-EVAL_SCENARIO="$scenario_file" \
+EVAL_SCENARIO="$out/scenario.json" \
 EVAL_LOG="$out/calls.jsonl" \
 EVAL_STATE="$out/state.json" \
+EVAL_MAX_CALLS="${EVAL_MAX_CALLS:-80}" \
 PI_VAULT_DIR="$out/vault" \
 timeout 900 pi --print \
 	--no-extensions -e "$here/stubs.ts" \

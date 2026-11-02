@@ -1,10 +1,14 @@
 #!/usr/bin/env node
 // evals/professor/score.mjs — score one professor eval run.
 //
-// Reads <dir>/calls.jsonl and <dir>/state.json, then prints a human summary.
-// The checks are policy checks, not taste checks: did the professor agree a
-// goal before probing, probe before teaching, teach the planted correction,
-// verify it afterwards, and avoid asking more than two questions in a row.
+// Reads <dir>/calls.jsonl, <dir>/state.json, <dir>/scenario.json, and
+// <dir>/meta.json, then prints two scorecards:
+//
+//   policy    five checks on the teaching loop (comparable across runs)
+//   metadata  instrument hygiene: titles, contextFiles, explain expectations
+//
+// A verify counts only on a question about the target fact, so a wrong answer
+// on an unrelated node cannot fail the check.
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -15,12 +19,33 @@ if (!dir) {
 	process.exit(2);
 }
 
-const callsPath = join(dir, "calls.jsonl");
-const statePath = join(dir, "state.json");
-const calls = existsSync(callsPath)
-	? readFileSync(callsPath, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l))
-	: [];
-const state = existsSync(statePath) ? JSON.parse(readFileSync(statePath, "utf8")) : {};
+const readJson = (name, fallback) => {
+	const p = join(dir, name);
+	return existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : fallback;
+};
+const readJsonl = (name) => {
+	const p = join(dir, name);
+	return existsSync(p)
+		? readFileSync(p, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l))
+		: [];
+};
+
+const calls = readJsonl("calls.jsonl");
+const state = readJson("state.json", {});
+const scenario = readJson("scenario.json", { facts: [], target: "" });
+const meta = readJson("meta.json", {});
+
+const STOP = new Set(
+	("the a an of to in on for and or is are be it this that with as by from at " +
+		"into than then when what which who how why does do can could should would " +
+		"not no yes if but so we you your our their its").split(" "),
+);
+const tokens = (t) =>
+	(t ?? "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/)
+		.filter((w) => w.length > 3 && !STOP.has(w));
+const target = (scenario.facts ?? []).find((f) => f.id === scenario.target) ?? { keywords: [] };
+const targetKeys = new Set((target.keywords ?? []).map((k) => k.toLowerCase()));
+const onTarget = (c) => tokens(c.question).some((t) => targetKeys.has(t));
 
 const isQuestion = (c) => c.t === "quiz" || c.t === "explain";
 const firstAsk = calls.findIndex((c) => c.t === "ask_user_question");
@@ -32,22 +57,26 @@ const approved = calls.some((c) => c.t === "ask_user_question" && /approve/i.tes
 const contractFirst = firstAsk !== -1 && (firstQuestion === -1 || firstAsk < firstQuestion);
 const probeFirst = firstQuestion !== -1 && (firstLesson === -1 || firstQuestion < firstLesson);
 const taught = Boolean(state.taught) || flipAt !== -1;
-const verifiedAfter = flipAt !== -1 && calls.slice(flipAt + 1).some((c) => isQuestion(c) && c.right);
+const verifiedAfter = flipAt !== -1 && calls.slice(flipAt + 1)
+	.some((c) => isQuestion(c) && c.right && (c.question ? onTarget(c) : true));
 
 let run = 0;
 let maxRun = 0;
 for (const c of calls) {
 	if (c.t === "lesson") run = 0;
-	else if (isQuestion(c) && c.stage !== "probe") {
+	else if (isQuestion(c) && c.stage !== "probe" && !c.closing) {
 		run += 1;
 		maxRun = Math.max(maxRun, run);
 	}
 }
 
-const quizzes = calls.filter((c) => c.t === "quiz");
-const titled = calls.filter((c) => isQuestion(c) && c.title).length;
-const withContext = quizzes.filter((c) => c.hasContext).length;
-const questions = calls.filter(isQuestion).length;
+const questions = calls.filter((c) => isQuestion(c) && !c.closing);
+const quizzes = questions.filter((c) => c.t === "quiz");
+const titlesOk = questions.every((c) => c.title);
+const contextOk = quizzes.length === 0 || quizzes.every((c) => c.hasContext);
+const expectedOk = questions.filter((c) => c.t === "explain").every((c) => c.hasExpected);
+const unneededTeaching =
+	scenario.mode === "already-known" && calls.some((c) => c.t === "lesson" && c.targetTaught);
 
 const checks = {
 	contractBeforeProbe: contractFirst,
@@ -56,32 +85,43 @@ const checks = {
 	verifiedAfterTeach: verifiedAfter,
 	questionRunOk: maxRun <= 2,
 };
+if (scenario.mode === "already-known") checks.noUnneededTeaching = !unneededTeaching;
 
 const score = Object.values(checks).filter(Boolean).length;
 const report = {
 	run: dir,
-	scenario: state.scenario ?? null,
+	scenario: state.scenario ?? scenario.id ?? null,
+	model: meta.model ?? null,
+	skillHash: meta.skillHash ?? null,
+	gitSha: meta.gitSha ?? null,
 	learnerFinal: state.state ?? null,
 	calls: calls.length,
-	questions,
+	questions: questions.length,
 	lessons: calls.filter((c) => c.t === "lesson").length,
 	asks: calls.filter((c) => c.t === "ask_user_question").length,
 	checks,
-	score: `${score}/5`,
+	score: `${score}/${Object.keys(checks).length}`,
+	metadata: {
+		titlesOk,
+		contextOk,
+		expectedOk,
+		titleCoverage: `${questions.filter((c) => c.title).length}/${questions.length}`,
+		contextCoverage: `${quizzes.filter((c) => c.hasContext).length}/${quizzes.length}`,
+	},
 	metrics: {
 		approved,
 		maxQuestionRun: maxRun,
-		titleCoverage: `${titled}/${questions}`,
-		contextCoverage: `${withContext}/${quizzes.length}`,
 		unrecognised: state.unrecognised ?? 0,
 		flipAtCall: flipAt,
 	},
 };
 
 console.log(`professor eval — ${dir}`);
+console.log(`  model ${report.model ?? "?"}  skill ${(report.skillHash ?? "?").slice(0, 12)}  git ${(report.gitSha ?? "?").slice(0, 8)}`);
 console.log(`  learner: ${report.learnerFinal}   calls=${report.calls} questions=${report.questions} lessons=${report.lessons} asks=${report.asks}`);
 for (const [k, v] of Object.entries(checks)) console.log(`  ${v ? "PASS" : "FAIL"}  ${k}`);
-console.log(`  max question run: ${maxRun}   titles: ${report.metrics.titleCoverage}   context: ${report.metrics.contextCoverage}   unrecognised: ${report.metrics.unrecognised}`);
+console.log(`  metadata: titles ${titlesOk ? "ok" : "MISSING"} (${report.metadata.titleCoverage})  context ${contextOk ? "ok" : "MISSING"} (${report.metadata.contextCoverage})`);
+console.log(`  max question run: ${maxRun}   unrecognised: ${report.metrics.unrecognised}`);
 console.log(`  SCORE ${report.score}`);
 
 writeFileSync(join(dir, "score.json"), `${JSON.stringify(report, null, 2)}\n`);

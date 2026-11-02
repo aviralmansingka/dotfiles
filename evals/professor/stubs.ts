@@ -1,10 +1,10 @@
 // evals/professor/stubs.ts — scripted learner instruments for the professor eval.
 //
-// Replaces the interactive tools with deterministic versions that answer from a
-// scenario profile. The learner knows what the scenario says it knows, holds the
-// planted misconception until a lesson teaches the correcting claim, and never
-// pretends to know more. Every call is logged as JSONL so score.mjs can audit
-// the run without reading the transcript.
+// The learner holds a set of facts. Each fact is known from the start, or
+// unlocked when a lesson carries its teach keywords. A fact may also carry a
+// wrong claim: the learner asserts it until the fact unlocks. Questions are
+// matched against fact keywords, so the learner can answer about any node it
+// holds, not just the planted misconception.
 //
 // Load with: pi --no-extensions -e evals/professor/stubs.ts
 
@@ -12,35 +12,32 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { Type } from "typebox";
 
-interface KnownFact {
+interface Fact {
 	id: string;
 	claim: string;
 	keywords: string[];
-}
-
-interface Gap {
-	id: string;
-	wrong: string;
-	right: string;
-	keywords: string[];
+	known?: boolean;
+	wrong?: string;
+	teachGroups?: string[][];
 }
 
 interface Scenario {
 	id: string;
 	topic: string;
 	goal: string;
-	known: KnownFact[];
-	gap: Gap;
+	target: string;
 	grill: string[];
-	teachGroups: string[][];
+	facts: Fact[];
 	commandOutput?: string;
 }
 
 const scenarioPath = process.env.EVAL_SCENARIO ?? "";
 const logPath = process.env.EVAL_LOG ?? "/tmp/professor-eval.jsonl";
 const statePath = process.env.EVAL_STATE ?? "/tmp/professor-eval-state.json";
+const maxCalls = Number(process.env.EVAL_MAX_CALLS ?? 80);
 
 const scenario: Scenario = JSON.parse(readFileSync(scenarioPath, "utf8"));
+const target = scenario.facts.find((f) => f.id === scenario.target);
 
 interface LearnerState {
 	taught: boolean;
@@ -50,6 +47,8 @@ interface LearnerState {
 	grill: number;
 	unrecognised: number;
 	afterFlip: number;
+	calls: number;
+	unlocked: string[];
 	state: "misconception" | "correct";
 }
 
@@ -61,14 +60,10 @@ const state: LearnerState = {
 	grill: 0,
 	unrecognised: 0,
 	afterFlip: 0,
+	calls: 0,
+	unlocked: scenario.facts.filter((f) => f.known).map((f) => f.id),
 	state: "misconception",
 };
-
-// After the learner has seen the correction and answered twice, they leave.
-// Instrument calls return a closing notice instead of a question, so a run
-// ends without an external kill.
-const CLOSING = "The learner has left the session. Stop asking questions and give the closing summary.";
-const closing = (): boolean => state.taught && state.afterFlip >= 5;
 
 function persist(): void {
 	writeFileSync(statePath, JSON.stringify({ scenario: scenario.id, ...state }, null, 2));
@@ -92,20 +87,16 @@ function tokens(text: string): string[] {
 		.filter((w) => w.length > 3 && !STOP.has(w));
 }
 
-function overlap(haystack: string, needles: string[]): number {
-	const h = new Set(tokens(haystack));
-	return needles.reduce((n, k) => n + (h.has(k.toLowerCase()) ? 1 : 0), 0);
-}
-
-function matches(text: string, keywords: string[]): boolean {
-	return overlap(text, keywords) >= Math.min(2, keywords.length);
+function hits(text: string, keywords: string[]): number {
+	const set = new Set(tokens(text));
+	return keywords.reduce((n, k) => n + (set.has(k.toLowerCase()) ? 1 : 0), 0);
 }
 
 function bestOption(
 	options: { label?: string; value?: string; description?: string }[],
-	target: string,
+	targetClaim: string,
 ): number {
-	const targetTokens = new Set(tokens(target));
+	const targetTokens = new Set(tokens(targetClaim));
 	let best = 0;
 	let bestScore = -1;
 	options.forEach((o, i) => {
@@ -122,19 +113,71 @@ function bestOption(
 	return best;
 }
 
-function answer(text: string): { pick: string; why: string } {
-	const gapMatch = matches(text, scenario.gap.keywords);
-	if (gapMatch && state.taught) return { pick: scenario.gap.right, why: "gap-known" };
-	if (gapMatch) return { pick: scenario.gap.wrong, why: "misconception" };
-	for (const fact of scenario.known) {
-		if (matches(text, fact.keywords)) return { pick: fact.claim, why: `known:${fact.id}` };
+/** Match a question to the held fact with the most keyword hits. */
+function answer(text: string): { claim: string; why: string } {
+	let bestFact: Fact | undefined;
+	let bestScore = 0;
+	let bestUnlocked = false;
+	for (const f of scenario.facts) {
+		const score = hits(text, f.keywords);
+		if (score === 0) continue;
+		const unlocked = state.unlocked.includes(f.id);
+		if (
+			score > bestScore ||
+			(score === bestScore && unlocked && !bestUnlocked)
+		) {
+			bestFact = f;
+			bestScore = score;
+			bestUnlocked = unlocked;
+		}
+	}
+	if (bestFact) {
+		if (bestUnlocked) {
+			return { claim: bestFact.claim, why: `known:${bestFact.id}` };
+		}
+		state.unrecognised += 1;
+		return {
+			claim: bestFact.wrong ?? "I do not know.",
+			why: `misconception:${bestFact.id}`,
+		};
 	}
 	state.unrecognised += 1;
-	// After the correction lands, an unrecognised question still gets the
-	// right answer: the learner knows the claim, even when the question is
-	// phrased outside the scenario vocabulary.
-	if (state.taught) return { pick: scenario.gap.right, why: "unrecognised-taught" };
-	return { pick: scenario.gap.wrong, why: "unrecognised" };
+	if (target && state.unlocked.includes(target.id)) {
+		return { claim: target.claim, why: "fallback-taught" };
+	}
+	return { claim: target?.wrong ?? "I do not know.", why: "fallback" };
+}
+
+/** Unlock every fact whose teach groups all appear in a lesson body. */
+function learnFromLesson(body: string): string[] {
+	const text = body.toLowerCase();
+	const unlocked: string[] = [];
+	for (const f of scenario.facts) {
+		if (state.unlocked.includes(f.id)) continue;
+		if (!f.teachGroups?.length) continue;
+		const matched = f.teachGroups.every((g) =>
+			g.some((k) => text.includes(k.toLowerCase())),
+		);
+		if (matched) {
+			state.unlocked.push(f.id);
+			unlocked.push(f.id);
+		}
+	}
+	if (target && unlocked.includes(target.id)) {
+		state.taught = true;
+		state.state = "correct";
+	}
+	return unlocked;
+}
+
+const CLOSING = "The learner has left the session. Stop asking questions and give the closing summary.";
+const closing = (): boolean =>
+	state.calls >= maxCalls || (state.taught && state.afterFlip >= 5);
+
+function overBudget(): boolean {
+	if (state.calls < maxCalls) return false;
+	log({ t: "budget", calls: state.calls });
+	return true;
 }
 
 export default function stubs(pi: ExtensionAPI) {
@@ -161,27 +204,31 @@ export default function stubs(pi: ExtensionAPI) {
 			multiSelect: Type.Optional(Type.Boolean()),
 		}),
 		async execute(_id: string, params: any) {
-			state.quiz += 1;
-			if (closing()) {
-				log({ t: "quiz", seq: state.quiz, closing: true });
+			state.calls += 1;
+			if (overBudget() || closing()) {
+				log({ t: "quiz", seq: state.quiz, closing: true, question: String(params.question).slice(0, 200) });
 				return { content: [{ type: "text" as const, text: CLOSING }], details: {} };
 			}
+			state.quiz += 1;
 			if (state.taught) state.afterFlip += 1;
 			const text = `${params.question} ${params.details ?? ""}`;
-			const { pick, why } = answer(text);
-			const idx = bestOption(params.options ?? [], pick);
+			const { claim, why } = answer(text);
+			const idx = bestOption(params.options ?? [], claim);
 			const chosen = params.options?.[idx];
 			const correctValue = params.correctAnswer ?? params.options?.[0]?.value;
-			const isRight = chosen?.value === correctValue || chosen?.label === correctValue;
+			const isRight =
+				chosen?.value === correctValue ||
+				chosen?.label === correctValue ||
+				chosen?.description === correctValue;
 			log({
 				t: "quiz",
 				seq: state.quiz,
 				title: params.title ?? null,
 				stage: params.stage ?? null,
 				hasContext: Array.isArray(params.contextFiles) && params.contextFiles.length > 0,
+				question: String(params.question).slice(0, 200),
 				rule: why,
-				chosen: chosen?.label ?? null,
-				chosenText: `${chosen?.label ?? ""} ${chosen?.description ?? ""}`.trim().slice(0, 120),
+				chosen: `${chosen?.label ?? ""} ${chosen?.description ?? ""}`.trim().slice(0, 120),
 				right: isRight,
 			});
 			persist();
@@ -208,21 +255,24 @@ export default function stubs(pi: ExtensionAPI) {
 			stage: Type.Optional(Type.String()),
 		}),
 		async execute(_id: string, params: any) {
-			state.explain += 1;
-			if (closing()) {
-				log({ t: "explain", seq: state.explain, closing: true });
+			state.calls += 1;
+			if (overBudget() || closing()) {
+				log({ t: "explain", seq: state.explain, closing: true, question: String(params.question).slice(0, 200) });
 				return { content: [{ type: "text" as const, text: CLOSING }], details: {} };
 			}
+			state.explain += 1;
 			if (state.taught) state.afterFlip += 1;
 			const text = `${params.question} ${params.details ?? ""}`;
-			const { pick, why } = answer(text);
-			const right = why === "gap-known" || why.startsWith("known:");
+			const { claim, why } = answer(text);
+			const right = !why.startsWith("misconception") && why !== "fallback";
 			log({
 				t: "explain",
 				seq: state.explain,
 				title: params.title ?? null,
 				stage: params.stage ?? null,
 				hasExpected: Boolean(params.expected),
+				hasContext: Array.isArray(params.contextFiles) && params.contextFiles.length > 0,
+				question: String(params.question).slice(0, 200),
 				rule: why,
 				right,
 			});
@@ -230,7 +280,7 @@ export default function stubs(pi: ExtensionAPI) {
 			return {
 				content: [{
 					type: "text" as const,
-					text: `Learner answered: "${pick}"\nVerdict: ${right ? "correct" : "incorrect"} (${why}).`,
+					text: `Learner answered: "${claim}"\nVerdict: ${right ? "correct" : "incorrect"} (${why}).`,
 				}],
 				details: { verdict: right ? "correct" : "incorrect" },
 			};
@@ -243,23 +293,20 @@ export default function stubs(pi: ExtensionAPI) {
 		description: "Deliver one teaching node. Used by the professor eval harness; the body is logged.",
 		parameters: Type.Object({ title: Type.String(), body: Type.String() }),
 		async execute(_id: string, params: any) {
+			state.calls += 1;
 			state.lessons += 1;
-			const body = String(params.body ?? "").toLowerCase();
-			const groups = scenario.teachGroups.map((g) => g.some((k) => body.includes(k.toLowerCase())));
-			const hit = groups.filter(Boolean).length;
-			const taughtNow = hit === groups.length;
-			if (taughtNow) {
-				state.taught = true;
-				state.state = "correct";
-			}
+			const body = String(params.body ?? "");
+			const unlocked = learnFromLesson(body);
+			const targetTaught =
+				target?.teachGroups?.every((g) => g.some((k) => body.toLowerCase().includes(k.toLowerCase()))) ?? false;
 			log({
 				t: "lesson",
 				seq: state.lessons,
 				title: params.title ?? null,
-				bodyLen: String(params.body ?? "").length,
-				teachGroupsHit: hit,
-				teachGroupsNeeded: groups.length,
-				flipped: taughtNow,
+				bodyLen: body.length,
+				unlocked,
+				flipped: unlocked.includes(scenario.target),
+				targetTaught,
 			});
 			persist();
 			return {
@@ -280,6 +327,7 @@ export default function stubs(pi: ExtensionAPI) {
 			multiSelect: Type.Optional(Type.Boolean()),
 		}),
 		async execute(_id: string, params: any) {
+			state.calls += 1;
 			state.grill += 1;
 			const q = String(params.question ?? "");
 			const isApproval = /approv/i.test(q) || /by the end of this session/i.test(q);
@@ -307,6 +355,7 @@ export default function stubs(pi: ExtensionAPI) {
 			title: Type.Optional(Type.String()),
 		}),
 		async execute(_id: string, params: any) {
+			state.calls += 1;
 			const out = scenario.commandOutput ?? "(no output)";
 			log({ t: "run-command", command: String(params.command).slice(0, 160), hasPrediction: Boolean(params.prediction) });
 			return {
