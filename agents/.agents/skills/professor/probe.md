@@ -55,7 +55,9 @@ by serving that contract.
 ## Phase 1 — Probe (never skip)
 
 After the goal contract is approved, locate the learner's zone of proximal
-development. Find the **edge** of their understanding — the frontier where
+development. Probe only the frontier the record does not cover: a proposition
+in the vault is held unless the probe contradicts it, and re-probing what
+`status.md` already answers wastes the session. Find the **edge** of their understanding — the frontier where
 reliable knowledge turns into guesswork — along every strand the lesson will
 depend on. Mostly quiz — options let you map the edge cheaply — with some
 explain once a strand starts feeling familiar, one question at a time, each
@@ -96,6 +98,14 @@ adapted to the last answer.
   bracketed, stop probing that strand. The session exists to add knowledge —
   probing past the bracket is avoidance of teaching, not diagnosis.
 - **Map every strand the lesson rests on**, bounded by relevance to the goal.
+
+### When the learner complains
+
+- **"I don't understand the question" / "that wasn't framed well."** Repair
+  once. Restate the question with a concrete entry point, or give one short
+  `lesson`. Never answer a complaint with a batch of new questions.
+- **"We're veering" / "this drifted."** Stop. Restate the goal contract in one
+  line. Ask which direction to take. Do not ask another content question.
 
 ## Exit — the probe report
 

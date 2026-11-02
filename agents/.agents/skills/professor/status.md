@@ -54,6 +54,18 @@ Order the candidates with these rules, first match first:
 A lesson is not evidence. A target taught yesterday and never practised is
 undemonstrated. Say so when it matters.
 
+## Survey mode
+
+The learner may ask for an inventory instead of a lesson: "probe me", "do not
+teach", "where are my gaps". Run probe-only.
+
+- Read the record first. The vault names what is held.
+- Probe the gaps with `quiz` and `explain` only.
+- No `lesson` call in a survey. One lesson turns the survey into teaching.
+- End with three lists: held, ranked gaps, and one next move.
+
+If the learner asks to teach afterwards, that is a new session.
+
 ## Answer in this shape
 
 Keep it short. The learner wants a position, not a report.
@@ -81,6 +93,8 @@ shape.
 
 ## Rules
 
+- **A held target ends the session.** When the probe shows the learner already
+  holds the goal, say so in one line and stop. Do not teach it.
 - **No teaching in a status turn.** If the learner asks a question about the
   material, answer it in one line and return to the position. Teach only when
   they choose to.

@@ -143,6 +143,9 @@ journal, probe log, and overview buffer rebuild the same position from
 md-log's durable records — `h` shows the learner where the arc stands. Don't
 re-teach what's already landed.
 
+**Never re-pose a cancelled question verbatim.** A cancelled quiz is not a
+queued quiz. Re-present the node, then ask a fresh question.
+
 **Re-present the active node on resume.** The previous session's node buffers
 died with its editor pane. Before you quiz or verify any node after a
 resume, deliver that node's content again with one `lesson` call (from the

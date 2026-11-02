@@ -108,6 +108,8 @@ Start with `status.md`, then choose:
   corrected model.
 - **Unconditional truths first**, and motivate every node. A fact with no
   visible reason does not lock in.
+- **A complaint stops the loop.** Drift and framing complaints get a re-anchor
+  or one repair, never another content question.
 - **One node per `lesson` call.** The side buffer holds one node at a time.
 - **The lesson never lives in thinking.** Teaching lands in visible text, a
   panel, or an artifact file.

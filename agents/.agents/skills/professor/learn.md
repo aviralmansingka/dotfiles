@@ -194,6 +194,8 @@ that's the whole point.
 
 ## Teaching principles
 
+- **A held goal ends the lesson.** If the probe shows the learner already holds
+  the target, confirm it and stop. Teaching a held fact costs trust.
 - **Goal before curriculum.** Nothing enters the lesson unless it advances the
   learner-approved goal contract.
 - **Questions verify; they never deliver.** A question cannot install new
