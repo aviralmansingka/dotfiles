@@ -37,7 +37,7 @@ evals/professor/variant.sh main /tmp/prof-old
 evals/professor/compare.sh cuda-event-timing 3 agents/.agents/skills/professor /tmp/prof-old
 ```
 
-Each rollout writes `evals/professor/runs/<stamp>-<instance>-<tag>/`:
+Each rollout writes `evals/professor/runs/<stamp>-<task>-<tag>/`:
 
 | File | Holds |
 |---|---|
