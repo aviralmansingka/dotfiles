@@ -53,6 +53,12 @@ async function withStdinTTY(tty, fn) {
 const realReadlink = (await import("node:fs")).readlinkSync;
 
 async function main() {
+	// Baseline listener counts: the runner's own stdin plumbing may hold
+	// listeners of its own (a node-version detail), so the assertions below
+	// measure the load's delta, not an absolute count.
+	const endBase = process.stdin.listenerCount("end");
+	const closeBase = process.stdin.listenerCount("close");
+
 	// 1. Piped stdin: no listeners, no widget.
 	const widgets1 = [];
 	await withStdinTTY(false, async () => {
@@ -65,7 +71,7 @@ async function main() {
 		mod.default(pi);
 	});
 	assert.equal(widgets1.length, 0, "piped stdin must not register the widget");
-	assert.equal(process.stdin.listenerCount("end"), 0, "piped stdin must not arm end");
+	assert.equal(process.stdin.listenerCount("end"), endBase, "piped stdin must not arm end");
 	assert.equal(process.stdin.listenerCount("SIGHUP") > 0, false, "piped stdin must not arm SIGHUP");
 
 	// 2. TTY stdin: arms end/close + SIGHUP, registers the capture widget,
@@ -85,8 +91,8 @@ async function main() {
 		assert.equal(component.text, "", "capture widget renders zero rows");
 	});
 	assert.equal(widgets2[0], "stdin-reattach");
-	assert.equal(process.stdin.listenerCount("end"), 1, "tty arms one end listener");
-	assert.equal(process.stdin.listenerCount("close"), 1, "tty arms one close listener");
+	assert.equal(process.stdin.listenerCount("end"), endBase + 1, "tty arms one end listener");
+	assert.equal(process.stdin.listenerCount("close"), closeBase + 1, "tty arms one close listener");
 	assert.ok(process.listenerCount("SIGHUP") >= 1, "tty arms SIGHUP handling");
 
 	// 3. Arm-once across reloads.
@@ -94,8 +100,8 @@ async function main() {
 		const mod = await jiti.import(EXT);
 		mod.default({ on: () => {} });
 	});
-	assert.equal(process.stdin.listenerCount("end"), 1, "reload must not double-arm");
-	assert.equal(process.stdin.listenerCount("close"), 1, "reload must not double-arm close");
+	assert.equal(process.stdin.listenerCount("end"), endBase + 1, "reload must not double-arm");
+	assert.equal(process.stdin.listenerCount("close"), closeBase + 1, "reload must not double-arm close");
 
 	// Leave nothing armed for later suites.
 	process.stdin.removeAllListeners("end");

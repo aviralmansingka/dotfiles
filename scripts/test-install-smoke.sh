@@ -22,6 +22,7 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 INSTALL="${INSTALL_SH:-$REPO/install.sh}"
 STRICT="${STRICT:-0}"
 REAL_STOW="$(command -v stow || true)"
+REAL_STOW_DIR="${REAL_STOW:+$(dirname "$REAL_STOW")}"
 NODE_BIN="$(command -v node || true)"
 ORIG_HOME="${HOME:-/nonexistent}"
 
@@ -46,16 +47,30 @@ newtmp() { mktemp -d "$TMPROOT/smoke.XXXXXX"; }
 
 # One representative target per stow package named by install.sh (the keys
 # must match every `^stow` package in install.sh except `launchd` and the
-# phase-5 `stow -R` restow; drift here fails the plan phase).
-declare -A SENTINEL=(
-  [zsh]=".zshenv" [tmux]=".tmux.conf" [nvim]=".config/nvim"
-  [starship]=".config/starship.toml" [ghostty]=".config/ghostty"
-  [aerospace]=".aerospace.toml" [gh-dash]=".config/gh-dash"
-  [tuicr]=".config/tuicr"
-  [agents]=".agents" [pi]="bin" [herdr]=".config/herdr"
-  [systemd]=".config/systemd"
-  [git]=".config/git"
-)
+# phase-5 `stow -R` restow; drift here fails the plan phase). A newline table
+# keeps this portable: macOS ships bash 3.2, which has no associative arrays.
+SENTINEL_TABLE='
+zsh=.zshenv
+tmux=.tmux.conf
+nvim=.config/nvim
+starship=.config/starship.toml
+ghostty=.config/ghostty
+aerospace=.aerospace.toml
+gh-dash=.config/gh-dash
+tuicr=.config/tuicr
+rex=.config/rex
+agents=.agents
+pi=bin
+herdr=.config/herdr
+systemd=.config/systemd
+git=.config/git
+'
+
+sentinel_keys() { printf '%s\n' "$SENTINEL_TABLE" | sed '/^$/d' | cut -d= -f1; }
+sentinel_for() { # $1 package -> sentinel target (empty when absent)
+  printf '%s\n' "$SENTINEL_TABLE" | sed '/^$/d' \
+    | awk -F= -v k="$1" '$1 == k { print $2; exit }'
+}
 
 # ---------------------------------------------------------------- plan ----
 # Extract every `stow` line from install.sh (indented ones included) in
@@ -141,14 +156,15 @@ phase_plan() {
   # needs a smoke sentinel.
   pkgs=$(awk -F'|' '{print $2}' "$PLAN_FILE" | sort -u | grep -vx launchd)
   while read -r p; do
-    [ -n "${SENTINEL[$p]:-}" ] || fail "plan/coverage" "install.sh stows '$p' but the smoke has no sentinel for it"
+    [ -n "$(sentinel_for "$p")" ] || fail "plan/coverage" "install.sh stows '$p' but the smoke has no sentinel for it"
   done <<<"$pkgs"
   # Reverse drift: every sentinel key must appear in install.sh's stow lines.
   local all_pkgs
   all_pkgs=$(awk -F'|' '{print $2}' "$PLAN_FILE" | sort -u)
-  for k in "${!SENTINEL[@]}"; do
+  while read -r k; do
+    [ -n "$k" ] || continue
     grep -qx "$k" <<<"$all_pkgs" || fail "plan/drift" "sentinel '$k' has no stow line in install.sh (stow-list drift?)"
-  done
+  done <<<"$(sentinel_keys)"
 }
 
 # ------------------------------------------------------------- deploy ----
@@ -163,7 +179,7 @@ run_deploy() {
   (
     set -u
     export HOME="$dep_h"
-    export PATH="${dep_stub:+$dep_stub:}/usr/bin:/bin"
+    export PATH="${dep_stub:+$dep_stub:}${REAL_STOW_DIR:+$REAL_STOW_DIR:}/usr/bin:/bin"
     local ok_p=() ok_n=() p nf out
     rollback() {
       echo "ROLLBACK: ${ok_p[*]:-none}"
@@ -239,7 +255,7 @@ check_sentinels() { # $1 fake home, $2 gated file
   local act p nf target
   while read -r act p nf; do
     [ "$act" = "RUN" ] || continue
-    target="${SENTINEL[$p]:-}"
+    target="$(sentinel_for "$p")"
     [ -n "$target" ] || continue
     if [ -L "$1/$target" ]; then
       case "$(readlink -f "$1/$target")" in "$REPO/$p"/*)
@@ -257,18 +273,23 @@ check_sentinels() { # $1 fake home, $2 gated file
 REALHOME_STATES="$(newtmp)/states"
 snapshot_real_home() { # $1 outfile
   local k t line=""
-  for k in "${!SENTINEL[@]}"; do
-    t="$ORIG_HOME/${SENTINEL[$k]}"
+  while read -r k; do
+    [ -n "$k" ] || continue
+    t="$ORIG_HOME/$(sentinel_for "$k")"
     if [ -L "$t" ]; then line="L"
     elif [ -d "$t" ]; then line="D"
     elif [ -f "$t" ]; then line="F"
     else line="-"
     fi
     printf '%s %s\n' "$k" "$line" >> "$1"
-  done
+  done <<<"$(sentinel_keys)"
 }
 
 FH="$(newtmp)"
+# Resolve the tree through any symlinked ancestor (macOS /var -> /private/var):
+the sync guard correctly refuses a folded agent dir, so a fake HOME reached
+through a symlink would trip it for the wrong reason.
+FH="$(cd "$FH" && pwd -P)"
 DEPLOY_OUT="$(newtmp)/out"
 DEPLOY_RC=0
 
@@ -296,16 +317,31 @@ phase_deploy() {
   done < <(grep '^SKIP ' "$GATED_FILE")
 }
 
+# Portable stand-ins for GNU find's -printf (macOS find has none): one
+# "<relpath> <target>" line per symlink, one "<relpath>" line per real file.
+list_links() { # $1 root
+  local l
+  find "$1" -type l | while IFS= read -r l; do
+    printf '%s %s\n' "${l#"$1"/}" "$(readlink "$l")"
+  done | sort
+}
+list_reals() { # $1 root
+  local f
+  find "$1" \! -type l \! -type d | while IFS= read -r f; do
+    printf '%s\n' "${f#"$1"/}"
+  done | sort
+}
+
 phase_idempotence() {
   if [ -z "$REAL_STOW" ] || [ -z "$NODE_BIN" ] || [ "$DEPLOY_RC" -ne 0 ]; then
     req_skip "idempotence/all" "deploy phase did not run"; return
   fi
   local before after
-  find "$FH" -type l -printf '%P\n%l\n' | sort > "$DEPLOY_OUT.links1"
-  find "$FH" \! -type l \! -type d -printf '%P\n' | sort > "$DEPLOY_OUT.reals1"
+  list_links "$FH" > "$DEPLOY_OUT.links1"
+  list_reals "$FH" > "$DEPLOY_OUT.reals1"
   run_deploy "$REPO" "$FH" "" > "$DEPLOY_OUT.2" 2>&1; local rc=$?
-  find "$FH" -type l -printf '%P\n%l\n' | sort > "$DEPLOY_OUT.links2"
-  find "$FH" \! -type l \! -type d -printf '%P\n' | sort > "$DEPLOY_OUT.reals2"
+  list_links "$FH" > "$DEPLOY_OUT.links2"
+  list_reals "$FH" > "$DEPLOY_OUT.reals2"
   if [ "$rc" -eq 0 ]; then pass "idempotence/exit" "second run exited 0"
   else fail "idempotence/exit" "second run exited $rc"; sed 's/^/  | /' "$DEPLOY_OUT.2"; fi
   if grep -qiE 'conflict|cannot|error' "$DEPLOY_OUT.2"; then
@@ -414,7 +450,10 @@ phase_stub() {
   cp -a "$REPO/install.sh" "$REPO/terminfo" "$SB/"
   cp -a "$REPO/scripts/pi-settings-sync" "$REPO/scripts/hooks" "$SB/scripts/"
   local p
-  for p in "${!SENTINEL[@]}"; do cp -a "$REPO/$p" "$SB/"; done
+  while read -r p; do
+    [ -n "$p" ] || continue
+    cp -a "$REPO/$p" "$SB/"
+  done <<<"$(sentinel_keys)"
   printf '#!/bin/sh\nif [ -e "%s" ]; then exit 1; fi\n: > "%s"\nexec "%s" "$@"\n' \
     "$MARK" "$MARK" "$REAL_STOW" > "$STUBD/stow"
   chmod +x "$STUBD/stow"

@@ -40,7 +40,7 @@ Three themes account for most `partial` verdicts:
 | `install.sh` (stow + plugin block) | Stows `herdr`; installs integrations, Flash, annotate, nm-herdr bridge | yes | Replace the guarded Herdr block with `rex server start`, and drop the `stow herdr` line. |
 | `install.sh` (lines 51-56) | Curl-installs the Herdr binary | yes | Delete; Rex installs as a macOS app. |
 | `herdr/.config/herdr/config.toml` | Entire file: keybindings, theme, workspace picker | no | Delete; Rex config is the stowed `rex/.config/rex/init.lua`. |
-| `herdr/.../herdr-flash/config.toml` | Flash plugin colours | no | Delete with the rest of `herdr/`. |
+| `herdr/.config/herdr/plugins/config/youguanxinqing.herdr-flash/config.toml` | Flash plugin colours | no | Delete with the rest of `herdr/`. |
 | `herdr/.local/bin/herdr-clean-handoff` | Execs `herdr server live-handoff` | no | Delete; Rex owns its server lifecycle. |
 | `herdr/.local/bin/wl-copy` | None — pure OSC52 adapter | yes | **Relocate** to a multiplexer-neutral stow package before deleting `herdr/`, or clipboard breaks. |
 | `ops/packer/scripts/deploy_dotfiles.sh` | `herdr` in stow list; integration block | yes | Drop both; Rex is macOS-only. |
@@ -56,14 +56,14 @@ Fresh Rex-only install would miss: the nvim sidebar and annotate-review workflow
 
 | File | Kind | Herdr coupling | Possible? | Change needed |
 | --- | --- | --- | --- | --- |
-| `tuicr/tuicr-wrapper-herdr.sh` | code | `pane split/run/close`, `pane wait-output --match` | yes (corrected) | Rewrite against `rex split/send/close`; replace `wait-output` with `rex wait` plus `last_exit`, guarding the ambiguous exit code 1. |
-| `nvim/nvim-open.sh` | code | `workspace list`, `pane current/list/process-info/send-text/neighbor/focus/split/run` | partial | Map to `rex block ls/inspect`, `rex split`, `rex send`; `pane neighbor` geometry has no Rex equivalent. |
-| `nvimr/nvimr` | code | `pane list/process-info/current` for socket discovery | yes | Swap to `rex block ls/inspect`; the socket-glob fallback already covers Herdr-absent. |
-| `visualize/SKILL.md` | prose recipe | `pane split/run/close/read`, keyed on `HERDR_ENV` | yes | Replace with `rex split/send/capture/close`, gated on `REX_BLOCK`. |
-| `tuicr/SKILL.md` | prose + dispatch | Routes on `$HERDR_ENV=1` to the Herdr wrapper | yes | Add a Rex row keyed on `REX_SESSION` pointing at a new wrapper. |
-| `nvim/SKILL.md` | prose | Documents Herdr verbs and sidebar daemon | yes | Reword to Rex; the sidebar story needs a Rex answer or removal. |
-| `nvimr/SKILL.md` | prose | Discovery order, `HERDR_TIMEOUT` | yes | Rewrite discovery order to Rex blocks. |
-| `no-mistakes/SKILL.md` | prose | Herdr-bridge subagent-tab delegation, red blocked state | partial | Reword is cheap; the install script behind it is the real port and assumes agent-aware tabs. |
+| `agents/.agents/skills/tuicr/tuicr-wrapper-herdr.sh` | code | `pane split/run/close`, `pane wait-output --match` | yes (corrected) | Rewrite against `rex split/send/close`; replace `wait-output` with `rex wait` plus `last_exit`, guarding the ambiguous exit code 1. |
+| `agents/.agents/skills/nvim/nvim-open.sh` | code | `workspace list`, `pane current/list/process-info/send-text/neighbor/focus/split/run` | partial | Map to `rex block ls/inspect`, `rex split`, `rex send`; `pane neighbor` geometry has no Rex equivalent. |
+| `agents/.agents/skills/nvimr/nvimr` | code | `pane list/process-info/current` for socket discovery | yes | Swap to `rex block ls/inspect`; the socket-glob fallback already covers Herdr-absent. |
+| `agents/.agents/skills/visualize/SKILL.md` | prose recipe | `pane split/run/close/read`, keyed on `HERDR_ENV` | yes | Replace with `rex split/send/capture/close`, gated on `REX_BLOCK`. |
+| `agents/.agents/skills/tuicr/SKILL.md` | prose + dispatch | Routes on `$HERDR_ENV=1` to the Herdr wrapper | yes | Add a Rex row keyed on `REX_SESSION` pointing at a new wrapper. |
+| `agents/.agents/skills/nvim/SKILL.md` | prose | Documents Herdr verbs and sidebar daemon | yes | Reword to Rex; the sidebar story needs a Rex answer or removal. |
+| `agents/.agents/skills/nvimr/SKILL.md` | prose | Discovery order, `HERDR_TIMEOUT` | yes | Rewrite discovery order to Rex blocks. |
+| `agents/.agents/skills/no-mistakes/SKILL.md` | prose | Herdr-bridge subagent-tab delegation, red blocked state | partial | Reword is cheap; the install script behind it is the real port and assumes agent-aware tabs. |
 | `vault/SKILL.md` | prose | One line about workspace renames | yes | One-line reword. |
 | `professor`, `research` | prose | None | n/a | No change. |
 
@@ -93,12 +93,12 @@ Fresh Rex-only install would miss: the nvim sidebar and annotate-review workflow
 | `docs/contracts/herdr-attachment-leases-v{0..3}.json` | contract | Herdr as session authority | no | Archive; the authority model is unimplemented under Rex. |
 | `docs/adr/0002-share-herdr-workspace-per-repository.md` | ADR | One workspace per repo, worktree cardinality | partial | Mark superseded; the worktree half now lives in the worktree tool. |
 | `docs/adr/0003-keep-attachment-authority-in-herdr.md` | ADR | Herdr owns session identity and arbitration | no | Record as superseded; the premise is contradicted. |
-| `docs/adr/0004-require-holder-consent...` | ADR | Lease transfer consent | no | Supersede; Rex has no lease concept. |
+| `docs/adr/0004-require-holder-consent-for-healthy-lease-transfer.md` | ADR | Lease transfer consent | no | Supersede; Rex has no lease concept. |
 | `docs/herdr-attachment-leases-*.md` | spec | Full lease language | no | Archive, marked superseded. |
 | `docs/ci-test-surfaces.md` | prose | `HERDR_ENV`/`HERDR_PANE_ID` dispatch matrix | partial | Rewrite dispatch rows to `REX_SESSION`/`REX_BLOCK`; keep the hermetic fake-binary rule. |
 | `docs/ci-tests/*.md` | prose | Document fake herdr and env dispatch | partial | Update where the fake binary and dispatch change. |
 | `docs/neovim-current-features.md` | prose | Sidekick uses Herdr as mux backend | partial | Rewrite the Sidekick/workspace sections. |
-| `docs/evidence/sidekick-.../README.md` | evidence | References `verify-nvim sidekick-herdr` | partial | Update the case name after the backend swap. |
+| `docs/evidence/sidekick-repository-worktree-picker/README.md` | evidence | References `verify-nvim sidekick-herdr` | partial | Update the case name after the backend swap. |
 | `README.md` | prose | Herdr install, Flash, handoff, scrollback, annotate | partial | Replace with Rex CLI; scrollback becomes `rex capture -b`. |
 | `AGENTS.md` | prose | Herdr session/workspace/bridge invariants | partial | Rewrite invariants for `REX_SESSION`/`REX_BLOCK`; worktree identity via the worktree tool. |
 | `CONTEXT.md` | prose | Herdr glossary: Workspace, Binding, Lease | partial | Drop Herdr-specific terms, add Rex terms. |
