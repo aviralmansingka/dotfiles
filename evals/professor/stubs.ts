@@ -1,8 +1,8 @@
-// evals/professor/stubs.ts — scripted learner instruments for the professor eval.
+// evals/professor/stubs.ts — user simulator instruments for the professor eval.
 //
-// The learner holds a set of facts. Each fact is known from the start, or
+// The simulator holds a set of facts. Each fact is known from the start, or
 // unlocked when a lesson carries its teach keywords. A fact may also carry a
-// wrong claim: the learner asserts it until the fact unlocks. Questions are
+// wrong claim: the simulator asserts it until the fact unlocks. Questions are
 // matched against fact keywords, so the learner can answer about any node it
 // holds, not just the planted misconception.
 //

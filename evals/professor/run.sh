@@ -9,7 +9,7 @@
 #
 # Writes every artifact under evals/professor/runs/<stamp>-<scenario>-<tag>/:
 #   professor/     the skill variant that ran, copied verbatim
-#   scenario.json  the learner profile
+#   scenario.json  the task instance
 #   calls.jsonl    one row per instrument call (stubs.ts)
 #   state.json     the learner's final state
 #   stdout.txt     the professor's visible transcript

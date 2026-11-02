@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // evals/professor/score.mjs — score one professor eval run.
 //
-// Reads <dir>/calls.jsonl, <dir>/state.json, <dir>/scenario.json, and
+// Reads <dir>/calls.jsonl (the step log), <dir>/state.json (simulator state), <dir>/scenario.json, and
 // <dir>/meta.json, then prints two scorecards:
 //
 //   policy    five checks on the teaching loop (comparable across runs)
