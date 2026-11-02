@@ -93,6 +93,28 @@ What the relaxed rule still cannot rescue:
 | `dotfiles-fix-visualize`, `feat-add-opengateway`, `fix-lavish-open-session`, `fix-cost-calculator`, `feat-hunk-dash-ext`, `feat-hunk-custom-gruvbox`, `feat-dash-worktree-shortcut`, `fix-ask-question-nav`, `fix-subagent-new-tab`, `fix-agent-pane-size`, `fix-interactive-subagent-tab-launch`, `fix-tuicr-review`, `feat-worktree`, `feat-autonomous-worktrees`, `feat-update-dotfiles`, `feat-gruvbox-dash`, `feat-rataflow`, `feat-local-provider` | Conversational one-to-three-line briefs with no acceptance criteria; verification would have to be invented. |
 | `dotfiles` `.treehouse/*` crewmate launch briefs (10 sessions) | Rich specs, but they are firstmate orchestration briefs for a different worktree layout, and their commits are not all in `main`. |
 
+## Model comparison pass — two rollouts, one grader fix
+
+17 tasks were run twice (pi/deepseek, codex/gpt-6.1-sol without the priority tier) in throwaway worktrees,
+graded automatically. The first grading pass exposed a grader defect: several gold tests reject work that
+behaves correctly but uses different helper names or a different command text. Six tasks were re-graded
+behaviour-only (five now, one reverted — see the README table) and every rollout was re-scored.
+
+| agent | first pass | after relaxing |
+| --- | --- | --- |
+| pi / deepseek | 9 pass / 14 graded | **12 pass / 15** |
+| codex / gpt-6.1-sol | 2 pass / 12 graded | **7 pass / 15** |
+
+Flips: codex `fast-command`, codex `fast-mode-openai`, codex `ghdash`, pi+codex `ghdash`, codex `opengateway`,
+pi+codex `rack-bench-part-size` — each was a naming or command-text pin, not a behaviour miss. Every relaxed
+check was re-validated red at `base_commit` and green at `final_commit` before use.
+
+Still gold-graded and still failing: `mermaid` (codex), `quiz-thinking` (both), `revise-practice` (codex),
+`thinking-hidden-row` (codex), `blob-profiling` (both), `datapath-cache` (codex), `gcs-provider` (codex),
+`multi-bucket` (both), `process-pool` (codex). These need either a TUI harness (quiz, revise), an engine stub
+(mermaid) or an offline end-to-end bench run (blob, datapath, gcs, multi-bucket, process-pool) to grade without
+pinning internals; that is the next piece of work, not a claim that the models failed.
+
 ## Verification results
 
 All runs: worktree at the listed commit, `verify.sh` from this directory, `timeout 120`. `base_rc` is the exit

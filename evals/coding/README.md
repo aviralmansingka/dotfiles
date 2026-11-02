@@ -77,7 +77,7 @@ One JSON object per line:
 | `base_commit`, `final_commit` | full SHAs; `final_commit` is the merged task commit |
 | `prompt_file` | path to the prompt, relative to `evals/coding/` |
 | `verify` | the exact shell commands, in order; the first entry (when present) checks gold test files out of `final_commit` |
-| `verify_kind` | `gold-tests`, `authored-check`, or both (`gold-tests+authored-check`) |
+| `verify_kind` | `gold-tests` (reference tests), `authored-check` (greps/structural), `behaviour-check` (drives the public surface), or a combination |
 | `difficulty` | `small` (≤150 changed lines), `medium` (151–450), `large` (>450) |
 | `kind` | `feature`, `bugfix`, `refactor`, `removal` |
 | `files_changed`, `lines_added`, `lines_removed` | `git diff --shortstat base final` |
@@ -118,8 +118,28 @@ the graded contract:
 - at `final_commit` they pass — the "green after" state;
 - a solution is accepted when `verify.sh` exits 0.
 
+### Behaviour-only grading
+
+Six tasks were re-graded after a model comparison showed the reference tests rejecting work that behaved
+correctly but named its helpers differently (`fastIdFor`, `trimArt`, `part_size_mib`, a literal `H` command).
+Those tasks now grade on behaviour, driven through the public surface the brief names — registered tool,
+command, hook, CLI flag, config file — and never import a helper from the reference implementation:
+
+| task | behaviour check |
+| --- | --- |
+| `dotfiles-fast-mode-openai` | load the extension, find the `before_provider_request` hook, feed payloads: gpt on openai/openai-codex → `priority`, copy not mutate, explicit tier wins, `PI_FAST_MODE=off` disables (fresh process) |
+| `dotfiles-fast-command` | drive the registered `/fast` command: state report, on/off/toggle, sibling swap through a stub registry, no-sibling report, unknown-argument usage, env-off override |
+| `dotfiles-ghdash-hunk-shortcut` | read the `H` binding from the gh-dash config, substitute the placeholders, run it with stub `gh`/`hunk` on PATH, require the PR diff to reach hunk; `ghd` must exist |
+| `dotfiles-opengateway-provider` | accept either an extension that registers a gateway provider on load or a JSON model-config fragment with a gateway block (https base URL, ≥1 model) |
+| `rack-bench-part-size` | public CLI: `--part-size` listed, 0/4/513/-1 rejected with a message that names the flag, 64 accepted, base test files restored from `HEAD` and the suite green |
+| `rack-bench-multi-bucket` | kept gold-graded: a parse-level probe cannot separate real sharding from the base parser's silent last-wins, so the CLI-grammar pin stays |
+
+`verify-strict.sh` is kept next to each relaxed task: it is the old gold-test grader, useful for spotting a
+solution that passes behaviour but breaks a pinned contract. `lib/pi-harness.mjs` provides the recording
+`ExtensionAPI` stub that makes the extension checks short.
+
 Some tasks have no test to borrow. There the check is **authored for this eval** and lives next to the task
-(`check.py`, or inline gates in `verify.sh`). Authored checks assert the properties the brief states, and prefer
+(`check.py`, `check.mjs`, `check.sh`, or inline gates in `verify.sh`). Authored checks assert the properties the brief states, and prefer
 properties over reference values: `dotfiles-hunk-gruvbox-theme` parses the theme with `tomllib` and requires
 dark/light luminance bounds, 25 colour roles, 10 syntax scopes and 12 distinct colours — it accepts any
 gruvbox-consistent palette and rejects a stub. `dotfiles-remove-fix-code-remote` uses the brief's own
