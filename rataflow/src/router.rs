@@ -583,7 +583,19 @@ pub fn plan(nodes: &[NodeBox], edges: &[EdgeSpec], axis: FlowAxis) -> Plan {
         .min()
         .unwrap_or(0)
         .min(0);
-    let extent = (extent.0 - min_x, extent.1 - min_y);
+    // A label slot the layout reserved is part of the drawing: its text sits
+    // beyond the last route cell when the gutter band reaches outward, so the
+    // extent must cover it or `clear` would reject a label that fits.
+    let mut extent = (extent.0 - min_x, extent.1 - min_y);
+    for edge in edges {
+        let (Some(slot), Some(label)) = (edge.label_slot.as_ref(), edge.label.as_deref()) else {
+            continue;
+        };
+        let width = label.chars().count() as i32;
+        let lo = slot.anchor.0 - width / 2 - min_x;
+        extent.0 = extent.0.max(lo + width + 1);
+        extent.1 = extent.1.max(slot.anchor.1 - min_y + 2);
+    }
 
     // Every route's cells, kept so a label can prove which route owns it.
     let route_cell_list: Vec<Vec<(i32, i32)>> = routes
@@ -1155,15 +1167,16 @@ fn route_cells(points: &[(i32, i32)]) -> Vec<(i32, i32)> {
     cells
 }
 
-/// Cells a dot can sit on, in travel order: the cell just outside the source
-/// port first, the arrowhead cell last. Mid-route corners are skipped (a dot
-/// on a bend reads as a schematic dot), and so are junctions, bridges and
-/// cells shared with another route. The one exception is the FIRST drawn
-/// cell after the source port: it is the route's origin, so it stays even
-/// when it is a corner glyph — otherwise the dot would start one cell late,
-/// which is exactly the defect the `origins:` line exists to catch. The
-/// arrowhead stays last because the head glyph paints over it: that is the
-/// arrival, not a resting dot.
+/// Cells a dot can sit on, in travel order: the route's origin first, the
+/// arrowhead cell last. The origin is the first cell of the polyline — the
+/// cell immediately outside the source border, the first one the renderer
+/// paints — because a dot that starts on the cell AFTER it is one cell late,
+/// which is exactly the defect the `origins:` line exists to catch. A spur
+/// starts on its corridor junction, which keeps its glyph, so its origin is
+/// the cell after it. Mid-route corners are skipped (a dot on a bend reads
+/// as a schematic dot), and so are junctions, bridges and cells shared with
+/// another route. The arrowhead stays last because the head glyph paints
+/// over it: that is the arrival, not a resting dot.
 fn dot_cells(points: &[(i32, i32)], grid: &Grid, junctions: &[(i32, i32)]) -> Vec<(i32, i32)> {
     let Some(&last) = points.last() else {
         return Vec::new();
@@ -1179,11 +1192,10 @@ fn dot_cells(points: &[(i32, i32)], grid: &Grid, junctions: &[(i32, i32)]) -> Ve
         let (from, to) = (window[0], window[1]);
         let (dx, dy) = ((to.0 - from.0).signum(), (to.1 - from.1).signum());
         let len = (to.0 - from.0).abs() + (to.1 - from.1).abs();
-        // Step 0 is the source port on the first segment and the previous
+        // Step 0 is the origin on the first segment and the previous
         // segment's end (a corner) on every later one.
-        for step in 1..=len {
+        for step in (if segment == 0 { 0 } else { 1 })..=len {
             let cell = (from.0 + dx * step, from.1 + dy * step);
-            let origin = segment == 0 && step == 1;
             if cell == last {
                 cells.push(cell);
                 continue;
@@ -1195,12 +1207,6 @@ fn dot_cells(points: &[(i32, i32)], grid: &Grid, junctions: &[(i32, i32)]) -> Ve
                 Some(index) => grid.count[index] > 1,
                 None => false,
             };
-            if origin {
-                // The origin never moves, even onto a corner or a cell the
-                // route shares with its own port stem.
-                cells.push(cell);
-                continue;
-            }
             if corners.contains(&cell) || shared {
                 continue;
             }

@@ -1301,9 +1301,7 @@ fn select_all_is_accepted_with_check_and_with_frames() {
 // Same-arrival dots, dot origins, crossing-aware routing, --check lines
 // ---------------------------------------------------------------------------
 
-use rataflow_view::{
-    DEFAULT_DURATION_MS, DEFAULT_FLOW_RATE, MIN_DOT_CELLS, ShortRoute, Timing, dot_index,
-};
+use rataflow_view::{DEFAULT_DURATION_MS, DEFAULT_FLOW_RATE, MIN_DOT_CELLS, Timing, dot_index};
 
 /// A five-layer chain: one route spans four layer gaps, one spans a single
 /// one. Both opt into the shared arrival time, so both must arrive together;
@@ -1315,20 +1313,14 @@ const SYNC_SPEC: &str = r#"{
             {"from":"b","to":"c","flow":true,"timing":"same-arrival"}]
 }"#;
 
-/// The cell one step out of the source port: where a dot must start.
-fn stem_cell(route: &rataflow_view::Route) -> (i32, i32) {
-    let (from, to) = (route.points[0], route.points[1]);
-    let step = |delta: f64| {
-        if delta.abs() < 0.5 {
-            0.0
-        } else {
-            delta.signum()
-        }
-    };
-    (
-        (from.0 + step(to.0 - from.0)) as i32,
-        (from.1 + step(to.1 - from.1)) as i32,
-    )
+/// The route's FIRST drawn cell: the cell immediately outside the source
+/// border, which the renderer paints as the start of the stroke. This is the
+/// cell a dot must start on — one cell further is the round-08 defect the
+/// `dots: 1` pixel captures measured (cli→api port `(37,4)`, painted stem
+/// `(37,5)`, dot wrongly at `(37,6)`).
+fn first_drawn_cell(route: &rataflow_view::Route) -> (i32, i32) {
+    let (x, y) = route.points[0];
+    (x as i32, y as i32)
 }
 
 fn dot_span(route: &rataflow_view::Route) -> Vec<(i32, i32)> {
@@ -1388,8 +1380,10 @@ fn routes_of_different_lengths_reach_their_arrowhead_on_the_same_step() {
     let mid_short = dot_index(short_n, timing, steps / 2).unwrap();
     let mid_long = dot_index(long_n, timing, steps / 2).unwrap();
     assert_ne!(mid_short, mid_long);
-    assert_eq!(mid_short, (short_n - 1) / 2);
-    assert_eq!(mid_long, (long_n - 1) / 2);
+    // round((span - 1) / 2) in integer arithmetic: the middle step of the
+    // shared walk, whatever the span's parity.
+    assert_eq!(mid_short, short_n / 2);
+    assert_eq!(mid_long, long_n / 2);
 
     // On the canvas: the arriving step leaves each arrowhead intact, and the
     // middle step shows each dot on its own route.
@@ -1437,7 +1431,7 @@ const ORIGIN_SPEC: &str = r#"{
 }"#;
 
 #[test]
-fn every_animated_route_starts_on_the_cell_after_its_source_port() {
+fn every_animated_route_starts_on_its_first_drawn_cell() {
     use rataflow::HandlePosition::*;
     let (flow, report) = build(ORIGIN_SPEC);
     let routes: Vec<&rataflow_view::Route> = flow
@@ -1455,8 +1449,8 @@ fn every_animated_route_starts_on_the_cell_after_its_source_port() {
         );
         assert_eq!(
             span[0],
-            stem_cell(route),
-            "the dot must start on the source stem, not mid-route"
+            first_drawn_cell(route),
+            "the dot must start on the first drawn route cell, not one cell past it"
         );
         sides.push(route.src);
     }
@@ -1472,9 +1466,14 @@ fn every_animated_route_starts_on_the_cell_after_its_source_port() {
         .find(|route| route.tgt == Left && route.src == Left)
         .expect("a return route leaving and entering the left sides");
     let span = dot_span(return_route);
+    assert_eq!(
+        span[0],
+        first_drawn_cell(return_route),
+        "the return route starts on its first drawn cell, left of its port"
+    );
     assert!(
-        span[0].0 < return_route.points[0].0 as i32,
-        "the return route starts on its outward stem, left of its port"
+        return_route.points[0].0 > return_route.points[1].0,
+        "the return route travels outward (left, off its left port) first"
     );
     assert!(
         report.short_routes.is_empty(),
@@ -1568,8 +1567,8 @@ fn duration_ms_sets_the_step_count_and_a_numeric_flow_stays_unsynchronized() {
     assert_eq!(stats.violations, 0, "{stats:?}");
 }
 
-/// A fan-out whose first port puts a two-cell route on the canvas: too short
-/// to show motion.
+/// A fan-out whose first port puts the shortest possible route on the canvas:
+/// a jog whose span is exactly [`MIN_DOT_CELLS`].
 const SHORT_SPEC: &str = r#"{
   "nodes": [{"id":"r"},{"id":"a"},{"id":"b"}],
   "layers": [["r"],["a","b"]],
@@ -1577,52 +1576,58 @@ const SHORT_SPEC: &str = r#"{
             {"from":"r","to":"b","flow":true}]
 }"#;
 
+/// The shortest route a layered layout can draw now counts its origin: the
+/// span is the first drawn cell, one straight cell, and the arrowhead, which
+/// is exactly [`MIN_DOT_CELLS`]. Fewer cells can no longer be routed, so no
+/// route is reported as too short — and `dot_index` still refuses to animate
+/// a span below the minimum.
 #[test]
-fn a_route_too_short_to_show_motion_is_reported_and_draws_no_dot() {
+fn the_shortest_routable_span_animates_from_its_origin_cell() {
     let (flow, report) = build(SHORT_SPEC);
-    assert_eq!(
-        report.short_routes,
-        vec![ShortRoute {
-            route: "e0".to_string(),
-            from: "r".to_string(),
-            to: "a".to_string(),
-            dot_cells: 2,
-        }],
-        "the short route must be reported, not animated ambiguously"
-    );
     let short = flow.edges()[0].content.planned().expect("planned");
     let long = flow.edges()[1].content.planned().expect("planned");
-    assert!(short.dot_cells.len() < MIN_DOT_CELLS);
     assert_eq!(
-        dot_index(
-            short.dot_cells.len(),
-            Timing::Constant(DEFAULT_FLOW_RATE),
-            0
-        ),
-        None
+        short.dot_cells.len(),
+        MIN_DOT_CELLS,
+        "the jog keeps origin, one straight cell, and the head: {:?}",
+        short.dot_cells
+    );
+    assert_eq!(
+        short.dot_cells.first().copied(),
+        short.origin_cell(),
+        "the span starts on the route's origin"
+    );
+    assert!(
+        report.short_routes.is_empty(),
+        "nothing is too short: {:?}",
+        report.short_routes
+    );
+    assert_eq!(
+        dot_index(MIN_DOT_CELLS - 1, Timing::Constant(DEFAULT_FLOW_RATE), 0),
+        None,
+        "a span below the minimum is still never animated"
     );
     assert!(long.dot_cells.len() >= MIN_DOT_CELLS);
 
-    // It is not counted as a valid animated route, and it never draws a dot.
+    // Both routes count as animated periodic routes, and every dot starts on
+    // its own first drawn cell.
     let extent = report.extent;
     let stats = dot_stats(&mut build(SHORT_SPEC).0, extent, 24);
-    assert_eq!(stats.periodic, 1, "only the long route animates: {stats:?}");
+    assert_eq!(stats.periodic, 2, "both routes animate: {stats:?}");
     assert_eq!(stats.single, 0, "{stats:?}");
-    assert_eq!(stats.constant, 1, "{stats:?}");
+    assert_eq!(stats.constant, 2, "{stats:?}");
     assert_eq!(stats.violations, 0, "{stats:?}");
+    assert_eq!(stats.origins_ok, stats.origins_total, "{stats:?}");
 
-    let short_cells: HashSet<(i32, i32)> = dot_span(short).into_iter().collect();
-    for phase in 0..12 {
-        let (cells, drawn) = render_full(SHORT_SPEC, phase);
-        let buffer = cells_from(&cells);
-        for (x, y) in &short_cells {
-            let (tx, ty) = drawn.world_to_terminal(Position::new(*x as f64, *y as f64));
-            let symbol = buffer[(tx as u16, ty as u16)].symbol();
-            assert_ne!(
-                symbol, "●",
-                "phase {phase}: the too-short route must draw no dot at {x},{y}"
-            );
-        }
+    let (cells, drawn) = render_full(SHORT_SPEC, 0);
+    let buffer = cells_from(&cells);
+    for route in [short, long] {
+        let (x, y) = drawn.world_to_terminal(Position::new(route.points[0].0, route.points[0].1));
+        assert_eq!(
+            buffer[(x as u16, y as u16)].symbol(),
+            "●",
+            "phase 0 must put the dot on the first drawn cell ({x},{y})"
+        );
     }
 }
 
@@ -1801,7 +1806,8 @@ fn check_prints_crossings_both_motion_modes_and_the_origin_proof() {
     }
     std::fs::remove_file(path).ok();
 
-    // A too-short route is named by --check instead of animated silently.
+    // A jog route keeps the minimum drawable span, so `--check` counts it as
+    // animated instead of naming it too short.
     let path = write_spec("short", SHORT_SPEC);
     let out = Command::new(env!("CARGO_BIN_EXE_rataflow-view"))
         .arg("--check")
@@ -1811,22 +1817,22 @@ fn check_prints_crossings_both_motion_modes_and_the_origin_proof() {
     assert!(out.status.success());
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(
-        stdout
+        !stdout
             .lines()
-            .any(|line| line.starts_with("warning: route e0 (r -> a) has 2 dot cell")),
-        "missing the short-route warning in:\n{stdout}"
+            .any(|line| line.contains("cannot show motion")),
+        "no route is too short now that the origin counts:\n{stdout}"
     );
     assert!(
         stdout.lines().any(|line| line.contains(
-            "1 periodic routes, 0 violations, 1 constant at 0.5c/step, 0 same-arrival at"
+            "2 periodic routes, 0 violations, 2 constant at 0.5c/step, 0 same-arrival at"
         )),
-        "the short route must not count as animated in:\n{stdout}"
+        "both routes count as animated in:\n{stdout}"
     );
     assert!(
         stdout
             .lines()
             .any(|line| line == "origins: 2/2 routes start at their arrow origin"),
-        "both routes still start at their origin:\n{stdout}"
+        "both routes start at their origin:\n{stdout}"
     );
     std::fs::remove_file(path).ok();
 }
@@ -2044,13 +2050,13 @@ const CORNER_FIRST_SPEC: &str = r#"{
 }"#;
 
 /// The render-level proof of the origin rule: on frame 0 every animated
-/// route draws its dot on the FIRST drawn route cell after the border port —
-/// the cell `--check` measures for `origins:`. A dot one cell downstream of
-/// it (the old defect) fails here, and so does a dot that skips a stem cell
-/// that happens to be a corner glyph.
+/// route draws its dot on the FIRST drawn route cell — the cell just outside
+/// the source border, which is the cell `--check` measures for `origins:`. A
+/// dot one cell downstream of it (the round-08 `dots: 1` defect) fails here,
+/// and so does a dot on the corner that follows the origin.
 #[test]
 fn frame_zero_puts_every_dot_on_the_first_drawn_route_cell() {
-    let mut corner_first_seen = false;
+    let mut corner_next_to_origin_seen = false;
     let mut timings: Vec<Timing> = Vec::new();
     for spec in [
         CORNER_FIRST_SPEC,
@@ -2073,9 +2079,8 @@ fn frame_zero_puts_every_dot_on_the_first_drawn_route_cell() {
                 continue;
             }
             animated += 1;
-            // The first drawn route cell, read straight off the polyline: one
-            // step out of the border port, whatever glyph sits there.
-            let (sx, sy) = stem_cell(route);
+            // The first drawn route cell, read straight off the polyline.
+            let (sx, sy) = first_drawn_cell(route);
             let first_drawn = terminal_cell(&flow, (sx as f64, sy as f64));
             assert_eq!(
                 terminal_cell(&flow, route.dot_cells[0]),
@@ -2087,18 +2092,33 @@ fn frame_zero_puts_every_dot_on_the_first_drawn_route_cell() {
                 "frame 0 must draw the dot on the first drawn route cell \
                  {first_drawn:?}, got {dots:?} in {spec}"
             );
+            // No dot may rest on a corner: the origin is the first drawn cell,
+            // and every other corner of the route stays a bend glyph.
             let corners: Vec<(f64, f64)> =
                 route.points[1..route.points.len().saturating_sub(1)].to_vec();
-            if corners.first() == route.dot_cells.first() {
-                corner_first_seen = true;
+            for corner in &corners {
+                let (cx, cy) = terminal_cell(&flow, *corner);
+                assert!(
+                    !dots.contains(&(cx as u16, cy as u16)),
+                    "frame 0 dot on corner ({cx},{cy}) in {spec}"
+                );
+            }
+            if corners.first() == route.points.get(1) {
+                // Coverage: a route that turns ONE cell out of its origin —
+                // the cell the pre-fix code mistook for the origin.
+                let step = (route.points[1].0 - route.points[0].0).abs()
+                    + (route.points[1].1 - route.points[0].1).abs();
+                if step == 1.0 {
+                    corner_next_to_origin_seen = true;
+                }
             }
             timings.push(edge.content.timing());
         }
         assert!(animated > 0, "no animated route in {spec}");
     }
     assert!(
-        corner_first_seen,
-        "a route whose first drawn cell is a corner glyph must be covered"
+        corner_next_to_origin_seen,
+        "a route that turns right after its origin must be covered"
     );
     assert!(
         timings
@@ -2112,4 +2132,180 @@ fn frame_zero_puts_every_dot_on_the_first_drawn_route_cell() {
             .any(|timing| matches!(timing, Timing::SameArrival { .. })),
         "the same-arrival clock must be covered"
     );
+}
+
+// ---------------------------------------------------------------------------
+// Round 09: the `dots: 1` origin (`label_slot` gutter bands live below)
+// ---------------------------------------------------------------------------
+
+/// A straight two-node run with exactly one dot: the simplest frame-zero
+/// proof for the single-dot path.
+const STRAIGHT_SINGLE_DOT_SPEC: &str = r#"{
+  "direction": "tb",
+  "nodes": [{"id":"src","label":"Src"},{"id":"dst","label":"Dst"}],
+  "edges": [{"from":"src","to":"dst","flow":true,"dots":1}]
+}"#;
+
+#[test]
+fn a_straight_single_dot_sits_on_the_first_drawn_route_cell() {
+    let (cells, flow) = render_full(STRAIGHT_SINGLE_DOT_SPEC, 0);
+    let dots = positions(&dot_positions(&cells));
+    assert_eq!(dots.len(), 1, "exactly one dot, got {dots:?}");
+
+    let route = flow.edges()[0]
+        .content
+        .planned()
+        .expect("the single edge is routed");
+    assert_eq!(
+        route.origin_cell(),
+        Some(route.points[0]),
+        "the origin is the first cell of the polyline"
+    );
+    let (px, py) = first_drawn_cell(route);
+    let (dx, dy) = terminal_cell(&flow, (px as f64, py as f64));
+    assert_eq!(
+        dots[0],
+        (dx as u16, dy as u16),
+        "frame 0 puts the single dot on the first drawn route cell ({dx},{dy})"
+    );
+
+    // The round-08 defect: the dot sat one cell downstream, on the second
+    // drawn cell. That cell must hold the stroke, not the dot.
+    let (nx, ny) = (route.dot_cells[1].0 as i32, route.dot_cells[1].1 as i32);
+    assert_ne!(
+        (nx, ny),
+        (dx, dy),
+        "the second drawn cell is not the origin"
+    );
+    assert!(
+        !dots.contains(&(nx as u16, ny as u16)),
+        "frame 0 must not draw the dot one cell past the origin"
+    );
+}
+
+#[test]
+fn a_single_dot_whose_route_turns_one_cell_out_sits_on_the_first_drawn_cell() {
+    let (cells, flow) = render_full(CORNER_FIRST_SPEC, 0);
+    let dots = positions(&dot_positions(&cells));
+    let buffer = cells_from(&cells);
+    let mut covered = 0;
+    for edge in flow.edges().iter() {
+        if !edge.content.is_flowing() {
+            continue;
+        }
+        let Some(route) = edge.content.planned() else {
+            continue;
+        };
+        // A route that turns one cell out of its port: its first interior
+        // point is a corner glyph one cell from the first drawn cell.
+        let step = (route.points[1].0 - route.points[0].0).abs()
+            + (route.points[1].1 - route.points[0].1).abs();
+        let turns =
+            (route.points[1].0 == route.points[0].0) != (route.points[2].0 == route.points[1].0);
+        if step != 1.0 || !turns {
+            continue;
+        }
+        covered += 1;
+        assert_eq!(
+            route.origin_cell(),
+            Some(route.points[0]),
+            "the origin is the first drawn cell, not the corner after it"
+        );
+        let (px, py) = first_drawn_cell(route);
+        let (dx, dy) = terminal_cell(&flow, (px as f64, py as f64));
+        assert!(
+            dots.contains(&(dx as u16, dy as u16)),
+            "frame 0 must draw the single dot on the first drawn cell ({dx},{dy}), got {dots:?}"
+        );
+        // The corner keeps its bend glyph: a dot there both reads as a
+        // schematic dot and destroys the turn the reader needs.
+        let (cx, cy) = (route.points[1].0 as i32, route.points[1].1 as i32);
+        let (tx, ty) = terminal_cell(&flow, (cx as f64, cy as f64));
+        let glyph = buffer[(tx as u16, ty as u16)].symbol();
+        assert!(
+            matches!(glyph, "╭" | "╮" | "╯" | "╰"),
+            "the corner right after the origin keeps its bend glyph, got {glyph:?}"
+        );
+        assert!(
+            !dots.contains(&(tx as u16, ty as u16)),
+            "no dot may rest on the corner right after the origin"
+        );
+    }
+    assert_eq!(
+        covered, 1,
+        "the fixture must contain one route that turns one cell out of its port"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// `label_slot`: a horizontal gutter band instead of a label-length rank gap
+// ---------------------------------------------------------------------------
+
+/// The round-08 modal-runtime shape: a two-node anti-parallel top-to-bottom
+/// pair carrying one 13-cell label in the channel between the boxes.
+fn anti_parallel_pair(label_slot: bool) -> String {
+    format!(
+        r#"{{
+  "direction": "tb",
+  "nodes": [{{"id":"up","label":"Upstream"}},
+            {{"id":"down","label":"Downstream"}}],
+  "edges": [{{"from":"up","to":"down","label":"thirteen-cell","label_slot":{label_slot}}},
+            {{"from":"down","to":"up","label":"back"}}]
+}}"#
+    )
+}
+
+#[test]
+fn a_label_slot_rides_a_gutter_band_and_fits_the_77x47_target() {
+    let spec_json = anti_parallel_pair(true);
+    let spec = Spec::from_json(&spec_json).expect("spec");
+    assert!(spec.edges[0].wants_label_slot());
+    assert!(!spec.edges[1].wants_label_slot());
+
+    let (cells, flow) = render_full(&spec_json, 0);
+    let text = rendered_text(&cells);
+    assert!(
+        text.contains("thirteen-cell"),
+        "the 13-cell label must render whole\n{text}"
+    );
+    assert!(text.contains("back"), "the short label must render too");
+
+    // Natural zoom fits the 77x47 target: the canvas is one row shorter than
+    // the pane because the header owns the first row.
+    let (_, report) = build(&spec_json);
+    assert!(
+        report.extent.0 <= 77 && report.extent.1 < 47,
+        "the gutter band must fit 77x47 at natural zoom, extent {:?}",
+        report.extent
+    );
+    assert_eq!(report.labels_placed, 2, "both labels placed: {report:?}");
+    assert_eq!(report.labels_skipped, 0, "no label dropped: {report:?}");
+    assert_eq!(report.labels_on_route, 0, "no label on a route cell");
+    assert_eq!(report.labels_ambiguous, 0, "each label owns its gutter");
+
+    // The two corridors stay distinct: one cell each, no overlap, no bridge.
+    let routes: Vec<&rataflow_view::Route> = flow
+        .edges()
+        .iter()
+        .map(|edge| edge.content.planned().expect("both routes planned"))
+        .collect();
+    assert_eq!(routes.len(), 2, "two routes");
+    let first: HashSet<(i32, i32)> = route_cells(routes[0]).into_iter().collect();
+    let second: HashSet<(i32, i32)> = route_cells(routes[1]).into_iter().collect();
+    let shared: Vec<&(i32, i32)> = first.intersection(&second).collect();
+    assert!(
+        shared.is_empty(),
+        "the anti-parallel corridors must stay distinct, shared {shared:?}"
+    );
+    assert_eq!(report.shared_run, 0, "no shared run: {report:?}");
+
+    // Without `label_slot` the same spec loses the label: the cell the label
+    // needs is not reserved, so the search cannot place it. That is the guard
+    // the gutter band exists for.
+    let (_, plain) = build(&anti_parallel_pair(false));
+    assert_eq!(
+        plain.labels_placed, 1,
+        "without the slot the 13-cell label is dropped: {plain:?}"
+    );
+    assert_eq!(plain.labels_skipped, 1, "{plain:?}");
 }

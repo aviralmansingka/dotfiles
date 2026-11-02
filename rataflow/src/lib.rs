@@ -114,6 +114,11 @@ pub struct SpecEdge {
     /// or a trunk corridor gets its own channel.
     #[serde(default)]
     minlen: Option<usize>,
+    /// `true` reserves a horizontal gutter band for this edge's label, in the
+    /// channel beside the edge's own run, instead of widening the rank gap to
+    /// the label's length. Needs a `label`.
+    #[serde(default)]
+    label_slot: bool,
 }
 
 impl SpecEdge {
@@ -168,6 +173,13 @@ impl SpecEdge {
     /// ranks, more to reserve a channel between them.
     pub fn minlen(&self) -> usize {
         self.minlen.unwrap_or(1)
+    }
+
+    /// True when the label asks for a horizontal gutter band beside the run
+    /// instead of a rank gap as tall as the text is wide. A slot without a
+    /// label has nothing to place, so it is ignored.
+    pub fn wants_label_slot(&self) -> bool {
+        self.label_slot && self.label.is_some()
     }
 
     /// How many dots this route draws at once.
@@ -351,6 +363,12 @@ impl Spec {
                 bail!(
                     "edge {index} has \"minlen\": {minlen}; it must be between 1 (consecutive \
                      ranks) and {MAX_MINLEN} (that many rank gaps)"
+                );
+            }
+            if edge.label_slot && edge.label.is_none() {
+                bail!(
+                    "edge {index} sets \"label_slot\": true without a \"label\"; \
+                     the slot exists to place that label"
                 );
             }
             if let Some(style) = edge.style.as_deref()
@@ -889,11 +907,14 @@ pub fn build_flow_with_report(spec: &Spec) -> Result<(Graph, Report)> {
     let pins = rank_pins(&nodes, spec);
     // Structural specs (regions, minlen gaps, partial pins) go through the
     // engine; a fully pinned grid with none of those keeps its declared grid.
+    // A `label_slot` also needs the engine, because the gutter band it
+    // reserves is chosen from the engine's own label placement.
     let structured = !spec.groups().is_empty()
         || spec.edges.iter().any(|edge| edge.minlen() > 1)
+        || spec.edges.iter().any(|edge| edge.wants_label_slot())
         || pins.iter().any(Option::is_none);
     let mut conflicts: Vec<layout::PinConflict> = Vec::new();
-    nodes = place_nodes(nodes, spec, &pins, structured, &mut conflicts);
+    nodes = place_nodes(nodes, spec, &pins, structured, &mut conflicts).0;
 
     let edges: Vec<Edge<FlowEdge>> = routes_spec
         .iter()
@@ -967,7 +988,7 @@ pub fn build_flow_with_report(spec: &Spec) -> Result<(Graph, Report)> {
             }
         }
     }
-    nodes = place_nodes(nodes, spec, &pins, structured, &mut conflicts);
+    let (nodes, label_anchors) = place_nodes(nodes, spec, &pins, structured, &mut conflicts);
     flow.set_nodes(nodes)?;
     flow = flow.with_theme(spec.theme());
     paint_nodes(&mut flow, spec)?;
@@ -987,11 +1008,15 @@ pub fn build_flow_with_report(spec: &Spec) -> Result<(Graph, Report)> {
     let index_of = |id: &str| boxes.iter().position(|b| b.id == id).unwrap_or(0);
     let edge_specs: Vec<router::EdgeSpec> = routes_spec
         .iter()
-        .map(|route| router::EdgeSpec {
+        .enumerate()
+        .map(|(index, route)| router::EdgeSpec {
             from: index_of(&route.from),
             to: index_of(&route.to),
             label: route.label.clone(),
-            label_slot: None,
+            // A `label_slot` label is placed by the layout as a horizontal
+            // gutter band beside the run; the router reserves those cells so
+            // no other route may cross the text.
+            label_slot: gutter_label(index, route, &label_anchors),
             role: route.role,
         })
         .collect();
@@ -1100,6 +1125,9 @@ struct RoutedEdge {
     from: String,
     to: String,
     label: Option<String>,
+    /// True when the spec asked for a horizontal gutter band for this
+    /// label (`label_slot`).
+    label_slot: bool,
     dots: DotMode,
     dashed: bool,
     timing: Timing,
@@ -1116,6 +1144,7 @@ fn routed_edges(spec: &Spec) -> Vec<RoutedEdge> {
             from: edge.from.clone(),
             to: edge.to.clone(),
             label: edge.label.clone(),
+            label_slot: edge.wants_label_slot(),
             dots: edge.dots_mode(),
             dashed: edge.dashed(),
             timing: edge.timing(),
@@ -1127,6 +1156,7 @@ fn routed_edges(spec: &Spec) -> Vec<RoutedEdge> {
             from: spec_trunk.from.clone(),
             to: spec_trunk.to.clone(),
             label: spec_trunk.label.clone(),
+            label_slot: false,
             dots: DotMode::None,
             dashed: false,
             timing: Timing::Static,
@@ -1137,6 +1167,7 @@ fn routed_edges(spec: &Spec) -> Vec<RoutedEdge> {
                 from: spec_trunk.from.clone(),
                 to: branch.clone(),
                 label: None,
+                label_slot: false,
                 dots: DotMode::None,
                 dashed: false,
                 timing: Timing::Static,
@@ -1426,19 +1457,43 @@ fn place_by_layers(mut nodes: Vec<Node<TextContent>>, spec: &Spec) -> Vec<Node<T
 }
 
 /// Places nodes: the engine for anything structural, the round-05 grid for a
-/// spec that pins every node and declares no region or `minlen`.
+/// spec that pins every node and declares no region or `minlen`. Returns the
+/// label anchors the engine reserved, keyed by route index, so a
+/// `label_slot` label can hand its gutter band to the router.
 fn place_nodes(
     nodes: Vec<Node<TextContent>>,
     spec: &Spec,
     pins: &[Option<usize>],
     structured: bool,
     conflicts: &mut Vec<layout::PinConflict>,
-) -> Vec<Node<TextContent>> {
+) -> (Vec<Node<TextContent>>, LabelAnchors) {
     if structured || spec.layers.is_empty() {
         place_with_engine(nodes, spec, pins, conflicts)
     } else {
-        place_by_layers(nodes, spec)
+        (place_by_layers(nodes, spec), BTreeMap::new())
     }
+}
+
+/// The label anchor cells the layout reserved, keyed by route index.
+type LabelAnchors = BTreeMap<usize, (i32, i32)>;
+
+/// The label slot the layout reserved for one route, when its spec edge asked
+/// for a gutter band. `None` keeps today's behavior: the router finds the
+/// label a cell itself.
+fn gutter_label(
+    index: usize,
+    route: &RoutedEdge,
+    anchors: &LabelAnchors,
+) -> Option<router::LabelSlot> {
+    if !route.label_slot {
+        return None;
+    }
+    let label = route.label.as_deref()?;
+    let anchor = *anchors.get(&index)?;
+    Some(router::LabelSlot {
+        anchor,
+        width: label.chars().count() as i32,
+    })
 }
 
 /// Declared rank per node, from the spec's `layers`. A node the spec does
@@ -1460,13 +1515,14 @@ fn rank_pins(nodes: &[Node<TextContent>], spec: &Spec) -> Vec<Option<usize>> {
 }
 
 /// Places every node with the layout engine: ranks from `minlen` and the
-/// pins, order from the barycenter sweep, then coordinates.
+/// pins, order from the barycenter sweep, then coordinates. Returns the label
+/// anchors the engine reserved, per route index.
 fn place_with_engine(
     mut nodes: Vec<Node<TextContent>>,
     spec: &Spec,
     pins: &[Option<usize>],
     conflicts: &mut Vec<layout::PinConflict>,
-) -> Vec<Node<TextContent>> {
+) -> (Vec<Node<TextContent>>, LabelAnchors) {
     let group_of: HashMap<&str, &str> = spec
         .nodes
         .iter()
@@ -1498,6 +1554,7 @@ fn place_with_engine(
                 from: route.from.clone(),
                 to: route.to.clone(),
                 label_width: route.label.as_ref().map(|label| label.chars().count()),
+                label_gutter: route.label_slot,
                 minlen,
             }
         })
@@ -1525,7 +1582,7 @@ fn place_with_engine(
             }
         }
     }
-    nodes
+    (nodes, placement.labels)
 }
 
 /// Rows the viewer reserves above the canvas for its header line.
@@ -2092,6 +2149,25 @@ mod tests {
 
         let err = Spec::from_json(r#"{"edges":[{"from":"a","to":"b","flow":-1.5}]}"#).unwrap_err();
         assert!(format!("{err:#}").contains("flow"), "got: {err:#}");
+    }
+
+    #[test]
+    fn a_label_slot_needs_a_label_and_is_parsed_as_a_request() {
+        let s = spec(
+            r#"{"edges":[{"from":"a","to":"b","label":"wide label","label_slot":true},
+                                  {"from":"b","to":"c","label":"plain"},
+                                  {"from":"c","to":"d"}]}"#,
+        );
+        assert!(s.edges[0].wants_label_slot());
+        assert!(!s.edges[1].wants_label_slot(), "absent is the default");
+        assert!(!s.edges[2].wants_label_slot());
+
+        // A slot with nothing to place is refused instead of becoming a
+        // silent no-op field.
+        let err = Spec::from_json(r#"{"edges":[{"from":"a","to":"b","label_slot":true}]}"#)
+            .expect_err("a slot needs a label");
+        let message = format!("{err:#}");
+        assert!(message.contains("label_slot"), "got: {message}");
     }
 
     #[test]

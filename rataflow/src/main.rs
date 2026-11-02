@@ -47,7 +47,7 @@ options:
   --select-all     mark every node selected before drawing
 
 spec fields: direction (tb|lr), theme (gruvbox|dark|light),
-nodes (id, label?, group?), edges (from, to, label?, flow?, timing?, duration_ms?, dots?, style?),
+nodes (id, label?, group?), edges (from, to, label?, flow?, timing?, duration_ms?, dots?, style?, label_slot?),
 trunks (id, label?, from, to, branches)
 flow: true or a positive rate — animated dots travel from \"from\" to \"to\";
       true runs at the default constant rate (0.5 cells per 100 ms step); a
@@ -60,6 +60,8 @@ duration_ms: positive whole milliseconds of shared arrival time (default
       2000); valid ONLY with \"timing\": \"same-arrival\" and \"flow\": true
 dots: 0 (no dot) or 1 (exactly one dot on the route); absent keeps the
       periodic dot spacing
+label_slot: true reserves a horizontal gutter band for this edge's label
+      beside its run, instead of a rank gap as tall as the text is wide
 style: solid (default) or dashed — dashed marks an unconfirmed fact
 trunks: one corridor from \"from\" to \"to\" plus one spur per branch node
 ";

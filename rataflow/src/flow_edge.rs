@@ -143,32 +143,48 @@ impl Route {
         self
     }
 
-    /// The first drawn route cell after the source port — see
-    /// [`origin_cell`].
+    /// The route's first drawn cell — see [`origin_cell`].
     pub fn origin_cell(&self) -> Option<(f64, f64)> {
-        origin_cell(&self.points)
+        origin_cell(&self.points, &self.junctions)
+    }
+
+    /// The terminal cells a dot may rest on, in travel order. Index 0 is
+    /// always [`Route::origin_cell`], so the frame-0 dot sits on the route's
+    /// FIRST drawn cell for a single dot and for a train alike, instead of
+    /// one cell downstream of it.
+    pub fn dot_span(&self, to_terminal: impl Fn(f64, f64) -> (i32, i32)) -> Vec<(i32, i32)> {
+        let mut span: Vec<(i32, i32)> = Vec::new();
+        if let Some((x, y)) = self.origin_cell() {
+            span.push(to_terminal(x, y));
+        }
+        for &(x, y) in &self.dot_cells {
+            let cell = to_terminal(x, y);
+            if span.last() != Some(&cell) {
+                span.push(cell);
+            }
+        }
+        span
     }
 }
 
-/// The first drawn route cell after the source port: the route's origin.
+/// The route's origin: its FIRST drawn cell — the cell immediately outside
+/// the source border, which the renderer paints as the start of the stroke.
 ///
-/// This is the cell a dot train starts on and the cell `--check` measures
-/// for `origins:`, so the check line and the rendered pixels agree by
-/// construction instead of each picking its own cell. It is a corner glyph
-/// whenever the route turns one cell out of its port, which is exactly the
-/// case that made the dot start late.
-pub fn origin_cell(points: &[(f64, f64)]) -> Option<(f64, f64)> {
-    let (&from, &to) = (points.first()?, points.get(1)?);
-    // A delta under half a cell does not step, and `signum` answers 1.0 for
-    // 0.0, so it cannot stand in for this rule.
-    let step = |delta: f64| {
-        if delta.abs() < 0.5 {
-            0.0
-        } else {
-            delta.signum()
-        }
-    };
-    Some((from.0 + step(to.0 - from.0), from.1 + step(to.1 - from.1)))
+/// This is the cell a dot train starts on, the cell a single dot rests on at
+/// frame 0, and the cell `--check` measures for `origins:`, so the check
+/// line and the rendered pixels agree by construction instead of each
+/// picking its own cell. The round-08 pixel evidence on `dots: 1` routes
+/// (cli→api port `(37,4)`, painted stem `(37,5)`, dot wrongly at `(37,6)`)
+/// was exactly this: the dot started one cell late because the origin was
+/// read as the cell after the stem instead of the stem itself.
+///
+/// A trunk spur starts ON its corridor, at a junction cell that must keep
+/// its glyph, so its origin is the first cell after it.
+pub fn origin_cell(points: &[(f64, f64)], junctions: &[(f64, f64)]) -> Option<(f64, f64)> {
+    points
+        .iter()
+        .find(|cell| !junctions.contains(cell))
+        .copied()
 }
 
 /// How a route's dots are timed.
@@ -438,17 +454,15 @@ impl EdgeContent for FlowEdge {
 
         let arrow = arrow_cell(&path).filter(|&(cell, _)| in_area(buf.area, cell));
         let dot_style = Style::default().fg(palette.accent);
+        // One span, one origin: it starts on the route's first drawn cell,
+        // measured through the same helper the check uses, so a single dot
+        // and a same-arrival train both begin where the pixels begin.
         let cells: Vec<(i32, i32)> = self
             .route
             .as_ref()
-            .map(|route| {
-                route
-                    .dot_cells
-                    .iter()
-                    .map(|&(x, y)| ctx.world_to_terminal(Position::new(x, y)))
-                    .collect()
-            })
+            .map(|route| route.dot_span(|x, y| ctx.world_to_terminal(Position::new(x, y))))
             .unwrap_or_default();
+        let junction_cells: Vec<(i32, i32)> = junctions.iter().copied().collect();
         let head = arrow.map(|(cell, _)| cell);
         // A route too short to show motion is drawn static: `--check` names
         // it instead of animating it ambiguously.
@@ -467,7 +481,15 @@ impl EdgeContent for FlowEdge {
             DotMode::Periodic => match self.timing {
                 Timing::Static => {}
                 Timing::Constant(rate) if animatable => {
-                    draw_dots(&path, rate, self.phase, dot_style, head, buf);
+                    draw_dots(
+                        &path,
+                        &junction_cells,
+                        rate,
+                        self.phase,
+                        dot_style,
+                        head,
+                        buf,
+                    );
                 }
                 Timing::Constant(_) => {}
                 Timing::SameArrival { .. } => {
@@ -789,6 +811,7 @@ fn draw_same_arrival_dots(
 /// Flow dots, spaced so the line stays readable.
 fn draw_dots(
     points: &[(i32, i32)],
+    junctions: &[(i32, i32)],
     speed: f64,
     phase: usize,
     style: Style,
@@ -796,16 +819,25 @@ fn draw_dots(
     buf: &mut Buffer,
 ) {
     let area = buf.area;
-    // The train is anchored on the route's origin — the first drawn cell
-    // after the source port, the very cell `--check` measures — so phase 0
-    // puts a dot there instead of one cell downstream of it.
+    // The train is anchored on the route's origin — its first drawn cell,
+    // the very cell `--check` measures — so phase 0 puts a dot there instead
+    // of one cell downstream of it. A detached spur's origin is one cell
+    // into its polyline (the junction it leaves), so distances start there.
     let origin = origin_cell(
         &points
             .iter()
             .map(|&(x, y)| (x as f64, y as f64))
             .collect::<Vec<_>>(),
+        &junctions
+            .iter()
+            .map(|&(x, y)| (x as f64, y as f64))
+            .collect::<Vec<_>>(),
     )
     .map(|(x, y)| (x as i32, y as i32));
+    let behind = points
+        .iter()
+        .take_while(|cell| junctions.contains(cell))
+        .count() as i32;
     let offset = phase as f64 * speed;
     let total: i32 = points
         .windows(2)
@@ -834,15 +866,15 @@ fn draw_dots(
         let (dx, dy) = ((to.0 - from.0).signum(), (to.1 - from.1).signum());
         for step in 0..len {
             let cell = (from.0 + dx * step, from.1 + dy * step);
-            // Distances count from the origin, so the port itself is one
-            // cell behind it rather than the train's anchor.
-            let distance = traveled + step - 1;
-            if cell == first || cell == last || Some(cell) == arrow {
+            // Distances count from the origin, so the origin cell itself is
+            // distance 0 and the train starts on it at phase 0.
+            let distance = traveled + step - behind;
+            // The origin stays a dot cell: it is where the route starts, so
+            // the dot cannot begin later.
+            let is_origin = Some(cell) == origin;
+            if (cell == first && !is_origin) || cell == last || Some(cell) == arrow {
                 continue;
             }
-            // The origin stays a dot cell even when it is a corner glyph:
-            // it is where the route starts, so the dot cannot begin later.
-            let is_origin = Some(cell) == origin;
             if corners.contains(&cell) && !is_origin {
                 continue;
             }
@@ -924,9 +956,9 @@ mod tests {
                 let mut buf = Buffer::empty(Rect::new(0, 0, 12, 10));
                 let style = Style::default().fg(edge_stroke());
                 draw_line(&first, style, false, &HashSet::new(), &mut buf);
-                draw_dots(&first, 1.0, phase, style, None, &mut buf);
+                draw_dots(&first, &[], 1.0, phase, style, None, &mut buf);
                 draw_line(&second, style, false, &HashSet::new(), &mut buf);
-                draw_dots(&second, 1.0, phase, style, None, &mut buf);
+                draw_dots(&second, &[], 1.0, phase, style, None, &mut buf);
                 assert_eq!(buf[(5, 4)].symbol(), "⌒");
                 assert!(
                     !buf.content
