@@ -33,7 +33,7 @@
       "keywords": ["npv", "present", "value", "discount", "hurdle", "positive"],
       "teachGroups": [
         ["discount", "hurdle", "today"],
-        ["positive", "adds value", "beats"]
+        ["positive", "adds value", "beats", "sign", "above zero", "exceeds"]
       ]
     }
   ]
