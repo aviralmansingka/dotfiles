@@ -108,6 +108,10 @@ Start with `status.md`, then choose:
   corrected model.
 - **Unconditional truths first**, and motivate every node. A fact with no
   visible reason does not lock in.
+- **A survey teaches nothing.** An inventory, a gap list, or a "do not teach"
+  request runs probe-only and ends with held, gaps, and one next move.
+- **A held goal ends the session.** When the probe shows the learner already
+  holds the target, confirm it and stop. Do not teach it.
 - **A complaint stops the loop.** Drift and framing complaints get a re-anchor
   or one repair, never another content question.
 - **One node per `lesson` call.** The side buffer holds one node at a time.

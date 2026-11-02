@@ -46,6 +46,11 @@ time so the exchange is a real adaptive conversation. Turn the learner's rough
 topic into one concrete, observable goal contract and obtain explicit approval
 before continuing.
 
+Two hard stops. A survey request — an inventory, a gap list, "do not teach" —
+runs probe-only: no `lesson` call, and it ends with held items, ranked gaps,
+and one next move. A target the probe shows as already held ends the session:
+confirm it and stop.
+
 Two hard prose rules: every quiz/explain call carries a short `title` naming
 the node under test, and all learner-facing prose is written in Simplified
 Technical English at full compliance — short sentences, active voice, approved

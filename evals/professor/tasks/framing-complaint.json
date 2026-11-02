@@ -31,7 +31,7 @@
       "wrong": "Per-stream speed drops immediately as C grows, because each stream waits for the others.",
       "keywords": ["per-stream", "decode", "concurrency", "speed", "flat", "drop"],
       "teachGroups": [
-        ["1/d", "same iteration", "shared iteration", "iteration"],
+        ["1/d", "same iteration", "shared iteration", "iteration", "step", "per step"],
         ["saturat", "compute", "bandwidth", "batch"]
       ]
     }
