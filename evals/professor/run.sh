@@ -132,7 +132,7 @@ EVAL_LOG="$out/calls.jsonl" \
 EVAL_STATE="$out/state.json" \
 EVAL_MAX_CALLS="${EVAL_MAX_CALLS:-80}" \
 PI_VAULT_DIR="$out/vault" \
-timeout 900 pi --print \
+timeout "${EVAL_TIMEOUT:-900}" pi --print \
 	--no-extensions -e "$here/stubs.ts" \
 	--skill "$out/professor" \
 	--tools read,bash,grep,find,ls,write,edit,quiz,explain,lesson,ask_user_question,run-command \

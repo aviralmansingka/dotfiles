@@ -128,9 +128,19 @@ if (Array.isArray(task.artifacts)) {
 }
 
 if (Array.isArray(task.planContains)) {
+	// The skill names the session directory after the topic, not the task id.
+	// Read the declared path first, then any session.md the rollout wrote.
 	const planRel = task.planFile ?? `professor-lessons/${task.id}/session.md`;
-	const plan = existsSync(workspace(planRel)) ? readFileSync(workspace(planRel), "utf8") : "";
-	checks.planUpdated = plan.length > 0 && task.planContains.every((s) => plan.includes(s));
+	const plans = [];
+	if (existsSync(workspace(planRel))) plans.push(readFileSync(workspace(planRel), "utf8"));
+	const lessonsDir = workspace("professor-lessons");
+	if (existsSync(lessonsDir)) {
+		for (const entry of readdirSync(lessonsDir)) {
+			const f = join(lessonsDir, entry, "session.md");
+			if (existsSync(f)) plans.push(readFileSync(f, "utf8"));
+		}
+	}
+	checks.planUpdated = plans.some((plan) => task.planContains.every((needle) => plan.includes(needle)));
 }
 
 if (Array.isArray(task.bodyChecks)) {
