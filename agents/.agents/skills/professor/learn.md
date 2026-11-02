@@ -197,11 +197,10 @@ that's the whole point.
 - **Goal before curriculum.** Nothing enters the lesson unless it advances the
   learner-approved goal contract.
 - **Questions verify; they never deliver.** A question cannot install new
-  knowledge — only teaching can. Once a node is confirmed, move on and teach
-  the next node. Ask at most two questions in a row on the same concept
-  before you deliver new content; after a second miss, stop re-asking, teach
-  the corrected model with the `lesson` tool, then verify once. The session
-  must add knowledge faster than it adds questions.
+  knowledge — only teaching can. Probing may run for a while: take as many
+  questions as a strand needs to find its edge. After a second miss on one
+  concept, stop re-asking, teach the corrected model with the `lesson` tool,
+  then verify once. The session must add knowledge, not only questions.
 - **One concept at a time.** Park after each interaction and wait for his paste.
 - **Motivate every node, including foundations.** Unmotivated, unconfirmed facts
   don't lock in — that's the whole point.

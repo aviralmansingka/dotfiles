@@ -94,11 +94,11 @@ chosen option, the correct option, and any `thinking` the learner typed.
   name it, explain why it's wrong, and re-ask in a different form before moving
   on. Treat an ungraded Other (`dontKnow`) result as an honest signal to teach,
   not a failure. Ctrl+P (`tooHard`) is a request to teach and retry simpler.
-- **Drill into why, not just what — once.** Follow a correct answer with at
-  most ONE "why" question before confirming mastery, then teach the next node.
-  "Why does the interface need to be admin-up before it can report carrier?"
-  not just "What flag does ip link set?" An endless why-chain delays new
-  knowledge; the session must deliver it.
+- **Drill into why, not just what.** Follow a correct answer with a "why"
+  question when the model feels shallow. "Why does the interface need to be
+  admin-up before it can report carrier?" not just "What flag does ip link
+  set?" Stop when the answer is solid. A chain that repeats the same point
+  adds no knowledge.
 - **Don't move on until confirmed — but don't loop either.** Mark confirmed
   when he articulates it in the correct terminology. After a second miss on
   the same concept, stop re-asking: teach the corrected model with the

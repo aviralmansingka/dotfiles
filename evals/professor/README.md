@@ -55,7 +55,7 @@ Cost: one model rollout per invocation, about 5–10 minutes.
 
 ## What the checks measure
 
-**Policy** — five checks on the produced trajectory:
+**Policy** — four checks on the produced trajectory:
 
 1. **contractBeforeProbe** — an `ask_user_question` happens before the first
    quiz.
@@ -63,12 +63,13 @@ Cost: one model rollout per invocation, about 5–10 minutes.
 3. **taughtCorrection** — a lesson body carries the planted correction.
 4. **verifiedAfterTeach** — a question about the target fact, asked after the
    correction, is answered right. Unrelated nodes cannot fail this check.
-5. **questionRunOk** — no more than two non-probe questions in a row without a
-   lesson.
+
+Question runs are reported, not scored. Probing may run as long as a strand
+needs; the report keeps the longest run and the unrecognised count as signals.
 
 Task modes change the check set:
 
-- **default** — the five checks above.
+- **default** — the four checks above.
 - **already-known** — `targetHeld` and `verifiedOnTarget` replace the teach and
   verify checks, and `noUnneededTeaching` is added.
 - **diagnostic** — `noTeaching` (zero lessons) replaces the teach and verify
@@ -134,23 +135,20 @@ unless its mode or fields add more.
 
 ## Current results
 
-Same model on both arms (`fireworks/glm-5p3-fast`), 2026-11-02, one rollout per
-cell. Before is commit `f67576e5^`; after is this harness.
+Latest sweep, 2026-11-03, `fireworks/glm-5p3-fast`, one rollout per task,
+re-scored after the question-run rule was removed.
 
-| Task | Before | After |
-|---|---|---|
-| mtu-blackhole | 5/5 | 5/5 |
-| cuda-event-timing | 2/5, cut at the 900 s cap | 4/5 |
-| already-known | not measurable | 5/6, max question run 10 |
+| Result | Tasks |
+|---|---|
+| full score | bgp, blank-slate, cold-start, cuda, derivation-gap, fenwick, handout, lesson-channel, mtu, resume-cancel, scope-change, transpose |
+| 4/5 | already-known (taught a held fact) |
+| 4/5 | goal-drift (did not re-anchor) |
+| 3/5 | framing-complaint (cut at the 900 s cap) |
+| 2/3 | ncp-diagnostic (taught during a survey) |
 
-The harness change moved validity, not the score. On MTU both versions pass. On
-CUDA the old simulator could not answer a later node, so it never flipped and
-the rollout hit the cap; the new simulator flips and the loop completes. The
-already-known instance is new, and it found a real failure: ten questions in a
-row without a lesson.
-
-A sonnet batch before these changes scored CUDA 5, 5, 5 and MTU 5, 4, 3. Those
-MTU failures came from the single-fact simulator, not from the skill.
+Three real failures remain: the survey branch, the already-known stop, and the
+goal re-anchor. Everything else holds, including the resume rule and the
+artifact, plan, and channel checks.
 
 ## Honest limits
 

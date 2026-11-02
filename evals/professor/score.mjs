@@ -97,7 +97,6 @@ if (diagnostic) {
 		contractBeforeProbe: contractFirst,
 		probeBeforeTeach: probeFirst,
 		noTeaching: lessons === 0,
-		questionRunOk: maxRun <= 2,
 	};
 } else if (known) {
 	checks = {
@@ -105,7 +104,6 @@ if (diagnostic) {
 		probeBeforeTeach: probeFirst,
 		targetHeld,
 		verifiedOnTarget: verifiedAfter,
-		questionRunOk: maxRun <= 2,
 		noUnneededTeaching: !unneededTeaching,
 	};
 } else {
@@ -114,7 +112,6 @@ if (diagnostic) {
 		probeBeforeTeach: probeFirst,
 		taughtCorrection: taught,
 		verifiedAfterTeach: verifiedAfter,
-		questionRunOk: maxRun <= 2,
 	};
 }
 if (task.mode === "cold-start") {

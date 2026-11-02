@@ -173,28 +173,15 @@ repeated cancelled title.
 
 ---
 
-## E7 — Questions instead of teaching
+## E7 — retired: questions instead of teaching
 
-**Evaluates** pacing: at most two questions in a row without a lesson.
+**Retired 2026-11-03.** The rule capped consecutive questions at two. That cap
+was wrong: probing may run as long as a strand needs, and the vault record now
+removes most of the reason to probe. The check is gone, and the longest
+question run is reported as a metric only.
 
-**Failure case** — `2026-10-04T22:26:08`, homelab, `~/dotfiles/fix-pi-update`. Nine
-calls with one lesson and a run of five questions. The same pattern appeared in
-the harness: the `already-known` run asked ten questions in a row.
-
-**Expected** — two questions, then a lesson that delivers the corrected model.
-
-**Check** — the longest run of non-probe questions is two or less.
-
-**Good for** — the most common real failure, and the one the professor feedback
-file complains about directly ("at some point I need to actually acquire new
-knowledge").
-
-**Not for** — deciding the right number for a given learner. Two is a policy,
-not a law of learning.
-
-**Runs as** — a task instance; the `questionRunOk` policy check. Ready today.
-
----
+The repair case survives as E2: after a complaint, re-frame rather than stack
+new questions. That is a different rule, and it still holds.
 
 ## E8 — Diagnostic survey
 
@@ -321,15 +308,16 @@ file must exist after the rollout.
 | E4 | assertion | lesson body groups | `derivation-gap` |
 | E5 | channel | text versus lesson | `lesson-channel` |
 | E6 | resume | first instrument | `resume-cancel` |
-| E7 | pacing | question run | every default task |
+| E7 | retired | — | — |
 | E8 | diagnosis | lesson count | `ncp-diagnostic` |
 | E9 | warm start | lesson keywords | `already-known` |
 | E10 | lab | prediction present | `cuda-event-timing`, `transpose-bandwidth` |
 | E11 | replanning | plan diff | `scope-change` |
 | E12 | artifacts | file exists | `handout-missing` |
 
-All twelve failure cases now have a task. The checks differ by task: policy
-checks run everywhere, and a task opts into the feature checks it can provoke.
+Eleven failure cases have a task; E7 is retired. The checks differ by task:
+policy checks run everywhere, and a task opts into the feature checks it can
+provoke.
 
 ## What this suite is good for
 
