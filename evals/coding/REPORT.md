@@ -129,6 +129,28 @@ a commit. So the Codex history contributes candidates but no verifiable tasks.
 were added (see the table above). Both are stdlib Python, both already have a behaviour-only grader, and both were
 validated red at `base_commit` and green at `final_commit`.
 
+### Treehouse and firstmate briefs
+
+`~/.treehouse/*` holds 17 firstmate crewmate sessions (10 dotfiles, 5 firstmate, 1 no-mistakes, 4 vault… actually 17
+directories). Each prompt is a crewmate launch brief: an orchestration wrapper, then a `# Task` block that is the
+real brief. Three of the dotfiles ones had a landed commit and a test, so they are in the set
+(`dotfiles-quiz-tab-modes`, `dotfiles-run-command-r-shortcut`, `dotfiles-nm-visible-pane`), with the `# Task` block
+copied verbatim as the prompt.
+
+Rejected from that family:
+
+| brief | reason |
+| --- | --- |
+| Phase-2 tree-renderer plan (2 sessions) | The first is an investigation with no code; the second's commit (`b5ee25f9`, PR #193) is 6.2 k lines dominated by vendoring upstream `pi-interactive-subagents`, so the graded work would be "reproduce a vendored tree", not the wiring. |
+| Tavily key verification | Ops/security verification of a local key; nothing to build. |
+| Thinking-tree diagnosis (2 sessions) | Diagnosis tasks whose fix landed as a one-line load-path change; no behaviour test distinguishes the states. |
+| Karabiner home-row mods | The brief requires the agent to propose and wait for captain approval - not autonomous by design. |
+| gh-dash/tuicr scout, karabiner Q&A, no-mistakes cost report | Report-only or read-only investigations. |
+| `firstmate` `bin/fm-brief.sh` one-liner, 5 stacked PRs, `/shipshape`, ask-user escalation | firstmate-repo work, but each one is either a one-line text edit, a no-mistakes pipeline drive, or "the code is already committed on a branch". The ask-user escalation change also spread across rerun branches (`75697a1`/`655e307`/`39a9f07`) with only test edits visible, so the base/final pair could not be pinned honestly. |
+
+So the treehouse/firstmate family added three tasks, all dotfiles; the firstmate repo itself added none, for the
+reasons above.
+
 ## Rejected candidates
 
 | session / commit | reason |

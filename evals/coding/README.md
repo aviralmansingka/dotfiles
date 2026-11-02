@@ -1,6 +1,6 @@
 # Coding eval set
 
-A curated, reproducible set of 23 coding tasks (10 dotfiles, 11 rack-bench, 2 kimi-endpoint) taken from the
+A curated, reproducible set of 26 coding tasks (13 dotfiles, 11 rack-bench, 2 kimi-endpoint) taken from the
 captain's own agent sessions, built so that two models can be compared fairly: **same repo, same base commit, same prompt, same
 verification command**.
 
@@ -69,6 +69,9 @@ are one-line complaints, need a live PTY, or never landed a commit. See REPORT.m
 | `rack-bench-cloud-lab-runbook` | rack-bench | 409 / medium | feature | Docs deliverable with a stated shape: practice runbook (matrix, loop, read-and-fix table, five experiments, SKIP triage, limits) plus the `--config` schema draft. Graded structurally. |
 | `kimi-bench-agentic-harness` | kimi-endpoint | 745 / large | feature | Largest single-file task: five agentic traffic patterns, dry-run payload generation and bench_serving-style metrics. Graded on `--list-patterns`, per-pattern `--dry-run`, and the documented knobs, with no server. |
 | `kimi-trace-profiler` | kimi-endpoint | 516 / large | feature | Debug-and-extend a buggy draft analyzer so it reads three trace formats into workload parameters. Graded hermetically: a private HOME with one synthetic trace and known token totals. |
+| `dotfiles-quiz-tab-modes` | dotfiles | 306 / medium | feature | Treehouse crewmate brief with a real UI contract: Tab cycles steering/note/follow-up and steering keeps the question alive. Gold user-input mode test. |
+| `dotfiles-run-command-r-shortcut` | dotfiles | 424 / medium | feature | Second treehouse brief: an `R` shortcut that runs the command in a Neovim terminal pane and auto-captures output. Gold run-command test. |
+| `dotfiles-nm-visible-pane` | dotfiles | 998 / large | feature | Largest treehouse task: surface no-mistakes in a visible Herdr pane instead of hiding it in tool output. Gold no-mistakes-pane test. |
 
 `size` in the table is changed lines (added + removed); `manifest.jsonl` also carries `files_changed`,
 `lines_added` and `lines_removed`.
@@ -83,7 +86,7 @@ One JSON object per line:
 | `repo` | absolute path of the source repository |
 | `base_commit`, `final_commit` | full SHAs; `final_commit` is the merged task commit |
 | `prompt_file` | path to the prompt, relative to `evals/coding/` |
-| `prompt_source` | `session-first-user-message` (verbatim brief) or `authored-from-commit` (no session existed; written from the landed commit message and diff) |
+| `prompt_source` | `session-first-user-message` (verbatim brief), `treehouse-task-block` (the `# Task` block of a firstmate crewmate brief), or `authored-from-commit` (written from the landed commit message and diff) |
 | `verify` | the exact shell commands, in order; the first entry (when present) checks gold test files out of `final_commit` |
 | `verify_kind` | `gold-tests` (reference tests), `authored-check` (greps/structural), `behaviour-check` (drives the public surface), or a combination |
 | `difficulty` | `small` (≤150 changed lines), `medium` (151–450), `large` (>450) |
