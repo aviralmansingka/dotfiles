@@ -25,13 +25,18 @@
  *
  * `/titles` toggles between title rows and full thinking text (pi's
  * built-in `/thinking` command controls the thinking level, so this one
- * keeps a distinct name). Pi's
- * native hidden row (Ctrl+T, or clicking a title row) shows the
- * HIDDEN_ROW_LABEL — it must stay non-blank, or empty structural rows
- * come back (#thinking-space).
+ * keeps a distinct name).
+ *
+ * Hidden runs (Ctrl+T, or a click on a title row) render HIDDEN_ROW_LABEL.
+ * Pi 1.5.0 renders a run with an empty label as nothing at all, its
+ * spacers included, so the row disappears. Pi 1.4.0 keeps the spacers and
+ * leaves blank lines behind (#thinking-space), so it keeps a visible label.
+ * `hiddenRowLabel` picks per running pi version. A visible label on 1.5.0
+ * shows a bare "✺ thinking" row for every hidden run — an extra bullet row
+ * with no thinking text after it. Ctrl+T brings the title rows back.
  */
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { VERSION, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 /** Pinned title model: cheap, fast, summarization-capable. */
 const TITLE_MODEL = { provider: "fireworks", id: "deepseek-v4-flash-0731" };
@@ -40,8 +45,13 @@ const MAX_TITLE_WORDS = 15;
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const SPINNER_LABEL = "thinking";
 const SPINNER_FRAME_MS = 100;
-/** Non-blank: a blank hidden label re-creates the extra-blank-line bug. */
-const HIDDEN_ROW_LABEL = "✺ thinking";
+/**
+ * First pi release that renders a hidden run with an empty label as no row
+ * and no spacer. Pi 1.4.0 keeps its structural spacers.
+ */
+const EMPTY_LABEL_PI_VERSION = "1.5.0";
+/** Visible label for pi peers that cannot skip an empty hidden run. */
+const LEGACY_HIDDEN_ROW_LABEL = "✺ thinking";
 const GENERIC_TITLE = "reasoning through the request";
 const TITLE_TIMEOUT_MS = 8000;
 const MAX_TITLE_INPUT_CHARS = 4000;
@@ -107,6 +117,29 @@ export function hashText(text: string): string {
 	return hash.toString(16) + ":" + collapsed.length;
 }
 
+/** Loose semver compare: numeric parts only, prerelease builds compare equal. */
+export function atLeastVersion(version: string | undefined, minimum: string): boolean {
+	const parse = (value: string) =>
+		value.split("-")[0].split(".").map((part) => Number.parseInt(part, 10) || 0);
+	const left = parse(version ?? "");
+	const right = parse(minimum);
+	for (let index = 0; index < Math.max(left.length, right.length); index++) {
+		const a = left[index] ?? 0;
+		const b = right[index] ?? 0;
+		if (a !== b) return a > b;
+	}
+	return true;
+}
+
+/**
+ * Label of a hidden thinking run for the running pi version. Empty where pi
+ * skips an empty-label run (no row, no spacer); a visible label elsewhere,
+ * because an empty label there leaves blank rows behind.
+ */
+export function hiddenRowLabel(version: string | undefined): string {
+	return atLeastVersion(version, EMPTY_LABEL_PI_VERSION) ? "" : LEGACY_HIDDEN_ROW_LABEL;
+}
+
 function spinnerLine(): string {
 	const frame = SPINNER_FRAMES[
 		Math.floor(Date.now() / SPINNER_FRAME_MS) % SPINNER_FRAMES.length
@@ -115,6 +148,7 @@ function spinnerLine(): string {
 }
 
 export default function (pi: ExtensionAPI) {
+	const hiddenLabel = hiddenRowLabel(VERSION);
 	/** content hash -> title. Survives branch switches: same text, same title. */
 	const titles = new Map<string, string>();
 	const inFlight = new Set<string>();
@@ -127,7 +161,7 @@ export default function (pi: ExtensionAPI) {
 		repaintTimer = setTimeout(() => {
 			repaintTimer = undefined;
 			try {
-				ctx.ui.setHiddenThinkingLabel(HIDDEN_ROW_LABEL);
+				ctx.ui.setHiddenThinkingLabel(hiddenLabel);
 			} catch {
 				/* headless stub or dead context: nothing to repaint */
 			}
@@ -196,7 +230,8 @@ export default function (pi: ExtensionAPI) {
 	};
 
 	pi.on("session_start", (_event, ctx) => {
-		ctx.ui.setHiddenThinkingLabel(HIDDEN_ROW_LABEL);
+		// Override pi's "Thinking..." default, so a hidden run leaves no row.
+		ctx.ui.setHiddenThinkingLabel(hiddenLabel);
 	});
 
 	pi.on("message_update", (event, ctx) => {
@@ -223,7 +258,7 @@ export default function (pi: ExtensionAPI) {
 		description: "Toggle thinking rows between titles and full text",
 		handler: async (_args, ctx) => {
 			showFullThinking = !showFullThinking;
-			ctx.ui.setHiddenThinkingLabel(HIDDEN_ROW_LABEL);
+			ctx.ui.setHiddenThinkingLabel(hiddenLabel);
 			ctx.ui.notify(
 				showFullThinking ? "Showing full thinking text" : "Showing thinking titles",
 				"info",

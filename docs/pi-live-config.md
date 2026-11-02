@@ -60,14 +60,29 @@ then the pinned `fireworks/deepseek-v4-flash-0731` model replaces it with a
 10-15 word title (never awaited inside a handler; failures keep the
 heuristic). `/titles` toggles title rows and full thinking text.
 
+Hiding thinking rows (Ctrl+T, or a click on a title row) leaves no stray
+row. The hidden label depends on the running pi release, because an empty
+label renders differently on each:
+
+| pi | empty hidden label | what the extension sets |
+|---|---|---|
+| 1.5.0 and newer | no row, no spacer | empty — the run disappears |
+| 1.4.0 | keeps its structural spacers (five blank rows, #thinking-space) | `✺ thinking` |
+
+`hiddenRowLabel(VERSION)` picks per release. A visible label on 1.5.0 is
+the bug this gate fixes: it shows a bare `✺ thinking` bullet row for every
+hidden run, with no thinking text after it. A whitespace-only thinking run
+the "thinking off" shape — renders no row on any release.
+
 Two tests guard the contract. `scripts/test-pi-hidden-thinking.mjs` (CI)
 checks repo wiring and live deployment state read-only, including that the
 retired bundle patch stays retired. `pi/.pi/agent/extensions/
-thinking-title.test.mjs` (CI) pins the render rules and the nested title
-calls. `scripts/test-pi-hidden-thinking-render.py` (local, no model call)
-renders a fixture session with thinking between two bash calls in a real
-TUI and asserts each thinking row is one title line with a blank, title,
-blank gap between the tool rows:
+thinking-title.test.mjs` (CI) pins the render rules, the version gate, and
+the nested title calls. `scripts/test-pi-hidden-thinking-render.py` (local,
+no model call) renders a fixture session with thinking between two bash
+calls in a real TUI. It asserts each visible thinking row is one title line
+with a blank, title, blank gap between the tool rows, and that a hidden
+thinking run shows the row its release allows with no doubled blank lines:
 
 ```sh
 uv run --with pyte scripts/test-pi-hidden-thinking-render.py

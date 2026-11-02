@@ -1,13 +1,29 @@
 #!/usr/bin/env python3
 """Render-level guard for thinking-title rows.
 
-Opens a fixture session (a short and a long thinking block, each before a
-bash call) in a real pi TUI inside a PTY, replays the terminal stream, and
-asserts the rendered transcript shows each thinking run as ONE title row:
-the short block verbatim (codex-style), the long block as its first
-sentence. Between the two tool rows the gap must be exactly blank, title,
-blank. This catches deployment drift (extension not stowed, settings not
-synced, hideThinkingBlock back on) that state checks alone can miss.
+Two phases, both rendered through a real pi TUI inside a PTY and replayed
+with pyte. No model call happens.
+
+Visible phase (live pi install): a fixture session with a short and a long
+thinking block, each before a bash call, must show each thinking run as ONE
+title row — the short block verbatim (codex-style), the long block as its
+first sentence. Between the two tool rows the gap must be exactly blank,
+title, blank. This catches deployment drift (extension not stowed, settings
+not synced, hideThinkingBlock back on) that state checks alone can miss.
+
+Hidden phase (isolated agent dir with hideThinkingBlock on): the same
+fixture must show no extra row and no doubled blank lines. The hidden row
+depends on the pi version:
+- pi 1.5.0 and newer: the extension hands pi an empty label, and pi renders
+  such a run as nothing, spacers included. No "✺ thinking" row may appear.
+- pi 1.4.0: an empty label leaves its structural spacers behind
+  (#thinking-space), so the extension keeps the visible "✺ thinking" label.
+  Exactly one label row per hidden run, with single blank lines around it.
+
+This phase names the branch's own extension file, so it tests the code
+under change instead of the deployed copy. It also renders a message whose
+only thinking block is whitespace: that is the "thinking off" case, and no
+row may appear for it on any version.
 
 The spinner that animates while a run streams cannot be captured from a
 completed-session fixture; its rules are pinned in
@@ -17,8 +33,7 @@ Run locally (needs the live pi install; no model call happens):
 
     uv run --with pyte scripts/test-pi-hidden-thinking-render.py
 
-Skips with exit 0 when pi, pyte, or the extension is unavailable or when
-hideThinkingBlock is on (the transformer only runs on the visible path).
+Each phase skips with a printed reason when its inputs are unavailable.
 """
 import json
 import os
@@ -36,10 +51,16 @@ import termios
 
 ROWS, COLS = 100, 100
 
+FINAL_TEXT = "fixture complete"
 SHORT_TITLE = "Planning the first command."
 LONG_FIRST_SENTENCE = (
     "Checking the first result carefully before deciding whether the "
     "second command is necessary"
+)
+
+REPO_EXTENSION = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "pi/.pi/agent/extensions/thinking-title.ts",
 )
 
 
@@ -86,18 +107,22 @@ def build_session(path: str) -> None:
                tool_two], stopReason="toolUse", **assistant),
         entry("e-r2", "e-a2", "toolResult",
               [{"type": "text", "text": "two\n"}], toolCallId="tc-two", toolName="bash"),
+        # Whitespace-only thinking run: the "thinking off" shape. Pi skips an
+        # empty run on every release, so no row may appear for it.
         entry("e-a3", "e-r2", "assistant",
-              [{"type": "text", "text": "done"}], stopReason="stop", **assistant),
+              [{"type": "thinking", "thinking": "  \n\t "},
+               {"type": "text", "text": FINAL_TEXT}], stopReason="stop", **assistant),
     ]
     with open(path, "w") as handle:
         for line in lines:
             handle.write(json.dumps(line) + "\n")
 
 
-def capture(command: list[str]) -> bytes:
+def capture(command: list[str], env: dict | None = None) -> bytes:
     master, slave = pty.openpty()
     child = subprocess.Popen(command, stdin=slave, stdout=slave, stderr=slave,
-                             cwd="/tmp", close_fds=True, preexec_fn=os.setsid)
+                             cwd="/tmp", close_fds=True, preexec_fn=os.setsid,
+                             env=env)
     os.close(slave)
     fcntl.ioctl(master, termios.TIOCSWINSZ, struct.pack("HHHH", ROWS, COLS, 0, 0))
     raw = bytearray()
@@ -114,7 +139,7 @@ def capture(command: list[str]) -> bytes:
                 break
             raw.extend(chunk)
             last = time.time()
-        elif b"echo two" in bytes(raw) and time.time() - last > 2.5:
+        elif FINAL_TEXT.encode() in bytes(raw) and time.time() - last > 2.5:
             break
     try:
         os.killpg(os.getpgid(child.pid), signal.SIGTERM)
@@ -132,44 +157,43 @@ def replay(raw: bytes) -> list[str]:
                     for x in range(COLS)).rstrip() for y in range(ROWS)]
 
 
-def main() -> None:
-    if not shutil.which("pi"):
-        skip("pi is not on PATH")
-    try:
-        import pyte  # noqa: F401
-    except ImportError:
-        skip("pyte is missing; run with: uv run --with pyte scripts/test-pi-hidden-thinking-render.py")
+def find(rows: list[str], marker: str, start: int) -> int:
+    for index in range(start, ROWS):
+        if marker in rows[index]:
+            return index
+    return -1
 
-    settings_path = os.path.join(os.environ.get("PI_CODING_AGENT_DIR",
-                                                os.path.expanduser("~/.pi/agent")), "settings.json")
+
+def agent_dir() -> str:
+    return os.environ.get("PI_CODING_AGENT_DIR", os.path.expanduser("~/.pi/agent"))
+
+
+def check_visible_rows(session: str) -> None:
+    """Live install: each thinking run is one title row, gap blank/title/blank."""
+    settings_path = os.path.join(agent_dir(), "settings.json")
     if not os.path.exists(settings_path):
-        skip(f"no pi settings at {settings_path}")
+        print(f"SKIP visible phase: no pi settings at {settings_path}")
+        return
     settings = json.load(open(settings_path))
     if settings.get("hideThinkingBlock") is True:
-        skip("hideThinkingBlock is on; the thinking-title contract needs the visible markdown path")
-    if not any("+extensions/thinking-title.ts" == entry for entry in settings.get("extensions", [])):
-        skip("thinking-title.ts is not enabled in live settings; deploy first (merge + stow, or pi-settings-sync)")
+        print("SKIP visible phase: hideThinkingBlock is on; the title rows need the"
+              " visible markdown path")
+        return
+    if "+extensions/thinking-title.ts" not in settings.get("extensions", []):
+        print("SKIP visible phase: thinking-title.ts is not enabled in live settings;"
+              " deploy first (merge + stow, or pi-settings-sync)")
+        return
 
-    with tempfile.TemporaryDirectory(prefix="pi-hidden-thinking-render-") as tmp:
-        session = os.path.join(tmp, "fixture.jsonl")
-        build_session(session)
-        raw = capture(["pi", "--session", session, "--tui-mode", "regular", "--offline"])
-
+    raw = capture(["pi", "--session", session, "--tui-mode", "regular", "--offline"])
     rows = replay(raw)
     text = "\n".join(rows)
 
-    def find(marker: str, start: int) -> int:
-        for index in range(start, ROWS):
-            if marker in rows[index]:
-                return index
-        return -1
-
-    call_one = find("echo one", 0)
+    call_one = find(rows, "echo one", 0)
     if call_one < 0:
         print("FAIL: first bash call row did not render; transcript was:\n" + text)
         sys.exit(1)
-    result_one = find("└─", call_one + 1)
-    call_two = find("echo two", result_one + 1)
+    result_one = find(rows, "└─", call_one + 1)
+    call_two = find(rows, "echo two", result_one + 1)
     if result_one < 0 or call_two < 0:
         print("FAIL: could not locate both tool rows; transcript was:\n" + text)
         sys.exit(1)
@@ -182,13 +206,14 @@ def main() -> None:
         print("\n".join(f"{i:3d}|{rows[i]}" for i in range(call_one, call_two + 1)))
         sys.exit(1)
 
+    # The title row carries pi's output pad, so compare its stripped text.
     gap = rows[result_one + 1:call_two]
-    if len(gap) != 3 or not gap[0] or gap[1] != LONG_FIRST_SENTENCE or not gap[2]:
+    if len(gap) != 3 or gap[0].strip() or gap[1].strip() != LONG_FIRST_SENTENCE or gap[2].strip():
         print(f"FAIL: expected [blank, '{LONG_FIRST_SENTENCE}', blank] between the tool rows, got:")
         print("\n".join(f"{i:3d}|{rows[i]}" for i in range(call_one, call_two + 1)))
         sys.exit(1)
 
-    if find(SHORT_TITLE, 0) < 0:
+    if find(rows, SHORT_TITLE, 0) < 0:
         print("FAIL: the short (codex-style) thinking block did not render verbatim as a title row")
         print("\n".join(f"{i:3d}|{rows[i]}" for i in range(0, call_one + 1)))
         sys.exit(1)
@@ -198,8 +223,132 @@ def main() -> None:
             print("FAIL: a spinner frame rendered in a completed transcript")
             sys.exit(1)
 
-    print("render check passed: title rows render, gap is blank/title/blank, no spinner frames")
-    print("\n".join(f"{i:3d}|{rows[i]}" for i in range(call_one, call_two + 1)))
+    print("visible phase passed: title rows render, gap is blank/title/blank, no spinner frames")
+
+
+# pi 1.5.0 renders a hidden run with an empty label as no row and no
+# spacer. Pi 1.4.0 keeps the spacers, so the extension keeps a visible
+# label there. Keep this mirror in step with hiddenRowLabel in
+# pi/.pi/agent/extensions/thinking-title.ts.
+EMPTY_LABEL_FROM = (1, 5, 0)
+LEGACY_HIDDEN_LABEL = "✺ thinking"
+
+
+def pi_version() -> tuple[int, ...]:
+    out = subprocess.run(["pi", "--version"], capture_output=True, text=True, timeout=60)
+    text = (out.stdout + out.stderr).strip().splitlines()
+    if not text:
+        return ()
+    parts = text[0].strip().split(".")
+    try:
+        return tuple(int(part.split("-")[0]) for part in parts)
+    except ValueError:
+        return ()
+
+
+def expected_hidden_label(version: tuple[int, ...]) -> str:
+    """Mirror of the extension's hiddenRowLabel gate."""
+    if not version:
+        return LEGACY_HIDDEN_LABEL
+    return "" if version >= EMPTY_LABEL_FROM else LEGACY_HIDDEN_LABEL
+
+
+def max_blank_run(rows: list[str]) -> int:
+    longest = current = 0
+    for row in rows:
+        if row.strip():
+            current = 0
+        else:
+            current += 1
+            longest = max(longest, current)
+    return longest
+
+
+def fail(message: str, rows: list[str], start: int, end: int) -> None:
+    print("FAIL: " + message)
+    print("\n".join(f"{i:3d}|{rows[i]}" for i in range(start, end + 1)))
+    sys.exit(1)
+
+
+def check_hidden_rows(tmp: str, session: str) -> None:
+    """Hidden thinking: the version's agreed row, no doubled blank lines.
+
+    The isolated agent dir carries only hideThinkingBlock plus the branch's
+    own extension file, so this phase does not depend on the live deploy.
+    """
+    if not os.path.exists(REPO_EXTENSION):
+        print(f"SKIP hidden phase: no extension at {REPO_EXTENSION}")
+        return
+
+    version = pi_version()
+    label = expected_hidden_label(version)
+    shown = ".".join(str(part) for part in version) or "unknown"
+
+    hidden_dir = os.path.join(tmp, "hidden-agent")
+    os.makedirs(hidden_dir, exist_ok=True)
+    with open(os.path.join(hidden_dir, "settings.json"), "w") as handle:
+        json.dump({"hideThinkingBlock": True}, handle)
+
+    env = dict(os.environ, PI_CODING_AGENT_DIR=hidden_dir)
+    raw = capture(["pi", "--session", session, "--tui-mode", "regular",
+                   "--offline", "-e", REPO_EXTENSION], env=env)
+    rows = replay(raw)
+
+    user_row = find(rows, "Run echo one", 0)
+    final_row = find(rows, FINAL_TEXT, user_row + 1 if user_row >= 0 else 0)
+    if user_row < 0 or final_row < 0:
+        fail("hidden-phase fixture did not render", rows, 0, ROWS - 1)
+    transcript = rows[user_row:final_row + 1]
+    body = "\n".join(transcript)
+
+    if SHORT_TITLE in body:
+        fail("a title row rendered while thinking rows were hidden", rows, user_row, final_row)
+
+    label_rows = [row for row in transcript if LEGACY_HIDDEN_LABEL in row]
+    if not label:
+        if label_rows:
+            fail(f"pi {shown} drops a hidden run with an empty label, but a"
+                 f" '{LEGACY_HIDDEN_LABEL}' row rendered (the extra bullet row the user reported)",
+                 rows, user_row, final_row)
+    else:
+        if len(label_rows) != 2:
+            fail(f"pi {shown} keeps a visible hidden label: expected one"
+                 f" '{LEGACY_HIDDEN_LABEL}' row per hidden run, got {len(label_rows)}",
+                 rows, user_row, final_row)
+
+    stray = [row for row in transcript
+             if "thinking" in row.lower() and LEGACY_HIDDEN_LABEL not in row]
+    if stray:
+        fail("a hidden thinking run rendered stray text: " + stray[0].strip(), rows, user_row, final_row)
+
+    # Doubled blank lines are the #thinking-space failure: an empty label on a
+    # release that keeps its structural spacers leaves five blank rows behind.
+    # The label path itself pads two blank rows around the label, so allow that.
+    allowed = 2 if label else 3
+    if max_blank_run(transcript) > allowed:
+        fail(f"the hidden transcript gained extra blank rows (max {max_blank_run(transcript)},"
+             f" allowed {allowed})", rows, user_row, final_row)
+
+    contract = "no row" if not label else f"one '{label}' row per hidden run"
+    print(f"hidden phase passed (pi {shown}): hidden runs render {contract},"
+          f" no doubled blank lines")
+
+
+def main() -> None:
+    if not shutil.which("pi"):
+        skip("pi is not on PATH")
+    try:
+        import pyte  # noqa: F401
+    except ImportError:
+        skip("pyte is missing; run with: uv run --with pyte scripts/test-pi-hidden-thinking-render.py")
+
+    with tempfile.TemporaryDirectory(prefix="pi-hidden-thinking-render-") as tmp:
+        session = os.path.join(tmp, "fixture.jsonl")
+        build_session(session)
+        check_visible_rows(session)
+        check_hidden_rows(tmp, session)
+
+    print("render check passed")
 
 
 if __name__ == "__main__":

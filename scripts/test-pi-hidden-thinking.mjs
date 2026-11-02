@@ -3,10 +3,13 @@
 // Thinking rows render spinner-then-title through the thinking-title
 // extension, with no bundle patching: the extension transformer owns the
 // assistant-thinking markdown, so `pi update` can no longer drop the fix.
-// This guard pins the wiring (settings entries, extension files, retired
-// patch artifacts) and checks the live install read-only. The unit rules
-// live in thinking-title.test.mjs; the rendered transcript contract lives
-// in scripts/test-pi-hidden-thinking-render.py.
+// Hiding rows keeps no stray bullet row: the extension hands pi an empty
+// hidden label on 1.5.0 and newer, and a visible label on 1.4.0 (an empty
+// label there leaves blank rows behind). This guard pins the wiring
+// (settings entries, extension files, retired patch artifacts) and checks
+// the live install read-only. The unit rules live in
+// thinking-title.test.mjs; the rendered transcript contract lives in
+// scripts/test-pi-hidden-thinking-render.py.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -21,7 +24,8 @@ const retiredExtension = path.join(checkout, 'pi/.pi/agent/extensions/thinking-b
 
 assert(fs.existsSync(repoExtension), 'pi/.pi/agent/extensions/thinking-title.ts must exist');
 assert(!fs.existsSync(retiredPatch), 'scripts/pi-patch-hidden-thinking must stay retired (bundle patching is gone)');
-assert(!fs.existsSync(retiredExtension), 'thinking-blank.ts must stay retired (a blank label re-creates the extra-line bug)');
+assert(!fs.existsSync(retiredExtension),
+  'thinking-blank.ts must stay retired: the hidden label now lives in thinking-title.ts, gated per pi version');
 
 const base = JSON.parse(fs.readFileSync(repoSettings, 'utf8'));
 assert(base.extensions.includes('+extensions/thinking-title.ts'),
@@ -44,7 +48,7 @@ if (!fs.existsSync(versionFile)) {
   assert(!live.extensions.some((entry) => entry.includes('thinking-blank')),
     'live settings must not reference thinking-blank');
   assert(live.hideThinkingBlock !== true,
-    `live settings hideThinkingBlock must not be true: hidden rows render one shared label and cannot show per-block titles`);
+    `live settings hideThinkingBlock must not be true: hidden rows cannot show per-block titles`);
   assert(fs.existsSync(path.join(agentDir, 'extensions/thinking-title.ts')),
     'live extensions dir must contain thinking-title.ts (stow pi/ or re-run install.sh)');
 
