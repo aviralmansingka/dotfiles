@@ -1,0 +1,24 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "layers": [
+    ["rms"],
+    ["oob"],
+    ["bmc_c", "bmc_s", "pwr", "nvos"]
+  ],
+  "nodes": [
+    { "id": "rms", "label": "nv-rms" },
+    { "id": "oob", "label": "OOB LAN" },
+    { "id": "bmc_c", "label": "Compute BMC" },
+    { "id": "bmc_s", "label": "NVSwitch BMC" },
+    { "id": "pwr", "label": "Power shelf" },
+    { "id": "nvos", "label": "NVOS" }
+  ],
+  "edges": [
+    { "from": "rms", "to": "oob", "label": "client" },
+    { "from": "oob", "to": "bmc_c", "label": "power serial" },
+    { "from": "oob", "to": "bmc_s", "label": "power serial" },
+    { "from": "oob", "to": "pwr", "label": "power serial" },
+    { "from": "oob", "to": "nvos", "label": "reach hist." }
+  ]
+}

@@ -1,0 +1,10 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/01/server-nic-layout/specs/vA-host-tor.json",
+    "sha256": "91e8bb79a1cdc09582d7e1217394dd781f8c329247391f1c20268db67b32e549"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/01/server-nic-layout/specs/vB-upstream.json",
+    "sha256": "73e2d48c87e9ff021086998f835a1153c04fb2526329076f13ec464aee1aa5f0"
+  }
+]

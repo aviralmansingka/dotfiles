@@ -1,0 +1,50 @@
+ rataflow-view · 83x51 @100% · v2.json · 7 nodes · 7 edges · q quit
+
+
+
+
+
+
+
+                ╭───────────╮
+                │River queue│
+                │           │
+                ╰───────────╯
+                 │ provision job
+                 │
+                 ●
+                 ▼
+                ╭─────────────╮                   ╭──────────────╮
+                │prov registry│                   │reconcile loop│
+                │             │                   │              │
+                ╰─────────────╯                   ╰──────────────╯
+                 │           gcore sync 1m         │ │
+                 │ ╭────────────────────────────●──╯ │
+                 ● │provider API      cluster state╭●╯
+                 ▼ ▼                               ▼
+                ╭───────────────╮                 ╭────────╮
+                │metal providers│                 │Postgres│
+                │               │                 │        │
+                ╰───────────────╯                 ╰────────╯
+                 │
+                 │
+                 ●
+                 ▼ alloc instance
+                ╭────────╮
+             ╭─▶│machines│
+             │  │        │
+             │  ╰────────╯
+             │   │
+             │   │ iPXE request
+             ●   ●
+             │   ▼
+             │  ╭───────────╮
+             ╰──│boot server│
+                │           │
+                ╰───────────╯
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘

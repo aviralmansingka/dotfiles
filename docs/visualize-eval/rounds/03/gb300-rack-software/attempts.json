@@ -1,0 +1,47 @@
+{
+  "case_id": "gb300-rack-software",
+  "round": "03",
+  "note": "Spec attempt budget: at most 3 local specs per view, at most 4 views. The entry 'exploration-all-13' is not a final view; it is the abandoned single-view attempt, kept so the crossing comparison is auditable.",
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "spec": "specs/attempts-v1-a.json",
+          "spec_sha256": "f09bf4622d4dd305faed41af38e723a8d614cc508a3c7943ab30292e1a8f5004",
+          "note": "explicit 4 layers, trunk corridor ended at Compute BMC with NVSwitch BMC/Power shelf as branches -> renderer error 'no obstacle-safe route for oob -> pwr'. Rejected."
+        },
+        {
+          "spec": "specs/attempts-v1-b.json",
+          "spec_sha256": "300f82698f8df1d01f7b9d6972c7d43aca579e02f59545f735bd4843feb4cb1a",
+          "note": "no explicit layers (sugiyama), corridor ended at Power shelf -> extent 101x26, crossings 7, overflows the 77-column target. Rejected."
+        },
+        {
+          "spec": "specs/attempts-all-c.json",
+          "spec_sha256": "88b4e584e92b778ad4272691898f8c11a1bfe348f18de64b958215550825320c",
+          "note": "explicit 4 layers with NVOS in the device band, corridor ended at Power shelf -> extent 59x31, crossings 3 (best of the three, and the only one inside 77x47). Kept. The shipped specs/v1.json differs from this spec in ONE edge label only ('NVUE/NMX gRPC' -> 'NVUE REST+gRPC'); extent 59x31, crossings 3, labels 6/6 are unchanged, so the chosen layout is the measured one."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "attempts": [
+        {
+          "spec": "specs/v2.json",
+          "spec_sha256": "c660806f0e4547e7aca587de341bd71e65a0a0cce996f539f8ad460d329f04a0",
+          "note": "explicit 5-layer tb chain, dcgm-exporter and Driver+CUDA side by side -> extent 33x37, crossings 0, labels 5/5. Kept on the first attempt."
+        }
+      ]
+    },
+    {
+      "view": "exploration-all-13",
+      "attempts": [
+        {
+          "spec": "specs/attempts-v0-all.json",
+          "spec_sha256": "ff63b8bb05c155afa06a6c7990326b12448b53d7717c184f731c16a7c3781d03",
+          "note": "one view for all 13 nodes: extent 61x41, crossings 7, labels 9/11 (2 skipped), renderer warning above the 12/16 readable budget. Abandoned in favour of the two-view split."
+        }
+      ]
+    }
+  ]
+}

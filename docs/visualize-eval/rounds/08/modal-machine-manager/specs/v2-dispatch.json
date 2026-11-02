@@ -1,0 +1,28 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "q", "label": "River queue", "group": "jobs" },
+    { "id": "reg", "label": "provider registry", "group": "providers" },
+    { "id": "ssh", "label": "SSH + BMC", "group": "ops" },
+    { "id": "jan", "label": "janitor app", "group": "ops" },
+    { "id": "web", "label": "humans + mmctl", "group": "humans" },
+    { "id": "prov", "label": "providers", "group": "providers" },
+    { "id": "mch", "label": "machines", "group": "plant" },
+    { "id": "wapi", "label": "webapi", "group": "control" }
+  ],
+  "layers": [
+    ["q"],
+    ["reg", "ssh", "jan", "web"],
+    ["prov", "mch", "wapi"]
+  ],
+  "edges": [
+    { "from": "q", "to": "reg", "label": "provision", "flow": true, "dots": 1 },
+    { "from": "q", "to": "ssh", "label": "reimage", "flow": true, "dots": 1 },
+    { "from": "q", "to": "jan", "label": "diagnostics", "flow": true, "dots": 1 },
+    { "from": "web", "to": "wapi", "label": "http", "flow": true, "dots": 1 },
+    { "from": "reg", "to": "prov", "label": "API", "flow": true, "dots": 1 },
+    { "from": "ssh", "to": "mch", "label": "run audit", "flow": true, "dots": 1 },
+    { "from": "jan", "to": "wapi", "label": "proposals", "flow": true, "dots": 1 }
+  ]
+}

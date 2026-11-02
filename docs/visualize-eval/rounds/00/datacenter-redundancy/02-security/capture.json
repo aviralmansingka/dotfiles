@@ -1,0 +1,23 @@
+{
+  "pane_id": "w7E:p2G",
+  "tab_id": "w7E:tD",
+  "rows": 47,
+  "cols": 77,
+  "zoom": "natural initial 1; no zoom/fit input",
+  "animation": false,
+  "states": [
+    {
+      "state": "unselected",
+      "captured_at": "2026-11-02T08:20:02.401679+00:00",
+      "text": "visible.txt",
+      "ansi": "visible.ansi"
+    },
+    {
+      "state": "selected",
+      "captured_at": "2026-11-02T08:20:02.728852+00:00",
+      "text": "visible-selected.txt",
+      "ansi": "visible-selected.ansi"
+    }
+  ],
+  "selection_ansi_changed": true
+}

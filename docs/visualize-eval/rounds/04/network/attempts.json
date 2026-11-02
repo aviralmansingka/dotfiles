@@ -1,0 +1,89 @@
+{
+  "case_id": "network",
+  "round": "04",
+  "attempt_budget": "3 spec candidates per view, counting every --check run on a distinct spec",
+  "views": [
+    {
+      "view": "v1",
+      "label": "network path and application relations, single view",
+      "attempts": [
+        {
+          "spec": "specs/v1-a1.json",
+          "spec_sha256": "91cc83303275727d2b77df82703be7b4f9a03d1bf3c49ace7a0e5736e1dbb511",
+          "check_output": null,
+          "rendered_frame": "dumps/v1-a1-frame0.txt",
+          "verdict": "rejected before spending a --check",
+          "note": "cache in a right-hand column (col2), db under the chain; rendered frame shows one bridge (U+232C glyph between core->cache's descent and web->cache's run at frame rows 27-28 of dumps/v1-a1-frame0.txt). Rejected because the crossing had to be removed by changing the layout, not by accepting the bridge."
+        },
+        {
+          "spec": "specs/v1-a2.json",
+          "spec_sha256": "ab2d2d8b1e64c6128d4e5a6f69d7a4a812687d79f5a87b390a9c412e8b6eb8d1",
+          "check_output": "checks/v1-a2.check.txt",
+          "rendered_frame": "dumps/v1-a2-frame0.txt",
+          "verdict": "rejected",
+          "note": "--check: crossings 0 bridges / 0 touching bends, routes 7/7 near-minimal 0 detours, origins 7/7, but 'labels: 7/7 placed, 0 on route cells, 0 skipped, 2 ambiguous owners' plus the ambiguity warning. Ambiguity was measured at the two tight label centres: (28,21) for '25 GbE' (own route core->cache is 6 cells away, core->web's adjacent stem 4) and (32,32) for 'session' (own route 5 cells away, web->db's row-30 run 2)."
+        },
+        {
+          "spec": "specs/v1-a3.json",
+          "spec_sha256": "3a2a475ace1149a25048717a2c01e6df4971e74002642b38266baeca8f90f2a3",
+          "check_output": "checks/v1-a3.check.txt",
+          "rendered_frame": "evidence/v1/v1-text.txt",
+          "verdict": "accepted",
+          "note": "Accepted layout: chain column in the second slot with cache to its left and db far right. Moves the graph's own bounding box to the left of the cache descents, which is what gives '25 GbE' and 'session' interior slots: --check reads 0 bridges, 0 detours, 7/7 origins, 0 ambiguous owners, and the harness capture confirms --check on the same spec (evidence/v1/check.txt)."
+        }
+      ]
+    }
+  ],
+  "geometry_probes": [
+    {
+      "probe": "col1",
+      "dump": "dumps/probe-col1.txt",
+      "note": "cache one column right of the chain: 1 bridge at the core->cache / web->cache overlap. Rejected by eye, no --check spent."
+    },
+    {
+      "probe": "col3",
+      "dump": "dumps/probe-col3.txt",
+      "note": "same shape with a wider cache offset: still 1 bridge. Rejected by eye."
+    },
+    {
+      "probe": "db_col2 / db_col3",
+      "dump": "dumps/probe-db_col2.txt, dumps/probe-db_col3.txt",
+      "note": "cache directly under web with db offset right: no bridge, but labels sit in the core fan-out corner (measured ambiguous by hand). Led to the v1-a2 candidate."
+    },
+    {
+      "probe": "left_cache",
+      "dump": "dumps/probe-left_cache.txt",
+      "note": "cache under web, db offset right: no bridge, label rows crowded at the core ports. Rejected by eye."
+    },
+    {
+      "probe": "web_right",
+      "dump": "dumps/probe-web_right.txt",
+      "note": "web offset right, cache under core, db offset right: no bridge; '25 GbE' still lands 5 cells from its route and 3 from core->web's run. Rejected."
+    },
+    {
+      "probe": "wr_db2 / wr_db3",
+      "dump": "dumps/probe-wr_db2.txt, dumps/probe-wr_db3.txt, dumps/probe-wr_db3.json",
+      "note": "web offset right, cache under core, db further right: the spread that became v1-a2's geometry."
+    },
+    {
+      "probe": "wr_db3_swapcore",
+      "dump": "dumps/probe-wr_db3_swapcore.txt",
+      "note": "edge-order swap (core->cache listed before core->web) to change label placement order: label positions unchanged, so order was not the lever. Rejected."
+    },
+    {
+      "probe": "webcache_same",
+      "dump": "dumps/probe-webcache_same.txt",
+      "note": "5-layer alternative with web and Redis on one tier band (horizontal 'session' arrow). Compact, but the source's tier depth for Redis is not free to reinterpret, so it stayed a probe."
+    },
+    {
+      "probe": "mirror_cache_left / mirror_cache_left2",
+      "dump": "dumps/probe-mirror_cache_left.txt, dumps/probe-mirror_cache_left2.json",
+      "note": "chain in the second column, cache left, db right: the accepted direction. mirror_cache_left2 is the geometry of v1-a3."
+    }
+  ],
+  "checks_run": [
+    { "spec_sha256": "ab2d2d8b1e64c6128d4e5a6f69d7a4a812687d79f5a87b390a9c412e8b6eb8d1", "file": "checks/v1-a2.check.txt" },
+    { "spec_sha256": "3a2a475ace1149a25048717a2c01e6df4971e74002642b38266baeca8f90f2a3", "file": "checks/v1-a3.check.txt" },
+    { "spec_sha256": "3a2a475ace1149a25048717a2c01e6df4971e74002642b38266baeca8f90f2a3", "file": "evidence/v1/check.txt", "note": "same spec, run by scripts/viz-evidence.sh" }
+  ]
+}

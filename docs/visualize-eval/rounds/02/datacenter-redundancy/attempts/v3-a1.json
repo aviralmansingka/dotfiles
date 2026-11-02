@@ -1,0 +1,29 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "sp1", "label": "Spine 1", "group": "routing" },
+    { "id": "sp2", "label": "Spine 2", "group": "routing" },
+    { "id": "bl1", "label": "BL 1", "group": "leaf" },
+    { "id": "bl2", "label": "BL 2", "group": "leaf" },
+    { "id": "leaf1", "label": "Leaf 1", "group": "leaf" },
+    { "id": "leaf2", "label": "Leaf 2", "group": "leaf" },
+    { "id": "rack1", "label": "Rack 1", "group": "compute" },
+    { "id": "rack2", "label": "Rack 2", "group": "compute" }
+  ],
+  "layers": [["sp1", "sp2"], [""], ["bl1", "bl2", "leaf1", "leaf2"], [""], ["rack1", "rack2"]],
+  "edges": [
+    { "from": "bl1", "to": "sp1", "label": "ECMP", "dots": 1 },
+    { "from": "bl1", "to": "sp2", "label": "ECMP", "dots": 1 },
+    { "from": "bl2", "to": "sp1", "label": "ECMP", "dots": 1 },
+    { "from": "bl2", "to": "sp2", "label": "ECMP", "dots": 1 },
+    { "from": "sp1", "to": "leaf1", "label": "ECMP", "dots": 1 },
+    { "from": "sp1", "to": "leaf2", "label": "ECMP", "dots": 1 },
+    { "from": "sp2", "to": "leaf1", "label": "ECMP", "dots": 1 },
+    { "from": "sp2", "to": "leaf2", "label": "ECMP", "dots": 1 },
+    { "from": "leaf1", "to": "rack1", "label": "dual", "dots": 1 },
+    { "from": "leaf2", "to": "rack1", "label": "dual", "dots": 1 },
+    { "from": "leaf1", "to": "rack2", "label": "dual", "dots": 1 },
+    { "from": "leaf2", "to": "rack2", "label": "dual", "dots": 1 }
+  ]
+}

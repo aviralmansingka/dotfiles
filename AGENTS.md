@@ -135,10 +135,23 @@ fixes upstream (watch zenbu-labs #221).
 builds single-file HTML artifacts — decks, dashboards, infographics — and routes
 graph-shaped requests to `visualize` by default. `visualize` is the ratatui-only skill:
 live node graphs from a JSON spec through `rataflow-view` (crate in `rataflow/`, a thin
-wrapper on the `rataflow` crate) in a herdr pane (`pane split` + `pane run`) — gruvbox
-styling, plain background, and animated flow dots on edges with a `flow` speed. Chat
-replies use the mermaid tool; static ANSI and PNG belong to the mermaid skill. Open
+wrapper on the `rataflow` crate) in a herdr pane (`pane split` + `pane run`). The renderer
+owns the character grid: `rataflow/src/router.rs` gives every edge its own port and an
+A*-planned corridor (no shared runs), `group` gives related concepts a hue family
+(geometry never groups), declared `trunks` draw one bus that splits, `dots: 1` keeps one live
+dot per route, `style: "dashed"` marks an unconfirmed link, edges stay muted, and the accent
+is reserved for selection and flow dots, the fit never zooms below 100% (an oversize graph says so instead
+of clipping labels), and `--check` reports extent, shared corridors, dropped labels, label cells
+on routes, group/trunk membership, and dot violations.
+Chat replies use the mermaid tool; static ANSI and PNG belong to the mermaid skill. Open
 panes through the herdr CLI, never raw tmux, and never paste pane art into chat.
+The eval harness binds claims to code: `scripts/viz-evidence.sh` captures one view (binary hash,
+`viewport:` line, text/ANSI, `--select-all`, `--frames`) and proves its pane close,
+`scripts/viz-validate.py` rejects an over-budget or evidence-poor sample,
+`scripts/viz-aggregate.py` recomputes `matrix.json` from verified judge results, and
+`scripts/viz-review-panes.sh` opens the blocking human-review tabs (one per case, baseline
+round left, evaluated round right, each drawn by its own binary) with the feedback file at
+`docs/visualize-eval/rounds/<r>/human-review/feedback.md`.
 install.sh builds the binary (`cargo install --path rataflow --locked`);
 `scripts/test-rataflow.py` is the offline CI suite, with `RATAFLOW_BUILD=1` adding the
 cargo tests as a local pre-merge gate.

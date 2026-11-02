@@ -1,0 +1,97 @@
+{
+  "case_id": "server-nic-layout",
+  "round": "04",
+  "budget_note": "Three spec candidates per view. The v0 entry is the abandoned single-view design: it was the view under work before the split, so its two probes are recorded here rather than folded into v1. No evidence bundle exists for v0 because it was abandoned before capture.",
+  "views": [
+    {
+      "view": "v0-access-single-view (abandoned)",
+      "attempts": [
+        {
+          "spec": "attempts/v0-attempt1.json",
+          "spec_sha256": "cb623c1f47bd4b1bd8b413633adb02544146adeb424010e550bdec2412111d5a",
+          "check": "attempts/v0-attempt1.check.txt",
+          "check_sha256": "8e6f6faf0425ad0e03841dfaf0bf196eb798441c266d8ba8f74e1939da39d0cd",
+          "note": "PROBE, no evidence bundle: first single-view design - all five access relations in one tb graph (7 nodes, 5 edges). 2 bridges, 1 touching bend, and the s2->gw route wrapped 64 cells around the gateway; 1 label had no unambiguous owner. Abandoned in favour of a three-view split."
+        },
+        {
+          "spec": "attempts/v0-attempt2.json",
+          "spec_sha256": "e0146daa446371983fcb22a6e712804ad9d69434eaa1ac4bce58d07874489b09",
+          "check": "attempts/v0-attempt2.check.txt",
+          "check_sha256": "9c92ae098b25e65cf014140eeec702c130990a492ca61d24a563925743ec3dd4",
+          "note": "PROBE, no evidence bundle: same graph with the /29 members flattened into one layer. Crossings dropped to 0, but the short nic->gw stub still had no unambiguous label slot (1 ambiguous owner), so the design - not the layout - was the problem. Split into v1/v2/v3 after this."
+        }
+      ]
+    },
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "spec": "attempts/v1-attempt1.json",
+          "spec_sha256": "e2ee0c8011f8b28ee92f07d2e6138cb0b65d6f430a289727607291cddbf2eae8",
+          "check": "attempts/v1-attempt1.check.txt",
+          "check_sha256": "1e1530f5da98a5da74512bf9d90291dc6e1482c5851b143f99062b8e9dbbc93b",
+          "note": "rejected: tb chain (7 dark ports -> server1 -> active NIC) was clean on its first check, but server1 carried the bare octet `.58`, an abbreviation of 103.19.91.58 with no /29 key anywhere on that view (skill abbreviation rule)."
+        },
+        {
+          "spec": "attempts/v1-attempt2.json",
+          "spec_sha256": "cbe99bfff5fdf68aefa9a6be50975ce224d142a8b6c1cf0e571765015192828b",
+          "check": "attempts/v1-attempt2.check.txt",
+          "check_sha256": "21bd13af2ee9d905a4979878688fdf2a39cc2acc132b554f9dfdc12fea006bd5",
+          "note": "rejected: the full address fixed the key problem, but the `no cable?` label anchored one cell right of its own vertical run, so it printed flush against the arrowhead (`▼no cable?`) - readable but crowded."
+        },
+        {
+          "spec": "attempts/v1-attempt3.json",
+          "spec_sha256": "a68544d0acc4fc1efbf2b864e3b65094e735bc397acbad605242b3312e8815e5",
+          "check": "attempts/v1-attempt3.check.txt",
+          "check_sha256": "a169f6838625576c3a00ed64daa0a4a57a7b3581e88cd3e75b766932a981ba7e",
+          "note": "final: host note moved left of the dark-port node, so the dark->server1 route owns a long horizontal run and its label rides above it. extent 48x21, 0 bridges, 0 detours, 0 ambiguous owners."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "attempts": [
+        {
+          "spec": "attempts/v2-attempt1.json",
+          "spec_sha256": "30c69aed5a87a8d70fad0051497753742fcd2d38babaa634aae6a95f9b3f06df",
+          "check": "attempts/v2-attempt1.check.txt",
+          "check_sha256": "109591f248bdb0356c796c0df316618fe5c82e2533f5a86c306bf2e035ed73a6",
+          "note": "rejected: tb with the three /29 sources in one row and gw+note in a 2-layer bottom row. The router wrapped the s2 route around the nic box (1 bridge, 1 touching bend, 61-cell forced route) and '0.1 ms' had no unambiguous slot (1 ambiguous owner)."
+        },
+        {
+          "spec": "attempts/v2-attempt2.json",
+          "spec_sha256": "ce4cf67d58718dbb7a017de5b6ea363614ee71b649f63b2a8b0669163cb27ced",
+          "check": "attempts/v2-attempt2.check.txt",
+          "check_sha256": "c8eaa712f610fc8ca9a9cbd9dbf89606d1ac44c3aadf3efdedf0ca09fb35cfa9",
+          "note": "final: the same seed graph drawn lr (sources stacked in column 1, Arista gateway + /29 note in column 2). Each route owns a long horizontal run, so every label sits closer to its own edge: 0 bridges, 0 detours, 0 ambiguous owners, extent 69x18."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "attempts": [
+        {
+          "spec": "attempts/v3-attempt1.json",
+          "spec_sha256": "4076deb9ec7a4a43476c01c539591718cb3c117e2291c5e6e346756c2baf578f",
+          "check": "attempts/v3-attempt1.check.txt",
+          "check_sha256": "96e7e3a624975ae2a28af2963d0d82e2e63a45c92c6d5eedf24fdde5ccca31fb",
+          "note": "rejected: 5 layers with a site note band on top. extent 75x36 put the Cloudflare box at rows 39-42 where the control palette floats; the palette overwrote the box border (bottom-left corner not clear)."
+        },
+        {
+          "spec": "attempts/v3-attempt2.json",
+          "spec_sha256": "5d237208b7e5100a6064558bf5f36d1371614566ea3a421a4f7331811676d18c",
+          "check": "attempts/v3-attempt2.check.txt",
+          "check_sha256": "a9e82324e67edb0114256d277abc76bdedcf486a0365a8fa6b02c8b5908cd76d",
+          "note": "rejected: merged AS132717 into the gw label and put the whole 'above ToR: bridge? tunnel? silent? · no ECMP' note beside Airtel. extent grew to 81x29, wider than 77, so the live pane reported 'graph overflows · drag to pan'."
+        },
+        {
+          "spec": "attempts/v3-attempt3.json",
+          "spec_sha256": "78d192cf1b141bf48a3afd6017a9ca43a3d0a942881bfad2e826ecb86d782e7a",
+          "check": "attempts/v3-attempt3.check.txt",
+          "check_sha256": "c33c23ba9575f5873f46a7cc012bbdfd3046efb5b20b8c9c9686f0631ca6b531",
+          "note": "final: AS132717 on the gateway, the fabric-uncertainty note beside Airtel and '1 uplink · no ECMP' beside the backbone. extent 68x29, 0 bridges, 0 detours, 0 ambiguous owners, bottom-left corner clear."
+        }
+      ]
+    }
+  ]
+}

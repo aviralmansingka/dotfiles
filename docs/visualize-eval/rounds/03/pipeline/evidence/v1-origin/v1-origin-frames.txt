@@ -1,0 +1,220 @@
+/tmp/visualize-eval/round-03/bin/rataflow-view /Users/aviral/.herdr/worktrees
+/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/pipeline/spec-v1.
+json
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️
+ aviralmansingka@gmail.com
+❯ /tmp/visualize-eval/round-03/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/pipeline/spec-v
+1.json
+viewport: 77x47 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️
+ aviralmansingka@gmail.com
+❯ /tmp/visualize-eval/round-03/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/pipeline/spec-v
+1.json --select-all
+viewport: 77x47 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️
+ aviralmansingka@gmail.com
+❯ /tmp/visualize-eval/round-03/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/pipeline/spec-v
+1.json --frames 4 --step-ms 150
+viewport: 77x47 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 77x47 @100% · spec-v1.json · 6 nodes · 6 edges · q quit
+
+
+
+
+
+                                   ╭───╮
+                                   │CLI│
+                                   │   │
+                                   ╰───╯
+                                    │
+                                    ●
+                                    │
+                                    ▼
+                                   ╭───────────╮
+                                   │API gateway│
+                                   │           │
+                                   ╰───────────╯
+                                    │ │
+                           enqueue  ● ● verify
+                       ╭────────────╯ ╰──────────╮
+                       ▼                         ▼
+                      ╭─────────╮               ╭────╮
+                      │Job queue│               │Auth│
+                      │         │               │    │
+                      ╰─────────╯               ╰────╯
+                       │                         │
+                       ●                         ●
+                       │                         │
+                       ▼                         │
+                      ╭───────────╮              │
+                      │Worker pool│              │
+                      │           │              │
+                      ╰───────────╯              │
+                       │                         │
+                       ●   write          read   │
+                       ╰────────────╮ ╭──────────╯
+                                    ▼ ▼
+                                   ╭────────╮
+                                   │Postgres│
+ ┌───────┐                         │        │
+ │ + [+] │                         ╰────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 150ms
+ rataflow-view · 77x47 @100% · spec-v1.json · 6 nodes · 6 edges · q quit
+
+
+
+
+
+                                   ╭───╮
+                                   │CLI│
+                                   │   │
+                                   ╰───╯
+                                    │
+                                    ●
+                                    │
+                                    ▼
+                                   ╭───────────╮
+                                   │API gateway│
+                                   │           │
+                                   ╰───────────╯
+                                    │ │
+                           enqueue  ● ● verify
+                       ╭────────────╯ ╰──────────╮
+                       ▼                         ▼
+                      ╭─────────╮               ╭────╮
+                      │Job queue│               │Auth│
+                      │         │               │    │
+                      ╰─────────╯               ╰────╯
+                       │                         │
+                       ●                         │
+                       │                         ●
+                       ▼                         │
+                      ╭───────────╮              │
+                      │Worker pool│              │
+                      │           │              │
+                      ╰───────────╯              │
+                       │                         │
+                       ●   write          read   │
+                       ╰────────────╮ ╭──────────╯
+                                    ▼ ▼
+                                   ╭────────╮
+                                   │Postgres│
+ ┌───────┐                         │        │
+ │ + [+] │                         ╰────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 300ms
+ rataflow-view · 77x47 @100% · spec-v1.json · 6 nodes · 6 edges · q quit
+
+
+
+
+
+                                   ╭───╮
+                                   │CLI│
+                                   │   │
+                                   ╰───╯
+                                    │
+                                    ●
+                                    │
+                                    ▼
+                                   ╭───────────╮
+                                   │API gateway│
+                                   │           │
+                                   ╰───────────╯
+                                    │ │
+                           enqueue  │ │ verify
+                       ╭───────────●╯ ╰●─────────╮
+                       ▼                         ▼
+                      ╭─────────╮               ╭────╮
+                      │Job queue│               │Auth│
+                      │         │               │    │
+                      ╰─────────╯               ╰────╯
+                       │                         │
+                       ●                         │
+                       │                         ●
+                       ▼                         │
+                      ╭───────────╮              │
+                      │Worker pool│              │
+                      │           │              │
+                      ╰───────────╯              │
+                       │                         │
+                       │   write          read   │
+                       ╰●───────────╮ ╭──────────╯
+                                    ▼ ▼
+                                   ╭────────╮
+                                   │Postgres│
+ ┌───────┐                         │        │
+ │ + [+] │                         ╰────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 450ms
+ rataflow-view · 77x47 @100% · spec-v1.json · 6 nodes · 6 edges · q quit
+
+
+
+
+
+                                   ╭───╮
+                                   │CLI│
+                                   │   │
+                                   ╰───╯
+                                    │
+                                    ●
+                                    │
+                                    ▼
+                                   ╭───────────╮
+                                   │API gateway│
+                                   │           │
+                                   ╰───────────╯
+                                    │ │
+                           enqueue  │ │ verify
+                       ╭───────────●╯ ╰●─────────╮
+                       ▼                         ▼
+                      ╭─────────╮               ╭────╮
+                      │Job queue│               │Auth│
+                      │         │               │    │
+                      ╰─────────╯               ╰────╯
+                       │                         │
+                       ●                         │
+                       │                         │
+                       ▼                         ●
+                      ╭───────────╮              │
+                      │Worker pool│              │
+                      │           │              │
+                      ╰───────────╯              │
+                       │                         │
+                       │   write          read   │
+                       ╰●───────────╮ ╭──────────╯
+                                    ▼ ▼
+                                   ╭────────╮
+                                   │Postgres│
+ ┌───────┐                         │        │
+ │ + [+] │                         ╰────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️
+ aviralmansingka@gmail.com
+❯

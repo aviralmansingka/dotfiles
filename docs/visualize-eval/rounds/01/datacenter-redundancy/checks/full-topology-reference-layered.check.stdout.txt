@@ -1,0 +1,5 @@
+ok: nodes=18 edges=28 flows=0 direction=tb theme=gruvbox
+layers=7 (explicit placement, sugiyama skipped)
+extent=54x71 cells
+warning: 18 nodes / 28 edges is above the readable budget (12/16); split it into an overview and detail graphs
+warning: 2 edge label(s) had no free slot; shorten the labels or split the graph

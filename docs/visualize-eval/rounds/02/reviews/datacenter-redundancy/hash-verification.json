@@ -1,0 +1,371 @@
+{
+  "checks": [
+    {
+      "actual_sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+      "expected_sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+      "kind": "frozen candidate skill",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/SKILL.md"
+    },
+    {
+      "actual_sha256": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+      "expected_sha256": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+      "kind": "frozen binary, bytes only; not executed",
+      "match": true,
+      "path": "/tmp/visualize-eval/round-02/bin/rataflow-view"
+    },
+    {
+      "actual_sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f",
+      "expected_sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f",
+      "kind": "frozen rubric",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/rubric.json"
+    },
+    {
+      "actual_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "expected_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "kind": "frozen dataset manifest",
+      "match": true,
+      "path": "docs/visualize-eval/cases.json"
+    },
+    {
+      "actual_sha256": "a3051af3eeeec31aee53558dafbbea5d061dc74253618fd6940eba5c39b5bb98",
+      "expected_sha256": "a3051af3eeeec31aee53558dafbbea5d061dc74253618fd6940eba5c39b5bb98",
+      "kind": "this case frozen input",
+      "match": true,
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+    },
+    {
+      "actual_sha256": "926e866fbdbb3eaac5b7a21360905d1f621a7a6386139afab303e8ba7e62ed47",
+      "expected_sha256": "926e866fbdbb3eaac5b7a21360905d1f621a7a6386139afab303e8ba7e62ed47",
+      "kind": "this case frozen input",
+      "match": true,
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/expected.json"
+    },
+    {
+      "actual_sha256": "2a804dea703e5a9da9cdd788d4eb89690860a02606ec681948670dfe19e8e069",
+      "expected_sha256": "2a804dea703e5a9da9cdd788d4eb89690860a02606ec681948670dfe19e8e069",
+      "kind": "frozen harness; hashed only",
+      "match": true,
+      "path": "scripts/viz-evidence.sh"
+    },
+    {
+      "actual_sha256": "0c8a5488c5b40d511d74c6470f076638d2baa33b384abfb398186497cbdf5e66",
+      "expected_sha256": "0c8a5488c5b40d511d74c6470f076638d2baa33b384abfb398186497cbdf5e66",
+      "kind": "frozen harness; hashed only",
+      "match": true,
+      "path": "scripts/viz-validate.py"
+    },
+    {
+      "actual_sha256": "5ab3cfd4c1d84a01ae1aa3c166c2d5331bf6692e15e1d8fb97a2a0905192cffa",
+      "expected_sha256": "5ab3cfd4c1d84a01ae1aa3c166c2d5331bf6692e15e1d8fb97a2a0905192cffa",
+      "kind": "frozen harness; hashed only",
+      "match": true,
+      "path": "scripts/viz-aggregate.py"
+    },
+    {
+      "actual_sha256": "16901b56f026228236c66d0dc7e5343ecceeaa22ab42885e76cde470eb383898",
+      "expected_sha256": "16901b56f026228236c66d0dc7e5343ecceeaa22ab42885e76cde470eb383898",
+      "kind": "immutable Stage-A record",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/reviews/datacenter-redundancy/observed-first.md"
+    },
+    {
+      "actual_sha256": "98e8ba90854d81d8fae0f5de5ca7d772462d9a17c7e083a36dff6377ab9d1ccb",
+      "expected_sha256": "98e8ba90854d81d8fae0f5de5ca7d772462d9a17c7e083a36dff6377ab9d1ccb",
+      "kind": "executed final spec",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/v1.json"
+    },
+    {
+      "actual_sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "expected_sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/bin.sha256"
+    },
+    {
+      "actual_sha256": "f06d53f3b6df808f645cb7c5d93d7e4ac818fd401212e55a20e6e65427fb105d",
+      "expected_sha256": "f06d53f3b6df808f645cb7c5d93d7e4ac818fd401212e55a20e6e65427fb105d",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/check.txt"
+    },
+    {
+      "actual_sha256": "a9dbc871345212e82fe49bb84d4f871d964459a1dff0143038fde1277db9909d",
+      "expected_sha256": "a9dbc871345212e82fe49bb84d4f871d964459a1dff0143038fde1277db9909d",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-ansi.ansi"
+    },
+    {
+      "actual_sha256": "87d3a42cf2932c754a3597282d4885f27228563206731e256e6280a713d3e770",
+      "expected_sha256": "87d3a42cf2932c754a3597282d4885f27228563206731e256e6280a713d3e770",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-frames.ansi"
+    },
+    {
+      "actual_sha256": "6ec17bb8eeb886fe18371e4070f252b13b7b1018e2ff71fe0301f79de567e88d",
+      "expected_sha256": "6ec17bb8eeb886fe18371e4070f252b13b7b1018e2ff71fe0301f79de567e88d",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-frames.txt"
+    },
+    {
+      "actual_sha256": "f49c853c0406e77cd2b49872cd187fdd48db5ac379b6b2ff67b71e6566955781",
+      "expected_sha256": "f49c853c0406e77cd2b49872cd187fdd48db5ac379b6b2ff67b71e6566955781",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-selected.ansi"
+    },
+    {
+      "actual_sha256": "478f64bf24b201be0f9265b22f23e52f84176a57ab582fb25efd0141e75d691a",
+      "expected_sha256": "478f64bf24b201be0f9265b22f23e52f84176a57ab582fb25efd0141e75d691a",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-text.txt"
+    },
+    {
+      "actual_sha256": "9a8b1950a7595b958fd6b2cbc6892a59cd48b04d1c0c4e9bb8c6833aac0577f2",
+      "expected_sha256": "9a8b1950a7595b958fd6b2cbc6892a59cd48b04d1c0c4e9bb8c6833aac0577f2",
+      "kind": "executed final spec",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/v2.json"
+    },
+    {
+      "actual_sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "expected_sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/bin.sha256"
+    },
+    {
+      "actual_sha256": "c4307177f06ecee2bad85e7699c033f0b728fa0afbd0989eb031801ae9cf9496",
+      "expected_sha256": "c4307177f06ecee2bad85e7699c033f0b728fa0afbd0989eb031801ae9cf9496",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/check.txt"
+    },
+    {
+      "actual_sha256": "70205fe3d9c3f66d32301bc1542378355689de462e67d24b532df0b2e09e873d",
+      "expected_sha256": "70205fe3d9c3f66d32301bc1542378355689de462e67d24b532df0b2e09e873d",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-ansi.ansi"
+    },
+    {
+      "actual_sha256": "71f06ce0c66eb781fcf4a8df981b663ef6dbbd5821128ef261c33641276d494e",
+      "expected_sha256": "71f06ce0c66eb781fcf4a8df981b663ef6dbbd5821128ef261c33641276d494e",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-frames.ansi"
+    },
+    {
+      "actual_sha256": "cefe60393aa63c0cfa39dfed72fed6b0be4d62c38f14427f6970465da8184b6d",
+      "expected_sha256": "cefe60393aa63c0cfa39dfed72fed6b0be4d62c38f14427f6970465da8184b6d",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-frames.txt"
+    },
+    {
+      "actual_sha256": "80ad0288f590fd0b3aab7fbdb957665ab7714c9b35bd417e95b39a3546d9659d",
+      "expected_sha256": "80ad0288f590fd0b3aab7fbdb957665ab7714c9b35bd417e95b39a3546d9659d",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-selected.ansi"
+    },
+    {
+      "actual_sha256": "822dd591b9f41beb089ad5b336f735674ab91f0fccf25b293062973f361f44ea",
+      "expected_sha256": "822dd591b9f41beb089ad5b336f735674ab91f0fccf25b293062973f361f44ea",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-text.txt"
+    },
+    {
+      "actual_sha256": "c6bdfb415415e794cdd6cc2d85fd10dcb2f2b7d842f2b65ec59f2de7b4a25429",
+      "expected_sha256": "c6bdfb415415e794cdd6cc2d85fd10dcb2f2b7d842f2b65ec59f2de7b4a25429",
+      "kind": "executed final spec",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/v3.json"
+    },
+    {
+      "actual_sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "expected_sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/bin.sha256"
+    },
+    {
+      "actual_sha256": "abc97dbc205641ca3f48c522e5d520c55bda112842c9dd78f5648e60c7f65d72",
+      "expected_sha256": "abc97dbc205641ca3f48c522e5d520c55bda112842c9dd78f5648e60c7f65d72",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/check.txt"
+    },
+    {
+      "actual_sha256": "dbeebed84c1a0ff98313579a7d961d6e8d4dbf0f79ed5b0782fe5d9a7a53052d",
+      "expected_sha256": "dbeebed84c1a0ff98313579a7d961d6e8d4dbf0f79ed5b0782fe5d9a7a53052d",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-ansi.ansi"
+    },
+    {
+      "actual_sha256": "7ecc89cda4751f81135d2d15560207f6cb27e83feafaf45a895361d77c9278bc",
+      "expected_sha256": "7ecc89cda4751f81135d2d15560207f6cb27e83feafaf45a895361d77c9278bc",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-frames.ansi"
+    },
+    {
+      "actual_sha256": "b196347e167536f025c5fbf783cae2ac0327119cba6fb0907298473133df8f54",
+      "expected_sha256": "b196347e167536f025c5fbf783cae2ac0327119cba6fb0907298473133df8f54",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-frames.txt"
+    },
+    {
+      "actual_sha256": "c04fa2c9c0c345ef82bfe99f0627a1421c8b6b19f76376d85ffcb7a132a7b920",
+      "expected_sha256": "c04fa2c9c0c345ef82bfe99f0627a1421c8b6b19f76376d85ffcb7a132a7b920",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-selected.ansi"
+    },
+    {
+      "actual_sha256": "6f76e824bdc4e98ed238f1d493ee50f2b780d8a83e8d8ab18912e70464d7907a",
+      "expected_sha256": "6f76e824bdc4e98ed238f1d493ee50f2b780d8a83e8d8ab18912e70464d7907a",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-text.txt"
+    },
+    {
+      "actual_sha256": "44cbe30cb0574e53ac01f5e3cd547ee05bb3687397a140e703d790e5346a619a",
+      "expected_sha256": "44cbe30cb0574e53ac01f5e3cd547ee05bb3687397a140e703d790e5346a619a",
+      "kind": "executed final spec",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/v4.json"
+    },
+    {
+      "actual_sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "expected_sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/bin.sha256"
+    },
+    {
+      "actual_sha256": "44e5a23ebb7e08855fdd75e6159f3867ac41c9b3569aca48770a1c8844e454cf",
+      "expected_sha256": "44e5a23ebb7e08855fdd75e6159f3867ac41c9b3569aca48770a1c8844e454cf",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/check.txt"
+    },
+    {
+      "actual_sha256": "b8b738f5d289c75b042b2b19279610a217ad77457294f1271ce0a3392b6283ff",
+      "expected_sha256": "b8b738f5d289c75b042b2b19279610a217ad77457294f1271ce0a3392b6283ff",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-ansi.ansi"
+    },
+    {
+      "actual_sha256": "18252f959b7109fdf722a2f5185c4c435063e0c33b76851f1e1db84a81d61db3",
+      "expected_sha256": "18252f959b7109fdf722a2f5185c4c435063e0c33b76851f1e1db84a81d61db3",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-frames.ansi"
+    },
+    {
+      "actual_sha256": "7a5a689494f2414340ba2f0870adf5fa84068af802d7e5661618f158fab57e7e",
+      "expected_sha256": "7a5a689494f2414340ba2f0870adf5fa84068af802d7e5661618f158fab57e7e",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-frames.txt"
+    },
+    {
+      "actual_sha256": "90448a5f8397678abceb2c65b9af2f3f917bf08efc1f062874d5066df5ef56b0",
+      "expected_sha256": "90448a5f8397678abceb2c65b9af2f3f917bf08efc1f062874d5066df5ef56b0",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-selected.ansi"
+    },
+    {
+      "actual_sha256": "4d9b6ee764776dcf7a073c19ea57a4aac1ca87e64d9bd0034234c86f1a810bd7",
+      "expected_sha256": "4d9b6ee764776dcf7a073c19ea57a4aac1ca87e64d9bd0034234c86f1a810bd7",
+      "kind": "frozen captured artifact",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-text.txt"
+    },
+    {
+      "actual_sha256": "98e8ba90854d81d8fae0f5de5ca7d772462d9a17c7e083a36dff6377ab9d1ccb",
+      "expected_sha256": "98e8ba90854d81d8fae0f5de5ca7d772462d9a17c7e083a36dff6377ab9d1ccb",
+      "kind": "recorded attempt spec; not evidence of its missing capture",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/attempts/v1-a1.json"
+    },
+    {
+      "actual_sha256": "7dda6d6f71a784b2d861a2a1b4492fa1f94a7876238574de1c07333b88064c4a",
+      "expected_sha256": "7dda6d6f71a784b2d861a2a1b4492fa1f94a7876238574de1c07333b88064c4a",
+      "kind": "recorded attempt spec; not evidence of its missing capture",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/attempts/v1-a2-compact.json"
+    },
+    {
+      "actual_sha256": "cf242609e1b8cb00670db40fe6cd49a1ba4790db1e5ad5568b414942a4ee4a5c",
+      "expected_sha256": "cf242609e1b8cb00670db40fe6cd49a1ba4790db1e5ad5568b414942a4ee4a5c",
+      "kind": "recorded attempt spec; not evidence of its missing capture",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/attempts/v1-a3.json"
+    },
+    {
+      "actual_sha256": "9a8b1950a7595b958fd6b2cbc6892a59cd48b04d1c0c4e9bb8c6833aac0577f2",
+      "expected_sha256": "9a8b1950a7595b958fd6b2cbc6892a59cd48b04d1c0c4e9bb8c6833aac0577f2",
+      "kind": "recorded attempt spec; not evidence of its missing capture",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/attempts/v2-a1.json"
+    },
+    {
+      "actual_sha256": "0d601e589c78939588872ced97a44dc12090ecd5c81b8c16ba94301ea5b6d8eb",
+      "expected_sha256": "0d601e589c78939588872ced97a44dc12090ecd5c81b8c16ba94301ea5b6d8eb",
+      "kind": "recorded attempt spec; not evidence of its missing capture",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/attempts/v2-a2-compact.json"
+    },
+    {
+      "actual_sha256": "8e9cc98003b6830a5e148c3669ef54f6b21b4042a039054bfcd85fb9caab246d",
+      "expected_sha256": "8e9cc98003b6830a5e148c3669ef54f6b21b4042a039054bfcd85fb9caab246d",
+      "kind": "recorded attempt spec; not evidence of its missing capture",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/attempts/v2-a3.json"
+    },
+    {
+      "actual_sha256": "6042babd3fa394082e9460549dea4fa346e2a90837349cc14aa24a2cde731924",
+      "expected_sha256": "6042babd3fa394082e9460549dea4fa346e2a90837349cc14aa24a2cde731924",
+      "kind": "recorded attempt spec; not evidence of its missing capture",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/attempts/v3-a1.json"
+    },
+    {
+      "actual_sha256": "b86090b3b00474db5d0e0f1a9cab05d6f49a1414ad261eb84f3e5707febbb17b",
+      "expected_sha256": "b86090b3b00474db5d0e0f1a9cab05d6f49a1414ad261eb84f3e5707febbb17b",
+      "kind": "recorded attempt spec; not evidence of its missing capture",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/attempts/v3-a2.json"
+    },
+    {
+      "actual_sha256": "c6bdfb415415e794cdd6cc2d85fd10dcb2f2b7d842f2b65ec59f2de7b4a25429",
+      "expected_sha256": "c6bdfb415415e794cdd6cc2d85fd10dcb2f2b7d842f2b65ec59f2de7b4a25429",
+      "kind": "recorded attempt spec; not evidence of its missing capture",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/v3.json"
+    },
+    {
+      "actual_sha256": "44cbe30cb0574e53ac01f5e3cd547ee05bb3687397a140e703d790e5346a619a",
+      "expected_sha256": "44cbe30cb0574e53ac01f5e3cd547ee05bb3687397a140e703d790e5346a619a",
+      "kind": "recorded attempt spec; not evidence of its missing capture",
+      "match": true,
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/v4.json"
+    }
+  ],
+  "note": "All checks hash existing bytes only. Relative paths use repository root; frozen renderer input is necessarily an absolute provenance path inside this verification record, not an evidence-inventory path.",
+  "review_model_environment": "gpt-6.1-sol",
+  "stage_a_sha256": "16901b56f026228236c66d0dc7e5343ecceeaa22ab42885e76cde470eb383898"
+}

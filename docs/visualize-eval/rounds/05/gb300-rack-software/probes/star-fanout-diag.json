@@ -1,0 +1,1 @@
+{"direction":"lr","theme":"gruvbox","nodes":[{"id":"rms","label":"nv-rms"},{"id":"a","label":"Compute BMC"},{"id":"b","label":"NVSwitch BMC"},{"id":"c","label":"Power shelf"}],"edges":[{"from":"rms","to":"a","label":"Redfish/HTTPS"},{"from":"rms","to":"b","label":"Redfish/HTTPS"},{"from":"rms","to":"c","label":"Redfish/HTTPS"}]}

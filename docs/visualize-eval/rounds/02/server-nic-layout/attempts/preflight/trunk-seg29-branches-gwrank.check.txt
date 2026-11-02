@@ -1,0 +1,2 @@
+=== attempts/preflight/trunk-seg29-branches-gwrank.json
+rataflow-view: no obstacle-safe route for nic -> s2, nic -> spare; increase node/layer spacing

@@ -1,0 +1,22 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "web", "label": "humans + mmctl", "group": "humans" },
+    { "id": "cp", "label": "control plane", "group": "control" },
+    { "id": "wapi", "label": "webapi", "group": "control" },
+    { "id": "pgrpc", "label": "private gRPC", "group": "control" },
+    { "id": "q", "label": "River queue", "group": "queue" },
+    { "id": "db", "label": "Postgres", "group": "state" },
+    { "id": "slack", "label": "Slack", "group": "humans" }
+  ],
+  "edges": [
+    { "from": "cp", "to": "pgrpc", "label": "create/terminate/repair", "dots": 1, "flow": true },
+    { "from": "web", "to": "wapi", "label": "http", "dots": 1, "flow": true },
+    { "from": "wapi", "to": "q", "label": "reinstall/reprov", "dots": 1, "flow": true },
+    { "from": "pgrpc", "to": "q", "label": "enqueue job", "dots": 1, "flow": true },
+    { "from": "pgrpc", "to": "db", "label": "machine rows", "dots": 1, "flow": true },
+    { "from": "q", "to": "db", "label": "job rows", "dots": 1, "flow": true },
+    { "from": "wapi", "to": "slack", "label": "confirm/alerts", "dots": 1, "flow": true }
+  ]
+}

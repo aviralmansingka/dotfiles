@@ -1,0 +1,268 @@
+/tmp/visualize-eval/round-02/bin/rataflow-view /Users/aviral/.herdr/worktrees
+/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/02/modal-machine-man
+ager/v4.json
+
+rounds/02/modal-machine-manager on  fix/visualize-skill [$!?] on ☁️  (ap-sou
+th-1) on ☁️  aviralmansingka@gmail.com
+❯ /tmp/visualize-eval/round-02/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/02/modal-machine-m
+anager/v4.json
+viewport: 77x47 zoom: 1.00 natural
+
+rounds/02/modal-machine-manager on  fix/visualize-skill [$!?] on ☁️  (ap-sou
+th-1) on ☁️  aviralmansingka@gmail.com
+❯ /tmp/visualize-eval/round-02/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/02/modal-machine-m
+anager/v4.json --select-all
+viewport: 77x47 zoom: 1.00 natural
+
+rounds/02/modal-machine-manager on  fix/visualize-skill [$!?] on ☁️  (ap-sou
+th-1) on ☁️  aviralmansingka@gmail.com
+❯ /tmp/visualize-eval/round-02/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/02/modal-machine-m
+anager/v4.json --frames 5 --step-ms 100
+viewport: 77x47 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 77x47 @100% · v4.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                 ╭────────╮
+                                              ╭─▶│        │
+      ╭────────────╮       machine rows       │  │        │
+      │private gRPC│─●────────────────────────╯╭▶│Postgres│
+      │            │                          ╭╯ │        │
+      ╰────────────╯                        ╭─⌒─▶│        │
+                                            │ │  ╰────────╯
+                                            │ │
+      ╭───────────────╮       job rows      │ │  ╭────────────────────╮
+      │River job queue│─●───────────────────⌒─╯╭▶│bare-metal providers│
+      │               │                     │  │ │                    │
+      ╰───────────────╯                     │  │ ╰────────────────────╯
+                                            │  │
+      ╭──────────────────────╮ cluster state│  │
+      │                      │─●────────────╯  │
+      │cluster reconcile loop│ gcore sync 1min │
+      │                      │─●───────────────╯
+      ╰──────────────────────╯
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 77x47 @100% · v4.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                 ╭────────╮
+                                              ╭─▶│        │
+      ╭────────────╮       machine rows       │  │        │
+      │private gRPC│──●───────────────────────╯╭▶│Postgres│
+      │            │                          ╭╯ │        │
+      ╰────────────╯                        ╭─⌒─▶│        │
+                                            │ │  ╰────────╯
+                                            │ │
+      ╭───────────────╮       job rows      │ │  ╭────────────────────╮
+      │River job queue│──●──────────────────⌒─╯╭▶│bare-metal providers│
+      │               │                     │  │ │                    │
+      ╰───────────────╯                     │  │ ╰────────────────────╯
+                                            │  │
+      ╭──────────────────────╮ cluster state│  │
+      │                      │──●───────────╯  │
+      │cluster reconcile loop│ gcore sync 1min │
+      │                      │──●──────────────╯
+      ╰──────────────────────╯
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 77x47 @100% · v4.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                 ╭────────╮
+                                              ╭─▶│        │
+      ╭────────────╮       machine rows       │  │        │
+      │private gRPC│───●──────────────────────╯╭▶│Postgres│
+      │            │                          ╭╯ │        │
+      ╰────────────╯                        ╭─⌒─▶│        │
+                                            │ │  ╰────────╯
+                                            │ │
+      ╭───────────────╮       job rows      │ │  ╭────────────────────╮
+      │River job queue│───●─────────────────⌒─╯╭▶│bare-metal providers│
+      │               │                     │  │ │                    │
+      ╰───────────────╯                     │  │ ╰────────────────────╯
+                                            │  │
+      ╭──────────────────────╮ cluster state│  │
+      │                      │───●──────────╯  │
+      │cluster reconcile loop│ gcore sync 1min │
+      │                      │───●─────────────╯
+      ╰──────────────────────╯
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 77x47 @100% · v4.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                 ╭────────╮
+                                              ╭─▶│        │
+      ╭────────────╮       machine rows       │  │        │
+      │private gRPC│────●─────────────────────╯╭▶│Postgres│
+      │            │                          ╭╯ │        │
+      ╰────────────╯                        ╭─⌒─▶│        │
+                                            │ │  ╰────────╯
+                                            │ │
+      ╭───────────────╮       job rows      │ │  ╭────────────────────╮
+      │River job queue│────●────────────────⌒─╯╭▶│bare-metal providers│
+      │               │                     │  │ │                    │
+      ╰───────────────╯                     │  │ ╰────────────────────╯
+                                            │  │
+      ╭──────────────────────╮ cluster state│  │
+      │                      │────●─────────╯  │
+      │cluster reconcile loop│ gcore sync 1min │
+      │                      │────●────────────╯
+      ╰──────────────────────╯
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 77x47 @100% · v4.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                 ╭────────╮
+                                              ╭─▶│        │
+      ╭────────────╮       machine rows       │  │        │
+      │private gRPC│─────●────────────────────╯╭▶│Postgres│
+      │            │                          ╭╯ │        │
+      ╰────────────╯                        ╭─⌒─▶│        │
+                                            │ │  ╰────────╯
+                                            │ │
+      ╭───────────────╮       job rows      │ │  ╭────────────────────╮
+      │River job queue│─────●───────────────⌒─╯╭▶│bare-metal providers│
+      │               │                     │  │ │                    │
+      ╰───────────────╯                     │  │ ╰────────────────────╯
+                                            │  │
+      ╭──────────────────────╮ cluster state│  │
+      │                      │─────●────────╯  │
+      │cluster reconcile loop│ gcore sync 1min │
+      │                      │─────●───────────╯
+      ╰──────────────────────╯
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+rounds/02/modal-machine-manager on  fix/visualize-skill [$!?] on ☁️  (ap-sou
+th-1) on ☁️  aviralmansingka@gmail.com
+❯

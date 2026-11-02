@@ -1,0 +1,73 @@
+[
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-dotfiles-fix-visualize--/2026-10-13T05-35-27-649Z_01a133c2-33a0-74b7-9033-3ad246285cff.jsonl",
+    "line": 180,
+    "call_id": "chatcmpl-tool-8bf56de848923fd1",
+    "path": "rataflow/examples/pipeline.json",
+    "spec": {
+      "direction": "lr",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "cli",
+          "label": "CLI"
+        },
+        {
+          "id": "api",
+          "label": "API gateway"
+        },
+        {
+          "id": "auth",
+          "label": "Auth"
+        },
+        {
+          "id": "queue",
+          "label": "Job queue"
+        },
+        {
+          "id": "worker",
+          "label": "Worker pool"
+        },
+        {
+          "id": "db",
+          "label": "Postgres"
+        }
+      ],
+      "edges": [
+        {
+          "from": "cli",
+          "to": "api",
+          "flow": 1
+        },
+        {
+          "from": "api",
+          "to": "auth",
+          "label": "verify",
+          "flow": 1
+        },
+        {
+          "from": "api",
+          "to": "queue",
+          "label": "enqueue",
+          "flow": 1
+        },
+        {
+          "from": "queue",
+          "to": "worker",
+          "flow": 3
+        },
+        {
+          "from": "worker",
+          "to": "db",
+          "label": "write",
+          "flow": 2
+        },
+        {
+          "from": "auth",
+          "to": "db",
+          "label": "read"
+        }
+      ]
+    }
+  }
+]

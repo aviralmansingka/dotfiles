@@ -1,0 +1,447 @@
+{
+  "case_id": "pipeline",
+  "round": "08",
+  "generator": {
+    "role": "diagram generator (worker)",
+    "subagent_name": "viz-ds08-1",
+    "provider": "fireworks",
+    "model": "accounts/fireworks/routers/deepseek-flash-latest",
+    "model_env": {
+      "PI_MODEL": "accounts/fireworks/routers/deepseek-flash-latest",
+      "PI_PROVIDER": "fireworks",
+      "PI_REASONING_LEVEL": "high"
+    },
+    "session_id": "01a19e0a-5237-736e-a731-d874603a16ea",
+    "session_file": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-dotfiles-fix-visualize--/2026-11-02T20-53-58-182Z_2fcf7189-60384b80-b1ca86fe-602e.jsonl"
+  },
+  "candidate_skill": {
+    "path": "docs/visualize-eval/rounds/08/SKILL.md",
+    "sha256": "b1bdb4d3d38336cb7783db34da7f9f19edf80704a890de32285d9e582b4221eb"
+  },
+  "renderer": {
+    "path": "/tmp/visualize-eval/round-08/bin/rataflow-view",
+    "sha256": "ea24593b0f80c1617573eef4766f2bacaaf4315a8133a65d5331e9daec1c1f30"
+  },
+  "target_viewport": {
+    "cols": 77,
+    "rows": 47,
+    "zoom": "1.00 natural"
+  },
+  "family_classification": {
+    "family": "flow-chains",
+    "evidence": "6 nodes and 6 relations (E = N, one relation per node: cli->api, api->auth, api->queue, queue->worker, worker->db, auth->db), shallow depth, and the source asks for slow sparse motion on the traffic, so one dot per animated hop at the constant default speed.",
+    "recipe_applied": "one dot per animated hop at constant speed, no invented side branches, corridor width kept by one node per rank except the source's own fork at the gateway; single view, no split.",
+    "recipe_deviation": {
+      "lever": "direction tb instead of the flow-chains lr preference for 5+ stages",
+      "why": "lr at this content measures extent=89x9 (attempts/03-lr-case/check.txt) and overflows the 77-column pane; it also reports two hops with 2 dot cells, i.e. unable to show motion (warnings in the same file). tb measures extent=31x46 and fits.",
+      "evidence": [
+        "attempts/03-lr-case/check.txt",
+        "attempts/03-lr-case/pinned77x47-frames.txt (line 4: graph overflows - drag to pan)",
+        "attempts/02-tb-final/check.txt",
+        "evidence/v1/v1-77x47-frames.txt"
+      ]
+    }
+  },
+  "views": [
+    {
+      "view": "v1",
+      "family_line": "family: flow-chains | evidence: 6 nodes / 6 relations (E = N), shallow depth, animated traffic, so one dot per hop at the constant default rate.",
+      "role": "the whole pipeline in one view",
+      "spec": "specs/pipeline-tb.json",
+      "spec_sha256": "e0180ab5749af5739d4a20a25112f39ae7914afcad04b2a85c435d46ab9db10d",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "check": "evidence/v1/check.txt",
+      "frames_text_pane": "evidence/v1/v1-frames.txt",
+      "frames_ansi_pane": "evidence/v1/v1-frames.ansi",
+      "frames_pinned_77x47": "evidence/v1/v1-77x47-frames.txt",
+      "pinned_dump_command": "COLUMNS=77 LINES=47 /tmp/visualize-eval/round-08/bin/rataflow-view --frames 36 --step-ms 100 docs/visualize-eval/rounds/08/pipeline/specs/pipeline-tb.json",
+      "frames_captured": {
+        "pinned_77x47": 36,
+        "pane": 19,
+        "step_ms": 100,
+        "frame_zero_included": true,
+        "lap_basis": "longest route (auth->db) has 18 drawable dot cells and its dot returns to (29,28) on frame 34; 36 frames at 100 ms cover one full lap"
+      },
+      "measured_dimensions": {
+        "app_header_token": "83x51 @100%",
+        "app_header_source": "evidence/v1/v1-text.txt line 1",
+        "pane_rows_reported_by_harness": 51,
+        "pane_rect": null,
+        "pane_cols": null,
+        "target": "77x47",
+        "fit_proof": "the FINAL spec's pinned 77x47 dump (evidence/v1/v1-77x47-frames.txt) draws the whole graph with no overflow badge"
+      },
+      "viewport_line": "viewport: 77x47 zoom: 1.00 natural (evidence/v1/v1-77x47-frames.txt line 2)",
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=6 edges=6 flows=6 direction=tb theme=gruvbox",
+        "extent=31x46 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups:",
+        "trunks:",
+        "dots: 6 single-dot routes, 0 periodic routes, 0 violations, 6 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 6/6 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "validator": {
+        "command": "scripts/viz-validate.py docs/visualize-eval/rounds/08/pipeline/evidence/v1 --require-select --require-frames --attempts docs/visualize-eval/rounds/08/pipeline/attempts.json",
+        "output_file": "evidence/v1/validator.txt",
+        "result": "all checks passed"
+      },
+      "verified_in_capture": [
+        "6 boxes, exact source labels, no truncation: CLI (rows 1-4, cols 36-40), API gateway (rows 9-12, cols 32-44), Auth (rows 23-26, cols 28-33), Job queue (rows 23-26, cols 37-47), Worker pool (rows 31-34, cols 35-47), Postgres (rows 43-46, cols 33-42) in evidence/v1/v1-77x47-frames.txt frame 0.",
+        "the gateway fork is two separate ports on the api bottom border, (33,12) and (35,12), with separate labels verify (row 17, cols 26-31) and enqueue (row 17, cols 37-43), and two separate arrowheads on row 22.",
+        "read and write stay separate at the join: auth->db arrives on (34,42) and worker->db on (36,42) - two distinct arrowheads into Postgres on row 42; label read at (34,24), label write at (38,38).",
+        "labels own blank lanes, not route cells: row 17 and rows 34/38 carry no route glyph under the text (check: 0 on route cells, 0 ambiguous owners).",
+        "crossings: none - the read route runs down column 29 and the write lane down column 36, no bridge glyph anywhere in frame 0.",
+        "palette corner clear: the controls box occupies rows 40-45 cols 1-9 and every cell between column 10 and column 23 on those rows is blank, so no node or route border is overwritten.",
+        "motion: all six dots advance exactly one dot cell per two frames at 0.5 cells/100 ms (frame 0 -> frame 2: (37,6)->(36,7), (33,14)->(33,15), (35,14)->(35,15), (29,28)->(29,29), (38,28)->(37,29), (36,36)->(36,37)).",
+        "no dot on a corner, junction, bridge or label in any captured frame (dots sit at (37,6), (33,14), (35,14), (29,28), (38,28), (36,36) on frame 0; corner cells (37,7), (33,21), (38,29), (36,29), (29,41) carry no dot)."
+      ]
+    }
+  ],
+  "meaning_ledger": [
+    {
+      "fact": "CLI (node cli)",
+      "kind": "role",
+      "fate": "drawn",
+      "view": "v1"
+    },
+    {
+      "fact": "API gateway (node api)",
+      "kind": "role",
+      "fate": "drawn",
+      "view": "v1"
+    },
+    {
+      "fact": "Auth (node auth)",
+      "kind": "role",
+      "fate": "drawn",
+      "view": "v1"
+    },
+    {
+      "fact": "Job queue (node queue)",
+      "kind": "role",
+      "fate": "drawn",
+      "view": "v1"
+    },
+    {
+      "fact": "Worker pool (node worker)",
+      "kind": "role",
+      "fate": "drawn",
+      "view": "v1"
+    },
+    {
+      "fact": "Postgres (node db)",
+      "kind": "role/technology",
+      "fate": "drawn",
+      "view": "v1"
+    },
+    {
+      "fact": "cli -> api is an unlabeled historical relation; do not invent a protocol",
+      "kind": "qualifier",
+      "fate": "drawn as an unlabeled edge (no protocol label added)",
+      "view": "v1"
+    },
+    {
+      "fact": "api -> auth verb verify",
+      "kind": "action verb",
+      "fate": "drawn as label verify",
+      "view": "v1"
+    },
+    {
+      "fact": "api -> queue verb enqueue",
+      "kind": "action verb",
+      "fate": "drawn as label enqueue",
+      "view": "v1"
+    },
+    {
+      "fact": "queue -> worker unlabeled historical relation; do not invent a protocol",
+      "kind": "qualifier",
+      "fate": "drawn as an unlabeled edge",
+      "view": "v1"
+    },
+    {
+      "fact": "worker -> db verb write",
+      "kind": "action verb",
+      "fate": "drawn as label write",
+      "view": "v1"
+    },
+    {
+      "fact": "auth -> db verb read",
+      "kind": "action verb",
+      "fate": "drawn as label read",
+      "view": "v1"
+    },
+    {
+      "fact": "the read and write database paths are separate and must not be confused",
+      "kind": "structural claim",
+      "fate": "drawn as two independent routes arriving on two distinct arrowheads, (34,42) and (36,42)",
+      "view": "v1"
+    },
+    {
+      "fact": "the authentication path and the queue path are separate",
+      "kind": "structural claim",
+      "fate": "drawn as two independent api egress ports (33,12)/(35,12) with distinct labels verify/enqueue",
+      "view": "v1"
+    },
+    {
+      "fact": "slow, sparse motion for traffic",
+      "kind": "motion",
+      "fate": "drawn: exactly one dot per route at the constant default 0.5 cells/100 ms (no flow rate override)",
+      "view": "v1"
+    },
+    {
+      "fact": "live dots flow along the lines and their direction is traffic direction",
+      "kind": "motion",
+      "fate": "drawn: each dot travels from its source port toward its arrowhead (frame 0 vs frame 2 in evidence/v1/v1-77x47-frames.txt)",
+      "view": "v1"
+    },
+    {
+      "fact": "no dots in the background, no dot on a border",
+      "kind": "style qualifier",
+      "fate": "drawn: dots exist only on route cells; no dot sits on any box border in any captured frame",
+      "view": "v1"
+    },
+    {
+      "fact": "gruvbox color scheme",
+      "kind": "style",
+      "fate": "drawn (theme gruvbox; ANSI capture)",
+      "view": "v1"
+    },
+    {
+      "fact": "semantic tiers with related color shades",
+      "kind": "style/concept",
+      "fate": "dropped - see deliberate_drops[0]; the frozen renderer derives tier hues only from a declared group, and declared sibling groups on this centred chain render as bands outside their members (attempts/01)",
+      "view": "v1"
+    },
+    {
+      "fact": "the visualize pane should be an even split, not a narrowed one",
+      "kind": "harness detail (chat trivia, not a graph fact)",
+      "fate": "dropped - not a diagram fact; the evidence pane is a 0.5 ratio split (170x53 tab -> 83x51 app viewport)",
+      "view": "v1"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "cli",
+      "to": "api",
+      "verb_tech": "unlabeled historical relation (no protocol invented)",
+      "label_owner": "e1 (no label)",
+      "view": "v1",
+      "geometry": "port (37,4) -> corner (37,7) -> corner (33,7) -> arrowhead (33,8)"
+    },
+    {
+      "id": "e2",
+      "from": "api",
+      "to": "auth",
+      "verb_tech": "verify",
+      "label_owner": "e2",
+      "view": "v1",
+      "geometry": "port (33,12) -> corner (33,21) -> corner (29,21) -> arrowhead (29,22); label at (17,26)"
+    },
+    {
+      "id": "e3",
+      "from": "api",
+      "to": "queue",
+      "verb_tech": "enqueue",
+      "label_owner": "e3",
+      "view": "v1",
+      "geometry": "port (35,12) -> corner (35,21) -> corner (38,21) -> arrowhead (38,22); label at (17,37)"
+    },
+    {
+      "id": "e4",
+      "from": "queue",
+      "to": "worker",
+      "verb_tech": "unlabeled historical relation (no protocol invented)",
+      "label_owner": "e4 (no label)",
+      "view": "v1",
+      "geometry": "port (38,26) -> corner (38,29) -> corner (36,29) -> arrowhead (36,30)"
+    },
+    {
+      "id": "e5",
+      "from": "worker",
+      "to": "db",
+      "verb_tech": "write",
+      "label_owner": "e5",
+      "view": "v1",
+      "geometry": "port (36,34) -> straight down column 36 -> arrowhead (36,42); label at (38,38)"
+    },
+    {
+      "id": "e6",
+      "from": "auth",
+      "to": "db",
+      "verb_tech": "read",
+      "label_owner": "e6",
+      "view": "v1",
+      "geometry": "port (29,26) -> down column 29 to corner (29,41) -> corner (34,41) -> arrowhead (34,42); label at (34,24)"
+    }
+  ],
+  "relationship_mapping": [
+    {
+      "original": "cli -> api",
+      "visible": "e1, undirected-looking single arrow cli down into API gateway",
+      "view": "v1"
+    },
+    {
+      "original": "api -> auth (verify)",
+      "visible": "e2, API gateway bottom port into Auth top, label verify",
+      "view": "v1"
+    },
+    {
+      "original": "api -> queue (enqueue)",
+      "visible": "e3, second API gateway bottom port into Job queue top, label enqueue",
+      "view": "v1"
+    },
+    {
+      "original": "queue -> worker",
+      "visible": "e4, Job queue bottom into Worker pool top",
+      "view": "v1"
+    },
+    {
+      "original": "worker -> db (write)",
+      "visible": "e5, Worker pool bottom down the right lane into Postgres top, label write",
+      "view": "v1"
+    },
+    {
+      "original": "auth -> db (read)",
+      "visible": "e6, Auth bottom down the left lane around Worker pool into Postgres top, label read",
+      "view": "v1"
+    }
+  ],
+  "coverage_map": [
+    {
+      "view": "v1 (only view)",
+      "carries": "all 6 nodes, all 6 audited edges e1-e6, all 4 labels (verify, enqueue, write, read), both unlabeled historical relations kept unlabeled, motion on every hop"
+    }
+  ],
+  "structural_levers": [
+    {
+      "lever": "direction",
+      "value": "tb",
+      "source_fact": "no source fact fixes orientation; the 77x47 viewport does (lr measures 89x9 and cannot show motion on 2 hops)",
+      "evidence": [
+        "attempts/02-tb-final/check.txt",
+        "attempts/03-lr-case/check.txt"
+      ]
+    },
+    {
+      "lever": "groups (regions)",
+      "value": "none declared",
+      "source_fact": "the source names semantic tiers, but a declared group is the only hue source and sibling regions on this centred chain land outside their members",
+      "evidence": [
+        "attempts/01-lr-synthetic-groups/check.txt",
+        "attempts/01-lr-synthetic-groups/frames-120x30.txt"
+      ]
+    },
+    {
+      "lever": "layers (rank pins)",
+      "value": "omitted",
+      "source_fact": "the source states no geometry (no uplink row, spine/leaf order or parallel planes); ranks are the pipeline's own topology",
+      "evidence": []
+    },
+    {
+      "lever": "minlen (rank gaps)",
+      "value": "omitted (default 1)",
+      "source_fact": "the source states no corridor or phase skip; the read path's extra rank is the pipeline's join, not a declared gap",
+      "evidence": []
+    },
+    {
+      "lever": "trunks",
+      "value": "none",
+      "source_fact": "the gateway fork carries two different relations (verify and enqueue), not one bus that splits; a trunk would merge two distinct verbs into one corridor",
+      "evidence": []
+    },
+    {
+      "lever": "dots/flow",
+      "value": "flow true + dots 1 on all six edges, constant default 0.5 cells/100 ms, no timing override",
+      "source_fact": "the pipeline historically animated, and the source asks for slow sparse traffic motion",
+      "evidence": [
+        "evidence/v1/check.txt (dots: 6 single-dot routes, 6 constant at 0.5c/step)",
+        "evidence/v1/v1-77x47-frames.txt"
+      ]
+    }
+  ],
+  "source_pointers": {
+    "case_file": "docs/visualize-eval/cases/pipeline/source.md",
+    "relationships": "docs/visualize-eval/cases/pipeline/source.md 'Relationship facts from the historical attempt' (6 bullets) and 'Fixed constraints' (keep every relation, do not confuse the read with the write, semantic tiers, plain background, no border dots)",
+    "motion_request": "docs/visualize-eval/cases/pipeline/source.md Task line: 'Use slow, sparse motion for traffic.' and Original line 5 on live dots/direction/speed",
+    "historical_origin": "chat session 2026-10-13T05-35-27-649Z line 180, call chatcmpl-tool-8bf56de848923fd1 (not read directly; the brief's excerpts are the evidence)"
+  },
+  "abbreviations": [],
+  "deliberate_drops": [
+    {
+      "fact": "semantic tiers with related color shades",
+      "reason": "tier color exists only through a declared group; declared sibling groups on a 5-rank centred chain render as disjoint bands that do not contain their members (attempts/01-lr-synthetic-groups frames), so the tiers are carried by the rank structure and the four verb labels instead of by false region boxes. Reported as defect D2, not silently dropped."
+    },
+    {
+      "fact": "the 'even split, not narrowed' chat remark",
+      "reason": "a pane-layout remark, not a graph fact; the evidence pane is a 0.5 split (170x53 -> 83x51)."
+    }
+  ],
+  "protocol_omissions": [
+    {
+      "fact": "protocol on cli -> api",
+      "reason": "the source explicitly forbids inventing one; the edge is drawn unlabeled."
+    },
+    {
+      "fact": "protocol on queue -> worker",
+      "reason": "the source explicitly forbids inventing one; the edge is drawn unlabeled."
+    }
+  ],
+  "defects": [
+    {
+      "id": "D1",
+      "severity": "real, renderer-side (frozen binary; not fixable from a spec)",
+      "title": "frame-0 dots start one cell downstream of the first drawn route cell after the border port",
+      "check_reading": "origins: 6/6 routes start at their arrow origin (evidence/v1/check.txt) - the check's definition is dot_cells[0] == origin_cell(), and origin_cell() is the polyline's first point plus one step, while the polyline's first point is already the first cell outside the border.",
+      "capture_reading": "For all six routes the frame-0 dot sits at port row + 2 while the first drawn route cell is at port row + 1 (evidence/v1/v1-77x47-frames.txt frame 0): cli->api port (37,4), first drawn (37,5), dot (37,6); api->auth port (33,12), first drawn (33,13), dot (33,14); api->queue port (35,12), first drawn (35,13), dot (35,14); queue->worker port (38,26), first drawn (38,27), dot (38,28); auth->db port (29,26), first drawn (29,27), dot (29,28); worker->db port (36,34), first drawn (36,35), dot (36,36).",
+      "conclusion": "the check and the capture disagree about the arrow origin; under the stated rule (first drawn cell after the border port) the dots start one cell late. Both readings are recorded; the spec cannot fix it."
+    },
+    {
+      "id": "D2",
+      "severity": "coverage gap (capability limit)",
+      "title": "no group regions in this view",
+      "detail": "the source's semantic-tier shades are unmet because sibling group regions on this centred 5-rank chain render as bands outside their members (attempts/01-lr-synthetic-groups). Recorded rather than shipping false regions; groups line in evidence/v1/check.txt is empty."
+    },
+    {
+      "id": "D3",
+      "severity": "harness bookkeeping",
+      "title": "pane rectangle not recorded by the evidence script",
+      "detail": "scripts/viz-evidence.sh resolves the pane rectangle with `herdr pane layout` (no --pane/--current), which returned the FOCUSED tab (w7G:t1) rather than this session's tab (w7E:t7D), so manifest pane_rect and pane_cols are null and pane_rows came from the scroll viewport. The measured size therefore comes from the app's own header token 83x51 @100% (evidence/v1/v1-text.txt line 1), and fit is proven by the pinned 77x47 dump of the final spec."
+    },
+    {
+      "id": "D4",
+      "severity": "harness limit",
+      "title": "pane frames capture truncated to frames 17-35",
+      "detail": "herdr returns at most 1000 lines per pane read, so evidence/v1/v1-frames.txt holds only the last 19 of 36 frames (all timestamped). The full lap including frame 0 is the pinned dump evidence/v1/v1-77x47-frames.txt (36 frames, 0..35)."
+    }
+  ],
+  "blockers": [
+    "No renderer capability is missing for the structure the source states; the only unmet capability is honest tier regions on a centred chain (D2), which the frozen engine cannot place without drawing boxes outside their members."
+  ],
+  "cleanup": {
+    "pane_id": "w7E:pK6",
+    "result": "confirmed_closed",
+    "source": "evidence/v1/manifest.json cleanup field",
+    "notes": "the split was created by scripts/viz-evidence.sh with --no-focus in this session's own tab and closed by the same script; no other pane was touched."
+  },
+  "attempts_file": "attempts.json",
+  "self_assessment": "not marked green; no independent review run (the captain starts a separate judge).",
+  "validator": {
+    "command": "uv run --no-project scripts/viz-validate.py docs/visualize-eval/rounds/08/pipeline/evidence/v1 --require-select --require-frames --attempts docs/visualize-eval/rounds/08/pipeline/attempts.json",
+    "output_file": "evidence/v1/validator.txt",
+    "result": "all checks passed",
+    "failing_checks": [],
+    "pass_count": 32
+  },
+  "additional_files": {
+    "generation_md": "generation.md",
+    "commands_md": "commands.md",
+    "attempt_records": "attempts.json"
+  }
+}

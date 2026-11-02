@@ -1,0 +1,20 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "q", "label": "River queue", "group": "queue" },
+    { "id": "rec", "label": "reconcile loop", "group": "control" },
+    { "id": "reg", "label": "prov registry", "group": "providers" },
+    { "id": "prov", "label": "metal providers", "group": "providers" },
+    { "id": "mch", "label": "machines", "group": "machines" },
+    { "id": "boot", "label": "boot server", "group": "machines" }
+  ],
+  "edges": [
+    { "from": "q", "to": "reg", "label": "provision job", "dots": 1, "flow": true },
+    { "from": "rec", "to": "prov", "label": "gcore sync 1m", "dots": 1, "flow": true },
+    { "from": "reg", "to": "prov", "label": "provider API", "dots": 1, "flow": true },
+    { "from": "prov", "to": "mch", "label": "alloc instance", "dots": 1, "flow": true },
+    { "from": "mch", "to": "boot", "label": "iPXE request", "dots": 1, "flow": true },
+    { "from": "boot", "to": "mch", "label": "boot.ipxe + S3 args", "dots": 1, "flow": true }
+  ]
+}

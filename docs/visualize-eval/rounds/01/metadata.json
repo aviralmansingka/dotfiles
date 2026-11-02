@@ -1,0 +1,91 @@
+{
+  "round": "01",
+  "phase": "generation",
+  "skill_path": "docs/visualize-eval/rounds/01/SKILL.md",
+  "skill_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+  "renderer_path": "/tmp/visualize-eval/round-01/bin/rataflow-view",
+  "renderer_sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+  "cases_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "case_hashes": {
+    "pipeline": {
+      "source_sha256": "68aa197fdc597c3a22d1b8ca88a3ebee861dcda34684da15ae69b6946b741e58",
+      "expected_sha256": "ea177d01af818876ff04bf707b923326b153185fd425f21ea96250486b504ec3",
+      "variants_sha256": "5d351c45f055d2ca115036d10ab4bd50fb1d22ccd87f31e018f01c3039b48659"
+    },
+    "network": {
+      "source_sha256": "9d23a7b50d1d26a69f95523a9586bab96ec588afb9628ae274c896992b147947",
+      "expected_sha256": "8cb86d269c21176d775e79f8592f09067049031a0e581df38d66705e73a8caa9",
+      "variants_sha256": "6af06039e172f0ef75d83c87703f85541b24e61d8706c64d8bba31ce742c2cbe"
+    },
+    "homelab-nic-trace": {
+      "source_sha256": "abe8b376eccd7d0027f2985aab55ed656603b2094c275ee66ed223a57421b4c4",
+      "expected_sha256": "91ef88d09af71cd4583cfd0f1141e10f2fc2efdd3a779f9389f1d67759cd09c7",
+      "variants_sha256": "d70fd9d33cc1966bc015b6bc4d84176984979cac15b9cb7d1d89165e1bc7fc1f"
+    },
+    "server-nic-layout": {
+      "source_sha256": "235d296fef435710c8a49bcd247455c8c82b844e71726f146c4cedf227d0308b",
+      "expected_sha256": "ada8d8b1b8a3dfda4221b22fd1bb785327d6eeda69834c35ab5ab17b0678afb4",
+      "variants_sha256": "40f060941014aeaf83ee591346e9950f71c02bf9a68c5693804877bfbcbd9eb8"
+    },
+    "datacenter-redundancy": {
+      "source_sha256": "a3051af3eeeec31aee53558dafbbea5d061dc74253618fd6940eba5c39b5bb98",
+      "expected_sha256": "926e866fbdbb3eaac5b7a21360905d1f621a7a6386139afab303e8ba7e62ed47",
+      "variants_sha256": "a5753817a621b846abcb4105d028dbd0d0152214495f5b225044b3882f4f34b9"
+    },
+    "modal-machine-manager": {
+      "source_sha256": "a41065d9ceca1ed035bfd6282f0e937abbd0034ad497a33637a76f2d8a9ebab3",
+      "expected_sha256": "c6d14814bcfa0f41e7401df3b57ea1400e15050b9fb4db3d2e12980d6fde9764",
+      "variants_sha256": "22f00c085b50f218115610ed1580e89f4c0a94d39f8ecf83c80d6712116a06b2"
+    },
+    "modal-runtime": {
+      "source_sha256": "c6e4552d5842347bc9472e53a2351897c3624c92b5a14541aaa3c28216dc4a0d",
+      "expected_sha256": "fd3963e207e9c433b7e5825c8a1691766bb13d5df7322ac97a05e379d2cbba99",
+      "variants_sha256": "1e5a6add0f9d62670f8c884a2f4df679112e233df8539b3983d80c122bdcf8e7"
+    },
+    "gb300-rack-software": {
+      "source_sha256": "10d440af0be8d3730c448e710a48d4dfbd527a966f532084e7f98fd2d4b83fda",
+      "expected_sha256": "9a947233493973c247544ae6e9c175b940feb9d87fc850d4693565c90042c0ab",
+      "variants_sha256": "fd9892244406ec1b2b09ee2cc7adb2af5534ebb52ede5036664f238b776eff31"
+    }
+  },
+  "target": {
+    "columns": 77,
+    "rows": 47,
+    "zoom": 1.0
+  },
+  "note": "Fresh DeepSeek generators use the unchanged candidate skill and a new frozen renderer baseline containing completed arrow/border fixes. Cancelled Astra outputs are not reused or scored.",
+  "rubric_path": "docs/visualize-eval/rounds/01/rubric.json",
+  "rubric_sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+  "source_chat_hashes": {
+    "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-dotfiles-fix-visualize--/2026-10-13T05-35-27-649Z_01a133c2-33a0-74b7-9033-3ad246285cff.jsonl": "d81011109a4ffb408f5f36017eb40abb33f3e6cec9518fb0b2704f70ff02f214",
+    "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-rack-bench-feat-network-diagram--/2026-10-13T05-14-42-097Z_01a133af-3231-71ff-87c1-c56889a12a6c.jsonl": "fc49d2a4135b43c07f7b2073ca843b1647b2ba88cce5154b743af47557d6298c",
+    "/Users/aviral/.pi/agent/sessions/--Users-aviral-modal--/2026-10-14T20-31-55-285Z_01a13c1d-4b94-70e7-a930-7631ea0f9b66.jsonl": "7bb7c9eedee5c8415cc388ac6a932b353cb60bb6ee1a73ce4e1da3a199a4ca34",
+    "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-modal-learn-runtime-arch--/2026-10-14T20-36-14-065Z_01a13c21-3e70-754d-a101-f5817da3e05a.jsonl": "5cdf5d450474d22f6a076526bd0e0b9f7c990555054d5bfbcf078ee864d78aeb",
+    "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-vault-research-grace-blackwell--/2026-10-31T11-22-16-652Z_01a191b2-30cc-7236-b360-f3de1efcfa9a.jsonl": "34e9881a0f0a9d388b7304991606f5bcc0a660d19614944d4948e405c6636747"
+  },
+  "renderer_source_provenance": "Completed fix worker source, base c56402636e445761089db599ddd6055190515fa9; exact file hashes and local source copy recorded below.",
+  "critic_protocol": "Two stages: saved blind capture observations first; expected source/spec revealed only by captain follow-up after observation result.",
+  "scored": false,
+  "cancellation_reason": null,
+  "baseline_reason": "Fresh DeepSeek generation after user model correction. Renderer also advances to the completed tested arrow/border fix; this is a new baseline, not a skill-only improvement.",
+  "generator_model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+  "reviewer_model": "openai/gpt-6-astra",
+  "renderer_source_hashes": {
+    "rataflow/src/lib.rs": "ec7aa22e00d7c230419f2dc1a136aee22980cad2f65927afd7f5034cba6dbccf",
+    "rataflow/src/flow_edge.rs": "fd93c5e1ecc3ea04db13773e110e94a0b1f36b40556755d73ef187a5fe57f82c",
+    "rataflow/src/router.rs": "a21873030e717ae996161bed95594ad27991aa5b1da0433a03b1b22a6d98c7d8",
+    "rataflow/src/main.rs": "7200aef2c8854c94a5ad484c5a20bf449c59640d01f71f57dc3725627a4d1dbd",
+    "rataflow/Cargo.toml": "78b442c5d48530b3fa1017e4518f8a79f486ed5aae4b4e1ead7c291e93a771ed",
+    "rataflow/Cargo.lock": "964045834c8c80ffbb74d32900e53c2841d27bfba273c2bc9d0a319fb23dc34f"
+  },
+  "generator_workers": {
+    "pipeline": "viz-ds01-pipeline",
+    "network": "viz-ds01-network",
+    "homelab-nic-trace": "viz-ds01-homelab-nic-trace",
+    "server-nic-layout": "viz-ds01-server-nic-layout",
+    "datacenter-redundancy": "viz-ds01-datacenter-redundancy",
+    "modal-machine-manager": "viz-ds01-modal-machine-manager",
+    "modal-runtime": "viz-ds01-modal-runtime",
+    "gb300-rack-software": "viz-ds01-gb300-rack-software"
+  }
+}

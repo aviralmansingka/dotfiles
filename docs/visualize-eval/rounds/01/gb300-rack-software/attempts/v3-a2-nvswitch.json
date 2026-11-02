@@ -1,0 +1,20 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "layers": [
+    ["oob"],
+    ["nvos", "bmc_s"],
+    ["nmxc"]
+  ],
+  "nodes": [
+    { "id": "oob", "label": "OOB LAN" },
+    { "id": "nvos", "label": "NVOS" },
+    { "id": "bmc_s", "label": "NVSwitch BMC" },
+    { "id": "nmxc", "label": "NMX-C/T" }
+  ],
+  "edges": [
+    { "from": "oob", "to": "nvos", "label": "reach hist." },
+    { "from": "oob", "to": "bmc_s", "label": "power serial" },
+    { "from": "nvos", "to": "nmxc", "label": "NMX-C gRPC" }
+  ]
+}

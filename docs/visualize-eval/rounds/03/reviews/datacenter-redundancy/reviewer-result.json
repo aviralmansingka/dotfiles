@@ -1,0 +1,2879 @@
+{
+  "protocol_version": 1,
+  "round": 3,
+  "case_id": "datacenter-redundancy",
+  "candidate_sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+  "renderer_sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7",
+  "rubric_sha256": "5519fd84f6b75973dbf7b5f5544c909a8f32a8841a876c8e7af00a1fcb119335",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "ab6d229ee371574b8d239f848b51742de43e38d5cbde30d2b413651e22527a56",
+  "generator": {
+    "worker_id": "viz-ds03-5",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge03-datacenter",
+    "model": "openai/gpt-6.1-sol"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": null,
+  "evidence": [
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/03/metadata.json",
+      "sha256": "2b8b65daab2e7c34565fa8ed90f7b83fb4c9475b9e88a029be27168fa6afcb86",
+      "description": "Frozen round-03 provenance, hashes, worker map, and identity-correction record.",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/03/rubric.json",
+      "sha256": "5519fd84f6b75973dbf7b5f5544c909a8f32a8841a876c8e7af00a1fcb119335",
+      "description": "Full corrected frozen rubric and embedded result schema, revision 4.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen dataset descriptor; only this case was reviewed.",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/03/SKILL.md",
+      "sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+      "description": "Executed candidate skill snapshot; not the current working skill.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+      "sha256": "a3051af3eeeec31aee53558dafbbea5d061dc74253618fd6940eba5c39b5bb98",
+      "description": "Source excerpts, human corrections, physical-arrow constraint, explicit no-dots request.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/expected.json",
+      "sha256": "926e866fbdbb3eaac5b7a21360905d1f621a7a6386139afab303e8ba7e62ed47",
+      "description": "Qualified source-backed 18-concept/28-relation expectation set.",
+      "capture": null
+    },
+    {
+      "id": "variants",
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/historical-variants.json",
+      "sha256": "a5753817a621b846abcb4105d028dbd0d0152214495f5b225044b3882f4f34b9",
+      "description": "Preserved local historical variants; no external chat was opened.",
+      "capture": null
+    },
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/03/reviews/datacenter-redundancy/observed-first.md",
+      "sha256": "fad23e2a7cbb1a760b485737def2f5e7f415ed7dc06bcd092bc30a7ddce13224",
+      "description": "Immutable stage-A observations; saved_before_expected_reveal: true; digest reverified before and after stage B.",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/03/reviews/datacenter-redundancy/spec-manifest.json",
+      "sha256": "ab6d229ee371574b8d239f848b51742de43e38d5cbde30d2b413651e22527a56",
+      "description": "Deterministic sorted repository-relative spec path and actual SHA-256 pairs; digest is spec_sha256.",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/generation.json",
+      "sha256": "aa4c88643d1b11fa785b08ee97d9179f6453679fe33f86ffc889f6a1eafa4f52",
+      "description": "Generator provenance, coverage, commands, reported dimensions and cleanup; self-report is not visual proof.",
+      "capture": null
+    },
+    {
+      "id": "generation-report",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/generation.md",
+      "sha256": "72e6b03635058d305cb3b55ec7277893f3bbc81141ccab27d946f5ba399095e8",
+      "description": "Physical-link arrow convention, source coverage, and admitted presentation/evidence limitations.",
+      "capture": null
+    },
+    {
+      "id": "generation-builder",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/build-generation.py",
+      "sha256": "4bdf0cc46ec43de536220f4cfc10586aca016ad90a54410ef034627d0f97047e",
+      "description": "Process record revealing that reported outer-pane dimensions are literals.",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/attempts.json",
+      "sha256": "1b998525ab5a176ba4aa22ad80759d8c3f4a065a8a111df7ca43f5a9139704a9",
+      "description": "1/3/3/1 attempted-spec budget and selection rationale.",
+      "capture": null
+    },
+    {
+      "id": "verification",
+      "path": "docs/visualize-eval/rounds/03/reviews/datacenter-redundancy/verification.json",
+      "sha256": "6ff76ffd2039bcd909135afe8d5618926b24428a84112d88b5d8dce71570d2ee",
+      "description": "Independent hash/capture/route verification derived only from frozen evidence; no render.",
+      "capture": null
+    },
+    {
+      "id": "review-helper",
+      "path": "docs/visualize-eval/rounds/03/reviews/datacenter-redundancy/build-review.py",
+      "sha256": "484f3a133b589666f882a5ec6e98b38ebdb178e843af883156b33b04030c0311",
+      "description": "Review-only reproducible evidence parser and result assembler; never writes the blind record.",
+      "capture": null
+    },
+    {
+      "id": "v1-attempt1",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/attempts/v1-attempt1.json",
+      "sha256": "e973aa007d70fecc8f6b530eeb85b8ec4436b2b934a730ae1fce9655582c6509",
+      "description": "Preserved local attempt; digest verified against attempts.json; not accepted as a substitute for final captures.",
+      "capture": null
+    },
+    {
+      "id": "v2-attempt1",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/attempts/v2-attempt1.json",
+      "sha256": "a0467fb222ac36b78e70330b033c4d4daa4c79a25c272abf698a9e6ac22fe36a",
+      "description": "Preserved local attempt; digest verified against attempts.json; not accepted as a substitute for final captures.",
+      "capture": null
+    },
+    {
+      "id": "v2-attempt2",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/attempts/v2-attempt2.json",
+      "sha256": "4735e2c6917bac298f875d0b72461787fce8b1088f3e95876251aab270a8f762",
+      "description": "Preserved local attempt; digest verified against attempts.json; not accepted as a substitute for final captures.",
+      "capture": null
+    },
+    {
+      "id": "v2-attempt3",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/attempts/v2-attempt3.json",
+      "sha256": "0ebbc9dacf7d6c7cef47903a6a246c12700c0bbd68baf3260f80362198138273",
+      "description": "Preserved local attempt; digest verified against attempts.json; not accepted as a substitute for final captures.",
+      "capture": null
+    },
+    {
+      "id": "v3-attempt1",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/attempts/v3-attempt1.json",
+      "sha256": "1e27b326ffaaa3a1709c58f92065c19cbd813879b176323a04f01d83c6066ef9",
+      "description": "Preserved local attempt; digest verified against attempts.json; not accepted as a substitute for final captures.",
+      "capture": null
+    },
+    {
+      "id": "v3-attempt2",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/attempts/v3-attempt2.json",
+      "sha256": "2b1644825e696789082c74e01cc712217c910c8a0bd79639f9dfccfa4280486b",
+      "description": "Preserved local attempt; digest verified against attempts.json; not accepted as a substitute for final captures.",
+      "capture": null
+    },
+    {
+      "id": "v3-attempt3",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/attempts/v3-attempt3.json",
+      "sha256": "cddaa0b842530057c4d75a0ae1309b073ca12657669fc52d76a3380c0d7502bd",
+      "description": "Preserved local attempt; digest verified against attempts.json; not accepted as a substitute for final captures.",
+      "capture": null
+    },
+    {
+      "id": "v4-attempt1",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/attempts/v4-attempt1.json",
+      "sha256": "a4374676a03c55cb92fad1f4037041ca4404bc0010677d43d55b6f9f252045d0",
+      "description": "Preserved local attempt; digest verified against attempts.json; not accepted as a substitute for final captures.",
+      "capture": null
+    },
+    {
+      "id": "v1-spec",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/specs/v1.json",
+      "sha256": "e973aa007d70fecc8f6b530eeb85b8ec4436b2b934a730ae1fce9655582c6509",
+      "description": "Final spec; actual hash matches generation and manifest; relation readability audited in captures.",
+      "capture": null
+    },
+    {
+      "id": "v1-manifest",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v1/manifest.json",
+      "sha256": "22af4ee23ba75c0740608f991e356b133d0ee3b6f7163928fd1a19abdf44c56d",
+      "description": "Capture/check windows, recorded exit status and cleanup, artifact digests; pane_cols/pane_rect are null.",
+      "capture": null
+    },
+    {
+      "id": "v1-check",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v1/check.txt",
+      "sha256": "04ac8ae85eec9e22894dc30ccf5323fccc191ccd35782447ef718f5640855612",
+      "description": "Preserved complete check text; recorded exit 0 in manifest; no warning; not fit or ownership proof.",
+      "capture": null
+    },
+    {
+      "id": "v1-bin-hash",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v1/bin.sha256",
+      "sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "description": "Frozen absolute binary SHA-256 record; binary independently rehashed at the recorded absolute path.",
+      "capture": null
+    },
+    {
+      "id": "v1-validator",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/validator/v1.txt",
+      "sha256": "4e46700d9608600eca0a03dc2e2eb64aadaec8381d2d477bcea5701738b8092a",
+      "description": "Preserved all-pass harness output, not substituted for judging.",
+      "capture": null
+    },
+    {
+      "id": "v1-text",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v1/v1-text.txt",
+      "sha256": "e0ce375b02d4b0081c2cfecfc798d8d3784d3e2ed8323954e8c4d157d1c95ab8",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "normal standalone",
+        "timestamp": "capture window 2026-11-02T11:18:16Z / 2026-11-02T11:18:20Z; individual UTC frame times not recorded",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-ansi",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v1/v1-ansi.ansi",
+      "sha256": "ce3aefa897744a5fe76801d90e9126ee7b2dc7fb154f5a28abec0d4dbf2cc1b4",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "normal standalone",
+        "timestamp": "capture window 2026-11-02T11:18:16Z / 2026-11-02T11:18:20Z; individual UTC frame times not recorded",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-selected",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v1/v1-selected.ansi",
+      "sha256": "102dd362fbd00319362b253379c8b3cfc29284875e49b26951611b62a4906562",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "--select-all standalone",
+        "timestamp": "capture window 2026-11-02T11:18:16Z / 2026-11-02T11:18:20Z; individual UTC frame times not recorded",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frames-text",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v1/v1-frames.txt",
+      "sha256": "1d9ba90775558f4e96da9ad9fc8833ebd016882a320eb136cd7a159e8407fabd",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0..10; relative 0..2000ms at 200ms steps",
+        "timestamp": "capture window 2026-11-02T11:18:16Z / 2026-11-02T11:18:20Z; individual UTC frame times not recorded",
+        "state": "static frame sequence",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frames-ansi",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v1/v1-frames.ansi",
+      "sha256": "a3382eadc6d20eb540bea62f4bc154621d82923179103f74b6b93b74fdd5f5ea",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0..10; relative 0..2000ms at 200ms steps",
+        "timestamp": "capture window 2026-11-02T11:18:16Z / 2026-11-02T11:18:20Z; individual UTC frame times not recorded",
+        "state": "static frame sequence",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-spec",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/specs/v2.json",
+      "sha256": "4735e2c6917bac298f875d0b72461787fce8b1088f3e95876251aab270a8f762",
+      "description": "Final spec; actual hash matches generation and manifest; relation readability audited in captures.",
+      "capture": null
+    },
+    {
+      "id": "v2-manifest",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v2/manifest.json",
+      "sha256": "73a57dd64275174ac840ae424d024169909c8bef4d1ed2464419be84b05efd23",
+      "description": "Capture/check windows, recorded exit status and cleanup, artifact digests; pane_cols/pane_rect are null.",
+      "capture": null
+    },
+    {
+      "id": "v2-check",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v2/check.txt",
+      "sha256": "167d3206e7fe9949f0c877a8127f6342d7f3eb741ecd45caa2d1262030f14308",
+      "description": "Preserved complete check text; recorded exit 0 in manifest; no warning; not fit or ownership proof.",
+      "capture": null
+    },
+    {
+      "id": "v2-bin-hash",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v2/bin.sha256",
+      "sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "description": "Frozen absolute binary SHA-256 record; binary independently rehashed at the recorded absolute path.",
+      "capture": null
+    },
+    {
+      "id": "v2-validator",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/validator/v2.txt",
+      "sha256": "4e46700d9608600eca0a03dc2e2eb64aadaec8381d2d477bcea5701738b8092a",
+      "description": "Preserved all-pass harness output, not substituted for judging.",
+      "capture": null
+    },
+    {
+      "id": "v2-text",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v2/v2-text.txt",
+      "sha256": "2f098cb8732f6957a8535dc24947497b23ee9ae8e7b06f87127de8bec1cd1326",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "normal standalone",
+        "timestamp": "capture window 2026-11-02T11:18:29Z / 2026-11-02T11:18:33Z; individual UTC frame times not recorded",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-ansi",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v2/v2-ansi.ansi",
+      "sha256": "1a5641a046268df627ea1601e7aca894c8b64ac1b3c2eb1f879978da7657020b",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "normal standalone",
+        "timestamp": "capture window 2026-11-02T11:18:29Z / 2026-11-02T11:18:33Z; individual UTC frame times not recorded",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-selected",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v2/v2-selected.ansi",
+      "sha256": "9f5faabbe325c6c8ba8c0f9aa2ba684fade65fd9f39f7d94ad571af41858a25e",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "--select-all standalone",
+        "timestamp": "capture window 2026-11-02T11:18:29Z / 2026-11-02T11:18:33Z; individual UTC frame times not recorded",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frames-text",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v2/v2-frames.txt",
+      "sha256": "1bd8480a2e73d5d22cc0965946f75ac03a1d5064441b93bdc0e59a1caf2e774f",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0..10; relative 0..2000ms at 200ms steps",
+        "timestamp": "capture window 2026-11-02T11:18:29Z / 2026-11-02T11:18:33Z; individual UTC frame times not recorded",
+        "state": "static frame sequence",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frames-ansi",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v2/v2-frames.ansi",
+      "sha256": "970acb65d55345c1fc9dcd502450c479c5c1883b748e086b7fbd0de6f332f2dc",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0..10; relative 0..2000ms at 200ms steps",
+        "timestamp": "capture window 2026-11-02T11:18:29Z / 2026-11-02T11:18:33Z; individual UTC frame times not recorded",
+        "state": "static frame sequence",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-spec",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/specs/v3.json",
+      "sha256": "2b1644825e696789082c74e01cc712217c910c8a0bd79639f9dfccfa4280486b",
+      "description": "Final spec; actual hash matches generation and manifest; relation readability audited in captures.",
+      "capture": null
+    },
+    {
+      "id": "v3-manifest",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v3/manifest.json",
+      "sha256": "56c2a5b1d40f62628793cb5787e0188f2554c6e7e46ff88f1d800a00b6485403",
+      "description": "Capture/check windows, recorded exit status and cleanup, artifact digests; pane_cols/pane_rect are null.",
+      "capture": null
+    },
+    {
+      "id": "v3-check",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v3/check.txt",
+      "sha256": "815369ddfcd9e45eeb8c1589e22bf5d39e7813169d39288eef9f900834aec507",
+      "description": "Preserved complete check text; recorded exit 0 in manifest; no warning; not fit or ownership proof.",
+      "capture": null
+    },
+    {
+      "id": "v3-bin-hash",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v3/bin.sha256",
+      "sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "description": "Frozen absolute binary SHA-256 record; binary independently rehashed at the recorded absolute path.",
+      "capture": null
+    },
+    {
+      "id": "v3-validator",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/validator/v3.txt",
+      "sha256": "4e46700d9608600eca0a03dc2e2eb64aadaec8381d2d477bcea5701738b8092a",
+      "description": "Preserved all-pass harness output, not substituted for judging.",
+      "capture": null
+    },
+    {
+      "id": "v3-text",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v3/v3-text.txt",
+      "sha256": "be548ab15d0dfbc7bf1071bf6dc9692012612549e635a2cb5585fbdb8ec232f7",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "normal standalone",
+        "timestamp": "capture window 2026-11-02T11:18:34Z / 2026-11-02T11:18:37Z; individual UTC frame times not recorded",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-ansi",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v3/v3-ansi.ansi",
+      "sha256": "78ff49954e7149a028832bf2dba42fdfe62dc3cb02bd4b0c099641dbecc5b8fc",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "normal standalone",
+        "timestamp": "capture window 2026-11-02T11:18:34Z / 2026-11-02T11:18:37Z; individual UTC frame times not recorded",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-selected",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v3/v3-selected.ansi",
+      "sha256": "9455138cd246e258349b8db97076409a5b5fcdd372a6df567dcf26033c7fb344",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "--select-all standalone",
+        "timestamp": "capture window 2026-11-02T11:18:34Z / 2026-11-02T11:18:37Z; individual UTC frame times not recorded",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-frames-text",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v3/v3-frames.txt",
+      "sha256": "eef0609ff24f9beb7a155c10cdce1e26dd72648cbce4f7a239cf623d5ce9382a",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "0..10; relative 0..2000ms at 200ms steps",
+        "timestamp": "capture window 2026-11-02T11:18:34Z / 2026-11-02T11:18:37Z; individual UTC frame times not recorded",
+        "state": "static frame sequence",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frames-ansi",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v3/v3-frames.ansi",
+      "sha256": "d2d4029b720046470ba5d9ca706dcffceea096b630816e7be74f79bee971af20",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "0..10; relative 0..2000ms at 200ms steps",
+        "timestamp": "capture window 2026-11-02T11:18:34Z / 2026-11-02T11:18:37Z; individual UTC frame times not recorded",
+        "state": "static frame sequence",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-spec",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/specs/v4.json",
+      "sha256": "a4374676a03c55cb92fad1f4037041ca4404bc0010677d43d55b6f9f252045d0",
+      "description": "Final spec; actual hash matches generation and manifest; relation readability audited in captures.",
+      "capture": null
+    },
+    {
+      "id": "v4-manifest",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v4/manifest.json",
+      "sha256": "3ac1d17ff2022c4650a083c62f419c4e2e6853681b92a44a0e580558b82020da",
+      "description": "Capture/check windows, recorded exit status and cleanup, artifact digests; pane_cols/pane_rect are null.",
+      "capture": null
+    },
+    {
+      "id": "v4-check",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v4/check.txt",
+      "sha256": "39018a43c268cfdd7729de8712033e21b8aa4bbeb11ca9a7bb27b36c7d5e6c69",
+      "description": "Preserved complete check text; recorded exit 0 in manifest; no warning; not fit or ownership proof.",
+      "capture": null
+    },
+    {
+      "id": "v4-bin-hash",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v4/bin.sha256",
+      "sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "description": "Frozen absolute binary SHA-256 record; binary independently rehashed at the recorded absolute path.",
+      "capture": null
+    },
+    {
+      "id": "v4-validator",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/validator/v4.txt",
+      "sha256": "4e46700d9608600eca0a03dc2e2eb64aadaec8381d2d477bcea5701738b8092a",
+      "description": "Preserved all-pass harness output, not substituted for judging.",
+      "capture": null
+    },
+    {
+      "id": "v4-text",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v4/v4-text.txt",
+      "sha256": "85151399d0caf93e96d86bf7f067bdd39393594c1187b11e364cca0494e4f803",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "normal standalone",
+        "timestamp": "capture window 2026-11-02T11:18:38Z / 2026-11-02T11:18:42Z; individual UTC frame times not recorded",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-ansi",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v4/v4-ansi.ansi",
+      "sha256": "ad0a1809e7e0941a5076b922d95329c7d45582dc29f45fca0c0f4e77cf6fa066",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "normal standalone",
+        "timestamp": "capture window 2026-11-02T11:18:38Z / 2026-11-02T11:18:42Z; individual UTC frame times not recorded",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-selected",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v4/v4-selected.ansi",
+      "sha256": "0d47634af9513d1562d517149fdb876a5fb22d3460f74b085fd38206c290df22",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "--select-all standalone",
+        "timestamp": "capture window 2026-11-02T11:18:38Z / 2026-11-02T11:18:42Z; individual UTC frame times not recorded",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-frames-text",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v4/v4-frames.txt",
+      "sha256": "13528c0e99a2e22e830438ac9fad29a23a55418a11a94120baa31ded8f0bce0b",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "0..10; relative 0..2000ms at 200ms steps",
+        "timestamp": "capture window 2026-11-02T11:18:38Z / 2026-11-02T11:18:42Z; individual UTC frame times not recorded",
+        "state": "static frame sequence",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-frames-ansi",
+      "path": "docs/visualize-eval/rounds/03/datacenter-redundancy/evidence/v4/v4-frames.ansi",
+      "sha256": "05d0cb22740465a2e447138b875130082776beae2a2a0bc091b16fa703ee7d35",
+      "description": "Actual pane capture; dimensions denote the app buffer, not an independently measured outer-pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "0..10; relative 0..2000ms at 200ms steps",
+        "timestamp": "capture window 2026-11-02T11:18:38Z / 2026-11-02T11:18:42Z; individual UTC frame times not recorded",
+        "state": "static frame sequence",
+        "format": "ansi"
+      }
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 18 source concepts and 28 required directed physical-link relations are readable in captures, with complete four-view boundary coverage and the corrected same-height leaf tier. 17 local label owners remain uncertain, but required meanings are recovered by full endpoint tracing: x-connect/ECMP/dual fans are homogeneous; v2 firewall role node labels plus dashed standby paths disambiguate active/standby. No instantaneous/unique-per-word-leader gate is added. generation.md states physical connectivity, not proof of one-way traffic; standby? qualifies historical standby without removing links.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "generation-report",
+        "blind",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v4-ansi"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Every one of 28 captured source stems reaches its unique intact head, including BL-to-spine arrows ending on side ports. All 15 crossings use distinguishable bridges; all independent paths remain separate with no shared runs, invented branch, trunk, missing head or dot-origin issue. Close bends and owner uncertainty slow reading but do not prevent complete endpoint tracing.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 270 (user)",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/constraints"
+      ],
+      "evidence_ids": [
+        "blind",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v4-ansi"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Four measured 77x47 app buffers and startup viewport lines prove complete natural-100% fit, no clipping or overlay occlusion, and source-complete splits. However, captured counts 1/4/9/1 include at least four avoidable crossing cells: the e14/e16 and e23/e24 double hairpins can each be bypassed inside their own existing cells with all boxes, source groups and tiers fixed. Required source geometry does not force these detours. Seventeen locally uncertain label owners are additional layout/readability defects. A new global optimum is not claimed.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/layout_fit",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 248 (user)",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 270 (user)"
+      ],
+      "evidence_ids": [
+        "blind",
+        "verification",
+        "attempts",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v4-ansi",
+        "v1-frames-text",
+        "v1-frames-ansi",
+        "v2-frames-text",
+        "v2-frames-ansi",
+        "v3-frames-text",
+        "v3-frames-ansi",
+        "v4-frames-text",
+        "v4-frames-ansi"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Actual ANSI and box proximity show honest equipment-role hue families: WAN ISPs, MUXes, cores, firewall pair, border leaves, spines, rack leaves and racks. v3 leaves share top row 28 below both spine boxes. No source group or tier is reordered in the final views; cross-view hue stability is not a separate rubric gate.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 126 (user)",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 248 (user)",
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/conceptual_grouping_color"
+      ],
+      "evidence_ids": [
+        "source",
+        "blind",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v4-ansi"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Normal ANSI proves all sides/corners complete and one continuous RGB foreground around every node perimeter, including taller port-bearing boxes. Selected ANSI proves bold RGB(216,166,87) throughout each full perimeter: 8/8 + 6/6 + 6/6 + 4/4 = 24/24. Evidence is simultaneous --select-all, not isolated interactive selection; the rubric permits this.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/border_integrity"
+      ],
+      "evidence_ids": [
+        "blind",
+        "verification",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v4-ansi",
+        "v1-selected",
+        "v2-selected",
+        "v3-selected",
+        "v4-selected"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Frozen skill, binary, corrected rubric, dataset/case hashes, four final specs, manifests and all 28 manifest-listed artifact hashes verify. Separate generator/reviewer identities, unchanged pre-reveal blind record, commands/check exit 0, text/ANSI/selected/frame evidence and cleanup records exist. Reviewer identity is true Sol under clerical revision 4, not stale Astra prose. But separate actual live-pane dimensions are not captured: all pane_cols/pane_rect fields are null and 79x49 in the report builder is literal. App viewport evidence cannot replace the missing raw pane/probe measurement. No new probe may repair this sample.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/03/metadata.json#/frozen_input_corrections"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "rubric",
+        "dataset",
+        "skill",
+        "source",
+        "expected",
+        "variants",
+        "blind",
+        "spec-manifest",
+        "generation",
+        "generation-builder",
+        "verification",
+        "v1-manifest",
+        "v2-manifest",
+        "v3-manifest",
+        "v4-manifest",
+        "v1-frames-text",
+        "v1-frames-ansi",
+        "v2-frames-text",
+        "v2-frames-ansi",
+        "v3-frames-text",
+        "v3-frames-ansi",
+        "v4-frames-text",
+        "v4-frames-ansi"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Applicable form is explicit static suppression: source Original line 134 asks to remove flowing dots, and expected.json/cases.json say off. All 44 sampled frame bodies show zero dots, identical across each view at 0,200,...,2000ms; no motion critical violation. Animated origin, travel spacing/direction and synchronized arrival are not claimed or required for these static links. This is not a five-frame alias inference or an animated success metric.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 134 (user)",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/animation",
+        "docs/visualize-eval/cases.json#datacenter-redundancy.animation"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "dataset",
+        "blind",
+        "verification",
+        "v1-frames-text",
+        "v1-frames-ansi",
+        "v2-frames-text",
+        "v2-frames-ansi",
+        "v3-frames-text",
+        "v3-frames-ansi",
+        "v4-frames-text",
+        "v4-frames-ansi"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/0",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "ISP A -> MUX 1; physical connectivity in audit direction, not proof of one-way traffic; unlabeled, no invented protocol; independent redundancy link, never a bus.",
+      "observed": "v1: ISP A -> MUX 1, solid. First drawn source stem [20, 18]; source-to-head polyline [[20, 18], [20, 22]]; unique intact ▼ head [20, 22] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: none. No edge label required or invented; ISP and MUX identities and physical relation visible. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            19,
+            14,
+            7,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            20,
+            18,
+            1,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            20,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            20,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            19,
+            23,
+            7,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/1",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "ISP B -> MUX 1; physical connectivity in audit direction, not proof of one-way traffic; unlabeled, no invented protocol; independent redundancy link, never a bus.",
+      "observed": "v1: ISP B -> MUX 1, solid. First drawn source stem [32, 18]; source-to-head polyline [[32, 18], [32, 20], [22, 20], [22, 22]]; unique intact ▼ head [22, 22] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: none. No edge label required or invented; ISP and MUX identities and physical relation visible. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            31,
+            14,
+            7,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            22,
+            18,
+            11,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            32,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            22,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            19,
+            23,
+            7,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/2",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "ISP C -> MUX 2; physical connectivity in audit direction, not proof of one-way traffic; unlabeled, no invented protocol; independent redundancy link, never a bus.",
+      "observed": "v1: ISP C -> MUX 2, solid. First drawn source stem [43, 18]; source-to-head polyline [[43, 18], [43, 20], [33, 20], [33, 21], [32, 21], [32, 22]]; unique intact ▼ head [32, 22] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: none. No edge label required or invented; ISP and MUX identities and physical relation visible. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            42,
+            14,
+            7,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            32,
+            18,
+            12,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            43,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            32,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            31,
+            23,
+            7,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/3",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "ISP D -> MUX 2; physical connectivity in audit direction, not proof of one-way traffic; unlabeled, no invented protocol; independent redundancy link, never a bus.",
+      "observed": "v1: ISP D -> MUX 2, solid. First drawn source stem [54, 18]; source-to-head polyline [[54, 18], [54, 21], [34, 21], [34, 22]]; unique intact ▼ head [34, 22] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: none. No edge label required or invented; ISP and MUX identities and physical relation visible. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            53,
+            14,
+            7,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            34,
+            18,
+            21,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            54,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            34,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            31,
+            23,
+            7,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/4",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "MUX 1 -> Core 1; physical connectivity in audit direction, not proof of one-way traffic; label meaning x-connect; independent redundancy link, never a bus.",
+      "observed": "v1: MUX 1 -> Core 1, solid. First drawn source stem [20, 27]; source-to-head polyline [[20, 27], [20, 30], [19, 30], [19, 31]]; unique intact ▼ head [19, 31] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: none. Visible x-connect words carry the homogeneous source-required meaning across this fan; every endpoint pair is independently traced. Local ownership ambiguity is retained in F3, not erased by the spec. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            19,
+            23,
+            7,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            19,
+            27,
+            2,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            20,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            19,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            18,
+            32,
+            8,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/5",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "MUX 1 -> Core 2; physical connectivity in audit direction, not proof of one-way traffic; label meaning x-connect; independent redundancy link, never a bus.",
+      "observed": "v1: MUX 1 -> Core 2, solid. First drawn source stem [22, 27]; source-to-head polyline [[22, 27], [22, 30], [31, 30], [31, 31]]; unique intact ▼ head [31, 31] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: [22, 29] with e7. Visible x-connect words carry the homogeneous source-required meaning across this fan; every endpoint pair is independently traced. Local ownership ambiguity is retained in F3, not erased by the spec. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            19,
+            23,
+            7,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            22,
+            27,
+            10,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            22,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            31,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            30,
+            32,
+            8,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/6",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "MUX 2 -> Core 1; physical connectivity in audit direction, not proof of one-way traffic; label meaning x-connect; independent redundancy link, never a bus.",
+      "observed": "v1: MUX 2 -> Core 1, solid. First drawn source stem [32, 27]; source-to-head polyline [[32, 27], [32, 29], [21, 29], [21, 31]]; unique intact ▼ head [21, 31] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: [22, 29] with e6. Visible x-connect words carry the homogeneous source-required meaning across this fan; every endpoint pair is independently traced. Local ownership ambiguity is retained in F3, not erased by the spec. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            31,
+            23,
+            7,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            21,
+            27,
+            12,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            32,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            21,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            18,
+            32,
+            8,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/7",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "MUX 2 -> Core 2; physical connectivity in audit direction, not proof of one-way traffic; label meaning x-connect; independent redundancy link, never a bus.",
+      "observed": "v1: MUX 2 -> Core 2, solid. First drawn source stem [34, 27]; source-to-head polyline [[34, 27], [34, 30], [33, 30], [33, 31]]; unique intact ▼ head [33, 31] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: none. Visible x-connect words carry the homogeneous source-required meaning across this fan; every endpoint pair is independently traced. Local ownership ambiguity is retained in F3, not erased by the spec. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            31,
+            23,
+            7,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            33,
+            27,
+            2,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            34,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            33,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            30,
+            32,
+            8,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e9",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/8",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "Core 1 -> FW1 active; physical connectivity in audit direction, not proof of one-way traffic; label meaning active; independent redundancy link, never a bus.",
+      "observed": "v2: Core 1 -> FW1 active, solid. First drawn source stem [28, 18]; source-to-head polyline [[28, 18], [28, 20], [26, 20], [26, 22]]; unique intact ▼ head [26, 22] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: none. Visible active words plus the FW1 active endpoint and solid route recover active role. Fused active/standby labels require tracing; exact local word owner is not certified. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            27,
+            14,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            26,
+            18,
+            3,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            28,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            26,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            25,
+            23,
+            12,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e10",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/9",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "Core 2 -> FW1 active; physical connectivity in audit direction, not proof of one-way traffic; label meaning active; independent redundancy link, never a bus.",
+      "observed": "v2: Core 2 -> FW1 active, solid. First drawn source stem [45, 18]; source-to-head polyline [[45, 18], [45, 20], [43, 20], [43, 19], [31, 19], [31, 20], [29, 20], [29, 21], [28, 21], [28, 22]]; unique intact ▼ head [28, 22] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: [30, 20] with e11. Visible active words plus the FW1 active endpoint and solid route recover active role. Fused active/standby labels require tracing; exact local word owner is not certified. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            44,
+            14,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            28,
+            18,
+            18,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            45,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            28,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            25,
+            23,
+            12,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e11",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/10",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "Core 1 -> FW2 standby; physical connectivity in audit direction, not proof of one-way traffic; label meaning standby; independent redundancy link, never a bus.",
+      "observed": "v2: Core 1 -> FW2 standby, dashed. First drawn source stem [30, 18]; source-to-head polyline [[30, 18], [30, 21], [42, 21], [42, 22]]; unique intact ▼ head [42, 22] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: [30, 20] with e10. Visible standby? words qualify historical standby; dashed route and explicit FW2 standby endpoint recover meaning. Local placement is not a uniquely proven word-to-edge assignment. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            27,
+            14,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            30,
+            18,
+            13,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            30,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            42,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            41,
+            23,
+            13,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e12",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/11",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "Core 2 -> FW2 standby; physical connectivity in audit direction, not proof of one-way traffic; label meaning standby; independent redundancy link, never a bus.",
+      "observed": "v2: Core 2 -> FW2 standby, dashed. First drawn source stem [47, 18]; source-to-head polyline [[47, 18], [47, 21], [44, 21], [44, 22]]; unique intact ▼ head [44, 22] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: none. Visible standby? words qualify historical standby; dashed route and explicit FW2 standby endpoint recover meaning. Local placement is not a uniquely proven word-to-edge assignment. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            44,
+            14,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            44,
+            18,
+            4,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            47,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            44,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            41,
+            23,
+            13,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e13",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/12",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "FW1 active -> BL 1; physical connectivity in audit direction, not proof of one-way traffic; label meaning active; independent redundancy link, never a bus.",
+      "observed": "v2: FW1 active -> BL 1, solid. First drawn source stem [26, 27]; source-to-head polyline [[26, 27], [26, 30], [29, 30], [29, 31]]; unique intact ▼ head [29, 31] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: none. Visible active words plus the FW1 active endpoint and solid route recover active role. Fused active/standby labels require tracing; exact local word owner is not certified. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            25,
+            23,
+            12,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            26,
+            27,
+            4,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            26,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            29,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            28,
+            32,
+            6,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e14",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/13",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "FW1 active -> BL 2; physical connectivity in audit direction, not proof of one-way traffic; label meaning active; independent redundancy link, never a bus.",
+      "observed": "v2: FW1 active -> BL 2, solid. First drawn source stem [28, 27]; source-to-head polyline [[28, 27], [28, 29], [46, 29], [46, 31]]; unique intact ▼ head [46, 31] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: [42, 29] with e15; [44, 29] with e16; [45, 29] with e16. Visible active words plus the FW1 active endpoint and solid route recover active role. Fused active/standby labels require tracing; exact local word owner is not certified. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            25,
+            23,
+            12,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            28,
+            27,
+            19,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            28,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            46,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            45,
+            32,
+            6,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1",
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e15",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/14",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "FW2 standby -> BL 1; physical connectivity in audit direction, not proof of one-way traffic; label meaning standby; independent redundancy link, never a bus.",
+      "observed": "v2: FW2 standby -> BL 1, dashed. First drawn source stem [42, 27]; source-to-head polyline [[42, 27], [42, 30], [31, 30], [31, 31]]; unique intact ▼ head [31, 31] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: [42, 29] with e14. Visible standby? words qualify historical standby; dashed route and explicit FW2 standby endpoint recover meaning. Local placement is not a uniquely proven word-to-edge assignment. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            41,
+            23,
+            13,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            31,
+            27,
+            12,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            42,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            31,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            28,
+            32,
+            6,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e16",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/15",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "FW2 standby -> BL 2; physical connectivity in audit direction, not proof of one-way traffic; label meaning standby; independent redundancy link, never a bus.",
+      "observed": "v2: FW2 standby -> BL 2, dashed. First drawn source stem [44, 27]; source-to-head polyline [[44, 27], [44, 30], [45, 30], [45, 28], [48, 28], [48, 31]]; unique intact ▼ head [48, 31] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: [44, 29] with e14; [45, 29] with e14. Visible standby? words qualify historical standby; dashed route and explicit FW2 standby endpoint recover meaning. Local placement is not a uniquely proven word-to-edge assignment. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            41,
+            23,
+            13,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            44,
+            27,
+            5,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            44,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            48,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            45,
+            32,
+            6,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1",
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e17",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/16",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "BL 1 -> Spine 1; physical connectivity in audit direction, not proof of one-way traffic; label meaning ECMP; independent redundancy link, never a bus.",
+      "observed": "v3: BL 1 -> Spine 1, solid. First drawn source stem [17, 29]; source-to-head polyline [[17, 29], [13, 29], [13, 17], [15, 17]]; unique intact ▶ head [15, 17] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: [15, 29] with e19. Visible ECMP words carry the homogeneous source-required meaning across this fan; every endpoint pair is independently traced. Local ownership ambiguity is retained in F3, not erased by the spec. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            18,
+            28,
+            6,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            13,
+            17,
+            5,
+            13
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            17,
+            29,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            15,
+            17,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            16,
+            16,
+            9,
+            5
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e18",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/17",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "BL 1 -> Spine 2; physical connectivity in audit direction, not proof of one-way traffic; label meaning ECMP; independent redundancy link, never a bus.",
+      "observed": "v3: BL 1 -> Spine 2, solid. First drawn source stem [24, 29]; source-to-head polyline [[24, 29], [26, 29], [26, 14], [39, 14], [39, 17], [38, 17]]; unique intact ◀ head [38, 17] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: [26, 26] with e21; [26, 24] with e22. Visible ECMP words carry the homogeneous source-required meaning across this fan; every endpoint pair is independently traced. Local ownership ambiguity is retained in F3, not erased by the spec. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            18,
+            28,
+            6,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            24,
+            14,
+            16,
+            16
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            24,
+            29,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            38,
+            17,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            29,
+            16,
+            9,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e19",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/18",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "BL 2 -> Spine 1; physical connectivity in audit direction, not proof of one-way traffic; label meaning ECMP; independent redundancy link, never a bus.",
+      "observed": "v3: BL 2 -> Spine 1, solid. First drawn source stem [30, 29]; source-to-head polyline [[30, 29], [27, 29], [27, 33], [15, 33], [15, 22], [14, 22], [14, 19], [15, 19]]; unique intact ▶ head [15, 19] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: [28, 29] with e20; [15, 29] with e17. Visible ECMP words carry the homogeneous source-required meaning across this fan; every endpoint pair is independently traced. Local ownership ambiguity is retained in F3, not erased by the spec. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            31,
+            28,
+            6,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            14,
+            19,
+            17,
+            15
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            30,
+            29,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            15,
+            19,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            16,
+            16,
+            9,
+            5
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e20",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/19",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "BL 2 -> Spine 2; physical connectivity in audit direction, not proof of one-way traffic; label meaning ECMP; independent redundancy link, never a bus.",
+      "observed": "v3: BL 2 -> Spine 2, solid. First drawn source stem [30, 31]; source-to-head polyline [[30, 31], [28, 31], [28, 21], [27, 21], [27, 17], [28, 17]]; unique intact ▶ head [28, 17] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: [28, 29] with e19; [28, 26] with e21; [28, 24] with e22. Visible ECMP words carry the homogeneous source-required meaning across this fan; every endpoint pair is independently traced. Local ownership ambiguity is retained in F3, not erased by the spec. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            31,
+            28,
+            6,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            27,
+            17,
+            4,
+            15
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            30,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            28,
+            17,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            29,
+            16,
+            9,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e21",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/20",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "Spine 1 -> Leaf 1; physical connectivity in audit direction, not proof of one-way traffic; label meaning ECMP; independent redundancy link, never a bus.",
+      "observed": "v3: Spine 1 -> Leaf 1, solid. First drawn source stem [17, 21]; source-to-head polyline [[17, 21], [17, 26], [43, 26], [43, 27]]; unique intact ▼ head [43, 27] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: [26, 26] with e18; [28, 26] with e20. Visible ECMP words carry the homogeneous source-required meaning across this fan; every endpoint pair is independently traced. Local ownership ambiguity is retained in F3, not erased by the spec. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            16,
+            16,
+            9,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            17,
+            21,
+            27,
+            7
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            17,
+            21,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            43,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            42,
+            28,
+            8,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e22",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/21",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "Spine 1 -> Leaf 2; physical connectivity in audit direction, not proof of one-way traffic; label meaning ECMP; independent redundancy link, never a bus.",
+      "observed": "v3: Spine 1 -> Leaf 2, solid. First drawn source stem [19, 21]; source-to-head polyline [[19, 21], [19, 24], [55, 24], [55, 27]]; unique intact ▼ head [55, 27] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: [26, 24] with e18; [28, 24] with e20; [45, 24] with e23. Visible ECMP words carry the homogeneous source-required meaning across this fan; every endpoint pair is independently traced. Local ownership ambiguity is retained in F3, not erased by the spec. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            16,
+            16,
+            9,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            19,
+            21,
+            37,
+            7
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            19,
+            21,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            55,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            54,
+            28,
+            8,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e23",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/22",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "Spine 2 -> Leaf 1; physical connectivity in audit direction, not proof of one-way traffic; label meaning ECMP; independent redundancy link, never a bus.",
+      "observed": "v3: Spine 2 -> Leaf 1, solid. First drawn source stem [30, 20]; source-to-head polyline [[30, 20], [30, 22], [45, 22], [45, 27]]; unique intact ▼ head [45, 27] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: [32, 22] with e24; [33, 22] with e24; [45, 24] with e22. Visible ECMP words carry the homogeneous source-required meaning across this fan; every endpoint pair is independently traced. Local ownership ambiguity is retained in F3, not erased by the spec. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            29,
+            16,
+            9,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            30,
+            20,
+            16,
+            8
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            30,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            45,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            42,
+            28,
+            8,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2",
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e24",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/23",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "Spine 2 -> Leaf 2; physical connectivity in audit direction, not proof of one-way traffic; label meaning ECMP; independent redundancy link, never a bus.",
+      "observed": "v3: Spine 2 -> Leaf 2, solid. First drawn source stem [32, 20]; source-to-head polyline [[32, 20], [32, 23], [33, 23], [33, 21], [57, 21], [57, 27]]; unique intact ▼ head [57, 27] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: [32, 22] with e23; [33, 22] with e23. Visible ECMP words carry the homogeneous source-required meaning across this fan; every endpoint pair is independently traced. Local ownership ambiguity is retained in F3, not erased by the spec. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            29,
+            16,
+            9,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            32,
+            20,
+            26,
+            8
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            32,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            57,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            54,
+            28,
+            8,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2",
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e25",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/24",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "Leaf 1 -> Rack 1; physical connectivity in audit direction, not proof of one-way traffic; label meaning dual; independent redundancy link, never a bus.",
+      "observed": "v4: Leaf 1 -> Rack 1, solid. First drawn source stem [30, 22]; source-to-head polyline [[30, 22], [30, 26]]; unique intact ▼ head [30, 26] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: none. Visible dual words carry the homogeneous source-required meaning across this fan; every endpoint pair is independently traced. Local ownership ambiguity is retained in F3, not erased by the spec. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            29,
+            18,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            30,
+            22,
+            1,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            30,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            30,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            29,
+            27,
+            8,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e26",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/25",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "Leaf 2 -> Rack 1; physical connectivity in audit direction, not proof of one-way traffic; label meaning dual; independent redundancy link, never a bus.",
+      "observed": "v4: Leaf 2 -> Rack 1, solid. First drawn source stem [42, 22]; source-to-head polyline [[42, 22], [42, 23], [33, 23], [33, 25], [32, 25], [32, 26]]; unique intact ▼ head [32, 26] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: [33, 24] with e27. Visible dual words carry the homogeneous source-required meaning across this fan; every endpoint pair is independently traced. Local ownership ambiguity is retained in F3, not erased by the spec. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            41,
+            18,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            32,
+            22,
+            11,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            42,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            32,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            29,
+            27,
+            8,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e27",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/26",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "Leaf 1 -> Rack 2; physical connectivity in audit direction, not proof of one-way traffic; label meaning dual; independent redundancy link, never a bus.",
+      "observed": "v4: Leaf 1 -> Rack 2, solid. First drawn source stem [32, 22]; source-to-head polyline [[32, 22], [32, 24], [42, 24], [42, 26]]; unique intact ▼ head [42, 26] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: [33, 24] with e26. Visible dual words carry the homogeneous source-required meaning across this fan; every endpoint pair is independently traced. Local ownership ambiguity is retained in F3, not erased by the spec. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            29,
+            18,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            32,
+            22,
+            11,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            32,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            42,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            41,
+            27,
+            8,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e28",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/27",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Fixed constraints"
+      ],
+      "expected": "Leaf 2 -> Rack 2; physical connectivity in audit direction, not proof of one-way traffic; label meaning dual; independent redundancy link, never a bus.",
+      "observed": "v4: Leaf 2 -> Rack 2, solid. First drawn source stem [44, 22]; source-to-head polyline [[44, 22], [44, 26]]; unique intact ▼ head [44, 26] adjacent to target border. Complete route traced without guessed branch; no shared run or junction. Bridges: none. Visible dual words carry the homogeneous source-required meaning across this fan; every endpoint pair is independently traced. Local ownership ambiguity is retained in F3, not erased by the spec. Zero flow dots in all 11 captured frames.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            41,
+            18,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            44,
+            22,
+            1,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            44,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            44,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            41,
+            27,
+            8,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "layout_fit",
+      "edge_ids": [
+        "e14",
+        "e16"
+      ],
+      "severity": "medium",
+      "description": "Defect: v2 e16 makes a down-and-up hairpin and crosses e14 twice at [44,29] and [45,29]. The unchanged stem can turn right on row 28 into its own existing rightward run, retaining all nodes, ports, source group order and heads while avoiding both crossings. No alternative render or fix was executed.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 270 (user)",
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/layout_fit"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            44,
+            28,
+            5,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            44,
+            29,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            45,
+            29,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "layout_fit",
+      "edge_ids": [
+        "e23",
+        "e24"
+      ],
+      "severity": "medium",
+      "description": "Defect: v3 e24 descends below e23, shifts one column, and climbs back above it, adding double bridges at [32,22] and [33,22]. Turning right at [32,21] into the existing row-21 run removes both crossings without moving any box or changing the mandated shared leaf tier or spine-above geometry. Nine crossings is not a demonstrated floor; no alternative render or fix was executed.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 248 (user)",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 270 (user)",
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/layout_fit"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            32,
+            20,
+            3,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            32,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            33,
+            22,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "category": "layout_fit",
+      "edge_ids": [
+        "e5",
+        "e6",
+        "e7",
+        "e8",
+        "e9",
+        "e10",
+        "e11",
+        "e12",
+        "e13",
+        "e14",
+        "e15",
+        "e16",
+        "e17",
+        "e18",
+        "e19",
+        "e20",
+        "e21",
+        "e22",
+        "e23",
+        "e24",
+        "e25",
+        "e26",
+        "e27",
+        "e28"
+      ],
+      "severity": "medium",
+      "description": "Defect: 17 label occurrences have uncertain local owners: 3 stacked/squeezed x-connect words in v1, 4 fused active/standby words in v2, 6 ECMP words in v3, and all 4 dual words in v4. Words are complete, not clipped. This is a layout/readability defect; semantic and arrow gates pass because complete endpoint tracing plus homogeneous per-fan meanings, explicit firewall node roles, and dashed standby paths recover each required relation meaning without spec-only owner assignments. Local word ownership is not claimed uniquely proven.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 158 (user)",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 270 (user)",
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/semantic_fidelity",
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/arrow_traceability",
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/layout_fit"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            23,
+            27,
+            9,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            22,
+            31,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            31,
+            18,
+            14,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            29,
+            28,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            35,
+            23,
+            8,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            29,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            16,
+            27,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            30,
+            27,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            19,
+            32,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            33,
+            22,
+            8,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            35,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            38,
+            26,
+            4,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G1",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Evidence gap / blocker: all four manifests lack pane_cols and pane_rect. The report builder hardcodes the claimed 79x49 outer dimensions; no raw per-pane/probe measurement accompanies them. App buffers and viewport startup lines independently prove 77x47 natural 100%, but are not separate outer-pane measurement. live_pane remains null. The viewport-title regions identify the evidence that is present; missing manifest fields have no fabricated terminal coordinate.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/layout_fit",
+        "docs/visualize-eval/rounds/03/datacenter-redundancy/build-generation.py",
+        "docs/visualize-eval/rounds/03/datacenter-redundancy/generation.json#/known_defects"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            2,
+            1,
+            66,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            2,
+            1,
+            66,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            2,
+            1,
+            66,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            2,
+            1,
+            66,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "G1: Missing raw outer-pane geometry for all four owned capture panes; manifests have null pane_cols/pane_rect. Reported 79x49 is hardcoded into the builder, not an independently preserved measurement. Need frozen per-pane/probe dimensions; app 77x47 does not substitute. No required model or renderer capability blocker is established; caption limitation is nonblocking because the arrow convention is stated externally as the source requires."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pBS",
+      "w7E:pBX",
+      "w7E:pBY",
+      "w7E:pBZ",
+      "w7E:pBJ"
+    ],
+    "closed_pane_ids": [
+      "w7E:pBS",
+      "w7E:pBX",
+      "w7E:pBY",
+      "w7E:pBZ",
+      "w7E:pBJ"
+    ],
+    "status": "done",
+    "reason": "Four capture manifests record confirmed_closed for w7E:pBS, w7E:pBX, w7E:pBY, w7E:pBZ; generation.json separately reports probe w7E:pBJ closed, without raw probe transcript. No cleanup failures are reported. Reviewer owned no panes and ran no new live probes. Recorded cleanup is not a replacement for missing geometry evidence."
+  },
+  "overall": "fail"
+}

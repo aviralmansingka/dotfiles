@@ -1,0 +1,15 @@
+2026-11-02T08:26:40Z split start
+2026-11-02T08:26:40Z pane=w7E:p3K
+2026-11-02T08:26:41Z measured tty=47 77x
+2026-11-02T08:26:41Z viewer launched
+2026-11-02T08:26:44Z captured none-state
+2026-11-02T08:26:45Z captured tab-selected
+2026-11-02T08:26:46Z captured right-selected
+2026-11-02T08:26:47Z pane w7E:p3K self-closed
+ rataflow-view · seams.v3.json · 4 nodes · 4 edges · 0 flows · drag pan · scr
+none 0b63ad125e40b8eb7d41a485b6a2776a4fab6818d183405fce869dc16ad8f8ef  captures/seams-v3.text.none.txt
+d847bd73399c12c69dbbac0b98c007a36b1d2f63e5c361cc7b8f2062dd19f77d  captures/seams-v3.ansi.none.txt
+sel-tab 0b63ad125e40b8eb7d41a485b6a2776a4fab6818d183405fce869dc16ad8f8ef  captures/seams-v3.text.sel-tab.txt
+b62f9dcc1350da52820d27133355161eebafea14cb5f53b7c9bafd3559f69d45  captures/seams-v3.ansi.sel-tab.txt
+sel-right 0b63ad125e40b8eb7d41a485b6a2776a4fab6818d183405fce869dc16ad8f8ef  captures/seams-v3.text.sel-right.txt
+0b7a7d276231daae5c3a565717ded04e834f2cc0435de143f839d4d3551a9718  captures/seams-v3.ansi.sel-right.txt

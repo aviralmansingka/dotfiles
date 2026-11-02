@@ -1,0 +1,198 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "cp",
+      "label": "control plane"
+    },
+    {
+      "id": "web",
+      "label": "mmctl"
+    },
+    {
+      "id": "pgrpc",
+      "label": "private gRPC"
+    },
+    {
+      "id": "wapi",
+      "label": "webapi"
+    },
+    {
+      "id": "q",
+      "label": "River jobs"
+    },
+    {
+      "id": "slack",
+      "label": "Slack"
+    },
+    {
+      "id": "prov",
+      "label": "providers"
+    },
+    {
+      "id": "ssh",
+      "label": "SSH + BMC"
+    },
+    {
+      "id": "jan",
+      "label": "janitor"
+    },
+    {
+      "id": "rec",
+      "label": "reconcile loop"
+    },
+    {
+      "id": "mch",
+      "label": "machines"
+    },
+    {
+      "id": "s3",
+      "label": "S3"
+    },
+    {
+      "id": "pub",
+      "label": "public gRPC"
+    },
+    {
+      "id": "boot",
+      "label": "boot server"
+    },
+    {
+      "id": "db",
+      "label": "Postgres"
+    }
+  ],
+  "layers": [
+    [
+      "cp",
+      "web"
+    ],
+    [
+      "pgrpc",
+      "wapi"
+    ],
+    [
+      "q",
+      "slack"
+    ],
+    [
+      "prov",
+      "ssh",
+      "jan",
+      "rec"
+    ],
+    [
+      "mch",
+      "s3"
+    ],
+    [
+      "",
+      "db",
+      "pub",
+      "boot"
+    ]
+  ],
+  "edges": [
+    {
+      "from": "cp",
+      "to": "pgrpc",
+      "label": "create"
+    },
+    {
+      "from": "web",
+      "to": "wapi",
+      "label": "http"
+    },
+    {
+      "from": "pgrpc",
+      "to": "q",
+      "label": "enqueue"
+    },
+    {
+      "from": "wapi",
+      "to": "q",
+      "label": "reinstall"
+    },
+    {
+      "from": "wapi",
+      "to": "slack",
+      "label": "alerts"
+    },
+    {
+      "from": "q",
+      "to": "prov",
+      "label": "provision"
+    },
+    {
+      "from": "q",
+      "to": "ssh",
+      "label": "audit"
+    },
+    {
+      "from": "q",
+      "to": "s3",
+      "label": "logs"
+    },
+    {
+      "from": "q",
+      "to": "jan",
+      "label": "events"
+    },
+    {
+      "from": "q",
+      "to": "db",
+      "label": "job rows"
+    },
+    {
+      "from": "pgrpc",
+      "to": "db",
+      "label": "writes"
+    },
+    {
+      "from": "rec",
+      "to": "prov",
+      "label": "gcore sync"
+    },
+    {
+      "from": "rec",
+      "to": "db",
+      "label": "state"
+    },
+    {
+      "from": "ssh",
+      "to": "mch",
+      "label": "audit"
+    },
+    {
+      "from": "prov",
+      "to": "mch",
+      "label": "allocates"
+    },
+    {
+      "from": "mch",
+      "to": "s3",
+      "label": "image"
+    },
+    {
+      "from": "mch",
+      "to": "boot",
+      "label": "iPXE"
+    },
+    {
+      "from": "mch",
+      "to": "pub",
+      "label": "heartbeats"
+    },
+    {
+      "from": "pub",
+      "to": "db",
+      "label": "state"
+    },
+    {
+      "from": "jan",
+      "to": "wapi",
+      "label": "proposals"
+    }
+  ]
+}

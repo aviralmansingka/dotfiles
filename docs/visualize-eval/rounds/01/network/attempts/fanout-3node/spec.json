@@ -1,0 +1,1 @@
+{"direction":"tb","nodes":[{"id":"web","label":"Web tier"},{"id":"cache","label":"Redis"},{"id":"db","label":"DB tier"}],"edges":[{"from":"web","to":"cache","label":"session"},{"from":"web","to":"db","label":"queries"}]}

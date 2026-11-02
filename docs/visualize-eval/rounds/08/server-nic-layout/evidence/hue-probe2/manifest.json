@@ -1,0 +1,34 @@
+{
+  "spec_path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/08/server-nic-layout/specs/probe-hues2.json",
+  "spec_sha256": "b41140585af2189f1c95d84072aa1f39c03d928a0b9389926586e6ed6bb63547",
+  "binary_path": "/tmp/visualize-eval/round-08/bin/rataflow-view",
+  "binary_sha256": "ea24593b0f80c1617573eef4766f2bacaaf4315a8133a65d5331e9daec1c1f30",
+  "pane_id": "w7E:pKT",
+  "pane_rect": null,
+  "pane_cols": null,
+  "pane_rows": 51,
+  "viewport_line": null,
+  "viewport_token": "83x51 @100%",
+  "check_exit": 0,
+  "check_window": [
+    "2026-11-02T21:03:00Z",
+    "2026-11-02T21:03:00Z"
+  ],
+  "capture_window": [
+    "2026-11-02T21:03:00Z",
+    "2026-11-02T21:03:04Z"
+  ],
+  "cleanup": "confirmed_closed",
+  "select_all_frame": true,
+  "frames": 3,
+  "frame_step_ms": 100,
+  "artifacts": {
+    "bin.sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+    "check.txt": "f03e7155eb8473d0029635e156656ef285e2cf4db98a1e8891254e5e05bdbd25",
+    "hueprobe2-ansi.ansi": "8e24a51dcac58ab6e33d8c71b944a55ecbdff4748bd7ae1f96b87c5af49321d2",
+    "hueprobe2-frames.ansi": "0067c5b9771b98aff3b4adb265abcd3c0edb71dfde432c586a8fe88382265bb6",
+    "hueprobe2-frames.txt": "d608227f82e711421ebcab5deaa57584ec9b283b16bafce6e6ef43bb3d573404",
+    "hueprobe2-selected.ansi": "2eb5a7fbb0fa91706a6f8c5149389e9af360fd74721bcabd55cf91bb4ec1eceb",
+    "hueprobe2-text.txt": "580c4eb33d74600aa9a7381fc0a79b24c7d4d1008ab429204d28c1a89fddc7d1"
+  }
+}

@@ -1,0 +1,216 @@
+{
+  "round": 1,
+  "evaluated_at_utc": "2026-11-02T09:20:12.734019+00:00",
+  "overall": "fail",
+  "decision": "stop_unsupported_required_renderer_capability",
+  "candidate_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+  "renderer_sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+  "rubric_sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "metrics": {
+    "green_cases": 0,
+    "total_cases": 8,
+    "passed_applicable_categories": 11,
+    "failed_applicable_categories": 26,
+    "blocked_applicable_categories": 14,
+    "applicable_categories": 51,
+    "finding_severities": {
+      "medium": 7,
+      "high": 33,
+      "critical": 12
+    },
+    "evidence_records_verified": 522
+  },
+  "cases": [
+    {
+      "case_id": "pipeline",
+      "overall": "fail",
+      "categories": {
+        "semantic_fidelity": "pass",
+        "arrow_traceability": "pass",
+        "layout_fit": "pass",
+        "conceptual_grouping_color": "pass",
+        "border_integrity": "blocked",
+        "workflow_evidence": "blocked",
+        "animation": "fail"
+      },
+      "edge_audits": {
+        "pass": 6
+      },
+      "report": "docs/visualize-eval/rounds/01/reviews/pipeline/reviewer-result.json",
+      "report_sha256": "6ca266a43c79c121c89a361cbb761427370a28f7416d77c3523f7593083a6f5c",
+      "observed_first_sha256": "433079ce2330ef2fbb6a378f60e48378a59aa077ac3ccede3342facf701d3743",
+      "evidence_records_verified": 54,
+      "cleanup_status": "done"
+    },
+    {
+      "case_id": "network",
+      "overall": "fail",
+      "categories": {
+        "semantic_fidelity": "pass",
+        "arrow_traceability": "pass",
+        "layout_fit": "blocked",
+        "conceptual_grouping_color": "pass",
+        "border_integrity": "fail",
+        "workflow_evidence": "blocked",
+        "animation": "fail"
+      },
+      "edge_audits": {
+        "pass": 7
+      },
+      "report": "docs/visualize-eval/rounds/01/reviews/network/reviewer-result.json",
+      "report_sha256": "f5b5ad192db4abc26cf04013f0dfc563769bab982059e9abf4a7648c9efdef43",
+      "observed_first_sha256": "2b96648d1c9df2483cb2d6bd347401fb951138cb8335bfca1bc94d49f301f436",
+      "evidence_records_verified": 85,
+      "cleanup_status": "done"
+    },
+    {
+      "case_id": "homelab-nic-trace",
+      "overall": "fail",
+      "categories": {
+        "semantic_fidelity": "fail",
+        "arrow_traceability": "fail",
+        "layout_fit": "fail",
+        "conceptual_grouping_color": "fail",
+        "border_integrity": "blocked",
+        "workflow_evidence": "blocked",
+        "animation": null
+      },
+      "edge_audits": {
+        "pass": 8,
+        "fail": 10
+      },
+      "report": "docs/visualize-eval/rounds/01/reviews/homelab-nic-trace/reviewer-result.json",
+      "report_sha256": "7507fe6935ca3b5372d43b3e4181fb73a03b1cd5e024b5a08b6880246c93198b",
+      "observed_first_sha256": "0485b74aac7129fdd5771c4ae12bdb6319b4615d1e5122ea3c992984219fdced",
+      "evidence_records_verified": 61,
+      "cleanup_status": "done"
+    },
+    {
+      "case_id": "server-nic-layout",
+      "overall": "fail",
+      "categories": {
+        "semantic_fidelity": "fail",
+        "arrow_traceability": "pass",
+        "layout_fit": "fail",
+        "conceptual_grouping_color": "fail",
+        "border_integrity": "blocked",
+        "workflow_evidence": "fail",
+        "animation": null
+      },
+      "edge_audits": {
+        "pass": 8
+      },
+      "report": "docs/visualize-eval/rounds/01/reviews/server-nic-layout/reviewer-result.json",
+      "report_sha256": "67d0d4a2cc115f2cf4df93193562b5db21ac569432b317bbb125e106dc9d5d8a",
+      "observed_first_sha256": "d2d88b88beb589f8874a36c369f04183949cd31a2140f097d7bb10b67f3807a2",
+      "evidence_records_verified": 45,
+      "cleanup_status": "done"
+    },
+    {
+      "case_id": "datacenter-redundancy",
+      "overall": "fail",
+      "categories": {
+        "semantic_fidelity": "fail",
+        "arrow_traceability": "fail",
+        "layout_fit": "fail",
+        "conceptual_grouping_color": "pass",
+        "border_integrity": "blocked",
+        "workflow_evidence": "blocked",
+        "animation": null
+      },
+      "edge_audits": {
+        "pass": 19,
+        "fail": 9
+      },
+      "report": "docs/visualize-eval/rounds/01/reviews/datacenter-redundancy/reviewer-result.json",
+      "report_sha256": "0238121ff3b1ae05d807d3e97289b50df5035c7bcde2062fffb3b2649856316c",
+      "observed_first_sha256": "635c74dc1a54baf3ca70df5baed1ae332f19e2fdd1502430f3256a3aeef3ace2",
+      "evidence_records_verified": 64,
+      "cleanup_status": "blocked"
+    },
+    {
+      "case_id": "modal-machine-manager",
+      "overall": "fail",
+      "categories": {
+        "semantic_fidelity": "fail",
+        "arrow_traceability": "fail",
+        "layout_fit": "fail",
+        "conceptual_grouping_color": "fail",
+        "border_integrity": "blocked",
+        "workflow_evidence": "blocked",
+        "animation": "fail"
+      },
+      "edge_audits": {
+        "fail": 12,
+        "pass": 11
+      },
+      "report": "docs/visualize-eval/rounds/01/reviews/modal-machine-manager/reviewer-result.json",
+      "report_sha256": "a8b9a9c8383fab2e7aecb473c6cb8244d82d98f8dc162f65d1723bb100f27649",
+      "observed_first_sha256": "d5e69e8f615137443e6e62047bc467c3e69312645b766552f1d0300b331c94b9",
+      "evidence_records_verified": 99,
+      "cleanup_status": "blocked"
+    },
+    {
+      "case_id": "modal-runtime",
+      "overall": "fail",
+      "categories": {
+        "semantic_fidelity": "fail",
+        "arrow_traceability": "pass",
+        "layout_fit": "pass",
+        "conceptual_grouping_color": "fail",
+        "border_integrity": "blocked",
+        "workflow_evidence": "fail",
+        "animation": null
+      },
+      "edge_audits": {
+        "fail": 5,
+        "pass": 3
+      },
+      "report": "docs/visualize-eval/rounds/01/reviews/modal-runtime/reviewer-result.json",
+      "report_sha256": "631f040c15341f57cb8a73caccbac4af81b55c40a97a8044c3d384102a6527d4",
+      "observed_first_sha256": "b49b433d92fe06c005feeb3e64dd50c39fdd60fa89a80144a2a6e506c13b803b",
+      "evidence_records_verified": 63,
+      "cleanup_status": "blocked"
+    },
+    {
+      "case_id": "gb300-rack-software",
+      "overall": "fail",
+      "categories": {
+        "semantic_fidelity": "fail",
+        "arrow_traceability": "fail",
+        "layout_fit": "fail",
+        "conceptual_grouping_color": "fail",
+        "border_integrity": "blocked",
+        "workflow_evidence": "blocked",
+        "animation": null
+      },
+      "edge_audits": {
+        "pass": 7,
+        "fail": 12,
+        "blocked": 1
+      },
+      "report": "docs/visualize-eval/rounds/01/reviews/gb300-rack-software/reviewer-result.json",
+      "report_sha256": "605452582cd179ee59f3b58aff58afab546975bc5d78b51a3b64b35535ebd020",
+      "observed_first_sha256": "5d6e0e1910c3fc208810f32c3f92d2a670a5e848d26ca5abce16c326bcaf4e67",
+      "evidence_records_verified": 51,
+      "cleanup_status": "done"
+    }
+  ],
+  "comparison_eligible": false,
+  "comparison_limitations": [
+    "Network executable-to-capture binding is unproven.",
+    "Selected-state and workflow evidence is incomplete.",
+    "Attempt-budget compliance is not established; datacenter includes extra fabric trials.",
+    "This is the only completed baseline; cancelled round00 is excluded."
+  ],
+  "last_evaluated_round": 1,
+  "best_observed_round": 1,
+  "approved_candidate": null,
+  "proposed_skill": {
+    "path": "docs/visualize-eval/proposals/02/SKILL.md",
+    "sha256": "bb2ccaeccca85ca52181d67fe7c0ceb785428d6179b2d6f9fa1dd294f15c265e",
+    "status": "unevaluated_not_installed"
+  },
+  "validation": "Every frozen-schema keyword used by these records was checked offline, plus hashes, references, coordinate bounds, applicability, role separation and overall aggregation. This validates records, not visual success."
+}

@@ -1,0 +1,13 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "airtel", "label": "Airtel 14.143.x", "group": "upstream hops" },
+    { "id": "airtelbb", "label": "AirtelBB 14.141.x", "group": "upstream hops" },
+    { "id": "cf", "label": "Cloudflare 1.1.1.1 AS13335", "group": "upstream hops" }
+  ],
+  "edges": [
+    { "from": "airtel", "to": "airtelbb", "label": "7.1 ms" },
+    { "from": "airtelbb", "to": "cf", "label": "8.3-8.6 ms" }
+  ]
+}

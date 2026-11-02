@@ -1,0 +1,28 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "agent", "label": "machine-agent", "group": "plant" },
+    { "id": "pgrpc", "label": "private gRPC", "group": "control" },
+    { "id": "q", "label": "River queue", "group": "jobs" },
+    { "id": "rec", "label": "reconcile loop", "group": "control" },
+    { "id": "prov", "label": "providers", "group": "providers" },
+    { "id": "pub", "label": "public gRPC", "group": "control" },
+    { "id": "mch", "label": "machines", "group": "plant" },
+    { "id": "db", "label": "Postgres", "group": "state" }
+  ],
+  "layers": [
+    ["agent", "pgrpc", "q", "rec"],
+    ["prov", "pub"],
+    ["mch", "db"]
+  ],
+  "edges": [
+    { "from": "agent", "to": "pub", "label": "heartbeat", "flow": true, "dots": 1 },
+    { "from": "pub", "to": "db", "label": "state rows", "flow": true, "dots": 1 },
+    { "from": "pgrpc", "to": "db", "label": "machine rows", "flow": true, "dots": 1 },
+    { "from": "q", "to": "db", "label": "job rows", "flow": true, "dots": 1 },
+    { "from": "rec", "to": "prov", "label": "gcore 1min", "flow": true, "dots": 1 },
+    { "from": "rec", "to": "db", "label": "cluster state", "flow": true, "dots": 1 },
+    { "from": "prov", "to": "mch", "label": "allocate", "flow": true, "dots": 1 }
+  ]
+}

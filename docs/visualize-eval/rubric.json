@@ -1,0 +1,764 @@
+{
+  "protocol_version": 1,
+  "freeze": "Freeze this rubric and all eight source-backed cases before round 0. Changes require a labeled new baseline, never a skill-only success.",
+  "case_ids": [
+    "pipeline",
+    "network",
+    "homelab-nic-trace",
+    "server-nic-layout",
+    "datacenter-redundancy",
+    "modal-machine-manager",
+    "modal-runtime",
+    "gb300-rack-software"
+  ],
+  "required_generator_model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+  "required_reviewer_model": "openai/gpt-6.1-terra:high",
+  "required_viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "pass_iff": "Every source-required concept, label meaning, directed relationship, order and tier is preserved; none is missing, reversed or invented. Human corrections take precedence over old generated specs. Every split has explicit complete coverage including cross-view relations. GB300 follows the last human free-software-only request."
+    },
+    "arrow_traceability": {
+      "pass_iff": "Every independent link can be traced from its source stem to its unique arrowhead, with correct direction, no fake branches and crossings distinguishable from connections. Intentional source-named buses remain traceable through their specified junctions. GB300 OOB uses the requested single trunk split once; redundant datacenter independent links are never bundled. A universal one-route-per-edge rule cannot override the explicit bus request. A dot that starts away from its arrow's origin makes that arrow's direction unproven. Routes take near-minimal obstacle-safe paths: a route that loops or detours beyond what obstacles force is a defect, and the check's route-economy warnings count against this category."
+    },
+    "layout_fit": {
+      "pass_iff": "Actual 77x47 half-pane captures at natural 100% zoom show every complete box and full label, without clipping or overlay occlusion. Record actual live pane dimensions separately. All split views meet the same gate and have complete source coverage; panning or zooming out cannot rescue the required view. Crossings are reported and kept to a minimum by layout: a candidate may not add avoidable crossing pairs, and may not reorder source groups, layers or tiers to reduce crossings. Reducing crossings never excuses lost, reversed or merged relations."
+    },
+    "conceptual_grouping_color": {
+      "pass_iff": "Related source concepts are near each other and use related hue families. Source-defined order and tiers are respected. No arbitrary alphabet cycling, misleading geometric-depth grouping claim, or color grouping unsupported by the source."
+    },
+    "category_fit": {
+      "pass_iff": "The generator classifies the source into one of the six families (flow-chains, service-meshes, redundant-fabrics, lifecycle-machines, placement-planes, identity-probe-maps) and states its choice with one source-backed evidence line. The chosen family matches the source's actual structure as visible in the captures: density and fan shape, anti-parallel pairs, double-arrowhead targets, phase order, weakly-connected worlds with a bus, and identifier/qualifier density are the discriminating facts. That family's recipe is then applied and visible: chains keep short single-stage ranks with per-hop corridor room; meshes order the fan ports and keep an anti-parallel pair co-viewed as two distinct edges; fabrics pin the source's tiers and keep redundant links as independent parallel lanes without bundling or a trunk, with no dots unless the source animates them; lifecycle machines rank by source phase with the boot sequence readable in one direction and one dot per live transition; placement planes render each weakly-connected world as its own region side by side with one bus splitting once; identity maps cover every identifier and qualifier before layout is tuned. A wrong family, a missing or unsupported evidence line, or a right family whose recipe is not applied fails this category; a straddling source passes only when the dominant family is named and any secondary recipe is stated and visible."
+    },
+    "border_integrity": {
+      "pass_iff": "Every node side and corner is complete and uses a consistent per-node border color, including handles and selected states. ANSI or buffer evidence proves color continuity; plain text alone cannot pass. Every node border must be complete and unobstructed in its own view: any node border cell overwritten by the control palette or any other floating UI is a border-integrity defect, in normal and selected states alike."
+    },
+    "workflow_evidence": {
+      "pass_iff": "Candidate skill bundle, frozen binary, rubric, dataset and spec hashes identify reproducible inputs. Fresh isolated generator and separate openai/gpt-6-astra critic identities, blind-first observation record, exact commands, full --check stdout/stderr/exit status, actual text plus ANSI/buffer pane captures, dimensions, states and coverage are preserved. No pane art is pasted into chat. Owned panes are cleaned up, including failures. Missing tools or models block rather than substitute. Live pane size is proven by the running app's own measured header token or a preserved pane-rectangle record; a hardcoded or invented pane geometry fails. Rejected-draft records with their raw command/status output, and probe logs, must be preserved in the bundle. A frames capture (at least 3 timestamped frames) is required for EVERY view, static ones included; its absence is an evidence gap, never a silent pass. Animated-view captures must cover a full lap of the longest route."
+    },
+    "animation": {
+      "pass_iff": "Dots appear only where the source animated them; an explicit source request for no dots removes them everywhere in that case. When dots are present, timestamped actual-render evidence shows sparse, slow dots at a constant shared speed: every dot moves at the same rate, starts together at t=0, and starts at the actual start of its own arrow \u2014 the FIRST DRAWN CELL after the source port, including when that cell is a corner glyph; the check line and the capture must agree on that cell. A dot may rest on its origin cell even when it is a corner, but must never rest on any other corner, bridge, or junction, and never obscures a label. Same-arrival timing applies only when the source or user specifies it, and that arrival must be visible at the arrowheads in one frame. Evaluate all animated routes, not a single attractive frame.",
+      "not_applicable_iff": "The frozen source-backed manifest explicitly establishes that animation was not requested. Record the reason and source reference; unknown applicability is blocked."
+    }
+  },
+  "aggregation": {
+    "category_statuses": [
+      "pass",
+      "fail",
+      "blocked"
+    ],
+    "not_applicable": "Only animation may have applicable=false and status=null, with a source-backed reason. It adds no pass to the metric.",
+    "green": "All applicable categories and all audited required edges pass, with complete evidence, for every one of the eight fixed cases.",
+    "case_status": "fail if any known category/edge failure; otherwise blocked if any required evidence, capability or audit is missing; otherwise pass.",
+    "metric_lexicographic_max": [
+      "green_cases",
+      "passed_applicable_categories",
+      "negative_critical_defect_count",
+      "negative_high_defect_count"
+    ],
+    "guard": "No regressions on any green case; no dataset/rubric weakening; missing findings in blocked reviews cannot improve the metric. Gather all eight critiques before revision.",
+    "stop": "All green, unsupported required rendering/model capability, or the same blocker/no metric improvement after two consecutive candidate revisions. Report red matrix and exact blocker."
+  },
+  "severity": {
+    "critical": "A false, missing or reversed source relationship/concept, or a violation of an explicit human prohibition, changes the diagram's meaning.",
+    "high": "An untraceable link, unreadable required label, missing view, misleading grouping or broken required evidence prevents reliable interpretation or verification.",
+    "medium": "A localized rubric violation leaves meaning recoverable but still fails the category.",
+    "low": "A small observable rubric violation still fails the category; severity never waives a gate."
+  },
+  "result_schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Visualize independent case review",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "protocol_version",
+      "round",
+      "case_id",
+      "candidate_sha256",
+      "renderer_sha256",
+      "rubric_sha256",
+      "dataset_sha256",
+      "spec_sha256",
+      "generator",
+      "reviewer",
+      "viewport",
+      "live_pane",
+      "evidence",
+      "observed_first",
+      "categories",
+      "edge_audit",
+      "findings",
+      "blockers",
+      "cleanup",
+      "overall"
+    ],
+    "properties": {
+      "protocol_version": {
+        "const": 1
+      },
+      "round": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "case_id": {
+        "enum": [
+          "pipeline",
+          "network",
+          "homelab-nic-trace",
+          "server-nic-layout",
+          "datacenter-redundancy",
+          "modal-machine-manager",
+          "modal-runtime",
+          "gb300-rack-software"
+        ]
+      },
+      "candidate_sha256": {
+        "$ref": "#/$defs/hash"
+      },
+      "renderer_sha256": {
+        "$ref": "#/$defs/hash"
+      },
+      "rubric_sha256": {
+        "$ref": "#/$defs/hash"
+      },
+      "dataset_sha256": {
+        "$ref": "#/$defs/hash"
+      },
+      "spec_sha256": {
+        "$ref": "#/$defs/hash"
+      },
+      "generator": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/worker"
+          },
+          {
+            "properties": {
+              "model": {
+                "enum": [
+                  "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+                  null
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "reviewer": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/worker"
+          },
+          {
+            "properties": {
+              "model": {
+                "const": "openai/gpt-6.1-terra:high"
+              }
+            }
+          }
+        ]
+      },
+      "viewport": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "columns",
+          "rows",
+          "zoom_percent",
+          "verified"
+        ],
+        "properties": {
+          "columns": {
+            "const": 77
+          },
+          "rows": {
+            "const": 47
+          },
+          "zoom_percent": {
+            "const": 100
+          },
+          "verified": {
+            "type": "boolean"
+          }
+        }
+      },
+      "live_pane": {
+        "$ref": "#/$defs/dimensions"
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/evidence"
+        }
+      },
+      "observed_first": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "evidence_id",
+          "saved_before_expected_reveal"
+        ],
+        "properties": {
+          "evidence_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "saved_before_expected_reveal": {
+            "type": "boolean"
+          }
+        }
+      },
+      "categories": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "semantic_fidelity",
+          "arrow_traceability",
+          "layout_fit",
+          "conceptual_grouping_color",
+          "border_integrity",
+          "workflow_evidence",
+          "animation",
+          "category_fit"
+        ],
+        "properties": {
+          "semantic_fidelity": {
+            "$ref": "#/$defs/category"
+          },
+          "arrow_traceability": {
+            "$ref": "#/$defs/category"
+          },
+          "layout_fit": {
+            "$ref": "#/$defs/category"
+          },
+          "conceptual_grouping_color": {
+            "$ref": "#/$defs/category"
+          },
+          "border_integrity": {
+            "$ref": "#/$defs/category"
+          },
+          "workflow_evidence": {
+            "$ref": "#/$defs/category"
+          },
+          "animation": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/category"
+              },
+              {
+                "$ref": "#/$defs/notApplicable"
+              }
+            ]
+          },
+          "category_fit": {
+            "type": "object",
+            "required": [
+              "applicable",
+              "status"
+            ],
+            "properties": {
+              "applicable": {
+                "type": "boolean"
+              },
+              "status": {
+                "enum": [
+                  "pass",
+                  "fail",
+                  "blocked"
+                ],
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "edge_audit": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "edge_id",
+            "kind",
+            "source_refs",
+            "expected",
+            "observed",
+            "status",
+            "locations",
+            "finding_ids"
+          ],
+          "properties": {
+            "edge_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "kind": {
+              "enum": [
+                "independent_link",
+                "named_bus",
+                "bus_trunk",
+                "bus_branch",
+                "unexpected_link"
+              ]
+            },
+            "source_refs": {
+              "$ref": "#/$defs/strings"
+            },
+            "expected": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Source, target, direction and source-backed bus semantics; null for an extra visible relationship."
+            },
+            "observed": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Actual inferred endpoints/direction, stem-to-arrowhead trace, crossings and junctions; explain absence/ambiguity."
+            },
+            "status": {
+              "$ref": "#/$defs/status"
+            },
+            "locations": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/location"
+              }
+            },
+            "finding_ids": {
+              "$ref": "#/$defs/strings"
+            }
+          }
+        }
+      },
+      "findings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "category",
+            "edge_ids",
+            "severity",
+            "description",
+            "source_refs",
+            "locations"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "category": {
+              "enum": [
+                "semantic_fidelity",
+                "arrow_traceability",
+                "layout_fit",
+                "conceptual_grouping_color",
+                "border_integrity",
+                "workflow_evidence",
+                "animation",
+                "category_fit"
+              ]
+            },
+            "edge_ids": {
+              "$ref": "#/$defs/strings"
+            },
+            "severity": {
+              "enum": [
+                "critical",
+                "high",
+                "medium",
+                "low"
+              ]
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "source_refs": {
+              "$ref": "#/$defs/strings"
+            },
+            "locations": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/location"
+              }
+            }
+          }
+        }
+      },
+      "blockers": {
+        "$ref": "#/$defs/strings"
+      },
+      "cleanup": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owned_pane_ids",
+          "closed_pane_ids",
+          "status",
+          "reason"
+        ],
+        "properties": {
+          "owned_pane_ids": {
+            "$ref": "#/$defs/strings"
+          },
+          "closed_pane_ids": {
+            "$ref": "#/$defs/strings"
+          },
+          "status": {
+            "enum": [
+              "done",
+              "not_started",
+              "blocked"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "overall": {
+        "$ref": "#/$defs/status"
+      }
+    },
+    "$defs": {
+      "hash": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "status": {
+        "enum": [
+          "pass",
+          "fail",
+          "blocked"
+        ]
+      },
+      "strings": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        },
+        "uniqueItems": true
+      },
+      "worker": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "worker_id",
+          "model"
+        ],
+        "properties": {
+          "worker_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "dimensions": {
+        "oneOf": [
+          {
+            "type": "null"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "columns",
+              "rows"
+            ],
+            "properties": {
+              "columns": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "rows": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        ]
+      },
+      "category": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applicable",
+          "status",
+          "reason",
+          "source_refs",
+          "evidence_ids"
+        ],
+        "properties": {
+          "applicable": {
+            "const": true
+          },
+          "status": {
+            "$ref": "#/$defs/status"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_refs": {
+            "$ref": "#/$defs/strings"
+          },
+          "evidence_ids": {
+            "$ref": "#/$defs/strings"
+          }
+        }
+      },
+      "notApplicable": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applicable",
+          "status",
+          "reason",
+          "source_refs",
+          "evidence_ids"
+        ],
+        "properties": {
+          "applicable": {
+            "const": false
+          },
+          "status": {
+            "type": "null"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_refs": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/strings"
+              },
+              {
+                "minItems": 1
+              }
+            ]
+          },
+          "evidence_ids": {
+            "$ref": "#/$defs/strings"
+          }
+        }
+      },
+      "evidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "path",
+          "sha256",
+          "description",
+          "capture"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "capture": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "dimensions",
+                  "view",
+                  "frame",
+                  "timestamp",
+                  "state",
+                  "format"
+                ],
+                "properties": {
+                  "dimensions": {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/dimensions"
+                      },
+                      {
+                        "type": "object"
+                      }
+                    ]
+                  },
+                  "view": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "frame": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "timestamp": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "state": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "format": {
+                    "enum": [
+                      "text",
+                      "ansi",
+                      "buffer",
+                      "image",
+                      "recording"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "location": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "evidence_id",
+          "region"
+        ],
+        "properties": {
+          "evidence_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "region": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "1-based [column, row, width, height] in the referenced capture/frame."
+          }
+        }
+      }
+    }
+  },
+  "revisions": [
+    {
+      "revision": 2,
+      "round": "03",
+      "date": "2026-11-02",
+      "source": "human review of round 02",
+      "changes": [
+        "animation: dots start at their own arrow origin and arrive together unless the source specifies otherwise",
+        "layout_fit: crossing count is reported and minimized by layout, never by reordering source groups",
+        "arrow_traceability: a dot starting away from its origin makes the direction unproven"
+      ],
+      "note": "Criteria were strengthened, never weakened. Round 03 freezes its own copy; round 01 and round 02 copies stay unchanged."
+    },
+    {
+      "revision": 3,
+      "round": "03",
+      "date": "2026-11-02",
+      "source": "user instruction",
+      "changes": [
+        "generator endpoint is fireworks/accounts/fireworks/routers/deepseek-flash-latest for round 03 onward (the OpenGateway switch was reverted before any round ran)"
+      ],
+      "note": "Criteria, thresholds and the judge model were never changed. The OpenGateway endpoint was never used for a generation.",
+      "status": "reverted-before-use"
+    },
+    {
+      "revision": 4,
+      "round": "03",
+      "date": "2026-11-02",
+      "source": "clerical correction found by viz-judge03-runtime mid-stage-B",
+      "changes": [
+        "required_reviewer_model corrected from stale round-01 value openai/gpt-6-astra to openai/gpt-6.1-sol",
+        "result_schema reviewer model const corrected the same way (1 occurrence)"
+      ],
+      "note": "Criteria text, thresholds, and category rules are byte-identical with round 02 plus the revision-2 motion and crossing rules; only the reviewer identity left over from round 01 was stale. Round 02 judged on Sol; round 03 judges on Sol; corrected before any reviewer-result.json exists. No judge was asked to falsify identity."
+    },
+    {
+      "revision": 5,
+      "round": "04",
+      "date": "2026-11-02",
+      "source": "human review of round 03 (verbatim in rounds/03/human-review/feedback.md)",
+      "changes": [
+        "animation: constant shared speed is the default; same-arrival is opt-in and must show visible simultaneous arrival",
+        "animation: dots may be kept as flair by default; explicit source no-dots still overrides",
+        "arrow_traceability: near-minimal route paths; loops and avoidable detours are defects",
+        "workflow_evidence: pane size proven by app header token or preserved rectangle; hardcoded geometry fails; rejected-draft and probe records required"
+      ],
+      "note": "Direction change requested by the user after round 03: the round-03 same-arrival default is reversed to constant speed."
+    },
+    {
+      "revision": 6,
+      "round": "05",
+      "date": "2026-11-02",
+      "source": "round-04 judge splits recorded in rounds/04/decision.md",
+      "changes": [
+        "animation: origin defined as the first DRAWN cell after the source port (corner included); corner occupancy outside the origin cell is a violation",
+        "border_integrity: palette/UI overwriting any node border cell is a defect",
+        "workflow_evidence: frames capture required for every view, static included; full-lap length for animated views"
+      ],
+      "note": "Pins four definitions the round-04 judges ruled differently; criteria otherwise unchanged from revision 5."
+    },
+    {
+      "revision": 7,
+      "round": "09",
+      "date": "2026-11-02",
+      "source": "user directive 2026-11-02: add a round for the diagram categorization; taxonomy recorded in state.json diagram_taxonomy_2026_11_02",
+      "changes": [
+        "category_fit added as a rubric category: the generator's chosen family must match the source's structure, judged from the captures plus the stated one-line evidence, and that family's recipe must be applied; a wrong family or an unapplied recipe fails the category"
+      ],
+      "note": "Additive only: the seven existing categories, their pass_iff texts, thresholds, models and aggregation are unchanged. The passing bar moved up, never down."
+    },
+    {
+      "revision": 8,
+      "round": "08",
+      "date": "2026-11-02",
+      "source": "user directive: use gpt terra 6.1 high fast for the judges from now on",
+      "changes": [
+        "required_reviewer_model and its result_schema const set to openai/gpt-6.1-terra:high (was openai/gpt-6.1-sol)"
+      ],
+      "note": "Judge model change only; criteria and thresholds untouched. The in-flight round-07 judge (viz-judge07, mid-stage-B on sol) completes on sol; every judge spawned after this revision uses terra:high."
+    }
+  ]
+}

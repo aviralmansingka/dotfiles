@@ -1,0 +1,288 @@
+/tmp/visualize-eval/round-05/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotfi
+les/fix-visualize-skill/docs/visualize-eval/rounds/05/datacenter-redundancy/specs/v
+2-fw-border-spine.json
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-05/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/05/datacenter-redundancy/specs
+/v2-fw-border-spine.json
+viewport: 83x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-05/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/05/datacenter-redundancy/specs
+/v2-fw-border-spine.json --select-all
+viewport: 83x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-05/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/05/datacenter-redundancy/specs
+/v2-fw-border-spine.json --frames 5 --step-ms 100
+viewport: 83x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 83x51 @100% · v2-fw-border-spine.json · 8 nodes · 12 edges · q qui
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          ╭──────╮standby?  ╭───╮  standby?   ╭────╮   ECMP     ╭───────╮
+          │      │╌╌╌╌╌╌╌╌╌▶│   │╌╌╌╌╌╌╌╌╌╌╌╌▶│    │───────────▶│       │
+          │Core 1│          │FW2│             │BL 1│            │Spine 2│
+          │      │───────╮╭▶│   │╌╌╌╌╌╌╌╌╮ ╭─▶│    │─────────╮╭▶│       │
+          ╰──────╯     ╭╌⌒╯ ╰───╯standby?╎ │  ╰────╯  ECMP ╭─⌒╯ ╰───────╯
+                       ╎ │               ╎ │               │ │
+                       ╎ │               ╎ │               │ │
+                       ╎ │ active        ╎ │               │ │
+              standby? ╎ │               ╎ │               │ │
+                       ╎ │               ╎ │               │ │
+          ╭──────╮     ╎ │  ╭───╮  active╰╌⌒╮ ╭────╮ ECMP  │ │  ╭───────╮
+          │      │╌╌╌╌╌╯ ╰─▶│   │──────────╯╰▶│    │───────╯ ╰─▶│       │
+          │Core 2│          │FW1│             │BL 2│            │Spine 1│
+          │      │─────────▶│   │────────────▶│    │───────────▶│       │
+          ╰──────╯ active   ╰───╯   active    ╰────╯   ECMP     ╰───────╯
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 83x51 @100% · v2-fw-border-spine.json · 8 nodes · 12 edges · q qui
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          ╭──────╮standby?  ╭───╮  standby?   ╭────╮   ECMP     ╭───────╮
+          │      │╌╌╌╌╌╌╌╌╌▶│   │╌╌╌╌╌╌╌╌╌╌╌╌▶│    │───────────▶│       │
+          │Core 1│          │FW2│             │BL 1│            │Spine 2│
+          │      │───────╮╭▶│   │╌╌╌╌╌╌╌╌╮ ╭─▶│    │─────────╮╭▶│       │
+          ╰──────╯     ╭╌⌒╯ ╰───╯standby?╎ │  ╰────╯  ECMP ╭─⌒╯ ╰───────╯
+                       ╎ │               ╎ │               │ │
+                       ╎ │               ╎ │               │ │
+                       ╎ │ active        ╎ │               │ │
+              standby? ╎ │               ╎ │               │ │
+                       ╎ │               ╎ │               │ │
+          ╭──────╮     ╎ │  ╭───╮  active╰╌⌒╮ ╭────╮ ECMP  │ │  ╭───────╮
+          │      │╌╌╌╌╌╯ ╰─▶│   │──────────╯╰▶│    │───────╯ ╰─▶│       │
+          │Core 2│          │FW1│             │BL 2│            │Spine 1│
+          │      │─────────▶│   │────────────▶│    │───────────▶│       │
+          ╰──────╯ active   ╰───╯   active    ╰────╯   ECMP     ╰───────╯
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 83x51 @100% · v2-fw-border-spine.json · 8 nodes · 12 edges · q qui
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          ╭──────╮standby?  ╭───╮  standby?   ╭────╮   ECMP     ╭───────╮
+          │      │╌╌╌╌╌╌╌╌╌▶│   │╌╌╌╌╌╌╌╌╌╌╌╌▶│    │───────────▶│       │
+          │Core 1│          │FW2│             │BL 1│            │Spine 2│
+          │      │───────╮╭▶│   │╌╌╌╌╌╌╌╌╮ ╭─▶│    │─────────╮╭▶│       │
+          ╰──────╯     ╭╌⌒╯ ╰───╯standby?╎ │  ╰────╯  ECMP ╭─⌒╯ ╰───────╯
+                       ╎ │               ╎ │               │ │
+                       ╎ │               ╎ │               │ │
+                       ╎ │ active        ╎ │               │ │
+              standby? ╎ │               ╎ │               │ │
+                       ╎ │               ╎ │               │ │
+          ╭──────╮     ╎ │  ╭───╮  active╰╌⌒╮ ╭────╮ ECMP  │ │  ╭───────╮
+          │      │╌╌╌╌╌╯ ╰─▶│   │──────────╯╰▶│    │───────╯ ╰─▶│       │
+          │Core 2│          │FW1│             │BL 2│            │Spine 1│
+          │      │─────────▶│   │────────────▶│    │───────────▶│       │
+          ╰──────╯ active   ╰───╯   active    ╰────╯   ECMP     ╰───────╯
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 83x51 @100% · v2-fw-border-spine.json · 8 nodes · 12 edges · q qui
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          ╭──────╮standby?  ╭───╮  standby?   ╭────╮   ECMP     ╭───────╮
+          │      │╌╌╌╌╌╌╌╌╌▶│   │╌╌╌╌╌╌╌╌╌╌╌╌▶│    │───────────▶│       │
+          │Core 1│          │FW2│             │BL 1│            │Spine 2│
+          │      │───────╮╭▶│   │╌╌╌╌╌╌╌╌╮ ╭─▶│    │─────────╮╭▶│       │
+          ╰──────╯     ╭╌⌒╯ ╰───╯standby?╎ │  ╰────╯  ECMP ╭─⌒╯ ╰───────╯
+                       ╎ │               ╎ │               │ │
+                       ╎ │               ╎ │               │ │
+                       ╎ │ active        ╎ │               │ │
+              standby? ╎ │               ╎ │               │ │
+                       ╎ │               ╎ │               │ │
+          ╭──────╮     ╎ │  ╭───╮  active╰╌⌒╮ ╭────╮ ECMP  │ │  ╭───────╮
+          │      │╌╌╌╌╌╯ ╰─▶│   │──────────╯╰▶│    │───────╯ ╰─▶│       │
+          │Core 2│          │FW1│             │BL 2│            │Spine 1│
+          │      │─────────▶│   │────────────▶│    │───────────▶│       │
+          ╰──────╯ active   ╰───╯   active    ╰────╯   ECMP     ╰───────╯
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 83x51 @100% · v2-fw-border-spine.json · 8 nodes · 12 edges · q qui
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          ╭──────╮standby?  ╭───╮  standby?   ╭────╮   ECMP     ╭───────╮
+          │      │╌╌╌╌╌╌╌╌╌▶│   │╌╌╌╌╌╌╌╌╌╌╌╌▶│    │───────────▶│       │
+          │Core 1│          │FW2│             │BL 1│            │Spine 2│
+          │      │───────╮╭▶│   │╌╌╌╌╌╌╌╌╮ ╭─▶│    │─────────╮╭▶│       │
+          ╰──────╯     ╭╌⌒╯ ╰───╯standby?╎ │  ╰────╯  ECMP ╭─⌒╯ ╰───────╯
+                       ╎ │               ╎ │               │ │
+                       ╎ │               ╎ │               │ │
+                       ╎ │ active        ╎ │               │ │
+              standby? ╎ │               ╎ │               │ │
+                       ╎ │               ╎ │               │ │
+          ╭──────╮     ╎ │  ╭───╮  active╰╌⌒╮ ╭────╮ ECMP  │ │  ╭───────╮
+          │      │╌╌╌╌╌╯ ╰─▶│   │──────────╯╰▶│    │───────╯ ╰─▶│       │
+          │Core 2│          │FW1│             │BL 2│            │Spine 1│
+          │      │─────────▶│   │────────────▶│    │───────────▶│       │
+          ╰──────╯ active   ╰───╯   active    ╰────╯   ECMP     ╰───────╯
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯

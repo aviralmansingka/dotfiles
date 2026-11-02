@@ -1,0 +1,82 @@
+[
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-dotfiles-fix-visualize--/2026-10-13T05-35-27-649Z_01a133c2-33a0-74b7-9033-3ad246285cff.jsonl",
+    "line": 180,
+    "call_id": "chatcmpl-tool-bfad145e3b78162e",
+    "path": "rataflow/examples/network.json",
+    "spec": {
+      "direction": "lr",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "wan",
+          "label": "WAN"
+        },
+        {
+          "id": "fw",
+          "label": "Firewall"
+        },
+        {
+          "id": "core",
+          "label": "Core switch"
+        },
+        {
+          "id": "web",
+          "label": "Web tier"
+        },
+        {
+          "id": "cache",
+          "label": "Redis"
+        },
+        {
+          "id": "db",
+          "label": "DB tier"
+        }
+      ],
+      "edges": [
+        {
+          "from": "wan",
+          "to": "fw",
+          "label": "1 GbE",
+          "flow": 1
+        },
+        {
+          "from": "fw",
+          "to": "core",
+          "label": "10 GbE",
+          "flow": 2
+        },
+        {
+          "from": "core",
+          "to": "web",
+          "label": "10 GbE",
+          "flow": 2
+        },
+        {
+          "from": "core",
+          "to": "cache",
+          "label": "25 GbE",
+          "flow": 3
+        },
+        {
+          "from": "web",
+          "to": "cache",
+          "label": "session",
+          "flow": 2
+        },
+        {
+          "from": "web",
+          "to": "db",
+          "label": "queries",
+          "flow": 1
+        },
+        {
+          "from": "cache",
+          "to": "db",
+          "label": "fill",
+          "flow": 1
+        }
+      ]
+    }
+  }
+]

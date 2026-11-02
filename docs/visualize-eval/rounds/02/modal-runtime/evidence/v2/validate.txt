@@ -1,0 +1,26 @@
+PASS manifest_readable
+PASS binary_path_absolute
+PASS binary_hash_recorded
+PASS artifact_hashes
+PASS check_output_present
+PASS check_exit_zero
+PASS check_warnings_absent
+PASS labels_parsed
+PASS labels_complete
+PASS labels_off_routes
+PASS labels_not_skipped
+PASS dots_parsed
+PASS dots_no_violations
+PASS viewport_proven
+PASS viewport_proven_measurable
+PASS viewport_matches_target
+PASS cleanup_confirmed
+PASS select_all_frame
+PASS select_all_artifact
+PASS frames_artifact
+PASS frames_timestamped
+PASS attempts_readable
+PASS attempts_view_budget
+PASS attempts_spec_budget
+
+all checks passed

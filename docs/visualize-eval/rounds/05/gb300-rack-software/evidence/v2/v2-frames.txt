@@ -1,0 +1,288 @@
+/tmp/visualize-eval/round-05/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotfi
+les/fix-visualize-skill/docs/visualize-eval/rounds/05/gb300-rack-software/specs/v2-
+rms-apis.json
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-05/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/05/gb300-rack-software/specs/v
+2-rms-apis.json
+viewport: 83x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-05/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/05/gb300-rack-software/specs/v
+2-rms-apis.json --select-all
+viewport: 83x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-05/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/05/gb300-rack-software/specs/v
+2-rms-apis.json --frames 5 --step-ms 100
+viewport: 83x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 83x51 @100% · v2-rms-apis.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                  ╭───────────╮
+                                                ╭▶│Compute BMC│
+                                                │ │           │
+                                                │ ╰───────────╯
+                                                │
+                    ╭─────────────╮Redfish/HTTPS│
+                    │             │─────────────╯
+                    │nv-rms (mgmt)│
+                    │             │─────────────╮
+                    ╰─────────────╯Redfish shelf│
+                                                │ ╭───────────╮
+                                                ╰▶│Power shelf│
+                                                  │           │
+                                                  ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 83x51 @100% · v2-rms-apis.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                  ╭───────────╮
+                                                ╭▶│Compute BMC│
+                                                │ │           │
+                                                │ ╰───────────╯
+                                                │
+                    ╭─────────────╮Redfish/HTTPS│
+                    │             │─────────────╯
+                    │nv-rms (mgmt)│
+                    │             │─────────────╮
+                    ╰─────────────╯Redfish shelf│
+                                                │ ╭───────────╮
+                                                ╰▶│Power shelf│
+                                                  │           │
+                                                  ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 83x51 @100% · v2-rms-apis.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                  ╭───────────╮
+                                                ╭▶│Compute BMC│
+                                                │ │           │
+                                                │ ╰───────────╯
+                                                │
+                    ╭─────────────╮Redfish/HTTPS│
+                    │             │─────────────╯
+                    │nv-rms (mgmt)│
+                    │             │─────────────╮
+                    ╰─────────────╯Redfish shelf│
+                                                │ ╭───────────╮
+                                                ╰▶│Power shelf│
+                                                  │           │
+                                                  ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 83x51 @100% · v2-rms-apis.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                  ╭───────────╮
+                                                ╭▶│Compute BMC│
+                                                │ │           │
+                                                │ ╰───────────╯
+                                                │
+                    ╭─────────────╮Redfish/HTTPS│
+                    │             │─────────────╯
+                    │nv-rms (mgmt)│
+                    │             │─────────────╮
+                    ╰─────────────╯Redfish shelf│
+                                                │ ╭───────────╮
+                                                ╰▶│Power shelf│
+                                                  │           │
+                                                  ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 83x51 @100% · v2-rms-apis.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                  ╭───────────╮
+                                                ╭▶│Compute BMC│
+                                                │ │           │
+                                                │ ╰───────────╯
+                                                │
+                    ╭─────────────╮Redfish/HTTPS│
+                    │             │─────────────╯
+                    │nv-rms (mgmt)│
+                    │             │─────────────╮
+                    ╰─────────────╯Redfish shelf│
+                                                │ ╭───────────╮
+                                                ╰▶│Power shelf│
+                                                  │           │
+                                                  ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯

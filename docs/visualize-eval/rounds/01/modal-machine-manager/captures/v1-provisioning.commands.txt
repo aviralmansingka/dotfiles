@@ -1,0 +1,18 @@
+# 2026-11-02T08:29:43Z capture v1-provisioning spec=specs/v1-provisioning.json split_from=w7E:p31
+# /tmp/visualize-eval/round-01/bin/rataflow-view --check specs/v1-provisioning.json
+ok: nodes=9 edges=8 flows=5 direction=tb theme=gruvbox
+layers=6 (explicit placement, sugiyama skipped)
+extent=48x45 cells
+# herdr pane split --pane w7E:p31 --direction right --ratio 0.5 --cwd /Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/01/modal-machine-manager --no-focus
+{"id":"cli:pane:split","result":{"pane":{"agent_status":"unknown","cwd":"/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/01/modal-machine-manager","focused":false,"foreground_cwd":"/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/01/modal-machine-manager","pane_id":"w7E:p4Q","revision":0,"scroll":{"max_offset_from_bottom":0,"offset_from_bottom":0,"viewport_rows":49},"tab_id":"w7E:tT","terminal_id":"term_65f46f2a4e4dae4","workspace_id":"w7E"},"type":"pane_info"}}
+pane=w7E:p4Q
+# herdr pane run w7E:p4Q "cd '/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/01/modal-machine-manager' && { date -u +%Y-%m-%dT%H:%M:%SZ; echo pane=w7E:p4Q; stty size; } > 'captures/v1-provisioning.dimensions.txt' && clear && /tmp/visualize-eval/round-01/bin/rataflow-view 'specs/v1-provisioning.json'; herdr pane close w7E:p4Q"
+# herdr pane wait-output w7E:p4Q --match rataflow-view
+# 2026-11-02T08:29:43Z header wait finished
+# herdr pane read w7E:p4Q --source visible --format text
+# herdr pane read w7E:p4Q --source visible --format ansi
+# header:  rataflow-view · v1-provisioning.json · 9 nodes · 8 edges · 5 flows · drag pa
+# herdr pane send-keys w7E:p4Q Tab
+# herdr pane send-keys w7E:p4Q q
+# herdr pane get w7E:p4Q
+# 2026-11-02T08:29:53Z done

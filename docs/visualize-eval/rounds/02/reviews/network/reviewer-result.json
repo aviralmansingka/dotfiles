@@ -1,0 +1,1148 @@
+{
+  "protocol_version": 1,
+  "round": 2,
+  "case_id": "network",
+  "candidate_sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+  "renderer_sha256": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+  "rubric_sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "62fded1cd6c2da97d0068800604f475d4285fc59084831329747d6f5a9fd996e",
+  "generator": {
+    "worker_id": "viz-ds02-network",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge02-network",
+    "model": "openai/gpt-6.1-sol"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": null,
+  "evidence": [
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/02/metadata.json",
+      "sha256": "e40d17b02025d270a79fe0dd437fb908ed07c048ea6cbe043d4e17ccaf94bc45",
+      "description": "Frozen round-02 baseline, identities and accepted measurement limitation",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/02/rubric.json",
+      "sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f",
+      "description": "Frozen seven categories and result schema",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen dataset manifest; only network content judged",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/network/source.md",
+      "sha256": "9d23a7b50d1d26a69f95523a9586bab96ec588afb9628ae274c896992b147947",
+      "description": "Source-backed network requirements",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/network/expected.json",
+      "sha256": "8cb86d269c21176d775e79f8592f09067049031a0e581df38d66705e73a8caa9",
+      "description": "Required concepts and seven directed relations",
+      "capture": null
+    },
+    {
+      "id": "candidate",
+      "path": "docs/visualize-eval/rounds/02/SKILL.md",
+      "sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+      "description": "Frozen candidate skill",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/02/reviews/network/spec-manifest.json",
+      "sha256": "62fded1cd6c2da97d0068800604f475d4285fc59084831329747d6f5a9fd996e",
+      "description": "Deterministic sorted final-spec path/hash pairs",
+      "capture": null
+    },
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/02/reviews/network/observed-first.md",
+      "sha256": "34635aebb6fa253a585280dd95364320b3f1f2ad9650a237c279420ef6b6d4e8",
+      "description": "Immutable pre-reveal blind record",
+      "capture": null
+    },
+    {
+      "id": "hash-verification",
+      "path": "docs/visualize-eval/rounds/02/reviews/network/hash-verification.json",
+      "sha256": "df70bf889532163781f03d2650c6c690141d2ab177a6de5f0e6d2b8cfed25fc5",
+      "description": "41 verified metadata/artifact/spec hash comparisons, including actual frozen binary",
+      "capture": null
+    },
+    {
+      "id": "critique",
+      "path": "docs/visualize-eval/rounds/02/reviews/network/critique.md",
+      "sha256": "7e8340607547e8e32bb25ba626b70851f68650e7c97356419e7f82d487d851b5",
+      "description": "Independent full-rubric decisions and correction candidates",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/02/network/generation.json",
+      "sha256": "159aafb52bb0590a4f00b09e539a7c4ec72965f980fc6eac46c0fab5389e78ce",
+      "description": "Generator identity, commands, meanings, coverage and cleanup records",
+      "capture": null
+    },
+    {
+      "id": "generation-report",
+      "path": "docs/visualize-eval/rounds/02/network/generation.md",
+      "sha256": "cc53e1abb9679454dab483b4292fb6408054ed5c5b6f81dba0c1af586f169572",
+      "description": "Generator narrative; not proof of visual correctness",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/02/network/attempts.json",
+      "sha256": "e128c23ecc3dbe15db8ed6aa88123121e23e91c4e81a2985e9f39c3b3732fd8a",
+      "description": "Attempt history and preserved spec bindings",
+      "capture": null
+    },
+    {
+      "id": "spec-v1",
+      "path": "docs/visualize-eval/rounds/02/network/v1.json",
+      "sha256": "6f4e4d15aab2ae01e539f78424a20176eec88f1bf0102738f21d6e75ba5893cd",
+      "description": "Final physical-link spec; intention, not visual proof",
+      "capture": null
+    },
+    {
+      "id": "spec-v2",
+      "path": "docs/visualize-eval/rounds/02/network/v2.json",
+      "sha256": "73810910c94dbf26ace0ab263e3c4606b720395d865b56986ed0ce85e3b9d6f4",
+      "description": "Final application-link spec; intention, not visual proof",
+      "capture": null
+    },
+    {
+      "id": "v1-manifest",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/manifest.json",
+      "sha256": "122e9ce99f93c9e246e4ed1797d0e92de8932d6cf1450278befa56f82d2e3f82",
+      "description": "Captured dimensions, artifact hashes, command windows, exit code and cleanup",
+      "capture": null
+    },
+    {
+      "id": "v1-binary-binding",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "description": "Executed absolute binary path and recorded SHA-256",
+      "capture": null
+    },
+    {
+      "id": "v1-check",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/check.txt",
+      "sha256": "35662a7d64150043e99207ecccd8c44a33e542c5b1aae7cfeb42201bef5d185d",
+      "description": "Complete saved check output; zero exit in manifest; not visual proof",
+      "capture": null
+    },
+    {
+      "id": "v1-validation",
+      "path": "docs/visualize-eval/rounds/02/network/validation/v1-validator.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6",
+      "description": "Saved machine-validation output; not independent visual approval",
+      "capture": null
+    },
+    {
+      "id": "v1-text",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/v1-text.txt",
+      "sha256": "82a1a0c38f94a9947a979ca4668b48748667d1968216adaedb3f57aed5ee7b97",
+      "description": "Final captured evidence; time is the recorded capture window, not an invented exact frame wall time",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "single snapshot",
+        "timestamp": "2026-11-02T10:00:17Z through 2026-11-02T10:00:21Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-ansi",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/v1-ansi.ansi",
+      "sha256": "d7ed82a3906d9b4ba854177b085f3c204a41cf5b2b94a31c8f6e48409b32c4eb",
+      "description": "Final captured evidence; time is the recorded capture window, not an invented exact frame wall time",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "single snapshot",
+        "timestamp": "2026-11-02T10:00:17Z through 2026-11-02T10:00:21Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-selected",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/v1-selected.ansi",
+      "sha256": "b7286fe76f41a7ef895700d5427174eef4bf30b8cc6ce72f8f662ded1ab4c075",
+      "description": "Final captured evidence; time is the recorded capture window, not an invented exact frame wall time",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "single snapshot",
+        "timestamp": "2026-11-02T10:00:17Z through 2026-11-02T10:00:21Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frames",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/v1-frames.txt",
+      "sha256": "ea341136b245cd23b07aa01ac0cae9a24b1bf34f093d3dc462729cf653e1e6bd",
+      "description": "Final captured evidence; time is the recorded capture window, not an invented exact frame wall time",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0,1,2,3,4 at 0,100,200,300,400ms",
+        "timestamp": "2026-11-02T10:00:17Z through 2026-11-02T10:00:21Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/v1-frames.ansi",
+      "sha256": "31628469683bb23e7ba2c958ddbb1f99c5b8138ae56fd7cff832943f3e128c2a",
+      "description": "Final captured evidence; time is the recorded capture window, not an invented exact frame wall time",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0,1,2,3,4 at 0,100,200,300,400ms",
+        "timestamp": "2026-11-02T10:00:17Z through 2026-11-02T10:00:21Z",
+        "state": "animated; diagram cells lack foreground ANSI",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frame0",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/v1-frames.txt",
+      "sha256": "ea341136b245cd23b07aa01ac0cae9a24b1bf34f093d3dc462729cf653e1e6bd",
+      "description": "Named timestamped viewport within the saved transcript; regions refer to this frame only",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0",
+        "timestamp": "0ms relative to frame 0; capture window 2026-11-02T10:00:17Z through 2026-11-02T10:00:21Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frame1",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/v1-frames.txt",
+      "sha256": "ea341136b245cd23b07aa01ac0cae9a24b1bf34f093d3dc462729cf653e1e6bd",
+      "description": "Named timestamped viewport within the saved transcript; regions refer to this frame only",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "1",
+        "timestamp": "100ms relative to frame 0; capture window 2026-11-02T10:00:17Z through 2026-11-02T10:00:21Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frame2",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/v1-frames.txt",
+      "sha256": "ea341136b245cd23b07aa01ac0cae9a24b1bf34f093d3dc462729cf653e1e6bd",
+      "description": "Named timestamped viewport within the saved transcript; regions refer to this frame only",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "2",
+        "timestamp": "200ms relative to frame 0; capture window 2026-11-02T10:00:17Z through 2026-11-02T10:00:21Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frame3",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/v1-frames.txt",
+      "sha256": "ea341136b245cd23b07aa01ac0cae9a24b1bf34f093d3dc462729cf653e1e6bd",
+      "description": "Named timestamped viewport within the saved transcript; regions refer to this frame only",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "3",
+        "timestamp": "300ms relative to frame 0; capture window 2026-11-02T10:00:17Z through 2026-11-02T10:00:21Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frame4",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/v1-frames.txt",
+      "sha256": "ea341136b245cd23b07aa01ac0cae9a24b1bf34f093d3dc462729cf653e1e6bd",
+      "description": "Named timestamped viewport within the saved transcript; regions refer to this frame only",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "4",
+        "timestamp": "400ms relative to frame 0; capture window 2026-11-02T10:00:17Z through 2026-11-02T10:00:21Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-manifest",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/manifest.json",
+      "sha256": "0aa42f2d5d5276dde35b4587342726f968e0dfc73fb097ed31d8b1059789e9c4",
+      "description": "Captured dimensions, artifact hashes, command windows, exit code and cleanup",
+      "capture": null
+    },
+    {
+      "id": "v2-binary-binding",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "description": "Executed absolute binary path and recorded SHA-256",
+      "capture": null
+    },
+    {
+      "id": "v2-check",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/check.txt",
+      "sha256": "bb0b2f5b4131074e5f5021fcae43f6859fbe67042e562abb2489e02d64157390",
+      "description": "Complete saved check output; zero exit in manifest; not visual proof",
+      "capture": null
+    },
+    {
+      "id": "v2-validation",
+      "path": "docs/visualize-eval/rounds/02/network/validation/v2-validator.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6",
+      "description": "Saved machine-validation output; not independent visual approval",
+      "capture": null
+    },
+    {
+      "id": "v2-text",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/v2-text.txt",
+      "sha256": "df44ac9b26895b49a85551f135cfc95aa4cd31735fd585e9d92dfb948caec849",
+      "description": "Final captured evidence; time is the recorded capture window, not an invented exact frame wall time",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "single snapshot",
+        "timestamp": "2026-11-02T10:00:41Z through 2026-11-02T10:00:45Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-ansi",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/v2-ansi.ansi",
+      "sha256": "8e6ca81a97c09858797cc69163d5b50f60522831fcd2f375c47b75cf5297928d",
+      "description": "Final captured evidence; time is the recorded capture window, not an invented exact frame wall time",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "single snapshot",
+        "timestamp": "2026-11-02T10:00:41Z through 2026-11-02T10:00:45Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-selected",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/v2-selected.ansi",
+      "sha256": "133b7b37ef1ede4a43291e38204fe69597104df0045b8f7857b04b5dfc259590",
+      "description": "Final captured evidence; time is the recorded capture window, not an invented exact frame wall time",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "single snapshot",
+        "timestamp": "2026-11-02T10:00:41Z through 2026-11-02T10:00:45Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frames",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/v2-frames.txt",
+      "sha256": "4d5eda6ed5760ea0a0ea2e7a70e24d5cf5e2f07c38f178b288434b60ecbc6996",
+      "description": "Final captured evidence; time is the recorded capture window, not an invented exact frame wall time",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0,1,2,3,4 at 0,100,200,300,400ms",
+        "timestamp": "2026-11-02T10:00:41Z through 2026-11-02T10:00:45Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/v2-frames.ansi",
+      "sha256": "9fb4423315dce84ee201b225c88967fd5490eb06186f19a178dc4ce41100a9e2",
+      "description": "Final captured evidence; time is the recorded capture window, not an invented exact frame wall time",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0,1,2,3,4 at 0,100,200,300,400ms",
+        "timestamp": "2026-11-02T10:00:41Z through 2026-11-02T10:00:45Z",
+        "state": "animated; diagram cells lack foreground ANSI",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frame0",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/v2-frames.txt",
+      "sha256": "4d5eda6ed5760ea0a0ea2e7a70e24d5cf5e2f07c38f178b288434b60ecbc6996",
+      "description": "Named timestamped viewport within the saved transcript; regions refer to this frame only",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0",
+        "timestamp": "0ms relative to frame 0; capture window 2026-11-02T10:00:41Z through 2026-11-02T10:00:45Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frame1",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/v2-frames.txt",
+      "sha256": "4d5eda6ed5760ea0a0ea2e7a70e24d5cf5e2f07c38f178b288434b60ecbc6996",
+      "description": "Named timestamped viewport within the saved transcript; regions refer to this frame only",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "1",
+        "timestamp": "100ms relative to frame 0; capture window 2026-11-02T10:00:41Z through 2026-11-02T10:00:45Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frame2",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/v2-frames.txt",
+      "sha256": "4d5eda6ed5760ea0a0ea2e7a70e24d5cf5e2f07c38f178b288434b60ecbc6996",
+      "description": "Named timestamped viewport within the saved transcript; regions refer to this frame only",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "2",
+        "timestamp": "200ms relative to frame 0; capture window 2026-11-02T10:00:41Z through 2026-11-02T10:00:45Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frame3",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/v2-frames.txt",
+      "sha256": "4d5eda6ed5760ea0a0ea2e7a70e24d5cf5e2f07c38f178b288434b60ecbc6996",
+      "description": "Named timestamped viewport within the saved transcript; regions refer to this frame only",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "3",
+        "timestamp": "300ms relative to frame 0; capture window 2026-11-02T10:00:41Z through 2026-11-02T10:00:45Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frame4",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/v2-frames.txt",
+      "sha256": "4d5eda6ed5760ea0a0ea2e7a70e24d5cf5e2f07c38f178b288434b60ecbc6996",
+      "description": "Named timestamped viewport within the saved transcript; regions refer to this frame only",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "4",
+        "timestamp": "400ms relative to frame 0; capture window 2026-11-02T10:00:41Z through 2026-11-02T10:00:45Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "archive-attempts-v1-attempt1-json",
+      "path": "docs/visualize-eval/rounds/02/network/attempts/v1-attempt1.json",
+      "sha256": "cc00ef4665938ca054b404fee449066884e70bb1f79cff51b60deb5fcccce16e",
+      "description": "Preserved attempt/superseded evidence; not a final scored view",
+      "capture": null
+    },
+    {
+      "id": "archive-attempts-v1-attempt2-allinone-json",
+      "path": "docs/visualize-eval/rounds/02/network/attempts/v1-attempt2-allinone.json",
+      "sha256": "d8233ebbd41c1a077a374c1b4ea20fc5af7793ebdff8e3577bffef8322322157",
+      "description": "Preserved attempt/superseded evidence; not a final scored view",
+      "capture": null
+    },
+    {
+      "id": "archive-attempts-v1-probe-lr-json",
+      "path": "docs/visualize-eval/rounds/02/network/attempts/v1-probe-lr.json",
+      "sha256": "fe9cb35c11f641d06e1657a061ef4e35696f24db183a8cd9286465b05765d94f",
+      "description": "Preserved attempt/superseded evidence; not a final scored view",
+      "capture": null
+    },
+    {
+      "id": "archive-attempts-v2-attempt1-auto-json",
+      "path": "docs/visualize-eval/rounds/02/network/attempts/v2-attempt1-auto.json",
+      "sha256": "e929f11fdf3a12070214b1113090de5874cbc8da569ce3913b4c4a711c8913b4",
+      "description": "Preserved attempt/superseded evidence; not a final scored view",
+      "capture": null
+    },
+    {
+      "id": "archive-evidence-v1-pre-split-bin-sha256",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1-pre-split/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "description": "Preserved attempt/superseded evidence; not a final scored view",
+      "capture": null
+    },
+    {
+      "id": "archive-evidence-v1-pre-split-check-txt",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1-pre-split/check.txt",
+      "sha256": "56f10876d95a02952a3ab77cf65915f2cdf668d65d2850c14f3b0650f29e5ab2",
+      "description": "Preserved attempt/superseded evidence; not a final scored view",
+      "capture": null
+    },
+    {
+      "id": "archive-evidence-v1-pre-split-manifest-json",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1-pre-split/manifest.json",
+      "sha256": "64e4815ab0130bdfb24d295b58b8ef06635a95c30c70ea2d04c6b041cdfe6900",
+      "description": "Preserved attempt/superseded evidence; not a final scored view",
+      "capture": null
+    },
+    {
+      "id": "archive-evidence-v1-pre-split-v1-ansi-ansi",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1-pre-split/v1-ansi.ansi",
+      "sha256": "d01b4da6e5b82007670493b19b0424e0320b7d45332a4e1c54cc17bd21d1bdd5",
+      "description": "Preserved attempt/superseded evidence; not a final scored view",
+      "capture": null
+    },
+    {
+      "id": "archive-evidence-v1-pre-split-v1-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1-pre-split/v1-frames.ansi",
+      "sha256": "44ed512bc472e26059b4b4f3ed711b55a745336c6814209033a21cd6a193a2d7",
+      "description": "Preserved attempt/superseded evidence; not a final scored view",
+      "capture": null
+    },
+    {
+      "id": "archive-evidence-v1-pre-split-v1-frames-txt",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1-pre-split/v1-frames.txt",
+      "sha256": "15e050fceb07bb9124f418645dbdd55675cbcf83fcb31f4ccad6cf68dddd2b78",
+      "description": "Preserved attempt/superseded evidence; not a final scored view",
+      "capture": null
+    },
+    {
+      "id": "archive-evidence-v1-pre-split-v1-selected-ansi",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1-pre-split/v1-selected.ansi",
+      "sha256": "326089202405f4ff7c7f59074b991cd07e980c1bf265dfb2ba3e132df29911a2",
+      "description": "Preserved attempt/superseded evidence; not a final scored view",
+      "capture": null
+    },
+    {
+      "id": "archive-evidence-v1-pre-split-v1-text-txt",
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1-pre-split/v1-text.txt",
+      "sha256": "052416fe57a4907aaff180c77dc78f22fea9347d9956a8a4afe0fd927a22f9ce",
+      "description": "Preserved attempt/superseded evidence; not a final scored view",
+      "capture": null
+    },
+    {
+      "id": "archive-validation-v1-pre-split-validator-txt",
+      "path": "docs/visualize-eval/rounds/02/network/validation/v1-pre-split-validator.txt",
+      "sha256": "007fac5ab58dcb271ed2f0c05361a26a0973a1d0fa543dfb99f4dddf6913e071",
+      "description": "Preserved attempt/superseded evidence; not a final scored view",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Six concepts and seven directed endpoint pairs are present across v1/v2 with explicit coverage; all speed strings remain visible. Required session meaning is not uniquely attached to e5 in the capture, so complete readable labeled-relation coverage fails (F1).",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "source",
+        "expected",
+        "v1-text",
+        "v2-text",
+        "generation"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All seven source stems reach their unique correctly directed arrowheads without crossings, shared runs or fake branches. The vertically adjacent bends [31,24] and [31,25] have nonjoining openings; no junction is inferred. Label ambiguity is separately scored under semantic_fidelity.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "v1-text",
+        "v2-text",
+        "v1-ansi",
+        "v2-ansi"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Both app viewports say 77x47 @100%, startup lines say viewport: 77x47 zoom: 1.00 natural, and ANSI arrays measure 77x47. All complete boxes/full strings fit without pan, zoom or overlay occlusion; split endpoint coverage is complete. Independent Herdr pane columns/rectangle are unavailable, separately disclosed as live_pane null; frozen metadata accepts app viewport authority.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "metadata",
+        "v1-ansi",
+        "v2-ansi",
+        "v1-frames",
+        "v2-frames",
+        "v1-manifest",
+        "v2-manifest"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Related WAN/Firewall boundary concepts are nearby amber hues in v1; related Redis/DB state concepts are adjacent teal hues in v2. Source roles, not depth, explain these families. There is no additional global per-node cross-view hue-stability requirement.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "source",
+        "v1-ansi",
+        "v2-ansi",
+        "blind"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Every side/corner of all 8 final node occurrences has a complete continuous single-color normal perimeter; all 8 selected perimeters are complete, uniformly accent RGB (216,166,87), bold. Select-all covers 8/8, not separate individual-focus sessions.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "v1-ansi",
+        "v2-ansi",
+        "v1-selected",
+        "v2-selected"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Frozen hashes were recomputed, including actual binary bytes; final and archived artifact bindings match. Separate DeepSeek generator and required Sol judge are identified, blind-first saved/hash retained, commands/check output/exit status/captures/states/coverage and all three pane cleanups recorded. Frozen metadata documents the cosmetic dispatch label bug and pane-column lookup limitation. Missing independent rectangle and motion-cell color are disclosed; no machine validator is treated as visual approval.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "candidate",
+        "hash-verification",
+        "spec-manifest",
+        "generation",
+        "attempts",
+        "blind",
+        "v1-manifest",
+        "v2-manifest",
+        "v1-check",
+        "v2-check",
+        "v1-frames",
+        "v2-frames"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Animation is required. Exactly one dot per route in all 35 route/frame samples and zero forbidden-cell dots pass count/occupancy. But e1/e2/e5 visibly alternate two positions with 200ms repetition, returning toward the source every other sample rather than communicating slow directed traffic (F2). No smooth sub-frame motion or full long-route traversal is inferred.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "dataset",
+        "source",
+        "expected",
+        "blind",
+        "v1-frames",
+        "v2-frames",
+        "v1-frame0",
+        "v1-frame1",
+        "v1-frame2",
+        "v2-frame0",
+        "v2-frame1",
+        "v2-frame2"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json#/historical_reference/edges/0"
+      ],
+      "expected": "WAN -> Firewall: 1 GbE",
+      "observed": "WAN bottom at column 35 continues through [35,15..18]; downward head [35,18] meets Firewall top row 19. 1 GbE has clear ownership. No crossings/junctions. Short-cycle animation is F2, separate from this endpoint/label audit.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            35,
+            15,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            37,
+            16,
+            5,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json#/historical_reference/edges/1"
+      ],
+      "expected": "Firewall -> Core switch: 10 GbE",
+      "observed": "Firewall bottom at column 35 continues through [35,23..26]; downward head [35,26] meets Core switch top row 27. 10 GbE at row 24 has clear ownership. No crossings/junctions. Short-cycle animation is F2.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            35,
+            23,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            37,
+            24,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json#/historical_reference/edges/2"
+      ],
+      "expected": "Core switch -> Web tier: 10 GbE",
+      "observed": "Core switch distinct bottom stem [37,31] descends to bend [37,33], goes right to bend [48,33], then downward head [48,34] into Web tier. Label 10 GbE clearly sits above this run. Separate from e4; no crossing or shared branch.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            37,
+            31,
+            12,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            39,
+            32,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json#/historical_reference/edges/3"
+      ],
+      "expected": "Core switch -> Redis: 25 GbE; independent of web-to-cache",
+      "observed": "Core switch bottom stem [35,31] descends to bend [35,33], goes left to bend [22,33], then downward head [22,34] into Redis. 25 GbE clearly sits over its run. No crossing, bus or merge with web-to-cache.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            22,
+            31,
+            14,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            26,
+            32,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json#/historical_reference/edges/4"
+      ],
+      "expected": "Web tier -> Redis: session; independent of core-to-cache",
+      "observed": "Web tier distinct bottom stem [29,23] descends via [29,24], turns right at [29,25] through [30,25], turns down at [31,25], ends with downward head [31,26] into Redis. Geometry traceable and no crossing. Adjacent other-route bend [31,24] does not join. session at [33,25,7,1] can belong to this short path or the competing Web-to-DB horizontal run directly above; expected owner does not resolve visual ambiguity. Short-cycle animation is also F2.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            29,
+            23,
+            3,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            33,
+            25,
+            7,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1",
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json#/historical_reference/edges/5"
+      ],
+      "expected": "Web tier -> DB tier: queries",
+      "observed": "Web tier bottom stem [31,23] turns right at [31,24], follows row 24 to bend [43,24], descends through [43,25] to downward head [43,26] into DB tier. queries above row 24 has clear ownership. Adjacent bend [31,25] belongs to e5 and does not join. session placement is F1 on e5, not an extra endpoint relation.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            31,
+            23,
+            13,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            34,
+            23,
+            7,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json#/historical_reference/edges/6"
+      ],
+      "expected": "Redis -> DB tier: fill",
+      "observed": "Redis right-side stem [37,28] runs right through column 40 to rightward head [41,28], immediately before DB tier left side column 42. fill at row 27 is readable above this run, though directly abutting Redis top-right border. No crossing/junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            37,
+            28,
+            5,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            37,
+            27,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e5"
+      ],
+      "severity": "high",
+      "description": "Required session label at [33,25,7,1] is immediately below the competing e6 horizontal route (row 24) and only beside the final bend of its intended e5 route (column 31). A reader cannot uniquely assign it without the spec/expected data; blind uncertainty survives reveal. All endpoint pairs are drawn, but complete readable labeled-relation coverage fails.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json#/historical_reference/edges/4",
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/semantic_fidelity"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            33,
+            25,
+            7,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            29,
+            23,
+            15,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            31,
+            24,
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "animation",
+      "edge_ids": [
+        "e1",
+        "e2",
+        "e5"
+      ],
+      "severity": "medium",
+      "description": "Timestamped samples show e1 [35,16]->[35,17]->[35,16], e2 [35,24]->[35,25]->[35,24], and e5 [29,24]->[30,25]->[29,24] at 0/100/200ms, repeated at 300/400ms. These tiny 200ms cycles alternate toward/away from the source rather than communicating the required slow directed traffic. Exactly one dot and zero forbidden-cell occupancy do not repair this temporal failure. No unseen sub-frame behavior is claimed.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json#/animation",
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/animation"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-frame0",
+          "region": [
+            35,
+            16,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-frame1",
+          "region": [
+            35,
+            16,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-frame2",
+          "region": [
+            35,
+            16,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-frame0",
+          "region": [
+            35,
+            24,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-frame1",
+          "region": [
+            35,
+            24,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-frame2",
+          "region": [
+            35,
+            24,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v2-frame0",
+          "region": [
+            29,
+            24,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v2-frame1",
+          "region": [
+            29,
+            24,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v2-frame2",
+          "region": [
+            29,
+            24,
+            2,
+            2
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:p6X",
+      "w7E:p73",
+      "w7E:p77"
+    ],
+    "closed_pane_ids": [
+      "w7E:p6X",
+      "w7E:p73",
+      "w7E:p77"
+    ],
+    "status": "done",
+    "reason": "All three generator-owned capture panes are recorded confirmed_closed in their preserved manifests, including archived failure/rejection evidence; generation records final tab restoration. Judge opened no panes. This reports preserved cleanup evidence, not a new live probe."
+  },
+  "overall": "fail"
+}

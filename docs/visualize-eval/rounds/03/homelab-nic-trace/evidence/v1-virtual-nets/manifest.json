@@ -1,0 +1,34 @@
+{
+  "spec_path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v1-virtual-nets.json",
+  "spec_sha256": "f6dcb5d64b17f49f3ef41668682a0b876e1802183ed9fec52c9342d0d45ca9e5",
+  "binary_path": "/tmp/visualize-eval/round-03/bin/rataflow-view",
+  "binary_sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7",
+  "pane_id": "w7E:pBW",
+  "pane_rect": null,
+  "pane_cols": null,
+  "pane_rows": 47,
+  "viewport_line": null,
+  "viewport_token": "77x47 @100%",
+  "check_exit": 0,
+  "check_window": [
+    "2026-11-02T11:18:27Z",
+    "2026-11-02T11:18:27Z"
+  ],
+  "capture_window": [
+    "2026-11-02T11:18:27Z",
+    "2026-11-02T11:18:31Z"
+  ],
+  "cleanup": "confirmed_closed",
+  "select_all_frame": true,
+  "frames": 5,
+  "frame_step_ms": 100,
+  "artifacts": {
+    "bin.sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+    "check.txt": "99fd5f4f1b4a302239e3bcb6aea76316ae41d6413ea9bd6968c6db5cd4612531",
+    "v1-virtual-nets-ansi.ansi": "97e01cf3470b20e26fb860ad959ce24b23045be5fc7f00fc4d5d7033cd80efcd",
+    "v1-virtual-nets-frames.ansi": "ef210ee0c3dfc9c984a5fa6b1169d11a1f3d7888552a44d64bc53a2bfaf2d50a",
+    "v1-virtual-nets-frames.txt": "a435581cfc1b6c341d4ee932b0314268ae9a65e898ca97922d86ada58275fc01",
+    "v1-virtual-nets-selected.ansi": "33fd8b16485b67457c6ffc654553c3115a9e66a8853d764746337a1d5b055cab",
+    "v1-virtual-nets-text.txt": "d6de0845aa704d2b731fd99daa8cc01daf29d585e7bf25c3908662e89ea5938f"
+  }
+}

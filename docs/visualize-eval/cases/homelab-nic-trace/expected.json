@@ -1,0 +1,141 @@
+{
+  "case_id": "homelab-nic-trace",
+  "reference_kind": "historical_generated_relations_not_independent_fact_verification",
+  "source_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-rack-bench-feat-network-diagram--/2026-10-13T05-14-42-097Z_01a133af-3231-71ff-87c1-c56889a12a6c.jsonl",
+  "source_spec_line": 62,
+  "source_call_id": "chatcmpl-tool-b004896d418e23a3",
+  "historical_reference": {
+    "nodes": [
+      {
+        "id": "box",
+        "label": "homelab rack-bench host"
+      },
+      {
+        "id": "bond0",
+        "label": "bond0 192.168.1.197"
+      },
+      {
+        "id": "wlp",
+        "label": "wlp8s0 wifi .213"
+      },
+      {
+        "id": "ts",
+        "label": "tailscale0 100.113.153.49"
+      },
+      {
+        "id": "virbr",
+        "label": "virbr0 libvirt NAT"
+      },
+      {
+        "id": "vm",
+        "label": "VM vnet0"
+      },
+      {
+        "id": "dkbr",
+        "label": "docker 172.18.2.1"
+      },
+      {
+        "id": "ctr",
+        "label": "container veth"
+      },
+      {
+        "id": "rtr",
+        "label": "Fios router 192.168.1.1"
+      },
+      {
+        "id": "ont",
+        "label": "ONT 169.254.3.1"
+      },
+      {
+        "id": "vzagg",
+        "label": "Verizon edge 100.41.x"
+      },
+      {
+        "id": "vzbb",
+        "label": "Verizon backbone AS701"
+      },
+      {
+        "id": "cf",
+        "label": "Cloudflare 1.1.1.1"
+      }
+    ],
+    "edges": [
+      {
+        "from": "vm",
+        "to": "virbr",
+        "label": "192.168.122.x"
+      },
+      {
+        "from": "virbr",
+        "to": "box",
+        "label": "NAT bridge"
+      },
+      {
+        "from": "ctr",
+        "to": "dkbr",
+        "label": "172.18.2.x"
+      },
+      {
+        "from": "dkbr",
+        "to": "box",
+        "label": "docker bridge"
+      },
+      {
+        "from": "ts",
+        "to": "box",
+        "label": "overlay"
+      },
+      {
+        "from": "ts",
+        "to": "bond0",
+        "label": "encap over UDP"
+      },
+      {
+        "from": "box",
+        "to": "bond0",
+        "label": "eno1 2.5 GbE"
+      },
+      {
+        "from": "box",
+        "to": "wlp",
+        "label": "backup path"
+      },
+      {
+        "from": "bond0",
+        "to": "rtr",
+        "label": "default gw 0.5 ms"
+      },
+      {
+        "from": "wlp",
+        "to": "rtr",
+        "label": "metric 600"
+      },
+      {
+        "from": "rtr",
+        "to": "ont",
+        "label": "NAT out"
+      },
+      {
+        "from": "ont",
+        "to": "vzagg",
+        "label": "4.5 ms"
+      },
+      {
+        "from": "vzagg",
+        "to": "vzbb",
+        "label": "6.6 ms"
+      },
+      {
+        "from": "vzbb",
+        "to": "cf",
+        "label": "6-9 ms"
+      }
+    ]
+  },
+  "constraints": [
+    "Treat traceroute hops and MAC-vendor device roles as historical interpretations, not verified physical topology. Qualify the claimed ONT and router identity.",
+    "Separate wired primary, Wi-Fi backup, Tailscale encapsulation, Docker bridge, and libvirt NAT.",
+    "Do not SSH or probe any host. Use only the historical evidence."
+  ],
+  "animation": "optional"
+}

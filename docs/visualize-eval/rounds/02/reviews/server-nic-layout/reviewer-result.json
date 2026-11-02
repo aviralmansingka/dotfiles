@@ -1,0 +1,1052 @@
+{
+  "blockers": [],
+  "candidate_sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+  "case_id": "server-nic-layout",
+  "categories": {
+    "animation": {
+      "applicable": false,
+      "evidence_ids": [
+        "dataset",
+        "expected",
+        "source",
+        "blind",
+        "v1-frames",
+        "v2-frames",
+        "v1-frames-ansi",
+        "v2-frames-ansi"
+      ],
+      "reason": "Source-backed N/A: cases.json and expected.json explicitly mark this case animation optional, and source.md Task requests NIC/observed-egress visualization without asking for motion. The six volunteered animated routes are inspected but earn no pass. Their five samples alternate A/B/A/B/A at 100ms intervals: neither monotonic direction nor sparse slow cadence/full traversal is established. Every sampled route has exactly one dot, with zero sampled corner/bridge/junction/arrowhead/border/label violations; optional motion does not damage traceability. Were directed slow animation required, these samples would be insufficient and the evidence would be blocked, not passed. No exemption is applied to any required-animation case.",
+      "source_refs": [
+        "docs/visualize-eval/cases.json#/cases/3/animation",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/animation",
+        "docs/visualize-eval/cases/server-nic-layout/source.md#task",
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/animation"
+      ],
+      "status": null
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "evidence_ids": [
+        "blind",
+        "v1-text",
+        "v2-text",
+        "v1-ansi",
+        "v2-ansi",
+        "v1-frames",
+        "v2-frames"
+      ],
+      "reason": "All nine drawn route occurrences (eight source relations) have distinct, continuous stems and unique correct arrowheads. V1 has one two-elbow dogleg; no crossing, bridge, shared run, outside-box junction or fake branch appears. The source requires no bus. F3 concerns label ownership rather than geometric endpoint tracing. Dots never obscure arrowheads in the supplied samples.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/02/rubric.json",
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "status": "pass"
+    },
+    "border_integrity": {
+      "applicable": true,
+      "evidence_ids": [
+        "blind",
+        "v1-ansi",
+        "v2-ansi",
+        "v1-selected",
+        "v2-selected"
+      ],
+      "reason": "All 11/11 node occurrences have four complete sides and four corners with one continuous normal perimeter color; all 11/11 have their own complete bold RGB(216,166,87) selected perimeter in the all-selected ANSI captures. Zero uncheckable node occurrences. No edge interruption or corner loss. Simultaneous selection does not prove solo-selection interaction, but such interaction is not a separate required gate. Timestamped diagram bodies lack color; the normal and selected ANSI snapshots provide the required border color evidence.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/02/rubric.json",
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "status": "pass"
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "evidence_ids": [
+        "blind",
+        "v1-ansi",
+        "v2-ansi",
+        "v1-text",
+        "v2-text"
+      ],
+      "reason": "ANSI shows semantic families rather than arbitrary per-depth color cycling: inactive/active ports are related gold hues; server1/server2 are related teal hues; the two Airtel hops are related teal hues in the upstream view; fabric is pink and pool/internet distinct within their views. Placement follows the host/NIC assembly, local /29 peers and ordered upstream chain. Cross-view hue reuse/stability is not a separate rubric gate; generator requests for per-group overrides do not establish a blocker.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/02/rubric.json",
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "status": "pass"
+    },
+    "layout_fit": {
+      "applicable": true,
+      "evidence_ids": [
+        "blind",
+        "v1-text",
+        "v2-text",
+        "v1-ansi",
+        "v2-ansi",
+        "v1-frames",
+        "v2-frames",
+        "v1-manifest",
+        "v2-manifest"
+      ],
+      "reason": "Geometric fit passes: both actual captured grids are 77x47 at natural 100%, all boxes and chosen labels are complete, no clipping or overlay occlusion, no pan/zoom required. The free? label touching the spare-box corner does NOT break this gate: its cells and the corner remain distinct and readable, and the rubric does not require a blank margin. The full category nevertheless fails its explicit complete-source-coverage clause: across the split views the public-address prefix and server2 model remain absent (F1-F2); a split map in generation.json cannot supply missing visible content. Independently measured live-pane columns are unavailable, reported separately as null rather than invented.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/02/rubric.json",
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "status": "fail"
+    },
+    "semantic_fidelity": {
+      "applicable": true,
+      "evidence_ids": [
+        "blind",
+        "source",
+        "expected",
+        "v1-text",
+        "v2-text",
+        "v1-ansi",
+        "v2-ansi"
+      ],
+      "reason": "All nine historical node identities have counterparts and all eight endpoint pairs are drawn, with the NIC->gateway relation repeated across views. However no capture provides the 103.19.91 address-prefix key for any shortened host/gateway/pool address; server2 loses its source-backed R7725 model; and same /29 has an uncertain owner adjacent to the different NIC->gateway arrow. These are recoverable only from external source/spec knowledge, not visible labels. Correctly qualifies dark ports and free addresses and avoids an unproven ToR or invisible switches. See F1-F3.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/02/rubric.json",
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "status": "fail"
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "evidence_ids": [
+        "skill",
+        "metadata",
+        "rubric",
+        "dataset",
+        "source",
+        "expected",
+        "generation",
+        "attempts",
+        "capture-harness",
+        "blind",
+        "spec-manifest",
+        "v1-spec",
+        "v2-spec",
+        "v1-manifest",
+        "v2-manifest",
+        "v1-bin",
+        "v2-bin",
+        "v1-check",
+        "v2-check",
+        "v1-text",
+        "v2-text",
+        "v1-ansi",
+        "v2-ansi",
+        "v1-selected",
+        "v2-selected",
+        "v1-frames",
+        "v2-frames",
+        "superseded-cleanup"
+      ],
+      "reason": "Verified actual hashes of frozen skill, executable, rubric, dataset, source, expected, both final specs and all manifest-listed final capture artifacts, plus unchanged blind record. Separate corrected DeepSeek generator identity and actual Sol reviewer identity match stage-B contract/schema; metadata explains the stale undefined-4 tab label and pane rectangle limitation. Frozen hash-matching harness plus manifests/transcripts preserve exact executed arguments, merged check stdout/stderr and exit 0, timestamps, normal/selected/motion states, and close probes for all three owned capture panes including superseded w7E:p7F. Both viewport tokens and startup lines are present. No pane art was pasted into review chat; no live rerender occurred. Pane rectangle/columns remain unavailable, not silently equated to app dimensions. The rubric pass_iff contains stale gpt-6-astra prose, superseded explicitly by required_reviewer_model, stage-B contract and schema constant Sol.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/02/rubric.json",
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "status": "pass"
+    }
+  },
+  "cleanup": {
+    "closed_pane_ids": [
+      "w7E:p7E",
+      "w7E:p7F",
+      "w7E:p7T"
+    ],
+    "owned_pane_ids": [
+      "w7E:p7E",
+      "w7E:p7F",
+      "w7E:p7T"
+    ],
+    "reason": "All three generator-owned capture panes, including the superseded v2 pane, have confirmed_closed manifests. Frozen harness closes each pane and probes pane get failure before recording that result. Reviewer opened no panes and performed no new live probes.",
+    "status": "done"
+  },
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "expected": "dark -> s1: seven inactive NICs belong to server1; historical no cable must be qualified, not asserted as proven.",
+      "finding_ids": [],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            28,
+            11,
+            19,
+            12
+          ]
+        }
+      ],
+      "observed": "V1-A: 7 of 8 ports dark -> server1 R7725 .58, dashed down column 29 rows 15-17, source bottom row14 and unique down arrow (29,18) just above target top row19. no link seen owns this gap and avoids claiming physical cable absence. No crossing or junction.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference/edges/0"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "e2",
+      "expected": "s1 -> nic: server1 uses eno16595np0 25 GbE as its only active uplink.",
+      "finding_ids": [],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            28,
+            19,
+            19,
+            12
+          ]
+        }
+      ],
+      "observed": "V1-B: server1 R7725 .58 -> eno16595np0 25GbE down column29 from source bottom row22, stem row23, only uplink at [31,24,11,1], unique arrow (29,26) before target top row27. No crossing/junction; sampled dot never reaches arrowhead.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference/edges/1"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "e3",
+      "expected": "nic -> gw: active NIC uses gateway .57, default gateway RTT 0.1ms; public /29 directly on host, no NAT or IPv6. Repeated anchors may split labels across views but must retain identity.",
+      "finding_ids": [
+        "F1"
+      ],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            28,
+            27,
+            19,
+            12
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            29,
+            7,
+            21,
+            12
+          ]
+        }
+      ],
+      "observed": "V1-C: NIC -> Arista .57 L3; down column29 rows31-32; own elbows (29,33),(31,33), straight middle (30,33); unique down arrow (31,34) above gateway top row35. def gw 0.1ms readable. V2-A repeats NIC .58 -> Arista .57 AS132717 straight down column30 rows11-14 with no NAT, no v6 and arrow (30,14). No crossings, bridges, shared runs or junctions. Host/network identity is incomplete because the full public-address prefix has no visible key (F1); stems/directions themselves pass.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference/edges/2"
+      ],
+      "status": "fail"
+    },
+    {
+      "edge_id": "e4",
+      "expected": "s2 -> gw: server2 (Dell R7725 .59) belongs to the same /29 via .57.",
+      "finding_ids": [
+        "F1",
+        "F2",
+        "F3"
+      ],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            11,
+            34,
+            34,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            22,
+            34,
+            10,
+            1
+          ]
+        }
+      ],
+      "observed": "V1-D: server2 .59 -> Arista .57 L3, source right border (23,36), straight rightward stem columns24-28, unique arrow (29,36), target left border (30,36). Geometry is unambiguous, with no branch/crossing. But same /29 at [22,34,8,1] sits immediately left of the different V1-C down arrow (31,34), two rows above this route. Capture alone does not reliably attach this qualifier to server2. Server2 model and full address-prefix identity are also absent.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference/edges/3"
+      ],
+      "status": "fail"
+    },
+    {
+      "edge_id": "e5",
+      "expected": "spare -> gw: .60-.62 are reported free in the /29; unresponsive addresses do not prove free, so uncertainty must remain.",
+      "finding_ids": [
+        "F1"
+      ],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            30,
+            35,
+            38,
+            4
+          ]
+        }
+      ],
+      "observed": "V1-E: .60-.62 (free?) -> Arista .57 L3, leftward dashed stem columns50-46 row36, from spare left border (51,36) to unique left arrow (45,36) beside gateway right border (44,36). free? is above this gap at [46,35,5,1] and touches spare corner (51,35), but does not overwrite it. Dashed line plus question marks qualify availability. No crossing/junction. Pool network identity is incomplete because the address prefix is missing.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference/edges/4"
+      ],
+      "status": "fail"
+    },
+    {
+      "edge_id": "e6",
+      "expected": "gw -> airtel: Arista .57 -> observed Airtel 14.143.x transit, 1.8ms; invisible intervening fabric must not become invented spine/leaf devices.",
+      "finding_ids": [],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            29,
+            15,
+            21,
+            12
+          ]
+        }
+      ],
+      "observed": "V2-B: Arista .57 AS132717 -> Airtel 14.143.x, source bottom row18, down stem column30 rows19-21, unique down arrow (30,22) before target top row23. 1.8 ms unseen at [32,20,13,1] signals the unobserved portion, although terse; no invisible device is invented. No crossing/junction. AS132717 is on the gateway, and subsequent upstream order is preserved.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference/edges/5"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "e7",
+      "expected": "airtel -> airtelbb: observed Airtel 14.143.x -> Airtel backbone 14.141.x, 7.1ms.",
+      "finding_ids": [],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            29,
+            23,
+            19,
+            12
+          ]
+        }
+      ],
+      "observed": "V2-C: Airtel 14.143.x -> AirtelBB 14.141.x, down column30 from source bottom row26 via rows27-29 to unique down arrow (30,30), then target top row31. 7.1 ms at [32,28,6,1]. AirtelBB abbreviation retains backbone meaning; no crossing/junction.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference/edges/6"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "e8",
+      "expected": "airtelbb -> cf: observed Airtel backbone 14.141.x -> Cloudflare 1.1.1.1 AS13335. Historical extracted edge gives 8.3ms; prose excerpt separately says 8.6ms, so neither is independently fact-verified.",
+      "finding_ids": [],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            29,
+            31,
+            20,
+            12
+          ]
+        }
+      ],
+      "observed": "V2-D: AirtelBB 14.141.x -> CF 1.1.1.1 AS13335, down column30 from source bottom row34 through stem rows35-37 to unique arrow (30,38), then target top row39. 8.3 ms at [32,36,6,1] matches the frozen extracted edge. No crossing/junction. Passed for required endpoint/order and extracted label, not independent verification of conflicting historical RTT measurements.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference/edges/7"
+      ],
+      "status": "pass"
+    }
+  ],
+  "evidence": [
+    {
+      "capture": null,
+      "description": "Stage-A observation saved before expected reveal; immutable SHA-256 verified.",
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/02/reviews/server-nic-layout/observed-first.md",
+      "sha256": "4d5c10e3851453b825e6bd625ac97b0561248f5c1d0bea9c86521be1bea333b8"
+    },
+    {
+      "capture": null,
+      "description": "Deterministic sorted final-spec path/hash pairs; top-level spec_sha256 hashes these exact bytes.",
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/02/reviews/server-nic-layout/spec-manifest.json",
+      "sha256": "32d783a9801c305d12fb0d69d9d9444e2ba7cee2921cb6d95a36fbfb76698de7"
+    },
+    {
+      "capture": null,
+      "description": "Frozen candidate skill, not the current installed skill.",
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/02/SKILL.md",
+      "sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70"
+    },
+    {
+      "capture": null,
+      "description": "Frozen baseline identity, model declarations, input hashes, and documented pane-measurement limitation.",
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/02/metadata.json",
+      "sha256": "e40d17b02025d270a79fe0dd437fb908ed07c048ea6cbe043d4e17ccaf94bc45"
+    },
+    {
+      "capture": null,
+      "description": "Full seven-category rubric and result schema.",
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/02/rubric.json",
+      "sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f"
+    },
+    {
+      "capture": null,
+      "description": "Frozen case manifest; this case animation is optional.",
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05"
+    },
+    {
+      "capture": null,
+      "description": "Supplied server/NIC/egress source and qualifications; no access to historical chat.",
+      "id": "source",
+      "path": "docs/visualize-eval/cases/server-nic-layout/source.md",
+      "sha256": "235d296fef435710c8a49bcd247455c8c82b844e71726f146c4cedf227d0308b"
+    },
+    {
+      "capture": null,
+      "description": "Historical extracted relation reference, not independent fact verification.",
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/server-nic-layout/expected.json",
+      "sha256": "ada8d8b1b8a3dfda4221b22fd1bb785327d6eeda69834c35ab5ab17b0678afb4"
+    },
+    {
+      "capture": null,
+      "description": "Generator identity, command binding, meaning ledger, split map, timestamps and cleanup record.",
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/generation.json",
+      "sha256": "a26a1d01e2ee91a5b6aa0fd9d697c56310d8034a4bf774bf2d38ac9ba65ab44b"
+    },
+    {
+      "capture": null,
+      "description": "Generator attempt and cleanup narrative; not used as visual proof.",
+      "id": "generation-notes",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/generation.md",
+      "sha256": "434bf21d6db50f94320114cc0401948d9533b92b94b5329bc86e1510d9f7bad5"
+    },
+    {
+      "capture": null,
+      "description": "Budgeted attempts, preflights, archived capture identity and split coverage.",
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/attempts.json",
+      "sha256": "f837a3c1172cedcdabb14b6e0bea63c1100d5711fde3c277c863c3ca5800af40"
+    },
+    {
+      "capture": null,
+      "description": "Hash matches frozen metadata; defines exact check stdout+stderr capture, command arguments and cleanup probe.",
+      "id": "capture-harness",
+      "path": "scripts/viz-evidence.sh",
+      "sha256": "2a804dea703e5a9da9cdd788d4eb89690860a02606ec681948670dfe19e8e069"
+    },
+    {
+      "capture": null,
+      "description": "Hash matches frozen metadata; no rerun used as visual judgment.",
+      "id": "validate-harness",
+      "path": "scripts/viz-validate.py",
+      "sha256": "0c8a5488c5b40d511d74c6470f076638d2baa33b384abfb398186497cbdf5e66"
+    },
+    {
+      "capture": null,
+      "description": "Hash matches frozen metadata; not run during this review.",
+      "id": "aggregate-harness",
+      "path": "scripts/viz-aggregate.py",
+      "sha256": "5ab3cfd4c1d84a01ae1aa3c166c2d5331bf6692e15e1d8fb97a2a0905192cffa"
+    },
+    {
+      "capture": null,
+      "description": "Final intended graph; never proof of visible labels or routes.",
+      "id": "v1-spec",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/v1.json",
+      "sha256": "da86859d62efecd2c25ab261c2ddb7644fefd8ae6cfeec3b16bed07661c637d0"
+    },
+    {
+      "capture": null,
+      "description": "Capture/check time windows, check exit, artifact hashes and confirmed pane close; independent pane columns/rectangle are null.",
+      "id": "v1-manifest",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v1/manifest.json",
+      "sha256": "3477459eab8b75c20dd0b30bb1a36d5f2c769e618d60e3714ae940352308e622"
+    },
+    {
+      "capture": null,
+      "description": "Absolute executed binary and hash attestation; executable bytes independently rehashed during review without executing it.",
+      "id": "v1-bin",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v1/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f"
+    },
+    {
+      "capture": null,
+      "description": "Frozen combined --check stdout/stderr; exit 0 in manifest, not visual evidence.",
+      "id": "v1-check",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v1/check.txt",
+      "sha256": "037a4841b80ccef018dfff699874c51191cff97dfaf6275d3642ac8291797bd9"
+    },
+    {
+      "capture": null,
+      "description": "Preserved validator output; not a visual pass.",
+      "id": "v1-validate",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v1/validate.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "normal snapshot",
+        "state": "normal",
+        "timestamp": "2026-11-02T10:01:35Z/2026-11-02T10:01:38Z",
+        "view": "v1"
+      },
+      "description": "Actual captured evidence. Frame times are relative; file timestamps bounded by manifest capture window.",
+      "id": "v1-text",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v1/v1-text.txt",
+      "sha256": "722537fe95763577711c1594fb8aedd21d550348552d42ba0b862cb2c2f41ad8"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "ansi",
+        "frame": "normal snapshot",
+        "state": "normal",
+        "timestamp": "2026-11-02T10:01:35Z/2026-11-02T10:01:38Z",
+        "view": "v1"
+      },
+      "description": "Actual captured evidence. Frame times are relative; file timestamps bounded by manifest capture window.",
+      "id": "v1-ansi",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v1/v1-ansi.ansi",
+      "sha256": "4e989c088d6b0f417c2920d9e90c3d0e5d1added7b5530e75ef024caefa8a78c"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "ansi",
+        "frame": "selected snapshot",
+        "state": "all nodes selected",
+        "timestamp": "2026-11-02T10:01:35Z/2026-11-02T10:01:38Z",
+        "view": "v1"
+      },
+      "description": "Actual captured evidence. Frame times are relative; file timestamps bounded by manifest capture window.",
+      "id": "v1-selected",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v1/v1-selected.ansi",
+      "sha256": "8ea71bf707b1f6cde825e39b60a33996bef28ea5e3543ba6bb3a21b0c90c34e3"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "0..4 at 0,100,200,300,400ms",
+        "state": "timestamped normal frames",
+        "timestamp": "2026-11-02T10:01:35Z/2026-11-02T10:01:38Z",
+        "view": "v1"
+      },
+      "description": "Actual captured evidence. Frame times are relative; file timestamps bounded by manifest capture window.",
+      "id": "v1-frames",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v1/v1-frames.txt",
+      "sha256": "4008e777b16b435b56299b2cb2daf582e8da47f8f2a001cf30d1bbbe41a331be"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "ansi",
+        "frame": "0..4 at 0,100,200,300,400ms",
+        "state": "timestamped normal frames; diagram bodies have no SGR",
+        "timestamp": "2026-11-02T10:01:35Z/2026-11-02T10:01:38Z",
+        "view": "v1"
+      },
+      "description": "Actual captured evidence. Frame times are relative; file timestamps bounded by manifest capture window.",
+      "id": "v1-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v1/v1-frames.ansi",
+      "sha256": "c415d2e3dc8ddf899198ceeb369a2becd3276885099ccc656633df07579af608"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "0 at 0ms",
+        "state": "normal timestamped frame",
+        "timestamp": "0ms relative; capture window 2026-11-02T10:01:35Z/2026-11-02T10:01:38Z",
+        "view": "v1"
+      },
+      "description": "Specific timestamped frame within compound transcript; coordinates are relative to this frame header, not shell transcript.",
+      "id": "v1-frame-0",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v1/v1-frames.txt",
+      "sha256": "4008e777b16b435b56299b2cb2daf582e8da47f8f2a001cf30d1bbbe41a331be"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "1 at 100ms",
+        "state": "normal timestamped frame",
+        "timestamp": "100ms relative; capture window 2026-11-02T10:01:35Z/2026-11-02T10:01:38Z",
+        "view": "v1"
+      },
+      "description": "Specific timestamped frame within compound transcript; coordinates are relative to this frame header, not shell transcript.",
+      "id": "v1-frame-1",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v1/v1-frames.txt",
+      "sha256": "4008e777b16b435b56299b2cb2daf582e8da47f8f2a001cf30d1bbbe41a331be"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "2 at 200ms",
+        "state": "normal timestamped frame",
+        "timestamp": "200ms relative; capture window 2026-11-02T10:01:35Z/2026-11-02T10:01:38Z",
+        "view": "v1"
+      },
+      "description": "Specific timestamped frame within compound transcript; coordinates are relative to this frame header, not shell transcript.",
+      "id": "v1-frame-2",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v1/v1-frames.txt",
+      "sha256": "4008e777b16b435b56299b2cb2daf582e8da47f8f2a001cf30d1bbbe41a331be"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "3 at 300ms",
+        "state": "normal timestamped frame",
+        "timestamp": "300ms relative; capture window 2026-11-02T10:01:35Z/2026-11-02T10:01:38Z",
+        "view": "v1"
+      },
+      "description": "Specific timestamped frame within compound transcript; coordinates are relative to this frame header, not shell transcript.",
+      "id": "v1-frame-3",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v1/v1-frames.txt",
+      "sha256": "4008e777b16b435b56299b2cb2daf582e8da47f8f2a001cf30d1bbbe41a331be"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "4 at 400ms",
+        "state": "normal timestamped frame",
+        "timestamp": "400ms relative; capture window 2026-11-02T10:01:35Z/2026-11-02T10:01:38Z",
+        "view": "v1"
+      },
+      "description": "Specific timestamped frame within compound transcript; coordinates are relative to this frame header, not shell transcript.",
+      "id": "v1-frame-4",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v1/v1-frames.txt",
+      "sha256": "4008e777b16b435b56299b2cb2daf582e8da47f8f2a001cf30d1bbbe41a331be"
+    },
+    {
+      "capture": null,
+      "description": "Final intended graph; never proof of visible labels or routes.",
+      "id": "v2-spec",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/v2.json",
+      "sha256": "8f4ccba2eacadae5c1a24157a44c42ced9ba87d304c0d3e5be5f96022e7cdfa7"
+    },
+    {
+      "capture": null,
+      "description": "Capture/check time windows, check exit, artifact hashes and confirmed pane close; independent pane columns/rectangle are null.",
+      "id": "v2-manifest",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v2/manifest.json",
+      "sha256": "3cf38f903e7c809579d9d190e4a87caa68590b7ec6d14a6d7a36cc6565905c37"
+    },
+    {
+      "capture": null,
+      "description": "Absolute executed binary and hash attestation; executable bytes independently rehashed during review without executing it.",
+      "id": "v2-bin",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v2/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f"
+    },
+    {
+      "capture": null,
+      "description": "Frozen combined --check stdout/stderr; exit 0 in manifest, not visual evidence.",
+      "id": "v2-check",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v2/check.txt",
+      "sha256": "6e942ad608c314bb87dbd2184fbabc5737ec0891726479f902d0815578bd2598"
+    },
+    {
+      "capture": null,
+      "description": "Preserved validator output; not a visual pass.",
+      "id": "v2-validate",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v2/validate.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "normal snapshot",
+        "state": "normal",
+        "timestamp": "2026-11-02T10:02:39Z/2026-11-02T10:02:43Z",
+        "view": "v2"
+      },
+      "description": "Actual captured evidence. Frame times are relative; file timestamps bounded by manifest capture window.",
+      "id": "v2-text",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v2/v2-text.txt",
+      "sha256": "12262fb7843ba3a99a097696168e0cdb5135cc66f74667c091dcc8bcc6c55ba3"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "ansi",
+        "frame": "normal snapshot",
+        "state": "normal",
+        "timestamp": "2026-11-02T10:02:39Z/2026-11-02T10:02:43Z",
+        "view": "v2"
+      },
+      "description": "Actual captured evidence. Frame times are relative; file timestamps bounded by manifest capture window.",
+      "id": "v2-ansi",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v2/v2-ansi.ansi",
+      "sha256": "2cf25fbfc36d2dcbf76f78ef8d5f6b83f82408fdab003a5df6fa13511ca2bef5"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "ansi",
+        "frame": "selected snapshot",
+        "state": "all nodes selected",
+        "timestamp": "2026-11-02T10:02:39Z/2026-11-02T10:02:43Z",
+        "view": "v2"
+      },
+      "description": "Actual captured evidence. Frame times are relative; file timestamps bounded by manifest capture window.",
+      "id": "v2-selected",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v2/v2-selected.ansi",
+      "sha256": "6dc6b1a99635df890705827a9abb52f818be4424c1af2e7d940e51bee198ad1f"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "0..4 at 0,100,200,300,400ms",
+        "state": "timestamped normal frames",
+        "timestamp": "2026-11-02T10:02:39Z/2026-11-02T10:02:43Z",
+        "view": "v2"
+      },
+      "description": "Actual captured evidence. Frame times are relative; file timestamps bounded by manifest capture window.",
+      "id": "v2-frames",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v2/v2-frames.txt",
+      "sha256": "be5239e89831bdcada5066d11df8ca0f85a3cceac3ee962420747b0abdc6e5d6"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "ansi",
+        "frame": "0..4 at 0,100,200,300,400ms",
+        "state": "timestamped normal frames; diagram bodies have no SGR",
+        "timestamp": "2026-11-02T10:02:39Z/2026-11-02T10:02:43Z",
+        "view": "v2"
+      },
+      "description": "Actual captured evidence. Frame times are relative; file timestamps bounded by manifest capture window.",
+      "id": "v2-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v2/v2-frames.ansi",
+      "sha256": "d9ea4d3304a1c264e0e128523c99dc9d9759d62e375e0529c57aec149c834f13"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "0 at 0ms",
+        "state": "normal timestamped frame",
+        "timestamp": "0ms relative; capture window 2026-11-02T10:02:39Z/2026-11-02T10:02:43Z",
+        "view": "v2"
+      },
+      "description": "Specific timestamped frame within compound transcript; coordinates are relative to this frame header, not shell transcript.",
+      "id": "v2-frame-0",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v2/v2-frames.txt",
+      "sha256": "be5239e89831bdcada5066d11df8ca0f85a3cceac3ee962420747b0abdc6e5d6"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "1 at 100ms",
+        "state": "normal timestamped frame",
+        "timestamp": "100ms relative; capture window 2026-11-02T10:02:39Z/2026-11-02T10:02:43Z",
+        "view": "v2"
+      },
+      "description": "Specific timestamped frame within compound transcript; coordinates are relative to this frame header, not shell transcript.",
+      "id": "v2-frame-1",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v2/v2-frames.txt",
+      "sha256": "be5239e89831bdcada5066d11df8ca0f85a3cceac3ee962420747b0abdc6e5d6"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "2 at 200ms",
+        "state": "normal timestamped frame",
+        "timestamp": "200ms relative; capture window 2026-11-02T10:02:39Z/2026-11-02T10:02:43Z",
+        "view": "v2"
+      },
+      "description": "Specific timestamped frame within compound transcript; coordinates are relative to this frame header, not shell transcript.",
+      "id": "v2-frame-2",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v2/v2-frames.txt",
+      "sha256": "be5239e89831bdcada5066d11df8ca0f85a3cceac3ee962420747b0abdc6e5d6"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "3 at 300ms",
+        "state": "normal timestamped frame",
+        "timestamp": "300ms relative; capture window 2026-11-02T10:02:39Z/2026-11-02T10:02:43Z",
+        "view": "v2"
+      },
+      "description": "Specific timestamped frame within compound transcript; coordinates are relative to this frame header, not shell transcript.",
+      "id": "v2-frame-3",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v2/v2-frames.txt",
+      "sha256": "be5239e89831bdcada5066d11df8ca0f85a3cceac3ee962420747b0abdc6e5d6"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "4 at 400ms",
+        "state": "normal timestamped frame",
+        "timestamp": "400ms relative; capture window 2026-11-02T10:02:39Z/2026-11-02T10:02:43Z",
+        "view": "v2"
+      },
+      "description": "Specific timestamped frame within compound transcript; coordinates are relative to this frame header, not shell transcript.",
+      "id": "v2-frame-4",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/evidence/v2/v2-frames.txt",
+      "sha256": "be5239e89831bdcada5066d11df8ca0f85a3cceac3ee962420747b0abdc6e5d6"
+    },
+    {
+      "capture": null,
+      "description": "Archived capture manifest for owned pane w7E:p7F, confirmed closed. Not counted as a final view.",
+      "id": "superseded-cleanup",
+      "path": "docs/visualize-eval/rounds/02/server-nic-layout/attempts/superseded-capture/v2-pre-colorfix/manifest.json",
+      "sha256": "c707d4b71928d18f6c93b31d27e7566b83ae4746feac14902b3ba5c1f3e84f5e"
+    }
+  ],
+  "findings": [
+    {
+      "category": "semantic_fidelity",
+      "description": "The supplied 103.19.91.58/29 public host address and same-prefix gateway/server2/pool identities are shortened to .58/.57/.59/.60-.62 with no visible 103.19.91 prefix key in either view. A reader cannot recover the public network identity or confirm the source address from these captures. no NAT, no v6 does not supply the missing prefix. This is source-content loss, also failing layout_fit complete split-source-coverage, not geometric clipping.",
+      "edge_ids": [
+        "e3",
+        "e4",
+        "e5"
+      ],
+      "id": "F1",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            29,
+            20,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            12,
+            36,
+            55,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            30,
+            8,
+            15,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            30,
+            16,
+            19,
+            1
+          ]
+        }
+      ],
+      "severity": "critical",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md#the-box",
+        "docs/visualize-eval/cases/server-nic-layout/source.md#the-layout-in-the-pane",
+        "docs/visualize-eval/rounds/02/SKILL.md#step-1--meaning-ledger-before-any-spec"
+      ]
+    },
+    {
+      "category": "semantic_fidelity",
+      "description": "Source and extracted node s2 identify server2 as Dell R7725, but the only visible server2 occurrence says server2 .59. Showing R7725 on server1 does not communicate that server2 shares the model. The generator calls this duplicate information in its ledger, but the missing subject-to-model association is not supplied by any captured key or label. Also contributes to incomplete split-source coverage in layout_fit.",
+      "edge_ids": [
+        "e4"
+      ],
+      "id": "F2",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            12,
+            36,
+            11,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            29,
+            20,
+            17,
+            1
+          ]
+        }
+      ],
+      "severity": "critical",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md#the-box",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference/nodes/3"
+      ]
+    },
+    {
+      "category": "semantic_fidelity",
+      "description": "The required same /29 qualifier has an uncertain visible owner: [22,34,8,1] is beside the NIC->gateway down arrow at (31,34), but its intended server2->gateway horizontal route is row36. Thus the drawn server2 link geometry is traceable while its source-required subnet membership label is not reliably attached. A spec assignment cannot repair visible ownership.",
+      "edge_ids": [
+        "e4"
+      ],
+      "id": "F3",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            22,
+            34,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            23,
+            36,
+            8,
+            1
+          ]
+        }
+      ],
+      "severity": "high",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference/edges/3",
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/semantic_fidelity"
+      ]
+    }
+  ],
+  "generator": {
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "worker_id": "viz-ds02-server-nic-layout"
+  },
+  "live_pane": null,
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "overall": "fail",
+  "protocol_version": 1,
+  "renderer_sha256": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+  "reviewer": {
+    "model": "openai/gpt-6.1-sol",
+    "worker_id": "viz-judge02-server-nic-layout"
+  },
+  "round": 2,
+  "rubric_sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f",
+  "spec_sha256": "32d783a9801c305d12fb0d69d9d9444e2ba7cee2921cb6d95a36fbfb76698de7",
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "verified": true,
+    "zoom_percent": 100
+  }
+}

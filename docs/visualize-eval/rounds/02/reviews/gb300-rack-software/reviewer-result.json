@@ -1,0 +1,1281 @@
+{
+  "protocol_version": 1,
+  "round": 2,
+  "case_id": "gb300-rack-software",
+  "candidate_sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+  "renderer_sha256": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+  "rubric_sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "ec75e75b6dde000a0ce85aab3f9b170631c65baa11114b835ec73969dce2b87a",
+  "generator": {
+    "worker_id": "viz-ds02-gb300-rack-software",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge02-gb300-rack-software",
+    "model": "openai/gpt-6.1-sol"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": null,
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/02/reviews/gb300-rack-software/observed-first.md",
+      "sha256": "fd99fedc3d00e31a9336006c3c744881ba3c61eb24e727ea619c1ff14d783c38",
+      "description": "Immutable pre-reveal Stage-A observations; hash verified before and after Stage B.",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/02/reviews/gb300-rack-software/spec-manifest.json",
+      "sha256": "ec75e75b6dde000a0ce85aab3f9b170631c65baa11114b835ec73969dce2b87a",
+      "description": "Deterministic sorted final-spec path/hash pairs; spec_sha256 hashes these exact manifest bytes.",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/02/metadata.json",
+      "sha256": "e40d17b02025d270a79fe0dd437fb908ed07c048ea6cbe043d4e17ccaf94bc45",
+      "description": "Frozen round-02 identity, input digests, worker-label correction and capture limitation.",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/02/SKILL.md",
+      "sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+      "description": "Frozen candidate skill; digest verified against metadata.",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/02/rubric.json",
+      "sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f",
+      "description": "Frozen seven-category rubric and embedded result_schema; digest verified.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen case manifest; digest verified; no other case source was opened.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/gb300-rack-software/source.md",
+      "sha256": "10d440af0be8d3730c448e710a48d4dfbd527a966f532084e7f98fd2d4b83fda",
+      "description": "This case only: source excerpts, human corrections and fixed constraints; digest verified.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/gb300-rack-software/expected.json",
+      "sha256": "9a947233493973c247544ae6e9c175b940feb9d87fc850d4693565c90042c0ab",
+      "description": "Historical reference and constraints; explicitly not an unqualified semantic oracle; digest verified.",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/generation.json",
+      "sha256": "9f74b7577506e7236f361e44a5b1b609e36dee20795a9d28db65a4626e772203",
+      "description": "Generator identity, coverage ledger, command parameters and reported probe cleanup; not visual proof.",
+      "capture": null
+    },
+    {
+      "id": "generation-md",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/generation.md",
+      "sha256": "06cffe8cdfc9cfe6916d95ace7ff3b5845896fa321ceb8700cb6f0da66ba2e72",
+      "description": "Generator narrative and reported limitations; not visual proof.",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/attempts.json",
+      "sha256": "175dbb6c789de4eb3613213559101ac51a37258c7a08605ff3267254c29d4bb1",
+      "description": "Design-attempt summaries and hashes; rejected checks are summaries rather than full raw logs.",
+      "capture": null
+    },
+    {
+      "id": "capture-harness",
+      "path": "scripts/viz-evidence.sh",
+      "sha256": "2a804dea703e5a9da9cdd788d4eb89690860a02606ec681948670dfe19e8e069",
+      "description": "Hash matches frozen metadata; documents merged check stdout/stderr, pane cleanup probe, exact capture procedure.",
+      "capture": null
+    },
+    {
+      "id": "validate-harness",
+      "path": "scripts/viz-validate.py",
+      "sha256": "0c8a5488c5b40d511d74c6470f076638d2baa33b384abfb398186497cbdf5e66",
+      "description": "Hash matches frozen metadata; validator success is not visual proof.",
+      "capture": null
+    },
+    {
+      "id": "aggregate-harness",
+      "path": "scripts/viz-aggregate.py",
+      "sha256": "5ab3cfd4c1d84a01ae1aa3c166c2d5331bf6692e15e1d8fb97a2a0905192cffa",
+      "description": "Hash matches frozen metadata; not executed during judging.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v1-a1-single-graph",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/attempts/v1-a1-single-graph.json",
+      "sha256": "3bbc727c69f61077b5ae273d7929f3045c8805b6056fdaaf783644b7611f6390",
+      "description": "Preserved rejected design; hash verified against attempts.json; not final visual evidence.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v1-a2-plain-tb",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/attempts/v1-a2-plain-tb.json",
+      "sha256": "23622e4b15645258acd076010b33ec30eab196194b00eed6151b4f01ccc789aa",
+      "description": "Preserved rejected design; hash verified against attempts.json; not final visual evidence.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v2-a1-plain-tb",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/attempts/v2-a1-plain-tb.json",
+      "sha256": "e82675dbac2107c7efbc65e7a3710312988dedc16bcf59ba1abd5dfbef744c15",
+      "description": "Preserved rejected design; hash verified against attempts.json; not final visual evidence.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v2-a2-lr-layers",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/attempts/v2-a2-lr-layers.json",
+      "sha256": "301e77b96a5745b8a7848d2eb49b695cd46d27ad22283ec5b9249b5fba1587fa",
+      "description": "Preserved rejected design; hash verified against attempts.json; not final visual evidence.",
+      "capture": null
+    },
+    {
+      "id": "v1-spec",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/v1.json",
+      "sha256": "d459325771c09e7402acb88a3c6c670d537c813b4d016962a04e3aaf28c7a04d",
+      "description": "Final v1 spec; intention only, hash verified against capture manifest and generation record.",
+      "capture": null
+    },
+    {
+      "id": "v1-manifest",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/evidence/v1/manifest.json",
+      "sha256": "f257d607e671cb0097f0f47e648bf8ee7e852990a8954366533a9b18a1516b11",
+      "description": "Captured spec/binary hashes, timestamps, check_exit=0, selected-state flag and confirmed_closed pane result.",
+      "capture": null
+    },
+    {
+      "id": "v1-bin",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/evidence/v1/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "description": "Executable digest record; matches metadata and the currently retained frozen executable bytes.",
+      "capture": null
+    },
+    {
+      "id": "v1-check",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/evidence/v1/check.txt",
+      "sha256": "54dfb70eeb82b05433783ab4111a747ab1d785abcc84468d766e096340b6faa2",
+      "description": "Complete merged final --check stdout/stderr; exit status 0 is in manifest. Not proof of readable labels or bus semantics.",
+      "capture": null
+    },
+    {
+      "id": "v1-validator",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/evidence/v1/validator.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6",
+      "description": "Preserved 24/24 validator output; not used to override observations.",
+      "capture": null
+    },
+    {
+      "id": "v1-text",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/evidence/v1/v1-text.txt",
+      "sha256": "59cc6a7c9bfbbf4c4aacf80a47e1e7ae7f55b30331dc11aefcc346c99c9c92fc",
+      "description": "Actual normal-state pane text; coordinates include header at row 1.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "static",
+        "timestamp": "2026-11-02T10:01:06Z/2026-11-02T10:01:10Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-ansi",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/evidence/v1/v1-ansi.ansi",
+      "sha256": "5faaf543c8317fb042f58d108fbcf6ea46c9cf589104605a56cfd67e0ad1fa18",
+      "description": "Actual normal-state pane ANSI; RGB border and dot evidence.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "static",
+        "timestamp": "2026-11-02T10:01:06Z/2026-11-02T10:01:10Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-selected",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/evidence/v1/v1-selected.ansi",
+      "sha256": "12af59b4f5c1231f307b740651b4606ad19c6ab03cfbe62b311d3b42ed07dc3e",
+      "description": "Actual all-nodes-selected ANSI; every node occurrence has a complete bold-gold perimeter.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T10:01:06Z/2026-11-02T10:01:10Z",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frames",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/evidence/v1/v1-frames.txt",
+      "sha256": "e236f1ac91ebd058a9072e59a5d6a8fc46b0d053d7298ad32ac031a0dcc7d658",
+      "description": "Actual saved terminal transcript containing frames 0–4 at 0,100,200,300,400ms and viewport startup line.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0–4",
+        "timestamp": "0,100,200,300,400ms",
+        "state": "animated normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/evidence/v1/v1-frames.ansi",
+      "sha256": "556ffea7e6b07738e74990e3103eda86efeb99ae7a786838ce38a5be99bbddad",
+      "description": "Same timestamped motion capture in ANSI format; diagram portions have no SGR color styling.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0–4",
+        "timestamp": "0,100,200,300,400ms",
+        "state": "animated normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-spec",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/v2.json",
+      "sha256": "e645856239d27a20b4ffe8c55b12c2dab360ac45454b5af0812eb5ebc4f9a083",
+      "description": "Final v2 spec; intention only, hash verified against capture manifest and generation record.",
+      "capture": null
+    },
+    {
+      "id": "v2-manifest",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/evidence/v2/manifest.json",
+      "sha256": "bc730db4c9428ab021e62ac0cae9bb3fb4fafe574231570ddeeeb8db91a84ba4",
+      "description": "Captured spec/binary hashes, timestamps, check_exit=0, selected-state flag and confirmed_closed pane result.",
+      "capture": null
+    },
+    {
+      "id": "v2-bin",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/evidence/v2/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "description": "Executable digest record; matches metadata and the currently retained frozen executable bytes.",
+      "capture": null
+    },
+    {
+      "id": "v2-check",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/evidence/v2/check.txt",
+      "sha256": "9cbc79d37c8d2a9591158457d8914c906714453a0aa4609ce774777a4f5f6c4c",
+      "description": "Complete merged final --check stdout/stderr; exit status 0 is in manifest. Not proof of readable labels or bus semantics.",
+      "capture": null
+    },
+    {
+      "id": "v2-validator",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/evidence/v2/validator.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6",
+      "description": "Preserved 24/24 validator output; not used to override observations.",
+      "capture": null
+    },
+    {
+      "id": "v2-text",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/evidence/v2/v2-text.txt",
+      "sha256": "27b07b78ec38868e3eb6ad11bb9985c38e09e8eafd68c7877bf2fd7f8050df30",
+      "description": "Actual normal-state pane text; coordinates include header at row 1.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "static",
+        "timestamp": "2026-11-02T10:01:23Z/2026-11-02T10:01:27Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-ansi",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/evidence/v2/v2-ansi.ansi",
+      "sha256": "2532ce92ea9336b48a6b40b7e0d3c038f77238bdd0cf5dedc5ff2f776aa00474",
+      "description": "Actual normal-state pane ANSI; RGB border and dot evidence.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "static",
+        "timestamp": "2026-11-02T10:01:23Z/2026-11-02T10:01:27Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-selected",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/evidence/v2/v2-selected.ansi",
+      "sha256": "906164d0b68afcbda848a22cb2af8e9548db03968817bcbf0b4ff0e8d423169a",
+      "description": "Actual all-nodes-selected ANSI; every node occurrence has a complete bold-gold perimeter.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T10:01:23Z/2026-11-02T10:01:27Z",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frames",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/evidence/v2/v2-frames.txt",
+      "sha256": "51d89081a1ff63c589928e71aa632a3734f365774f447ba5bdfe60d5f837cae5",
+      "description": "Actual saved terminal transcript containing frames 0–4 at 0,100,200,300,400ms and viewport startup line.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0–4",
+        "timestamp": "0,100,200,300,400ms",
+        "state": "animated normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/gb300-rack-software/evidence/v2/v2-frames.ansi",
+      "sha256": "3e10fd657e06be9357808d6e22530bcef8198284bc3ce785b1a17452a603276e",
+      "description": "Same timestamped motion capture in ANSI format; diagram portions have no SGR color styling.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0–4",
+        "timestamp": "0,100,200,300,400ms",
+        "state": "animated normal",
+        "format": "ansi"
+      }
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 13 named nodes and the corrected separate OOB/in-band chains are visible, with paid software and OOB→DCGM absent. However mandatory physical residency owners are not visible (F1), and Kubernetes→GPU Operator labeled \"deployed in\" reverses the directed residency proposition (F2). Ambiguous protocol/hosting label ownership also prevents credit for those intended meanings. Dashed co-resident is accepted as a qualified, non-deployment relation, not an invented driver management dependency.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-277-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-283-assistant"
+      ],
+      "evidence_ids": [
+        "blind",
+        "v1-text",
+        "v2-text",
+        "v2-ansi"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 14 source-to-target arrowheads and stems are traceable; 13 explicit overpasses are distinguishable from the two bus junctions. The bus is genuinely shared, but its two split locations fail the literal one-spot requirement (F3). Four uncertain relationship-label owners remain unresolved by the captures (F4). Crossings are not failed merely for existing.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-284-user",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-291-user",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#fixed-constraints"
+      ],
+      "evidence_ids": [
+        "blind",
+        "v1-text",
+        "v1-ansi",
+        "v2-text"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Both actual normal and selected capture grids are 77×47 at natural 100%, with startup viewport lines preserved in motion transcripts. All 13 reference nodes and all supported relation endpoint pairs are covered across the two views, with no cross-view seam requiring an omitted connector. All boxes, full displayed labels and arrowheads fit without clipping, control overlap, pan or zoom. Semantic omissions and verb/label defects are recorded separately, not misreported as clipping. Independent pane rectangle/column measurements are unavailable; live_pane is null, not an invented rectangle.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/02/rubric.json#/required_viewport",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#fixed-constraints"
+      ],
+      "evidence_ids": [
+        "v1-text",
+        "v2-text",
+        "v1-selected",
+        "v2-selected",
+        "v1-frames",
+        "v2-frames",
+        "v1-manifest",
+        "v2-manifest",
+        "metadata"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Normal ANSI shows the OOB LAN and three hardware endpoints in related teal hues and the NVOS/NMX software pair in pink hues, arranged in the same rack-control view; nv-rms has a separate amber border. The in-band software chain is compact and uses related amber/gold shades across multiple depths. These are source concepts rather than row/depth color cycling. Group names are not displayed, but the frozen color gate does not require a legend or cross-view per-node hue stability; missing explicit residency is scored under semantic fidelity.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#task",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#fixed-constraints"
+      ],
+      "evidence_ids": [
+        "blind",
+        "v1-ansi",
+        "v2-ansi"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Normal and select-all ANSI prove complete, color-continuous sides and corners for all 13/13 node occurrences. All selected perimeters are bold RGB(216,166,87), including the nodes whose normal hue is already gold. No handles are displayed; no unsupported handle state is credited. Timestamped diagrams lack SGR, so temporal border-color continuity is not asserted. No border corruption is visible in supplied states.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/border_integrity"
+      ],
+      "evidence_ids": [
+        "blind",
+        "v1-ansi",
+        "v2-ansi",
+        "v1-selected",
+        "v2-selected"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Candidate/rubric/dataset/case/spec/capture hashes verify; the retained frozen binary bytes match the executed binary digest. Separate required DeepSeek generator and Sol judge identities, true pre-reveal blind record, final merged check logs with check_exit=0, timestamps, text/ANSI/selected/motion captures and two capture-pane closure manifests are present. Frozen metadata explains the generator tab-label bug and missing pane_cols. However full rejected-check logs and independent probe-pane cleanup records are absent (F5). The stale Astra name in rubric prose is superseded by its required_reviewer_model, frozen metadata, and the explicit Stage-B Sol contract.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/02/metadata.json"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "skill",
+        "rubric",
+        "dataset",
+        "source",
+        "expected",
+        "spec-manifest",
+        "v1-spec",
+        "v2-spec",
+        "blind",
+        "generation",
+        "attempts",
+        "capture-harness",
+        "v1-check",
+        "v2-check",
+        "v1-manifest",
+        "v2-manifest"
+      ]
+    },
+    "animation": {
+      "applicable": false,
+      "status": null,
+      "reason": "cases.json marks this case animation=\"optional\", expected.json agrees, and the full source excerpts contain no animation request. Thus source-backed N/A is used, not a bonus pass. Unrequested animation does not obscure labels, borders, crossings or arrowheads: 55 route/frame samples have one dot each and zero forbidden-cell occurrences. Kubernetes→GPU Operator remains stationary at (26,12) in all five timestamps; this is not proof of flowing motion, but it is not a failure of an unrequested-animation gate. Bend/bridge skips cause uneven cadence on several other routes.",
+      "source_refs": [
+        "docs/visualize-eval/cases.json#/cases/7/animation",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json#/animation",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "evidence_ids": [
+        "blind",
+        "dataset",
+        "source",
+        "expected",
+        "v1-frames",
+        "v2-frames",
+        "v1-frames-ansi",
+        "v2-frames-ansi"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "rms-oob",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-277-assistant"
+      ],
+      "expected": "nv-rms → OOB LAN: management-node client attached to the physical OOB network, not ownership or an invented API protocol.",
+      "observed": "Source stem (2,17) descends to (2,21), crosses three verticals via overpasses at (6,21),(10,21),(16,21), runs right to (19,21), then reaches visible downward arrowhead (19,22). client on LAN [21,22,13,1] is associated with that head. Physical owner/residency omission is separately F1.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            2,
+            17,
+            32,
+            6
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "rms-bmc-c",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-283-assistant"
+      ],
+      "expected": "nv-rms → Compute BMC over Redfish/HTTPS.",
+      "observed": "Stem (6,17), down through nonconnecting crossings (6,19),(6,21), to bend (6,30), right to (17,30), then downward head (17,31). Redfish/HTTPS [4,31,13,1] ends immediately before its head. This API route is distinct from the bus head at (19,31).",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            4,
+            17,
+            14,
+            15
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "rms-power",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-283-assistant"
+      ],
+      "expected": "nv-rms → Power shelf controller over Redfish/HTTPS.",
+      "observed": "Stem (8,17) down/right/up through bends (8,20),(11,20),(11,18),(13,18),(13,17), then east to (52,17) and down to head (52,31). The top Redfish/HTTPS [26,16,13,1] belongs above its long run. Crossings (8,19),(11,19),(10,20),(52,20),(52,28),(52,29) remain nonconnecting. Competing labels next to column 52 are F4, not extra proven geometric links.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            8,
+            16,
+            45,
+            16
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "rms-nvos",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-283-assistant"
+      ],
+      "expected": "nv-rms → NVOS: NVUE REST and SSH/SFTP control, separate from OOB reach to NVSwitch BMC.",
+      "observed": "Stem (4,17), bend (4,19), east to (38,19), south through crossing (38,20) to head (38,22). Row-19 crossings (6,19),(8,19),(10,19),(11,19) distinguish verticals. Endpoint trace succeeds, but NVUE REST/SSH [15,18,13,1] sits equally between this row-19 run and the Power-shelf run at row 17. SFTP abbreviation has no visible key.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            4,
+            17,
+            35,
+            6
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            15,
+            18,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F4"
+      ]
+    },
+    {
+      "edge_id": "rms-nmxc",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-277-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-283-assistant"
+      ],
+      "expected": "nv-rms → NMX-C over gRPC.",
+      "observed": "Stem (10,17), south to (10,22), east to (16,22), north to (16,20), east to (21,20), south/east along row 21 to (37,21), north to (37,20), east to (69,20), then down to visible head (69,31). Crossings/close bends are completely listed blind. NMX-C gRPC [53,19,10,1] touches unrelated Power-shelf column 52; intended ownership is not unambiguous.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            10,
+            17,
+            60,
+            15
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            52,
+            19,
+            11,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F4"
+      ]
+    },
+    {
+      "edge_id": "nvos-nmxc",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#fixed-constraints"
+      ],
+      "expected": "NVOS → NMX-C/T: hosts (residency), not invented network/deployment protocol.",
+      "observed": "Stem (38,27), bend (38,28), east through overpasses (52,28),(69,28), then bend (71,28), downward head (71,31). hosts [53,27,5,1] abuts the unrelated vertical at column 52 rather than its own source or target. Endpoint trace succeeds but ownership of the residency verb does not.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            38,
+            27,
+            34,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            52,
+            27,
+            6,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F4"
+      ]
+    },
+    {
+      "edge_id": "oob-bus",
+      "kind": "named_bus",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-284-user",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#fixed-constraints"
+      ],
+      "expected": "One physical OOB trunk leaves OOB LAN and splits ONCE in exactly one spot into Compute BMC, NVSwitch BMC and Power shelf destinations.",
+      "observed": "A single source stem (19,27) leads down to (19,29), across one continuous row-29 bus and through exactly two real ┬ junctions at (22,29),(40,29), then continues to (54,29). Three target heads (19,31),(34,31),(54,31) are individually traceable. This is one bus, not three independent touching arrows, but two junction locations fail the literal split-once constraint. 1/10/25G Eth [26,28,12,1] also competes with the adjacent NVOS outgoing bend.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            19,
+            27,
+            36,
+            5
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3",
+        "F4"
+      ]
+    },
+    {
+      "edge_id": "oob-source-stem",
+      "kind": "bus_trunk",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-284-user"
+      ],
+      "expected": "One shared source stem from OOB LAN, before the required single split.",
+      "observed": "One visible stem at (19,27) runs down to (19,29), then right to the first junction (22,29). No second source stem leaves this box. Local shared-stem geometry passes; named-bus junction-count failure remains F3.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            19,
+            27,
+            4,
+            3
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "oob-bmc-c",
+      "kind": "bus_branch",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-277-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-284-user"
+      ],
+      "expected": "OOB LAN physical Ethernet reach to Compute BMC as a branch of the named bus.",
+      "observed": "From row-29 bus junction (22,29), down to (22,30), left to (19,30), then visible head (19,31). Distinct from RMS API head (17,31); no additional branch on the spur.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            19,
+            29,
+            4,
+            3
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "oob-bmc-s",
+      "kind": "bus_branch",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-277-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-283-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-284-user"
+      ],
+      "expected": "OOB LAN physical Ethernet reach to NVSwitch BMC as a branch of the named bus; power/serial console, not NVOS software hosting.",
+      "observed": "From bus junction (40,29), down to (40,30), left to (34,30), then visible head (34,31). No edge from this BMC to NVOS or NMX-C/T. This branch is traceable, but its separate junction is why the parent bus fails.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            34,
+            29,
+            7,
+            3
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "oob-power",
+      "kind": "bus_branch",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-277-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-284-user"
+      ],
+      "expected": "OOB LAN physical Ethernet reach to Power shelf as the third destination of the named bus.",
+      "observed": "Bus continues east across nonconnecting crossing (52,29) to bend (54,29), then down to visible head (54,31). Distinct from the RMS API head at (52,31).",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            40,
+            29,
+            15,
+            3
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "historical-oob-nvos",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-283-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-284-user",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#fixed-constraints"
+      ],
+      "expected": "No extra OOB→NVOS interface claim is required: the unlabeled historical edge is not an oracle. Later corrections require OOB physical branches to three hardware classes and a distinct RMS→NVOS control path.",
+      "observed": "No OOB→NVOS arrow appears. Source corrections support RMS→NVOS and OOB→NVSwitch BMC as distinct roles. Omission of the unsupported historical direct edge is accepted rather than scored as a missing verified relation.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            18,
+            23,
+            25,
+            9
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "k8s-gpuop",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-277-assistant"
+      ],
+      "expected": "Kubernetes hosts/contains GPU Operator; GPU Operator is deployed in Kubernetes. A forward Kubernetes→GPU Operator arrow needs a forward-compatible verb.",
+      "observed": "Stem (26,11), down to adjacent corners (26,13),(25,13), then downward arrowhead (25,14). Fully traceable without crossings. deployed in [28,12,11,1] reverses the proposition when read along the arrow. Dot at (26,12) is stationary across all five timestamps but animation is not requested.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            25,
+            11,
+            14,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "gpuop-dcgm",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-277-assistant"
+      ],
+      "expected": "GPU Operator → DCGM: deploys it as a DaemonSet.",
+      "observed": "Stem (25,19), down to (25,21), east to (29,21), downward head (29,22). DaemonSet [27,20,9,1] clearly belongs to this route. No OOB-originating stem exists in this separate view.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            25,
+            19,
+            11,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "dcgm-exporter",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-277-assistant"
+      ],
+      "expected": "DCGM → dcgm-exporter: metrics exposure via the in-band exporter, Prometheus endpoint :9400; not OOB hardware control.",
+      "observed": "Left DCGM port (29,27) descends to (29,29), runs left to (24,29), then reaches head (24,30). metrics :9400 [26,30,13,1] is clearly associated with the left target route, separate from the right driver route. Prometheus is abbreviated to metrics, but the required port is visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            24,
+            27,
+            15,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "dcgm-driver",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-277-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#fixed-constraints"
+      ],
+      "expected": "DCGM → Driver+CUDA: local NVML read/monitor path, not deploys/manages and not OOB network.",
+      "observed": "Right DCGM port (31,27) descends to (31,29), runs east to (43,29), then visible head (43,30). NVML read [33,28,9,1] is unambiguous. This states read semantics rather than a deployment dependency. Local/no-network and compute-host residency are not explicitly annotated; missing owner is F1 rather than an invented OOB link.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            31,
+            27,
+            13,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "driver-fm",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-271-assistant"
+      ],
+      "expected": "Driver+CUDA and Fabric Mgr are compute-host co-residents; the historical chain does not establish a deploys/manages or interface dependency. Any drawn uncertain relation must be visibly qualified.",
+      "observed": "Dashed route leaves (43,35), descends to (43,37), goes left to (26,37), then downward head (26,38). co-resident [30,36,11,1] narrows meaning to shared residency; ╎ and ╌ visibly mark uncertainty. Accepted as a qualified, non-causal association, not proof of an interface or a deployment relationship. The missing explicit compute-host owner remains F1.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            26,
+            35,
+            18,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            26,
+            35,
+            18,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "negative-oob-dcgm",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-277-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#fixed-constraints"
+      ],
+      "expected": "Never draw OOB→DCGM or a route through GPU Operator connecting the OOB physical bus to DCGM.",
+      "observed": "OOB source and all its destinations are in v1; the separate v2 chain has no OOB port or connector. The only paths into DCGM come from GPU Operator. No false OOB/in-band cross-view seam is implied.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            18,
+            23,
+            59,
+            13
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            23,
+            15,
+            32,
+            28
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "apparent-nvue-power",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-277-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-283-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#fixed-constraints"
+      ],
+      "expected": null,
+      "observed": "NVUE REST/SSH could label the upper RMS→Power shelf run rather than RMS→NVOS. These are alternative readings of existing strokes, not four additional geometrically distinct arrowheads. They are not claimed as definite new facts; unresolved ownership fails the required interpretation.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            15,
+            17,
+            13,
+            3
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F4"
+      ]
+    },
+    {
+      "edge_id": "apparent-grpc-power",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-277-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-283-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#fixed-constraints"
+      ],
+      "expected": null,
+      "observed": "NMX-C gRPC abuts the column-52 RMS→Power shelf run, suggesting gRPC to the power controller rather than NMX-C. These are alternative readings of existing strokes, not four additional geometrically distinct arrowheads. They are not claimed as definite new facts; unresolved ownership fails the required interpretation.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            52,
+            19,
+            11,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F4"
+      ]
+    },
+    {
+      "edge_id": "apparent-hosts-power",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-277-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-283-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#fixed-constraints"
+      ],
+      "expected": null,
+      "observed": "hosts abuts the RMS→Power shelf vertical, suggesting a controller-hosting relation rather than NVOS hosting NMX-C/T. These are alternative readings of existing strokes, not four additional geometrically distinct arrowheads. They are not claimed as definite new facts; unresolved ownership fails the required interpretation.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            52,
+            27,
+            6,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F4"
+      ]
+    },
+    {
+      "edge_id": "apparent-ethernet-nmxc",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-277-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-283-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#fixed-constraints"
+      ],
+      "expected": null,
+      "observed": "1/10/25G Eth abuts the NVOS→NMX-C/T bend, suggesting that the hosting route is a physical Ethernet link rather than labeling the OOB bus. These are alternative readings of existing strokes, not four additional geometrically distinct arrowheads. They are not claimed as definite new facts; unresolved ownership fails the required interpretation.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            26,
+            28,
+            13,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F4"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "semantic_fidelity",
+      "edge_ids": [],
+      "severity": "critical",
+      "description": "The residence question is incompletely answered: no visible management-node/off-rack owner for nv-rms, no named NVSwitch-tray owner for NVOS/NMX-C/T, and no compute-host owner for DCGM, Driver+CUDA and Fabric Mgr. All 13 software/device names appear, but invisible group identifiers and external generation titles do not establish these required locations. This is missing residency, not evidence that software was drawn on a GPU die.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#task",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-277-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#fixed-constraints"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            1,
+            13,
+            76,
+            23
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            23,
+            7,
+            32,
+            36
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "k8s-gpuop"
+      ],
+      "severity": "critical",
+      "description": "The route runs Kubernetes → GPU Operator but is labeled \"deployed in\". Reading the directed proposition says Kubernetes is deployed in GPU Operator, the inverse of the supported residency. The intended endpoint order can be retained with a contains/deploys label; otherwise the residency arrow needs the opposite direction. This is a verb-direction defect, not a geometrically missing arrow.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-277-assistant",
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/semantic_fidelity"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            25,
+            11,
+            14,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "oob-bus"
+      ],
+      "severity": "high",
+      "description": "The OOB structure is one connected shared bus, not three accidentally touching independent lines. Nevertheless it visibly splits at two distinct ┬ junctions, (22,29) and (40,29), 18 columns apart, with Power shelf on the continuing rail. This does not satisfy the explicit single split in exactly one spot. A declared trunk and a clean check do not waive the source geometry.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-284-user",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#fixed-constraints"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            19,
+            27,
+            36,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            22,
+            29,
+            19,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "rms-nvos",
+        "rms-nmxc",
+        "nvos-nmxc",
+        "oob-bus",
+        "apparent-nvue-power",
+        "apparent-grpc-power",
+        "apparent-hosts-power",
+        "apparent-ethernet-nmxc"
+      ],
+      "severity": "high",
+      "description": "Four label owners remain ambiguous exactly as recorded blind: NVUE REST/SSH sits between RMS→Power shelf and RMS→NVOS horizontal runs; NMX-C gRPC and hosts abut the unrelated column-52 Power-shelf route; 1/10/25G Eth abuts the NVOS outgoing bend above the OOB bus. Their intended ownership in JSON is not readable proof of the protocol/hosting/physical distinction. All strokes can still be traced under the bridge convention.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-277-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#original-line-283-assistant",
+        "docs/visualize-eval/cases/gb300-rack-software/source.md#fixed-constraints"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            15,
+            17,
+            13,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            52,
+            19,
+            11,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            52,
+            27,
+            6,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            26,
+            28,
+            13,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F5",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "The retained bundle has full raw final checks and capture-pane closure manifests, but rejected designs have only check summaries in attempts.json, not full stdout/stderr/exit records. The three geometry-probe panes have only generator assertions of closure, not retained close/probe records. This leaves complete failed-attempt and all-owned-pane workflow verification blocked; no new sessions or cleanup probes were run by the judge.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/02/gb300-rack-software/attempts.json",
+        "docs/visualize-eval/rounds/02/gb300-rack-software/generation.json#/cleanup/geometry_probe_panes"
+      ],
+      "locations": []
+    }
+  ],
+  "blockers": [
+    "Required-shape renderer capability gap: the executed declared OOB trunk has a separate junction for each branch spur. It does not provide the requested single n-ary split point. Frozen SKILL.md documents per-spur junctions; generation.json reports single-split geometry as unsupported. No new renderer test was performed, so this is a gap in the frozen supported primitive/evidence, not a claim about all imaginable encodings. F3 is a known failure, not waived by this blocker.",
+    "Workflow evidence gap: rejected-design full check stdout/stderr/exit logs and close/probe records for geometry panes w7E:p72, w7E:p74, w7E:p75 are not retained in the assigned bundle. Summaries and assertions do not independently verify these steps; workflow_evidence remains blocked."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:p72",
+      "w7E:p74",
+      "w7E:p75",
+      "w7E:p7A",
+      "w7E:p7D"
+    ],
+    "closed_pane_ids": [
+      "w7E:p7A",
+      "w7E:p7D"
+    ],
+    "status": "blocked",
+    "reason": "Capture manifests independently record confirmed_closed for w7E:p7A and w7E:p7D. Generator reports w7E:p72,w7E:p74,w7E:p75 closed, but no retained probe records prove those three closures; they are not promoted into closed_pane_ids. Judge opened zero panes. Pre-existing w7E:p6R is not owned and is excluded."
+  },
+  "overall": "fail"
+}

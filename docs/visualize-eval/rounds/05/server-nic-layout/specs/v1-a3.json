@@ -1,0 +1,16 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "fresh", "label": "fresh 1.5d, no GPUs", "group": "server1" },
+    { "id": "dark", "label": "7 of 8 dark", "group": "server1" },
+    { "id": "s1", "label": "server1 R7725 .58", "group": "server1" },
+    { "id": "nic", "label": "eno16595np0 25 GbE", "group": "server1" },
+    { "id": "gw", "label": "Arista 103.19.91.57 AS132717", "group": "nxtgen /29" }
+  ],
+  "edges": [
+    { "from": "dark", "to": "s1", "label": "no cable?", "dots": 0, "style": "dashed" },
+    { "from": "s1", "to": "nic", "label": "only uplink", "dots": 0 },
+    { "from": "nic", "to": "gw", "label": "def gw 0.1 ms", "dots": 0 }
+  ]
+}

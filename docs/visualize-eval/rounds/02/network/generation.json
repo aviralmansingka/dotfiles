@@ -1,0 +1,284 @@
+{
+  "case_id": "network",
+  "round": "02",
+  "worker_id": "viz-ds02-network",
+  "generator": {
+    "worker_id": "viz-ds02-network",
+    "harness_name": "viz-ds02-undefined-2",
+    "harness_name_note": "the spawner passed an unset case variable into the subagent name; the captain confirmed the case is network and the worker_id is viz-ds02-network",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "model_provider": "fireworks"
+  },
+  "frozen_inputs": {
+    "skill_path": "docs/visualize-eval/rounds/02/SKILL.md",
+    "skill_sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+    "binary_path": "/tmp/visualize-eval/round-02/bin/rataflow-view",
+    "binary_sha256": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+    "binary_sha256_recomputed": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+    "capture_script": "scripts/viz-evidence.sh",
+    "validate_script": "scripts/viz-validate.py",
+    "target_viewport": { "columns": 77, "rows": 47, "zoom_percent": 100 }
+  },
+  "case_source": {
+    "path": "docs/visualize-eval/cases/network/source.md",
+    "read_in_full": true,
+    "excerpts": [
+      "Original line 5 (user): style enhancements to /visualize — no background dots, uniform box background so borders do not look blocky, live dots along network links whose direction is traffic direction and whose speed shows an indicated speed, generic skill, gruvbox colors.",
+      "Original line 48 (user): the visualize pane must be an even split, not slightly narrowed.",
+      "Historical attempt line 180, call chatcmpl-tool-bfad145e3b78162e: the six nodes and seven relations quoted below.",
+      "Fixed constraints: preserve separate core-to-cache and web-to-cache relations; keep 1 GbE, 10 GbE and 25 GbE visible without implying motion speed is a measurement.",
+      "Task: live network graph from WAN through firewall and core to web, Redis and database tiers; preserve link speeds and application relations; use slow, sparse motion."
+    ],
+    "not_read": [
+      "docs/visualize-eval/cases/network/expected.json",
+      "docs/visualize-eval/cases/network/historical-variants.json",
+      "all other case directories",
+      "all round-01 output"
+    ]
+  },
+  "views": [
+    {
+      "view": "v1",
+      "purpose": "physical path and link speeds (WAN in, tier fan-out out of the core switch)",
+      "carries": ["e1", "e2", "e3", "e4"],
+      "spec": "v1.json",
+      "spec_sha256": "6f4e4d15aab2ae01e539f78424a20176eec88f1bf0102738f21d6e75ba5893cd",
+      "evidence_dir": "evidence/v1",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "check": "evidence/v1/check.txt",
+      "frames": "evidence/v1/v1-frames.txt",
+      "frames_ansi": "evidence/v1/v1-frames.ansi",
+      "manifest": "evidence/v1/manifest.json",
+      "bin_binding": "evidence/v1/bin.sha256",
+      "frame_count": 5,
+      "frame_step_ms": 100,
+      "extent_cells": { "width": 40, "height": 32 },
+      "measured_pane": { "columns": null, "rows": 47, "columns_note": "viz-evidence.sh resolves `herdr pane layout` against the focused tab, not the caller's tab, so pane_cols came back null; the app's own header token is the authority" },
+      "viewport_line": null,
+      "viewport_token": "77x47 @100%",
+      "zoom": "1.00 natural",
+      "check_facts": {
+        "nodes": 5,
+        "edges": 4,
+        "labels_placed": 4,
+        "labels_total": 4,
+        "labels_on_route_cells": 0,
+        "labels_skipped": 0,
+        "single_dot_routes": 4,
+        "periodic_routes": 0,
+        "dot_violations": 0,
+        "groups": "edge(2) fabric(1) compute(1) state(1)",
+        "trunks": "none declared",
+        "warnings": 0
+      },
+      "validator": {
+        "command": "scripts/viz-validate.py docs/visualize-eval/rounds/02/network/evidence/v1 --require-select --require-frames --attempts docs/visualize-eval/rounds/02/network/attempts.json",
+        "output_path": "validation/v1-validator.txt",
+        "result": "all checks passed (24/24 PASS, 0 FAIL)"
+      },
+      "cleanup": { "pane_id": "w7E:p73", "result": "confirmed_closed" }
+    },
+    {
+      "view": "v2",
+      "purpose": "application relations between the web tier and the state tier",
+      "carries": ["e5", "e6", "e7"],
+      "spec": "v2.json",
+      "spec_sha256": "73810910c94dbf26ace0ab263e3c4606b720395d865b56986ed0ce85e3b9d6f4",
+      "evidence_dir": "evidence/v2",
+      "text": "evidence/v2/v2-text.txt",
+      "ansi": "evidence/v2/v2-ansi.ansi",
+      "selected_ansi": "evidence/v2/v2-selected.ansi",
+      "check": "evidence/v2/check.txt",
+      "frames": "evidence/v2/v2-frames.txt",
+      "frames_ansi": "evidence/v2/v2-frames.ansi",
+      "manifest": "evidence/v2/manifest.json",
+      "bin_binding": "evidence/v2/bin.sha256",
+      "frame_count": 5,
+      "frame_step_ms": 100,
+      "extent_cells": { "width": 24, "height": 13 },
+      "measured_pane": { "columns": null, "rows": 47, "columns_note": "same harness pane_cols gap as v1" },
+      "viewport_line": null,
+      "viewport_token": "77x47 @100%",
+      "zoom": "1.00 natural",
+      "check_facts": {
+        "nodes": 3,
+        "edges": 3,
+        "labels_placed": 3,
+        "labels_total": 3,
+        "labels_on_route_cells": 0,
+        "labels_skipped": 0,
+        "single_dot_routes": 3,
+        "periodic_routes": 0,
+        "dot_violations": 0,
+        "layers": "2 (explicit placement, sugiyama skipped)",
+        "groups": "compute(1) state(2)",
+        "trunks": "none declared",
+        "warnings": 0
+      },
+      "validator": {
+        "command": "scripts/viz-validate.py docs/visualize-eval/rounds/02/network/evidence/v2 --require-select --require-frames --attempts docs/visualize-eval/rounds/02/network/attempts.json",
+        "output_path": "validation/v2-validator.txt",
+        "result": "all checks passed (24/24 PASS, 0 FAIL)"
+      },
+      "cleanup": { "pane_id": "w7E:p77", "result": "confirmed_closed" }
+    }
+  ],
+  "superseded_evidence": {
+    "label": "v1-pre-split",
+    "why_kept": "honest record of attempt 2 for view v1: it passed every --check and validator gate, but the capture showed corridor wrap-around that reads as a false second border around DB tier and a label whose route ownership is ambiguous",
+    "spec": "attempts/v1-attempt2-allinone.json",
+    "spec_sha256": "d8233ebbd41c1a077a374c1b4ea20fc5af7793ebdff8e3577bffef8322322157",
+    "evidence_dir": "evidence/v1-pre-split",
+    "text": "evidence/v1-pre-split/v1-text.txt",
+    "ansi": "evidence/v1-pre-split/v1-ansi.ansi",
+    "selected_ansi": "evidence/v1-pre-split/v1-selected.ansi",
+    "check": "evidence/v1-pre-split/check.txt",
+    "frames": "evidence/v1-pre-split/v1-frames.txt",
+    "manifest": "evidence/v1-pre-split/manifest.json",
+    "viewport_token": "77x47 @100%",
+    "extent_cells": { "width": 40, "height": 35 },
+    "validator": {
+      "command": "scripts/viz-validate.py docs/visualize-eval/rounds/02/network/evidence/v1-pre-split --require-select --require-frames",
+      "output_path": "validation/v1-pre-split-validator.txt",
+      "result": "all checks passed"
+    },
+    "manifest_note": "the manifest's spec_path is v1.json, which was revised after this capture; the captured bytes are preserved byte-identical at attempts/v1-attempt2-allinone.json (same sha256 d8233ebb…)",
+    "cleanup": { "pane_id": "w7E:p6X", "result": "confirmed_closed" },
+    "defects": [
+      "two corridors enclose the DB tier box on all four sides and read as an outer border (border integrity)",
+      "the 'session' label sits beside the core->cache route, so label ownership between e4 and e5 is ambiguous",
+      "web->db 'queries' wraps under Redis and enters DB tier from below, far from its label"
+    ]
+  },
+  "coverage_map": {
+    "v1": ["wan", "fw", "core", "web", "cache", "e1 wan->fw", "e2 fw->core", "e3 core->web", "e4 core->cache"],
+    "v2": ["web", "cache", "db", "e5 web->cache", "e6 web->db", "e7 cache->db"],
+    "every_edge_exactly_once": true,
+    "shared_nodes": "web and cache appear in both views because each view needs its own endpoints; no edge is repeated across views",
+    "complete_chain_note": "the chain WAN -> firewall -> core -> web -> DB is only complete when v1 and v2 are read together; that is the accepted cost of splitting out the crowded app tier"
+  },
+  "meaning_ledger": [
+    { "fact": "node `wan` labelled WAN", "kind": "identifier", "fate": "drawn", "where": "v1" },
+    { "fact": "node `fw` labelled Firewall", "kind": "identifier", "fate": "drawn", "where": "v1" },
+    { "fact": "node `core` labelled Core switch", "kind": "identifier", "fate": "drawn", "where": "v1" },
+    { "fact": "node `web` labelled Web tier", "kind": "identifier", "fate": "drawn", "where": "v1, v2" },
+    { "fact": "node `cache` labelled Redis", "kind": "identifier", "fate": "drawn", "where": "v1, v2" },
+    { "fact": "node `db` labelled DB tier", "kind": "identifier", "fate": "drawn", "where": "v2" },
+    { "fact": "`wan -> fw`: 1 GbE", "kind": "protocol/link speed", "fate": "drawn", "where": "v1, edge e1" },
+    { "fact": "`fw -> core`: 10 GbE", "kind": "protocol/link speed", "fate": "drawn", "where": "v1, edge e2" },
+    { "fact": "`core -> web`: 10 GbE", "kind": "protocol/link speed", "fate": "drawn", "where": "v1, edge e3" },
+    { "fact": "`core -> cache`: 25 GbE", "kind": "protocol/link speed", "fate": "drawn", "where": "v1, edge e4" },
+    { "fact": "`web -> cache`: session", "kind": "action verb / application relation", "fate": "drawn", "where": "v2, edge e5" },
+    { "fact": "`web -> db`: queries", "kind": "action verb / application relation", "fate": "drawn", "where": "v2, edge e6" },
+    { "fact": "`cache -> db`: fill", "kind": "action verb / application relation", "fate": "drawn", "where": "v2, edge e7" },
+    { "fact": "fixed constraint: keep core-to-cache and web-to-cache as separate relations", "kind": "qualifier/constraint", "fate": "drawn", "where": "e4 in v1 and e5 in v2; never merged, never one arrow with two labels" },
+    { "fact": "fixed constraint: 1 GbE, 10 GbE, 25 GbE stay visible and motion speed is not a measurement", "kind": "qualifier/constraint", "fate": "drawn", "where": "speeds appear only as edge label text; every edge uses the same flow 0.4 and dots 1" },
+    { "fact": "task: slow, sparse motion", "kind": "qualifier/constraint", "fate": "drawn", "where": "dots 1 on every route (one dot per route) and uniform flow 0.4; 5 frames at 100 ms show displacement of one cell per frame" },
+    { "fact": "task: live network graph from WAN through firewall and core to web, Redis and database tiers", "kind": "structure", "fate": "drawn", "where": "v1 (WAN->fw->core->web/Redis) plus v2 (web/Redis->DB); the chain is complete only across both views" },
+    { "fact": "historical chat: gruvbox colors, uniform box background, no background dots, live dots whose direction is traffic direction", "kind": "style request", "fate": "drawn", "where": "theme gruvbox; dots travel from -> to; background-dot suppression is renderer behaviour, applied by the frozen binary" },
+    { "fact": "historical chat: dots' speed should represent an indicated speed", "kind": "style request", "fate": "abbreviated", "where": "overridden by the case constraint that motion speed must not read as a measurement: one uniform slow speed, speeds in label text only" },
+    { "fact": "historical chat: the visualize pane must be an even split, not narrowed", "kind": "harness preference", "fate": "dropped", "reason": "it is a viewer-pane preference, not a graph fact; the capture harness splits at ratio 0.5 (a 159-column tab giving a 77-column app pane)", "where": "not drawn" },
+    { "fact": "historical chat session path and tool-call id (chatcmpl-tool-bfad145e3b78162e)", "kind": "provenance", "fate": "dropped", "reason": "provenance metadata, not diagram content; kept in case_source above" }
+  ],
+  "relationship_audit": [
+    { "id": "e1", "from": "wan", "to": "fw", "verb_tech": "1 GbE link", "label": "1 GbE", "label_owner": "e1", "view": "v1", "motion": "flow 0.4, dots 1", "style": "solid" },
+    { "id": "e2", "from": "fw", "to": "core", "verb_tech": "10 GbE link", "label": "10 GbE", "label_owner": "e2", "view": "v1", "motion": "flow 0.4, dots 1", "style": "solid" },
+    { "id": "e3", "from": "core", "to": "web", "verb_tech": "10 GbE link", "label": "10 GbE", "label_owner": "e3", "view": "v1", "motion": "flow 0.4, dots 1", "style": "solid" },
+    { "id": "e4", "from": "core", "to": "cache", "verb_tech": "25 GbE link", "label": "25 GbE", "label_owner": "e4", "view": "v1", "motion": "flow 0.4, dots 1", "style": "solid" },
+    { "id": "e5", "from": "web", "to": "cache", "verb_tech": "session (application)", "label": "session", "label_owner": "e5", "view": "v2", "motion": "flow 0.4, dots 1", "style": "solid" },
+    { "id": "e6", "from": "web", "to": "db", "verb_tech": "queries (application)", "label": "queries", "label_owner": "e6", "view": "v2", "motion": "flow 0.4, dots 1", "style": "solid" },
+    { "id": "e7", "from": "cache", "to": "db", "verb_tech": "fill (application)", "label": "fill", "label_owner": "e7", "view": "v2", "motion": "flow 0.4, dots 1", "style": "solid" }
+  ],
+  "relationship_mapping": [
+    { "original": "wan -> fw: 1 GbE", "visible": "v1: WAN box above Firewall, one arrow down, label '1 GbE' on the arrow, one dot travelling downward" },
+    { "original": "fw -> core: 10 GbE", "visible": "v1: Firewall above Core switch, arrow down, label '10 GbE'" },
+    { "original": "core -> web: 10 GbE", "visible": "v1: core's right port runs right and down into Web tier with label '10 GbE'" },
+    { "original": "core -> cache: 25 GbE", "visible": "v1: core's left port runs left and down into Redis with label '25 GbE'" },
+    { "original": "web -> cache: session", "visible": "v2: Web tier's left port descends into Redis, label 'session' beside that route" },
+    { "original": "web -> db: queries", "visible": "v2: Web tier's right port descends into DB tier's top, label 'queries' on that route" },
+    { "original": "cache -> db: fill", "visible": "v2: Redis's right port runs horizontally into DB tier's left edge with arrowhead, label 'fill' above that route" }
+  ],
+  "groups": [
+    { "group": "edge", "members": ["wan", "fw"], "reason": "the WAN boundary and the firewall that faces it" },
+    { "group": "fabric", "members": ["core"], "reason": "the core switch is the single fabric the tiers hang off" },
+    { "group": "compute", "members": ["web"], "reason": "the web tier is the only compute node in the source" },
+    { "group": "state", "members": ["cache", "db"], "reason": "Redis and DB tier are the state/storage tier: sessions and fills both move data into it" }
+  ],
+  "capability_preflight": {
+    "group": { "available": true, "used": true, "note": "4 groups in v1, 2 in v2; every node has an honest group" },
+    "dots_1": { "available": true, "used": true, "note": "dots 1 on all 7 edges; --check reports 7 single-dot routes, 0 periodic, 0 violations" },
+    "trunks": { "available": true, "used": false, "note": "deliberate non-use: the source declares no shared bus. The core's two downlinks carry different speeds (10 GbE to web, 25 GbE to cache) and the app relations have different verbs, so one corridor would merge links the source keeps distinct. Drawing a trunk here would fake a shared medium." },
+    "style_dashed": { "available": true, "used": false, "note": "deliberate non-use: the brief qualifies no relation as unconfirmed or historical-uncertain. Its only qualifications are the two fixed constraints, both about preservation. A dashed edge would invent uncertainty the source does not state." },
+    "select_all": { "available": true, "used": true, "note": "one --select-all ANSI frame per view; accent colour 216;166;87 with bold appears 34 times in v1's selected frame versus 10 in the normal frame, and 21 versus 9 in v2" },
+    "frames": { "available": true, "used": true, "note": "5 timestamped frames at 100 ms per view" },
+    "viewport_line": { "available": true, "note": "the live pane's alternate screen erases the startup line, so the header token 77x47 @100% is the recorded proof; the plain --check output does print `viewport: unknown zoom: 1.00 natural`" }
+  },
+  "abbreviations": [
+    { "drawn": "WAN", "source": "WAN" },
+    { "drawn": "Firewall", "source": "Firewall" },
+    { "drawn": "Core switch", "source": "Core switch" },
+    { "drawn": "Web tier", "source": "Web tier" },
+    { "drawn": "Redis", "source": "Redis (node id `cache`)" },
+    { "drawn": "DB tier", "source": "DB tier" },
+    { "drawn": "1 GbE / 10 GbE / 25 GbE", "source": "identical, already short" }
+  ],
+  "deliberate_drops": [
+    { "dropped": "the historical chat's instruction to remove background dots and give every box the same background", "reason": "renderer behaviour, not a graph relation; the frozen binary already draws on a uniform background with bordered boxes, so drawing it would be nothing to draw" },
+    { "dropped": "the historical chat's request that dot speed encode an indicated speed", "reason": "the case's fixed constraint requires that motion speed not imply a measurement; speeds stay in label text with one uniform slow flow" },
+    { "dropped": "the historical pane-width complaint (even split, not narrowed)", "reason": "a viewer-pane setting; the harness itself splits at ratio 0.5 and the app measured 77x47" },
+    { "dropped": "the session file path and original tool-call id", "reason": "provenance, recorded in case_source instead of the drawing" }
+  ],
+  "known_defects": [
+    "v1: reading the whole chain WAN -> firewall -> core -> web -> DB requires both views; v1 alone stops at the web/Redis tier. This is the accepted cost of the split that removed the corridor wrap-around of the superseded single view.",
+    "v1: Redis sits left of Web tier because automatic placement put the first fanned-out node there; the left/right order is layout, not a source ordering claim.",
+    "v2: the 'fill' label sits two cells above the DB tier's top-left corner, close to the box border; it is readable and belongs to the horizontal cache->db route, but it is the tightest label in the set.",
+    "v2: extent is only 24x13 inside the 77x47 pane, so the detail view leaves most of the pane empty.",
+    "both views: no trunk is drawn (see capability_preflight) and no dashed edge is drawn, so those two round-02 features are unexercised in this case sample.",
+    "harness: evidence/*/manifest.json records pane_cols null. viz-evidence.sh resolves `herdr pane layout` against the focused tab rather than the caller's tab, so the pane rectangle lookup misses the captured pane. Columns are therefore proven only by the app's own header token 77x47 @100%; pane_rows (47) did resolve from viewport_rows. Not fixed, because editing the harness is out of scope for a generator."
+  ],
+  "blockers": [
+    { "need": "a single frame carrying all 6 nodes and 7 edges at 77x47", "status": "not achievable without ambiguity in this build", "detail": "automatic placement needed 5 layers (extent 40x48, one row over the pane), direction lr needed 144 columns, and the 4-layer explicit version fit but wrapped two corridors around the DB tier box. Resolved by splitting into two views rather than shrinking labels or dropping relations." },
+    { "need": "harness-recorded pane column count", "status": "unavailable", "detail": "see the pane_cols defect above; the viewport proof comes from the app's own token instead" }
+  ],
+  "resolved_conflicts": [
+    { "conflict": "historical chat wants dot speed to carry an indicated speed; the case constraint forbids motion speed reading as a measurement", "resolution": "uniform flow 0.4 on every edge, all speeds in label text" },
+    { "conflict": "single dense view versus traceability", "resolution": "two disjoint views (v1 physical path, v2 application relations) with every edge in exactly one view" }
+  ],
+  "cleanup": {
+    "panes_opened": [
+      { "pane_id": "w7E:p6X", "purpose": "evidence/v1-pre-split capture", "result": "confirmed_closed" },
+      { "pane_id": "w7E:p73", "purpose": "evidence/v1 capture", "result": "confirmed_closed" },
+      { "pane_id": "w7E:p77", "purpose": "evidence/v2 capture", "result": "confirmed_closed" }
+    ],
+    "tab": "w7E:t1N (this subagent's own tab)",
+    "split_mode": "herdr pane split --current --direction right --ratio 0.5 --no-focus, executed by scripts/viz-evidence.sh",
+    "final_layout_check": "herdr pane layout --pane w7E:p6J reports the tab back to one pane, w7E:p6J, 159x49",
+    "captain_tab_untouched": true,
+    "cleanup_failures": []
+  },
+  "validation": {
+    "commands": [
+      "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/02/network/v1.json --bin /tmp/visualize-eval/round-02/bin/rataflow-view --out docs/visualize-eval/rounds/02/network/evidence/v1 --label v1 --frames 5",
+      "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/02/network/v2.json --bin /tmp/visualize-eval/round-02/bin/rataflow-view --out docs/visualize-eval/rounds/02/network/evidence/v2 --label v2 --frames 5",
+      "scripts/viz-validate.py docs/visualize-eval/rounds/02/network/evidence/v1 --require-select --require-frames --attempts docs/visualize-eval/rounds/02/network/attempts.json",
+      "scripts/viz-validate.py docs/visualize-eval/rounds/02/network/evidence/v2 --require-select --require-frames --attempts docs/visualize-eval/rounds/02/network/attempts.json"
+    ],
+    "checks_before_capture": [
+      "/tmp/visualize-eval/round-02/bin/rataflow-view --check docs/visualize-eval/rounds/02/network/v1.json",
+      "/tmp/visualize-eval/round-02/bin/rataflow-view --check docs/visualize-eval/rounds/02/network/v2.json"
+    ],
+    "failing_checks": [],
+    "summary": "v1: 24/24 PASS. v2: 24/24 PASS. Superseded all-in-one bundle: all checks passed as well; it was rejected on the visual read, not on a machine check."
+  },
+  "review": {
+    "spawned": false,
+    "reason": "the captain runs the separate Sol judge after generation; the candidate skill's review step was deliberately not run by this worker"
+  },
+  "claims": {
+    "self_certified_green": false,
+    "independent_approval": false,
+    "note": "all figures above come from the captured bundles, --check output and validator output in this directory"
+  }
+}

@@ -1,0 +1,580 @@
+{
+  "case_id": "network",
+  "round": "01",
+  "generated_at": "2026-11-02T08:33:30Z",
+  "generator": {
+    "role": "fresh diagram generator in the DeepSeek lane; replaced a user-cancelled Astra-generation round; no artifact from that round was read or reused",
+    "subagent_name": "viz-ds01-network",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "model_env": {
+      "PI_PROVIDER": "fireworks",
+      "PI_MODEL": "accounts/fireworks/routers/deepseek-flash-latest",
+      "PI_REASONING_LEVEL": "high"
+    },
+    "harness": "pi (PI_CODING_AGENT=true), Herdr session w7E, own tab w7E:tK, own pane w7E:p2R",
+    "session_id": "01a19b5b-df8c-7445-a692-a034d81b3b06",
+    "astra_review": "not run; separate diagram judges are captain-owned and no reviewer subagent was spawned"
+  },
+  "candidate": {
+    "skill_path": "docs/visualize-eval/rounds/01/SKILL.md",
+    "skill_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+    "skill_sha256_expected": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+    "renderer_path": "/tmp/visualize-eval/round-01/bin/rataflow-view",
+    "renderer_sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+    "renderer_sha256_expected": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+    "renderer_used_only_via": "the frozen executable; no other binary, build, or install was used"
+  },
+  "viewport": {
+    "target": "77x47 at natural 100% zoom",
+    "measured_cols": 77,
+    "measured_rows": 47,
+    "measurement": "stty size / tput inside each viewer pane before rataflow-view started; all three panes reported '47 77'",
+    "pane_rect": "79x49 (herdr pane layout JSON), inner terminal 77x47 after chrome",
+    "split": "herdr pane split --current --direction right --ratio 0.5 --cwd <case dir> --no-focus (even half split, own tab only)",
+    "pan_zoom": "none; the viewer never received f, arrow-pan, or scroll input; frames show the initial 100% fit",
+    "usable_graph_rows": "47 terminal rows minus 1 header row"
+  },
+  "views": [
+    {
+      "view_id": "01-request-path",
+      "purpose": "request path WAN -> firewall -> core switch -> web tier -> DB tier, all three link speeds on the ingress legs plus the web->DB query relation",
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        "WAN",
+        "Firewall",
+        "Core switch",
+        "Web tier",
+        "DB tier"
+      ],
+      "edges": [
+        "wan->fw [1 GbE] flow=0.2",
+        "fw->core [10 GbE] flow=0.2",
+        "core->web [10 GbE] flow=0.2",
+        "web->db [queries] flow=0.2"
+      ],
+      "spec": "views/01-request-path/spec.json",
+      "spec_sha256": "d6a087d5fdc133641f579c26b2ca9e22ad0a0f7aee0acbb81b07739ae7e1ed9f",
+      "check_stdout": "views/01-request-path/check.txt",
+      "check_stderr": "views/01-request-path/check.stderr.txt",
+      "check_exit": 0,
+      "check_summary": [
+        "ok: nodes=5 edges=4 flows=4 direction=tb theme=gruvbox",
+        "extent=17x40 cells"
+      ],
+      "extent": "17x40",
+      "pane": {
+        "pane_id": "w7E:p54",
+        "split_command": "herdr pane split --current --direction right --ratio 0.5 --cwd /Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/01/network --no-focus  -> pane w7E:p54",
+        "split_json": "views/01-request-path/captures/pane-split.json",
+        "pane_get_json": "views/01-request-path/captures/pane-get.json",
+        "rect": "79x49 (herdr pane rect; includes 2 columns + 2 rows of pane chrome)",
+        "command_log": "views/01-request-path/captures/commands.txt"
+      },
+      "dimensions": {
+        "target": "77x47",
+        "measured_stty_size": "47 77",
+        "measured_cols": 77,
+        "measured_rows": 47,
+        "matches_target": true,
+        "raw": "views/01-request-path/captures/dims-raw.txt"
+      },
+      "captures": {
+        "header": "views/01-request-path/captures/header.txt",
+        "unselected_text": "views/01-request-path/captures/unselected.txt",
+        "unselected_ansi": "views/01-request-path/captures/unselected.ansi.txt",
+        "selected_tab_text": "views/01-request-path/captures/selected-tab.txt",
+        "selected_tab_ansi": "views/01-request-path/captures/selected-tab.ansi.txt",
+        "selected_right_text": "views/01-request-path/captures/selected-right.txt",
+        "selected_right_ansi": "views/01-request-path/captures/selected-right.ansi.txt",
+        "selected_animation_frame": "views/01-request-path/captures/selected-after-frames.txt",
+        "frames": [
+          "views/01-request-path/captures/frames/frame-01.txt",
+          "views/01-request-path/captures/frames/frame-02.txt",
+          "views/01-request-path/captures/frames/frame-03.txt",
+          "views/01-request-path/captures/frames/frame-04.txt"
+        ],
+        "frame_timestamps": "views/01-request-path/captures/timestamps.txt",
+        "hashes": {
+          "unselected.txt": "e847361ca49b97e075cacf4155b3d577715c5118c4eb13d2f8bb83e7048b3c84",
+          "unselected.ansi.txt": "f302136751fd846ead9fadecaf618b48398057a7b7659720f3984c018876b954",
+          "selected-tab.ansi.txt": "0f490810af784589addc6d515b0e621936e2dfcd82dd285295e83ebc90da98c1"
+        },
+        "verify_report": "views/01-request-path/captures/verify.txt"
+      },
+      "verify_result": "RESULT: all mechanical checks passed",
+      "arrow_evidence": [
+        "[PASS] \u25bc at row 14 col 34 points into a box top border at row 15",
+        "[PASS] \u25bc at row 22 col 34 points into a box top border at row 23",
+        "[PASS] \u25bc at row 30 col 34 points into a box top border at row 31",
+        "[PASS] \u25bc at row 38 col 34 points into a box top border at row 39"
+      ],
+      "window": {
+        "first": "2026-11-02T08:32:06Z frame-01",
+        "last": "2026-11-02T08:32:18Z selected animation frame captured",
+        "frame_interval_s": 2.5
+      },
+      "observed_render": [
+        "                                \u256d\u2500\u2500\u2500\u256e",
+        "                                \u2502WAN\u2502",
+        "                                \u2502   \u2502",
+        "                                \u2570\u2500\u2500\u2500\u256f",
+        "                                 \u2502",
+        "                                 \u2502 1 GbE",
+        "                                 \u25cf",
+        "                                 \u25bc",
+        "                                \u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "                                \u2502Firewall\u2502",
+        "                                \u2502        \u2502",
+        "                                \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+        "                                 \u2502",
+        "                                 \u2502 10 GbE",
+        "                                 \u25cf",
+        "                                 \u25bc",
+        "                                \u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "                                \u2502Core switch\u2502",
+        "                                \u2502           \u2502",
+        "                                \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+        "                                 \u2502",
+        "                                 \u2502 10 GbE",
+        "                                 \u25cf",
+        "                                 \u25bc",
+        "                                \u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "                                \u2502Web tier\u2502",
+        "                                \u2502        \u2502",
+        "                                \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+        "                                 \u2502",
+        "                                 \u2502 queries",
+        "                                 \u25cf",
+        "                                 \u25bc",
+        "                                \u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "                                \u2502DB tier\u2502",
+        " \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510                      \u2502       \u2502",
+        " \u2502 + [+] \u2502                      \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+        " \u2502 \u2212 [-] \u2502",
+        " \u2502 \u22a1 [f] \u2502",
+        " \u2502 \u25a1 [i] \u2502",
+        " \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518"
+      ]
+    },
+    {
+      "view_id": "02-core-cache-fill",
+      "purpose": "core-to-Redis 25 GbE link and the Redis-to-DB fill relation",
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        "Core switch",
+        "Redis cache",
+        "DB tier"
+      ],
+      "edges": [
+        "core->cache [25 GbE] flow=0.2",
+        "cache->db [fill] flow=0.2"
+      ],
+      "spec": "views/02-core-cache-fill/spec.json",
+      "spec_sha256": "631cbc99580742d4f28b8af68e0a4841765a35779cf063b8fad7eb2aba7a62e9",
+      "check_stdout": "views/02-core-cache-fill/check.txt",
+      "check_stderr": "views/02-core-cache-fill/check.stderr.txt",
+      "check_exit": 0,
+      "check_summary": [
+        "ok: nodes=3 edges=2 flows=2 direction=tb theme=gruvbox",
+        "extent=17x24 cells"
+      ],
+      "extent": "17x24",
+      "pane": {
+        "pane_id": "w7E:p5A",
+        "split_command": "herdr pane split --current --direction right --ratio 0.5 --cwd /Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/01/network --no-focus  -> pane w7E:p5A",
+        "split_json": "views/02-core-cache-fill/captures/pane-split.json",
+        "pane_get_json": "views/02-core-cache-fill/captures/pane-get.json",
+        "rect": "79x49 (herdr pane rect; includes 2 columns + 2 rows of pane chrome)",
+        "command_log": "views/02-core-cache-fill/captures/commands.txt"
+      },
+      "dimensions": {
+        "target": "77x47",
+        "measured_stty_size": "47 77",
+        "measured_cols": 77,
+        "measured_rows": 47,
+        "matches_target": true,
+        "raw": "views/02-core-cache-fill/captures/dims-raw.txt"
+      },
+      "captures": {
+        "header": "views/02-core-cache-fill/captures/header.txt",
+        "unselected_text": "views/02-core-cache-fill/captures/unselected.txt",
+        "unselected_ansi": "views/02-core-cache-fill/captures/unselected.ansi.txt",
+        "selected_tab_text": "views/02-core-cache-fill/captures/selected-tab.txt",
+        "selected_tab_ansi": "views/02-core-cache-fill/captures/selected-tab.ansi.txt",
+        "selected_right_text": "views/02-core-cache-fill/captures/selected-right.txt",
+        "selected_right_ansi": "views/02-core-cache-fill/captures/selected-right.ansi.txt",
+        "selected_animation_frame": "views/02-core-cache-fill/captures/selected-after-frames.txt",
+        "frames": [
+          "views/02-core-cache-fill/captures/frames/frame-01.txt",
+          "views/02-core-cache-fill/captures/frames/frame-02.txt",
+          "views/02-core-cache-fill/captures/frames/frame-03.txt",
+          "views/02-core-cache-fill/captures/frames/frame-04.txt"
+        ],
+        "frame_timestamps": "views/02-core-cache-fill/captures/timestamps.txt",
+        "hashes": {
+          "unselected.txt": "855b980c5600e9842b1bd2b42ed146ff16f8f9a8a302598e934a655458869ff3",
+          "unselected.ansi.txt": "b531c9cb82434b9aa04271b74d99872623b46ea3bcf85529faed304b69df24ca",
+          "selected-tab.ansi.txt": "1f54f7407f60797b1f092dcb2d0e32b2504bf36f3c840deb4db318081aa64f94"
+        },
+        "verify_report": "views/02-core-cache-fill/captures/verify.txt"
+      },
+      "verify_result": "RESULT: all mechanical checks passed",
+      "arrow_evidence": [
+        "[PASS] \u25bc at row 22 col 34 points into a box top border at row 23",
+        "[PASS] \u25bc at row 30 col 34 points into a box top border at row 31"
+      ],
+      "window": {
+        "first": "2026-11-02T08:32:27Z frame-01",
+        "last": "2026-11-02T08:32:40Z selected animation frame captured",
+        "frame_interval_s": 2.5
+      },
+      "observed_render": [
+        "                                \u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "                                \u2502Core switch\u2502",
+        "                                \u2502           \u2502",
+        "                                \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+        "                                 \u2502",
+        "                                 \u2502 25 GbE",
+        "                                 \u25cf",
+        "                                 \u25bc",
+        "                                \u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "                                \u2502Redis cache\u2502",
+        "                                \u2502           \u2502",
+        "                                \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+        "                                 \u2502",
+        "                                 \u2502 fill",
+        "                                 \u25cf",
+        "                                 \u25bc",
+        "                                \u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "                                \u2502DB tier\u2502",
+        "                                \u2502       \u2502",
+        "                                \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+        " \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510",
+        " \u2502 + [+] \u2502",
+        " \u2502 \u2212 [-] \u2502",
+        " \u2502 \u22a1 [f] \u2502",
+        " \u2502 \u25a1 [i] \u2502",
+        " \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518"
+      ]
+    },
+    {
+      "view_id": "03-session-fill",
+      "purpose": "web-to-Redis session relation and the Redis-to-DB fill relation",
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        "Web tier",
+        "Redis cache",
+        "DB tier"
+      ],
+      "edges": [
+        "web->cache [session] flow=0.2",
+        "cache->db [fill] flow=0.2"
+      ],
+      "spec": "views/03-session-fill/spec.json",
+      "spec_sha256": "eb25d28f493eb2e3b96f07974ab221b751002f9ed7ef96adb91367eb2ac298f8",
+      "check_stdout": "views/03-session-fill/check.txt",
+      "check_stderr": "views/03-session-fill/check.stderr.txt",
+      "check_exit": 0,
+      "check_summary": [
+        "ok: nodes=3 edges=2 flows=2 direction=tb theme=gruvbox",
+        "extent=17x24 cells"
+      ],
+      "extent": "17x24",
+      "pane": {
+        "pane_id": "w7E:p5D",
+        "split_command": "herdr pane split --current --direction right --ratio 0.5 --cwd /Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/01/network --no-focus  -> pane w7E:p5D",
+        "split_json": "views/03-session-fill/captures/pane-split.json",
+        "pane_get_json": "views/03-session-fill/captures/pane-get.json",
+        "rect": "79x49 (herdr pane rect; includes 2 columns + 2 rows of pane chrome)",
+        "command_log": "views/03-session-fill/captures/commands.txt"
+      },
+      "dimensions": {
+        "target": "77x47",
+        "measured_stty_size": "47 77",
+        "measured_cols": 77,
+        "measured_rows": 47,
+        "matches_target": true,
+        "raw": "views/03-session-fill/captures/dims-raw.txt"
+      },
+      "captures": {
+        "header": "views/03-session-fill/captures/header.txt",
+        "unselected_text": "views/03-session-fill/captures/unselected.txt",
+        "unselected_ansi": "views/03-session-fill/captures/unselected.ansi.txt",
+        "selected_tab_text": "views/03-session-fill/captures/selected-tab.txt",
+        "selected_tab_ansi": "views/03-session-fill/captures/selected-tab.ansi.txt",
+        "selected_right_text": "views/03-session-fill/captures/selected-right.txt",
+        "selected_right_ansi": "views/03-session-fill/captures/selected-right.ansi.txt",
+        "selected_animation_frame": "views/03-session-fill/captures/selected-after-frames.txt",
+        "frames": [
+          "views/03-session-fill/captures/frames/frame-01.txt",
+          "views/03-session-fill/captures/frames/frame-02.txt",
+          "views/03-session-fill/captures/frames/frame-03.txt",
+          "views/03-session-fill/captures/frames/frame-04.txt"
+        ],
+        "frame_timestamps": "views/03-session-fill/captures/timestamps.txt",
+        "hashes": {
+          "unselected.txt": "7d7e966eb35090fc51b49b69704def5bbd92baca9e6c0971c6fab7a3c16a4b27",
+          "unselected.ansi.txt": "61b54837c683e71356a7f1fd1be827fd14c110e27ef3bb88f42b2e2295408604",
+          "selected-tab.ansi.txt": "3b78c7bbc6f2ebdb910cdacbcb1a8267471e21869fc35356d177e17cdb37cb9f"
+        },
+        "verify_report": "views/03-session-fill/captures/verify.txt"
+      },
+      "verify_result": "RESULT: all mechanical checks passed",
+      "arrow_evidence": [
+        "[PASS] \u25bc at row 22 col 34 points into a box top border at row 23",
+        "[PASS] \u25bc at row 30 col 34 points into a box top border at row 31"
+      ],
+      "window": {
+        "first": "2026-11-02T08:32:47Z frame-01",
+        "last": "2026-11-02T08:32:59Z selected animation frame captured",
+        "frame_interval_s": 2.5
+      },
+      "observed_render": [
+        "                                \u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "                                \u2502Web tier\u2502",
+        "                                \u2502        \u2502",
+        "                                \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+        "                                 \u2502",
+        "                                 \u2502 session",
+        "                                 \u25cf",
+        "                                 \u25bc",
+        "                                \u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "                                \u2502Redis cache\u2502",
+        "                                \u2502           \u2502",
+        "                                \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+        "                                 \u2502",
+        "                                 \u2502 fill",
+        "                                 \u25cf",
+        "                                 \u25bc",
+        "                                \u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "                                \u2502DB tier\u2502",
+        "                                \u2502       \u2502",
+        "                                \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+        " \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510",
+        " \u2502 + [+] \u2502",
+        " \u2502 \u2212 [-] \u2502",
+        " \u2502 \u22a1 [f] \u2502",
+        " \u2502 \u25a1 [i] \u2502",
+        " \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518"
+      ]
+    }
+  ],
+  "relationship_coverage": [
+    {
+      "original": "wan -> fw (1 GbE)",
+      "view": "01-request-path",
+      "visible_edge": "WAN -1 GbE-> Firewall, straight stem, \u25bc into Firewall top border"
+    },
+    {
+      "original": "fw -> core (10 GbE)",
+      "view": "01-request-path",
+      "visible_edge": "Firewall -10 GbE-> Core switch, straight stem, \u25bc into Core switch top border"
+    },
+    {
+      "original": "core -> web (10 GbE)",
+      "view": "01-request-path",
+      "visible_edge": "Core switch -10 GbE-> Web tier, straight stem, \u25bc into Web tier top border"
+    },
+    {
+      "original": "web -> db (queries)",
+      "view": "01-request-path",
+      "visible_edge": "Web tier -queries-> DB tier, straight stem, \u25bc into DB tier top border"
+    },
+    {
+      "original": "core -> cache (25 GbE)",
+      "view": "02-core-cache-fill",
+      "visible_edge": "Core switch -25 GbE-> Redis cache, straight stem, \u25bc into Redis cache top border"
+    },
+    {
+      "original": "cache -> db (fill)",
+      "view": "02-core-cache-fill (primary) and 03-session-fill (declared duplicate)",
+      "visible_edge": "Redis cache -fill-> DB tier, straight stem, \u25bc into DB tier top border"
+    },
+    {
+      "original": "web -> cache (session)",
+      "view": "03-session-fill",
+      "visible_edge": "Web tier -session-> Redis cache, straight stem, \u25bc into Redis cache top border"
+    }
+  ],
+  "fixed_constraints": {
+    "separate_core_and_web_cache_relations": "kept as two distinct labelled edges with different sources and different views: core->cache '25 GbE' (02) and web->cache 'session' (03). They are never merged, shortened, or reversed. A single pane holding both was rendered (attempts/fanin-4node) and the frozen renderer attached web->cache to the side of Redis without an arrowhead, so the pair is shown in two focused views instead.",
+    "speeds_visible_without_motion_measurement": "1 GbE, 10 GbE and 25 GbE appear as text edge labels in views 01 and 02. Every edge carries the same flow speed 0.2 (about 2 cells/second, dots >= 7 cells apart), so motion direction shows traffic direction and motion speed measures nothing. The historical request to let dot speed encode link speed is deliberately not implemented.",
+    "slow_sparse_motion": "uniform flow=0.2 on all 7 edges; 4 timestamped frames per view show dots advancing roughly 5-6 cells per 2.5 s interval"
+  },
+  "decisions": [
+    "Direction tb everywhere: lr for the 5-layer request path measured 92x8 (wider than the 77-column pane), and lr for the 3-node views measured 53x8 with one dropped edge label.",
+    "Node label 'Redis cache' instead of 'Redis': it is faithful to the source (node cache = Redis) and it widens the box so the frozen renderer can place the 'session' label in view 03; with label 'Redis' the 14-column layout dropped that label (--check warning).",
+    "Edge labels are copied verbatim from the source: 1 GbE, 10 GbE, 25 GbE, session, queries, fill.",
+    "The graph is split into three focused views because the frozen renderer only draws a forward edge cleanly when the target box is roughly below the source; see known_defects and blockers.",
+    "Full 6-node, 7-edge spec is preserved in attempts/full-graph-6node.json with its own --check output, so every relationship can be traced back to one place."
+  ],
+  "known_defects": [
+    {
+      "id": "D1",
+      "what": "every node's two connection-handle border cells (top-centre and bottom-centre in tb) are painted with the muted stroke colour 38;2;146;131;116 instead of the node's layer hue",
+      "where": "all three views; see the '[NOTE] box ...' lines in each captures/verify.txt",
+      "severity": "cosmetic, renderer-owned",
+      "fixable_by_spec": false
+    },
+    {
+      "id": "D2",
+      "what": "the graph occupies 17 of the 77 columns in every view, so the pane is mostly empty (nothing is clipped and no badge appears)",
+      "where": "01-request-path (17x40), 02-core-cache-fill (17x24), 03-session-fill (17x24)",
+      "severity": "composition, not readability",
+      "fixable_by_spec": "only by adding unrelated nodes or longer labels, which would distort the diagram"
+    },
+    {
+      "id": "D3",
+      "what": "the 'fill' relation is drawn twice, in 02 and in 03, with identical direction and label",
+      "where": "views 02-core-cache-fill and 03-session-fill",
+      "severity": "declared duplication for label placement (a 2-node view drops its single edge label)",
+      "fixable_by_spec": false
+    },
+    {
+      "id": "D4",
+      "what": "the historical request 'dot speed represents link speed' is not implemented; motion is uniform",
+      "where": "all views",
+      "severity": "deliberate, required by the round's fixed constraint",
+      "fixable_by_spec": "not without breaking the fixed constraint"
+    }
+  ],
+  "blockers": [
+    {
+      "id": "B1",
+      "what": "a single view of the whole network needs 48 rows (extent 40x48 for the 6-node 7-edge spec) and cannot fit the 47-row viewport, whose graph area is 46 rows below the header",
+      "evidence": "attempts/full-graph-6node.check.txt"
+    },
+    {
+      "id": "B2",
+      "what": "the frozen renderer attaches a forward edge to the side handle of a horizontally offset target and draws no arrowhead, and it drops edge labels from very narrow layouts; every compact arrangement tested hit one of these",
+      "evidence": "attempts/link-path-02-auto-5edge/text.txt (core->web enters the left border with '\u2500' and no arrowhead), attempts/fanout-3node/text.txt, attempts/fanin-4node/text.txt, attempts/app-chain-span/text.txt, attempts/link-path-03-explicit5/check.txt (2 labels dropped), attempts/explicit-grid-2x2/text.txt",
+      "consequence": "the case is delivered as three focused views with explicit coverage instead of one compact graph"
+    },
+    {
+      "id": "B3",
+      "what": "independent Astra readability review did not run in this round",
+      "evidence": "captain-owned judges; the generator spawned no reviewer, per the round instructions"
+    }
+  ],
+  "attempts": [
+    {
+      "path": "attempts/direction-probe-tb-full.json",
+      "what": "6-node/7-edge spec, tb",
+      "check": "extent 40x48 -> 2 rows taller than the viewport",
+      "verdict": "rejected: does not fit"
+    },
+    {
+      "path": "attempts/direction-probe-lr-full.json",
+      "what": "6-node/7-edge spec, lr",
+      "check": "extent 144x20",
+      "verdict": "rejected: wider than the pane"
+    },
+    {
+      "path": "attempts/full-graph-6node.json",
+      "what": "the preserved full spec (same 7 relationships)",
+      "check": "attempts/full-graph-6node.check.txt",
+      "verdict": "reference only, does not fit"
+    },
+    {
+      "path": "attempts/link-path-01-auto-4edge/",
+      "render_text": "attempts/link-path-01-auto-4edge/text.txt",
+      "render_ansi": "attempts/link-path-01-auto-4edge/ansi.txt",
+      "what": "5 nodes, 4 speed links, auto layers",
+      "render": "Web tier and Redis landed in one layer; both core edges entered side handles with no arrowhead",
+      "verdict": "rejected: missing arrowheads"
+    },
+    {
+      "path": "attempts/link-path-02-auto-5edge/",
+      "render_text": "attempts/link-path-02-auto-5edge/text.txt",
+      "render_ansi": "attempts/link-path-02-auto-5edge/ansi.txt",
+      "what": "5 nodes, 4 speed links + session",
+      "render": "core->web enters Web tier's left border with no arrowhead and the session stem branches off that same cell",
+      "verdict": "rejected: detached arrowhead + false branch"
+    },
+    {
+      "path": "attempts/link-path-02b-explicit4/",
+      "render_text": "attempts/link-path-02b-explicit4/text.txt",
+      "what": "explicit 4-layer placement",
+      "render": "labels detached from stems, corner clusters, no arrowheads",
+      "verdict": "rejected"
+    },
+    {
+      "path": "attempts/link-path-03-explicit5/",
+      "what": "explicit 5-layer placement",
+      "check": "extent 14x37 with '2 edge label(s) had no free slot'",
+      "verdict": "rejected: labels dropped"
+    },
+    {
+      "path": "attempts/fanout-3node/",
+      "render_text": "attempts/fanout-3node/text.txt",
+      "what": "web->redis, web->db fan-out",
+      "render": "both edges leave Web tier's sides, neither has an arrowhead",
+      "verdict": "rejected"
+    },
+    {
+      "path": "attempts/fanin-4node/",
+      "render_text": "attempts/fanin-4node/text.txt",
+      "what": "core,web->redis and web->db, cache->db",
+      "render": "core->cache gets \u25bc, but web->cache, web->db and cache->db enter side handles without arrowheads",
+      "verdict": "rejected"
+    },
+    {
+      "path": "attempts/app-chain-span/",
+      "render_text": "attempts/app-chain-span/text.txt",
+      "what": "web->redis->db plus web->db span",
+      "render": "session and fill are side-attached without arrowheads; label slots collide",
+      "verdict": "rejected"
+    },
+    {
+      "path": "attempts/explicit-grid-2x2/",
+      "render_text": "attempts/explicit-grid-2x2/text.txt",
+      "what": "two aligned links on an explicit 2x2 grid",
+      "render": "stems zigzag, no arrowheads, stray dots",
+      "verdict": "rejected"
+    },
+    {
+      "path": "attempts/direction-probe-tb-full.json",
+      "what": "6-node/7-edge spec in tb",
+      "check": "attempts/direction-probe-tb-full.check.txt",
+      "verdict": "reference: extent 40x48"
+    },
+    {
+      "path": "attempts/direction-probe-lr-full.json",
+      "what": "6-node/7-edge spec in lr",
+      "check": "attempts/direction-probe-lr-full.check.txt",
+      "verdict": "reference: extent 144x20"
+    }
+  ],
+  "cleanup": {
+    "panes_created_and_closed": [
+      "w7E:p33",
+      "w7E:p38",
+      "w7E:p3H",
+      "w7E:p30",
+      "w7E:p44",
+      "w7E:p46",
+      "w7E:p4B",
+      "w7E:p4J",
+      "w7E:p4P",
+      "w7E:p52",
+      "w7E:p54",
+      "w7E:p5A",
+      "w7E:p5D"
+    ],
+    "method": "each viewer ran 'rataflow-view <spec>; herdr pane close <pane-id>' and was also quit with q; every pane was verified gone via herdr pane get before the next capture",
+    "owner_tab_after": "w7E:tK holds only the generator's own pane w7E:p2R (herdr pane layout checked)",
+    "failures": "none",
+    "side_effects": "no builds, no installs, no remote commands, no commits, no edits outside this case directory (only /tmp scratch spec files outside it)"
+  },
+  "files": {
+    "notes": "generation.md",
+    "capture_scripts": [
+      "scripts/capture-view.sh",
+      "scripts/verify-view.py",
+      "scripts/write-generation.py"
+    ]
+  }
+}

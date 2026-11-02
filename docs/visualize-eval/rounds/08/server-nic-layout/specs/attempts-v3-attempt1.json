@@ -1,0 +1,16 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "gw", "label": "103.19.91.57 AS132717", "group": "IPv4 103.19.91.56/29" },
+    { "id": "airtel", "label": "Airtel 14.143.x", "group": "upstream hops" },
+    { "id": "airtelbb", "label": "AirtelBB 14.141.x", "group": "upstream hops" },
+    { "id": "cf", "label": "Cloudflare 1.1.1.1 AS13335", "group": "upstream hops" }
+  ],
+  "edges": [
+    { "from": "gw", "to": "airtel", "label": "1.8 ms" },
+    { "from": "gw", "to": "airtel", "label": "L2? no hop", "style": "dashed", "minlen": 2 },
+    { "from": "airtel", "to": "airtelbb", "label": "7.1 ms" },
+    { "from": "airtelbb", "to": "cf", "label": "8.3-8.6 ms" }
+  ]
+}

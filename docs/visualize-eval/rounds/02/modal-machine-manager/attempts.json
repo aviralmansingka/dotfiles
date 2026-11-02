@@ -1,0 +1,81 @@
+{
+  "round": "02",
+  "case_id": "modal-machine-manager",
+  "note": "Superseded draft files under attempts/ were reconstructed from the recorded in-place edits; their sha256 is of the reconstructed file, not of the exact bytes that ran. The final spec of each view is the byte-identical file that was captured.",
+  "views": [
+    {
+      "view": "v1",
+      "role": "provisioning request path",
+      "attempts": [
+        {
+          "spec": "v1.json",
+          "spec_sha256": "00b5d6a0084fe359f1695d8ca2bef82ab41ff0d6d3c95d9e706c8a4b904f4f03",
+          "note": "first draft; check clean (7/7 labels, extent 48x45) \u2014 accepted as final"
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "role": "boot exchange + heartbeat",
+      "attempts": [
+        {
+          "spec": "attempts/v2-attempt1.json",
+          "spec_sha256": "839d80ad96ebde0ffcbbe07a19f519fbc81c2e69f2303be8bb52dda2521281e9",
+          "reconstructed": true,
+          "note": "6 nodes with S3 under the machine; --check reported 1 dot violation and the reverse boot edge looped above the machine box"
+        },
+        {
+          "spec": "attempts/v2-attempt2.json",
+          "spec_sha256": "c546c51cc945c016fef91772662d3375237e1336299b3776c570df0f0c4a680a",
+          "reconstructed": true,
+          "note": "moved mch->s3 to v3 to thin the inter-layer band; dots clean but reverse-edge label 'boot.ipxe+S3 args' skipped"
+        },
+        {
+          "spec": "v2.json",
+          "spec_sha256": "8b908f1b38de152a082615adf30cc55a34feb6aa219da4eac0b18463fe074daf",
+          "note": "shortened the reverse-edge label to 12 chars; still skipped (see blockers: tb reverse edges expose no label slot) \u2014 attempt budget exhausted, kept as final"
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "role": "ops, diagnostics and image pull",
+      "attempts": [
+        {
+          "spec": "attempts/v3-attempt1.json",
+          "spec_sha256": "64a8a9441fcbc20f26cd3548170b371cd89617406d1df1a7bcda53f676c85b5c",
+          "reconstructed": true,
+          "note": "lr with S3 above mch; renderer aborted: 'no obstacle-safe route for mch -> s3'"
+        },
+        {
+          "spec": "v3.json",
+          "spec_sha256": "f6f0e6741ead65180717d803a24f1dcaab45790978748acd2ea109be5d856616",
+          "note": "tb with S3 below mch so every edge runs forward; 7/7 labels, extent 42x32 \u2014 accepted as final"
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "role": "state writers and reconcile loop",
+      "attempts": [
+        {
+          "spec": "attempts/v4-attempt1.json",
+          "spec_sha256": "0c74ddfd7f4aab6e4b14a201294cde19e45e4195fbf288a917cf44413fbbe3c0",
+          "reconstructed": true,
+          "note": "tb, auto slots; rec->prov routed around the bottom of the canvas, gcore arrow entered the box from below"
+        },
+        {
+          "spec": "attempts/v4-attempt2.json",
+          "spec_sha256": "7383b701de5cd82e93b7098fc1cfcb88488377faac06924e23d2d6a41c197335",
+          "reconstructed": true,
+          "note": "tb with a reserved empty slot to align db under q; 'cluster state' label landed between converging arrowheads"
+        },
+        {
+          "spec": "v4.json",
+          "spec_sha256": "08c68a5c52191cb8064f9c837137d6af8715650c8093d13388b1a6a17e27d83e",
+          "note": "lr; 4/4 labels on distinct rows, extent 66x19 \u2014 accepted as final"
+        }
+      ]
+    }
+  ]
+}

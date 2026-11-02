@@ -1,0 +1,2445 @@
+{
+  "protocol_version": 1,
+  "round": 4,
+  "case_id": "datacenter-redundancy",
+  "candidate_sha256": "ac431c6d3035e466e29136f36d9579c551c2e070a354dc5df72999b1bb1beb3c",
+  "renderer_sha256": "0da16d8d8ed46e2a25eb773fc71ecad4de9e310cd33e303a4c7fe77231ad95bc",
+  "rubric_sha256": "18412615f82841b34cf131976c6b5f4b00cd4fc031a710cdfc81058e2dd68d10",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "148a1f7742a5e212a41ad2f100160314138a1896cc5758040aa3eb50d7a81e3d",
+  "generator": {
+    "worker_id": "viz-ds04-5",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge04-datacenter",
+    "model": "openai/gpt-6.1-sol"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 77,
+    "rows": 47
+  },
+  "evidence": [
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/04/SKILL.md",
+      "sha256": "ac431c6d3035e466e29136f36d9579c551c2e070a354dc5df72999b1bb1beb3c",
+      "description": "Frozen candidate skill, actual hash verified against metadata.",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/04/rubric.json",
+      "sha256": "18412615f82841b34cf131976c6b5f4b00cd4fc031a710cdfc81058e2dd68d10",
+      "description": "Frozen round-04 rubric and embedded result schema; actual hash verified.",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/04/metadata.json",
+      "sha256": "2a33a2f6787598bb03ae874ac2bc1222f8095e7f8ec35a09132d9ed47f4f09a8",
+      "description": "Frozen input and renderer identities.",
+      "capture": null
+    },
+    {
+      "id": "cases",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen dataset manifest; datacenter animation=off.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+      "sha256": "a3051af3eeeec31aee53558dafbbea5d061dc74253618fd6940eba5c39b5bb98",
+      "description": "Source excerpts including original chat lines 134, 248, 270 and qualified physical-link convention.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/expected.json",
+      "sha256": "926e866fbdbb3eaac5b7a21360905d1f621a7a6386139afab303e8ba7e62ed47",
+      "description": "Qualified reference relation set: 18 concepts, 28 links; historical reference is not independent factual verification.",
+      "capture": null
+    },
+    {
+      "id": "historical-variants",
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/historical-variants.json",
+      "sha256": "a5753817a621b846abcb4105d028dbd0d0152214495f5b225044b3882f4f34b9",
+      "description": "Preserved historical variants; human corrections in source override these.",
+      "capture": null
+    },
+    {
+      "id": "observed-first",
+      "path": "docs/visualize-eval/rounds/04/reviews/datacenter-redundancy/observed-first.md",
+      "sha256": "5bc09c68db028c0f40c403378b2f0e7a1e6c8fbe64a3925e6ee880d8a759f9fe",
+      "description": "Immutable blind stage-A record, saved before expected reveal. Post-save control-widget color erratum is recorded in critique only.",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/04/reviews/datacenter-redundancy/spec-manifest.json",
+      "sha256": "148a1f7742a5e212a41ad2f100160314138a1896cc5758040aa3eb50d7a81e3d",
+      "description": "Deterministic sorted repository-relative final-spec path / actual SHA-256 pairs. Its digest is spec_sha256.",
+      "capture": null
+    },
+    {
+      "id": "generation-json",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/generation.json",
+      "sha256": "60607e6ae55451c544c0e1d2effafc417730d8ed947b99916ca8dcceac5c3b12",
+      "description": "Generator assertions, convention, coverage, timestamps, and limitations; not a substitute for visual judgment.",
+      "capture": null
+    },
+    {
+      "id": "generation-md",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/generation.md",
+      "sha256": "fa1b2351c6c7c87bfd961c075fbe26ef36ce32ac08549b0e0e01424b009338cf",
+      "description": "Generator narrative; no complete final executable command ledger or raw pane-close responses.",
+      "capture": null
+    },
+    {
+      "id": "attempts-json",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/attempts.json",
+      "sha256": "40bbda1793e182ab2dbb432f93bc5d2e96cc3d88f6e2918ec14739407b6904e2",
+      "description": "Preserved attempt/probe index and hashes; exact commands only for two frames-only probes, not final operations.",
+      "capture": null
+    },
+    {
+      "id": "spec-v1",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/specs/v1.json",
+      "sha256": "f6d20a5ffb5ec6d4452a49df144762a7a102f0c6e284a97b4a4e7ea859818c67",
+      "description": "Final spec, hash independently verified against manifest.",
+      "capture": null
+    },
+    {
+      "id": "v1-text",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v1/v1-text.txt",
+      "sha256": "db74560e042d9374a77b457925458d6c88d0eb4b46b164e2b7bcb21002a6b693",
+      "description": "Saved live-pane capture; timestamp is the manifest capture window, not an invented per-frame instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "static capture; no frame-series index",
+        "timestamp": "2026-11-02T12:49:09Z/2026-11-02T12:49:12Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-ansi",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v1/v1-ansi.ansi",
+      "sha256": "a2161177057f17e79c697718168a9b88f70c2d3d36ef9fece5bc58befb25de0b",
+      "description": "Saved live-pane capture; timestamp is the manifest capture window, not an invented per-frame instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "static capture; no frame-series index",
+        "timestamp": "2026-11-02T12:49:09Z/2026-11-02T12:49:12Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-selected",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v1/v1-selected.ansi",
+      "sha256": "9dbc899a14f216666efcd2d306ce74e414edef7352e50aa2f77f15430a05505c",
+      "description": "Saved live-pane capture; timestamp is the manifest capture window, not an invented per-frame instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "static capture; no frame-series index",
+        "timestamp": "2026-11-02T12:49:09Z/2026-11-02T12:49:12Z",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-check",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v1/check.txt",
+      "sha256": "0f5008eec89bb305e42c3b6c008914c4a487e4f0ba4ac9c885818b9f0238e906",
+      "description": "Full saved final check text; manifest records exit=0 and check window, but stderr separation and exact invocation are not preserved.",
+      "capture": null
+    },
+    {
+      "id": "v1-manifest",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v1/manifest.json",
+      "sha256": "26ae299bf6f2fa20ff207e74d369f7981a0de3059d248b70c254da7b15eccdc7",
+      "description": "Capture/check windows, app header token, artifact hashes, pane ID, and cleanup=confirmed_closed.",
+      "capture": null
+    },
+    {
+      "id": "v1-validator",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v1/validator.txt",
+      "sha256": "1a87de4fb3f3d7db43c0d9c99243e3190941622a1ab748c7af3b6482616228df",
+      "description": "Saved validator output; no --require-frames for this static case. Green harness output is not independent visual approval.",
+      "capture": null
+    },
+    {
+      "id": "v1-bin-sha256",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v1/bin.sha256",
+      "sha256": "8846c6305d5cd8f9cfd0db1d5780eda124cf8de84586b65d722509919150e2ff",
+      "description": "Saved executable hash file. Existing frozen executable was independently rehashed without execution.",
+      "capture": null
+    },
+    {
+      "id": "spec-v2",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/specs/v2.json",
+      "sha256": "31050fecd83fd229ce45507503fa20878de66ca1c37d92590f4d4376f47d4ade",
+      "description": "Final spec, hash independently verified against manifest.",
+      "capture": null
+    },
+    {
+      "id": "v2-text",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v2/v2-text.txt",
+      "sha256": "c5ddfa5414346853fa9e1f9d935a675550c85a85494961a5623cb045ada0e764",
+      "description": "Saved live-pane capture; timestamp is the manifest capture window, not an invented per-frame instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "static capture; no frame-series index",
+        "timestamp": "2026-11-02T12:49:19Z/2026-11-02T12:49:22Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-ansi",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v2/v2-ansi.ansi",
+      "sha256": "b79d7c830f1aea9ca54769ffe0ba79d64da9084adc3cb49cffcd9e15d503dd89",
+      "description": "Saved live-pane capture; timestamp is the manifest capture window, not an invented per-frame instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "static capture; no frame-series index",
+        "timestamp": "2026-11-02T12:49:19Z/2026-11-02T12:49:22Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-selected",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v2/v2-selected.ansi",
+      "sha256": "9e951a525371c0b6084abb96093339bde70d856de380d7b5db2470f3adc7ce2a",
+      "description": "Saved live-pane capture; timestamp is the manifest capture window, not an invented per-frame instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "static capture; no frame-series index",
+        "timestamp": "2026-11-02T12:49:19Z/2026-11-02T12:49:22Z",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-check",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v2/check.txt",
+      "sha256": "19b32777d728a977e49578266ebacbb7770a870fde0c79cad854c29580190753",
+      "description": "Full saved final check text; manifest records exit=0 and check window, but stderr separation and exact invocation are not preserved.",
+      "capture": null
+    },
+    {
+      "id": "v2-manifest",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v2/manifest.json",
+      "sha256": "fbff41273380e5e4e056a5d4ac2fdb4cc441fb6e2e7dfbc80409fd63a257fec8",
+      "description": "Capture/check windows, app header token, artifact hashes, pane ID, and cleanup=confirmed_closed.",
+      "capture": null
+    },
+    {
+      "id": "v2-validator",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v2/validator.txt",
+      "sha256": "1a87de4fb3f3d7db43c0d9c99243e3190941622a1ab748c7af3b6482616228df",
+      "description": "Saved validator output; no --require-frames for this static case. Green harness output is not independent visual approval.",
+      "capture": null
+    },
+    {
+      "id": "v2-bin-sha256",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v2/bin.sha256",
+      "sha256": "8846c6305d5cd8f9cfd0db1d5780eda124cf8de84586b65d722509919150e2ff",
+      "description": "Saved executable hash file. Existing frozen executable was independently rehashed without execution.",
+      "capture": null
+    },
+    {
+      "id": "spec-v3",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/specs/v3.json",
+      "sha256": "e9333a549c32be67377ed247a4ffb080dd6c30a32c1d3902b6c7d281510ad65b",
+      "description": "Final spec, hash independently verified against manifest.",
+      "capture": null
+    },
+    {
+      "id": "v3-text",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v3/v3-text.txt",
+      "sha256": "05617bafb3d627ea7a812d53b878020a6a0833bbcc1891b94c5152d05aacf6f3",
+      "description": "Saved live-pane capture; timestamp is the manifest capture window, not an invented per-frame instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "static capture; no frame-series index",
+        "timestamp": "2026-11-02T12:49:23Z/2026-11-02T12:49:26Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-ansi",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v3/v3-ansi.ansi",
+      "sha256": "da6395cfa4fb0b7ee90be13b2ebb233741f0b0e76cfc0658b60eb3e766367ee8",
+      "description": "Saved live-pane capture; timestamp is the manifest capture window, not an invented per-frame instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "static capture; no frame-series index",
+        "timestamp": "2026-11-02T12:49:23Z/2026-11-02T12:49:26Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-selected",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v3/v3-selected.ansi",
+      "sha256": "26aee741ac39a5e86ebb1a70b1677971d10351670242ea23e92cac92eb414305",
+      "description": "Saved live-pane capture; timestamp is the manifest capture window, not an invented per-frame instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "static capture; no frame-series index",
+        "timestamp": "2026-11-02T12:49:23Z/2026-11-02T12:49:26Z",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-check",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v3/check.txt",
+      "sha256": "56b1ac1e771eac39da8195aea919a2e1851d144550c8b7e4cc992e0875a4915b",
+      "description": "Full saved final check text; manifest records exit=0 and check window, but stderr separation and exact invocation are not preserved.",
+      "capture": null
+    },
+    {
+      "id": "v3-manifest",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v3/manifest.json",
+      "sha256": "ea33b8fa9d30f0084e963554dc31bc4a2061f791cf32d9d504a90b8fd8ee33ac",
+      "description": "Capture/check windows, app header token, artifact hashes, pane ID, and cleanup=confirmed_closed.",
+      "capture": null
+    },
+    {
+      "id": "v3-validator",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v3/validator.txt",
+      "sha256": "1a87de4fb3f3d7db43c0d9c99243e3190941622a1ab748c7af3b6482616228df",
+      "description": "Saved validator output; no --require-frames for this static case. Green harness output is not independent visual approval.",
+      "capture": null
+    },
+    {
+      "id": "v3-bin-sha256",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v3/bin.sha256",
+      "sha256": "8846c6305d5cd8f9cfd0db1d5780eda124cf8de84586b65d722509919150e2ff",
+      "description": "Saved executable hash file. Existing frozen executable was independently rehashed without execution.",
+      "capture": null
+    },
+    {
+      "id": "spec-v4",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/specs/v4.json",
+      "sha256": "073654cac1f354f54b2841c5474b154aafda8984cab35cea2c2d1131ce169c49",
+      "description": "Final spec, hash independently verified against manifest.",
+      "capture": null
+    },
+    {
+      "id": "v4-text",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v4/v4-text.txt",
+      "sha256": "c5350930289cf1d9fb3700aba1136caa3be78177247e23169158508e98c8de5d",
+      "description": "Saved live-pane capture; timestamp is the manifest capture window, not an invented per-frame instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "static capture; no frame-series index",
+        "timestamp": "2026-11-02T12:49:26Z/2026-11-02T12:49:29Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-ansi",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v4/v4-ansi.ansi",
+      "sha256": "2d13fb1fd1c137326914f5111ca86ca0e9a44dc36c121588ef5644677a6fedcd",
+      "description": "Saved live-pane capture; timestamp is the manifest capture window, not an invented per-frame instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "static capture; no frame-series index",
+        "timestamp": "2026-11-02T12:49:26Z/2026-11-02T12:49:29Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-selected",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v4/v4-selected.ansi",
+      "sha256": "3c15df9214c8313bf32948ccff819f6a69b087c5814adb4edecf40118991ef0d",
+      "description": "Saved live-pane capture; timestamp is the manifest capture window, not an invented per-frame instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "static capture; no frame-series index",
+        "timestamp": "2026-11-02T12:49:26Z/2026-11-02T12:49:29Z",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-check",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v4/check.txt",
+      "sha256": "b6d833d4126f5947994f5463093dca88c3a6964eec2f08451a5d72540a83e406",
+      "description": "Full saved final check text; manifest records exit=0 and check window, but stderr separation and exact invocation are not preserved.",
+      "capture": null
+    },
+    {
+      "id": "v4-manifest",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v4/manifest.json",
+      "sha256": "90d5fd8574eb53686b758c28029d446827d4d7a9b6bdd96310387eb11c9fc2c7",
+      "description": "Capture/check windows, app header token, artifact hashes, pane ID, and cleanup=confirmed_closed.",
+      "capture": null
+    },
+    {
+      "id": "v4-validator",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v4/validator.txt",
+      "sha256": "1a87de4fb3f3d7db43c0d9c99243e3190941622a1ab748c7af3b6482616228df",
+      "description": "Saved validator output; no --require-frames for this static case. Green harness output is not independent visual approval.",
+      "capture": null
+    },
+    {
+      "id": "v4-bin-sha256",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/evidence/v4/bin.sha256",
+      "sha256": "8846c6305d5cd8f9cfd0db1d5780eda124cf8de84586b65d722509919150e2ff",
+      "description": "Saved executable hash file. Existing frozen executable was independently rehashed without execution.",
+      "capture": null
+    },
+    {
+      "id": "draft-v1-a1",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/specs/v1-a1.json",
+      "sha256": "31e5b63fe36052551e880bc9866c47228d9b3d9844e4596e6613ad67ccc0aa78",
+      "description": "Preserved draft/probe spec; not a final-view capture.",
+      "capture": null
+    },
+    {
+      "id": "draft-v1-a2",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/specs/v1-a2.json",
+      "sha256": "74749501ed9b85b11758641333cddeb13ded40eb8dc422da81a5b8bfb574f45e",
+      "description": "Preserved draft/probe spec; not a final-view capture.",
+      "capture": null
+    },
+    {
+      "id": "draft-v1-a3",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/specs/v1-a3.json",
+      "sha256": "f6d20a5ffb5ec6d4452a49df144762a7a102f0c6e284a97b4a4e7ea859818c67",
+      "description": "Preserved draft/probe spec; not a final-view capture.",
+      "capture": null
+    },
+    {
+      "id": "draft-v2-a1",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/specs/v2-a1.json",
+      "sha256": "0ba8ee23617d85a53a6d02689302fc2c93ad55627f4f467ca378b2f755e5bd82",
+      "description": "Preserved draft/probe spec; not a final-view capture.",
+      "capture": null
+    },
+    {
+      "id": "draft-v2-a2",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/specs/v2-a2.json",
+      "sha256": "c1bdadff329962afb5fb094e0dece38b54183a2d4c7092487f2977a434f27e5e",
+      "description": "Preserved draft/probe spec; not a final-view capture.",
+      "capture": null
+    },
+    {
+      "id": "draft-v2-a3",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/specs/v2-a3.json",
+      "sha256": "31050fecd83fd229ce45507503fa20878de66ca1c37d92590f4d4376f47d4ade",
+      "description": "Preserved draft/probe spec; not a final-view capture.",
+      "capture": null
+    },
+    {
+      "id": "draft-v3-a1",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/specs/v3-a1.json",
+      "sha256": "1bab930bd5beb653909a6203e2e526bba7d90e7a229c7d94a6b272026d4f5470",
+      "description": "Preserved draft/probe spec; not a final-view capture.",
+      "capture": null
+    },
+    {
+      "id": "draft-v3-a2",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/specs/v3-a2.json",
+      "sha256": "9e9d3a869f4689b73db0e13b06a92465db178736ec68a8f62e8863ec6b427114",
+      "description": "Preserved draft/probe spec; not a final-view capture.",
+      "capture": null
+    },
+    {
+      "id": "draft-v3-a3",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/specs/v3-a3.json",
+      "sha256": "54f52dfc5c2908a8d8315460acfb79ae45709b7858891397e2165a5f3f84fded",
+      "description": "Preserved draft/probe spec; not a final-view capture.",
+      "capture": null
+    },
+    {
+      "id": "draft-v3-a4",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/specs/v3-a4.json",
+      "sha256": "e9333a549c32be67377ed247a4ffb080dd6c30a32c1d3902b6c7d281510ad65b",
+      "description": "Preserved draft/probe spec; not a final-view capture.",
+      "capture": null
+    },
+    {
+      "id": "draft-v4-a1",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/specs/v4-a1.json",
+      "sha256": "5bb7dc5bd3283f04ac94ed2a087ac817c79d986fc24e4aad3943723085e505a9",
+      "description": "Preserved draft/probe spec; not a final-view capture.",
+      "capture": null
+    },
+    {
+      "id": "draft-v4-a2",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/specs/v4-a2.json",
+      "sha256": "27a08bab5ce50d4616dbf6595b58603d196088412b0f44c977be9d916a23522b",
+      "description": "Preserved draft/probe spec; not a final-view capture.",
+      "capture": null
+    },
+    {
+      "id": "draft-v4-a3",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/specs/v4-a3.json",
+      "sha256": "ed6792765fc504c72ba9ea215c059d2c0b869a1dc1746568d27e4dee52033c47",
+      "description": "Preserved draft/probe spec; not a final-view capture.",
+      "capture": null
+    },
+    {
+      "id": "draft-v4-a4",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/specs/v4-a4.json",
+      "sha256": "073654cac1f354f54b2841c5474b154aafda8984cab35cea2c2d1131ce169c49",
+      "description": "Preserved draft/probe spec; not a final-view capture.",
+      "capture": null
+    },
+    {
+      "id": "attempts-v1-a1-check-txt",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/attempts/v1-a1-check.txt",
+      "sha256": "2ea900f2a2451914e052fc552ca531d78829ba1327336e410a53875fea4a6e6c",
+      "description": "Preserved raw attempts record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "attempts-v1-a2-check-txt",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/attempts/v1-a2-check.txt",
+      "sha256": "ec25458e405b5aca3de3459962c6f42f97e48a9b3ec4e2ff4453f69ecd60dfac",
+      "description": "Preserved raw attempts record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "attempts-v1-a3-check-txt",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/attempts/v1-a3-check.txt",
+      "sha256": "0f5008eec89bb305e42c3b6c008914c4a487e4f0ba4ac9c885818b9f0238e906",
+      "description": "Preserved raw attempts record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "attempts-v2-a2-check-txt",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/attempts/v2-a2-check.txt",
+      "sha256": "cefaa6f4e2a4fc38347c6ec8f006a92d91926d40ce8483e484153ec4a026b198",
+      "description": "Preserved raw attempts record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "attempts-v2-a3-check-txt",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/attempts/v2-a3-check.txt",
+      "sha256": "19b32777d728a977e49578266ebacbb7770a870fde0c79cad854c29580190753",
+      "description": "Preserved raw attempts record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "attempts-v3-a2-check-txt",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/attempts/v3-a2-check.txt",
+      "sha256": "5bafb869efefce69fe86022e8268c5b67705b7a2c097b26919caa1cec277c1f1",
+      "description": "Preserved raw attempts record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "attempts-v3-a3-check-txt",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/attempts/v3-a3-check.txt",
+      "sha256": "c296419a984b44671c10ca624b2f278266ac26bbf1ee7b7956a7144915bf813a",
+      "description": "Preserved raw attempts record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "attempts-v3-a4-check-txt",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/attempts/v3-a4-check.txt",
+      "sha256": "56b1ac1e771eac39da8195aea919a2e1851d144550c8b7e4cc992e0875a4915b",
+      "description": "Preserved raw attempts record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "attempts-v4-a2-check-txt",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/attempts/v4-a2-check.txt",
+      "sha256": "42e8c22cdace36c230cd2e148cd5ffb87db9b06819a6abf7691087f9fc08457a",
+      "description": "Preserved raw attempts record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "attempts-v4-a3-check-txt",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/attempts/v4-a3-check.txt",
+      "sha256": "ea7d4568115fdbe7ffa22dd40e234d96333fc3517a36cf48f9e6a6786560b374",
+      "description": "Preserved raw attempts record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "attempts-v4-a4-check-txt",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/attempts/v4-a4-check.txt",
+      "sha256": "b6d833d4126f5947994f5463093dca88c3a6964eec2f08451a5d72540a83e406",
+      "description": "Preserved raw attempts record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "preflight-pf-check-txt",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/preflight/pf-check.txt",
+      "sha256": "e25891b85282b3c907b458de59c7beb4d3ad0a93b4074c3e9d79f92ad2574dff",
+      "description": "Preserved raw preflight record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "preflight-pf-json",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/preflight/pf.json",
+      "sha256": "4343cb444946c93899e1c2a62d2fdd2807124069a905651c46d79fa5b472a755",
+      "description": "Preserved raw preflight record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "preflight-pf2-check-txt",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/preflight/pf2-check.txt",
+      "sha256": "fa48581505d25d618d0afebf2f6bbd474d7e372a4abae92b187bfb36dfe2a1d6",
+      "description": "Preserved raw preflight record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "preflight-pf2-json",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/preflight/pf2.json",
+      "sha256": "fc63b2adebb4f3de1e4b00710ab9fcc54719b1e0f8a99e4a292fc1dfbad4dd70",
+      "description": "Preserved raw preflight record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "preflight-pf3-check-txt",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/preflight/pf3-check.txt",
+      "sha256": "fa48581505d25d618d0afebf2f6bbd474d7e372a4abae92b187bfb36dfe2a1d6",
+      "description": "Preserved raw preflight record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "preflight-pf3-json",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/preflight/pf3.json",
+      "sha256": "acf2ca61e4ac620aaf359373e30d3bab515caa4e41914e0f5c61740d1198ff63",
+      "description": "Preserved raw preflight record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "preflight-pf5-check-txt",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/preflight/pf5-check.txt",
+      "sha256": "c95ea80bb8f0c6a7fda9dd92369160705f39b7bd64019443afd0c7400b04f077",
+      "description": "Preserved raw preflight record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "preflight-pf5-json",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/preflight/pf5.json",
+      "sha256": "f0a0289bfe33db8fa91964dc174ead5e8ede4697f9b8c95342198cc759e2beb3",
+      "description": "Preserved raw preflight record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "preflight-pf6-check-txt",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/preflight/pf6-check.txt",
+      "sha256": "2219824489e141301d5e08848adbbb06c116b11891ab6ff2d69f448ae3efb584",
+      "description": "Preserved raw preflight record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "preflight-pf6-json",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/preflight/pf6.json",
+      "sha256": "12bfa23048230c8d538f99d047842d2b9b15c08c68acdf5c0bd431c41d57279c",
+      "description": "Preserved raw preflight record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "probes-v2-a1-frames-txt",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/probes/v2-a1-frames.txt",
+      "sha256": "a5df1de2c7f072219014673eca09b56621e5a515f4a7dcaab39120c11b0e2573",
+      "description": "Preserved raw probes record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    },
+    {
+      "id": "probes-v3-a1-frames-txt",
+      "path": "docs/visualize-eval/rounds/04/datacenter-redundancy/probes/v3-a1-frames.txt",
+      "sha256": "51d703f6ab2504b95952f0e7771c2bab29e08c93544862a7cd89defacf8a95bd",
+      "description": "Preserved raw probes record; rejected/probe material is not evidence that a final view passes.",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "observed-first",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 18 identities and all 28 required endpoint/direction/label-meaning triples appear exactly once across v1-v4, with no extra visible relation or invented protocol. FW1 active/FW2 standby state is legibly carried by every incident link in v2. v3 honors common top row 28 for BL/rack leaves and spines above; v4 completes the split coverage. The physical-link arrow convention is explicitly stated in generation.json/md, not a traffic claim. The e20 local owner defect is scored under arrow_traceability, not a missing or false relation.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json"
+      ],
+      "evidence_ids": [
+        "expected",
+        "source",
+        "generation-json",
+        "generation-md",
+        "spec-manifest",
+        "observed-first",
+        "v1-text",
+        "v1-ansi",
+        "v1-selected",
+        "v2-text",
+        "v2-ansi",
+        "v2-selected",
+        "v3-text",
+        "v3-ansi",
+        "v3-selected",
+        "v4-text",
+        "v4-ansi",
+        "v4-selected"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 28 source stems and target heads are independently traceable with no bundled links or actual branch glyphs. However, ECMP [17,12,4,1] in v3 has two equally close candidate routes (D03), and Leaf 2 -> Rack 1 contains an avoidable two-step jog (D04). Green checks do not waive either gate. Other conspicuously long v3 routes are not independently condemned solely for length: their fixed side-port geometry accounts for their runs.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json"
+      ],
+      "evidence_ids": [
+        "observed-first",
+        "v3-text",
+        "v3-ansi",
+        "v3-check",
+        "generation-json"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Every final captured grid is 77x47 at 100%, measured by the running app header; all boxes/labels fit, with no clip/overlay loss. Null pane rectangles and unknown check viewport are not blockers because the frozen rubric accepts the app token. Nonetheless v1 has two avoidable carrier-feed bridges and v3 has two avoidable BL/spine bridges (D01/D02), without any need to reorder source groups/tiers. Observed counts are 3/2/4/1 bridges, not the eight reported touching bends counted as extra crossings.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json"
+      ],
+      "evidence_ids": [
+        "observed-first",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v4-ansi",
+        "v1-manifest",
+        "v2-manifest",
+        "v3-manifest",
+        "v4-manifest",
+        "attempts-v1-a1-check-txt",
+        "draft-v1-a1"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Within every view, source-related carrier/aggregation/core/firewall/edge/spine/leaf/rack concepts use related hue families and proximity. v3 keeps spines above the common BL/leaf band and racks below. Three repeated groups change hue across views, as observed blind, but the full task expressly says cross-view per-node hue stability is not a separate gate. No source-named conceptual band is reordered to lower crossings.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json"
+      ],
+      "evidence_ids": [
+        "observed-first",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v4-ansi"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 26 node occurrences have all sides and rounded corners, with continuous per-node normal ANSI color. All-selected captures cover 26/26 perimeters in continuous bold gold, including nodes already gold in normal state. This proves those saved selected borders, not hover/drag histories.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json"
+      ],
+      "evidence_ids": [
+        "observed-first",
+        "v1-ansi",
+        "v1-selected",
+        "v2-ansi",
+        "v2-selected",
+        "v3-ansi",
+        "v3-selected",
+        "v4-ansi",
+        "v4-selected"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Frozen skill, renderer, rubric, dataset, source and final-spec hashes verify; raw check/probe files, normal/ANSI/all-selected captures, app-measured header sizes, capture/check windows and confirmed_closed manifests exist. The blind file was saved before reveal. Required exact final operation commands, stderr accounting, rejected/preflight exit-status records and raw pane-close results are absent (G01), so workflow cannot pass. No frame dumps exist for final views; that is a disclosed nonblocking limitation for this explicitly static case, not an animation substitute.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "skill",
+        "rubric",
+        "cases",
+        "generation-json",
+        "generation-md",
+        "attempts-json",
+        "spec-manifest",
+        "observed-first",
+        "v1-check",
+        "v1-manifest",
+        "v1-validator",
+        "v2-check",
+        "v2-manifest",
+        "v2-validator",
+        "v3-check",
+        "v3-manifest",
+        "v3-validator",
+        "v4-check",
+        "v4-manifest",
+        "v4-validator"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Applicable as the explicit no-dots prohibition: source original chat line 134 and expected/dataset animation=off prohibit flowing dots. Literal scans of all 12 final visual captures show zero U+25CF glyphs; every edge has dots=0 and no flow field, and all four checks report flows=0. Thus no critical no-dots violation is observed. Positive-motion origin/speed/synchronization tests are source-backed N/A, not silently passed from a schema. Frames are absent; temporal absence outside captured states is not claimed.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (Original line 134: remove the dots flowing)",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/animation",
+        "docs/visualize-eval/cases.json (datacenter-redundancy animation=off)"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "cases",
+        "spec-v1",
+        "spec-v2",
+        "spec-v3",
+        "spec-v4",
+        "v1-text",
+        "v1-ansi",
+        "v1-selected",
+        "v2-text",
+        "v2-ansi",
+        "v2-selected",
+        "v3-text",
+        "v3-ansi",
+        "v3-selected",
+        "v4-text",
+        "v4-ansi",
+        "v4-selected"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/0",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "ISP A -> MUX 1; unlabelled. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "ISP A -> MUX 1: source stem (15, 16); orthogonal vertices (15, 16) -> (19, 16) -> (19, 15) -> (20, 15); intact target arrowhead ▶ at (20, 15). Solid route. No crossing on this route. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Unlabelled as required; no protocol invented. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            15,
+            15,
+            6,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            15,
+            16,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            20,
+            15,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/1",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "ISP B -> MUX 1; unlabelled. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "ISP B -> MUX 1: source stem (15, 22); orthogonal vertices (15, 22) -> (18, 22) -> (18, 17) -> (20, 17); intact target arrowhead ▶ at (20, 17). Solid route. Crossing cells (17, 22), (18, 21) use bridge continuations, not junctions. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Unlabelled as required; no protocol invented. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            15,
+            17,
+            6,
+            6
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            15,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            20,
+            17,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "D01"
+      ]
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/2",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "ISP C -> MUX 2; unlabelled. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "ISP C -> MUX 2: source stem (15, 27); orthogonal vertices (15, 27) -> (17, 27) -> (17, 21) -> (20, 21); intact target arrowhead ▶ at (20, 21). Solid route. Crossing cells (17, 22), (18, 21) use bridge continuations, not junctions. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Unlabelled as required; no protocol invented. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            15,
+            21,
+            6,
+            7
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            15,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            20,
+            21,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "D01"
+      ]
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/3",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "ISP D -> MUX 2; unlabelled. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "ISP D -> MUX 2: source stem (15, 32); orthogonal vertices (15, 32) -> (19, 32) -> (19, 23) -> (20, 23); intact target arrowhead ▶ at (20, 23). Solid route. No crossing on this route. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Unlabelled as required; no protocol invented. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            15,
+            23,
+            6,
+            10
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            15,
+            32,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            20,
+            23,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/4",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "MUX 1 -> Core 1; label 'x-connect'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "MUX 1 -> Core 1: source stem (28, 15); orthogonal vertices (28, 15) -> (62, 15); intact target arrowhead ▶ at (62, 15). Solid route. No crossing on this route. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'x-connect' at [41, 14, 9, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            28,
+            15,
+            35,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            28,
+            15,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            62,
+            15,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            41,
+            14,
+            9,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/5",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "MUX 1 -> Core 2; label 'x-connect'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "MUX 1 -> Core 2: source stem (28, 17); orthogonal vertices (28, 17) -> (60, 17) -> (60, 21) -> (62, 21); intact target arrowhead ▶ at (62, 21). Solid route. Crossing cells (60, 18) use bridge continuations, not junctions. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'x-connect' at [40, 18, 9, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            28,
+            17,
+            35,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            28,
+            17,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            62,
+            21,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            40,
+            18,
+            9,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/6",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "MUX 2 -> Core 1; label 'x-connect'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "MUX 2 -> Core 1: source stem (28, 21); orthogonal vertices (28, 21) -> (58, 21) -> (58, 18) -> (61, 18) -> (61, 17) -> (62, 17); intact target arrowhead ▶ at (62, 17). Solid route. Crossing cells (60, 18) use bridge continuations, not junctions. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'x-connect' at [39, 20, 9, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            28,
+            17,
+            35,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            28,
+            21,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            62,
+            17,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            39,
+            20,
+            9,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/7",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "MUX 2 -> Core 2; label 'x-connect'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "MUX 2 -> Core 2: source stem (28, 23); orthogonal vertices (28, 23) -> (62, 23); intact target arrowhead ▶ at (62, 23). Solid route. No crossing on this route. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'x-connect' at [41, 24, 9, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            28,
+            23,
+            35,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            28,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            62,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            41,
+            24,
+            9,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e9",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/8",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "Core 1 -> FW1; label 'active'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "Core 1 -> FW1: source stem (16, 20); orthogonal vertices (16, 20) -> (45, 20); intact target arrowhead ▶ at (45, 20). Solid route. No crossing on this route. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'active' at [27, 19, 6, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            16,
+            20,
+            30,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            16,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            45,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            27,
+            19,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e10",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/9",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "Core 2 -> FW1; label 'active'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "Core 2 -> FW1: source stem (16, 26); orthogonal vertices (16, 26) -> (43, 26) -> (43, 22) -> (45, 22); intact target arrowhead ▶ at (45, 22). Solid route. Crossing cells (43, 25) use bridge continuations, not junctions. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'active' at [26, 25, 6, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            16,
+            22,
+            30,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            16,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            45,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            26,
+            25,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e11",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/10",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "Core 1 -> FW2; label 'standby'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "Core 1 -> FW2: source stem (16, 22); orthogonal vertices (16, 22) -> (41, 22) -> (41, 25) -> (44, 25) -> (44, 26) -> (45, 26); intact target arrowhead ▶ at (45, 26). Dashed standby route; half-line corners are distinguishable. Crossing cells (43, 25) use bridge continuations, not junctions. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'standby' at [25, 23, 7, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            16,
+            22,
+            30,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            16,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            45,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            25,
+            23,
+            7,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e12",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/11",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "Core 2 -> FW2; label 'standby'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "Core 2 -> FW2: source stem (16, 28); orthogonal vertices (16, 28) -> (45, 28); intact target arrowhead ▶ at (45, 28). Dashed standby route; half-line corners are distinguishable. No crossing on this route. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'standby' at [27, 29, 7, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            16,
+            28,
+            30,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            16,
+            28,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            45,
+            28,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            27,
+            29,
+            7,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e13",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/12",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "FW1 -> BL 1; label 'active'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "FW1 -> BL 1: source stem (51, 20); orthogonal vertices (51, 20) -> (64, 20); intact target arrowhead ▶ at (64, 20). Solid route. No crossing on this route. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'active' at [54, 19, 6, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            51,
+            20,
+            14,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            51,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            64,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            54,
+            19,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e14",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/13",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "FW1 -> BL 2; label 'active'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "FW1 -> BL 2: source stem (51, 22); orthogonal vertices (51, 22) -> (62, 22) -> (62, 26) -> (64, 26); intact target arrowhead ▶ at (64, 26). Solid route. Crossing cells (62, 23) use bridge continuations, not junctions. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'active' at [53, 23, 6, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            51,
+            22,
+            14,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            51,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            64,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            53,
+            23,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e15",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/14",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "FW2 -> BL 1; label 'standby'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "FW2 -> BL 1: source stem (51, 26); orthogonal vertices (51, 26) -> (60, 26) -> (60, 23) -> (63, 23) -> (63, 22) -> (64, 22); intact target arrowhead ▶ at (64, 22). Dashed standby route; half-line corners are distinguishable. Crossing cells (62, 23) use bridge continuations, not junctions. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'standby' at [52, 25, 7, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            51,
+            22,
+            14,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            51,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            64,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            52,
+            25,
+            7,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e16",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/15",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "FW2 -> BL 2; label 'standby'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "FW2 -> BL 2: source stem (51, 28); orthogonal vertices (51, 28) -> (64, 28); intact target arrowhead ▶ at (64, 28). Dashed standby route; half-line corners are distinguishable. No crossing on this route. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'standby' at [54, 29, 7, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            51,
+            28,
+            14,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            51,
+            28,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            64,
+            28,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            54,
+            29,
+            7,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e17",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/16",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "BL 1 -> Spine 1; label 'ECMP'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "BL 1 -> Spine 1: source stem (9, 29); orthogonal vertices (9, 29) -> (5, 29) -> (5, 9) -> (7, 9); intact target arrowhead ▶ at (7, 9). Solid route. No crossing on this route. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'ECMP' at [8, 20, 4, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            5,
+            9,
+            5,
+            21
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            9,
+            29,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            7,
+            9,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            8,
+            20,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e18",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/17",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "BL 1 -> Spine 2; label 'ECMP'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "BL 1 -> Spine 2: source stem (16, 29); orthogonal vertices (16, 29) -> (24, 29) -> (24, 13) -> (35, 13) -> (35, 9) -> (34, 9); intact target arrowhead ◀ at (34, 9). Solid route. Crossing cells (24, 27), (22, 29) use bridge continuations, not junctions. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'ECMP' at [26, 21, 4, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            16,
+            9,
+            20,
+            21
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            16,
+            29,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            34,
+            9,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            26,
+            21,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "D02"
+      ]
+    },
+    {
+      "edge_id": "e19",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/18",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "BL 2 -> Spine 1; label 'ECMP'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "BL 2 -> Spine 1: source stem (26, 29); orthogonal vertices (26, 29) -> (25, 29) -> (25, 27) -> (17, 27) -> (17, 14) -> (6, 14) -> (6, 11) -> (7, 11); intact target arrowhead ▶ at (7, 11). Solid route. Crossing cells (22, 27), (24, 27) use bridge continuations, not junctions. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'ECMP' at [12, 21, 4, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            6,
+            11,
+            21,
+            19
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            26,
+            29,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            7,
+            11,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            12,
+            21,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "D02"
+      ]
+    },
+    {
+      "edge_id": "e20",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/19",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "BL 2 -> Spine 2; label 'ECMP'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "BL 2 -> Spine 2: source stem (26, 31); orthogonal vertices (26, 31) -> (22, 31) -> (22, 9) -> (24, 9); intact target arrowhead ▶ at (24, 9). Solid route. Crossing cells (22, 27), (22, 29) use bridge continuations, not junctions. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'ECMP' at [17, 12, 4, 1]. Label owner remains uncertain; see D03. Underlying source/head trace is intact.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            22,
+            9,
+            5,
+            23
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            26,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            24,
+            9,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            17,
+            12,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "D02",
+        "D03"
+      ]
+    },
+    {
+      "edge_id": "e21",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/24",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "Leaf 1 -> Rack 1; label 'dual'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "Leaf 1 -> Rack 1: source stem (47, 32); orthogonal vertices (47, 32) -> (47, 37); intact target arrowhead ▼ at (47, 37). Solid route. No crossing on this route. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'dual' at [42, 34, 4, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            47,
+            32,
+            1,
+            6
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            47,
+            32,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            47,
+            37,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            42,
+            34,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e22",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/25",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "Leaf 2 -> Rack 1; label 'dual'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "Leaf 2 -> Rack 1: source stem (63, 32); orthogonal vertices (63, 32) -> (63, 34) -> (62, 34) -> (62, 33) -> (50, 33) -> (50, 36) -> (49, 36) -> (49, 37); intact target arrowhead ▼ at (49, 37). Solid route. Crossing cells (50, 35) use bridge continuations, not junctions. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'dual' at [54, 32, 4, 1]. Endpoints and label are clear, but the removable jog fails route economy; see D04.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            49,
+            32,
+            15,
+            6
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            63,
+            32,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            49,
+            37,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            54,
+            32,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "D04"
+      ]
+    },
+    {
+      "edge_id": "e23",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/26",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "Leaf 1 -> Rack 2; label 'dual'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "Leaf 1 -> Rack 2: source stem (49, 32); orthogonal vertices (49, 32) -> (49, 35) -> (63, 35) -> (63, 37); intact target arrowhead ▼ at (63, 37). Solid route. Crossing cells (50, 35) use bridge continuations, not junctions. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'dual' at [54, 36, 4, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            49,
+            32,
+            15,
+            6
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            49,
+            32,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            63,
+            37,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            54,
+            36,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e24",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/27",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "Leaf 2 -> Rack 2; label 'dual'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "Leaf 2 -> Rack 2: source stem (65, 32); orthogonal vertices (65, 32) -> (65, 37); intact target arrowhead ▼ at (65, 37). Solid route. No crossing on this route. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'dual' at [67, 34, 4, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            65,
+            32,
+            1,
+            6
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            65,
+            32,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            65,
+            37,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            67,
+            34,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e25",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/20",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "Spine 1 -> Leaf 1; label 'ECMP'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "Spine 1 -> Leaf 1: source stem (27, 20); orthogonal vertices (27, 20) -> (51, 20); intact target arrowhead ▶ at (51, 20). Solid route. No crossing on this route. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'ECMP' at [37, 19, 4, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            27,
+            20,
+            25,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            27,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            51,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            37,
+            19,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e26",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/21",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "Spine 1 -> Leaf 2; label 'ECMP'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "Spine 1 -> Leaf 2: source stem (27, 22); orthogonal vertices (27, 22) -> (49, 22) -> (49, 26) -> (51, 26); intact target arrowhead ▶ at (51, 26). Solid route. Crossing cells (49, 23) use bridge continuations, not junctions. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'ECMP' at [36, 23, 4, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            27,
+            22,
+            25,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            27,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            51,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            36,
+            23,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e27",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/22",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "Spine 2 -> Leaf 1; label 'ECMP'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "Spine 2 -> Leaf 1: source stem (27, 26); orthogonal vertices (27, 26) -> (47, 26) -> (47, 23) -> (50, 23) -> (50, 22) -> (51, 22); intact target arrowhead ▶ at (51, 22). Solid route. Crossing cells (49, 23) use bridge continuations, not junctions. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'ECMP' at [35, 25, 4, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            27,
+            22,
+            25,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            27,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            51,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            35,
+            25,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e28",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/23",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md (qualified physical-link convention; original chat lines 142 and 270)"
+      ],
+      "expected": "Spine 2 -> Leaf 2; label 'ECMP'. Physical connectivity under the stated arrow convention, not one-way traffic.",
+      "observed": "Spine 2 -> Leaf 2: source stem (27, 28); orthogonal vertices (27, 28) -> (51, 28); intact target arrowhead ▶ at (51, 28). Solid route. No crossing on this route. No shared run, false branch, or reversed endpoint; exactly one occurrence across final views. Label 'ECMP' at [37, 29, 4, 1]. Whole route and label ownership are traceable under bridge/dash conventions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            27,
+            28,
+            25,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            27,
+            28,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            51,
+            28,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            37,
+            29,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "D01",
+      "category": "layout_fit",
+      "edge_ids": [
+        "e2",
+        "e3"
+      ],
+      "severity": "medium",
+      "description": "Defect: v1 adds two avoidable carrier-feed bridges at (18,21) and (17,22), beyond the ordered MUX/core fan crossing. Preserve ISP A/B/C/D and MUX 1/2 order but give the two feed pairs disjoint routing bands/slots; no source group or layer needs to be reordered. The preserved v1-a1 spec/check already uses the same orders and reports only one bridge, though its separate label defect means that rejected draft is not a passing replacement. Exhausting a draft budget does not make the extra crossings source-forced.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json",
+        "Original chat lines 142, 248, 270; rubric layout_fit"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            17,
+            21,
+            2,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D02",
+      "category": "layout_fit",
+      "edge_ids": [
+        "e18",
+        "e19",
+        "e20"
+      ],
+      "severity": "medium",
+      "description": "Defect: v3 has three bridges in the BL/spine fan at (22,27), (24,27), (22,29), plus one in the leaf/rack fan. The source requires spines above the common leaf band, not side-port serpentine entrances. Retaining the same spine order and BL/leaf band, order-aware bottom-spine/top-BL port assignment can reduce the BL/spine fan to one interleaving crossing. Two extra fan crossings arise from the chosen routing/port geometry, not the source. This is an analytical layout judgment, not a new rendered candidate.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json",
+        "Original chat lines 248 and 270; rubric layout_fit"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            22,
+            27,
+            4,
+            3
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D03",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "e20"
+      ],
+      "severity": "medium",
+      "description": "Defect: ECMP at [17,12,4,1] is visually owner-ambiguous, as recorded blind. Its likely own BL 2 -> Spine 2 route at column 22 is two cells from the label end; BL 2 -> Spine 1 has a horizontal run at row 14 two cells below the label start. The word also immediately abuts Spine 1 bottom-right corner (16,12). No unambiguous-slot exception was recorded; generator/check instead claim zero ambiguous owners. Endpoints and ECMP meaning remain recoverable, but this fails the ownership gate.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json",
+        "rubric arrow_traceability; judge-full-task label ownership rule"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            16,
+            12,
+            7,
+            3
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D04",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "e22"
+      ],
+      "severity": "medium",
+      "description": "Defect: Leaf 2 -> Rack 1 has a removable two-step jog: (63,32)->(63,34)->(62,34)->(62,33)->(50,33)->(50,36)->(49,36)->(49,37), 21 grid steps. At unchanged endpoints, (63,32)->(63,33)->(50,33)->(50,36)->(49,36)->(49,37) is 19 steps, uses only cells already belonging to that route plus its vacated corner strip, crosses no new foreign route, preserves the bridge at (50,35), and avoids all boxes, labels and the other leaf outputs. Thus the up-step is not obstacle-forced even though --check calls all routes near-minimal. This is a geometric witness, not an executed fix.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json",
+        "rubric arrow_traceability route economy; Original chat lines 150-166"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            49,
+            32,
+            15,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G01",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Required evidence gap / blocker, not a diagram defect: no exact final capture/check/validator/pane-launch/close command ledger, confirmation that saved final check text includes all stderr as well as stdout, rejected/preflight process exit-status records, or raw pane-close results is preserved in the supplied bundle. Final manifests provide check_exit=0, time windows and cleanup=confirmed_closed; two frame-only probe commands are recorded, and all 11 draft check texts plus five preflight texts exist. These do not prove the missing command/status/cleanup transcripts. The preserved specs/v4-a1.json is absent from the attempt/probe index and has no matching raw output or disposition; this does not prove an extra executed check, but leaves its history unknown. No historical session was searched or rerun to reconstruct the missing evidence.",
+      "source_refs": [
+        "rubric workflow_evidence",
+        "docs/visualize-eval/rounds/04/datacenter-redundancy/attempts.json",
+        "docs/visualize-eval/rounds/04/datacenter-redundancy/generation.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            2,
+            1,
+            66,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            2,
+            1,
+            66,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            2,
+            1,
+            66,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            2,
+            1,
+            66,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "G01: Required exact final check/capture/validator/pane launch/close commands are not preserved; only two frames-only probe command strings are recorded.",
+    "G01: Complete stdout/stderr preservation and rejected/preflight command exit statuses are not established; raw pane-close responses are absent. Combined output would be acceptable if its provenance were recorded. Confirmed-close manifest assertions are retained, not replaced by invented output.",
+    "G01: specs/v4-a1.json has no corresponding attempts.json entry, raw output or disposition. An additional executed check is not inferred."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pE5",
+      "w7E:pE6",
+      "w7E:pE7",
+      "w7E:pE8"
+    ],
+    "closed_pane_ids": [
+      "w7E:pE5",
+      "w7E:pE6",
+      "w7E:pE7",
+      "w7E:pE8"
+    ],
+    "status": "done",
+    "reason": "Each frozen final evidence manifest records cleanup=confirmed_closed for its owned pane. No new panes were opened by this judge. Raw close-response transcripts are not preserved, so command-level verification remains a workflow evidence gap; no new live probe was run."
+  },
+  "overall": "fail"
+}

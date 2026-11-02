@@ -1,0 +1,130 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "vm",
+      "label": "VM vnet0"
+    },
+    {
+      "id": "ctr",
+      "label": "Container veth"
+    },
+    {
+      "id": "virbr",
+      "label": "virbr0 NAT"
+    },
+    {
+      "id": "dkbr",
+      "label": "Docker 172.18.2.1"
+    },
+    {
+      "id": "box",
+      "label": "homelab rack-bench"
+    },
+    {
+      "id": "bond0",
+      "label": "bond0 192.168.1.197"
+    },
+    {
+      "id": "wlp",
+      "label": "wlp8s0 .213"
+    },
+    {
+      "id": "rtr",
+      "label": "Fios? 192.168.1.1"
+    },
+    {
+      "id": "ts",
+      "label": "tailscale0 100.113.153.49"
+    },
+    {
+      "id": "ont",
+      "label": "ONT? 169.254.3.1"
+    },
+    {
+      "id": "vzagg",
+      "label": "VZ 100.41.x"
+    },
+    {
+      "id": "vzbb",
+      "label": "VZ AS701"
+    },
+    {
+      "id": "cf",
+      "label": "CF 1.1.1.1"
+    }
+  ],
+  "edges": [
+    {
+      "from": "vm",
+      "to": "virbr",
+      "label": "192.168.122.x"
+    },
+    {
+      "from": "ctr",
+      "to": "dkbr",
+      "label": "172.18.2.x"
+    },
+    {
+      "from": "virbr",
+      "to": "box",
+      "label": "NAT bridge"
+    },
+    {
+      "from": "dkbr",
+      "to": "box",
+      "label": "docker bridge"
+    },
+    {
+      "from": "box",
+      "to": "bond0",
+      "label": "eno1 2.5 GbE"
+    },
+    {
+      "from": "box",
+      "to": "wlp",
+      "label": "backup path"
+    },
+    {
+      "from": "bond0",
+      "to": "rtr",
+      "label": "default gw 0.5 ms"
+    },
+    {
+      "from": "wlp",
+      "to": "rtr",
+      "label": "metric 600"
+    },
+    {
+      "from": "ts",
+      "to": "box",
+      "label": "overlay"
+    },
+    {
+      "from": "ts",
+      "to": "bond0",
+      "label": "encap over UDP"
+    },
+    {
+      "from": "rtr",
+      "to": "ont",
+      "label": "NAT out"
+    },
+    {
+      "from": "ont",
+      "to": "vzagg",
+      "label": "4.5 ms"
+    },
+    {
+      "from": "vzagg",
+      "to": "vzbb",
+      "label": "6.6 ms"
+    },
+    {
+      "from": "vzbb",
+      "to": "cf",
+      "label": "6-9 ms"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=3 edges=3 flows=3 direction=lr theme=gruvbox
+extent=54x15 cells
+crossings: 1
+labels: 3/3 placed, 0 on route cells, 0 skipped
+groups: app(1) data(2)
+trunks:
+dots: 3 single-dot routes, 0 periodic routes, 0 violations, 3 synchronized at 2000ms
+origins: 3/3 routes start at their arrow origin

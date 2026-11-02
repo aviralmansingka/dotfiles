@@ -1,0 +1,64 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "k",
+      "label": "Kubernetes"
+    },
+    {
+      "id": "op",
+      "label": "GPU Operator"
+    },
+    {
+      "id": "d",
+      "label": "DCGM"
+    },
+    {
+      "id": "x",
+      "label": "dcgm-exporter"
+    },
+    {
+      "id": "drv",
+      "label": "Driver / CUDA"
+    }
+  ],
+  "edges": [
+    {
+      "from": "k",
+      "to": "op",
+      "label": "runs operator"
+    },
+    {
+      "from": "op",
+      "to": "d",
+      "label": "DaemonSet"
+    },
+    {
+      "from": "d",
+      "to": "x",
+      "label": "metrics"
+    },
+    {
+      "from": "d",
+      "to": "drv",
+      "label": "NVML reads"
+    }
+  ],
+  "layers": [
+    [
+      "k"
+    ],
+    [
+      "op"
+    ],
+    [
+      "d"
+    ],
+    [
+      "",
+      "drv",
+      "x"
+    ]
+  ]
+}

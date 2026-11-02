@@ -1,0 +1,46 @@
+ rataflow-view · 77x47 @100% · v3-attempt3.json · 7 nodes · 7 edges · q quit
+
+
+
+
+
+
+
+                    ╭───────────────╮
+                    │River job queue│
+                    │               │
+                    ╰───────────────╯
+                     │ │ │
+                     │ │ │
+                ╭────╯ ● │ diagnostic events
+                │     ╭╯ ╰────●──────────────╮
+                │     ▼ audit + verify       ▼
+                │    ╭─────────────╮        ╭───────────╮
+                ●    │SSH + BMC ops│        │janitor app│
+                │    │             │        │           │
+                │    ╰─────────────╯        ╰───────────╯
+                │     │                      │
+                │     │ run machine-audit    │
+                │     ●     proposed actions ●
+                │  ╭──╯                     ╭╯
+                │  ▼                        ▼
+                │ ╭───────────────────╮    ╭─────────────╮
+                │ │bare-metal machines│    │webapi server│
+                │ │                   │    │             │
+                │ ╰───────────────────╯    ╰─────────────╯
+                │  │                        │
+                │  │ boot image             │
+                │  ╰─●─╮   confirm + alerts │
+                ╰────╮ │diagnose uploads    ╰●──╮
+                     ▼ ▼                        ▼
+                    ╭───────────────╮          ╭─────╮
+                    │S3 object store│          │Slack│
+                    │               │          │     │
+                    ╰───────────────╯          ╰─────╯
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘

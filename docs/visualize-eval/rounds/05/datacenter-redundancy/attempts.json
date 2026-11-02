@@ -1,0 +1,84 @@
+{
+  "case_id": "datacenter-redundancy",
+  "round": "05",
+  "binary": "/tmp/visualize-eval/round-05/bin/rataflow-view",
+  "binary_sha256": "b1ab9f2e78af11c2f2b005eea083a999079d184bf550e8d0b6d9c51867f22404",
+  "budget_note": "At most 3 spec candidates per view, counting every --check run on a distinct spec. Two candidates were used per view; the third slot was left unused because attempt 2 passed with structurally minimal crossings.",
+  "views": [
+    {
+      "view": "v1",
+      "carries": "ISP tier -> MUX tier -> core tier (e1-e8)",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "attempts/v1-a1-tb.json",
+          "spec_sha256": "9e2da2e58791fa0450a746027526f4808147dd519bc5bd44eaebc347c42cb2aa",
+          "direction": "tb",
+          "note": "Engine-owned placement, tb, groups declared, 8 nodes / 8 edges. Rejected before any check output was printed.",
+          "check_exit": 1,
+          "raw_check": "checks/v1-a1-tb-check.txt",
+          "raw_output": "rataflow-view: no obstacle-safe route for mux2 -> core1; increase node/layer spacing"
+        },
+        {
+          "attempt": 2,
+          "spec": "attempts/v1-a2-lr.json",
+          "spec_sha256": "3adbbf099facfc60bc6ed88c5def5acef81c71d3cb589e476ddbf053ee341a58",
+          "direction": "lr",
+          "note": "Only the direction changed (nodes, edges, labels, groups byte-identical). Routed. crossings 1 bridge / 1 touching bend = one 2x2 cross-connect tier, the structural minimum. Kept.",
+          "check_exit": 0,
+          "raw_check": "checks/v1-a2-lr-check.txt"
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "carries": "core tier -> active/passive firewall pair -> border leaves -> spines (e9-e20)",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "attempts/v2-a1-tb.json",
+          "spec_sha256": "a21dd3e8f1b0400ee1109ac3537705adc10285a5955d02a1467c2be6a418e500",
+          "direction": "tb",
+          "note": "8 nodes / 12 edges, tb. Rejected before any check output was printed.",
+          "check_exit": 1,
+          "raw_check": "checks/v2-a1-tb-check.txt",
+          "raw_output": "rataflow-view: no obstacle-safe route for core2 -> fw2, fw1 -> bl1, bl2 -> sp2; increase node/layer spacing"
+        },
+        {
+          "attempt": 2,
+          "spec": "attempts/v2-a2-lr.json",
+          "spec_sha256": "89e36227a0ac6e618fc1ca99bac7883df1972f299ffa80cfbf158c81918c7970",
+          "direction": "lr",
+          "note": "Only the direction changed. Routed. crossings 3 bridges / 3 touching bends = one per 2x2 cross-connect tier (three tiers), the structural minimum for this topology. Kept.",
+          "check_exit": 0,
+          "raw_check": "checks/v2-a2-lr-check.txt"
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "carries": "spines -> rack leaves -> racks (e21-e28)",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "attempts/v3-a1-tb.json",
+          "spec_sha256": "5862c92c69522b63f9d8d1538fa50fddc279df738bd60b54c11ae02c3af6bfc0",
+          "direction": "tb",
+          "note": "6 nodes / 8 edges, tb. Rejected before any check output was printed.",
+          "check_exit": 1,
+          "raw_check": "checks/v3-a1-tb-check.txt",
+          "raw_output": "rataflow-view: no obstacle-safe route for sp2 -> leaf1, leaf2 -> rack2; increase node/layer spacing"
+        },
+        {
+          "attempt": 2,
+          "spec": "attempts/v3-a2-lr.json",
+          "spec_sha256": "fcc12c64f14b41645f5fba4fbe960cb0693c8e756441d9bfd70de63172ffde2b",
+          "direction": "lr",
+          "note": "Only the direction changed. Routed. crossings 2 bridges / 2 touching bends = one per 2x2 cross-connect tier (two tiers). Kept.",
+          "check_exit": 0,
+          "raw_check": "checks/v3-a2-lr-check.txt"
+        }
+      ]
+    }
+  ]
+}

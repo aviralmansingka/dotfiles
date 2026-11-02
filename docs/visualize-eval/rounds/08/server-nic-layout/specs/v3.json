@@ -1,0 +1,30 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "gw",
+      "label": "103.19.91.57 AS132717 Bengaluru",
+      "group": "DC edge"
+    },
+    {
+      "id": "airtel",
+      "label": "Airtel 14.143.x",
+      "group": "DC edge"
+    }
+  ],
+  "edges": [
+    {
+      "from": "gw",
+      "to": "airtel",
+      "label": "1.8 ms"
+    },
+    {
+      "from": "gw",
+      "to": "airtel",
+      "label": "L2? no hop",
+      "style": "dashed",
+      "minlen": 2
+    }
+  ]
+}

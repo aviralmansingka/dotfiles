@@ -1,0 +1,288 @@
+/tmp/visualize-eval/round-08/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotfi
+les/fix-visualize-skill/docs/visualize-eval/rounds/08/gb300-rack-software/specs/v4-
+inband-sw.json
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-08/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/08/gb300-rack-software/specs/v
+4-inband-sw.json
+viewport: 83x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-08/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/08/gb300-rack-software/specs/v
+4-inband-sw.json --select-all
+viewport: 83x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-08/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/08/gb300-rack-software/specs/v
+4-inband-sw.json --frames 5 --step-ms 100
+viewport: 83x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 83x51 @100% · v4-inband-sw.json · 7 nodes · 6 edges · q quit
+
+
+
+                                    ── cluster ──
+                                   ╭──────────╮ │
+                                   │Kubernetes│ │
+                                   ││         │ │
+                                   ╰──────────╯ │
+                                    │           │
+                                    │           │
+                                   ╭╯           │
+                                   ▼│           │
+                                  ╭────────────╮│
+                                  │GPU Operator││
+                                  │ │          ││
+                                  ╰────────────╯│
+                                   │─────────────
+                                   │
+                                 ╭─╯
+                                 ▼
+                                ╭────────────────╮
+                                │DCGM (DaemonSet)│
+                                │                │
+                                ╰────────────────╯
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                          metrics│ │   NVML
+                        ╭────────╯ ╰────────────╮
+                        ▼                       ▼
+                       ╭───────────────────╮   ╭───────────╮
+                       │dcgm-exporter :9400│   │driver+CUDA│
+                       │                   │   │           │
+                       ╰───────────────────╯   ╰───────────╯
+                        │                       │
+                        │                       │
+                       ╭╯              ╭────────╯
+                     ──▼in-band ────   ▼
+                     │╭───────────╮│  ╭────────────────────╮
+ ┌───────┐           ││in-band net││  │Fabric Mgr (bundled)│
+ │ + [+] │           ││           ││  │                    │
+ │ − [-] │           │╰───────────╯│  ╰────────────────────╯
+ │ ⊡ [f] │           ───────────────
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 83x51 @100% · v4-inband-sw.json · 7 nodes · 6 edges · q quit
+
+
+
+                                    ── cluster ──
+                                   ╭──────────╮ │
+                                   │Kubernetes│ │
+                                   ││         │ │
+                                   ╰──────────╯ │
+                                    │           │
+                                    │           │
+                                   ╭╯           │
+                                   ▼│           │
+                                  ╭────────────╮│
+                                  │GPU Operator││
+                                  │ │          ││
+                                  ╰────────────╯│
+                                   │─────────────
+                                   │
+                                 ╭─╯
+                                 ▼
+                                ╭────────────────╮
+                                │DCGM (DaemonSet)│
+                                │                │
+                                ╰────────────────╯
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                          metrics│ │   NVML
+                        ╭────────╯ ╰────────────╮
+                        ▼                       ▼
+                       ╭───────────────────╮   ╭───────────╮
+                       │dcgm-exporter :9400│   │driver+CUDA│
+                       │                   │   │           │
+                       ╰───────────────────╯   ╰───────────╯
+                        │                       │
+                        │                       │
+                       ╭╯              ╭────────╯
+                     ──▼in-band ────   ▼
+                     │╭───────────╮│  ╭────────────────────╮
+ ┌───────┐           ││in-band net││  │Fabric Mgr (bundled)│
+ │ + [+] │           ││           ││  │                    │
+ │ − [-] │           │╰───────────╯│  ╰────────────────────╯
+ │ ⊡ [f] │           ───────────────
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 83x51 @100% · v4-inband-sw.json · 7 nodes · 6 edges · q quit
+
+
+
+                                    ── cluster ──
+                                   ╭──────────╮ │
+                                   │Kubernetes│ │
+                                   ││         │ │
+                                   ╰──────────╯ │
+                                    │           │
+                                    │           │
+                                   ╭╯           │
+                                   ▼│           │
+                                  ╭────────────╮│
+                                  │GPU Operator││
+                                  │ │          ││
+                                  ╰────────────╯│
+                                   │─────────────
+                                   │
+                                 ╭─╯
+                                 ▼
+                                ╭────────────────╮
+                                │DCGM (DaemonSet)│
+                                │                │
+                                ╰────────────────╯
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                          metrics│ │   NVML
+                        ╭────────╯ ╰────────────╮
+                        ▼                       ▼
+                       ╭───────────────────╮   ╭───────────╮
+                       │dcgm-exporter :9400│   │driver+CUDA│
+                       │                   │   │           │
+                       ╰───────────────────╯   ╰───────────╯
+                        │                       │
+                        │                       │
+                       ╭╯              ╭────────╯
+                     ──▼in-band ────   ▼
+                     │╭───────────╮│  ╭────────────────────╮
+ ┌───────┐           ││in-band net││  │Fabric Mgr (bundled)│
+ │ + [+] │           ││           ││  │                    │
+ │ − [-] │           │╰───────────╯│  ╰────────────────────╯
+ │ ⊡ [f] │           ───────────────
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 83x51 @100% · v4-inband-sw.json · 7 nodes · 6 edges · q quit
+
+
+
+                                    ── cluster ──
+                                   ╭──────────╮ │
+                                   │Kubernetes│ │
+                                   ││         │ │
+                                   ╰──────────╯ │
+                                    │           │
+                                    │           │
+                                   ╭╯           │
+                                   ▼│           │
+                                  ╭────────────╮│
+                                  │GPU Operator││
+                                  │ │          ││
+                                  ╰────────────╯│
+                                   │─────────────
+                                   │
+                                 ╭─╯
+                                 ▼
+                                ╭────────────────╮
+                                │DCGM (DaemonSet)│
+                                │                │
+                                ╰────────────────╯
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                          metrics│ │   NVML
+                        ╭────────╯ ╰────────────╮
+                        ▼                       ▼
+                       ╭───────────────────╮   ╭───────────╮
+                       │dcgm-exporter :9400│   │driver+CUDA│
+                       │                   │   │           │
+                       ╰───────────────────╯   ╰───────────╯
+                        │                       │
+                        │                       │
+                       ╭╯              ╭────────╯
+                     ──▼in-band ────   ▼
+                     │╭───────────╮│  ╭────────────────────╮
+ ┌───────┐           ││in-band net││  │Fabric Mgr (bundled)│
+ │ + [+] │           ││           ││  │                    │
+ │ − [-] │           │╰───────────╯│  ╰────────────────────╯
+ │ ⊡ [f] │           ───────────────
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 83x51 @100% · v4-inband-sw.json · 7 nodes · 6 edges · q quit
+
+
+
+                                    ── cluster ──
+                                   ╭──────────╮ │
+                                   │Kubernetes│ │
+                                   ││         │ │
+                                   ╰──────────╯ │
+                                    │           │
+                                    │           │
+                                   ╭╯           │
+                                   ▼│           │
+                                  ╭────────────╮│
+                                  │GPU Operator││
+                                  │ │          ││
+                                  ╰────────────╯│
+                                   │─────────────
+                                   │
+                                 ╭─╯
+                                 ▼
+                                ╭────────────────╮
+                                │DCGM (DaemonSet)│
+                                │                │
+                                ╰────────────────╯
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                                 │ │
+                          metrics│ │   NVML
+                        ╭────────╯ ╰────────────╮
+                        ▼                       ▼
+                       ╭───────────────────╮   ╭───────────╮
+                       │dcgm-exporter :9400│   │driver+CUDA│
+                       │                   │   │           │
+                       ╰───────────────────╯   ╰───────────╯
+                        │                       │
+                        │                       │
+                       ╭╯              ╭────────╯
+                     ──▼in-band ────   ▼
+                     │╭───────────╮│  ╭────────────────────╮
+ ┌───────┐           ││in-band net││  │Fabric Mgr (bundled)│
+ │ + [+] │           ││           ││  │                    │
+ │ − [-] │           │╰───────────╯│  ╰────────────────────╯
+ │ ⊡ [f] │           ───────────────
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯

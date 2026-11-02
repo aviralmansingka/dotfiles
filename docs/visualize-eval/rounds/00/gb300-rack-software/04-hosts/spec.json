@@ -1,0 +1,50 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "host",
+      "label": "Compute host OS"
+    },
+    {
+      "id": "d",
+      "label": "DCGM / exporter"
+    },
+    {
+      "id": "drv",
+      "label": "Driver+CUDA"
+    },
+    {
+      "id": "fm",
+      "label": "Fabric Mgr"
+    }
+  ],
+  "edges": [
+    {
+      "from": "host",
+      "to": "d",
+      "label": "hosts"
+    },
+    {
+      "from": "host",
+      "to": "drv",
+      "label": "hosts"
+    },
+    {
+      "from": "host",
+      "to": "fm",
+      "label": "hosts"
+    }
+  ],
+  "layers": [
+    [
+      "host"
+    ],
+    [
+      "",
+      "d",
+      "drv",
+      "fm"
+    ]
+  ]
+}

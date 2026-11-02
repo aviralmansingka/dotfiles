@@ -1,0 +1,28 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "rms", "label": "nv-rms", "group": "off-rack mgmt" },
+    { "id": "oob", "label": "OOB LAN", "group": "OOB plant" },
+    { "id": "bmc_c", "label": "Compute BMC×18", "group": "rack hw" },
+    { "id": "bmc_s", "label": "NVSwitch BMC", "group": "rack hw" },
+    { "id": "pwr", "label": "Power shelf", "group": "rack hw" }
+  ],
+  "layers": [
+    ["rms"],
+    ["oob"],
+    ["bmc_c", "bmc_s", "pwr"]
+  ],
+  "edges": [
+    { "from": "rms", "to": "oob", "label": "LAN client", "dots": 0 }
+  ],
+  "trunks": [
+    {
+      "id": "oob-bus",
+      "label": "Redfish/HTTPS",
+      "from": "oob",
+      "to": "bmc_c",
+      "branches": ["bmc_s", "pwr"]
+    }
+  ]
+}

@@ -1,0 +1,1001 @@
+{
+  "case_id": "modal-machine-manager",
+  "round": "08",
+  "generator": {
+    "identity": "pi worker subagent (fresh diagram generator, round 08)",
+    "model_exact": "accounts/fireworks/routers/deepseek-flash-latest",
+    "note": "DeepSeek generator by evaluation design; no judge was spawned."
+  },
+  "frozen_inputs": {
+    "candidate_skill": {
+      "path": "docs/visualize-eval/rounds/08/SKILL.md",
+      "sha256": "b1bdb4d3d38336cb7783db34da7f9f19edf80704a890de32285d9e582b4221eb",
+      "verified_with": "shasum -a 256 (matches the captain's b1bdb4d3d38336cb\u2026)"
+    },
+    "renderer": {
+      "path": "/tmp/visualize-eval/round-08/bin/rataflow-view",
+      "sha256": "ea24593b0f80c1617573eef4766f2bacaaf4315a8133a65d5331e9daec1c1f30",
+      "verified_with": "shasum -a 256 (matches the captain's ea24593b0f80c161\u2026), recorded again in every evidence bundle's bin.sha256"
+    },
+    "target_viewport": "77x47 at 100% natural zoom"
+  },
+  "family_step0": {
+    "family": "lifecycle-machines",
+    "evidence": "the River queue is one state that fans out to five phase transitions (registry, SSH+BMC audit, janitor, S3 diagnostics, Postgres rows) and the brief's last correction \u2014 'keep on dot alive per line' on 'slow dots flowing through it' \u2014 fixes the motion signature; the provisioning path is a phase order (request -> gRPC -> enqueue -> provision -> allocate -> boot -> register), so ranks are phases, not depths",
+    "secondary_recipe": "none; the fan is drawn as ordinary labelled edges because the source names three distinct job classes, not one shared bus (see structural_levers.no_trunks)",
+    "per_view_family_line": {
+      "v1": "family: lifecycle-machines | evidence: control plane -> private gRPC is the request phase, enqueue is the queue phase, and every transition in the brief is live (one dot per line)",
+      "v2": "family: lifecycle-machines | evidence: dispatch phase fans into job classes (provision / reimage / diagnostics), each an ordinary live transition of the queue state, then advances to provider, machine and webapi phases",
+      "v3": "family: lifecycle-machines | evidence: machine boot is a phase sequence \u2014 iPXE request, boot.ipxe + S3 args reply, image pull, host agent \u2014 each transition marked live by the brief",
+      "v4": "family: lifecycle-machines | evidence: heartbeat register -> state write and the reconcile loop are recurring phases ending in Postgres rows; every line carries one slow dot as the brief asks"
+    }
+  },
+  "meaning_ledger": [
+    {
+      "fact": "Modal control plane (cp)",
+      "kind": "component",
+      "fate": "drawn",
+      "view": "v1"
+    },
+    {
+      "fact": "humans + mmctl (web)",
+      "kind": "component / humans",
+      "fate": "drawn",
+      "view": "v2"
+    },
+    {
+      "fact": "private gRPC (pgrpc)",
+      "kind": "component / protocol surface",
+      "fate": "drawn",
+      "view": "v1, v4"
+    },
+    {
+      "fact": "webapi server (wapi)",
+      "kind": "component",
+      "fate": "drawn",
+      "view": "v1, v2"
+    },
+    {
+      "fact": "public gRPC (pub)",
+      "kind": "component / protocol surface",
+      "fate": "drawn",
+      "view": "v4"
+    },
+    {
+      "fact": "boot server (boot)",
+      "kind": "component",
+      "fate": "drawn",
+      "view": "v3"
+    },
+    {
+      "fact": "River job queue (q)",
+      "kind": "component",
+      "fate": "drawn",
+      "view": "v1, v2, v3, v4"
+    },
+    {
+      "fact": "cluster reconcile loop (rec)",
+      "kind": "component / loop",
+      "fate": "drawn",
+      "view": "v4"
+    },
+    {
+      "fact": "SSH + BMC ops (ssh)",
+      "kind": "component",
+      "fate": "drawn",
+      "view": "v2"
+    },
+    {
+      "fact": "Postgres (db)",
+      "kind": "component / storage",
+      "fate": "drawn",
+      "view": "v4"
+    },
+    {
+      "fact": "S3 object store (s3)",
+      "kind": "component / storage",
+      "fate": "drawn",
+      "view": "v3"
+    },
+    {
+      "fact": "provider registry (reg)",
+      "kind": "component (may be grouped, must not be dropped)",
+      "fate": "drawn, grouped as providers",
+      "view": "v2"
+    },
+    {
+      "fact": "bare-metal providers (prov)",
+      "kind": "component",
+      "fate": "drawn",
+      "view": "v2, v4"
+    },
+    {
+      "fact": "bare-metal machines (mch)",
+      "kind": "component",
+      "fate": "drawn",
+      "view": "v2, v3, v4"
+    },
+    {
+      "fact": "machine-agent (agent)",
+      "kind": "component (may be grouped, must not be dropped)",
+      "fate": "drawn, grouped as plant",
+      "view": "v3, v4"
+    },
+    {
+      "fact": "janitor app (jan)",
+      "kind": "component",
+      "fate": "drawn",
+      "view": "v2"
+    },
+    {
+      "fact": "Slack (slack)",
+      "kind": "component / humans",
+      "fate": "drawn",
+      "view": "v1"
+    },
+    {
+      "fact": "create / terminate / repair",
+      "kind": "action verbs",
+      "fate": "abbreviated to 'create/term' (repair not visible)",
+      "view": "v1"
+    },
+    {
+      "fact": "boot.ipxe + S3 args",
+      "kind": "payload (carried label)",
+      "fate": "drawn verbatim",
+      "view": "v3"
+    },
+    {
+      "fact": "reimage (audit / verify reimage)",
+      "kind": "action (carried label)",
+      "fate": "drawn as 'reimage'",
+      "view": "v2"
+    },
+    {
+      "fact": "pull boot image from S3",
+      "kind": "action (carried label)",
+      "fate": "drawn as 'pull image'",
+      "view": "v3"
+    },
+    {
+      "fact": "provider API",
+      "kind": "protocol",
+      "fate": "abbreviated to 'API'",
+      "view": "v2"
+    },
+    {
+      "fact": "gcore sync every minute",
+      "kind": "cadence",
+      "fate": "drawn as 'gcore 1min'",
+      "view": "v4"
+    },
+    {
+      "fact": "diagnostic events to the janitor",
+      "kind": "action / payload",
+      "fate": "drawn as 'diagnostics'",
+      "view": "v2"
+    },
+    {
+      "fact": "janitor proposes actions back through webapi",
+      "kind": "action",
+      "fate": "drawn as 'proposals'",
+      "view": "v2"
+    },
+    {
+      "fact": "webapi confirms via Slack (+ alerts)",
+      "kind": "action",
+      "fate": "abbreviated to 'confirm' (alerts not visible)",
+      "view": "v1"
+    },
+    {
+      "fact": "iPXE request",
+      "kind": "protocol",
+      "fate": "drawn as 'iPXE req'",
+      "view": "v3"
+    },
+    {
+      "fact": "machine-agent runs on host",
+      "kind": "residency",
+      "fate": "drawn as 'on host'",
+      "view": "v3"
+    },
+    {
+      "fact": "agent registers and heartbeats",
+      "kind": "protocol / action",
+      "fate": "abbreviated to 'heartbeat' (register not visible)",
+      "view": "v4"
+    },
+    {
+      "fact": "machine state written to Postgres",
+      "kind": "data",
+      "fate": "drawn as 'state rows'",
+      "view": "v4"
+    },
+    {
+      "fact": "machine rows (pgrpc -> db)",
+      "kind": "data",
+      "fate": "drawn as 'machine rows'",
+      "view": "v4"
+    },
+    {
+      "fact": "job rows (q -> db)",
+      "kind": "data",
+      "fate": "drawn as 'job rows'",
+      "view": "v4"
+    },
+    {
+      "fact": "http (web -> webapi)",
+      "kind": "protocol",
+      "fate": "drawn as 'http'",
+      "view": "v2"
+    },
+    {
+      "fact": "reinstall / reprovision (webapi -> queue)",
+      "kind": "action",
+      "fate": "abbreviated to 'reinstall' (reprovision not visible)",
+      "view": "v1"
+    },
+    {
+      "fact": "run machine-audit (jobs over SSH)",
+      "kind": "action",
+      "fate": "drawn as 'run audit'",
+      "view": "v2"
+    },
+    {
+      "fact": "allocate instance (providers -> machines)",
+      "kind": "action",
+      "fate": "drawn as 'allocate'",
+      "view": "v4"
+    },
+    {
+      "fact": "slow sparse dots, one alive per line, none on borders",
+      "kind": "motion requirement",
+      "fate": "drawn: flow true + dots 1 on every edge, constant 0.5 cells/100 ms, no timing override",
+      "view": "v1-v4"
+    },
+    {
+      "fact": "historical chat is evidence, not authority; no fact is marked historical or unconfirmed in the brief",
+      "kind": "qualifier",
+      "fate": "no dashed edge and no 'historical' label was added, because the brief qualifies none of the 23 relations",
+      "view": "all"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "cp",
+      "to": "pgrpc",
+      "verb_tech": "create / terminate / repair",
+      "label_owner": "e1",
+      "label": "create/term",
+      "view": "v1"
+    },
+    {
+      "id": "e2",
+      "from": "web",
+      "to": "wapi",
+      "verb_tech": "http",
+      "label_owner": "e2",
+      "label": "http",
+      "view": "v2"
+    },
+    {
+      "id": "e3",
+      "from": "pgrpc",
+      "to": "q",
+      "verb_tech": "enqueue job",
+      "label_owner": "e3",
+      "label": "enqueue",
+      "view": "v1"
+    },
+    {
+      "id": "e4",
+      "from": "wapi",
+      "to": "q",
+      "verb_tech": "reinstall / reprovision",
+      "label_owner": "e4",
+      "label": "reinstall",
+      "view": "v1"
+    },
+    {
+      "id": "e5",
+      "from": "q",
+      "to": "reg",
+      "verb_tech": "provision job",
+      "label_owner": "e5",
+      "label": "provision",
+      "view": "v2"
+    },
+    {
+      "id": "e6",
+      "from": "reg",
+      "to": "prov",
+      "verb_tech": "provider API",
+      "label_owner": "e6",
+      "label": "API",
+      "view": "v2"
+    },
+    {
+      "id": "e7",
+      "from": "prov",
+      "to": "mch",
+      "verb_tech": "allocate instance",
+      "label_owner": "e7",
+      "label": "allocate",
+      "view": "v4"
+    },
+    {
+      "id": "e8",
+      "from": "mch",
+      "to": "boot",
+      "verb_tech": "iPXE request",
+      "label_owner": "e8",
+      "label": "iPXE req",
+      "view": "v3"
+    },
+    {
+      "id": "e9",
+      "from": "boot",
+      "to": "mch",
+      "verb_tech": "boot.ipxe + S3 args",
+      "label_owner": "e9",
+      "label": "boot.ipxe + S3 args",
+      "view": "v3"
+    },
+    {
+      "id": "e10",
+      "from": "mch",
+      "to": "agent",
+      "verb_tech": "runs on host (residency)",
+      "label_owner": "e10",
+      "label": "on host",
+      "view": "v3"
+    },
+    {
+      "id": "e11",
+      "from": "agent",
+      "to": "pub",
+      "verb_tech": "register + heartbeat",
+      "label_owner": "e11",
+      "label": "heartbeat",
+      "view": "v4"
+    },
+    {
+      "id": "e12",
+      "from": "pub",
+      "to": "db",
+      "verb_tech": "machine state",
+      "label_owner": "e12",
+      "label": "state rows",
+      "view": "v4"
+    },
+    {
+      "id": "e13",
+      "from": "pgrpc",
+      "to": "db",
+      "verb_tech": "machine rows",
+      "label_owner": "e13",
+      "label": "machine rows",
+      "view": "v4"
+    },
+    {
+      "id": "e14",
+      "from": "q",
+      "to": "db",
+      "verb_tech": "job rows",
+      "label_owner": "e14",
+      "label": "job rows",
+      "view": "v4"
+    },
+    {
+      "id": "e15",
+      "from": "q",
+      "to": "ssh",
+      "verb_tech": "audit / verify reimage",
+      "label_owner": "e15",
+      "label": "reimage",
+      "view": "v2"
+    },
+    {
+      "id": "e16",
+      "from": "ssh",
+      "to": "mch",
+      "verb_tech": "run machine-audit",
+      "label_owner": "e16",
+      "label": "run audit",
+      "view": "v2"
+    },
+    {
+      "id": "e17",
+      "from": "mch",
+      "to": "s3",
+      "verb_tech": "pull boot image",
+      "label_owner": "e17",
+      "label": "pull image",
+      "view": "v3"
+    },
+    {
+      "id": "e18",
+      "from": "q",
+      "to": "s3",
+      "verb_tech": "diagnose uploads",
+      "label_owner": "e18",
+      "label": "diagnose",
+      "view": "v3"
+    },
+    {
+      "id": "e19",
+      "from": "q",
+      "to": "jan",
+      "verb_tech": "diagnostic events",
+      "label_owner": "e19",
+      "label": "diagnostics",
+      "view": "v2"
+    },
+    {
+      "id": "e20",
+      "from": "jan",
+      "to": "wapi",
+      "verb_tech": "proposed actions",
+      "label_owner": "e20",
+      "label": "proposals",
+      "view": "v2"
+    },
+    {
+      "id": "e21",
+      "from": "wapi",
+      "to": "slack",
+      "verb_tech": "confirm + alerts",
+      "label_owner": "e21",
+      "label": "confirm",
+      "view": "v1"
+    },
+    {
+      "id": "e22",
+      "from": "rec",
+      "to": "prov",
+      "verb_tech": "gcore sync, 1 min",
+      "label_owner": "e22",
+      "label": "gcore 1min",
+      "view": "v4"
+    },
+    {
+      "id": "e23",
+      "from": "rec",
+      "to": "db",
+      "verb_tech": "cluster state",
+      "label_owner": "e23",
+      "label": "cluster state",
+      "view": "v4"
+    }
+  ],
+  "coverage_map": {
+    "v1": {
+      "nodes": [
+        "cp",
+        "pgrpc",
+        "wapi",
+        "q",
+        "slack"
+      ],
+      "relations": [
+        "e1",
+        "e3",
+        "e4",
+        "e21"
+      ]
+    },
+    "v2": {
+      "nodes": [
+        "q",
+        "reg",
+        "ssh",
+        "jan",
+        "web",
+        "prov",
+        "mch",
+        "wapi"
+      ],
+      "relations": [
+        "e2",
+        "e5",
+        "e6",
+        "e15",
+        "e16",
+        "e19",
+        "e20"
+      ]
+    },
+    "v3": {
+      "nodes": [
+        "q",
+        "mch",
+        "boot",
+        "s3",
+        "agent"
+      ],
+      "relations": [
+        "e8",
+        "e9",
+        "e10",
+        "e17",
+        "e18"
+      ]
+    },
+    "v4": {
+      "nodes": [
+        "agent",
+        "pgrpc",
+        "q",
+        "rec",
+        "prov",
+        "pub",
+        "mch",
+        "db"
+      ],
+      "relations": [
+        "e7",
+        "e11",
+        "e12",
+        "e13",
+        "e14",
+        "e22",
+        "e23"
+      ]
+    },
+    "totals": {
+      "relations_covered": 23,
+      "relations_required": 23,
+      "duplicated_relations": 0,
+      "components_covered": 17,
+      "components_required": 17
+    },
+    "fixed_constraints_check": {
+      "both_ipxe_directions": "e8 mch->boot and e9 boot->mch are both drawn in v3, on separate ports, as the anti-parallel pair",
+      "janitor_proposals_preserved": "e20 jan->wapi is drawn in v2 (no relation deleted for routing)",
+      "q_to_s3_diagnostics_separate": "e18 q->s3 in v3 is its own edge with its own label 'diagnose'; e17 mch->s3 'pull image' is the machine image path and e6/e19 are providers/janitor \u2014 four separate edges",
+      "reg_and_agent_grouped_not_dropped": "reg in group providers (v2), agent in group plant (v3, v4)",
+      "dots_only_on_lines_never_borders": "dots: 1 + flow: true on edges only; the border overwrite visible in v2/v3 captures comes from route glyphs crossing region borders, not from dots"
+    }
+  },
+  "structural_levers": {
+    "groups": {
+      "declared": {
+        "control": [
+          "cp",
+          "pgrpc",
+          "wapi",
+          "pub",
+          "rec"
+        ],
+        "humans": [
+          "web",
+          "slack"
+        ],
+        "jobs": [
+          "q"
+        ],
+        "providers": [
+          "reg",
+          "prov"
+        ],
+        "plant": [
+          "mch",
+          "boot",
+          "agent"
+        ],
+        "state": [
+          "db",
+          "s3"
+        ],
+        "ops": [
+          "ssh",
+          "jan"
+        ]
+      },
+      "source_fact": "the brief names the control plane, jobs, provider registry/providers, bare-metal machines plus host agent and boot server (plant), Postgres and S3 (storage), and the ops path (SSH+BMC, janitor) \u2014 the seven names are source concepts, never rows or ranks",
+      "hue_stability": "names are identical in every view, so each region keeps one name-derived hue across the case"
+    },
+    "rank_pins": {
+      "v1": {
+        "layers": [
+          [
+            "cp"
+          ],
+          [
+            "pgrpc",
+            "wapi"
+          ],
+          [
+            "q",
+            "slack"
+          ]
+        ],
+        "why": "the brief states the phase order: control plane calls private gRPC, that enqueues a River job; Slack is the confirm sink of the same webapi phase"
+      },
+      "v2": {
+        "layers": [
+          [
+            "q"
+          ],
+          [
+            "reg",
+            "ssh",
+            "jan",
+            "web"
+          ],
+          [
+            "prov",
+            "mch",
+            "wapi"
+          ]
+        ],
+        "why": "the brief lists the queue's job classes first and their downstream phases second (provision -> providers, audit -> machines, diagnostics -> webapi, http -> webapi)"
+      },
+      "v3": {
+        "layers": [
+          [
+            "q",
+            "mch"
+          ],
+          [
+            "boot",
+            "s3",
+            "agent"
+          ]
+        ],
+        "why": "the machine is the requesting phase; the boot server, the image store and the host agent are what it talks to"
+      },
+      "v4": {
+        "layers": [
+          [
+            "agent",
+            "pgrpc",
+            "q",
+            "rec"
+          ],
+          [
+            "prov",
+            "pub"
+          ],
+          [
+            "mch",
+            "db"
+          ]
+        ],
+        "why": "the brief's state writers (agent heartbeat, gRPC rows, job rows, reconcile) precede the gRPC surface, and Postgres rows are the sink phase"
+      },
+      "pins_conflicts": "0 conflicts in every view (check line 'pins: N pinned, 0 conflict(s)')"
+    },
+    "minlen": {
+      "used": false,
+      "why": "no source-described hop visibly spans stages, and the only hops that do (pgrPC/q rows to Postgres) already get their own rank gap; adding a rank gap purely to open label space would be layout polish, which the brief forbids"
+    },
+    "trunks": {
+      "used": false,
+      "why": "the source names no shared bus. The queue's five relations are distinct job classes with distinct destinations and distinct labels (provision / reimage / diagnostics / diagnose / job rows); the skill forbids drawing one corridor for three independent lines"
+    },
+    "direction_choices": {
+      "v1": "tb \u2014 request phases must read top-to-bottom (lifecycle recipe)",
+      "v2": "lr \u2014 three fan edges from one box: in tb the ports sit 2 cells apart and their labels collide (measured in v2 attempt 2), in lr each route gets its own row band",
+      "v3": "tb \u2014 the boot sequence reads top-to-bottom; lr was measured and cannot route the anti-parallel pair (attempt 2)",
+      "v4": "tb \u2014 writers above, Postgres below"
+    }
+  },
+  "views": [
+    {
+      "view": "v1",
+      "family_line": "family: lifecycle-machines | evidence: control plane -> private gRPC is the request phase, enqueue is the queue phase, every transition in the brief is live (one dot per line)",
+      "subject": "request phase into the queue, plus the human confirm channel",
+      "spec": "specs/v1-request.json",
+      "spec_sha256": "5e19b2ed34593f0b3ab7979e751c3812c97bd064f6b5d17bb5f4f44297dca9e4",
+      "evidence_dir": "evidence/v1",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "check": "evidence/v1/check.txt",
+      "frames_pane": "evidence/v1/v1-frames.txt",
+      "frames_ansi_pane": "evidence/v1/v1-frames.ansi",
+      "frames_pinned_77x47": "evidence/v1/v1-frames-77x47.txt",
+      "manifest": "evidence/v1/manifest.json",
+      "measured": {
+        "pane_viewport_token": "83x51 @100%",
+        "pane_cols": null,
+        "pane_rows": 51,
+        "extent_cells": "41x40",
+        "zoom": "1.00 natural"
+      },
+      "viewport_line_pinned": "viewport: 77x47 zoom: 1.00 natural",
+      "check_lines": [
+        "extent=41x40 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 4/4 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+        "origins: 4/4 routes start at their arrow origin",
+        "dots: 4 single-dot routes, 0 periodic routes, 0 violations, 4 constant at 0.5c/step, 0 same-arrival at 2000ms"
+      ],
+      "fit_proof": "pinned COLUMNS=77 LINES=47 dump of this exact spec (frames_pinned_77x47) shows 'viewport: 77x47 zoom: 1.00 natural', 71 timestamped frames, and no 'overflows' banner"
+    },
+    {
+      "view": "v2",
+      "family_line": "family: lifecycle-machines | evidence: the dispatch phase fans into job classes (provision / reimage / diagnostics) and then advances to provider, machine and webapi phases",
+      "subject": "queue fan into job classes, provider chain head, janitor proposal loop, http entry",
+      "spec": "specs/v2-dispatch.json",
+      "spec_sha256": "70f3c2ca0c7dda0db3b360770966ad968e2c0933e8eef8a6715f859c00277e9c",
+      "evidence_dir": "evidence/v2",
+      "text": "evidence/v2/v2-text.txt",
+      "ansi": "evidence/v2/v2-ansi.ansi",
+      "selected_ansi": "evidence/v2/v2-selected.ansi",
+      "check": "evidence/v2/check.txt",
+      "frames_pane": "evidence/v2/v2-frames.txt",
+      "frames_ansi_pane": "evidence/v2/v2-frames.ansi",
+      "frames_pinned_77x47": "evidence/v2/v2-frames-77x47.txt",
+      "manifest": "evidence/v2/manifest.json",
+      "measured": {
+        "pane_viewport_token": "83x51 @100%",
+        "pane_cols": null,
+        "pane_rows": 51,
+        "extent_cells": "71x28",
+        "zoom": "1.00 natural"
+      },
+      "viewport_line_pinned": "viewport: 77x47 zoom: 1.00 natural",
+      "check_lines": [
+        "extent=71x28 cells",
+        "crossings: 1 bridges, 0 touching bends",
+        "labels: 7/7 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+        "origins: 7/7 routes start at their arrow origin",
+        "dots: 7 single-dot routes, 0 periodic routes, 0 violations, 7 constant at 0.5c/step, 0 same-arrival at 2000ms"
+      ],
+      "fit_proof": "pinned 77x47 dump (71 frames) with no overflow banner; extent 71x28 fits 77x47"
+    },
+    {
+      "view": "v3",
+      "family_line": "family: lifecycle-machines | evidence: machine boot is a phase sequence \u2014 iPXE request, boot.ipxe + S3 args reply, image pull, host agent",
+      "subject": "boot plant, image pull, host agent",
+      "spec": "specs/v3-boot.json",
+      "spec_sha256": "aff9f588faff84fd06f2449a93ff3fd0091c096cda0e294acc0f78abbc5964c4",
+      "evidence_dir": "evidence/v3",
+      "text": "evidence/v3/v3-text.txt",
+      "ansi": "evidence/v3/v3-ansi.ansi",
+      "selected_ansi": "evidence/v3/v3-selected.ansi",
+      "check": "evidence/v3/check.txt",
+      "frames_pane": "evidence/v3/v3-frames.txt",
+      "frames_ansi_pane": "evidence/v3/v3-frames.ansi",
+      "frames_pinned_77x47": "evidence/v3/v3-frames-77x47.txt",
+      "manifest": "evidence/v3/manifest.json",
+      "measured": {
+        "pane_viewport_token": "83x51 @100%",
+        "pane_cols": null,
+        "pane_rows": 51,
+        "extent_cells": "52x24",
+        "zoom": "1.00 natural"
+      },
+      "viewport_line_pinned": "viewport: 77x47 zoom: 1.00 natural",
+      "check_lines": [
+        "extent=52x24 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 5/5 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+        "origins: 5/5 routes start at their arrow origin",
+        "dots: 5 single-dot routes, 0 periodic routes, 0 violations, 5 constant at 0.5c/step, 0 same-arrival at 2000ms"
+      ],
+      "fit_proof": "pinned 77x47 dump (71 frames) with no overflow banner; extent 52x24"
+    },
+    {
+      "view": "v4",
+      "family_line": "family: lifecycle-machines | evidence: heartbeat register -> state write and the reconcile loop are recurring phases ending in Postgres rows",
+      "subject": "state writers, heartbeat sink, reconcile loop, allocate step",
+      "spec": "specs/v4-state-reconcile.json",
+      "spec_sha256": "df95ea2a9e36c9822a6fbb4b9971bc6c0a2a2d29f37bcac11e2d299d7037b89e",
+      "evidence_dir": "evidence/v4",
+      "text": "evidence/v4/v4-text.txt",
+      "ansi": "evidence/v4/v4-ansi.ansi",
+      "selected_ansi": "evidence/v4/v4-selected.ansi",
+      "check": "evidence/v4/check.txt",
+      "frames_pane": "evidence/v4/v4-frames.txt",
+      "frames_ansi_pane": "evidence/v4/v4-frames.ansi",
+      "frames_pinned_77x47": "evidence/v4/v4-frames-77x47.txt",
+      "manifest": "evidence/v4/manifest.json",
+      "measured": {
+        "pane_viewport_token": "83x51 @100%",
+        "pane_cols": null,
+        "pane_rows": 51,
+        "extent_cells": "76x40",
+        "zoom": "1.00 natural"
+      },
+      "viewport_line_pinned": "viewport: 77x47 zoom: 1.00 natural",
+      "check_lines": [
+        "extent=76x40 cells",
+        "crossings: 2 bridges, 0 touching bends",
+        "labels: 7/7 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "origins: 7/7 routes start at their arrow origin",
+        "dots: 7 single-dot routes, 0 periodic routes, 0 violations, 7 constant at 0.5c/step, 0 same-arrival at 2000ms"
+      ],
+      "fit_proof": "pinned 77x47 dump (71 frames) with no overflow banner; extent 76x40 (1 column of margin)"
+    }
+  ],
+  "capture_claims": [
+    {
+      "claim": "v1 renders its three regions as bordered boxes with members inside, but the region TITLES are overwritten by route glyphs on the title row (the 'jobs' title survives only as 'j...bs' fragments, 'humans' and 'control' titles are gone); v2/v3/v4 render readable titles",
+      "capture": "evidence/v1/v1-frames-77x47.txt and evidence/v1/v1-text.txt",
+      "coordinates": "v1 frame 0: control box border row 6 (cols 38-51, no title text), machines/webapi row 24, jobs box top border row 41 shows '\u2500\u2500\u25bcj\u25bcbs \u2500\u2500\u2500\u2500\u2500\u2500\u2500' where three arrowheads land on the title row, humans box top border row 47 '\u2500\u2500\u2500'; compare evidence/v2/v2-text.txt lines 16/24/32/41 with '\u2500\u2500 providers \u2500\u2500', '\u2500\u2500 ops \u2500\u2500', '\u2500\u2500 jobs \u2500\u2500', '\u2500\u2500 humans \u2500\u2500' intact"
+    },
+    {
+      "claim": "v3 draws both iPXE directions and the carried label 'boot.ipxe + S3 args' in one frame",
+      "capture": "evidence/v3/v3-frames-77x47.txt",
+      "coordinates": "frame 0, row 30: '\u25bc iPXE req \u25bc' arrowheads above the machine/boot-server row; row 35: '\u2502\u2500boot.ipxe\u2500+\u2500S3 args\u2500\u2500\u2500' on the return corridor under 'boot server'"
+    },
+    {
+      "claim": "v3 carries 'pull image' and 'diagnose' as separate relations to S3",
+      "capture": "evidence/v3/v3-frames-77x47.txt",
+      "coordinates": "frame 0: row 28 col 37 'pull image' on the mch->S3 corridor, row 24 col 44 'diagnose' on the q->S3 corridor, S3 box row 31"
+    },
+    {
+      "claim": "v2 carries 'reimage' on the jobs->SSH edge and 'run audit' on SSH->machines",
+      "capture": "evidence/v2/v2-frames-77x47.txt",
+      "coordinates": "frame 0: row 27 col 22 'reimage' (queue -> SSH corridor), row 25 col 48 'run audit' (SSH -> machines corridor), row 20 col 49 'proposals' (janitor -> webapi)"
+    },
+    {
+      "claim": "every animated route carries exactly one dot and all dots advance at the same rate",
+      "capture": "evidence/*/*-frames-77x47.txt",
+      "coordinates": "measured over frames 0 and 10 (100 ms steps): Manhattan advance 5 cells for every dot in v1/v2/v4 and 5 cells for four of five v3 dots (the fifth path bends, so the nearest-neighbour pairing reports 6); frame 0 dot counts equal the check's single-dot route counts (4/7/5/7)"
+    },
+    {
+      "claim": "frame-0 dots sit on each arrow's first drawn cell",
+      "capture": "evidence/*/*-frames-77x47.txt",
+      "coordinates": "frame 0: v1 dots at (32,11),(27,29),(44,29),(46,29); each has route glyphs above and below and sits on the port stem cell directly under its source box; --check reports origins 4/4, 7/7, 5/5, 7/7"
+    },
+    {
+      "claim": "v4 pins Postgres below its four state writers and keeps the API surfaces in the middle rank",
+      "capture": "evidence/v4/v4-frames-77x47.txt",
+      "coordinates": "frame 0: writers row 11 (agent/pgrpc/q/rec ports), 'public gRPC' row 24 col 5, 'providers' row 24 col 63, 'Postgres' row 41 col 28, 'machines' row 41 col 41"
+    }
+  ],
+  "known_defects": [
+    {
+      "view": "v1",
+      "defect": "1 ambiguous label owner (--check warning)",
+      "mechanism": "webapi has two out-edges inside one rank band (to the queue and to Slack); their ports land 3 cells apart, so a 7-9 cell label has no cell that is strictly closer to its own corridor; the same view also loses its region titles (see the v1 title defect)",
+      "measured": "evidence/v1/check.txt line 'labels: 4/4 placed, 0 on route cells, 0 skipped, 1 ambiguous owners'",
+      "not_fixed_because": "removing the second edge would delete e21; the candidate budget for this view is spent (3/3)"
+    },
+    {
+      "view": "v2",
+      "defect": "1 ambiguous label owner and 1 bridge (crossing)",
+      "mechanism": "the queue fans three job classes in one band; the middle route's label is equidistant from its own and its sibling corridor; the crossing is at the audit corridor meeting the janitor corridor",
+      "measured": "evidence/v2/check.txt lines 'crossings: 1 bridges, 0 touching bends' and 'labels: 7/7 placed ... 1 ambiguous owners'",
+      "not_fixed_because": "splitting the fan would need a fifth view; moving one class to another view would leave that view with no q node or push it over the height budget (measured: a tb variant of the same view was 65x40 with the same single ambiguity)"
+    },
+    {
+      "view": "v3",
+      "defect": "1 ambiguous label owner",
+      "mechanism": "machines have three out-edges in one band (boot, S3, agent); the middle route cannot host an unambiguous label",
+      "measured": "evidence/v3/check.txt line 'labels: 5/5 placed, 0 on route cells, 0 skipped, 1 ambiguous owners'",
+      "not_fixed_because": "staggering the three targets to three ranks costs more rows than 47 (a 3-rank variant needs ~51 rows), and lr cannot route the anti-parallel pair at all (attempt 2 failed)"
+    },
+    {
+      "view": "v4",
+      "defect": "2 bridges (crossings), 0 ambiguous labels",
+      "mechanism": "rec->db and q->db corridors cross pgrpc->db's corridor inside the 76-column extent",
+      "measured": "evidence/v4/check.txt line 'crossings: 2 bridges, 0 touching bends'",
+      "not_fixed_because": "changing the split would trade the clean label ownership for a warning; 2 bridges keep every label unambiguous"
+    },
+    {
+      "view": "v1",
+      "defect": "region titles are lost: the three region boxes draw, but their title cells are overwritten by arrowheads crossing the same row ('jobs' survives as fragments, 'control' and 'humans' show no title)",
+      "mechanism": "the queue and Slack sit directly under the title row of their boxes, so 2-3 arrows arrive on the border row; the router paints routes over borders",
+      "measured": "evidence/v1/v1-text.txt has no '\u2500\u2500 control \u2500\u2500' / '\u2500\u2500 jobs \u2500\u2500' / '\u2500\u2500 humans \u2500\u2500' marker (grep), while evidence/v2/v2-text.txt lines 16/24/32/41 and evidence/v4/v4-text.txt line 7 do; v1 frame 0 row 41 reads '\u2500\u2500\u25bcj\u25bcbs \u2500\u2500\u2500\u2500\u2500\u2500\u2500'",
+      "not_fixed_because": "region membership is still correct and provable from the check line 'groups: control(3) jobs(1) humans(1)' plus the borders themselves; the candidate budget for this view is spent, and the title loss comes from port placement, not from the grouping"
+    },
+    {
+      "view": "v2, v3",
+      "defect": "region borders and titles are painted over by route glyphs (e.g. v2 'providers'/'ops' title rows, v3 the plant box bottom row and the state box top row '\u2500\u2500\u25bcs\u25bca\u25bce \u2500\u2500\u2500' in the 5-node attempt); in v2 the janitor box reads '\u2502janitor\u2500app\u2502' because a route glyph lands in the label's space cell",
+      "mechanism": "route cells enter a region from above and the router draws over the border row; region titles lose letters where an arrowhead lands; the same painting puts a route glyph in one node-label space cell",
+      "measured": "evidence/v2/v2-frames-77x47.txt row 16 '\u2500\u2500 providers \u2500\u2500\u2500\u2500\u2500' with route glyphs at rows 18-20; evidence/v3/v3-frames-77x47.txt row 36; evidence/v2/v2-frames-77x47.txt frame 0 row 22 reads '\u2502janitor\u2500app\u2502'",
+      "not_fixed_because": "engine behaviour, not spec behaviour; no field in the round-08 schema moves a port off a region border"
+    },
+    {
+      "view": "v1",
+      "defect": "'create/term/repair' is drawn as 'create/term': the third verb is not visible",
+      "mechanism": "the 17-cell label has no clear cell inside the control region (candidate 2 measured it skipped at 6 nodes; candidate 3 measured 41x47 extent leaving no header margin), so the final candidate uses the 11-cell form",
+      "measured": "attempts-raw/v1-a2-check.txt 'labels: 4/5 placed ... 1 skipped'; attempts-raw/v1-a3-check.txt 'extent=41x47'"
+    }
+  ],
+  "blockers": [
+    {
+      "blocker": "harness pane size",
+      "detail": "scripts/viz-evidence.sh splits half of the caller's tab; this tab is 170x53, so every capture ran at 83x51 (rect minus border), not at the 77x47 target. `herdr pane layout` without --pane resolves the focused workspace, so the script recorded pane_cols=null and pane_rows=51; the app's own header token '83x51 @100%' is the measured size.",
+      "mitigation": "pinned COLUMNS=77 LINES=47 dumps of each final spec (evidence/vN/vN-frames-77x47.txt) show 'viewport: 77x47 zoom: 1.00 natural' and no overflow banner; each shows the whole graph at natural zoom",
+      "reported_not_hidden": true
+    },
+    {
+      "blocker": "pane frames truncated",
+      "detail": "the pane-based frames capture kept only 19 of the 71 requested frames (the read is bounded by the pane's recent buffer), so the pane artifacts prove timestamps but not a full lap",
+      "mitigation": "the pinned 77x47 dumps carry all 71 frames (62 needed for the longest measured route of 31 cells)",
+      "reported_not_hidden": true
+    }
+  ],
+  "cleanup": {
+    "status": "clean",
+    "detail": "each evidence bundle's manifest records cleanup=confirmed_closed for its own pane id: v1, v2, v3, v4. No pane was left open and no other tab was touched.",
+    "panes": {
+      "v1": "confirmed_closed",
+      "v2": "confirmed_closed",
+      "v3": "confirmed_closed",
+      "v4": "confirmed_closed"
+    }
+  },
+  "source_pointers": [
+    "docs/visualize-eval/cases/modal-machine-manager/source.md \u2014 'Original line 31' relationship groups (request / heartbeat / ops), the 17 node ids and the 23 directed relations",
+    "docs/visualize-eval/cases/modal-machine-manager/source.md \u2014 'Fixed constraints' (both iPXE directions, janitor->webapi, q->S3 diagnostics, sparse slow dots)",
+    "docs/visualize-eval/cases/modal-machine-manager/source.md \u2014 'Original line 217' user correction 'use way less dots. keep on dot alive per line'"
+  ],
+  "deliberate_drops": [
+    {
+      "dropped": "repair (verb)",
+      "reason": "abbreviated into 'create/term'; the 17-cell label that carried it has no clear cell at 77x47 (see known_defects)"
+    },
+    {
+      "dropped": "reprovision (verb)",
+      "reason": "wapi->q is drawn as 'reinstall'; the label slot in v1's queue band is 9 cells"
+    },
+    {
+      "dropped": "alerts (noun)",
+      "reason": "wapi->slack is drawn as 'confirm'; keeping both words needs 16 cells on a channel that shares wapi's port band"
+    },
+    {
+      "dropped": "register (verb)",
+      "reason": "agent->pub is drawn as 'heartbeat'; both verbs do not fit the v4 band label slot, the pair is still one relation"
+    },
+    {
+      "dropped": "floor layout / row-and-column placement",
+      "reason": "never drawn: the source states no geometry, so no layers were pinned to imitate a picture"
+    }
+  ],
+  "validator": {
+    "command": "scripts/viz-validate.py <bundle> --require-select --require-frames --attempts attempts.json",
+    "results": {
+      "v1": {
+        "bundle": "evidence/v1",
+        "validator_output": "evidence/v1/validator.txt",
+        "exit_status": 1,
+        "pass_count": 30,
+        "failures": [
+          "FAIL check_warnings_absent \u2014 warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge",
+          "FAIL labels_ownership_clear \u2014 1 label(s) sit as close to another route as to their own edge; a reader cannot pair them"
+        ],
+        "verdict": "FAIL (ambiguous label owner warning)"
+      },
+      "v2": {
+        "bundle": "evidence/v2",
+        "validator_output": "evidence/v2/validator.txt",
+        "exit_status": 1,
+        "pass_count": 30,
+        "failures": [
+          "FAIL check_warnings_absent \u2014 warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge",
+          "FAIL labels_ownership_clear \u2014 1 label(s) sit as close to another route as to their own edge; a reader cannot pair them"
+        ],
+        "verdict": "FAIL (ambiguous label owner warning)"
+      },
+      "v3": {
+        "bundle": "evidence/v3",
+        "validator_output": "evidence/v3/validator.txt",
+        "exit_status": 1,
+        "pass_count": 30,
+        "failures": [
+          "FAIL check_warnings_absent \u2014 warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge",
+          "FAIL labels_ownership_clear \u2014 1 label(s) sit as close to another route as to their own edge; a reader cannot pair them"
+        ],
+        "verdict": "FAIL (ambiguous label owner warning)"
+      },
+      "v4": {
+        "bundle": "evidence/v4",
+        "validator_output": "evidence/v4/validator.txt",
+        "exit_status": 0,
+        "pass_count": 32,
+        "failures": [],
+        "verdict": "PASS (all checks)"
+      }
+    },
+    "verdict_summary": "v4 passes every check; v1/v2/v3 pass 30 of 32 checks and fail check_warnings_absent + labels_ownership_clear with exactly one ambiguous label owner each (mechanism and coordinates in known_defects)"
+  },
+  "status": "not green: 3 of 4 views carry the engine's ambiguous-owner warning; no independent review was run (the captain starts the judge), and nothing here is self-certified"
+}

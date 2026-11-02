@@ -1,0 +1,13 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "runtime", "label": "modal-runtime", "group": "orchestration" },
+    { "id": "worker", "label": "modal-worker" },
+    { "id": "daemon", "label": "modal-daemon" }
+  ],
+  "edges": [
+    { "from": "worker", "to": "runtime", "label": "task+ctrl RPC", "dots": 0 },
+    { "from": "runtime", "to": "daemon", "label": "HTTP over UDS", "dots": 0 }
+  ]
+}

@@ -1,0 +1,21 @@
+boxes:
+  'Arista .57 AS132717 /'    rows 11-14 cols 29-49
+  'Airtel 14.143.x /'        rows 19-22 cols 31-47
+  'Airtel BB 14.141.x /'     rows 27-30 cols 30-49
+  'Cloudflare 1.1.1.1 /'     rows 35-38 cols 30-49
+
+arrowheads:
+  ▼ at row 18 col 32 -> into 'Airtel 14.143.x /'
+  ▼ at row 26 col 31 -> into 'Airtel BB 14.141.x /'
+  ▼ at row 34 col 31 -> into 'Cloudflare 1.1.1.1 /'
+
+stems (route glyph touching a box side):
+  from 'Arista .57 AS132717 /' bottom col 30: '│'
+  from 'Airtel 14.143.x /' bottom col 32: '│'
+  from 'Airtel BB 14.141.x /' bottom col 31: '│'
+
+interior sanitation:
+  0 interior glyph problems
+
+border glyph sanity:
+  0 border problems

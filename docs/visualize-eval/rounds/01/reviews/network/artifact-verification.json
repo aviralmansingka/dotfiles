@@ -1,0 +1,2369 @@
+{
+  "method": "Independent standard-library SGR/cell audit and SHA-256 verification; uv run --no-project /tmp/network-stage-b.py. No renderer execution.",
+  "hashes": [
+    {
+      "path": "docs/visualize-eval/rounds/01/SKILL.md",
+      "actual_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "frozen_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/rubric.json",
+      "actual_sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "frozen_sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/cases.json",
+      "actual_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "frozen_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/cases/network/source.md",
+      "actual_sha256": "9d23a7b50d1d26a69f95523a9586bab96ec588afb9628ae274c896992b147947",
+      "frozen_sha256": "9d23a7b50d1d26a69f95523a9586bab96ec588afb9628ae274c896992b147947",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/cases/network/expected.json",
+      "actual_sha256": "8cb86d269c21176d775e79f8592f09067049031a0e581df38d66705e73a8caa9",
+      "frozen_sha256": "8cb86d269c21176d775e79f8592f09067049031a0e581df38d66705e73a8caa9",
+      "matches": true
+    },
+    {
+      "path": "/tmp/visualize-eval/round-01/bin/rataflow-view",
+      "actual_sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "frozen_sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/reviews/network/observed-first.md",
+      "actual_sha256": "2b96648d1c9df2483cb2d6bd347401fb951138cb8335bfca1bc94d49f301f436",
+      "frozen_sha256": "2b96648d1c9df2483cb2d6bd347401fb951138cb8335bfca1bc94d49f301f436",
+      "matches": true
+    }
+  ],
+  "reviewer_runtime_identity": {
+    "PI_PROVIDER": "openai",
+    "PI_MODEL": "gpt-6-astra",
+    "PI_SUBAGENT_NAME": "viz-judge01-network",
+    "PI_SESSION_ID": "01a19b67-488f-73a0-973c-1e3918ea5b7e"
+  },
+  "source_relation_union": [
+    [
+      "cache",
+      "db",
+      "fill"
+    ],
+    [
+      "core",
+      "cache",
+      "25 GbE"
+    ],
+    [
+      "core",
+      "web",
+      "10 GbE"
+    ],
+    [
+      "fw",
+      "core",
+      "10 GbE"
+    ],
+    [
+      "wan",
+      "fw",
+      "1 GbE"
+    ],
+    [
+      "web",
+      "cache",
+      "session"
+    ],
+    [
+      "web",
+      "db",
+      "queries"
+    ]
+  ],
+  "spec_relation_union": [
+    [
+      "cache",
+      "db",
+      "fill"
+    ],
+    [
+      "core",
+      "cache",
+      "25 GbE"
+    ],
+    [
+      "core",
+      "web",
+      "10 GbE"
+    ],
+    [
+      "fw",
+      "core",
+      "10 GbE"
+    ],
+    [
+      "wan",
+      "fw",
+      "1 GbE"
+    ],
+    [
+      "web",
+      "cache",
+      "session"
+    ],
+    [
+      "web",
+      "db",
+      "queries"
+    ]
+  ],
+  "source_nodes": [
+    "cache",
+    "core",
+    "db",
+    "fw",
+    "wan",
+    "web"
+  ],
+  "extra_visible_relations": [],
+  "view_audits": [
+    {
+      "view": "01-request-path",
+      "measured_dimensions": {
+        "columns": 77,
+        "rows": 47
+      },
+      "state_audits": [
+        {
+          "state": "unselected",
+          "ansi_text_match": true,
+          "nodes": [
+            {
+              "id": "wan",
+              "label": "WAN",
+              "box": [
+                33,
+                7,
+                5,
+                4
+              ],
+              "major_border_rgb": [
+                216,
+                166,
+                87
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    35,
+                    7,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    35,
+                    10,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            },
+            {
+              "id": "fw",
+              "label": "Firewall",
+              "box": [
+                33,
+                15,
+                10,
+                4
+              ],
+              "major_border_rgb": [
+                125,
+                174,
+                163
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    38,
+                    15,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    38,
+                    18,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            },
+            {
+              "id": "core",
+              "label": "Core switch",
+              "box": [
+                33,
+                23,
+                13,
+                4
+              ],
+              "major_border_rgb": [
+                211,
+                134,
+                155
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    39,
+                    23,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    39,
+                    26,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            },
+            {
+              "id": "web",
+              "label": "Web tier",
+              "box": [
+                33,
+                31,
+                10,
+                4
+              ],
+              "major_border_rgb": [
+                169,
+                182,
+                101
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    38,
+                    31,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    38,
+                    34,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "label": "DB tier",
+              "box": [
+                33,
+                39,
+                9,
+                4
+              ],
+              "major_border_rgb": [
+                125,
+                160,
+                184
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    37,
+                    39,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    37,
+                    42,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "state": "selected-tab",
+          "ansi_text_match": true,
+          "nodes": [
+            {
+              "id": "wan",
+              "label": "WAN",
+              "box": [
+                33,
+                7,
+                5,
+                4
+              ],
+              "major_border_rgb": [
+                216,
+                166,
+                87
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    35,
+                    7,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    35,
+                    10,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            },
+            {
+              "id": "fw",
+              "label": "Firewall",
+              "box": [
+                33,
+                15,
+                10,
+                4
+              ],
+              "major_border_rgb": [
+                125,
+                174,
+                163
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    38,
+                    15,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    38,
+                    18,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            },
+            {
+              "id": "core",
+              "label": "Core switch",
+              "box": [
+                33,
+                23,
+                13,
+                4
+              ],
+              "major_border_rgb": [
+                216,
+                166,
+                87
+              ],
+              "bold": true,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    39,
+                    23,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": true
+                },
+                {
+                  "region": [
+                    39,
+                    26,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": true
+                }
+              ]
+            },
+            {
+              "id": "web",
+              "label": "Web tier",
+              "box": [
+                33,
+                31,
+                10,
+                4
+              ],
+              "major_border_rgb": [
+                169,
+                182,
+                101
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    38,
+                    31,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    38,
+                    34,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "label": "DB tier",
+              "box": [
+                33,
+                39,
+                9,
+                4
+              ],
+              "major_border_rgb": [
+                125,
+                160,
+                184
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    37,
+                    39,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    37,
+                    42,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "state": "selected-right",
+          "ansi_text_match": true,
+          "nodes": [
+            {
+              "id": "wan",
+              "label": "WAN",
+              "box": [
+                33,
+                7,
+                5,
+                4
+              ],
+              "major_border_rgb": [
+                216,
+                166,
+                87
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    35,
+                    7,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    35,
+                    10,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            },
+            {
+              "id": "fw",
+              "label": "Firewall",
+              "box": [
+                33,
+                15,
+                10,
+                4
+              ],
+              "major_border_rgb": [
+                125,
+                174,
+                163
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    38,
+                    15,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    38,
+                    18,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            },
+            {
+              "id": "core",
+              "label": "Core switch",
+              "box": [
+                33,
+                23,
+                13,
+                4
+              ],
+              "major_border_rgb": [
+                216,
+                166,
+                87
+              ],
+              "bold": true,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    39,
+                    23,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": true
+                },
+                {
+                  "region": [
+                    39,
+                    26,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": true
+                }
+              ]
+            },
+            {
+              "id": "web",
+              "label": "Web tier",
+              "box": [
+                33,
+                31,
+                10,
+                4
+              ],
+              "major_border_rgb": [
+                169,
+                182,
+                101
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    38,
+                    31,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    38,
+                    34,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "label": "DB tier",
+              "box": [
+                33,
+                39,
+                9,
+                4
+              ],
+              "major_border_rgb": [
+                125,
+                160,
+                184
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    37,
+                    39,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    37,
+                    42,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "frames": [
+        {
+          "file": "frames/frame-01.txt",
+          "dots": [
+            [
+              34,
+              13,
+              1,
+              1
+            ],
+            [
+              34,
+              21,
+              1,
+              1
+            ],
+            [
+              34,
+              29,
+              1,
+              1
+            ],
+            [
+              34,
+              37,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "frames/frame-02.txt",
+          "dots": [
+            [
+              34,
+              12,
+              1,
+              1
+            ],
+            [
+              34,
+              13,
+              1,
+              1
+            ],
+            [
+              34,
+              20,
+              1,
+              1
+            ],
+            [
+              34,
+              21,
+              1,
+              1
+            ],
+            [
+              34,
+              28,
+              1,
+              1
+            ],
+            [
+              34,
+              29,
+              1,
+              1
+            ],
+            [
+              34,
+              36,
+              1,
+              1
+            ],
+            [
+              34,
+              37,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "frames/frame-03.txt",
+          "dots": [
+            [
+              34,
+              12,
+              1,
+              1
+            ],
+            [
+              34,
+              20,
+              1,
+              1
+            ],
+            [
+              34,
+              28,
+              1,
+              1
+            ],
+            [
+              34,
+              36,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "frames/frame-04.txt",
+          "dots": [
+            [
+              34,
+              13,
+              1,
+              1
+            ],
+            [
+              34,
+              21,
+              1,
+              1
+            ],
+            [
+              34,
+              29,
+              1,
+              1
+            ],
+            [
+              34,
+              37,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "unselected.txt",
+          "dots": [
+            [
+              34,
+              13,
+              1,
+              1
+            ],
+            [
+              34,
+              21,
+              1,
+              1
+            ],
+            [
+              34,
+              29,
+              1,
+              1
+            ],
+            [
+              34,
+              37,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "selected-tab.txt",
+          "dots": [
+            [
+              34,
+              12,
+              1,
+              1
+            ],
+            [
+              34,
+              13,
+              1,
+              1
+            ],
+            [
+              34,
+              20,
+              1,
+              1
+            ],
+            [
+              34,
+              21,
+              1,
+              1
+            ],
+            [
+              34,
+              28,
+              1,
+              1
+            ],
+            [
+              34,
+              29,
+              1,
+              1
+            ],
+            [
+              34,
+              36,
+              1,
+              1
+            ],
+            [
+              34,
+              37,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "selected-right.txt",
+          "dots": [
+            [
+              34,
+              13,
+              1,
+              1
+            ],
+            [
+              34,
+              21,
+              1,
+              1
+            ],
+            [
+              34,
+              29,
+              1,
+              1
+            ],
+            [
+              34,
+              37,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "selected-after-frames.txt",
+          "dots": [
+            [
+              34,
+              13,
+              1,
+              1
+            ],
+            [
+              34,
+              21,
+              1,
+              1
+            ],
+            [
+              34,
+              29,
+              1,
+              1
+            ],
+            [
+              34,
+              37,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        }
+      ],
+      "remaining_generator_tab_panes": [
+        "w7E:p2R"
+      ]
+    },
+    {
+      "view": "02-core-cache-fill",
+      "measured_dimensions": {
+        "columns": 77,
+        "rows": 47
+      },
+      "state_audits": [
+        {
+          "state": "unselected",
+          "ansi_text_match": true,
+          "nodes": [
+            {
+              "id": "core",
+              "label": "Core switch",
+              "box": [
+                33,
+                15,
+                13,
+                4
+              ],
+              "major_border_rgb": [
+                216,
+                166,
+                87
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    39,
+                    15,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    39,
+                    18,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            },
+            {
+              "id": "cache",
+              "label": "Redis cache",
+              "box": [
+                33,
+                23,
+                13,
+                4
+              ],
+              "major_border_rgb": [
+                125,
+                174,
+                163
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    39,
+                    23,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    39,
+                    26,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "label": "DB tier",
+              "box": [
+                33,
+                31,
+                9,
+                4
+              ],
+              "major_border_rgb": [
+                211,
+                134,
+                155
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    37,
+                    31,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    37,
+                    34,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "state": "selected-tab",
+          "ansi_text_match": true,
+          "nodes": [
+            {
+              "id": "core",
+              "label": "Core switch",
+              "box": [
+                33,
+                15,
+                13,
+                4
+              ],
+              "major_border_rgb": [
+                216,
+                166,
+                87
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    39,
+                    15,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    39,
+                    18,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            },
+            {
+              "id": "cache",
+              "label": "Redis cache",
+              "box": [
+                33,
+                23,
+                13,
+                4
+              ],
+              "major_border_rgb": [
+                216,
+                166,
+                87
+              ],
+              "bold": true,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    39,
+                    23,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": true
+                },
+                {
+                  "region": [
+                    39,
+                    26,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": true
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "label": "DB tier",
+              "box": [
+                33,
+                31,
+                9,
+                4
+              ],
+              "major_border_rgb": [
+                211,
+                134,
+                155
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    37,
+                    31,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    37,
+                    34,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "state": "selected-right",
+          "ansi_text_match": true,
+          "nodes": [
+            {
+              "id": "core",
+              "label": "Core switch",
+              "box": [
+                33,
+                15,
+                13,
+                4
+              ],
+              "major_border_rgb": [
+                216,
+                166,
+                87
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    39,
+                    15,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    39,
+                    18,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            },
+            {
+              "id": "cache",
+              "label": "Redis cache",
+              "box": [
+                33,
+                23,
+                13,
+                4
+              ],
+              "major_border_rgb": [
+                216,
+                166,
+                87
+              ],
+              "bold": true,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    39,
+                    23,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": true
+                },
+                {
+                  "region": [
+                    39,
+                    26,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": true
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "label": "DB tier",
+              "box": [
+                33,
+                31,
+                9,
+                4
+              ],
+              "major_border_rgb": [
+                211,
+                134,
+                155
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    37,
+                    31,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    37,
+                    34,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "frames": [
+        {
+          "file": "frames/frame-01.txt",
+          "dots": [
+            [
+              34,
+              21,
+              1,
+              1
+            ],
+            [
+              34,
+              29,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "frames/frame-02.txt",
+          "dots": [
+            [
+              34,
+              20,
+              1,
+              1
+            ],
+            [
+              34,
+              21,
+              1,
+              1
+            ],
+            [
+              34,
+              28,
+              1,
+              1
+            ],
+            [
+              34,
+              29,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "frames/frame-03.txt",
+          "dots": [
+            [
+              34,
+              20,
+              1,
+              1
+            ],
+            [
+              34,
+              28,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "frames/frame-04.txt",
+          "dots": [
+            [
+              34,
+              21,
+              1,
+              1
+            ],
+            [
+              34,
+              29,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "unselected.txt",
+          "dots": [
+            [
+              34,
+              21,
+              1,
+              1
+            ],
+            [
+              34,
+              29,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "selected-tab.txt",
+          "dots": [
+            [
+              34,
+              20,
+              1,
+              1
+            ],
+            [
+              34,
+              28,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "selected-right.txt",
+          "dots": [
+            [
+              34,
+              21,
+              1,
+              1
+            ],
+            [
+              34,
+              29,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "selected-after-frames.txt",
+          "dots": [
+            [
+              34,
+              21,
+              1,
+              1
+            ],
+            [
+              34,
+              29,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        }
+      ],
+      "remaining_generator_tab_panes": [
+        "w7E:p2R"
+      ]
+    },
+    {
+      "view": "03-session-fill",
+      "measured_dimensions": {
+        "columns": 77,
+        "rows": 47
+      },
+      "state_audits": [
+        {
+          "state": "unselected",
+          "ansi_text_match": true,
+          "nodes": [
+            {
+              "id": "web",
+              "label": "Web tier",
+              "box": [
+                33,
+                15,
+                10,
+                4
+              ],
+              "major_border_rgb": [
+                216,
+                166,
+                87
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    38,
+                    15,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    38,
+                    18,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            },
+            {
+              "id": "cache",
+              "label": "Redis cache",
+              "box": [
+                33,
+                23,
+                13,
+                4
+              ],
+              "major_border_rgb": [
+                125,
+                174,
+                163
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    39,
+                    23,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    39,
+                    26,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "label": "DB tier",
+              "box": [
+                33,
+                31,
+                9,
+                4
+              ],
+              "major_border_rgb": [
+                211,
+                134,
+                155
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    37,
+                    31,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    37,
+                    34,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "state": "selected-tab",
+          "ansi_text_match": true,
+          "nodes": [
+            {
+              "id": "web",
+              "label": "Web tier",
+              "box": [
+                33,
+                15,
+                10,
+                4
+              ],
+              "major_border_rgb": [
+                216,
+                166,
+                87
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    38,
+                    15,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    38,
+                    18,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            },
+            {
+              "id": "cache",
+              "label": "Redis cache",
+              "box": [
+                33,
+                23,
+                13,
+                4
+              ],
+              "major_border_rgb": [
+                216,
+                166,
+                87
+              ],
+              "bold": true,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    39,
+                    23,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": true
+                },
+                {
+                  "region": [
+                    39,
+                    26,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": true
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "label": "DB tier",
+              "box": [
+                33,
+                31,
+                9,
+                4
+              ],
+              "major_border_rgb": [
+                211,
+                134,
+                155
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    37,
+                    31,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    37,
+                    34,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "state": "selected-right",
+          "ansi_text_match": true,
+          "nodes": [
+            {
+              "id": "web",
+              "label": "Web tier",
+              "box": [
+                33,
+                15,
+                10,
+                4
+              ],
+              "major_border_rgb": [
+                216,
+                166,
+                87
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    38,
+                    15,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    38,
+                    18,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            },
+            {
+              "id": "cache",
+              "label": "Redis cache",
+              "box": [
+                33,
+                23,
+                13,
+                4
+              ],
+              "major_border_rgb": [
+                216,
+                166,
+                87
+              ],
+              "bold": true,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    39,
+                    23,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": true
+                },
+                {
+                  "region": [
+                    39,
+                    26,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": true
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "label": "DB tier",
+              "box": [
+                33,
+                31,
+                9,
+                4
+              ],
+              "major_border_rgb": [
+                211,
+                134,
+                155
+              ],
+              "bold": false,
+              "border_color_exceptions": [
+                {
+                  "region": [
+                    37,
+                    31,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                },
+                {
+                  "region": [
+                    37,
+                    34,
+                    1,
+                    1
+                  ],
+                  "rgb": [
+                    146,
+                    131,
+                    116
+                  ],
+                  "bold": false
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "frames": [
+        {
+          "file": "frames/frame-01.txt",
+          "dots": [
+            [
+              34,
+              21,
+              1,
+              1
+            ],
+            [
+              34,
+              29,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "frames/frame-02.txt",
+          "dots": [
+            [
+              34,
+              20,
+              1,
+              1
+            ],
+            [
+              34,
+              21,
+              1,
+              1
+            ],
+            [
+              34,
+              28,
+              1,
+              1
+            ],
+            [
+              34,
+              29,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "frames/frame-03.txt",
+          "dots": [
+            [
+              34,
+              20,
+              1,
+              1
+            ],
+            [
+              34,
+              28,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "frames/frame-04.txt",
+          "dots": [
+            [
+              34,
+              20,
+              1,
+              1
+            ],
+            [
+              34,
+              28,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "unselected.txt",
+          "dots": [
+            [
+              34,
+              21,
+              1,
+              1
+            ],
+            [
+              34,
+              29,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "selected-tab.txt",
+          "dots": [
+            [
+              34,
+              20,
+              1,
+              1
+            ],
+            [
+              34,
+              21,
+              1,
+              1
+            ],
+            [
+              34,
+              28,
+              1,
+              1
+            ],
+            [
+              34,
+              29,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "selected-right.txt",
+          "dots": [
+            [
+              34,
+              21,
+              1,
+              1
+            ],
+            [
+              34,
+              29,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        },
+        {
+          "file": "selected-after-frames.txt",
+          "dots": [
+            [
+              34,
+              21,
+              1,
+              1
+            ],
+            [
+              34,
+              29,
+              1,
+              1
+            ]
+          ],
+          "all_changes_only_dot_line_swaps": true
+        }
+      ],
+      "remaining_generator_tab_panes": [
+        "w7E:p2R"
+      ]
+    }
+  ],
+  "limits": [
+    "Frozen binary bytes hash matches; bare launch commands do not prove its execution.",
+    "No numeric zoom telemetry in captures.",
+    "Sparse timestamp sampling does not establish continuous direction or speed."
+  ]
+}

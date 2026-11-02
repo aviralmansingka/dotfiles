@@ -1,0 +1,70 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "layers": [
+    [
+      "tun",
+      "icmp",
+      "inv"
+    ],
+    [
+      "sil"
+    ],
+    [
+      "claim"
+    ]
+  ],
+  "nodes": [
+    {
+      "id": "tun",
+      "label": "VXLAN/MPLS TTL",
+      "group": "why"
+    },
+    {
+      "id": "icmp",
+      "label": "ICMP rate-limit",
+      "group": "why"
+    },
+    {
+      "id": "inv",
+      "label": "above .57 invisible, no ECMP",
+      "group": "why"
+    },
+    {
+      "id": "sil",
+      "label": "hops 3,6 silent, 5:80% loss",
+      "group": "trace"
+    },
+    {
+      "id": "claim",
+      "label": "silent hop is not L2",
+      "group": "trace"
+    }
+  ],
+  "edges": [
+    {
+      "from": "tun",
+      "to": "sil",
+      "label": "hides fabric",
+      "dots": 0
+    },
+    {
+      "from": "icmp",
+      "to": "sil",
+      "label": "rate-limited",
+      "dots": 0
+    },
+    {
+      "from": "inv",
+      "to": "sil",
+      "label": "not visible",
+      "dots": 0
+    },
+    {
+      "from": "sil",
+      "to": "claim",
+      "label": "not proof",
+      "dots": 0
+    }
+  ]
+}

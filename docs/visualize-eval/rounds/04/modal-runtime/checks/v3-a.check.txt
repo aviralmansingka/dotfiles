@@ -1,0 +1,14 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=5 edges=4 flows=4 direction=tb theme=gruvbox
+layers=3 (explicit placement, sugiyama skipped)
+extent=46x21 cells
+crossings: 0 bridges, 0 touching bends
+labels: 4/4 placed, 0 on route cells, 0 skipped, 2 ambiguous owners
+warning: 2 label(s) have an ambiguous owner: another route is as close to the label as its own edge, so a reader cannot tell which edge the label names
+groups: orchestration(1) compute(2) storage(2)
+trunks:
+routes: 4/4 near-minimal, 0 detours, 0 shortened
+dots: 4 single-dot routes, 0 periodic routes, 0 violations, 4 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 4/4 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step
+exit=0

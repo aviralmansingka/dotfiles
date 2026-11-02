@@ -1,0 +1,1508 @@
+{
+  "protocol_version": 1,
+  "round": 2,
+  "case_id": "homelab-nic-trace",
+  "candidate_sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+  "renderer_sha256": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+  "rubric_sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "ba23ccd26157361fb3dbbe612e8b9bdc444cd99ad52d6dcee53aef26b5c94e77",
+  "generator": {
+    "worker_id": "viz-ds02-homelab-nic-trace",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge02-homelab-nic-trace",
+    "model": "openai/gpt-6.1-sol"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": null,
+  "evidence": [
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/02/metadata.json",
+      "sha256": "e40d17b02025d270a79fe0dd437fb908ed07c048ea6cbe043d4e17ccaf94bc45",
+      "description": "Frozen round-02 identities, hashes, and documented pane-width harness limitation.",
+      "capture": null
+    },
+    {
+      "id": "candidate",
+      "path": "docs/visualize-eval/rounds/02/SKILL.md",
+      "sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+      "description": "Frozen candidate skill; hash verified against metadata.",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/02/rubric.json",
+      "sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f",
+      "description": "Frozen seven-category rubric and embedded result schema; hash verified.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen case manifest; only this case is evaluated.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+      "sha256": "abe8b376eccd7d0027f2985aab55ed656603b2094c275ee66ed223a57421b4c4",
+      "description": "Source excerpts and human-qualified constraints; hash verified.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/homelab-nic-trace/expected.json",
+      "sha256": "91ef88d09af71cd4583cfd0f1141e10f2fc2efdd3a779f9389f1d67759cd09c7",
+      "description": "Historical reference concepts and 14 relations; hash verified.",
+      "capture": null
+    },
+    {
+      "id": "capture-harness",
+      "path": "scripts/viz-evidence.sh",
+      "sha256": "2a804dea703e5a9da9cdd788d4eb89690860a02606ec681948670dfe19e8e069",
+      "description": "Hash-verified frozen capture script: check stdout/stderr merge, exact command construction, close/get probe.",
+      "capture": null
+    },
+    {
+      "id": "validate-harness",
+      "path": "scripts/viz-validate.py",
+      "sha256": "0c8a5488c5b40d511d74c6470f076638d2baa33b384abfb398186497cbdf5e66",
+      "description": "Hash-verified validator; its results are not visual proof.",
+      "capture": null
+    },
+    {
+      "id": "aggregate-harness",
+      "path": "scripts/viz-aggregate.py",
+      "sha256": "5ab3cfd4c1d84a01ae1aa3c166c2d5331bf6692e15e1d8fb97a2a0905192cffa",
+      "description": "Hash-verified aggregator input provenance; not run by judge.",
+      "capture": null
+    },
+    {
+      "id": "generation-json",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/generation.json",
+      "sha256": "7ddfd2eaf8188270826021a96edd4b3e9d3369def01a5196407155219125644c",
+      "description": "Generator identity, meaning ledger, coverage map, omissions and all six pane cleanup records; not independent visual proof.",
+      "capture": null
+    },
+    {
+      "id": "generation-md",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/generation.md",
+      "sha256": "dfabe1ecc7dd39c9e7430f75faec586b59f6458da01396b754553451558b37e5",
+      "description": "Generator narrative; eight attempt files despite prose saying nine.",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/attempts.json",
+      "sha256": "82deffd7b87c378fa23335642df9277b011c0a566748fa2a05093f81ae8aadd9",
+      "description": "Preserved attempt ledger: v1=3, v2=3, v3=2; exact spec hashes verified.",
+      "capture": null
+    },
+    {
+      "id": "validator-all",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/validator/all-views.txt",
+      "sha256": "2db80bc7d6717f61e70e37f6c7bf12a021b64afb49ef8926b0b498b740e48e29",
+      "description": "Recorded per-view validation output; not visual proof.",
+      "capture": null
+    },
+    {
+      "id": "observed-first",
+      "path": "docs/visualize-eval/rounds/02/reviews/homelab-nic-trace/observed-first.md",
+      "sha256": "417a3548103c45046a49e74b5253c0353ee355a5367c8bd817b70eb5789a4b03",
+      "description": "Unmodified Stage-A blind record, sealed before expected-data reveal.",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/02/reviews/homelab-nic-trace/spec-manifest.json",
+      "sha256": "ba23ccd26157361fb3dbbe612e8b9bdc444cd99ad52d6dcee53aef26b5c94e77",
+      "description": "Deterministic sorted repository-relative final-spec path/hash pairs; spec_sha256 hashes these bytes.",
+      "capture": null
+    },
+    {
+      "id": "v1-attempt-1",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/attempts/v1-a1.json",
+      "sha256": "8ca8f96fb5184ff3644ec970b2e037a374b74c79d6ccd63a234a79490e7b85d7",
+      "description": "Preserved attempted spec; not used as proof of final visible content.",
+      "capture": null
+    },
+    {
+      "id": "v1-attempt-2",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/attempts/v1-a2.json",
+      "sha256": "baa5082f022a2e5613a1460bb7d99a192a8ebcf037d8a0e8be3f6256c651fcf3",
+      "description": "Preserved attempted spec; not used as proof of final visible content.",
+      "capture": null
+    },
+    {
+      "id": "v1-attempt-3",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/attempts/v1-a3.json",
+      "sha256": "097e1b77f7be20d3f1ece744c14cc5f64044484f426d527026df2824540d1084",
+      "description": "Preserved attempted spec; not used as proof of final visible content.",
+      "capture": null
+    },
+    {
+      "id": "v2-attempt-1",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/attempts/v2-a1.json",
+      "sha256": "5ba37cf848464bd31f9d92de23b599c5d40b9c297a6063b7ff93a10046b496bc",
+      "description": "Preserved attempted spec; not used as proof of final visible content.",
+      "capture": null
+    },
+    {
+      "id": "v2-attempt-2",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/attempts/v2-a2.json",
+      "sha256": "e93e48bfcd8557c5037fe7dc6cbf5c0f0deaa8ebda74a6a2300b638dfbc3b57c",
+      "description": "Preserved attempted spec; not used as proof of final visible content.",
+      "capture": null
+    },
+    {
+      "id": "v2-attempt-3",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/attempts/v2-a3.json",
+      "sha256": "1c794901d822ef3da274ce48538b190d19726ab886e8ff4a68dcf4f2e2e08eb1",
+      "description": "Preserved attempted spec; not used as proof of final visible content.",
+      "capture": null
+    },
+    {
+      "id": "v3-attempt-1",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/attempts/v3-a1.json",
+      "sha256": "917968112e82234fa59f96ec363010a6cb276f5fc0c33e191da3e4ec75ce1348",
+      "description": "Preserved attempted spec; not used as proof of final visible content.",
+      "capture": null
+    },
+    {
+      "id": "v3-attempt-2",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/attempts/v3-a2.json",
+      "sha256": "32559d5011d59e852d92f02ecd81f3ae9964393a102ffdf20c6bc134622e3afb",
+      "description": "Preserved attempted spec; not used as proof of final visible content.",
+      "capture": null
+    },
+    {
+      "id": "v1-spec",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/v1.json",
+      "sha256": "097e1b77f7be20d3f1ece744c14cc5f64044484f426d527026df2824540d1084",
+      "description": "Final intended spec, hash verified against capture manifest; not proof of visible content.",
+      "capture": null
+    },
+    {
+      "id": "v1-manifest",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v1/manifest.json",
+      "sha256": "682fd8658f4a0aa6c79af81c3ee8d800340b683d17a4a8aaae4d81827457f5ad",
+      "description": "Capture/check timestamp windows, binary/spec hashes, exit status, cleanup result; live pane_rect and pane_cols are null.",
+      "capture": null
+    },
+    {
+      "id": "v1-binary-record",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v1/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "description": "Recorded actually executed frozen absolute binary path/hash; binary bytes independently verified by judge.",
+      "capture": null
+    },
+    {
+      "id": "v1-check",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v1/check.txt",
+      "sha256": "e5c2f7598628a924e47a1d5d08514ca3af626e2ee9ed97fa3629eefe7f4b9827",
+      "description": "Full preserved check stdout+stderr (merged by frozen harness); manifest check_exit=0; not visual proof.",
+      "capture": null
+    },
+    {
+      "id": "v1-validator",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/validator/v1.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6",
+      "description": "Preserved per-view validator output; not visual proof.",
+      "capture": null
+    },
+    {
+      "id": "v1-text",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v1/v1-text.txt",
+      "sha256": "865b5dec14cf1f77e74fe7e85d39e975785e6ca7a210c88b17809978f0fbac63",
+      "description": "Saved capture; timestamp is the recorded capture window, not an invented per-state wall-clock instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "ordinary",
+        "timestamp": "2026-11-02T10:01:58Z .. 2026-11-02T10:02:02Z",
+        "state": "ordinary natural zoom",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-ansi",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v1/v1-ansi.ansi",
+      "sha256": "c2344a75372c48e989ce2f082d36c85d491f8f48a1397838968ff33726a27f0c",
+      "description": "Saved capture; timestamp is the recorded capture window, not an invented per-state wall-clock instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "ordinary",
+        "timestamp": "2026-11-02T10:01:58Z .. 2026-11-02T10:02:02Z",
+        "state": "ordinary natural zoom",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-selected",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v1/v1-selected.ansi",
+      "sha256": "78276b6470a6dbf1c08032447c02759316ea09cab0a1027141880e45d496d5fe",
+      "description": "Saved capture; timestamp is the recorded capture window, not an invented per-state wall-clock instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T10:01:58Z .. 2026-11-02T10:02:02Z",
+        "state": "all nodes selected simultaneously",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frames-text",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v1/v1-frames.txt",
+      "sha256": "77d4795bf81bfe88e346700d6b9aaa4af814f328888a47f5cab2acbd87232915",
+      "description": "Saved capture; timestamp is the recorded capture window, not an invented per-state wall-clock instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frames 0-4",
+        "timestamp": "2026-11-02T10:01:58Z .. 2026-11-02T10:02:02Z",
+        "state": "timestamped motion sample; diagram bodies plain text",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v1/v1-frames.ansi",
+      "sha256": "0e95df78d0ffbf8fa9bc6eca7358c8818e5e3373d7e2526fc122a5d67dbd381f",
+      "description": "Saved capture; timestamp is the recorded capture window, not an invented per-state wall-clock instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frames 0-4",
+        "timestamp": "2026-11-02T10:01:58Z .. 2026-11-02T10:02:02Z",
+        "state": "timestamped motion sample; diagram bodies unstyled, shell scrollback styled",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frame-0",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v1/v1-frames.txt",
+      "sha256": "77d4795bf81bfe88e346700d6b9aaa4af814f328888a47f5cab2acbd87232915",
+      "description": "Frame-addressable alias of the verbatim multi-frame capture; locations are relative to the named 77x47 frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frame 0",
+        "timestamp": "0ms (relative); capture window 2026-11-02T10:01:58Z .. 2026-11-02T10:02:02Z",
+        "state": "motion sample",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frame-1",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v1/v1-frames.txt",
+      "sha256": "77d4795bf81bfe88e346700d6b9aaa4af814f328888a47f5cab2acbd87232915",
+      "description": "Frame-addressable alias of the verbatim multi-frame capture; locations are relative to the named 77x47 frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frame 1",
+        "timestamp": "100ms (relative); capture window 2026-11-02T10:01:58Z .. 2026-11-02T10:02:02Z",
+        "state": "motion sample",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frame-2",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v1/v1-frames.txt",
+      "sha256": "77d4795bf81bfe88e346700d6b9aaa4af814f328888a47f5cab2acbd87232915",
+      "description": "Frame-addressable alias of the verbatim multi-frame capture; locations are relative to the named 77x47 frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frame 2",
+        "timestamp": "200ms (relative); capture window 2026-11-02T10:01:58Z .. 2026-11-02T10:02:02Z",
+        "state": "motion sample",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frame-3",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v1/v1-frames.txt",
+      "sha256": "77d4795bf81bfe88e346700d6b9aaa4af814f328888a47f5cab2acbd87232915",
+      "description": "Frame-addressable alias of the verbatim multi-frame capture; locations are relative to the named 77x47 frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frame 3",
+        "timestamp": "300ms (relative); capture window 2026-11-02T10:01:58Z .. 2026-11-02T10:02:02Z",
+        "state": "motion sample",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frame-4",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v1/v1-frames.txt",
+      "sha256": "77d4795bf81bfe88e346700d6b9aaa4af814f328888a47f5cab2acbd87232915",
+      "description": "Frame-addressable alias of the verbatim multi-frame capture; locations are relative to the named 77x47 frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frame 4",
+        "timestamp": "400ms (relative); capture window 2026-11-02T10:01:58Z .. 2026-11-02T10:02:02Z",
+        "state": "motion sample",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-spec",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/v2.json",
+      "sha256": "1c794901d822ef3da274ce48538b190d19726ab886e8ff4a68dcf4f2e2e08eb1",
+      "description": "Final intended spec, hash verified against capture manifest; not proof of visible content.",
+      "capture": null
+    },
+    {
+      "id": "v2-manifest",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v2/manifest.json",
+      "sha256": "4dabe8ccb6362bdf16ea7479ffb876f5f777be95156b5e146de05cbda37584b2",
+      "description": "Capture/check timestamp windows, binary/spec hashes, exit status, cleanup result; live pane_rect and pane_cols are null.",
+      "capture": null
+    },
+    {
+      "id": "v2-binary-record",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v2/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "description": "Recorded actually executed frozen absolute binary path/hash; binary bytes independently verified by judge.",
+      "capture": null
+    },
+    {
+      "id": "v2-check",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v2/check.txt",
+      "sha256": "ab90934b8985ef6ae213f743c0fb386f9550aa7bf67405c8a71f48bb631c67a9",
+      "description": "Full preserved check stdout+stderr (merged by frozen harness); manifest check_exit=0; not visual proof.",
+      "capture": null
+    },
+    {
+      "id": "v2-validator",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/validator/v2.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6",
+      "description": "Preserved per-view validator output; not visual proof.",
+      "capture": null
+    },
+    {
+      "id": "v2-text",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v2/v2-text.txt",
+      "sha256": "3950add5c9901d7c6931280cff33bc775549d2a05c5b258289bf2b706fc7664f",
+      "description": "Saved capture; timestamp is the recorded capture window, not an invented per-state wall-clock instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "ordinary",
+        "timestamp": "2026-11-02T10:03:30Z .. 2026-11-02T10:03:34Z",
+        "state": "ordinary natural zoom",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-ansi",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v2/v2-ansi.ansi",
+      "sha256": "0181d118ed732134659dd92b6e4905ba4793f4b241e259b455eff77f28f36d44",
+      "description": "Saved capture; timestamp is the recorded capture window, not an invented per-state wall-clock instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "ordinary",
+        "timestamp": "2026-11-02T10:03:30Z .. 2026-11-02T10:03:34Z",
+        "state": "ordinary natural zoom",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-selected",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v2/v2-selected.ansi",
+      "sha256": "a09489b18f7db44ae328cef52e491043f24dba34d6200bee0a13c1dd78f910dd",
+      "description": "Saved capture; timestamp is the recorded capture window, not an invented per-state wall-clock instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T10:03:30Z .. 2026-11-02T10:03:34Z",
+        "state": "all nodes selected simultaneously",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frames-text",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v2/v2-frames.txt",
+      "sha256": "804c5a35ccf761e3d485c66c79608fc734244e34fcd611806ecb346e1bd43402",
+      "description": "Saved capture; timestamp is the recorded capture window, not an invented per-state wall-clock instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "frames 0-4",
+        "timestamp": "2026-11-02T10:03:30Z .. 2026-11-02T10:03:34Z",
+        "state": "timestamped motion sample; diagram bodies plain text",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v2/v2-frames.ansi",
+      "sha256": "b1a5ea53c946f6cd3215768c40d4dcc8c73d247bb48c8abecfa8670d21bcaf2b",
+      "description": "Saved capture; timestamp is the recorded capture window, not an invented per-state wall-clock instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "frames 0-4",
+        "timestamp": "2026-11-02T10:03:30Z .. 2026-11-02T10:03:34Z",
+        "state": "timestamped motion sample; diagram bodies unstyled, shell scrollback styled",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frame-0",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v2/v2-frames.txt",
+      "sha256": "804c5a35ccf761e3d485c66c79608fc734244e34fcd611806ecb346e1bd43402",
+      "description": "Frame-addressable alias of the verbatim multi-frame capture; locations are relative to the named 77x47 frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "frame 0",
+        "timestamp": "0ms (relative); capture window 2026-11-02T10:03:30Z .. 2026-11-02T10:03:34Z",
+        "state": "motion sample",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frame-1",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v2/v2-frames.txt",
+      "sha256": "804c5a35ccf761e3d485c66c79608fc734244e34fcd611806ecb346e1bd43402",
+      "description": "Frame-addressable alias of the verbatim multi-frame capture; locations are relative to the named 77x47 frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "frame 1",
+        "timestamp": "100ms (relative); capture window 2026-11-02T10:03:30Z .. 2026-11-02T10:03:34Z",
+        "state": "motion sample",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frame-2",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v2/v2-frames.txt",
+      "sha256": "804c5a35ccf761e3d485c66c79608fc734244e34fcd611806ecb346e1bd43402",
+      "description": "Frame-addressable alias of the verbatim multi-frame capture; locations are relative to the named 77x47 frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "frame 2",
+        "timestamp": "200ms (relative); capture window 2026-11-02T10:03:30Z .. 2026-11-02T10:03:34Z",
+        "state": "motion sample",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frame-3",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v2/v2-frames.txt",
+      "sha256": "804c5a35ccf761e3d485c66c79608fc734244e34fcd611806ecb346e1bd43402",
+      "description": "Frame-addressable alias of the verbatim multi-frame capture; locations are relative to the named 77x47 frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "frame 3",
+        "timestamp": "300ms (relative); capture window 2026-11-02T10:03:30Z .. 2026-11-02T10:03:34Z",
+        "state": "motion sample",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frame-4",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v2/v2-frames.txt",
+      "sha256": "804c5a35ccf761e3d485c66c79608fc734244e34fcd611806ecb346e1bd43402",
+      "description": "Frame-addressable alias of the verbatim multi-frame capture; locations are relative to the named 77x47 frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "frame 4",
+        "timestamp": "400ms (relative); capture window 2026-11-02T10:03:30Z .. 2026-11-02T10:03:34Z",
+        "state": "motion sample",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-spec",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/v3.json",
+      "sha256": "32559d5011d59e852d92f02ecd81f3ae9964393a102ffdf20c6bc134622e3afb",
+      "description": "Final intended spec, hash verified against capture manifest; not proof of visible content.",
+      "capture": null
+    },
+    {
+      "id": "v3-manifest",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v3/manifest.json",
+      "sha256": "0215642780564e841e89dae20c60169cb39df05277e83a3036b7e64eefbf9eb6",
+      "description": "Capture/check timestamp windows, binary/spec hashes, exit status, cleanup result; live pane_rect and pane_cols are null.",
+      "capture": null
+    },
+    {
+      "id": "v3-binary-record",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v3/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "description": "Recorded actually executed frozen absolute binary path/hash; binary bytes independently verified by judge.",
+      "capture": null
+    },
+    {
+      "id": "v3-check",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v3/check.txt",
+      "sha256": "37da3cab1f270ecacdc74b74691e5f93df6845782e1b546ae8195b268cea5661",
+      "description": "Full preserved check stdout+stderr (merged by frozen harness); manifest check_exit=0; not visual proof.",
+      "capture": null
+    },
+    {
+      "id": "v3-validator",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/validator/v3.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6",
+      "description": "Preserved per-view validator output; not visual proof.",
+      "capture": null
+    },
+    {
+      "id": "v3-text",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v3/v3-text.txt",
+      "sha256": "671ce86a563f7af8b3ef4972cb69cb15265af23811015058806c669dbaebcd31",
+      "description": "Saved capture; timestamp is the recorded capture window, not an invented per-state wall-clock instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "ordinary",
+        "timestamp": "2026-11-02T10:02:24Z .. 2026-11-02T10:02:28Z",
+        "state": "ordinary natural zoom",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-ansi",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v3/v3-ansi.ansi",
+      "sha256": "f43008e43ab6d9147d456770a6665c638e41c6c2fac934e57d1ffb0dd59243a3",
+      "description": "Saved capture; timestamp is the recorded capture window, not an invented per-state wall-clock instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "ordinary",
+        "timestamp": "2026-11-02T10:02:24Z .. 2026-11-02T10:02:28Z",
+        "state": "ordinary natural zoom",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-selected",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v3/v3-selected.ansi",
+      "sha256": "33b74add1702ed4e05d28951d754138843afcd930d082e71b51bc97efa89406d",
+      "description": "Saved capture; timestamp is the recorded capture window, not an invented per-state wall-clock instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T10:02:24Z .. 2026-11-02T10:02:28Z",
+        "state": "all nodes selected simultaneously",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-frames-text",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v3/v3-frames.txt",
+      "sha256": "276a8d21e1a064d91e5afb17dbb191b96423aa2dfe29f0d891c018554dc81690",
+      "description": "Saved capture; timestamp is the recorded capture window, not an invented per-state wall-clock instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "frames 0-4",
+        "timestamp": "2026-11-02T10:02:24Z .. 2026-11-02T10:02:28Z",
+        "state": "timestamped motion sample; diagram bodies plain text",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v3/v3-frames.ansi",
+      "sha256": "b165577e6176d7bc8b9f9c7b8d9e65a40dbd9e4aae4858d155c901a969918590",
+      "description": "Saved capture; timestamp is the recorded capture window, not an invented per-state wall-clock instant.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "frames 0-4",
+        "timestamp": "2026-11-02T10:02:24Z .. 2026-11-02T10:02:28Z",
+        "state": "timestamped motion sample; diagram bodies unstyled, shell scrollback styled",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-frame-0",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v3/v3-frames.txt",
+      "sha256": "276a8d21e1a064d91e5afb17dbb191b96423aa2dfe29f0d891c018554dc81690",
+      "description": "Frame-addressable alias of the verbatim multi-frame capture; locations are relative to the named 77x47 frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "frame 0",
+        "timestamp": "0ms (relative); capture window 2026-11-02T10:02:24Z .. 2026-11-02T10:02:28Z",
+        "state": "motion sample",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frame-1",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v3/v3-frames.txt",
+      "sha256": "276a8d21e1a064d91e5afb17dbb191b96423aa2dfe29f0d891c018554dc81690",
+      "description": "Frame-addressable alias of the verbatim multi-frame capture; locations are relative to the named 77x47 frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "frame 1",
+        "timestamp": "100ms (relative); capture window 2026-11-02T10:02:24Z .. 2026-11-02T10:02:28Z",
+        "state": "motion sample",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frame-2",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v3/v3-frames.txt",
+      "sha256": "276a8d21e1a064d91e5afb17dbb191b96423aa2dfe29f0d891c018554dc81690",
+      "description": "Frame-addressable alias of the verbatim multi-frame capture; locations are relative to the named 77x47 frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "frame 2",
+        "timestamp": "200ms (relative); capture window 2026-11-02T10:02:24Z .. 2026-11-02T10:02:28Z",
+        "state": "motion sample",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frame-3",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v3/v3-frames.txt",
+      "sha256": "276a8d21e1a064d91e5afb17dbb191b96423aa2dfe29f0d891c018554dc81690",
+      "description": "Frame-addressable alias of the verbatim multi-frame capture; locations are relative to the named 77x47 frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "frame 3",
+        "timestamp": "300ms (relative); capture window 2026-11-02T10:02:24Z .. 2026-11-02T10:02:28Z",
+        "state": "motion sample",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frame-4",
+      "path": "docs/visualize-eval/rounds/02/homelab-nic-trace/evidence/v3/v3-frames.txt",
+      "sha256": "276a8d21e1a064d91e5afb17dbb191b96423aa2dfe29f0d891c018554dc81690",
+      "description": "Frame-addressable alias of the verbatim multi-frame capture; locations are relative to the named 77x47 frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "frame 4",
+        "timestamp": "400ms (relative); capture window 2026-11-02T10:02:24Z .. 2026-11-02T10:02:28Z",
+        "state": "motion sample",
+        "format": "text"
+      }
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "observed-first",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 14 directed geometric relations are present, but source-required identifiers/roles/limitations are dropped and three edge-label owners remain uncertain. Source/spec reveal confirms intent without curing capture ambiguity. See F1-F5; narrative ledgers are not same-view keys.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "evidence_ids": [
+        "observed-first",
+        "source",
+        "expected",
+        "v1-text",
+        "v2-text",
+        "v3-text",
+        "v1-spec",
+        "v2-spec",
+        "v3-spec"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 14 source stems reach unique arrowheads in the correct direction; no extra visible link, crossing, shared corridor, false branch or bus requirement. Close nested runs and two same-route one-cell jogs remain followable. Three label-ownership failures are semantic failures, not ambiguous geometric destinations.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/arrow_traceability"
+      ],
+      "evidence_ids": [
+        "observed-first",
+        "v1-text",
+        "v2-text",
+        "v3-text",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Geometric fit passes: each ordinary/selected view is 77x47 at natural 100%, complete boxes and full displayed labels, no palette occlusion or clipping; headers, startup lines and ANSI grids agree. All 14 geometric relations are covered once with repeated split anchors. However the fixed gate also requires complete source coverage across splits: F1/F2 source identifiers/roles have no key or view, so the full conjunctive category fails on those same omissions (not an additional independent defect). This is omission, not clipping. Outer live-pane rectangle is unrecorded; live_pane=null.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/layout_fit"
+      ],
+      "evidence_ids": [
+        "v1-text",
+        "v2-text",
+        "v3-text",
+        "v1-selected",
+        "v2-selected",
+        "v3-selected",
+        "v1-frames-text",
+        "v2-frames-text",
+        "v3-frames-text",
+        "metadata"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Captures show guest VM/container amber, virtual bridges teal, host pink, overlay green and NIC pair blue in v1; related NICs are adjacent amber in v2 and Verizon ISP nodes adjacent teal in v3. These are source concepts, not depth alone. Source sequence is respected. Cross-view hue stability is explicitly not a gate.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/rounds/02/judge-full-task.md"
+      ],
+      "evidence_ids": [
+        "observed-first",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "16/16 node occurrences have complete sides/four corners and one ordinary per-node perimeter color; all 16/16 selected perimeters are continuously bold RGB(216,166,87). None uncheckable. Simultaneous select-all proves borders, not individual focus/drag interaction. Motion diagram bodies do not preserve ANSI colors; ordinary/selected ANSI independently provides required color evidence.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/border_integrity"
+      ],
+      "evidence_ids": [
+        "observed-first",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v1-selected",
+        "v2-selected",
+        "v3-selected"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Frozen skill/binary/rubric/dataset/source/expected/harness hashes, all 21 bundle artifact hashes and 8 attempt hashes were verified; exact viewer argv is in captured scrollback and check argv/stdout+stderr/exit are bound by the hash-verified capture harness plus manifest. DeepSeek generation and separate actual OpenAI Sol judge identities are recorded; blind record preceded reveal and its hash is unchanged. Final three panes have harness close/get records, and all six owned panes have generator cleanup records. App dimensions/startup lines satisfy the documented frozen pane-width harness limitation; no outer-pane rectangle is invented. No new viewer or chat art.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/02/judge-full-task.md",
+        "docs/visualize-eval/rounds/02/metadata.json"
+      ],
+      "evidence_ids": [
+        "candidate",
+        "metadata",
+        "rubric",
+        "dataset",
+        "capture-harness",
+        "generation-json",
+        "attempts",
+        "observed-first",
+        "spec-manifest",
+        "v1-manifest",
+        "v2-manifest",
+        "v3-manifest",
+        "v1-check",
+        "v2-check",
+        "v3-check",
+        "v1-binary-record",
+        "v2-binary-record",
+        "v3-binary-record"
+      ]
+    },
+    "animation": {
+      "applicable": false,
+      "status": null,
+      "reason": "The frozen cases.json entry and expected.json both mark this case animation optional, and source.md contains no request for animation. Source-backed N/A therefore applies, not a pass. Unrequested dots do not damage stems, arrowheads, borders or labels in the samples. Two routes are stationary in-sample (e1 at (10,15), e14 at (37,32)); this is not evidence of successful motion and not a new required gate. Three other routes repeat short subsets; no observed multi-dot or hazard-cell violation. Full per-route positions are sealed in observed-first.md.",
+      "source_refs": [
+        "docs/visualize-eval/cases.json#/cases/2/animation",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/animation",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md"
+      ],
+      "evidence_ids": [
+        "dataset",
+        "expected",
+        "source",
+        "observed-first",
+        "v1-frames-text",
+        "v2-frames-text",
+        "v3-frames-text"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/0"
+      ],
+      "expected": "VM vnet0 → virbr0: 192.168.122.x",
+      "observed": "Down from (10,14), bends (10,16)/(11,16), ▼ (11,17); node-port contacts intact; no crossings/junctions. Visible network label belongs to this route.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            9,
+            10,
+            17,
+            12
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/1"
+      ],
+      "expected": "virbr0 → homelab host: NAT bridge",
+      "observed": "Down from (11,22), left at (11,23), down at (4,23), ▼ (4,25). Close to the next row route but no junction. NAT bridge is attributable.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            3,
+            18,
+            26,
+            12
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/2"
+      ],
+      "expected": "container veth → Docker bridge: 172.18.2.x",
+      "observed": "Down (35,14)–(35,17), ▼ (35,17). ctr veth and docker0 are visible, and subnet label is attributable. Geometry passes, but target bridge address 172.18.2.1 is missing and docker0 is not source-established.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            34,
+            10,
+            14,
+            12
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/3"
+      ],
+      "expected": "Docker bridge → homelab host: docker bridge",
+      "observed": "Down (35,22), left at (35,24), down at (6,24), ▼ (6,25). No junction with the row-23 NAT run. Label is attributable; source bridge identity/address is incompletely preserved.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            3,
+            18,
+            40,
+            12
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/4"
+      ],
+      "expected": "tailscale0 100.113.153.49 → homelab host: overlay",
+      "observed": "Leave tailscale0 left at (7,36), bend (1,36), up to (1,27), ▶ (2,27). Whole left-edge corridor and arrowhead visible; overlay label attributable. Source address absent.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            1,
+            26,
+            23,
+            13
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/5"
+      ],
+      "expected": "tailscale0 → bond0: encapsulated over UDP on wired path",
+      "observed": "Right stem (20,36) through ▶ (27,36) into bond0. Geometric link passes; UDP encap is at [19,34,9,1] beside the other inbound down arrow, so its intended owner is uncertain; overlay source address absent.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            8,
+            33,
+            41,
+            6
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1",
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/6"
+      ],
+      "expected": "homelab host → bond0 192.168.1.197: eno1 2.5 GbE",
+      "observed": "Down (4,30), right at (4,33), down at (29,33), ▼ (29,34). Geometric link passes; eno1 2.5 GbE at [10,32,12,1] is equally near the other row-31 run.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            3,
+            26,
+            52,
+            13
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/7"
+      ],
+      "expected": "homelab host → Wi-Fi wlp8s0 .213: backup path",
+      "observed": "Down (6,30), right at (6,31), down at (54,31), ▼ (54,34). backup path above this upper run is attributable; Wi-Fi is linked to the repeated wlp8s0 anchor in v2. No branch.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            3,
+            26,
+            72,
+            13
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e9",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/8"
+      ],
+      "expected": "bond0 → Fios router 192.168.1.1: default gateway 0.5 ms",
+      "observed": "Down (31,19), left at (31,20), down at (18,20), ▼ (18,22). default 0.5 ms is attributable; Fios rtr? qualifies identity and includes NAT/DHCP. Repeated bond0 anchor joins v1 to v2.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            17,
+            15,
+            32,
+            12
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e10",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/9"
+      ],
+      "expected": "Wi-Fi wlp8s0 → Fios router: metric-600 backup/failover, not ECMP",
+      "observed": "Down (54,19), left at (54,21), down at (20,21), ▼ (20,22). Geometric route unique; metric 600 at [32,20,10,1] touches the wired route bend instead of securely owning this route. v1 supplies backup path, but does not resolve metric ownership locally.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            17,
+            15,
+            44,
+            12
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F4"
+      ]
+    },
+    {
+      "edge_id": "e11",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/10"
+      ],
+      "expected": "Fios router → qualified ONT 169.254.3.1: NAT out",
+      "observed": "Down (18,27), right at (18,29), down at (25,29), ▼ (25,30). Dashed stems, unbroken trace, NAT 71.251.12.240 label and ONT? qualifier visible. ONT repeats exactly in v3.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            17,
+            23,
+            32,
+            12
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e12",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/11"
+      ],
+      "expected": "Qualified ONT 169.254.3.1 → Verizon aggregation/edge 100.41.x: 4.5 ms",
+      "observed": "Down (31,15), right at (31,17), down at (33,17), ▼ (33,18). Dashed, unbranched and correctly directed; 4.5 ms visible. Target lacks 100.41.x and aggregation qualification/key.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            30,
+            11,
+            18,
+            12
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e13",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/12"
+      ],
+      "expected": "Verizon aggregation/edge 100.41.x → Verizon backbone AS701: 6.6 ms",
+      "observed": "Down (33,23), right at (33,25), down at (37,25), ▼ (37,26). Correct unique geometric chain and 6.6 ms owner; source aggregation address/role key absent, and AS701 has no same-view Verizon-backbone expansion.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            31,
+            19,
+            15,
+            12
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e14",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/13"
+      ],
+      "expected": "Verizon backbone AS701 → Cloudflare 1.1.1.1 / AS13335: 6-9 ms",
+      "observed": "Down (37,31), left/down through adjacent bends (37,33)/(36,33), ▼ (36,34). Correct direction and 6-9 ms label; target is only AS13335 without source Cloudflare name/1.1.1.1. No crossing or branch.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            35,
+            27,
+            11,
+            12
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e5",
+        "e6"
+      ],
+      "severity": "critical",
+      "description": "Tailscale overlay address 100.113.153.49 is absent: the only overlay node says tailscale0, with no same-view address key. Source-required address meaning is dropped; the generator admits the omission. This is not clipping and not repaired by the JSON ledger.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#what-the-probes-found",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/nodes/3"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            8,
+            35,
+            12,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            1,
+            1,
+            77,
+            47
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e3",
+        "e4",
+        "e12",
+        "e13",
+        "e14"
+      ],
+      "severity": "critical",
+      "description": "Additional source identifiers/role meanings are erased: docker 172.18.2.1 is replaced by docker0 (the source does not establish that interface name); Verizon aggregation/edge 100.41.x becomes Verizon edge without its address/aggregation key; Cloudflare 1.1.1.1 / AS13335 becomes only AS13335. No same-view abbreviation key supplies the missing values or Cloudflare name.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/nodes/6",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/nodes/10",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/nodes/12",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#what-the-probes-found"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            34,
+            18,
+            9,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            32,
+            19,
+            14,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            35,
+            35,
+            9,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e6",
+        "e7"
+      ],
+      "severity": "high",
+      "description": "Two v1 required link labels have uncertain visual owners, as sealed blindly: eno1 2.5 GbE is between the host-to-Wi-Fi run at row 31 and host-to-bond run at row 33; UDP encap sits just left of the host-to-bond down arrow at (29,34), not securely on the tailscale-to-bond horizontal at row 36. Reading the spec settles intent, not capture readability.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/5",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/6",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#fixed-constraints"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            10,
+            32,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            4,
+            31,
+            51,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            19,
+            34,
+            11,
+            3
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e10"
+      ],
+      "severity": "high",
+      "description": "metric 600 at [32,20,10,1] begins immediately after the bond0/default-route bend at (31,20), while its intended wlp8s0 route is on row 21. The blind reader cannot securely assign the metric to the Wi-Fi backup rather than wired primary; the spec-only owner declaration does not preserve that source distinction visually.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/9",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#what-the-probes-found",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#fixed-constraints"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            30,
+            19,
+            25,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            32,
+            20,
+            10,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F5",
+      "category": "semantic_fidelity",
+      "edge_ids": [],
+      "severity": "critical",
+      "description": "Source-backed limitations and model roles are omitted or weakened: v6 ULA does not explicitly say ULA-only/no global IPv6/no IPv6 Internet; no view labels no committed rate, the collapsed ToR/spine/border/firewall role of the Fios router, or the demarc/MMR analogy. A node label or same-view text key can state these without inventing an edge. Bare group names in JSON and a generator narrative do not make those facts visible.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#what-the-probes-found",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#mapped-onto-the-datacenter-model"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            3,
+            26,
+            21,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            17,
+            23,
+            32,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            24,
+            31,
+            18,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            1,
+            1,
+            77,
+            47
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:p6V",
+      "w7E:p6W",
+      "w7E:p7G",
+      "w7E:p7M",
+      "w7E:p7Y",
+      "w7E:p7N"
+    ],
+    "closed_pane_ids": [
+      "w7E:p6V",
+      "w7E:p6W",
+      "w7E:p7G",
+      "w7E:p7M",
+      "w7E:p7Y",
+      "w7E:p7N"
+    ],
+    "status": "done",
+    "reason": "Final capture manifests record confirmed_closed after the frozen harness close/get probe for w7E:p7G, w7E:p7Y and w7E:p7N. generation.json cleanup records confirmed_closed for the two preflight panes and superseded w7E:p7M; raw probe output for those three is not separately retained. Judge opened no panes. Status reflects the preserved records, not a new live probe."
+  },
+  "overall": "fail"
+}

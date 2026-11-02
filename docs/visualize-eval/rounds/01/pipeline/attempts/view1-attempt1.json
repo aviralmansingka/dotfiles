@@ -1,0 +1,27 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "layers": [
+    ["cli"],
+    ["api"],
+    ["auth", "queue"],
+    ["", "worker"],
+    ["db"]
+  ],
+  "nodes": [
+    { "id": "cli", "label": "CLI" },
+    { "id": "api", "label": "API gateway" },
+    { "id": "auth", "label": "Auth" },
+    { "id": "queue", "label": "Job queue" },
+    { "id": "worker", "label": "Worker pool" },
+    { "id": "db", "label": "Postgres" }
+  ],
+  "edges": [
+    { "from": "cli", "to": "api", "label": "request", "flow": 0.2 },
+    { "from": "api", "to": "auth", "label": "verify", "flow": 0.2 },
+    { "from": "api", "to": "queue", "label": "enqueue", "flow": 0.2 },
+    { "from": "queue", "to": "worker", "label": "dispatch", "flow": 0.2 },
+    { "from": "worker", "to": "db", "label": "write", "flow": 0.2 },
+    { "from": "auth", "to": "db", "label": "read", "flow": 0.2 }
+  ]
+}

@@ -1,0 +1,2562 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v1-unselected.ansi",
+    "sha256": "d0bfef295e083a0c30d326290a1d566ee4500235bc0b8e2339e84bbba05f028f",
+    "rows": 47,
+    "widths": [
+      77
+    ],
+    "nodes": [
+      {
+        "region": [
+          24,
+          15,
+          10,
+          4
+        ],
+        "perimeter_cells": 24,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              216,
+              166,
+              87
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          40,
+          15,
+          16,
+          4
+        ],
+        "perimeter_cells": 36,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              228,
+              184,
+              111
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          23,
+          23,
+          12,
+          4
+        ],
+        "perimeter_cells": 28,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              174,
+              163
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          40,
+          23,
+          16,
+          4
+        ],
+        "perimeter_cells": 36,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              147,
+              194,
+              183
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          22,
+          31,
+          14,
+          4
+        ],
+        "perimeter_cells": 32,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              211,
+              134,
+              155
+            ],
+            "bold": false
+          }
+        ]
+      }
+    ],
+    "dots": [
+      [
+        25,
+        21,
+        1,
+        1
+      ],
+      [
+        41,
+        21,
+        1,
+        1
+      ],
+      [
+        41,
+        28,
+        1,
+        1
+      ],
+      [
+        24,
+        29,
+        1,
+        1
+      ],
+      [
+        28,
+        29,
+        1,
+        1
+      ],
+      [
+        35,
+        29,
+        1,
+        1
+      ]
+    ]
+  },
+  {
+    "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v1-selected.ansi",
+    "sha256": "0e6fa0f7702d35cd801bc82d18ec6e57f335196a248a0fbeede04a01a157b12d",
+    "rows": 47,
+    "widths": [
+      77
+    ],
+    "nodes": [
+      {
+        "region": [
+          24,
+          15,
+          10,
+          4
+        ],
+        "perimeter_cells": 24,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              216,
+              166,
+              87
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          40,
+          15,
+          16,
+          4
+        ],
+        "perimeter_cells": 36,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              228,
+              184,
+              111
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          23,
+          23,
+          12,
+          4
+        ],
+        "perimeter_cells": 28,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              174,
+              163
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          40,
+          23,
+          16,
+          4
+        ],
+        "perimeter_cells": 36,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              147,
+              194,
+              183
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          22,
+          31,
+          14,
+          4
+        ],
+        "perimeter_cells": 32,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              216,
+              166,
+              87
+            ],
+            "bold": true
+          }
+        ]
+      }
+    ],
+    "dots": [
+      [
+        41,
+        20,
+        1,
+        1
+      ],
+      [
+        25,
+        21,
+        1,
+        1
+      ],
+      [
+        24,
+        29,
+        1,
+        1
+      ],
+      [
+        25,
+        29,
+        1,
+        1
+      ],
+      [
+        32,
+        29,
+        1,
+        1
+      ],
+      [
+        39,
+        29,
+        1,
+        1
+      ]
+    ]
+  },
+  {
+    "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v1-frame01.ansi",
+    "sha256": "d0bfef295e083a0c30d326290a1d566ee4500235bc0b8e2339e84bbba05f028f",
+    "rows": 47,
+    "widths": [
+      77
+    ],
+    "nodes": [
+      {
+        "region": [
+          24,
+          15,
+          10,
+          4
+        ],
+        "perimeter_cells": 24,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              216,
+              166,
+              87
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          40,
+          15,
+          16,
+          4
+        ],
+        "perimeter_cells": 36,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              228,
+              184,
+              111
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          23,
+          23,
+          12,
+          4
+        ],
+        "perimeter_cells": 28,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              174,
+              163
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          40,
+          23,
+          16,
+          4
+        ],
+        "perimeter_cells": 36,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              147,
+              194,
+              183
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          22,
+          31,
+          14,
+          4
+        ],
+        "perimeter_cells": 32,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              211,
+              134,
+              155
+            ],
+            "bold": false
+          }
+        ]
+      }
+    ],
+    "dots": [
+      [
+        25,
+        21,
+        1,
+        1
+      ],
+      [
+        41,
+        21,
+        1,
+        1
+      ],
+      [
+        41,
+        28,
+        1,
+        1
+      ],
+      [
+        24,
+        29,
+        1,
+        1
+      ],
+      [
+        28,
+        29,
+        1,
+        1
+      ],
+      [
+        35,
+        29,
+        1,
+        1
+      ]
+    ]
+  },
+  {
+    "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v1-frame02.ansi",
+    "sha256": "dbe6bd81108a3dd685c1db9021f958c9a27b34d0076cc09e6ae18201246f1de7",
+    "rows": 47,
+    "widths": [
+      77
+    ],
+    "nodes": [
+      {
+        "region": [
+          24,
+          15,
+          10,
+          4
+        ],
+        "perimeter_cells": 24,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              216,
+              166,
+              87
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          40,
+          15,
+          16,
+          4
+        ],
+        "perimeter_cells": 36,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              228,
+              184,
+              111
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          23,
+          23,
+          12,
+          4
+        ],
+        "perimeter_cells": 28,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              174,
+              163
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          40,
+          23,
+          16,
+          4
+        ],
+        "perimeter_cells": 36,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              147,
+              194,
+              183
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          22,
+          31,
+          14,
+          4
+        ],
+        "perimeter_cells": 32,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              211,
+              134,
+              155
+            ],
+            "bold": false
+          }
+        ]
+      }
+    ],
+    "dots": [
+      [
+        41,
+        20,
+        1,
+        1
+      ],
+      [
+        25,
+        21,
+        1,
+        1
+      ],
+      [
+        24,
+        29,
+        1,
+        1
+      ],
+      [
+        26,
+        29,
+        1,
+        1
+      ],
+      [
+        33,
+        29,
+        1,
+        1
+      ],
+      [
+        40,
+        29,
+        1,
+        1
+      ]
+    ]
+  },
+  {
+    "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v1-frame03.ansi",
+    "sha256": "e883028e58869e18069d8a6ecad0051225f1e5d6d1e1662c1ec9aee3b8743dd2",
+    "rows": 47,
+    "widths": [
+      77
+    ],
+    "nodes": [
+      {
+        "region": [
+          24,
+          15,
+          10,
+          4
+        ],
+        "perimeter_cells": 24,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              216,
+              166,
+              87
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          40,
+          15,
+          16,
+          4
+        ],
+        "perimeter_cells": 36,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              228,
+              184,
+              111
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          23,
+          23,
+          12,
+          4
+        ],
+        "perimeter_cells": 28,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              174,
+              163
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          40,
+          23,
+          16,
+          4
+        ],
+        "perimeter_cells": 36,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              147,
+              194,
+              183
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          22,
+          31,
+          14,
+          4
+        ],
+        "perimeter_cells": 32,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              211,
+              134,
+              155
+            ],
+            "bold": false
+          }
+        ]
+      }
+    ],
+    "dots": [
+      [
+        25,
+        20,
+        1,
+        1
+      ],
+      [
+        41,
+        20,
+        1,
+        1
+      ],
+      [
+        24,
+        21,
+        1,
+        1
+      ],
+      [
+        41,
+        21,
+        1,
+        1
+      ],
+      [
+        24,
+        28,
+        1,
+        1
+      ],
+      [
+        23,
+        29,
+        1,
+        1
+      ],
+      [
+        30,
+        29,
+        1,
+        1
+      ],
+      [
+        37,
+        29,
+        1,
+        1
+      ]
+    ]
+  },
+  {
+    "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v2-unselected.ansi",
+    "sha256": "ef5468a4fd79efdf3567085cef317e796b32860038a1d5d0151380410f99b1d1",
+    "rows": 47,
+    "widths": [
+      77
+    ],
+    "nodes": [
+      {
+        "region": [
+          2,
+          20,
+          16,
+          5
+        ],
+        "perimeter_cells": 38,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              216,
+              166,
+              87
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          31,
+          20,
+          14,
+          5
+        ],
+        "perimeter_cells": 34,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              174,
+              163
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          63,
+          20,
+          14,
+          5
+        ],
+        "perimeter_cells": 34,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              211,
+              134,
+              155
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          63,
+          26,
+          13,
+          4
+        ],
+        "perimeter_cells": 30,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              226,
+              156,
+              175
+            ],
+            "bold": false
+          }
+        ]
+      }
+    ],
+    "dots": [
+      [
+        30,
+        18,
+        1,
+        1
+      ],
+      [
+        37,
+        18,
+        1,
+        1
+      ],
+      [
+        44,
+        18,
+        1,
+        1
+      ],
+      [
+        51,
+        18,
+        1,
+        1
+      ],
+      [
+        58,
+        18,
+        1,
+        1
+      ],
+      [
+        19,
+        21,
+        1,
+        1
+      ],
+      [
+        26,
+        21,
+        1,
+        1
+      ],
+      [
+        46,
+        21,
+        1,
+        1
+      ],
+      [
+        53,
+        21,
+        1,
+        1
+      ],
+      [
+        60,
+        21,
+        1,
+        1
+      ],
+      [
+        19,
+        23,
+        1,
+        1
+      ],
+      [
+        26,
+        23,
+        1,
+        1
+      ]
+    ]
+  },
+  {
+    "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v2-selected.ansi",
+    "sha256": "8560f39f9a44769e1b1b8ef959ff1dd17d1fb688af2c4c2c0001d6c66c1ac736",
+    "rows": 47,
+    "widths": [
+      77
+    ],
+    "nodes": [
+      {
+        "region": [
+          2,
+          20,
+          16,
+          5
+        ],
+        "perimeter_cells": 38,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              216,
+              166,
+              87
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          31,
+          20,
+          14,
+          5
+        ],
+        "perimeter_cells": 34,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              174,
+              163
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          63,
+          20,
+          14,
+          5
+        ],
+        "perimeter_cells": 34,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              216,
+              166,
+              87
+            ],
+            "bold": true
+          }
+        ]
+      },
+      {
+        "region": [
+          63,
+          26,
+          13,
+          4
+        ],
+        "perimeter_cells": 30,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              226,
+              156,
+              175
+            ],
+            "bold": false
+          }
+        ]
+      }
+    ],
+    "dots": [
+      [
+        33,
+        18,
+        1,
+        1
+      ],
+      [
+        40,
+        18,
+        1,
+        1
+      ],
+      [
+        47,
+        18,
+        1,
+        1
+      ],
+      [
+        54,
+        18,
+        1,
+        1
+      ],
+      [
+        61,
+        18,
+        1,
+        1
+      ],
+      [
+        28,
+        20,
+        1,
+        1
+      ],
+      [
+        22,
+        21,
+        1,
+        1
+      ],
+      [
+        49,
+        21,
+        1,
+        1
+      ],
+      [
+        56,
+        21,
+        1,
+        1
+      ],
+      [
+        22,
+        23,
+        1,
+        1
+      ],
+      [
+        29,
+        23,
+        1,
+        1
+      ],
+      [
+        61,
+        23,
+        1,
+        1
+      ]
+    ]
+  },
+  {
+    "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v2-frame01.ansi",
+    "sha256": "ef5468a4fd79efdf3567085cef317e796b32860038a1d5d0151380410f99b1d1",
+    "rows": 47,
+    "widths": [
+      77
+    ],
+    "nodes": [
+      {
+        "region": [
+          2,
+          20,
+          16,
+          5
+        ],
+        "perimeter_cells": 38,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              216,
+              166,
+              87
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          31,
+          20,
+          14,
+          5
+        ],
+        "perimeter_cells": 34,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              174,
+              163
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          63,
+          20,
+          14,
+          5
+        ],
+        "perimeter_cells": 34,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              211,
+              134,
+              155
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          63,
+          26,
+          13,
+          4
+        ],
+        "perimeter_cells": 30,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              226,
+              156,
+              175
+            ],
+            "bold": false
+          }
+        ]
+      }
+    ],
+    "dots": [
+      [
+        30,
+        18,
+        1,
+        1
+      ],
+      [
+        37,
+        18,
+        1,
+        1
+      ],
+      [
+        44,
+        18,
+        1,
+        1
+      ],
+      [
+        51,
+        18,
+        1,
+        1
+      ],
+      [
+        58,
+        18,
+        1,
+        1
+      ],
+      [
+        19,
+        21,
+        1,
+        1
+      ],
+      [
+        26,
+        21,
+        1,
+        1
+      ],
+      [
+        46,
+        21,
+        1,
+        1
+      ],
+      [
+        53,
+        21,
+        1,
+        1
+      ],
+      [
+        60,
+        21,
+        1,
+        1
+      ],
+      [
+        19,
+        23,
+        1,
+        1
+      ],
+      [
+        26,
+        23,
+        1,
+        1
+      ]
+    ]
+  },
+  {
+    "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v2-frame02.ansi",
+    "sha256": "4f8af766a734d102f483c038a6bd03604a89dfacbed6a27dcdde965567dfd601",
+    "rows": 47,
+    "widths": [
+      77
+    ],
+    "nodes": [
+      {
+        "region": [
+          2,
+          20,
+          16,
+          5
+        ],
+        "perimeter_cells": 38,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              216,
+              166,
+              87
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          31,
+          20,
+          14,
+          5
+        ],
+        "perimeter_cells": 34,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              174,
+              163
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          63,
+          20,
+          14,
+          5
+        ],
+        "perimeter_cells": 34,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              211,
+              134,
+              155
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          63,
+          26,
+          13,
+          4
+        ],
+        "perimeter_cells": 30,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              226,
+              156,
+              175
+            ],
+            "bold": false
+          }
+        ]
+      }
+    ],
+    "dots": [
+      [
+        32,
+        18,
+        1,
+        1
+      ],
+      [
+        39,
+        18,
+        1,
+        1
+      ],
+      [
+        46,
+        18,
+        1,
+        1
+      ],
+      [
+        53,
+        18,
+        1,
+        1
+      ],
+      [
+        60,
+        18,
+        1,
+        1
+      ],
+      [
+        21,
+        21,
+        1,
+        1
+      ],
+      [
+        28,
+        21,
+        1,
+        1
+      ],
+      [
+        48,
+        21,
+        1,
+        1
+      ],
+      [
+        55,
+        21,
+        1,
+        1
+      ],
+      [
+        21,
+        23,
+        1,
+        1
+      ],
+      [
+        28,
+        23,
+        1,
+        1
+      ],
+      [
+        60,
+        23,
+        1,
+        1
+      ]
+    ]
+  },
+  {
+    "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v2-frame03.ansi",
+    "sha256": "3aeda8b963c180fc0dfe9c89fe957c2fe2fe2c10a59895851ebc4eb432d0613f",
+    "rows": 47,
+    "widths": [
+      77
+    ],
+    "nodes": [
+      {
+        "region": [
+          2,
+          20,
+          16,
+          5
+        ],
+        "perimeter_cells": 38,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              216,
+              166,
+              87
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          31,
+          20,
+          14,
+          5
+        ],
+        "perimeter_cells": 34,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              174,
+              163
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          63,
+          20,
+          14,
+          5
+        ],
+        "perimeter_cells": 34,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              211,
+              134,
+              155
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          63,
+          26,
+          13,
+          4
+        ],
+        "perimeter_cells": 30,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              226,
+              156,
+              175
+            ],
+            "bold": false
+          }
+        ]
+      }
+    ],
+    "dots": [
+      [
+        28,
+        18,
+        1,
+        1
+      ],
+      [
+        35,
+        18,
+        1,
+        1
+      ],
+      [
+        42,
+        18,
+        1,
+        1
+      ],
+      [
+        49,
+        18,
+        1,
+        1
+      ],
+      [
+        56,
+        18,
+        1,
+        1
+      ],
+      [
+        61,
+        20,
+        1,
+        1
+      ],
+      [
+        24,
+        21,
+        1,
+        1
+      ],
+      [
+        29,
+        21,
+        1,
+        1
+      ],
+      [
+        51,
+        21,
+        1,
+        1
+      ],
+      [
+        58,
+        21,
+        1,
+        1
+      ],
+      [
+        24,
+        23,
+        1,
+        1
+      ]
+    ]
+  },
+  {
+    "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v3-unselected.ansi",
+    "sha256": "49fc76079b9a6c458563c231ae08effe89362e420613181c101e9dfe5f678670",
+    "rows": 47,
+    "widths": [
+      77
+    ],
+    "nodes": [
+      {
+        "region": [
+          24,
+          3,
+          14,
+          4
+        ],
+        "perimeter_cells": 32,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              216,
+              166,
+              87
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          47,
+          3,
+          13,
+          4
+        ],
+        "perimeter_cells": 30,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              228,
+              184,
+              111
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          21,
+          11,
+          19,
+          4
+        ],
+        "perimeter_cells": 42,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              174,
+              163
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          22,
+          19,
+          18,
+          4
+        ],
+        "perimeter_cells": 40,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              211,
+              134,
+              155
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          19,
+          27,
+          23,
+          4
+        ],
+        "perimeter_cells": 50,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              169,
+              182,
+              101
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          18,
+          35,
+          25,
+          4
+        ],
+        "perimeter_cells": 54,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              160,
+              184
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          21,
+          43,
+          20,
+          4
+        ],
+        "perimeter_cells": 44,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              231,
+              138,
+              78
+            ],
+            "bold": false
+          }
+        ]
+      }
+    ],
+    "dots": [
+      [
+        24,
+        8,
+        1,
+        1
+      ],
+      [
+        22,
+        9,
+        1,
+        1
+      ],
+      [
+        22,
+        17,
+        1,
+        1
+      ],
+      [
+        20,
+        25,
+        1,
+        1
+      ],
+      [
+        23,
+        25,
+        1,
+        1
+      ],
+      [
+        20,
+        33,
+        1,
+        1
+      ],
+      [
+        19,
+        41,
+        1,
+        1
+      ],
+      [
+        22,
+        41,
+        1,
+        1
+      ]
+    ]
+  },
+  {
+    "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v3-selected.ansi",
+    "sha256": "ff62ee0a3d47dc8492351c6279ef20306b8c23b8799f71250b9c26746f9eee4a",
+    "rows": 47,
+    "widths": [
+      77
+    ],
+    "nodes": [
+      {
+        "region": [
+          24,
+          3,
+          14,
+          4
+        ],
+        "perimeter_cells": 32,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              216,
+              166,
+              87
+            ],
+            "bold": true
+          }
+        ]
+      },
+      {
+        "region": [
+          47,
+          3,
+          13,
+          4
+        ],
+        "perimeter_cells": 30,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              228,
+              184,
+              111
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          21,
+          11,
+          19,
+          4
+        ],
+        "perimeter_cells": 42,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              174,
+              163
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          22,
+          19,
+          18,
+          4
+        ],
+        "perimeter_cells": 40,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              211,
+              134,
+              155
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          19,
+          27,
+          23,
+          4
+        ],
+        "perimeter_cells": 50,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              169,
+              182,
+              101
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          18,
+          35,
+          25,
+          4
+        ],
+        "perimeter_cells": 54,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              160,
+              184
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          21,
+          43,
+          20,
+          4
+        ],
+        "perimeter_cells": 44,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              231,
+              138,
+              78
+            ],
+            "bold": false
+          }
+        ]
+      }
+    ],
+    "dots": [
+      [
+        23,
+        8,
+        1,
+        1
+      ],
+      [
+        22,
+        17,
+        1,
+        1
+      ],
+      [
+        22,
+        25,
+        1,
+        1
+      ],
+      [
+        20,
+        33,
+        1,
+        1
+      ],
+      [
+        20,
+        41,
+        1,
+        1
+      ]
+    ]
+  },
+  {
+    "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v3-frame01.ansi",
+    "sha256": "49fc76079b9a6c458563c231ae08effe89362e420613181c101e9dfe5f678670",
+    "rows": 47,
+    "widths": [
+      77
+    ],
+    "nodes": [
+      {
+        "region": [
+          24,
+          3,
+          14,
+          4
+        ],
+        "perimeter_cells": 32,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              216,
+              166,
+              87
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          47,
+          3,
+          13,
+          4
+        ],
+        "perimeter_cells": 30,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              228,
+              184,
+              111
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          21,
+          11,
+          19,
+          4
+        ],
+        "perimeter_cells": 42,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              174,
+              163
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          22,
+          19,
+          18,
+          4
+        ],
+        "perimeter_cells": 40,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              211,
+              134,
+              155
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          19,
+          27,
+          23,
+          4
+        ],
+        "perimeter_cells": 50,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              169,
+              182,
+              101
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          18,
+          35,
+          25,
+          4
+        ],
+        "perimeter_cells": 54,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              160,
+              184
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          21,
+          43,
+          20,
+          4
+        ],
+        "perimeter_cells": 44,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              231,
+              138,
+              78
+            ],
+            "bold": false
+          }
+        ]
+      }
+    ],
+    "dots": [
+      [
+        24,
+        8,
+        1,
+        1
+      ],
+      [
+        22,
+        9,
+        1,
+        1
+      ],
+      [
+        22,
+        17,
+        1,
+        1
+      ],
+      [
+        20,
+        25,
+        1,
+        1
+      ],
+      [
+        23,
+        25,
+        1,
+        1
+      ],
+      [
+        20,
+        33,
+        1,
+        1
+      ],
+      [
+        19,
+        41,
+        1,
+        1
+      ],
+      [
+        22,
+        41,
+        1,
+        1
+      ]
+    ]
+  },
+  {
+    "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v3-frame02.ansi",
+    "sha256": "5a794afc39cfcc1333834e4e29459e0593b831590fbce31389a8b03f97b4d7af",
+    "rows": 47,
+    "widths": [
+      77
+    ],
+    "nodes": [
+      {
+        "region": [
+          24,
+          3,
+          14,
+          4
+        ],
+        "perimeter_cells": 32,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              216,
+              166,
+              87
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          47,
+          3,
+          13,
+          4
+        ],
+        "perimeter_cells": 30,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              228,
+              184,
+              111
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          21,
+          11,
+          19,
+          4
+        ],
+        "perimeter_cells": 42,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              174,
+              163
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          22,
+          19,
+          18,
+          4
+        ],
+        "perimeter_cells": 40,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              211,
+              134,
+              155
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          19,
+          27,
+          23,
+          4
+        ],
+        "perimeter_cells": 50,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              169,
+              182,
+              101
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          18,
+          35,
+          25,
+          4
+        ],
+        "perimeter_cells": 54,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              160,
+              184
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          21,
+          43,
+          20,
+          4
+        ],
+        "perimeter_cells": 44,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              231,
+              138,
+              78
+            ],
+            "bold": false
+          }
+        ]
+      }
+    ],
+    "dots": [
+      [
+        22,
+        8,
+        1,
+        1
+      ],
+      [
+        25,
+        8,
+        1,
+        1
+      ],
+      [
+        22,
+        17,
+        1,
+        1
+      ],
+      [
+        23,
+        24,
+        1,
+        1
+      ],
+      [
+        21,
+        25,
+        1,
+        1
+      ],
+      [
+        20,
+        33,
+        1,
+        1
+      ],
+      [
+        19,
+        40,
+        1,
+        1
+      ],
+      [
+        21,
+        41,
+        1,
+        1
+      ]
+    ]
+  },
+  {
+    "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v3-frame03.ansi",
+    "sha256": "743814e055328e3ec9649883ffacf13df3653fecc560228ffb2f60bb92f465e3",
+    "rows": 47,
+    "widths": [
+      77
+    ],
+    "nodes": [
+      {
+        "region": [
+          24,
+          3,
+          14,
+          4
+        ],
+        "perimeter_cells": 32,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              216,
+              166,
+              87
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          47,
+          3,
+          13,
+          4
+        ],
+        "perimeter_cells": 30,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              228,
+              184,
+              111
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          21,
+          11,
+          19,
+          4
+        ],
+        "perimeter_cells": 42,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              174,
+              163
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          22,
+          19,
+          18,
+          4
+        ],
+        "perimeter_cells": 40,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              211,
+              134,
+              155
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          19,
+          27,
+          23,
+          4
+        ],
+        "perimeter_cells": 50,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              169,
+              182,
+              101
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          18,
+          35,
+          25,
+          4
+        ],
+        "perimeter_cells": 54,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              125,
+              160,
+              184
+            ],
+            "bold": false
+          }
+        ]
+      },
+      {
+        "region": [
+          21,
+          43,
+          20,
+          4
+        ],
+        "perimeter_cells": 44,
+        "defects": [],
+        "styles": [
+          {
+            "rgb": [
+              231,
+              138,
+              78
+            ],
+            "bold": false
+          }
+        ]
+      }
+    ],
+    "dots": [
+      [
+        22,
+        8,
+        1,
+        1
+      ],
+      [
+        25,
+        8,
+        1,
+        1
+      ],
+      [
+        22,
+        16,
+        1,
+        1
+      ],
+      [
+        23,
+        17,
+        1,
+        1
+      ],
+      [
+        23,
+        24,
+        1,
+        1
+      ],
+      [
+        21,
+        25,
+        1,
+        1
+      ],
+      [
+        20,
+        32,
+        1,
+        1
+      ],
+      [
+        19,
+        33,
+        1,
+        1
+      ],
+      [
+        19,
+        40,
+        1,
+        1
+      ],
+      [
+        21,
+        41,
+        1,
+        1
+      ]
+    ]
+  }
+]

@@ -1,0 +1,2525 @@
+{
+  "protocol_version": 1,
+  "round": 4,
+  "case_id": "homelab-nic-trace",
+  "candidate_sha256": "ac431c6d3035e466e29136f36d9579c551c2e070a354dc5df72999b1bb1beb3c",
+  "renderer_sha256": "0da16d8d8ed46e2a25eb773fc71ecad4de9e310cd33e303a4c7fe77231ad95bc",
+  "rubric_sha256": "18412615f82841b34cf131976c6b5f4b00cd4fc031a710cdfc81058e2dd68d10",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "da6c2cd61d642c3752eeebe09156b6851977e0f31a5d2c6d60dd91aa67af220c",
+  "generator": {
+    "worker_id": "viz-ds04-homelab-nic-trace",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge04-homelab-nic-trace",
+    "model": "openai/gpt-6.1-sol"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 77,
+    "rows": 47
+  },
+  "evidence": [
+    {
+      "id": "docs_visualize_eval_rounds_04_metadata_json",
+      "path": "docs/visualize-eval/rounds/04/metadata.json",
+      "sha256": "2a33a2f6787598bb03ae874ac2bc1222f8095e7f8ec35a09132d9ed47f4f09a8",
+      "description": "Frozen round identities and input hashes",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_rubric_json",
+      "path": "docs/visualize-eval/rounds/04/rubric.json",
+      "sha256": "18412615f82841b34cf131976c6b5f4b00cd4fc031a710cdfc81058e2dd68d10",
+      "description": "All seven fixed category gates and result schema",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_SKILL_md",
+      "path": "docs/visualize-eval/rounds/04/SKILL.md",
+      "sha256": "ac431c6d3035e466e29136f36d9579c551c2e070a354dc5df72999b1bb1beb3c",
+      "description": "Frozen candidate skill, not the mutable current skill",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_cases_json",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen dataset manifest; only this case reviewed",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+      "sha256": "abe8b376eccd7d0027f2985aab55ed656603b2094c275ee66ed223a57421b4c4",
+      "description": "Revealed historical source excerpts and qualification constraints",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/homelab-nic-trace/expected.json",
+      "sha256": "91ef88d09af71cd4583cfd0f1141e10f2fc2efdd3a779f9389f1d67759cd09c7",
+      "description": "Revealed historical relation reference, subject to source corrections",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_cases_homelab_nic_trace_historical_variants_json",
+      "path": "docs/visualize-eval/cases/homelab-nic-trace/historical-variants.json",
+      "sha256": "d70fd9d33cc1966bc015b6bc4d84176984979cac15b9cb7d1d89165e1bc7fc1f",
+      "description": "Historical generated graph; not independent factual verification",
+      "capture": null
+    },
+    {
+      "id": "observed_first",
+      "path": "docs/visualize-eval/rounds/04/reviews/homelab-nic-trace/observed-first.md",
+      "sha256": "a498a2866ade2b442dee4eb4a1049f952722f7e9fa52cc7521706786aabf1216",
+      "description": "Immutable blind stage-A record, saved before expectations were revealed",
+      "capture": null
+    },
+    {
+      "id": "spec_manifest",
+      "path": "docs/visualize-eval/rounds/04/reviews/homelab-nic-trace/spec-manifest.json",
+      "sha256": "da6c2cd61d642c3752eeebe09156b6851977e0f31a5d2c6d60dd91aa67af220c",
+      "description": "Deterministic sorted repository-relative final-spec path / SHA-256 pairs",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_specs_v1_a1_json",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/specs/v1-a1.json",
+      "sha256": "599d59a308cf8103eb32743c53c67f9b5f3f74167c935462561c230f05b76544",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_specs_v1_a2_json",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/specs/v1-a2.json",
+      "sha256": "62b7d422292799f591c09328b69df9cfdfa63a18c806a007d1ce9abfe50c1d99",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_specs_v1_a3_json",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/specs/v1-a3.json",
+      "sha256": "6d1a5ef761860efe3b7f69a3d1733b83462921e52a100d2ccea62e56657f3f06",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_specs_v2_combined_a1_json",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/specs/v2-combined-a1.json",
+      "sha256": "4985e70f642b32b8b75c88689eb2844ba71441673ec18a47a1b1b3958aebebe7",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_specs_v2_combined_a2_json",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/specs/v2-combined-a2.json",
+      "sha256": "4f40ae90b30e3577272556ae58dce0ddf1ae5ba07ba0b20f1d9acc4422b5e406",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_specs_v2_combined_a3_json",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/specs/v2-combined-a3.json",
+      "sha256": "7fbcb7140f7303a7325e04e8359321ef660b0a2a7b3ad089757bb909733859c6",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_specs_v2_lan_a1_json",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/specs/v2-lan-a1.json",
+      "sha256": "341c30f13c4bad79e5e49227fb58fbba97df639ea36ea41932456475cee729f1",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_specs_v2_lan_a2_json",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/specs/v2-lan-a2.json",
+      "sha256": "f4eb7fb7d9fe66c4dc617bfb4d25d4139af71022b61a089134e4a3c68cb650fc",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_specs_v2_lan_a3_json",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/specs/v2-lan-a3.json",
+      "sha256": "d622ea485340d78c7c0d5f6111e32338dfcbc32ded28d16ab6d185500190d4c6",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_specs_v3_overlay_a1_json",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/specs/v3-overlay-a1.json",
+      "sha256": "e4fd54375422cec633dabd9ed16deab4a91a925c6aa2640d1d055c9a268e746f",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_specs_v3_overlay_a2_json",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/specs/v3-overlay-a2.json",
+      "sha256": "0ad360e08757b87c8ce57ee22626882363d76495947a22b0ec10920f147ca8d2",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_specs_v4_wan_a1_json",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/specs/v4-wan-a1.json",
+      "sha256": "87b64303aae8ec2e801c227b1a6e4d95ab244bd917f6a9efe65b9d4e3b311f71",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_specs_v4_wan_a2_json",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/specs/v4-wan-a2.json",
+      "sha256": "198f2eb19ac4537530f001de6e1173d25af2bec45489e8f123cb65c01f9f8b83",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_specs_v4_wan_a3_json",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/specs/v4-wan-a3.json",
+      "sha256": "ffe09aa8cb32e02d921505b7546a83d11f25520fdd50e4ce4b74e4dd01184a26",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_v1_a1_check_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/v1-a1-check.txt",
+      "sha256": "0a8c644ed00727f9d30bc3452d0b428f989b72c30e50163fc3e3750eaaaf96d6",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_v1_a2_check_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/v1-a2-check.txt",
+      "sha256": "aa3401e022ea4d13c0cb6352367c7f2aac9a20ee4cababd20c89d5a2fae64ee6",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_v1_a3_check_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/v1-a3-check.txt",
+      "sha256": "e812ec9a28141866f956e843b56a30b708b26cd8b75a7797579b2f85715fe039",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_v2_a1_check_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/v2-a1-check.txt",
+      "sha256": "c2476847e22979dab67a77a52073bedd59fb0f22afe15a159e7ff342bf4d9cab",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_v2_a2_check_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/v2-a2-check.txt",
+      "sha256": "c2476847e22979dab67a77a52073bedd59fb0f22afe15a159e7ff342bf4d9cab",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_v2_a3_check_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/v2-a3-check.txt",
+      "sha256": "c69cd3613064dd1ca798098b920c58b37b3cc8a2d84deee184572fab09c7881e",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_v2_combined_probe3_verify_check_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/v2-combined-probe3-verify-check.txt",
+      "sha256": "c69cd3613064dd1ca798098b920c58b37b3cc8a2d84deee184572fab09c7881e",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_v2_lan_a1_check_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/v2-lan-a1-check.txt",
+      "sha256": "490849a2d5263058c782c774579cfd63a2e1cf780c0b253dc056df49502aa06a",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_v2_lan_a1_verify_check_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/v2-lan-a1-verify-check.txt",
+      "sha256": "490849a2d5263058c782c774579cfd63a2e1cf780c0b253dc056df49502aa06a",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_v2_lan_a2_check_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/v2-lan-a2-check.txt",
+      "sha256": "2996c205c237031c7c5fd1f2553f716b16abb7c2be9854bb253358d3ca7abe29",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_v2_lan_a3_check_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/v2-lan-a3-check.txt",
+      "sha256": "2996c205c237031c7c5fd1f2553f716b16abb7c2be9854bb253358d3ca7abe29",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_v3_overlay_a1_check_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/v3-overlay-a1-check.txt",
+      "sha256": "c37b1588a42f79d18c43b36796203ed18242e8c5131af5c39793b9bd4b374c95",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_v3_overlay_a2_check_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/v3-overlay-a2-check.txt",
+      "sha256": "de9fe9e5a0bbbe801f26ddc33d937330c3e230f083753f17fba0fd0193bff9b3",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_v4_wan_a1_check_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/v4-wan-a1-check.txt",
+      "sha256": "138cff336e5995322857b13217d1ca70dc16955dc23e02ca5418ae8151d96b8c",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_v4_wan_a2_check_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/v4-wan-a2-check.txt",
+      "sha256": "328277a049f27f072728a03b49e2585fcb164864af07bcd64c03758951ae30b9",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_v4_wan_a2_verify_check_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/v4-wan-a2-verify-check.txt",
+      "sha256": "328277a049f27f072728a03b49e2585fcb164864af07bcd64c03758951ae30b9",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_attempts_v4_wan_a3_check_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts/v4-wan-a3-check.txt",
+      "sha256": "30310a4ef45440d38460b9b9056bd5e90b1c76dda3b69eb78d6a51dfbedf4020",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts.json",
+      "sha256": "5a5171bfddcf2e6187075b7d26b6b30c54329b696c9246e0e2546c6ce20ec17d",
+      "description": "Four final-view attempt groups plus three superseded probes: 14 distinct specs with raw check files and three verification reruns",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_evidence_v1_bin_sha256",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v1/bin.sha256",
+      "sha256": "8846c6305d5cd8f9cfd0db1d5780eda124cf8de84586b65d722509919150e2ff",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "v1_check",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v1/check.txt",
+      "sha256": "aa3401e022ea4d13c0cb6352367c7f2aac9a20ee4cababd20c89d5a2fae64ee6",
+      "description": "Captured raw final --check output; exit 0 and timing recorded in adjacent manifest",
+      "capture": null
+    },
+    {
+      "id": "v1_manifest",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v1/manifest.json",
+      "sha256": "b90e4e40c9739a4edd302fa40eabc784d1b18294f4464b3d9a0e5bdd23fb1029",
+      "description": "Original artifact hashes, capture/check windows, pane ID, approved measured header token, and confirmed-close record",
+      "capture": null
+    },
+    {
+      "id": "v1_ansi",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v1/v1-ansi.ansi",
+      "sha256": "734fae02a447e4ff41c516e9ed385c8b7419b0d276500ecdeb76dd12eeb3048d",
+      "description": "Actual app header proves 77x47 @100%; ANSI states decode to 47 rows of 77 cells",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "standalone captured viewport",
+        "timestamp": "2026-11-02T12:46:06Z to 2026-11-02T12:46:09Z",
+        "state": "normal captured view",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1_selected",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v1/v1-selected.ansi",
+      "sha256": "d4edc69b0a47a0ec2c7822f2b9c65c267738c3178f6d9411222cf19c65edb45e",
+      "description": "Actual app header proves 77x47 @100%; ANSI states decode to 47 rows of 77 cells",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "standalone captured viewport",
+        "timestamp": "2026-11-02T12:46:06Z to 2026-11-02T12:46:09Z",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1_text",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v1/v1-text.txt",
+      "sha256": "1cd6294c70e0692fe80e5480394cb5d77db863239eacc76ee4877556ae8aeb34",
+      "description": "Actual app header proves 77x47 @100%; ANSI states decode to 47 rows of 77 cells",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "standalone captured viewport",
+        "timestamp": "2026-11-02T12:46:06Z to 2026-11-02T12:46:09Z",
+        "state": "normal captured view",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1_validator",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v1/validator.txt",
+      "sha256": "1a87de4fb3f3d7db43c0d9c99243e3190941622a1ab748c7af3b6482616228df",
+      "description": "Generator-run validator output, not independent visual proof",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_evidence_v2_lan_bin_sha256",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v2-lan/bin.sha256",
+      "sha256": "8846c6305d5cd8f9cfd0db1d5780eda124cf8de84586b65d722509919150e2ff",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "v2-lan_check",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v2-lan/check.txt",
+      "sha256": "490849a2d5263058c782c774579cfd63a2e1cf780c0b253dc056df49502aa06a",
+      "description": "Captured raw final --check output; exit 0 and timing recorded in adjacent manifest",
+      "capture": null
+    },
+    {
+      "id": "v2-lan_manifest",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v2-lan/manifest.json",
+      "sha256": "91515a1b138afb07ba8e4ba57c2a261034fcf46785c00a6bccc7b8ddaf8dd1ec",
+      "description": "Original artifact hashes, capture/check windows, pane ID, approved measured header token, and confirmed-close record",
+      "capture": null
+    },
+    {
+      "id": "v2-lan_ansi",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v2-lan/v2-lan-ansi.ansi",
+      "sha256": "263d3ad805f6ee52ce6ec85861a86567ac3c5709ea09865f0f1a43b5ef0d3fb6",
+      "description": "Actual app header proves 77x47 @100%; ANSI states decode to 47 rows of 77 cells",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-lan",
+        "frame": "standalone captured viewport",
+        "timestamp": "2026-11-02T12:46:14Z to 2026-11-02T12:46:18Z",
+        "state": "normal captured view",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-lan_frames",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v2-lan/v2-lan-frames-pinned.txt",
+      "sha256": "e80dbe91e6d09ba458952cb87dfebe693ae4a083fd34c4fdc7be4b28949be3a2",
+      "description": "Complete pinned timestamped 77x47 motion dump; independently verified late-added hash in generation.json",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-lan",
+        "frame": "0..20",
+        "timestamp": "relative 0..2000 ms, 100 ms step; absolute recapture timestamp not preserved",
+        "state": "pinned constant-speed motion; no same-arrival request",
+        "format": "text"
+      }
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_evidence_v2_lan_v2_lan_frames_ansi",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v2-lan/v2-lan-frames.ansi",
+      "sha256": "af306f702e5e4bbc829c7c1ed748657e99d43587dd382569d8103e7d21572868",
+      "description": "Original in-pane motion stream, leading frame-0 fragment truncated by 1000-line scrollback; not full frame-0 evidence",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_evidence_v2_lan_v2_lan_frames_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v2-lan/v2-lan-frames.txt",
+      "sha256": "f0931f296265a94883a2bdfce81c133cca4f20364c2c2fa941c08b6bcc004f25",
+      "description": "Original in-pane motion stream, leading frame-0 fragment truncated by 1000-line scrollback; not full frame-0 evidence",
+      "capture": null
+    },
+    {
+      "id": "v2-lan_selected",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v2-lan/v2-lan-selected.ansi",
+      "sha256": "d5fa7b0020fffd0fc07414c4cab3c8fd534480a65370950f4b8bceafb541e15f",
+      "description": "Actual app header proves 77x47 @100%; ANSI states decode to 47 rows of 77 cells",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-lan",
+        "frame": "standalone captured viewport",
+        "timestamp": "2026-11-02T12:46:14Z to 2026-11-02T12:46:18Z",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-lan_text",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v2-lan/v2-lan-text.txt",
+      "sha256": "2be890e8c4a467fa5e270bbe02172082cb8f2bb1713346d4a14604e8c9fd797b",
+      "description": "Actual app header proves 77x47 @100%; ANSI states decode to 47 rows of 77 cells",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-lan",
+        "frame": "standalone captured viewport",
+        "timestamp": "2026-11-02T12:46:14Z to 2026-11-02T12:46:18Z",
+        "state": "normal captured view",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-lan_validator",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v2-lan/validator.txt",
+      "sha256": "5829e4cb7d716ef068a6039907415e74de24076b5db13d050999090e3f970dc2",
+      "description": "Generator-run validator output, not independent visual proof",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_evidence_v3_overlay_bin_sha256",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v3-overlay/bin.sha256",
+      "sha256": "8846c6305d5cd8f9cfd0db1d5780eda124cf8de84586b65d722509919150e2ff",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "v3-overlay_check",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v3-overlay/check.txt",
+      "sha256": "de9fe9e5a0bbbe801f26ddc33d937330c3e230f083753f17fba0fd0193bff9b3",
+      "description": "Captured raw final --check output; exit 0 and timing recorded in adjacent manifest",
+      "capture": null
+    },
+    {
+      "id": "v3-overlay_manifest",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v3-overlay/manifest.json",
+      "sha256": "2c915f664da28ca5d95708a7f4f6984318f61fdc2975f7a42b6a3363c90cd565",
+      "description": "Original artifact hashes, capture/check windows, pane ID, approved measured header token, and confirmed-close record",
+      "capture": null
+    },
+    {
+      "id": "v3-overlay_ansi",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v3-overlay/v3-overlay-ansi.ansi",
+      "sha256": "e527b2a551ab719fd8c04ea463e5bff1ea64c7250d31db687a24bdd6ce8a4031",
+      "description": "Actual app header proves 77x47 @100%; ANSI states decode to 47 rows of 77 cells",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-overlay",
+        "frame": "standalone captured viewport",
+        "timestamp": "2026-11-02T12:46:19Z to 2026-11-02T12:46:23Z",
+        "state": "normal captured view",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-overlay_frames",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v3-overlay/v3-overlay-frames-pinned.txt",
+      "sha256": "baefa82fa5e166a81c94026c7f4da15c26ee9b55d3dd97e66abf75fdf3873ff0",
+      "description": "Complete pinned timestamped 77x47 motion dump; independently verified late-added hash in generation.json",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-overlay",
+        "frame": "0..20",
+        "timestamp": "relative 0..2000 ms, 100 ms step; absolute recapture timestamp not preserved",
+        "state": "pinned constant-speed motion; no same-arrival request",
+        "format": "text"
+      }
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_evidence_v3_overlay_v3_overlay_frames_ansi",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v3-overlay/v3-overlay-frames.ansi",
+      "sha256": "5025edcc4907f1f90fba509166150512f6970141884a04d318216e25568367b4",
+      "description": "Original in-pane motion stream, leading frame-0 fragment truncated by 1000-line scrollback; not full frame-0 evidence",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_evidence_v3_overlay_v3_overlay_frames_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v3-overlay/v3-overlay-frames.txt",
+      "sha256": "88155e5fb0f26adee86cf9b36c60ab8693d66b8507c07376813d7437281f4169",
+      "description": "Original in-pane motion stream, leading frame-0 fragment truncated by 1000-line scrollback; not full frame-0 evidence",
+      "capture": null
+    },
+    {
+      "id": "v3-overlay_selected",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v3-overlay/v3-overlay-selected.ansi",
+      "sha256": "07e5be7a1ffc854372001a6c63bb1ab292dbd0c8831a43bb9735e9522101ac2c",
+      "description": "Actual app header proves 77x47 @100%; ANSI states decode to 47 rows of 77 cells",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-overlay",
+        "frame": "standalone captured viewport",
+        "timestamp": "2026-11-02T12:46:19Z to 2026-11-02T12:46:23Z",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-overlay_text",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v3-overlay/v3-overlay-text.txt",
+      "sha256": "9b0e0b244bf6f4471042e36731200be27a0d15f89999d19f1ee0b2d0918220a0",
+      "description": "Actual app header proves 77x47 @100%; ANSI states decode to 47 rows of 77 cells",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-overlay",
+        "frame": "standalone captured viewport",
+        "timestamp": "2026-11-02T12:46:19Z to 2026-11-02T12:46:23Z",
+        "state": "normal captured view",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-overlay_validator",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v3-overlay/validator.txt",
+      "sha256": "89d653620b7efb4d6123492a4ad8f5082eda2316c5fa966ce16eb91b9cc41e01",
+      "description": "Generator-run validator output, not independent visual proof",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_evidence_v4_wan_bin_sha256",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v4-wan/bin.sha256",
+      "sha256": "8846c6305d5cd8f9cfd0db1d5780eda124cf8de84586b65d722509919150e2ff",
+      "description": "Frozen candidate workflow / attempt artifact",
+      "capture": null
+    },
+    {
+      "id": "v4-wan_check",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v4-wan/check.txt",
+      "sha256": "328277a049f27f072728a03b49e2585fcb164864af07bcd64c03758951ae30b9",
+      "description": "Captured raw final --check output; exit 0 and timing recorded in adjacent manifest",
+      "capture": null
+    },
+    {
+      "id": "v4-wan_manifest",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v4-wan/manifest.json",
+      "sha256": "7ef0a3da2e13886e9e3b965918834acd4a1c194add4ff4d65937de8358da7345",
+      "description": "Original artifact hashes, capture/check windows, pane ID, approved measured header token, and confirmed-close record",
+      "capture": null
+    },
+    {
+      "id": "v4-wan_ansi",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v4-wan/v4-wan-ansi.ansi",
+      "sha256": "74e08d2d85a028afc33c920014f4aeba0fc198f46b2ff2f33ca663ac8f832a96",
+      "description": "Actual app header proves 77x47 @100%; ANSI states decode to 47 rows of 77 cells",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-wan",
+        "frame": "standalone captured viewport",
+        "timestamp": "2026-11-02T12:46:23Z to 2026-11-02T12:46:27Z",
+        "state": "normal captured view",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-wan_frames",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v4-wan/v4-wan-frames-pinned.txt",
+      "sha256": "ff8fd4695b51b1d63703f6279716f4f74a76cd0c77052e96391329c1c3de5843",
+      "description": "Complete pinned timestamped 77x47 motion dump; independently verified late-added hash in generation.json",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-wan",
+        "frame": "0..20",
+        "timestamp": "relative 0..2000 ms, 100 ms step; absolute recapture timestamp not preserved",
+        "state": "pinned constant-speed motion; no same-arrival request",
+        "format": "text"
+      }
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_evidence_v4_wan_v4_wan_frames_ansi",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v4-wan/v4-wan-frames.ansi",
+      "sha256": "b48bfc7aac90021887389c95a4fa5d530c782c5580eb5a3492d7ff629f953e41",
+      "description": "Original in-pane motion stream, leading frame-0 fragment truncated by 1000-line scrollback; not full frame-0 evidence",
+      "capture": null
+    },
+    {
+      "id": "docs_visualize_eval_rounds_04_homelab_nic_trace_evidence_v4_wan_v4_wan_frames_txt",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v4-wan/v4-wan-frames.txt",
+      "sha256": "1f0c3d7df12d545c3095da1df98371ae42a2353e746dc99fa4192517bcb240f4",
+      "description": "Original in-pane motion stream, leading frame-0 fragment truncated by 1000-line scrollback; not full frame-0 evidence",
+      "capture": null
+    },
+    {
+      "id": "v4-wan_selected",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v4-wan/v4-wan-selected.ansi",
+      "sha256": "4f93d483e5c2fb96d297bf3aca5173e4b4d9be73db5f38366b86e281676f42ae",
+      "description": "Actual app header proves 77x47 @100%; ANSI states decode to 47 rows of 77 cells",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-wan",
+        "frame": "standalone captured viewport",
+        "timestamp": "2026-11-02T12:46:23Z to 2026-11-02T12:46:27Z",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-wan_text",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v4-wan/v4-wan-text.txt",
+      "sha256": "7ff598d6a30133a312ae9ad60e67396dbd7e5c3a6e6d5206259686f4a5f3c4fa",
+      "description": "Actual app header proves 77x47 @100%; ANSI states decode to 47 rows of 77 cells",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-wan",
+        "frame": "standalone captured viewport",
+        "timestamp": "2026-11-02T12:46:23Z to 2026-11-02T12:46:27Z",
+        "state": "normal captured view",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-wan_validator",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v4-wan/validator.txt",
+      "sha256": "89d653620b7efb4d6123492a4ad8f5082eda2316c5fa966ce16eb91b9cc41e01",
+      "description": "Generator-run validator output, not independent visual proof",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/generation.json",
+      "sha256": "a758e76d6318c464b612427909a667a0ecbb95f218ef26a10890d6f9e42e9ec9",
+      "description": "Generator identity alias viz-ds04-3, coverage ledger, declared drops/defects, late pinned hashes; stale round 03 field explicitly explained as round-04 output",
+      "capture": null
+    },
+    {
+      "id": "generation_notes",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/generation.md",
+      "sha256": "53acf10a6669f3301059bc878862193d87731820eb8542b0db76d2520f3a9a6e",
+      "description": "Generator narrative, including recorded qualifier and palette defects; coordinates use zero-based indexing",
+      "capture": null
+    },
+    {
+      "id": "v1_spec",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/specs/v1.json",
+      "sha256": "62b7d422292799f591c09328b69df9cfdfa63a18c806a007d1ce9abfe50c1d99",
+      "description": "Final spec; hash independently checked against capture manifest",
+      "capture": null
+    },
+    {
+      "id": "v2-lan_spec",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/specs/v2-lan.json",
+      "sha256": "341c30f13c4bad79e5e49227fb58fbba97df639ea36ea41932456475cee729f1",
+      "description": "Final spec; hash independently checked against capture manifest",
+      "capture": null
+    },
+    {
+      "id": "v3-overlay_spec",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/specs/v3-overlay.json",
+      "sha256": "0ad360e08757b87c8ce57ee22626882363d76495947a22b0ec10920f147ca8d2",
+      "description": "Final spec; hash independently checked against capture manifest",
+      "capture": null
+    },
+    {
+      "id": "v4-wan_spec",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/specs/v4-wan.json",
+      "sha256": "198f2eb19ac4537530f001de6e1173d25af2bec45489e8f123cb65c01f9f8b83",
+      "description": "Final spec; hash independently checked against capture manifest",
+      "capture": null
+    },
+    {
+      "id": "v2-lan_frame_0",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v2-lan/v2-lan-frames-pinned.txt",
+      "sha256": "e80dbe91e6d09ba458952cb87dfebe693ae4a083fd34c4fdc7be4b28949be3a2",
+      "description": "Frame-specific reference into existing pinned capture, frame 0; no new rendering",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-lan",
+        "frame": "0",
+        "timestamp": "0 ms relative; absolute recapture timestamp not preserved",
+        "state": "constant-speed animation",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-lan_frame_2",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v2-lan/v2-lan-frames-pinned.txt",
+      "sha256": "e80dbe91e6d09ba458952cb87dfebe693ae4a083fd34c4fdc7be4b28949be3a2",
+      "description": "Frame-specific reference into existing pinned capture, frame 2; no new rendering",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-lan",
+        "frame": "2",
+        "timestamp": "200 ms relative; absolute recapture timestamp not preserved",
+        "state": "constant-speed animation",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-lan_frame_10",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v2-lan/v2-lan-frames-pinned.txt",
+      "sha256": "e80dbe91e6d09ba458952cb87dfebe693ae4a083fd34c4fdc7be4b28949be3a2",
+      "description": "Frame-specific reference into existing pinned capture, frame 10; no new rendering",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-lan",
+        "frame": "10",
+        "timestamp": "1000 ms relative; absolute recapture timestamp not preserved",
+        "state": "constant-speed animation",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-lan_frame_20",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v2-lan/v2-lan-frames-pinned.txt",
+      "sha256": "e80dbe91e6d09ba458952cb87dfebe693ae4a083fd34c4fdc7be4b28949be3a2",
+      "description": "Frame-specific reference into existing pinned capture, frame 20; no new rendering",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-lan",
+        "frame": "20",
+        "timestamp": "2000 ms relative; absolute recapture timestamp not preserved",
+        "state": "constant-speed animation",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-overlay_frame_0",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v3-overlay/v3-overlay-frames-pinned.txt",
+      "sha256": "baefa82fa5e166a81c94026c7f4da15c26ee9b55d3dd97e66abf75fdf3873ff0",
+      "description": "Frame-specific reference into existing pinned capture, frame 0; no new rendering",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-overlay",
+        "frame": "0",
+        "timestamp": "0 ms relative; absolute recapture timestamp not preserved",
+        "state": "constant-speed animation",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-overlay_frame_2",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v3-overlay/v3-overlay-frames-pinned.txt",
+      "sha256": "baefa82fa5e166a81c94026c7f4da15c26ee9b55d3dd97e66abf75fdf3873ff0",
+      "description": "Frame-specific reference into existing pinned capture, frame 2; no new rendering",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-overlay",
+        "frame": "2",
+        "timestamp": "200 ms relative; absolute recapture timestamp not preserved",
+        "state": "constant-speed animation",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-overlay_frame_10",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v3-overlay/v3-overlay-frames-pinned.txt",
+      "sha256": "baefa82fa5e166a81c94026c7f4da15c26ee9b55d3dd97e66abf75fdf3873ff0",
+      "description": "Frame-specific reference into existing pinned capture, frame 10; no new rendering",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-overlay",
+        "frame": "10",
+        "timestamp": "1000 ms relative; absolute recapture timestamp not preserved",
+        "state": "constant-speed animation",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-overlay_frame_20",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v3-overlay/v3-overlay-frames-pinned.txt",
+      "sha256": "baefa82fa5e166a81c94026c7f4da15c26ee9b55d3dd97e66abf75fdf3873ff0",
+      "description": "Frame-specific reference into existing pinned capture, frame 20; no new rendering",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-overlay",
+        "frame": "20",
+        "timestamp": "2000 ms relative; absolute recapture timestamp not preserved",
+        "state": "constant-speed animation",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-wan_frame_0",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v4-wan/v4-wan-frames-pinned.txt",
+      "sha256": "ff8fd4695b51b1d63703f6279716f4f74a76cd0c77052e96391329c1c3de5843",
+      "description": "Frame-specific reference into existing pinned capture, frame 0; no new rendering",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-wan",
+        "frame": "0",
+        "timestamp": "0 ms relative; absolute recapture timestamp not preserved",
+        "state": "constant-speed animation",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-wan_frame_2",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v4-wan/v4-wan-frames-pinned.txt",
+      "sha256": "ff8fd4695b51b1d63703f6279716f4f74a76cd0c77052e96391329c1c3de5843",
+      "description": "Frame-specific reference into existing pinned capture, frame 2; no new rendering",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-wan",
+        "frame": "2",
+        "timestamp": "200 ms relative; absolute recapture timestamp not preserved",
+        "state": "constant-speed animation",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-wan_frame_10",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v4-wan/v4-wan-frames-pinned.txt",
+      "sha256": "ff8fd4695b51b1d63703f6279716f4f74a76cd0c77052e96391329c1c3de5843",
+      "description": "Frame-specific reference into existing pinned capture, frame 10; no new rendering",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-wan",
+        "frame": "10",
+        "timestamp": "1000 ms relative; absolute recapture timestamp not preserved",
+        "state": "constant-speed animation",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-wan_frame_20",
+      "path": "docs/visualize-eval/rounds/04/homelab-nic-trace/evidence/v4-wan/v4-wan-frames-pinned.txt",
+      "sha256": "ff8fd4695b51b1d63703f6279716f4f74a76cd0c77052e96391329c1c3de5843",
+      "description": "Frame-specific reference into existing pinned capture, frame 20; no new rendering",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-wan",
+        "frame": "20",
+        "timestamp": "2000 ms relative; absolute recapture timestamp not preserved",
+        "state": "constant-speed animation",
+        "format": "text"
+      }
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "observed_first",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "F01-F03: all 14 historical endpoint relations and all key IP/AS identifiers are present across the four views, but WAN historical uncertainty and the WAN router claim qualification are not visible; source host/link qualifiers and collapsed-fabric/demarc roles are omitted. Ledger acknowledgment is not semantic preservation. No reversed required relation; .213 is source-backed shorthand. Extra negative-v6 and Fios-summary relations are source-backed, not inventions.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json",
+        "docs/visualize-eval/rounds/04/rubric.json#categories/semantic_fidelity"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "observed_first",
+        "generation",
+        "v1_text",
+        "v2-lan_text",
+        "v3-overlay_text",
+        "v4-wan_text"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "F05: all 16 static stem-to-head routes can be followed, with 0 crossings/bridges/touching bends and no detours or fake branches, but all 11 animated relations fail actual frame-0 origin proof. F04: no committed rate is a recorded ownership defect, not a silently dropped qualifier; two overflowing rewrites do not demonstrate the no-unambiguous-layout exception.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/rounds/04/rubric.json#categories/arrow_traceability"
+      ],
+      "evidence_ids": [
+        "observed_first",
+        "generation",
+        "attempts",
+        "v1_text",
+        "v2-lan_text",
+        "v3-overlay_text",
+        "v4-wan_text",
+        "v2-lan_frames",
+        "v3-overlay_frames",
+        "v4-wan_frames"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "F07: app headers and ANSI grids prove 77x47 @100% on every view, with no viewport clipping or pan/zoom rescue, but the WAN control palette obscures three cells of the Cloudflare outline. All split views must show complete boxes without overlay occlusion; 67x40 headless extent and passing validator do not waive that defect.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/rubric.json#categories/layout_fit"
+      ],
+      "evidence_ids": [
+        "v1_text",
+        "v2-lan_text",
+        "v3-overlay_text",
+        "v4-wan_text",
+        "v1_ansi",
+        "v2-lan_ansi",
+        "v3-overlay_ansi",
+        "v4-wan_ansi",
+        "v4-wan_selected"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "ANSI shows related hue families and appropriate proximity: v1 local virtual attachments share gold-family hues against teal host; v2 wired/Wi-Fi interfaces share teal versus pink edge nodes; v4 Verizon/ONT nodes share teal with separate router, IPv6 and Cloudflare concepts. First node accent is selection chrome, not arbitrary concept assignment. No source-defined tier is reordered; the source leaves independent virtual attachment order free. Cross-view per-node hue stability is not a gate.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#Task",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#What the probes found",
+        "docs/visualize-eval/rounds/04/rubric.json#categories/conceptual_grouping_color"
+      ],
+      "evidence_ids": [
+        "v1_ansi",
+        "v2-lan_ansi",
+        "v3-overlay_ansi",
+        "v4-wan_ansi",
+        "v1_selected",
+        "v2-lan_selected",
+        "v3-overlay_selected",
+        "v4-wan_selected"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "F07: 18/19 normal and selected node outlines are complete and color-continuous; all 19 node occurrences have their own selected border represented, but Cloudflare has three palette-overwritten perimeter cells and a missing lower-left corner. Normal and selected ANSI prove the color discontinuity, not just plain text.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/rubric.json#categories/border_integrity"
+      ],
+      "evidence_ids": [
+        "v1_ansi",
+        "v2-lan_ansi",
+        "v3-overlay_ansi",
+        "v4-wan_ansi",
+        "v1_selected",
+        "v2-lan_selected",
+        "v3-overlay_selected",
+        "v4-wan_selected",
+        "observed_first"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "F08/F09: actual frozen skill, renderer, rubric, dataset, source/expected/variant and final-spec hashes verify; blind record predates reveal; generator and Sol identities are separate; all 14 attempted specs/raw stdout records and recorded final-pane cleanup are present. Approved live header tokens prove geometry despite null rectangles. Missing exact executed command/status/stderr records and incomplete full-cycle motion prevent complete workflow proof. Stale generation round 03 is explicitly explained as round 04; missing specs/v2.json is a stale rerun-index path with an archived equivalent, not lost final content.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/rubric.json#categories/workflow_evidence"
+      ],
+      "evidence_ids": [
+        "observed_first",
+        "generation",
+        "attempts",
+        "spec_manifest",
+        "v1_manifest",
+        "v2-lan_manifest",
+        "v3-overlay_manifest",
+        "v4-wan_manifest",
+        "v2-lan_frames",
+        "v3-overlay_frames",
+        "v4-wan_frames"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Applicable because the generator enabled 11 routes despite source-optional animation. F05: all 11 frame-0 dots start one exterior cell late. F06: overlay frame 20 dot occupies a corner. Counts are correct (5/2/4 one-dot routes each frame); long straight runs support shared default speed and no labels/borders are dotted, but F09 full-cycle evidence is incomplete. Unequal arrival times are correct for constant mode; same-arrival was not requested. Static v1 has no motion dump by documented source-permitted decision: not an animation requirement failure for that view.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases.json#homelab-nic-trace/animation",
+        "docs/visualize-eval/rounds/04/rubric.json#categories/animation"
+      ],
+      "evidence_ids": [
+        "observed_first",
+        "generation",
+        "v2-lan_frames",
+        "v3-overlay_frames",
+        "v4-wan_frames"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#historical_reference/edges"
+      ],
+      "expected": "vm → virbr: 192.168.122.x segment",
+      "observed": "Readable 'VM vnet0' → 'virbr0 NAT bridge'; label '192.168.122.x'. First exterior stem / bends / head: (53,19) → (53,22); unique downward ▼ head; whole static route traceable; 0 crossings, 0 bridges, 0 touching bends, no junction or shared run. ",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            53,
+            16,
+            8,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            53,
+            24,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            55,
+            20,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            53,
+            19,
+            1,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#historical_reference/edges"
+      ],
+      "expected": "virbr → box: libvirt NAT bridge",
+      "observed": "Readable 'virbr0 NAT bridge' → 'homelab ~/rack-bench'; label 'libvirt NAT'. First exterior stem / bends / head: (53,27) → (53,29) → (33,29) → (33,30); unique downward ▼ head; whole static route traceable; 0 crossings, 0 bridges, 0 touching bends, no junction or shared run. ",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            53,
+            24,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            31,
+            32,
+            20,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            38,
+            28,
+            11,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            33,
+            27,
+            21,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#historical_reference/edges"
+      ],
+      "expected": "ctr → dkbr: 172.18.2.x segment",
+      "observed": "Readable 'ctr veth' → 'dkbr 172.18.2.1'; label '172.18.2.x'. First exterior stem / bends / head: (9,19) → (9,22); unique downward ▼ head; whole static route traceable; 0 crossings, 0 bridges, 0 touching bends, no junction or shared run. ",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            9,
+            16,
+            8,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            9,
+            24,
+            15,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            11,
+            20,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            9,
+            19,
+            1,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#historical_reference/edges"
+      ],
+      "expected": "dkbr → box: Docker bridge",
+      "observed": "Readable 'dkbr 172.18.2.1' → 'homelab ~/rack-bench'; label 'docker bridge'. First exterior stem / bends / head: (9,27) → (9,29) → (31,29) → (31,30); unique downward ▼ head; whole static route traceable; 0 crossings, 0 bridges, 0 touching bends, no junction or shared run. ",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            9,
+            24,
+            15,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            31,
+            32,
+            20,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            14,
+            28,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            9,
+            27,
+            23,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#historical_reference/edges"
+      ],
+      "expected": "ts → box: Tailscale overlay",
+      "observed": "Readable 'tailscale0 100.113.153.49' → 'homelab ~/rack-bench'; label 'overlay'. First exterior stem / bends / head: (35,21) → (46,21) → (46,22) → (47,22); unique rightward ▶ head; whole static route traceable; 0 crossings, 0 bridges, 0 touching bends, no junction or shared run. Frame-0 dot starts on second exterior cell rather than the first: static head is readable, but animated direction proof fails the fixed origin rule. Frame 20 also places dot on the lower-left bend at (46,22). ",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-overlay_text",
+          "region": [
+            9,
+            22,
+            25,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-overlay_text",
+          "region": [
+            49,
+            22,
+            20,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-overlay_text",
+          "region": [
+            37,
+            20,
+            7,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-overlay_text",
+          "region": [
+            35,
+            21,
+            13,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v3-overlay_frame_0",
+          "region": [
+            35,
+            21,
+            2,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F05",
+        "F06"
+      ]
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#historical_reference/edges"
+      ],
+      "expected": "ts → bond0: UDP encapsulation over the wired path",
+      "observed": "Readable 'tailscale0 100.113.153.49' → 'bond0 192.168.1.197'; label 'UDP encap'. First exterior stem / bends / head: (35,23) → (45,23) → (45,27) → (47,27); unique rightward ▶ head; whole static route traceable; 0 crossings, 0 bridges, 0 touching bends, no junction or shared run. Frame-0 dot starts on second exterior cell rather than the first: static head is readable, but animated direction proof fails the fixed origin rule. ",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-overlay_text",
+          "region": [
+            9,
+            22,
+            25,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-overlay_text",
+          "region": [
+            49,
+            27,
+            19,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-overlay_text",
+          "region": [
+            36,
+            24,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-overlay_text",
+          "region": [
+            35,
+            23,
+            13,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-overlay_frame_0",
+          "region": [
+            35,
+            23,
+            2,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F05"
+      ]
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#historical_reference/edges"
+      ],
+      "expected": "box → bond0: eno1 2.5 GbE wired primary",
+      "observed": "Readable 'homelab ASUS/Linux7' → 'bond0 192.168.1.197/24'; label 'eno1 2.5 GbE'. First exterior stem / bends / head: (29,15) → (29,17) → (5,17) → (5,18); unique downward ▼ head; whole static route traceable; 0 crossings, 0 bridges, 0 touching bends, no junction or shared run. Frame-0 dot starts on second exterior cell rather than the first: static head is readable, but animated direction proof fails the fixed origin rule. ",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            29,
+            12,
+            19,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            5,
+            20,
+            22,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            11,
+            16,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            5,
+            15,
+            25,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_frame_0",
+          "region": [
+            29,
+            15,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F05"
+      ]
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#historical_reference/edges"
+      ],
+      "expected": "box → wlp: Wi-Fi backup path",
+      "observed": "Readable 'homelab ASUS/Linux7' → 'wlp8s0 .213 failover'; label 'backup path'. First exterior stem / bends / head: (31,15) → (31,17) → (53,17) → (53,18); unique downward ▼ head; whole static route traceable; 0 crossings, 0 bridges, 0 touching bends, no junction or shared run. Frame-0 dot starts on second exterior cell rather than the first: static head is readable, but animated direction proof fails the fixed origin rule. ",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            29,
+            12,
+            19,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            53,
+            20,
+            20,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            37,
+            16,
+            11,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            31,
+            15,
+            23,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_frame_0",
+          "region": [
+            31,
+            15,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F05",
+        "F02"
+      ]
+    },
+    {
+      "edge_id": "e9",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#historical_reference/edges"
+      ],
+      "expected": "bond0 → rtr: default gateway 192.168.1.1 at 0.5 ms, claimed router role",
+      "observed": "Readable 'bond0 192.168.1.197/24' → 'claimed Fios rtr 0.5ms'; label '192.168.1.1'. First exterior stem / bends / head: (5,23) → (5,25) → (29,25) → (29,26); unique downward ▼ head; whole static route traceable; 0 crossings, 0 bridges, 0 touching bends, no junction or shared run. The gateway address is on this edge and 0.5ms is on the target node, preserving the combined label meaning. Frame-0 dot starts on second exterior cell rather than the first: static head is readable, but animated direction proof fails the fixed origin rule. ",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            5,
+            20,
+            22,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            29,
+            28,
+            22,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            12,
+            24,
+            11,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            5,
+            23,
+            25,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_frame_0",
+          "region": [
+            5,
+            23,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F05"
+      ]
+    },
+    {
+      "edge_id": "e10",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#historical_reference/edges"
+      ],
+      "expected": "wlp → rtr: metric-600 failover, not ECMP",
+      "observed": "Readable 'wlp8s0 .213 failover' → 'claimed Fios rtr 0.5ms'; label 'metric 600, not ECMP'. First exterior stem / bends / head: (53,23) → (53,25) → (31,25) → (31,26); unique downward ▼ head; whole static route traceable; 0 crossings, 0 bridges, 0 touching bends, no junction or shared run. Frame-0 dot starts on second exterior cell rather than the first: static head is readable, but animated direction proof fails the fixed origin rule. ",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            53,
+            20,
+            20,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            29,
+            28,
+            22,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            32,
+            24,
+            20,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            31,
+            23,
+            23,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_frame_0",
+          "region": [
+            53,
+            23,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F05"
+      ]
+    },
+    {
+      "edge_id": "e11",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#historical_reference/edges"
+      ],
+      "expected": "rtr → ont: NAT egress / shared pool 71.251.12.240, historically interpreted roles",
+      "observed": "Readable 'Fios rtr: NAT, DHCP' → 'claimed ONT 169.254.3.1'; label 'pool 71.251.12.240'. First exterior stem / bends / head: (34,11) → (34,13) → (9,13) → (9,14); unique downward ▼ head; whole static route traceable; 0 crossings, 0 bridges, 0 touching bends, no junction or shared run. NAT/DHCP is on the source and pool address on the edge; source router role is unqualified in this view and full path lacks historical qualification. Frame-0 dot starts on second exterior cell rather than the first: static head is readable, but animated direction proof fails the fixed origin rule. ",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            34,
+            8,
+            19,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            9,
+            16,
+            23,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            13,
+            12,
+            18,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            9,
+            11,
+            26,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_frame_0",
+          "region": [
+            34,
+            11,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F05"
+      ]
+    },
+    {
+      "edge_id": "e12",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#historical_reference/edges"
+      ],
+      "expected": "ont → vzagg: historical traceroute 4.5 ms hop",
+      "observed": "Readable 'claimed ONT 169.254.3.1' → 'VZ agg 100.41.x'; label '4.5ms'. First exterior stem / bends / head: (9,19) → (9,22); unique downward ▼ head; whole static route traceable; 0 crossings, 0 bridges, 0 touching bends, no junction or shared run. Solid RTT-bearing arrow preserves order but omits historical-traceroute qualification. Frame-0 dot starts on second exterior cell rather than the first: static head is readable, but animated direction proof fails the fixed origin rule. ",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            9,
+            16,
+            23,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            9,
+            24,
+            15,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            11,
+            20,
+            5,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            9,
+            19,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_frame_0",
+          "region": [
+            9,
+            19,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F05"
+      ]
+    },
+    {
+      "edge_id": "e13",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#historical_reference/edges"
+      ],
+      "expected": "vzagg → vzbb: historical traceroute 6.6 ms hop",
+      "observed": "Readable 'VZ agg 100.41.x' → 'VZ bbone AS701'; label '6.6ms'. First exterior stem / bends / head: (9,27) → (9,30); unique downward ▼ head; whole static route traceable; 0 crossings, 0 bridges, 0 touching bends, no junction or shared run. Solid RTT-bearing arrow preserves order but omits historical-traceroute qualification. Frame-0 dot starts on second exterior cell rather than the first: static head is readable, but animated direction proof fails the fixed origin rule. ",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            9,
+            24,
+            15,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            9,
+            32,
+            14,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            11,
+            28,
+            5,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            9,
+            27,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_frame_0",
+          "region": [
+            9,
+            27,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F05"
+      ]
+    },
+    {
+      "edge_id": "e14",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#historical_reference/edges"
+      ],
+      "expected": "vzbb → cf: historical traceroute 6-9 ms hop",
+      "observed": "Readable 'VZ bbone AS701' → 'CF AS13335 1.1.1.1'; label '6-9ms'. First exterior stem / bends / head: (9,35) → (9,38); unique downward ▼ head; whole static route traceable; 0 crossings, 0 bridges, 0 touching bends, no junction or shared run. Solid RTT-bearing arrow preserves order but omits historical-traceroute qualification. Frame-0 dot starts on second exterior cell rather than the first: static head is readable, but animated direction proof fails the fixed origin rule. The destination label/head stay visible, but its node lower-left outline is palette-obscured in normal and selected states. ",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            9,
+            32,
+            14,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            9,
+            40,
+            18,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            11,
+            36,
+            5,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            9,
+            35,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_frame_0",
+          "region": [
+            9,
+            35,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F05",
+        "F07"
+      ]
+    },
+    {
+      "edge_id": "x1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#What the probes found/IPv6"
+      ],
+      "expected": "rtr → v6: source-derived negative relation: ULA only, no global IPv6 / internet route",
+      "observed": "Readable 'Fios rtr: NAT, DHCP' → 'v6 internet'; label 'ULA only, no route'. First exterior stem / bends / head: (36,11) → (36,13) → (59,13) → (59,14); unique downward ▼ head; whole static route traceable; 0 crossings, 0 bridges, 0 touching bends, no junction or shared run. Dashed with explicit negative label, so not read as an available global-v6 route; no dot. This apparent extra relation is source-backed, not invented connectivity. ",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            34,
+            8,
+            19,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            59,
+            16,
+            11,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            38,
+            12,
+            18,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            36,
+            11,
+            24,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "x2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#Mapped onto the datacenter model"
+      ],
+      "expected": "rtr → fios: source-derived summary of bench internet Fios path, 1 ISP, no committed rate",
+      "observed": "Readable 'claimed Fios rtr 0.5ms' → 'Fios path: 1 ISP'; label 'no committed rate'. First exterior stem / bends / head: (29,31) → (29,34); unique downward ▼ head; whole static route traceable; 0 crossings, 0 bridges, 0 touching bends, no junction or shared run. Extra summary relation is source-backed, not a new physical hop. Label has the independently measured 10-versus-7 midpoint-owner defect; retained rather than silently dropped. Frame-0 dot starts on second exterior cell rather than the first: static head is readable, but animated direction proof fails the fixed origin rule. ",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            29,
+            28,
+            22,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            29,
+            36,
+            16,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            31,
+            32,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            29,
+            31,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_frame_0",
+          "region": [
+            29,
+            31,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F04",
+        "F05"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F01",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e11",
+        "e12",
+        "e13",
+        "e14"
+      ],
+      "severity": "critical",
+      "description": "DEFECT: the WAN view presents a solid router/ONT/aggregation/backbone/Cloudflare chain without a visible historical-traceroute qualification. The ONT has claimed, but that does not qualify all downstream relations, and the WAN router drops the claimed marker visible in the separate LAN view. A prose-only generator assertion that no physical topology is asserted is not visible uncertainty in the graph. The source expressly says these are historical interpretations, not verified physical topology; dashed uncertainty plus a qualifier/legend or equivalent visible qualification is required, not necessarily one exact styling choice.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#Fixed constraints",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#constraints/0"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            34,
+            8,
+            19,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            9,
+            16,
+            23,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            8,
+            19,
+            20,
+            24
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            29,
+            28,
+            22,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F02",
+      "category": "semantic_fidelity",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "DEFECT: source identifiers/qualifiers are not all readable in captures. homelab ASUS/Linux7 does not state bare metal or the exact Linux 7.0 version; the source MAC-vendor evidence identifier WNC OUI is absent; wlp8s0 .213 failover never explicitly says Wi-Fi. ASUS plus Linux is not proof of bare-metal residency. The ledger acknowledges the first and WNC omissions, but recording a required omission does not preserve it. Address-prefix shorthand .213 itself is source-backed and is not a defect.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#What the probes found",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#historical_reference/nodes"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            29,
+            12,
+            19,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            53,
+            20,
+            20,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            29,
+            28,
+            22,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F03",
+      "category": "semantic_fidelity",
+      "edge_ids": [],
+      "severity": "critical",
+      "description": "DEFECT: source-stated role mappings are absent: the router as collapsed ToR/spine/border/firewall, and the ONT as demarc/MMR analog. The 1 ISP summary preserves the single-provider fact but not those source role meanings. These can be annotations on real nodes; preserving them does not require inventing physical ToR/spine/MMR nodes. The generator expressly drops these concepts. The Oct 11 run-accounting date and comparison design are recorded as absent background, not separate topology failures.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#Mapped onto the datacenter model"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            29,
+            28,
+            22,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            29,
+            36,
+            16,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            34,
+            8,
+            19,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            9,
+            16,
+            23,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F04",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "x2"
+      ],
+      "severity": "medium",
+      "description": "DEFECT, recorded rather than silently dropped: no committed rate is readable at [31,32,17,1], but its midpoint (39,32) is 10 cells from its own route at (29,32) and 7 cells from the competing Wi-Fi-to-router run at (39,25). Its left edge is only 2 cells from its own route, so intended ownership is locally recoverable, not fully clear. Generation records this and two overflowing rewrites; that honesty preserves the qualifier but does not turn an acknowledged placement defect into a green gate. The narrow no-unambiguous-placement exception is not established by two node-label rewrites that overflowed: the evidence does not prove no unambiguous layout/split was available.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#Mapped onto the datacenter model",
+        "docs/visualize-eval/rounds/04/rubric.json#categories/arrow_traceability",
+        "docs/visualize-eval/rounds/04/SKILL.md#Step 7"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            31,
+            32,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            29,
+            31,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            31,
+            25,
+            23,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F05",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "e5",
+        "e6",
+        "e7",
+        "e8",
+        "e9",
+        "e10",
+        "e11",
+        "e12",
+        "e13",
+        "e14",
+        "x2"
+      ],
+      "severity": "high",
+      "description": "DEFECT affecting arrow_traceability and animation: all 11 frame-0 dots start on the second exterior route cell, not the first drawn cell after their source port. LAN examples: actual origin (29,15), dot (29,16); overlay origins (35,21)/(35,23), dots (36,21)/(36,23); WAN ONT origin (9,19), dot (9,20). The full 11-row table is in the immutable blind record. Captured checks report origins 5/5, 2/2, 4/4 and 0 dot violations; those internal counters do not satisfy the actual-origin rubric. All static arrowheads remain traceable, but the rubric explicitly makes an away-from-origin dot fail animated arrow-direction proof.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/rubric.json#categories/arrow_traceability",
+        "docs/visualize-eval/rounds/04/rubric.json#categories/animation",
+        "docs/visualize-eval/rounds/04/SKILL.md#Step 6"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-lan_frame_0",
+          "region": [
+            29,
+            15,
+            3,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_frame_0",
+          "region": [
+            5,
+            23,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_frame_0",
+          "region": [
+            53,
+            23,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_frame_0",
+          "region": [
+            29,
+            31,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v3-overlay_frame_0",
+          "region": [
+            35,
+            21,
+            2,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_frame_0",
+          "region": [
+            34,
+            11,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_frame_0",
+          "region": [
+            9,
+            19,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_frame_0",
+          "region": [
+            9,
+            27,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_frame_0",
+          "region": [
+            9,
+            35,
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F06",
+      "category": "animation",
+      "edge_ids": [
+        "e5"
+      ],
+      "severity": "medium",
+      "description": "DEFECT: in v3-overlay pinned frame 20 at 2000 ms, the upper dot occupies (46,22), replacing the route bend whose standalone glyph is a lower-left rounded corner. This is one observed route/frame corner-contact event; the check and generator claim zero such violations. It is not an arrowhead arrival and is not excused by default constant-speed timing.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/rubric.json#categories/animation",
+        "docs/visualize-eval/rounds/04/SKILL.md#Step 6"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-overlay_frame_20",
+          "region": [
+            46,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-overlay_text",
+          "region": [
+            46,
+            22,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F07",
+      "category": "border_integrity",
+      "edge_ids": [
+        "e14"
+      ],
+      "severity": "medium",
+      "description": "DEFECT affecting border_integrity and layout_fit: the control palette intersects the Cloudflare box in [8,41,3,2] and overwrites three perimeter cells: (8,41) is palette horizontal line rather than node vertical side, (8,42) is the control label closing bracket rather than bottom-left corner, and (10,42) is palette vertical line rather than node bottom edge. Top/right sides and the row-40 node label remain readable. ANSI proves the palette colors replace node RGB (169,182,101), and selected ANSI proves the same three cells fail to become the node selected accent. Thus 19/19 occurrences have selected-border evidence but only 18/19 have complete visible selected outlines.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/rubric.json#categories/layout_fit",
+        "docs/visualize-eval/rounds/04/rubric.json#categories/border_integrity",
+        "docs/visualize-eval/rounds/04/SKILL.md#Step 7"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v4-wan_ansi",
+          "region": [
+            8,
+            39,
+            20,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_selected",
+          "region": [
+            8,
+            41,
+            3,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F08",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "EVIDENCE GAP / BLOCKER: the frozen case bundle contains specs, raw check stdout, manifests with final check_exit=0 and capture windows, hashes, validators and recorded cleanup, but no exact executed invocation log, separate stderr/combined-stream declaration, or process exit-status records for the rejected/probe checks. Do not reconstruct exact commands from SKILL.md templates or the current harness. The verification-rerun index also references missing specs/v2.json; the corresponding archived v2-combined-a3 spec and matching raw check are preserved, so this is a stale index path, not a lost final view. Workflow reproducibility remains blocked rather than passed.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/rubric.json#categories/workflow_evidence",
+        "docs/visualize-eval/rounds/04/homelab-nic-trace/attempts.json",
+        "docs/visualize-eval/rounds/04/homelab-nic-trace/generation.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            2,
+            1,
+            66,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-lan_text",
+          "region": [
+            2,
+            1,
+            70,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-overlay_text",
+          "region": [
+            2,
+            1,
+            74,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_text",
+          "region": [
+            2,
+            1,
+            70,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F09",
+      "category": "animation",
+      "edge_ids": [
+        "e5",
+        "e6",
+        "e7",
+        "e8",
+        "e9",
+        "e10",
+        "e11"
+      ],
+      "severity": "high",
+      "description": "EVIDENCE GAP / BLOCKER: all complete pinned dumps end at 2000 ms, before the seven long-route dots have crossed their routes; no full default-speed cycle is captured. In particular, LAN host-to-bond0 is still at (19,17) with its arrowhead at (5,18), and WAN router-to-ONT is still at (24,13) with head at (9,14). The short routes reset every few frames. The generator constant-speed proof selects only long LAN routes and omits its short router-to-Fios route. Thus complete per-route full-cycle speed/corner behavior remains unverified. Unequal arrivals and absence of same-arrival timing are not defects: the source requests neither animation nor synchronized arrival.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/rubric.json#categories/animation",
+        "docs/visualize-eval/rounds/04/SKILL.md#Step 8",
+        "docs/visualize-eval/cases.json#homelab-nic-trace/animation"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-lan_frame_20",
+          "region": [
+            5,
+            15,
+            49,
+            20
+          ]
+        },
+        {
+          "evidence_id": "v3-overlay_frame_20",
+          "region": [
+            35,
+            21,
+            13,
+            7
+          ]
+        },
+        {
+          "evidence_id": "v4-wan_frame_20",
+          "region": [
+            9,
+            11,
+            26,
+            4
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "Evidence gap F08: exact executed commands, stderr/combined-stream provenance, and rejected/probe process exit statuses are not preserved. Templates and current scripts cannot substitute for frozen invocation records.",
+    "Evidence gap F09: 0..2000 ms pinned dumps do not cover a full default-speed cycle of the seven long routes. Future motion and full-cycle all-route equal-speed behavior are unproven; known origin/corner failures remain failures."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pD0",
+      "w7E:pE1",
+      "w7E:pE2",
+      "w7E:pE3"
+    ],
+    "closed_pane_ids": [
+      "w7E:pD0",
+      "w7E:pE1",
+      "w7E:pE2",
+      "w7E:pE3"
+    ],
+    "status": "done",
+    "reason": "All four original manifests and generation cleanup record confirmed_closed for w7E:pD0, w7E:pE1, w7E:pE2 and w7E:pE3. No failed live pane is listed; rejected attempts are preserved headless check records. The judge created no panes or sessions and did not replay cleanup."
+  },
+  "overall": "fail"
+}

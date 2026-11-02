@@ -1,0 +1,6 @@
+[
+  {"path":"docs/visualize-eval/rounds/08/modal-runtime/specs/v1-return-seams.json","sha256":"f1c33e595f47d09da91681533ff1136c0307018c035f9f7417d2bcac48999463"},
+  {"path":"docs/visualize-eval/rounds/08/modal-runtime/specs/v2-task-intake.json","sha256":"2bdfa72af4b82a7610aae0ba97a103688c617184dd0d04d0d96810ef1c706392"},
+  {"path":"docs/visualize-eval/rounds/08/modal-runtime/specs/v3-dispatch-fan.json","sha256":"18378e04cdc0e90c1345527a397b7bdc42d2a050675f0f22b3fc15909ff2b432"},
+  {"path":"docs/visualize-eval/rounds/08/modal-runtime/specs/v4-data-plane.json","sha256":"186f6bed8cb61e6dd18797e8583c3cda586913712eed6ec08a24e7664cf7e8f3"}
+]

@@ -1,0 +1,5 @@
+# pane geometry probe (own tab w7E:t40, no-focus half split)
+split: {"id":"cli:pane:split","result":{"pane":{"agent_status":"unknown","cwd":"/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill","focused":false,"foreground_cwd":"/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill","pane_id":"w7E:pDY","revision":0,"scroll":{"max_offset_from_bottom":0,"offset_from_bottom":0,"viewport_rows":49},"tab_id":"w7E:t40","terminal_id":"term_65f4a8368b36a21b","workspace_id":"w7E"},"type":"pane_info"}}
+{"tab_id":"w7E:t40","area":{"height":49,"width":159,"x":0,"y":0},"panes":[{"focused":true,"pane_id":"w7E:pDH","rect":{"height":49,"width":80,"x":0,"y":0}},{"focused":false,"pane_id":"w7E:pDY","rect":{"height":49,"width":79,"x":80,"y":0}}]}
+{"id":"cli:pane:close","result":{"type":"ok"}}
+cleanup: confirmed_closed

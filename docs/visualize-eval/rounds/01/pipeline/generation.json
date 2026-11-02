@@ -1,0 +1,321 @@
+{
+  "case_id": "pipeline",
+  "round": "01",
+  "generator": {
+    "role": "fresh diagram generator (DeepSeek)",
+    "harness": "pi subagent worker, auto-exit Herdr tab",
+    "subagent_name": "viz-ds01-pipeline",
+    "session_id": "01a19b5b-df8c-7276-b49f-fd5d2144b9f9",
+    "model_exact": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "model_env": {
+      "PI_PROVIDER": "fireworks",
+      "PI_MODEL": "accounts/fireworks/routers/deepseek-flash-latest",
+      "PI_REASONING_LEVEL": "high"
+    },
+    "identity_note": "model identity read from this session's PI_* environment, not inferred",
+    "worktree": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill",
+    "branch": "fix/visualize-skill",
+    "cwd_pane": "w7E:p2Q",
+    "tab": "w7E:tJ",
+    "workspace": "w7E"
+  },
+  "frozen_inputs": {
+    "candidate_skill": {
+      "path": "../SKILL.md",
+      "sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "matches_brief": true,
+      "note": "invoked fresh from the round snapshot; the globally installed skill was not used"
+    },
+    "executable": {
+      "path": "/tmp/visualize-eval/round-01/bin/rataflow-view",
+      "sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "matches_brief": true,
+      "used_for": "all --check runs and every viewer launch"
+    }
+  },
+  "viewport": {
+    "target": "77 columns x 47 rows at natural 100% zoom",
+    "measured": "47 rows x 77 columns",
+    "measured_with": "stty size executed inside the viewer pane before the viewer started",
+    "measured_files": ["captures/view1-dims.txt", "captures/view1-attempt2-dims.txt", "captures/view1-attempt3-dims.txt"],
+    "target_met": true,
+    "zoom_note": "no f/zoom/scroll/pan was used; captures are the natural render"
+  },
+  "views": [
+    {
+      "id": "view1",
+      "purpose": "whole job pipeline: ingress, auth path, queue/worker path, read/write split into Postgres",
+      "spec": "spec/view1.json",
+      "spec_sha256": "d5e59fa46e19f77f6841cf382c0794a45dca2aadf1a2142d6d7d1830d031d4cb",
+      "spec_equals_attempt": "attempts/view1-attempt3.json",
+      "check": {
+        "text": "checks/view1.check.txt",
+        "stdout": "checks/view1.check.stdout.txt",
+        "stderr": "checks/view1.check.stderr.txt",
+        "exit": "checks/view1.check.exit",
+        "exit_code": 0,
+        "stderr_bytes": 0,
+        "summary": "ok: nodes=6 edges=6 flows=6 direction=tb theme=gruvbox",
+        "extent_cells": "36x40",
+        "warnings": 0
+      },
+      "dimensions": "captures/view1-dims.txt",
+      "pane_id": "w7E:p3R",
+      "captured_at": "2026-11-02T08:27:04Z",
+      "text_unselected": "captures/view1-visible.txt",
+      "ansi_unselected": "captures/view1-ansi-unselected.txt",
+      "selected_states": [
+        {
+          "state": "API gateway selected (Tab once)",
+          "pane_id": "w7E:p3R",
+          "captured_at": "2026-11-02T08:27:07Z",
+          "text": "captures/view1-selected1-visible.txt",
+          "ansi": "captures/view1-selected1-ansi.txt",
+          "border_color_observed": "all API gateway border cells use the accent (216,166,87)"
+        },
+        {
+          "state": "Auth selected (Tab twice)",
+          "pane_id": "w7E:p3R",
+          "captured_at": "2026-11-02T08:27:16Z",
+          "text": "captures/view1-selected2-visible.txt",
+          "ansi": "captures/view1-selected2-ansi.txt",
+          "border_color_observed": "all Auth border cells use the accent (216,166,87)"
+        }
+      ],
+      "frames": {
+        "unselected_run": {
+          "pane_id": "w7E:p3E",
+          "files": ["captures/view1-frame1.txt", "captures/view1-frame2.txt", "captures/view1-frame3.txt", "captures/view1-frame4.txt"],
+          "times_utc": ["08:26:36Z", "08:26:38Z", "08:26:40Z", "08:26:42Z"]
+        },
+        "final_run": {
+          "pane_id": "w7E:p3R",
+          "files": ["captures/view1-live-frame1.txt", "captures/view1-live-frame2.txt", "captures/view1-live-frame3.txt"],
+          "times_utc": ["08:27:30Z", "08:27:32Z", "08:27:34Z"],
+          "note": "Worker pool was selected during these frames; selection is colour-only, the text capture is identical to unselected"
+        }
+      },
+      "render_audit": "checks/view1-render-audit.txt",
+      "hashes": "checks/hashes.txt",
+      "commands": "commands/commands.md"
+    }
+  ],
+  "relationship_mapping": [
+    {
+      "original": {"from": "cli", "to": "api", "label_in_source": null},
+      "source_pointer": "cases/pipeline/source.md > Relationship facts from the historical attempt, bullet 'cli -> api' (unlabeled historical relation; do not invent a protocol)",
+      "visible": {
+        "view": "view1",
+        "edge_label": "request",
+        "direction": "cli -> api (downward)",
+        "source_stem": "CLI bottom border, col 36; vertical stem rows 10-12",
+        "target_entry": "arrowhead row 13 col 36, on API gateway top border (box rows 14-17, cols 35-47)",
+        "route": "straight vertical, one dot en route"
+      },
+      "preserved": true,
+      "annotation": "label 'request' is a neutral relationship verb chosen by the generator; no protocol is asserted"
+    },
+    {
+      "original": {"from": "api", "to": "auth", "label_in_source": "verify"},
+      "source_pointer": "cases/pipeline/source.md > Relationship facts, bullet 'api -> auth: verify'",
+      "visible": {
+        "view": "view1",
+        "edge_label": "verify",
+        "direction": "api -> auth (downward, right branch)",
+        "source_stem": "API gateway bottom border, col 38; vertical stem rows 18-19",
+        "target_entry": "arrowhead row 21 col 49, on Auth top border (box rows 22-25, cols 48-53)",
+        "route": "down, elbow right at row 20, run to col 49, arrow down"
+      },
+      "preserved": true,
+      "annotation": "label 'verify' is the brief's own gloss for this relation"
+    },
+    {
+      "original": {"from": "api", "to": "queue", "label_in_source": "enqueue"},
+      "source_pointer": "cases/pipeline/source.md > Relationship facts, bullet 'api -> queue: enqueue'",
+      "visible": {
+        "view": "view1",
+        "edge_label": "enqueue",
+        "direction": "api -> queue (downward, left branch)",
+        "source_stem": "API gateway bottom border, col 36 (a separate port from the verify stem at col 38)",
+        "target_entry": "arrowhead row 21 col 23, on Job queue top border (box rows 22-25, cols 22-32)",
+        "route": "down, elbow left at row 20, run to col 23, arrow down"
+      },
+      "preserved": true
+    },
+    {
+      "original": {"from": "queue", "to": "worker", "label_in_source": null},
+      "source_pointer": "cases/pipeline/source.md > Relationship facts, bullet 'queue -> worker' (unlabeled historical relation; do not invent a protocol)",
+      "visible": {
+        "view": "view1",
+        "edge_label": "dispatch",
+        "direction": "queue -> worker (downward)",
+        "source_stem": "Job queue bottom border, col 23; vertical stem rows 26-29",
+        "target_entry": "arrowhead row 30 col 23, on Worker pool top border (box rows 30-33, cols 22-34)",
+        "route": "straight vertical, one dot en route"
+      },
+      "preserved": true,
+      "annotation": "label 'dispatch' is a neutral relationship verb chosen by the generator; no protocol is asserted"
+    },
+    {
+      "original": {"from": "worker", "to": "db", "label_in_source": "write"},
+      "source_pointer": "cases/pipeline/source.md > Relationship facts, bullet 'worker -> db: write'",
+      "visible": {
+        "view": "view1",
+        "edge_label": "write",
+        "direction": "worker -> db (downward, left-hand entry)",
+        "source_stem": "Worker pool bottom border, col 23; vertical stem rows 34-36",
+        "target_entry": "arrowhead row 37 col 36, on Postgres top border (box rows 38-41, cols 35-44)",
+        "route": "down, elbow right at row 36, run to col 36, arrow down; label sits above the run"
+      },
+      "preserved": true
+    },
+    {
+      "original": {"from": "auth", "to": "db", "label_in_source": "read"},
+      "source_pointer": "cases/pipeline/source.md > Relationship facts, bullet 'auth -> db: read'",
+      "visible": {
+        "view": "view1",
+        "edge_label": "read",
+        "direction": "auth -> db (downward, right-hand entry)",
+        "source_stem": "Auth bottom border, col 49; vertical stem rows 26-36",
+        "target_entry": "arrowhead row 37 col 38, on Postgres top border",
+        "route": "long vertical down the right side, elbow left at row 36, run to col 38, arrow down; label above the run"
+      },
+      "preserved": true,
+      "annotation": "kept distinct from the worker write: different source box, different column, different port and different label; no reversal"
+    }
+  ],
+  "split_views": {
+    "used": false,
+    "reason": "one view holds 6 nodes and 6 edges, well inside the 12-node / 16-edge budget, and the check reports 0 warnings",
+    "explicit_coverage": "all six source relations are visible in view1 with distinct source stems, distinct routes and separate target ports; the read/write and auth/queue paths are separated by branch (left: queue -> worker -> db, right: auth -> db) and by label"
+  },
+  "constraints_check": {
+    "semantic_tiers": "ranks used by the layout are cli / api / {auth, queue} / worker / db; the two same-rank boxes share the layer hue family",
+    "related_color_shades": "Job queue (211,134,155) and Auth (226,156,175) are related pinks of one layer; CLI (216,166,87), API gateway (125,174,163), Worker pool (169,182,101), Postgres (125,160,184) each own a distinct hue",
+    "plain_background": "every one of the 3619 captured cells has background (40,40,40); node boxes share it (interior_bgs single value in the audit)",
+    "no_border_dots": "audit reports border_dots=[] for all six boxes in unselected and selected states",
+    "no_protocol_invented": "the two unlabeled historical relations carry neutral verbs only; no HTTP/gRPC/etc. is asserted anywhere",
+    "slow_sparse_motion": "flow=0.2 on all six edges; measured dot drift about 3 cells per 2 s frame and per-edge dot spacing of 7-14 cells"
+  },
+  "source_pointers": {
+    "case_brief": "docs/visualize-eval/cases/pipeline/source.md (Task, Source, Relationship facts from the historical attempt, Fixed constraints)",
+    "historical_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-dotfiles-fix-visualize--/2026-10-13T05-35-27-649Z_01a133c2-33a0-74b7-9033-3ad246285cff.jsonl (line 180, call chatcmpl-tool-8bf56de848923fd1) - NOT read directly; used only through the brief's excerpts",
+    "historical_user_lines": ["line 5 (style: no background dots, plain shared box background, live flow dots, gruvbox)", "line 48 (even split pane)"]
+  },
+  "abbreviations": [
+    {"text": "CLI", "meaning": "command-line client (source node label)"},
+    {"text": "API gateway", "meaning": "source node label, unchanged"},
+    {"text": "Auth", "meaning": "authentication service (source node label, unchanged)"},
+    {"text": "Job queue", "meaning": "source node label, unchanged"},
+    {"text": "Worker pool", "meaning": "source node label, unchanged"},
+    {"text": "Postgres", "meaning": "source database node, unchanged"},
+    {"text": "request", "meaning": "generator-chosen neutral verb for the historically unlabeled cli -> api relation; not a protocol"},
+    {"text": "dispatch", "meaning": "generator-chosen neutral verb for the historically unlabeled queue -> worker relation; not a protocol"}
+  ],
+  "evidence_qualifications": [
+    "The brief marks cli -> api and queue -> worker as unlabeled historical relations. Only neutral verbs were added; no protocol, medium or API name is claimed.",
+    "The brief gives 'verify' for api -> auth; it is drawn as the edge label without adding a mechanism (no token/credential detail invented).",
+    "Historical user lines about style (no background dots, plain box background, live dots, gruvbox) are treated as evidence: the spec uses theme gruvbox and animates every edge; background/box styling is renderer-owned and was verified from ANSI captures rather than asserted."
+  ],
+  "attempts": [
+    {
+      "index": 1,
+      "spec": "attempts/view1-attempt1.json",
+      "spec_sha256": "ab6597b056bc92707da9b81074f6417216db2a9205bc948df587bd4627eb6162",
+      "idea": "explicit semantic layers, Postgres alone in the last layer",
+      "check": "checks/view1-attempt1.check.txt",
+      "extent_cells": "31x37",
+      "warnings": 0,
+      "pane_id": "w7E:p2X",
+      "captures": ["captures/view1-attempt1-visible.txt", "captures/view1-attempt1-ansi.txt"],
+      "dimensions_note": "attempt 1 wrote its stty measurement to captures/view1-dims.txt, which the final pass overwrote with the same 47x77 value; the 47x77 reading is recorded in the attempt-1 capture header as well",
+      "outcome": "superseded: two Postgres entries 2 cells apart with elbows stacked one row apart, a flow dot sitting inside the auth elbow, and a one-cell jog with a dot on the queue -> worker drop"
+    },
+    {
+      "index": 2,
+      "spec": "attempts/view1-attempt2.json",
+      "spec_sha256": "38010e16f4ad1fff4ab715e6f5abbd735f104d80ce0e60ec4e3a2cba0a58886e",
+      "idea": "same layers, Postgres moved under the worker column",
+      "check": "checks/view1-attempt2.check.txt",
+      "extent_cells": "31x37",
+      "warnings": 0,
+      "pane_id": "w7E:p3A",
+      "captures": ["captures/view1-attempt2-visible.txt", "captures/view1-attempt2-dims.txt"],
+      "outcome": "rejected: flow dots overwrote route corners (corner glyph replaced by a dot) in the static frame, the cli -> api corner vanished, and the read/write labels floated away from their routes"
+    },
+    {
+      "index": 3,
+      "spec": "attempts/view1-attempt3.json",
+      "spec_sha256": "d5e59fa46e19f77f6841cf382c0794a45dca2aadf1a2142d6d7d1830d031d4cb",
+      "idea": "drop the explicit layers, let the automatic placement rank the same relations",
+      "check": "checks/view1-attempt3.check.txt",
+      "extent_cells": "36x40",
+      "warnings": 0,
+      "pane_id": "w7E:p3E",
+      "captures": ["captures/view1-attempt3-visible.txt", "captures/view1-attempt3-dims.txt", "captures/view1-frame1.txt", "captures/view1-frame2.txt", "captures/view1-frame3.txt", "captures/view1-frame4.txt"],
+      "outcome": "selected as final: balanced left/right branches, straight queue -> worker drop, read and write enter Postgres through separate ports with their own labels, no corner dots in the static frame"
+    }
+  ],
+  "known_defects": [
+    {
+      "id": "D1",
+      "view": "view1",
+      "defect": "The cli -> api request edge enters the API gateway top border at col 36 while the box spans cols 35-47 (centre 41), and its stem leaves the CLI bottom at col 36 while the CLI box centre is col 37.",
+      "impact": "cosmetic off-centre attachment; the arrowhead is attached and unambiguous",
+      "status": "unfixed (no local spec attempt left in budget; changing placement re-routes the other five edges)"
+    },
+    {
+      "id": "D2",
+      "view": "view1",
+      "defect": "Postgres receives the write and read arrowheads at cols 36 and 38, two cells apart, and the two approach runs sit on the same row separated by one empty cell.",
+      "impact": "ports are separate and each run carries its own label, but the pair reads as a tight cluster at the target",
+      "status": "unfixed"
+    },
+    {
+      "id": "D3",
+      "view": "view1",
+      "defect": "The 'read' label sits on row 35 at cols 42-45, four cells left of its own vertical at col 49, inside the free space between the write stem (col 23) and the read line.",
+      "impact": "in plain text the label is nearer the gap than the line; ANSI shows it does not touch either route",
+      "status": "unfixed (shortening or moving it would need another spec attempt)"
+    },
+    {
+      "id": "D4",
+      "view": "view1",
+      "defect": "During animation a flow dot can replace a route corner glyph, e.g. the enqueue elbow at row 20 col 23 in captures/view1-live-frame1.txt renders as '●' instead of '╭'.",
+      "impact": "transient kink for the duration of one dot cycle; the route itself is unchanged",
+      "status": "renderer behaviour of the frozen binary, not spec-controllable"
+    },
+    {
+      "id": "D5",
+      "view": "view1",
+      "defect": "The layer-0 hue (216,166,87) is the same colour the renderer uses for flow dots and for the selection accent, so the CLI box always looks accent-coloured and a selected CLI is not distinguishable by border colour.",
+      "impact": "colour-only ambiguity, visible in ANSI; no effect on text capture",
+      "status": "theme mapping of the frozen binary; gruvbox is required by the source, so the spec does not change it"
+    }
+  ],
+  "observations": [
+    "Tab cycles node selection and never clears it; capturing an unselected state again required relaunching the viewer.",
+    "The viewer header 'rataflow-view · view1.json · 6 nodes · 6 edges · 6 flows · drag pan · scroll' was verified before each capture; no 'graph overflows' badge ever appeared.",
+    "The control palette (rows 40-45, cols 1-9) does not overlap any node, route or label; the graph occupies cols 22-53, rows 6-41."
+  ],
+  "blockers": [],
+  "unmet_needs": [],
+  "renderer_feature_gaps": [],
+  "review": {
+    "independent_review_run": false,
+    "reason": "the round brief reserves judging for a captain-owned Astra judge; this generator did not spawn any subagent",
+    "approval_claimed": false
+  },
+  "cleanup": {
+    "panes_created": ["w7E:p2X", "w7E:p3A", "w7E:p3E", "w7E:p3R"],
+    "panes_closed": ["w7E:p2X", "w7E:p3A", "w7E:p3E", "w7E:p3R"],
+    "method": "three panes were replaced with herdr pane close; the last pane was closed by its own self-closing launch command after q",
+    "verified": "herdr pane get w7E:p3R -> pane_not_found; herdr pane list shows tab w7E:tJ holding only the generator pane w7E:p2Q",
+    "failures": [],
+    "leftover_processes_note": "pgrep showed rataflow-view processes belonging to other cases' generators (server-nic-layout, network); they are not mine and were left alone"
+  },
+  "replaces_cancelled_round": {
+    "reused_artifacts": false,
+    "note": "no earlier Astra-round artifact, spec or critique was read; the spec, captures and checks in this directory were produced in this run"
+  }
+}

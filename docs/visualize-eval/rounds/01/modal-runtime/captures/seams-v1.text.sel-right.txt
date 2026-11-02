@@ -1,0 +1,46 @@
+ rataflow-view · seams.json · 4 nodes · 4 edges · 0 flows · drag pan · scroll
+
+
+
+
+
+
+
+
+
+
+
+
+
+                       ╭────────────╮
+                       │modal-worker│◀╮
+                       │            │ │
+                       ╰────────────╯ │
+                        │             │
+                        │ control gRPC│ events gRPC
+                       ╭╯             │
+                       ▼              │
+                      ╭─────────────╮ │
+                      │modal-runtime│─╯
+                      │             │
+                      ╰─────────────╯
+                       │ │
+                       │ ╰────────────────╮
+                       ╰╮ task dispatch   │
+                        ▼fs HTTP over UDS ▼
+                       ╭───────────╮     ╭────────────╮
+                       │Task engine│     │modal-daemon│
+                       │           │     │            │
+                       ╰───────────╯     ╰────────────╯
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘

@@ -44,11 +44,15 @@ except ImportError:  # python 3.9/3.10 (local macs)
 # Spec schema, mirrored from rataflow/src/lib.rs (the Rust code is the
 # source of truth for behavior; this mirror exists to validate the examples
 # and the skill's documented block against drift).
-ALLOWED_TOP = {"direction", "theme", "nodes", "edges"}
-ALLOWED_NODE = {"id", "label"}
-ALLOWED_EDGE = {"from", "to", "label", "flow"}
+ALLOWED_TOP = {"direction", "theme", "nodes", "edges", "layers", "trunks"}
+ALLOWED_NODE = {"id", "label", "group"}
+ALLOWED_EDGE = {"from", "to", "label", "flow", "dots", "style", "duration_ms", "timing"}
+ALLOWED_TRUNK = {"id", "label", "from", "to", "branches"}
 DIRECTIONS = {"tb", "lr"}
 THEMES = {"gruvbox", "dark", "light"}
+DOT_CHOICES = {0, 1}
+EDGE_STYLES = {"solid", "dashed"}
+TIMING_MODES = {"constant", "same-arrival"}
 
 RESULTS = []
 
@@ -83,9 +87,23 @@ def validate_spec(doc):
             continue
         if not str(node["id"]).strip():
             problems.append(f"node {index} has an empty id")
+        group = node.get("group")
+        if group is not None and (not isinstance(group, str) or not group.strip()):
+            problems.append(f"node {index} group must be a non-empty string")
         if node["id"] in seen:
             problems.append(f"duplicate node id {node['id']}")
         seen.add(node["id"])
+    layers = doc.get("layers")
+    if layers is not None:
+        if not isinstance(layers, list) or not all(
+            isinstance(layer, list) and all(isinstance(slot, str) for slot in layer)
+            for layer in layers
+        ):
+            problems.append("layers must be a list of lists of strings")
+        else:
+            placed = [slot for layer in layers for slot in layer if slot]
+            if len(placed) != len(set(placed)):
+                problems.append("a node appears in more than one layer slot")
     edges = doc.get("edges")
     if not isinstance(edges, list) or not edges:
         problems.append("edges is missing or empty")
@@ -108,6 +126,70 @@ def validate_spec(doc):
             problems.append(
                 f"edge {index} flow must be true or a positive number"
             )
+        dots = edge.get("dots")
+        if dots is not None and (isinstance(dots, bool) or dots not in DOT_CHOICES):
+            problems.append(f"edge {index} dots must be 0 or 1")
+        style = edge.get("style")
+        if style is not None and style not in EDGE_STYLES:
+            problems.append(f"edge {index} style must be solid or dashed")
+        duration = edge.get("duration_ms")
+        timing = edge.get("timing")
+        if timing is not None and timing not in TIMING_MODES:
+            problems.append(f"edge {index} timing must be constant or same-arrival")
+        if timing == "same-arrival" and flow is not True:
+            problems.append(
+                f"edge {index} timing same-arrival needs flow true and rejects a numeric flow"
+            )
+        if duration is not None:
+            if isinstance(duration, bool) or not isinstance(duration, int) or duration <= 0:
+                problems.append(
+                    f"edge {index} duration_ms must be a positive whole number"
+                )
+            elif timing != "same-arrival" or flow is not True:
+                problems.append(
+                    f"edge {index} duration_ms is valid only with timing same-arrival and flow true"
+                )
+    problems += validate_trunks(doc, seen)
+    return problems
+
+
+def validate_trunks(doc, node_ids):
+    """Check the optional trunk declarations against node ids and each other."""
+    problems = []
+    trunks = doc.get("trunks")
+    if trunks is None:
+        return problems
+    if not isinstance(trunks, list):
+        return ["trunks is not a list"]
+    seen = set()
+    for index, trunk in enumerate(trunks):
+        if not isinstance(trunk, dict) or set(trunk) - ALLOWED_TRUNK:
+            problems.append(f"trunk {index} is malformed")
+            continue
+        missing = {"id", "from", "to", "branches"} - set(trunk)
+        if missing:
+            problems.append(f"trunk {index} is missing {sorted(missing)}")
+            continue
+        if trunk["id"] in seen:
+            problems.append(f"duplicate trunk id {trunk['id']}")
+        seen.add(trunk["id"])
+        endpoints = {trunk["from"], trunk["to"]}
+        if trunk["from"] == trunk["to"]:
+            problems.append(f"trunk {index} has the same from and to")
+        branches = trunk["branches"]
+        if not isinstance(branches, list) or not branches:
+            problems.append(f"trunk {index} needs at least one branch")
+            continue
+        if len(branches) != len(set(branches)):
+            problems.append(f"trunk {index} repeats a branch")
+        for branch in branches:
+            if branch in endpoints:
+                problems.append(f"trunk {index} branch {branch} is an endpoint")
+            if branch not in node_ids:
+                problems.append(f"trunk {index} branch {branch} is not a node")
+        for endpoint in endpoints:
+            if endpoint not in node_ids:
+                problems.append(f"trunk {index} endpoint {endpoint} is not a node")
     return problems
 
 

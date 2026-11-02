@@ -1,0 +1,21 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "layers": [
+    ["worker"],
+    ["runtime"],
+    ["engine", "daemon"]
+  ],
+  "nodes": [
+    { "id": "worker", "label": "modal-worker", "group": "client" },
+    { "id": "runtime", "label": "modal-runtime", "group": "control" },
+    { "id": "engine", "label": "Task engine", "group": "control" },
+    { "id": "daemon", "label": "modal-daemon", "group": "host" }
+  ],
+  "edges": [
+    { "from": "worker", "to": "runtime", "label": "task input + control RPCs", "dots": 1, "flow": 1 },
+    { "from": "runtime", "to": "worker", "label": "events + management RPCs", "dots": 1, "flow": 1 },
+    { "from": "runtime", "to": "engine", "label": "dispatches tasks", "dots": 1, "flow": 1 },
+    { "from": "runtime", "to": "daemon", "label": "filesystem HTTP over UDS", "dots": 1, "flow": 1 }
+  ]
+}

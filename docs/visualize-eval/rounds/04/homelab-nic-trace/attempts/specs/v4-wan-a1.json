@@ -1,0 +1,19 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "rtr", "label": "Fios rtr: NAT, DHCP", "group": "edge" },
+    { "id": "ont", "label": "claimed ONT 169.254.3.1", "group": "isp" },
+    { "id": "v6", "label": "v6 internet (ULA only)", "group": "v6" },
+    { "id": "vzagg", "label": "VZ agg 100.41.x", "group": "isp" },
+    { "id": "vzbb", "label": "VZ bbone AS701", "group": "isp" },
+    { "id": "cf", "label": "CF AS13335 1.1.1.1", "group": "cf" }
+  ],
+  "edges": [
+    { "from": "rtr", "to": "ont", "label": "pool 71.251.12.240", "dots": 1, "flow": true },
+    { "from": "rtr", "to": "v6", "label": "no global v6", "style": "dashed" },
+    { "from": "ont", "to": "vzagg", "label": "4.5ms", "dots": 1, "flow": true },
+    { "from": "vzagg", "to": "vzbb", "label": "6.6ms", "dots": 1, "flow": true },
+    { "from": "vzbb", "to": "cf", "label": "6-9ms", "dots": 1, "flow": true }
+  ]
+}

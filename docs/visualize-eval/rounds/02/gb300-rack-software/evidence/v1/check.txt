@@ -1,0 +1,8 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=7 edges=6 flows=6 direction=tb theme=gruvbox
+layers=3 (explicit placement, sugiyama skipped)
+extent=77x24 cells
+labels: 7/7 placed, 0 on route cells, 0 skipped
+groups: mgmt(1) oob(4) nvsw(2)
+trunks: oob_lan from oob to pwr, 2 branches
+dots: 6 single-dot routes, 0 periodic routes, 0 violations

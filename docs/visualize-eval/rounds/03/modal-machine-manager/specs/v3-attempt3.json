@@ -1,0 +1,109 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "layers": [
+    [
+      "q"
+    ],
+    [
+      "ssh",
+      "jan"
+    ],
+    [
+      "mch",
+      "wapi"
+    ],
+    [
+      "s3",
+      "slack"
+    ]
+  ],
+  "nodes": [
+    {
+      "id": "q",
+      "label": "River job queue",
+      "group": "jobs"
+    },
+    {
+      "id": "ssh",
+      "label": "SSH + BMC ops",
+      "group": "machines"
+    },
+    {
+      "id": "jan",
+      "label": "janitor app",
+      "group": "jobs"
+    },
+    {
+      "id": "mch",
+      "label": "bare-metal machines",
+      "group": "machines"
+    },
+    {
+      "id": "s3",
+      "label": "S3 object store",
+      "group": "state"
+    },
+    {
+      "id": "wapi",
+      "label": "webapi server",
+      "group": "control"
+    },
+    {
+      "id": "slack",
+      "label": "Slack",
+      "group": "humans"
+    }
+  ],
+  "edges": [
+    {
+      "from": "q",
+      "to": "ssh",
+      "label": "audit + verify",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "ssh",
+      "to": "mch",
+      "label": "run machine-audit",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "q",
+      "to": "s3",
+      "label": "diagnose uploads",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "mch",
+      "to": "s3",
+      "label": "boot image",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "q",
+      "to": "jan",
+      "label": "diagnostic events",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "jan",
+      "to": "wapi",
+      "label": "proposed actions",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "wapi",
+      "to": "slack",
+      "label": "confirm + alerts",
+      "dots": 1,
+      "flow": true
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "spec_path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/datacenter-redundancy/specs/v2-fw-border-spine.json",
+  "spec_sha256": "89e36227a0ac6e618fc1ca99bac7883df1972f299ffa80cfbf158c81918c7970",
+  "binary_path": "/tmp/visualize-eval/round-05/bin/rataflow-view",
+  "binary_sha256": "b1ab9f2e78af11c2f2b005eea083a999079d184bf550e8d0b6d9c51867f22404",
+  "pane_id": "w7E:pHS",
+  "pane_rect": null,
+  "pane_cols": null,
+  "pane_rows": 51,
+  "viewport_line": null,
+  "viewport_token": "83x51 @100%",
+  "check_exit": 0,
+  "check_window": [
+    "2026-11-02T16:20:13Z",
+    "2026-11-02T16:20:13Z"
+  ],
+  "capture_window": [
+    "2026-11-02T16:20:13Z",
+    "2026-11-02T16:20:17Z"
+  ],
+  "cleanup": "confirmed_closed",
+  "select_all_frame": true,
+  "frames": 5,
+  "frame_step_ms": 100,
+  "artifacts": {
+    "bin.sha256": "93a87351efa820a41a27baf97e90d9945ff00a10f4b64913524cd83ec5757f8b",
+    "check.txt": "7a7311a500ba535cf77642b920d398553575091713b715b3bc2b4972f26f7458",
+    "v2-ansi.ansi": "59850baba35e592c50b40caba86e9af84aef83614d91993c1344bc09e864cbd4",
+    "v2-frames.ansi": "cfe74e39203e7bf0ab4aa97b62229ed30ccb80bda1488263772273cf2b1fa0f5",
+    "v2-frames.txt": "f9469aa812b5e83b5d83dd1a9c65d0d822847477375dc46d6dd06686bd497596",
+    "v2-selected.ansi": "9c671597ae5407d5260aa3400436d5976a46c1b0ba95461520bde57da0834e53",
+    "v2-text.txt": "66e66b711fd59d5571c03ad3e910f33a03b97bc56a2105b8476c0fdcb7c6ba67"
+  }
+}

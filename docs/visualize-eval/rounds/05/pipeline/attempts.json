@@ -1,0 +1,15 @@
+{
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "spec_sha256": "fdb8c42f6810b541b8a5367d9572d2d47ced3e756598658ff61f1c833a935f2f",
+          "spec": "attempts/attempt1-tb/spec.json",
+          "raw_check": "attempts/attempt1-tb/check.txt",
+          "note": "chosen and only spec candidate: tb orientation with four semantic groups (client/edge/work/state). --check reports extent 36x40, crossings 0 bridges 0 touching bends, labels 4/4 placed 0 on route 0 skipped 0 ambiguous owners, dots 6 single-dot constant routes 0 violations, origins 6/6. Kept because crossings are already at the structural minimum (0) and every label has an unambiguous slot; lr was not attempted because a 5-rank lr layout budgets ~75 columns for boxes-plus-label-slots before group borders, i.e. it cannot fit 77 columns at 100% zoom, and the skill forbids pan/zoom-out as fit."
+        }
+      ]
+    }
+  ]
+}

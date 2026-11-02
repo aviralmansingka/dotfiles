@@ -1,0 +1,320 @@
+{
+  "case_id": "network",
+  "round": "05",
+  "round_task_text_literal": "03",
+  "round_note": "The task template's Output section still names round \"03\" while this run is round 05 (directory docs/visualize-eval/rounds/05/network). Both values are recorded; \"round\" follows the actual round and directory.",
+  "generator": {
+    "identity": "viz-ds05-2 — fresh diagram generator subagent, round 05",
+    "agent_profile": "worker",
+    "model": "accounts/fireworks/routers/deepseek-flash-latest",
+    "provider": "fireworks",
+    "reasoning_level": "high",
+    "session_id": "01a19cf3-b63f-779f-bbc3-ff37722edffc"
+  },
+  "candidate_skill": {
+    "path": "docs/visualize-eval/rounds/05/SKILL.md",
+    "sha256": "ff4a9d3f32ba0bf86e54ee6bfbac02fdea3fac3b95b82a958b3411accef0a949"
+  },
+  "renderer": {
+    "path": "/tmp/visualize-eval/round-05/bin/rataflow-view",
+    "sha256": "b1ab9f2e78af11c2f2b005eea083a999079d184bf550e8d0b6d9c51867f22404",
+    "invoked_by_absolute_path_only": true,
+    "rebuilt_or_substituted": false
+  },
+  "validator": {
+    "path": "scripts/viz-validate.py",
+    "sha256_at_run": "902370989d632a497db9ebe325ca378a1f4fd81e0214f91f44906157bc1d453e",
+    "note": "The validator is an untracked working-tree script and was concurrently edited by another process during this case (it gained _pinned_target_dump_proves_fit so a larger measured pane plus a pinned 77x47 dump is accepted, and its routes-economy check became conditional because the frozen build emits no routes: line). It was not edited by me; both views were re-validated against the settled version above."
+  },
+  "views": [
+    {
+      "view": "v1",
+      "spec": "specs/v1.json",
+      "spec_sha256": "52c9e9905fa6c4bd6e1ffe8d46ce9ba2e14b37536f660785b9e334ebf3852869",
+      "title": "path: WAN -> firewall -> core -> Redis -> DB tier",
+      "direction": "tb",
+      "nodes": 5,
+      "edges": 4,
+      "extent_cells": "17x40",
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=5 edges=4 flows=4 direction=tb theme=gruvbox",
+        "extent=17x40 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: network(3) tiers(2)",
+        "trunks:",
+        "dots: 4 single-dot routes, 0 periodic routes, 0 violations, 4 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 4/4 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "check_line_note": "No routes: line — the frozen round-05 build dropped route economy with the round-04 revert; its absence is expected on this baseline.",
+      "artifacts": {
+        "check": "evidence/v1/check.txt",
+        "text": "evidence/v1/v1-text.txt",
+        "ansi": "evidence/v1/v1-ansi.ansi",
+        "selected_ansi": "evidence/v1/v1-selected.ansi",
+        "frames": "evidence/v1/v1-frames.txt",
+        "frames_ansi": "evidence/v1/v1-frames.ansi",
+        "pinned_77x47_frames": "evidence/v1/v1-frames-77x47.txt",
+        "manifest": "evidence/v1/manifest.json",
+        "binary_hash_record": "evidence/v1/bin.sha256"
+      },
+      "measured": {
+        "pane_id": "w7E:pGS",
+        "pane_header_token": "83x51 @100%",
+        "pane_rows_from_herdr": 51,
+        "pane_cols_from_herdr": null,
+        "pane_rect": null,
+        "viewport_line_in_pane": null,
+        "pinned_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "why_larger": "A capture pane inherits this session tab (170x53 in this workspace); viz-evidence.sh splits it 0.5 right, giving an 85x53 pane, and the app's border-adjusted viewport is 83x51. Pane size is not controlled by the worker, so the pinned direct dump at COLUMNS=77 LINES=47 carries the target-size fit proof per view.",
+        "pane_rect_null_reason": "viz-evidence.sh reads herdr pane layout, which reports only the focused tab; this worker's tab is unfocused, so pane_rect/pane_cols are null and pane_rows falls back to the app's own viewport_rows (51). The measured size is the app's header token."
+      },
+      "validator": {
+        "output": "validator-v1.txt",
+        "failing_checks": [],
+        "passed": true
+      }
+    },
+    {
+      "view": "v2",
+      "spec": "specs/v2.json",
+      "spec_sha256": "087943b82a67478b1117e7d63772949b47c1e7c2841aee990d89e502e22fd027",
+      "title": "core -> web tier, with web -> Redis session and web -> DB tier queries",
+      "direction": "tb",
+      "nodes": 4,
+      "edges": 3,
+      "extent_cells": "39x24",
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=4 edges=3 flows=3 direction=tb theme=gruvbox",
+        "extent=39x24 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 3/3 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: network(1) tiers(3)",
+        "trunks:",
+        "dots: 3 single-dot routes, 0 periodic routes, 0 violations, 3 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 3/3 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "check_line_note": "No routes: line — expected on this baseline (see v1 note).",
+      "artifacts": {
+        "check": "evidence/v2/check.txt",
+        "text": "evidence/v2/v2-text.txt",
+        "ansi": "evidence/v2/v2-ansi.ansi",
+        "selected_ansi": "evidence/v2/v2-selected.ansi",
+        "frames": "evidence/v2/v2-frames.txt",
+        "frames_ansi": "evidence/v2/v2-frames.ansi",
+        "pinned_77x47_frames": "evidence/v2/v2-frames-77x47.txt",
+        "manifest": "evidence/v2/manifest.json",
+        "binary_hash_record": "evidence/v2/bin.sha256"
+      },
+      "measured": {
+        "pane_id": "w7E:pGV",
+        "pane_header_token": "83x51 @100%",
+        "pane_rows_from_herdr": 51,
+        "pane_cols_from_herdr": null,
+        "pane_rect": null,
+        "viewport_line_in_pane": null,
+        "pinned_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "why_larger": "Same tab-size cause as v1; the pinned 77x47 dump proves the target size.",
+        "pane_rect_null_reason": "Same as v1: the worker tab is unfocused so pane layout does not report it.",
+        "frames_note": "evidence/v2/v2-frames.txt holds 19 of the 31 requested pane frames because the pane scrollback kept about 1000 lines; the complete 31-frame full-lap record is evidence/v2/v2-frames-77x47.txt."
+      },
+      "validator": {
+        "output": "validator-v2.txt",
+        "failing_checks": [],
+        "passed": true
+      }
+    }
+  ],
+  "meaning_ledger": [
+    { "fact": "wan = WAN", "kind": "node identity", "fate": "drawn (v1)" },
+    { "fact": "fw = Firewall", "kind": "node identity", "fate": "drawn (v1)" },
+    { "fact": "core = Core switch", "kind": "node identity", "fate": "drawn (v1, v2)" },
+    { "fact": "web = Web tier", "kind": "node identity", "fate": "drawn (v2)" },
+    { "fact": "cache = Redis", "kind": "node identity", "fate": "drawn (v1, v2)" },
+    { "fact": "db = DB tier", "kind": "node identity", "fate": "drawn (v1, v2)" },
+    { "fact": "wan -> fw: 1 GbE", "kind": "link + speed", "fate": "drawn (v1, e1)" },
+    { "fact": "fw -> core: 10 GbE", "kind": "link + speed", "fate": "drawn (v1, e2)" },
+    { "fact": "core -> web: 10 GbE", "kind": "link + speed", "fate": "drawn (v2, e3)" },
+    { "fact": "core -> cache: 25 GbE", "kind": "link + speed", "fate": "drawn (v1, e4)" },
+    { "fact": "web -> cache: session", "kind": "application relation", "fate": "drawn (v2, e5)" },
+    { "fact": "web -> db: queries", "kind": "application relation", "fate": "drawn (v2, e6)" },
+    { "fact": "cache -> db: fill", "kind": "application relation", "fate": "drawn (v1, e7)" },
+    { "fact": "live dots flow along the lines, direction = traffic flow", "kind": "motion request (source line 5)", "fate": "drawn: every route has flow: true + dots: 1 and dots travel from producer to consumer" },
+    { "fact": "dot speed represents a speed the author wants to indicate", "kind": "motion request (source line 5)", "fate": "abbreviated: link speed lives in the edge label only; motion uses the constant default 0.5 cells/100 ms on every route so no dot rate can be read as a GbE measurement (the case's fixed constraint)" },
+    { "fact": "gruvbox colour scheme", "kind": "theme (source line 5)", "fate": "drawn: theme gruvbox; group hue families verified in the ANSI captures" },
+    { "fact": "boxes share one background so borders do not look blocky", "kind": "style (source line 5)", "fate": "drawn by the renderer: every node border and the canvas share background rgb(40,40,40) in the ANSI captures" },
+    { "fact": "no dots in the background", "kind": "style (source line 5)", "fate": "drawn: no background dots exist; only the seven route dots" },
+    { "fact": "visualize pane should be an even split, not slightly narrowed", "kind": "pane layout (source line 48)", "fate": "dropped: pane geometry belongs to the harness/pane owner, not to the graph spec; viz-evidence.sh performs the split it is given and the worker does not resize the human's panes" }
+  ],
+  "relationship_audit": [
+    { "id": "e1", "from": "wan", "to": "fw", "tech": "1 GbE", "label": "1 GbE", "label_owner": "e1", "view": "v1" },
+    { "id": "e2", "from": "fw", "to": "core", "tech": "10 GbE", "label": "10 GbE", "label_owner": "e2", "view": "v1" },
+    { "id": "e3", "from": "core", "to": "web", "tech": "10 GbE", "label": "10 GbE", "label_owner": "e3", "view": "v2" },
+    { "id": "e4", "from": "core", "to": "cache", "tech": "25 GbE", "label": "25 GbE", "label_owner": "e4", "view": "v1" },
+    { "id": "e5", "from": "web", "to": "cache", "tech": "session", "label": "session", "label_owner": "e5", "view": "v2" },
+    { "id": "e6", "from": "web", "to": "db", "tech": "queries", "label": "queries", "label_owner": "e6", "view": "v2" },
+    { "id": "e7", "from": "cache", "to": "db", "tech": "fill", "label": "fill", "label_owner": "e7", "view": "v1" }
+  ],
+  "relationship_map": [
+    {
+      "edge": "e1 wan -> fw (1 GbE)",
+      "visible_as": "v1 vertical arrow from the WAN box (rows 6-9, cols 33-35) down to the Firewall box (rows 14-17, cols 33-40); label '1 GbE' on the same row as the dot",
+      "capture": "evidence/v1/v1-frames-77x47.txt frame 0: stem col 33 rows 10-12, head ▼ at (13,33), dot at (11,33), label at (11,35-39)"
+    },
+    {
+      "edge": "e2 fw -> core (10 GbE)",
+      "visible_as": "v1 vertical arrow Firewall (rows 14-17) -> Core switch (rows 22-25)",
+      "capture": "evidence/v1/v1-frames-77x47.txt frame 0: dot at (19,33), head ▼ at (21,33), label '10 GbE' at (19,35-40)"
+    },
+    {
+      "edge": "e3 core -> web (10 GbE)",
+      "visible_as": "v2 vertical arrow Core switch (rows 14-17, cols 35-45) -> Web tier (rows 22-25, cols 35-42)",
+      "capture": "evidence/v2/v2-frames-77x47.txt frame 0: dot at (19,35), head ▼ at (21,35), label '10 GbE' at (19,37-42)"
+    },
+    {
+      "edge": "e4 core -> cache (25 GbE)",
+      "visible_as": "v1 vertical arrow Core switch (rows 22-25) -> Redis (rows 30-33, cols 33-37)",
+      "capture": "evidence/v1/v1-frames-77x47.txt frame 0: dot at (27,33), head ▼ at (29,33), label '25 GbE' at (27,35-40)"
+    },
+    {
+      "edge": "e5 web -> cache (session)",
+      "visible_as": "v2 route leaving Web tier's lower-left port, running down and then left to Redis (rows 30-33, cols 22-26)",
+      "capture": "evidence/v2/v2-frames-77x47.txt frame 0: dot at (27,35), label 'session' at (27,26-32), elbow at (28,35), head ▼ at (29,22)"
+    },
+    {
+      "edge": "e6 web -> db (queries)",
+      "visible_as": "v2 route leaving Web tier's lower-right port, running down and then right to DB tier (rows 30-33, cols 48-54)",
+      "capture": "evidence/v2/v2-frames-77x47.txt frame 0: dot at (27,37), label 'queries' at (27,39-45), elbow at (28,37), head ▼ at (29,48)"
+    },
+    {
+      "edge": "e7 cache -> db (fill)",
+      "visible_as": "v1 vertical arrow Redis (rows 30-33) -> DB tier (rows 38-41, cols 33-39)",
+      "capture": "evidence/v1/v1-frames-77x47.txt frame 0: dot at (35,33), head ▼ at (37,33), label 'fill' at (35,35-38)"
+    }
+  ],
+  "motion_evidence": {
+    "mode": "constant (default); flow: true + dots: 1 on all 7 routes; no numeric rate, no timing: same-arrival, no duration_ms",
+    "source_of_motion": "the source asked for live dots flowing along the lines (source line 5) and the task asks for slow, sparse motion",
+    "v1": {
+      "corridor_lengths_cells": { "e1": 2, "e2": 2, "e4": 2, "e7": 2 },
+      "longest_corridor_cells": 2,
+      "full_lap_frames_at_100ms": 4,
+      "frames_captured": { "pane": 9, "pinned_77x47": 9 },
+      "advance_proof": "pinned frame 0 dots (11,33),(19,33),(27,33),(35,33) -> frame 2 dots (12,33),(20,33),(28,33),(36,33): every dot advanced exactly one cell; frame 4 dots return to (11,33),(19,33),(27,33),(35,33) (one full lap).",
+      "pane_proof": "evidence/v1/v1-frames.txt frame 0 dots (13,36),(21,36),(29,36),(37,36) -> frame 2 (14,36),(22,36),(30,36),(38,36): same one-cell advance in the live pane."
+    },
+    "v2": {
+      "corridor_lengths_cells": { "e3": 2, "e5": 13, "e6": 11 },
+      "longest_corridor_cells": 13,
+      "full_lap_frames_at_100ms": 26,
+      "frames_captured": { "pane": 19, "pinned_77x47": 31 },
+      "advance_proof": "pinned frame 0 dots (19,35),(27,35),(27,37) -> frame 2 (20,35),(30,31),(30,47): all three advanced one cell; the session dot returns to its origin (27,35) at frame 26, closing the full 13-cell lap.",
+      "pane_proof": "evidence/v2/v2-frames.txt frame 0 dots (21,38),(30,32),(30,46) -> frame 10 (22,38),(29,40),(30,27) in the live 83x51 pane; the long routes visibly travel, the short one advances one cell and wraps."
+    }
+  },
+  "colour_evidence": {
+    "theme": "gruvbox",
+    "canvas_and_node_background": "rgb(40,40,40) on every canvas row and every node border row (evidence/v1/v1-ansi.ansi)",
+    "group_hue_families": {
+      "network": "pink family — WAN rgb(211,134,155) at (8,35), Firewall rgb(226,156,175) at (16,35), Core switch rgb(187,108,131) at (24,35) in evidence/v1/v1-ansi.ansi",
+      "tiers": "teal family — Redis rgb(125,174,163) at (32,35), DB tier rgb(147,194,183) at (40,35) in evidence/v1/v1-ansi.ansi; Web tier rgb(125,174,163) at (24,37) in evidence/v2/v2-ansi.ansi",
+      "stability": "the same group keeps its family in both views (Core switch is pink in v1 (24,35) and in v2 (16,37))"
+    },
+    "select_all_frame": "evidence/v1/v1-selected.ansi gives all five node borders rgb(216,166,87) at (8,35),(16,35),(24,35),(32,35),(40,35); evidence/v2/v2-selected.ansi gives all four node borders rgb(216,166,87) at (16,37),(24,37),(32,24),(32,50)",
+    "palette_corner": "the palette block ┌───────┐ … └───────┘ occupies rows 40-45, cols 1-9 of both 77x47 dumps (row 0 is the header) and is intact in every frame; the graph body sits at cols 22-54, so no palette border cell is overwritten (evidence/v1/v1-frames-77x47.txt rows 40-45, evidence/v2/v2-frames-77x47.txt rows 40-45)"
+  },
+  "split_coverage": {
+    "v1": "e1, e2, e4, e7 plus nodes wan, fw, core, cache, db and the group split network(3)/tiers(2)",
+    "v2": "e3, e5, e6 plus nodes core, web, cache, db and the group split network(1)/tiers(3)",
+    "coverage_check": "all 7 audited edges appear exactly once; all 6 source nodes appear at least once; core, cache and db appear in both views as continuity anchors; the two cache relations stay separate (e4 25 GbE in v1, e5 session in v2) and are never merged"
+  },
+  "source_pointers": [
+    "docs/visualize-eval/cases/network/source.md — relationship facts, fixed constraints, and the two chat excerpts",
+    "source line 5 (user): dots only where requested, one shared box background, live dots whose direction is traffic flow, gruvbox colours",
+    "source line 48 (user): visualize pane should be an even split"
+  ],
+  "abbreviations": [
+    "node ids wan/fw/core/web/cache/db are internal ids; every node shows the source's human label (WAN, Firewall, Core switch, Web tier, Redis, DB tier)",
+    "nothing else is abbreviated: all seven edge labels are the source's own words"
+  ],
+  "deliberate_drops": [
+    {
+      "fact": "the pane-split remark from source line 48",
+      "reason": "it is a request about the human's Herdr layout, not a graph fact; the evidence harness owns the split and a worker must not resize the human's panes"
+    },
+    {
+      "fact": "numeric dot speed as a stand-in for link speed",
+      "reason": "the case's fixed constraint forbids implying that motion speed is a measurement, so speed stays in the labels and motion stays at the constant default rate"
+    }
+  ],
+  "known_defects": [
+    {
+      "defect": "short motion span on adjacent hops in tb",
+      "detail": "In tb every adjacent rank pair has a 4-cell gap and the renderer animates only the 2-cell corridor between the stem and the arrowhead, so the dots on e1, e2, e4, e7 (v1) and e3 (v2) advance one cell and wrap every 4 frames (400 ms) instead of travelling. Visible in evidence/v1/v1-frames-77x47.txt frames 0-4 and evidence/v2/v2-frames-77x47.txt frames 0-4.",
+      "attempted_fix": "lr was measured for the same 5-node path: structurally clean (0 bridges, 0 ambiguous) but extent 117x8, which overflows 77 columns, so lr was rejected; see attempts/v1-a3.check.txt and attempts.json.",
+      "not_hidden": "the routes were not switched to dots: 0 and no label was cut; the constant-rate check reports 0 dot violations"
+    },
+    {
+      "defect": "dots wrap before touching the arrowhead in constant mode",
+      "detail": "In constant mode the renderer loops each dot inside the corridor: the v2 session dot is last drawn at (28,23) and restarts at (27,35) at frame 26 while the drawn head ▼ sits at (29,22). arrivals: 0/0 is therefore reported because no route asks for same-arrival timing; constant mode does not claim arrival.",
+      "capture": "evidence/v2/v2-frames-77x47.txt frames 24-26"
+    },
+    {
+      "defect": "group borders and group names are not drawn by this build",
+      "detail": "The candidate skill says the engine draws groups as bordered blocks, but the frozen build only tints member borders: no group label text and no block outline appears in any capture (grep for 'network'/'tiers' in evidence/v1/v1-ansi.ansi and evidence/v2/v2-ansi.ansi finds nothing), while --check reports the membership (groups: network(3) tiers(2)). The colour families are the only visible group signal.",
+      "capture": "evidence/v1/v1-ansi.ansi border colours at (8,35),(16,35),(24,35) pink vs (32,35),(40,35) teal"
+    },
+    {
+      "defect": "v1 leaves most of the pane width empty",
+      "detail": "v1's graph is 17 cells wide inside an 83x51 pane, so the view reads as a narrow centred column. It is the fit price of a 6-rank graph in tb: the single-view alternative measured 40x48 and overflows the 47-row target (attempts/abandoned-single-6node-tb.check.txt)."
+    }
+  ],
+  "blockers": [
+    {
+      "blocker": "measured pane viewport is 83x51, not the 77x47 target",
+      "cause": "the worker's Herdr tab is 170x53 and viz-evidence.sh splits it 0.5 right; herdr clamps split ratios at 0.9 and the minimum sibling size is 17 cells, so a 79x49 child (77x47 after the app's border) cannot be produced in this tab",
+      "mitigation": "a pinned direct dump at COLUMNS=77 LINES=47 per view (evidence/v1/v1-frames-77x47.txt, evidence/v2/v2-frames-77x47.txt) shows the whole graph with no overflow banner and is accepted by the current validator",
+      "status": "recorded, not relabelled — no claim of a 77x47 pane capture is made"
+    },
+    {
+      "blocker": "no routes: / route-economy line in the frozen build's --check output",
+      "cause": "round 05 baseline dropped route economy with the round-04 revert; confirmed on all 7 --check runs of this case and by the corrected validator, which now treats the line as optional",
+      "status": "not a case defect; route economy could not be observed, so no claim about detours is made"
+    }
+  ],
+  "cleanup": {
+    "v1": { "pane_id": "w7E:pGS", "cleanup": "confirmed_closed", "manifest": "evidence/v1/manifest.json" },
+    "v2": { "pane_id": "w7E:pGV", "cleanup": "confirmed_closed", "manifest": "evidence/v2/manifest.json" },
+    "extra_panes": "Two short-lived orientation/size probe panes were opened by hand in this worker's own tab while measuring split behaviour (w7E:pFR, w7E:pFS, w7E:pFT, w7E:pFY, w7E:pF0); each was closed and the tab was verified back to its single pane w7E:pFG (170x53) before any capture.",
+    "captain_pane_untouched": true
+  },
+  "validator_output": [
+    {
+      "view": "v1",
+      "file": "validator-v1.txt",
+      "command": "uv run --no-project scripts/viz-validate.py docs/visualize-eval/rounds/05/network/evidence/v1 --require-select --require-frames --attempts docs/visualize-eval/rounds/05/network/attempts.json",
+      "failing_checks": [],
+      "summary": "all checks passed"
+    },
+    {
+      "view": "v2",
+      "file": "validator-v2.txt",
+      "command": "uv run --no-project scripts/viz-validate.py docs/visualize-eval/rounds/05/network/evidence/v2 --require-select --require-frames --attempts docs/visualize-eval/rounds/05/network/attempts.json",
+      "failing_checks": [],
+      "summary": "all checks passed"
+    }
+  ],
+  "probe_records": {
+    "dir": "probes/",
+    "note": "Raw direct-dump records kept for audit: one 77x47 frame per candidate spec (probes/*-77x47.txt) plus long dot-tracking dumps used to derive the corridor lengths and frame counts (probes/*-25f.txt, probes/*-61f.txt). These are working records, not bundles; every claim in this file cites the evidence/ captures."
+  },
+  "honesty_notes": [
+    "This bundle is a self-assessment only. No independent judge or reviewer ran; the skill's Step 9 review was deliberately skipped per the task.",
+    "One raw record needed regeneration: the first --check run of the case (single-view, 6 nodes) had its output file overwritten in place by a later candidate. The spec was reconstructed from the exact JSON that was checked and re-run; attempts/abandoned-single-6node-tb.check.txt is that fresh run, and it reproduces the originally printed numbers. See attempts.json.",
+    "The validator was concurrently edited by another process during the case; the version hash used for the final verdicts is recorded above."
+  ]
+}

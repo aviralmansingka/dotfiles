@@ -1,0 +1,314 @@
+{
+  "path_base": "repository root",
+  "blind_record_unchanged": true,
+  "checks": [
+    {
+      "name": "candidate_skill",
+      "path": "docs/visualize-eval/rounds/03/SKILL.md",
+      "expected_sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+      "actual_sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+      "matches": true
+    },
+    {
+      "name": "renderer_binary",
+      "path": "/tmp/visualize-eval/round-03/bin/rataflow-view",
+      "expected_sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7",
+      "actual_sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7",
+      "matches": true
+    },
+    {
+      "name": "rubric_corrected_revision_4",
+      "path": "docs/visualize-eval/rounds/03/rubric.json",
+      "expected_sha256": "5519fd84f6b75973dbf7b5f5544c909a8f32a8841a876c8e7af00a1fcb119335",
+      "actual_sha256": "5519fd84f6b75973dbf7b5f5544c909a8f32a8841a876c8e7af00a1fcb119335",
+      "matches": true
+    },
+    {
+      "name": "dataset_manifest",
+      "path": "docs/visualize-eval/cases.json",
+      "expected_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "actual_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "matches": true
+    },
+    {
+      "name": "blind_before_reveal",
+      "path": "docs/visualize-eval/rounds/03/reviews/homelab-nic-trace/observed-first.md",
+      "expected_sha256": "e3b445b5b4641c8bb29ae1284b33cf4b56663d469c7a7dd095a1780beeeeb833",
+      "actual_sha256": "e3b445b5b4641c8bb29ae1284b33cf4b56663d469c7a7dd095a1780beeeeb833",
+      "matches": true
+    },
+    {
+      "name": "source.md",
+      "path": "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+      "expected_sha256": "abe8b376eccd7d0027f2985aab55ed656603b2094c275ee66ed223a57421b4c4",
+      "actual_sha256": "abe8b376eccd7d0027f2985aab55ed656603b2094c275ee66ed223a57421b4c4",
+      "matches": true
+    },
+    {
+      "name": "expected.json",
+      "path": "docs/visualize-eval/cases/homelab-nic-trace/expected.json",
+      "expected_sha256": "91ef88d09af71cd4583cfd0f1141e10f2fc2efdd3a779f9389f1d67759cd09c7",
+      "actual_sha256": "91ef88d09af71cd4583cfd0f1141e10f2fc2efdd3a779f9389f1d67759cd09c7",
+      "matches": true
+    },
+    {
+      "name": "historical-variants.json",
+      "path": "docs/visualize-eval/cases/homelab-nic-trace/historical-variants.json",
+      "expected_sha256": "d70fd9d33cc1966bc015b6bc4d84176984979cac15b9cb7d1d89165e1bc7fc1f",
+      "actual_sha256": "d70fd9d33cc1966bc015b6bc4d84176984979cac15b9cb7d1d89165e1bc7fc1f",
+      "matches": true
+    },
+    {
+      "name": "pinned_harness",
+      "path": "scripts/viz-evidence.sh",
+      "expected_sha256": "2a804dea703e5a9da9cdd788d4eb89690860a02606ec681948670dfe19e8e069",
+      "actual_sha256": "2a804dea703e5a9da9cdd788d4eb89690860a02606ec681948670dfe19e8e069",
+      "matches": true
+    },
+    {
+      "name": "pinned_harness",
+      "path": "scripts/viz-validate.py",
+      "expected_sha256": "4a13878de22dd9dc28ac098658c0dc0c07727e7a03228af994a6f839e7d54ade",
+      "actual_sha256": "4a13878de22dd9dc28ac098658c0dc0c07727e7a03228af994a6f839e7d54ade",
+      "matches": true
+    },
+    {
+      "name": "pinned_harness",
+      "path": "scripts/viz-aggregate.py",
+      "expected_sha256": "5ab3cfd4c1d84a01ae1aa3c166c2d5331bf6692e15e1d8fb97a2a0905192cffa",
+      "actual_sha256": "5ab3cfd4c1d84a01ae1aa3c166c2d5331bf6692e15e1d8fb97a2a0905192cffa",
+      "matches": true
+    },
+    {
+      "name": "pinned_harness",
+      "path": "scripts/viz-review-panes.sh",
+      "expected_sha256": "0d7ddf530622bf2e1944397e16acdf049ac3e2fc9f4a22d8b8c0d0f4c7190516",
+      "actual_sha256": "0d7ddf530622bf2e1944397e16acdf049ac3e2fc9f4a22d8b8c0d0f4c7190516",
+      "matches": true
+    },
+    {
+      "name": "pinned_harness",
+      "path": "scripts/test-rataflow.py",
+      "expected_sha256": "a764cdf56a0d287f9f02f853acb2b3cb58b8726025593cad611954cd75ac9eae",
+      "actual_sha256": "a764cdf56a0d287f9f02f853acb2b3cb58b8726025593cad611954cd75ac9eae",
+      "matches": true
+    },
+    {
+      "name": "v1-virtual-nets spec",
+      "path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v1-virtual-nets.json",
+      "expected_sha256": "f6dcb5d64b17f49f3ef41668682a0b876e1802183ed9fec52c9342d0d45ca9e5",
+      "actual_sha256": "f6dcb5d64b17f49f3ef41668682a0b876e1802183ed9fec52c9342d0d45ca9e5",
+      "matches": true
+    },
+    {
+      "name": "v1-virtual-nets artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v1-virtual-nets/bin.sha256",
+      "expected_sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "actual_sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "matches": true
+    },
+    {
+      "name": "v1-virtual-nets artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v1-virtual-nets/check.txt",
+      "expected_sha256": "99fd5f4f1b4a302239e3bcb6aea76316ae41d6413ea9bd6968c6db5cd4612531",
+      "actual_sha256": "99fd5f4f1b4a302239e3bcb6aea76316ae41d6413ea9bd6968c6db5cd4612531",
+      "matches": true
+    },
+    {
+      "name": "v1-virtual-nets artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v1-virtual-nets/v1-virtual-nets-ansi.ansi",
+      "expected_sha256": "97e01cf3470b20e26fb860ad959ce24b23045be5fc7f00fc4d5d7033cd80efcd",
+      "actual_sha256": "97e01cf3470b20e26fb860ad959ce24b23045be5fc7f00fc4d5d7033cd80efcd",
+      "matches": true
+    },
+    {
+      "name": "v1-virtual-nets artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v1-virtual-nets/v1-virtual-nets-frames.ansi",
+      "expected_sha256": "ef210ee0c3dfc9c984a5fa6b1169d11a1f3d7888552a44d64bc53a2bfaf2d50a",
+      "actual_sha256": "ef210ee0c3dfc9c984a5fa6b1169d11a1f3d7888552a44d64bc53a2bfaf2d50a",
+      "matches": true
+    },
+    {
+      "name": "v1-virtual-nets artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v1-virtual-nets/v1-virtual-nets-frames.txt",
+      "expected_sha256": "a435581cfc1b6c341d4ee932b0314268ae9a65e898ca97922d86ada58275fc01",
+      "actual_sha256": "a435581cfc1b6c341d4ee932b0314268ae9a65e898ca97922d86ada58275fc01",
+      "matches": true
+    },
+    {
+      "name": "v1-virtual-nets artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v1-virtual-nets/v1-virtual-nets-selected.ansi",
+      "expected_sha256": "33fd8b16485b67457c6ffc654553c3115a9e66a8853d764746337a1d5b055cab",
+      "actual_sha256": "33fd8b16485b67457c6ffc654553c3115a9e66a8853d764746337a1d5b055cab",
+      "matches": true
+    },
+    {
+      "name": "v1-virtual-nets artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v1-virtual-nets/v1-virtual-nets-text.txt",
+      "expected_sha256": "d6de0845aa704d2b731fd99daa8cc01daf29d585e7bf25c3908662e89ea5938f",
+      "actual_sha256": "d6de0845aa704d2b731fd99daa8cc01daf29d585e7bf25c3908662e89ea5938f",
+      "matches": true
+    },
+    {
+      "name": "v2-overlay-uplinks spec",
+      "path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v2-overlay-uplinks.json",
+      "expected_sha256": "6610bdef07888a59b0b93513dc4ba5984cf7b79cae9a355f7273c54a3db3ea6c",
+      "actual_sha256": "6610bdef07888a59b0b93513dc4ba5984cf7b79cae9a355f7273c54a3db3ea6c",
+      "matches": true
+    },
+    {
+      "name": "v2-overlay-uplinks artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v2-overlay-uplinks/bin.sha256",
+      "expected_sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "actual_sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "matches": true
+    },
+    {
+      "name": "v2-overlay-uplinks artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v2-overlay-uplinks/check.txt",
+      "expected_sha256": "0736ddac6a6ef13cd7879c65404cc1d3ba5310df68a2ddee59f8837b754743d0",
+      "actual_sha256": "0736ddac6a6ef13cd7879c65404cc1d3ba5310df68a2ddee59f8837b754743d0",
+      "matches": true
+    },
+    {
+      "name": "v2-overlay-uplinks artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v2-overlay-uplinks/v2-overlay-uplinks-ansi.ansi",
+      "expected_sha256": "db0557666fa939b56f04da1d661dbad3f1f92da98376b24db4f757454dc1864f",
+      "actual_sha256": "db0557666fa939b56f04da1d661dbad3f1f92da98376b24db4f757454dc1864f",
+      "matches": true
+    },
+    {
+      "name": "v2-overlay-uplinks artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v2-overlay-uplinks/v2-overlay-uplinks-frames.ansi",
+      "expected_sha256": "0b508b45a9aeb3500db14bb9e3ce59abe9e1316dd242170d217c94bd90ce798f",
+      "actual_sha256": "0b508b45a9aeb3500db14bb9e3ce59abe9e1316dd242170d217c94bd90ce798f",
+      "matches": true
+    },
+    {
+      "name": "v2-overlay-uplinks artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v2-overlay-uplinks/v2-overlay-uplinks-frames.txt",
+      "expected_sha256": "7bb9e3b69516ec09c8f82870b8de5fe413f6d2ea005a8c38d4c9ef3fcce75ce0",
+      "actual_sha256": "7bb9e3b69516ec09c8f82870b8de5fe413f6d2ea005a8c38d4c9ef3fcce75ce0",
+      "matches": true
+    },
+    {
+      "name": "v2-overlay-uplinks artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v2-overlay-uplinks/v2-overlay-uplinks-selected.ansi",
+      "expected_sha256": "8744c58522de728247d7799048a2d9c659e3c7a9157ad7e4a1c016dbab7405c0",
+      "actual_sha256": "8744c58522de728247d7799048a2d9c659e3c7a9157ad7e4a1c016dbab7405c0",
+      "matches": true
+    },
+    {
+      "name": "v2-overlay-uplinks artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v2-overlay-uplinks/v2-overlay-uplinks-text.txt",
+      "expected_sha256": "9cc346513cd7dce8a5e2da62e188fab5da5a690e27f35374c6f9a31b21be5857",
+      "actual_sha256": "9cc346513cd7dce8a5e2da62e188fab5da5a690e27f35374c6f9a31b21be5857",
+      "matches": true
+    },
+    {
+      "name": "v3-wan-egress spec",
+      "path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v3-wan-egress.json",
+      "expected_sha256": "03d008a8804140b0b07e39f13c27787fcd5c202d61c9387520a0fcb16b915cb8",
+      "actual_sha256": "03d008a8804140b0b07e39f13c27787fcd5c202d61c9387520a0fcb16b915cb8",
+      "matches": true
+    },
+    {
+      "name": "v3-wan-egress artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v3-wan-egress/bin.sha256",
+      "expected_sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "actual_sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "matches": true
+    },
+    {
+      "name": "v3-wan-egress artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v3-wan-egress/check.txt",
+      "expected_sha256": "de66398fa00300e56e9f0f6152f448b48282d20854b71ed472094c0f3550aeee",
+      "actual_sha256": "de66398fa00300e56e9f0f6152f448b48282d20854b71ed472094c0f3550aeee",
+      "matches": true
+    },
+    {
+      "name": "v3-wan-egress artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v3-wan-egress/v3-wan-egress-ansi.ansi",
+      "expected_sha256": "e727cff1b2feba4e25922e94a398ab942ec4732094929a16a6aef7d057f80f9b",
+      "actual_sha256": "e727cff1b2feba4e25922e94a398ab942ec4732094929a16a6aef7d057f80f9b",
+      "matches": true
+    },
+    {
+      "name": "v3-wan-egress artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v3-wan-egress/v3-wan-egress-frames.ansi",
+      "expected_sha256": "8fefc1de3bbf6e24623d7196baf51af5f4e947bc24b29c35d947715b0d85f9b7",
+      "actual_sha256": "8fefc1de3bbf6e24623d7196baf51af5f4e947bc24b29c35d947715b0d85f9b7",
+      "matches": true
+    },
+    {
+      "name": "v3-wan-egress artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v3-wan-egress/v3-wan-egress-frames.txt",
+      "expected_sha256": "a5f2d5dec7140590346a0e7e228f467b94cedbda3d07ca90064e1988c9d3dc6b",
+      "actual_sha256": "a5f2d5dec7140590346a0e7e228f467b94cedbda3d07ca90064e1988c9d3dc6b",
+      "matches": true
+    },
+    {
+      "name": "v3-wan-egress artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v3-wan-egress/v3-wan-egress-selected.ansi",
+      "expected_sha256": "3fb40cb0e35f1585bc0f5737671d53aa9f9c0f47f6cf3208f75692b8fd9f4a6b",
+      "actual_sha256": "3fb40cb0e35f1585bc0f5737671d53aa9f9c0f47f6cf3208f75692b8fd9f4a6b",
+      "matches": true
+    },
+    {
+      "name": "v3-wan-egress artifact",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v3-wan-egress/v3-wan-egress-text.txt",
+      "expected_sha256": "1bd24c6690024d1ec41d1422e89f6d71a527bd471543dba71d5434004f03b18b",
+      "actual_sha256": "1bd24c6690024d1ec41d1422e89f6d71a527bd471543dba71d5434004f03b18b",
+      "matches": true
+    },
+    {
+      "name": "v1-virtual-nets attempt 1",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/attempts/v1-attempt1-combined-7nodes.json",
+      "expected_sha256": "7ce69e4cf5df31013c6ba73f0d5273a93c28a3c699178c70be5e016f38e80989",
+      "actual_sha256": "7ce69e4cf5df31013c6ba73f0d5273a93c28a3c699178c70be5e016f38e80989",
+      "matches": true
+    },
+    {
+      "name": "v1-virtual-nets attempt 2",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v1-virtual-nets.json",
+      "expected_sha256": "f6dcb5d64b17f49f3ef41668682a0b876e1802183ed9fec52c9342d0d45ca9e5",
+      "actual_sha256": "f6dcb5d64b17f49f3ef41668682a0b876e1802183ed9fec52c9342d0d45ca9e5",
+      "matches": true
+    },
+    {
+      "name": "v2-overlay-uplinks attempt 1",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/attempts/v2-attempt1-no-caption.json",
+      "expected_sha256": "1c2c779edf6923905445ea1665f83f131f0eb9a581bf25ecf650cc35fc540153",
+      "actual_sha256": "1c2c779edf6923905445ea1665f83f131f0eb9a581bf25ecf650cc35fc540153",
+      "matches": true
+    },
+    {
+      "name": "v2-overlay-uplinks attempt 2",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/attempts/v2-attempt2-claimed-rtr-crossing.json",
+      "expected_sha256": "dc65ca9982c69b5fe746957b5bb4837295aae6dbb5284e16d5328bfd7c2b8729",
+      "actual_sha256": "dc65ca9982c69b5fe746957b5bb4837295aae6dbb5284e16d5328bfd7c2b8729",
+      "matches": true
+    },
+    {
+      "name": "v2-overlay-uplinks attempt 3",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v2-overlay-uplinks.json",
+      "expected_sha256": "6610bdef07888a59b0b93513dc4ba5984cf7b79cae9a355f7273c54a3db3ea6c",
+      "actual_sha256": "6610bdef07888a59b0b93513dc4ba5984cf7b79cae9a355f7273c54a3db3ea6c",
+      "matches": true
+    },
+    {
+      "name": "v3-wan-egress attempt 1",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/attempts/v3-attempt1-plain.json",
+      "expected_sha256": "1676e1f5cc2f99c4f589c40778d9066339396e76d58bc687e6df7645eecfc3ab",
+      "actual_sha256": "1676e1f5cc2f99c4f589c40778d9066339396e76d58bc687e6df7645eecfc3ab",
+      "matches": true
+    },
+    {
+      "name": "v3-wan-egress attempt 2",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v3-wan-egress.json",
+      "expected_sha256": "03d008a8804140b0b07e39f13c27787fcd5c202d61c9387520a0fcb16b915cb8",
+      "actual_sha256": "03d008a8804140b0b07e39f13c27787fcd5c202d61c9387520a0fcb16b915cb8",
+      "matches": true
+    }
+  ]
+}

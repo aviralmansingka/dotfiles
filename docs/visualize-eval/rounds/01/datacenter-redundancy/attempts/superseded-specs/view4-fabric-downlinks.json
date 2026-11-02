@@ -1,0 +1,92 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "layers": [
+    [
+      "",
+      "sp1",
+      "",
+      "sp2"
+    ],
+    [
+      "",
+      "leaf1",
+      "leaf2",
+      ""
+    ],
+    [
+      "",
+      "rack1",
+      "rack2",
+      ""
+    ]
+  ],
+  "nodes": [
+    {
+      "id": "sp1",
+      "label": "Spine 1"
+    },
+    {
+      "id": "sp2",
+      "label": "Spine 2"
+    },
+    {
+      "id": "leaf1",
+      "label": "Leaf 1"
+    },
+    {
+      "id": "leaf2",
+      "label": "Leaf 2"
+    },
+    {
+      "id": "rack1",
+      "label": "Rack 1"
+    },
+    {
+      "id": "rack2",
+      "label": "Rack 2"
+    }
+  ],
+  "edges": [
+    {
+      "from": "sp1",
+      "to": "leaf1",
+      "label": "ECMP"
+    },
+    {
+      "from": "sp1",
+      "to": "leaf2",
+      "label": "ECMP"
+    },
+    {
+      "from": "sp2",
+      "to": "leaf1",
+      "label": "ECMP"
+    },
+    {
+      "from": "sp2",
+      "to": "leaf2",
+      "label": "ECMP"
+    },
+    {
+      "from": "leaf1",
+      "to": "rack1",
+      "label": "dual"
+    },
+    {
+      "from": "leaf2",
+      "to": "rack1",
+      "label": "dual"
+    },
+    {
+      "from": "leaf1",
+      "to": "rack2",
+      "label": "dual"
+    },
+    {
+      "from": "leaf2",
+      "to": "rack2",
+      "label": "dual"
+    }
+  ]
+}

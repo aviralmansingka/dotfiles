@@ -1,0 +1,46 @@
+ rataflow-view · 77x47 @100% · v1.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                   ╭────────────╮
+                   │modal-worker│◀╮
+                   │            │ │
+                   ╰────────────╯ ●
+                    │             │
+                    ● task+ctrl   │ events+mgmt
+                   ╭╯             │
+                   ▼              │
+                  ╭─────────────╮ │
+                  │modal-runtime│─╯
+                  │             │
+                  ╰─────────────╯
+                   │ │     fs HTTP/UDS
+                   ● ╰─────●────────────────╮
+                   ╰╮dispatches             │
+                    ▼                       ▼
+                   ╭───────────╮           ╭────────────╮
+                   │Task engine│           │modal-daemon│
+                   │           │           │            │
+                   ╰───────────╯           ╰────────────╯
+                    │ │
+                    │ │mounts/snapshots
+                 ╭●─╯ ╰────●────────────╮
+                 ▼ starts/manages       ▼
+                ╭─────────────────╮    ╭────────────────────╮
+                │Container backend│    │Filesystem + volumes│
+                │                 │    │                    │
+                ╰─────────────────╯    ╰────────────────────╯
+                 │                      │
+                 │ runs user proc       │
+                 ╰●╮                    ╰────●─╮
+                   ▼             image+vol data▼
+                  ╭──────────────╮            ╭───────╮
+                  │Task container│            │Blobnet│
+ ┌───────┐        │              │            │       │
+ │ + [+] │        ╰──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘

@@ -1,0 +1,996 @@
+{
+  "protocol_version": 1,
+  "round": 2,
+  "case_id": "modal-runtime",
+  "candidate_sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+  "renderer_sha256": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+  "rubric_sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "22a9b5376d014909cdce316cc9ceae8507421ee6aab371c56bc480776b3094bb",
+  "generator": {
+    "worker_id": "viz-ds02-modal-runtime",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge02-modal-runtime",
+    "model": "openai/gpt-6.1-sol"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": null,
+  "evidence": [
+    {
+      "id": "stage-a",
+      "path": "docs/visualize-eval/rounds/02/reviews/modal-runtime/observed-first.md",
+      "sha256": "b28d0ab9be6b6d08c43eb92d03e32c1368cc5a12996f2c6e1e7221be0ba24a75",
+      "description": "Blind stage-A record saved and sealed before expectations were disclosed; unchanged.",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/02/reviews/modal-runtime/spec-manifest.json",
+      "sha256": "22a9b5376d014909cdce316cc9ceae8507421ee6aab371c56bc480776b3094bb",
+      "description": "Deterministic sorted path/hash pairs for the three final executed specs; rejected attempts are inventoried separately.",
+      "capture": null
+    },
+    {
+      "id": "candidate-skill",
+      "path": "docs/visualize-eval/rounds/02/SKILL.md",
+      "sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+      "description": "Frozen round-02 candidate skill; verified against metadata.skill_sha256.",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/02/rubric.json",
+      "sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f",
+      "description": "Frozen seven-category rubric and embedded result schema; actual hash verified against metadata.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen dataset manifest; only the modal-runtime source and expected case contents were read.",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/02/metadata.json",
+      "sha256": "e40d17b02025d270a79fe0dd437fb908ed07c048ea6cbe043d4e17ccaf94bc45",
+      "description": "Frozen input hashes, renderer baseline, Sol judge identity, disclosed generator-tab rename, and pane-measurement limitation.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/modal-runtime/source.md",
+      "sha256": "c6e4552d5842347bc9472e53a2351897c3624c92b5a14541aaa3c28216dc4a0d",
+      "description": "Source-backed task, eight component/relation requirements, interface distinction; no motion request.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/modal-runtime/expected.json",
+      "sha256": "fd3963e207e9c433b7e5825c8a1691766bb13d5df7322ac97a05e379d2cbba99",
+      "description": "Historical-reference relationships constrained by the frozen case; animation optional.",
+      "capture": null
+    },
+    {
+      "id": "stage-a-contract",
+      "path": "docs/visualize-eval/rounds/02/judge-blind-task.md",
+      "sha256": "7481a29508874abba21fa87b96bb87804f48130e862df82080919014c61c860c",
+      "description": "Blind observation contract.",
+      "capture": null
+    },
+    {
+      "id": "stage-b-contract",
+      "path": "docs/visualize-eval/rounds/02/judge-full-task.md",
+      "sha256": "e599be8b02ddb203400e1f31cb6ad07c32bf7615236df74e48878637346b3628",
+      "description": "Full comparison contract, including optional-animation and semantic-grouping interpretation.",
+      "capture": null
+    },
+    {
+      "id": "capture-harness",
+      "path": "scripts/viz-evidence.sh",
+      "sha256": "2a804dea703e5a9da9cdd788d4eb89690860a02606ec681948670dfe19e8e069",
+      "description": "Verified frozen harness: combined check stdout/stderr, exit status, capture commands and cleanup probe implementation; not rerun.",
+      "capture": null
+    },
+    {
+      "id": "validator-harness",
+      "path": "scripts/viz-validate.py",
+      "sha256": "0c8a5488c5b40d511d74c6470f076638d2baa33b384abfb398186497cbdf5e66",
+      "description": "Verified frozen validator bytes; passing validator results are not visual proof.",
+      "capture": null
+    },
+    {
+      "id": "aggregate-harness",
+      "path": "scripts/viz-aggregate.py",
+      "sha256": "5ab3cfd4c1d84a01ae1aa3c166c2d5331bf6692e15e1d8fb97a2a0905192cffa",
+      "description": "Verified frozen aggregation helper bytes; not executed as part of this case review.",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/generation.json",
+      "sha256": "a5f874e03a1eaf884ebbf0f49980f978dca8d1d16261c9c84b688b8235287583",
+      "description": "Generator identity, exact commands, meaning/coverage ledger, attempts pointers and cleanup record. Its motion self-report is not adopted.",
+      "capture": null
+    },
+    {
+      "id": "generation-notes",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/generation.md",
+      "sha256": "5de70cc6f4be1419d7525440a390551005930d94d61cfb9d8d5f3942ba53f2bb",
+      "description": "Generator notes, reported limitations and cleanup; not substituted for captures.",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/attempts.json",
+      "sha256": "bada80c87fc6583682892e3a1b382b06070c69ac7d290762b9f619f126c421bd",
+      "description": "Recorded 3/3/1 candidate attempts, rejected layouts and promoted v3; every listed spec hash verified.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v1.attempt1",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/specs/v1.attempt1.json",
+      "sha256": "ce1f37c6e89bdaf4dd45a4faa513929d34e5742872883612bb973ea31b381677",
+      "description": "Recorded non-final spec attempt; not final visual evidence.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v1.attempt2",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/specs/v1.attempt2.json",
+      "sha256": "e380c9f263600dba99361880ac157ab9468224bccf4482fc5266327e8ec2685b",
+      "description": "Recorded non-final spec attempt; not final visual evidence.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v2.attempt1",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/specs/v2.attempt1.json",
+      "sha256": "75b77f2901a2ee2e64920f31296da675e5f1dbd939f61b26c9f6bf07f6698815",
+      "description": "Recorded non-final spec attempt; not final visual evidence.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v2.attempt2",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/specs/v2.attempt2.json",
+      "sha256": "50954a7e0c775651738f16be792dbda23b74e2ed91065d1a0bd4ea160218a079",
+      "description": "Recorded non-final spec attempt; not final visual evidence.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v3.attempt1",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/specs/v3.attempt1.json",
+      "sha256": "6afe665dc80bb72126f671a485d73cedbb1f80bac8332dc25b386660ca624a18",
+      "description": "Recorded non-final spec attempt; not final visual evidence.",
+      "capture": null
+    },
+    {
+      "id": "v1-spec",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/specs/v1.json",
+      "sha256": "53a86b1d722acb74679adb5627cf3fd7a535fcc367b9c8058eba6767452123a8",
+      "description": "Final executed spec; capture manifest binds its hash. Spec establishes intention, not visibility.",
+      "capture": null
+    },
+    {
+      "id": "v1-manifest",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v1/manifest.json",
+      "sha256": "e889d94fc1cfb425bb95f7497b078d5466859039e7e34a46b237b834c2952fa5",
+      "description": "Capture/check windows, binary/spec/artifact hashes, actual viewport token, exit status and confirmed-closed pane record; pane_cols/pane_rect are null.",
+      "capture": null
+    },
+    {
+      "id": "v1-binary-hash",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v1/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "description": "Repository-relative execution receipt naming the absolute frozen binary and its SHA-256; executable bytes independently rehashed successfully.",
+      "capture": null
+    },
+    {
+      "id": "v1-check",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v1/check.txt",
+      "sha256": "a3134463ca1fb81c51153749980c5303407ec541f59857f45f36eee314cc3127",
+      "description": "Complete combined --check stdout/stderr; corresponding manifest records exit 0. Offline viewport is unknown, not fit evidence.",
+      "capture": null
+    },
+    {
+      "id": "v1-validation",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v1/validate.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6",
+      "description": "Preserved validator output; not used to infer visual correctness.",
+      "capture": null
+    },
+    {
+      "id": "v1-text",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v1/v1-text.txt",
+      "sha256": "2b820c5766d2f2ddddd55af81e6b755739b68c4cd56707dff4adfe8fe62b3666",
+      "description": "Actual capture. Timestamp is the recorded capture-window interval, not an invented per-still instant. Diagram cell dimensions are 77x47.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "normal still",
+        "timestamp": "2026-11-02T09:59:43Z/2026-11-02T09:59:47Z",
+        "state": "normal, natural 100% zoom",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-ansi",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v1/v1-ansi.ansi",
+      "sha256": "bacd63a8c55b3ac8c5abdae0e6d0afb630f21f705cd5bf0fe42e7d4519ea0a31",
+      "description": "Actual capture. Timestamp is the recorded capture-window interval, not an invented per-still instant. Diagram cell dimensions are 77x47.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "normal still",
+        "timestamp": "2026-11-02T09:59:43Z/2026-11-02T09:59:47Z",
+        "state": "normal, natural 100% zoom",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-selected",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v1/v1-selected.ansi",
+      "sha256": "e49d735a71ddc468544c1b5646f7ad111107bbf63ca3d164f44be59331c93351",
+      "description": "Actual capture. Timestamp is the recorded capture-window interval, not an invented per-still instant. Diagram cell dimensions are 77x47.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "selected still",
+        "timestamp": "2026-11-02T09:59:43Z/2026-11-02T09:59:47Z",
+        "state": "all nodes selected simultaneously, natural 100% zoom",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frames",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v1/v1-frames.txt",
+      "sha256": "5f46dda7a24cbc4fde50fcedf230588c3fd269ebf422655625cc02b91a143ac9",
+      "description": "Actual capture. Timestamp is the recorded capture-window interval, not an invented per-still instant. Diagram cell dimensions are 77x47.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frames 0-4 at 0,100,200,300,400 ms",
+        "timestamp": "2026-11-02T09:59:43Z/2026-11-02T09:59:47Z",
+        "state": "timestamped rendered glyph frames; surrounding shell transcript retained",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v1/v1-frames.ansi",
+      "sha256": "afd6da880cf23b8cd353fbaef201eb96972525ac4ee4cbc3a3d2d610de6988fe",
+      "description": "Actual capture. Timestamp is the recorded capture-window interval, not an invented per-still instant. Diagram cell dimensions are 77x47.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frames 0-4 at 0,100,200,300,400 ms",
+        "timestamp": "2026-11-02T09:59:43Z/2026-11-02T09:59:47Z",
+        "state": "timestamped rendered glyph frames; diagram portion has no SGR color attributes",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-spec",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/specs/v2.json",
+      "sha256": "52c03e043dabe566efca4302b9760c3310095f3c56b153e6f00b5c5ad564a326",
+      "description": "Final executed spec; capture manifest binds its hash. Spec establishes intention, not visibility.",
+      "capture": null
+    },
+    {
+      "id": "v2-manifest",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v2/manifest.json",
+      "sha256": "f0a132db334506b90670cc1b1b99b1a53c75475e769c02af7b222f17e1b730b0",
+      "description": "Capture/check windows, binary/spec/artifact hashes, actual viewport token, exit status and confirmed-closed pane record; pane_cols/pane_rect are null.",
+      "capture": null
+    },
+    {
+      "id": "v2-binary-hash",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v2/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "description": "Repository-relative execution receipt naming the absolute frozen binary and its SHA-256; executable bytes independently rehashed successfully.",
+      "capture": null
+    },
+    {
+      "id": "v2-check",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v2/check.txt",
+      "sha256": "a82ea61a080cb1fad9511cf4ce9f0137ab6b3b0b66237f37e57a11e1d9b219e5",
+      "description": "Complete combined --check stdout/stderr; corresponding manifest records exit 0. Offline viewport is unknown, not fit evidence.",
+      "capture": null
+    },
+    {
+      "id": "v2-validation",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v2/validate.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6",
+      "description": "Preserved validator output; not used to infer visual correctness.",
+      "capture": null
+    },
+    {
+      "id": "v2-text",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v2/v2-text.txt",
+      "sha256": "a4bce21e6dd152a6a8e6d75ee585b9c7ee23a4d0d2e4d9b7927df5097537142f",
+      "description": "Actual capture. Timestamp is the recorded capture-window interval, not an invented per-still instant. Diagram cell dimensions are 77x47.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "normal still",
+        "timestamp": "2026-11-02T09:59:56Z/2026-11-02T10:00:00Z",
+        "state": "normal, natural 100% zoom",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-ansi",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v2/v2-ansi.ansi",
+      "sha256": "6fca9b664e94f7efe28b62c80beed60f32afa70e000086d79fc73ba9d9203e48",
+      "description": "Actual capture. Timestamp is the recorded capture-window interval, not an invented per-still instant. Diagram cell dimensions are 77x47.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "normal still",
+        "timestamp": "2026-11-02T09:59:56Z/2026-11-02T10:00:00Z",
+        "state": "normal, natural 100% zoom",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-selected",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v2/v2-selected.ansi",
+      "sha256": "41fa071d9bb58275bffdb7d68c9bccd671855a8cd5c1a233c822c3cf1290c2f6",
+      "description": "Actual capture. Timestamp is the recorded capture-window interval, not an invented per-still instant. Diagram cell dimensions are 77x47.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "selected still",
+        "timestamp": "2026-11-02T09:59:56Z/2026-11-02T10:00:00Z",
+        "state": "all nodes selected simultaneously, natural 100% zoom",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frames",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v2/v2-frames.txt",
+      "sha256": "1c56719b49d6a22ddedfc22a0a083c914b9c3834b0f9e86dcc03ce54825e8e81",
+      "description": "Actual capture. Timestamp is the recorded capture-window interval, not an invented per-still instant. Diagram cell dimensions are 77x47.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "frames 0-4 at 0,100,200,300,400 ms",
+        "timestamp": "2026-11-02T09:59:56Z/2026-11-02T10:00:00Z",
+        "state": "timestamped rendered glyph frames; surrounding shell transcript retained",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v2/v2-frames.ansi",
+      "sha256": "8e9cee4cafe140da073978a9303db04b6bf4ba0f857f7b9e03d6d740f5bfeebc",
+      "description": "Actual capture. Timestamp is the recorded capture-window interval, not an invented per-still instant. Diagram cell dimensions are 77x47.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "frames 0-4 at 0,100,200,300,400 ms",
+        "timestamp": "2026-11-02T09:59:56Z/2026-11-02T10:00:00Z",
+        "state": "timestamped rendered glyph frames; diagram portion has no SGR color attributes",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-spec",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/specs/v3.json",
+      "sha256": "6afe665dc80bb72126f671a485d73cedbb1f80bac8332dc25b386660ca624a18",
+      "description": "Final executed spec; capture manifest binds its hash. Spec establishes intention, not visibility.",
+      "capture": null
+    },
+    {
+      "id": "v3-manifest",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v3/manifest.json",
+      "sha256": "2e02d7f5ba96eb1f70d0f6cc17eb564691c3886564ff7c6ccaf43e1efb91c53f",
+      "description": "Capture/check windows, binary/spec/artifact hashes, actual viewport token, exit status and confirmed-closed pane record; pane_cols/pane_rect are null.",
+      "capture": null
+    },
+    {
+      "id": "v3-binary-hash",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v3/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "description": "Repository-relative execution receipt naming the absolute frozen binary and its SHA-256; executable bytes independently rehashed successfully.",
+      "capture": null
+    },
+    {
+      "id": "v3-check",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v3/check.txt",
+      "sha256": "bd4ff9d7ffa7a618eb621249820ef5a403286b85e49b9e4ac3a5a5e70beeeaba",
+      "description": "Complete combined --check stdout/stderr; corresponding manifest records exit 0. Offline viewport is unknown, not fit evidence.",
+      "capture": null
+    },
+    {
+      "id": "v3-validation",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v3/validate.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6",
+      "description": "Preserved validator output; not used to infer visual correctness.",
+      "capture": null
+    },
+    {
+      "id": "v3-text",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v3/v3-text.txt",
+      "sha256": "1b945a11d3702ca0b1b8ef1094281c723bfaea7bf23d09c6186836d25fb756e2",
+      "description": "Actual capture. Timestamp is the recorded capture-window interval, not an invented per-still instant. Diagram cell dimensions are 77x47.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "normal still",
+        "timestamp": "2026-11-02T10:00:07Z/2026-11-02T10:00:11Z",
+        "state": "normal, natural 100% zoom",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-ansi",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v3/v3-ansi.ansi",
+      "sha256": "b9547767013bc2baa2903654d3ad39c5cb213a3e637abcb2825122fa00464b83",
+      "description": "Actual capture. Timestamp is the recorded capture-window interval, not an invented per-still instant. Diagram cell dimensions are 77x47.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "normal still",
+        "timestamp": "2026-11-02T10:00:07Z/2026-11-02T10:00:11Z",
+        "state": "normal, natural 100% zoom",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-selected",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v3/v3-selected.ansi",
+      "sha256": "0760ac46fc247f5cc54d52e410a553808011efb8affe64416b96f5b8f87637a0",
+      "description": "Actual capture. Timestamp is the recorded capture-window interval, not an invented per-still instant. Diagram cell dimensions are 77x47.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "selected still",
+        "timestamp": "2026-11-02T10:00:07Z/2026-11-02T10:00:11Z",
+        "state": "all nodes selected simultaneously, natural 100% zoom",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-frames",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v3/v3-frames.txt",
+      "sha256": "7fa4a6f4835c1d66ae947cb2fd665728eed9f1e42561bec92148ddb336eee4d4",
+      "description": "Actual capture. Timestamp is the recorded capture-window interval, not an invented per-still instant. Diagram cell dimensions are 77x47.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "frames 0-4 at 0,100,200,300,400 ms",
+        "timestamp": "2026-11-02T10:00:07Z/2026-11-02T10:00:11Z",
+        "state": "timestamped rendered glyph frames; surrounding shell transcript retained",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/modal-runtime/evidence/v3/v3-frames.ansi",
+      "sha256": "d4a0acda9273a5abbb4a236283134763a8a4a5221e47eb3bf92abdd6980fdba0",
+      "description": "Actual capture. Timestamp is the recorded capture-window interval, not an invented per-still instant. Diagram cell dimensions are 77x47.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "frames 0-4 at 0,100,200,300,400 ms",
+        "timestamp": "2026-11-02T10:00:07Z/2026-11-02T10:00:11Z",
+        "state": "timestamped rendered glyph frames; diagram portion has no SGR color attributes",
+        "format": "ansi"
+      }
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "stage-a",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All eight required component titles and all eight directed relations are visibly present in v1; v2 repeats e1/e2/e3/e8 and explicitly distinguishes worker gRPC from daemon HTTP over UDS; v3 repeats e4/e5/e6/e7 with expanded payload/action labels. Task engine is the exact shared component connecting v2 dispatch to v3 execution/storage. task+ctrl, events+mgmt, dispatches, runs user proc, image+vol data and fs HTTP/UDS preserve readable meanings, with v2/v3 expansion where needed. No missing, reversed or extra relation. No machine-manager concept is substituted. The historical-reference status is retained in review provenance, not promoted to independently verified fact.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "stage-a",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 16 displayed edge occurrences (eight distinct required endpoint pairs) have visible source stems and their own correctly directed arrowheads. The worker-to-runtime down route and runtime-to-worker right/up/left return are separate. Zero crossings, bridges, shared-wire junctions, false branches or uncertain label owners. Four adjacent same-route S-bend pairs are followable, not connections to other links. Independent engine departures preserve the two source relations; no source bus is required. Optional dots never obscure a label, border, bend or arrowhead in the captured samples.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference",
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/arrow_traceability"
+      ],
+      "evidence_ids": [
+        "stage-a",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v1-frames",
+        "v2-frames",
+        "v3-frames"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Each final ANSI pane capture is 77 columns by 47 rows with header 77x47 @100%; each frames transcript contains viewport: 77x47 zoom: 1.00 natural. Every observed box, caption and arrowhead fits without pan, zoom-out or palette occlusion. Extents in the blind record are v1 columns17-61/rows7-42, v2 columns23-55/rows15-34, v3 columns17-61/rows15-34. Source coverage is complete across the views, with all eight relations already in v1. Independent CLI pane rectangle/column fields remain missing, separately represented by live_pane=null; frozen metadata explicitly accepts actual app viewport evidence for this known harness limitation.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference",
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/layout_fit"
+      ],
+      "evidence_ids": [
+        "stage-a",
+        "metadata",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v1-frames",
+        "v2-frames",
+        "v3-frames",
+        "v1-manifest",
+        "v2-manifest",
+        "v3-manifest"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "The ANSI captures show source-backed families, not merely same-depth colors: v1 runtime/engine are neighboring teal shades, backend/container are a nearby green execution chain, filesystem/Blobnet are a nearby blue storage chain. The two branches lie side by side with their children below. v2 retains the runtime/engine teal pair. v3 keeps backend/container in related teal shades and filesystem/Blobnet in related pink shades, each spatially paired. Worker and daemon are separate interface roles. Hues change between view palettes, but per-node cross-view hue stability is not a frozen gate; no failure is inferred from that. No schema-only grouping credit is used.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference",
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/conceptual_grouping_color"
+      ],
+      "evidence_ids": [
+        "source",
+        "stage-a",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 17 node occurrences have complete four-corner/four-side perimeters and uniform per-node ANSI foreground across each normal perimeter. All 17 selected perimeters are uniformly RGB(216,166,87), bold, including corners and sides; coverage is 8/8+4/4+5/5. No visible handle interrupts a border. All-selected frames do not prove isolated single-node selections or unrecorded drag/hover states; neither is shown defective. Timestamped diagram text lacks SGR color, so temporal border-color continuity is not claimed.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/border_integrity"
+      ],
+      "evidence_ids": [
+        "stage-a",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v1-selected",
+        "v2-selected",
+        "v3-selected"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Candidate skill, actual frozen executable, rubric, dataset, source/expected and all recorded spec/artifact hashes were verified. The sorted final-spec manifest hash binds the three executed specs. Generator is the assigned DeepSeek worker; this separate Sol session saved stage A before disclosure. Exact absolute-binary commands, combined check stdout/stderr with manifest exit0, text/ANSI, selected states, timestamped glyph frames, capture windows and three confirmed-closed pane records are preserved. Frozen metadata discloses the initial tab-label bug and subsequent case assignment; semantic worker ids follow the stage-B contract, not invented tab names. live_pane=null explicitly preserves the missing independent rectangle rather than copying generator estimates. Validator/self-report claims are not used as visual evidence; in particular, the claimed per-step movement is contradicted for four optional routes. No new renderer/viewer run, model substitution, or pane art in prose occurred.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/02/judge-full-task.md"
+      ],
+      "evidence_ids": [
+        "candidate-skill",
+        "metadata",
+        "rubric",
+        "dataset",
+        "source",
+        "expected",
+        "spec-manifest",
+        "stage-a",
+        "generation",
+        "attempts",
+        "capture-harness",
+        "v1-spec",
+        "v1-manifest",
+        "v1-binary-hash",
+        "v1-check",
+        "v1-text",
+        "v1-ansi",
+        "v1-selected",
+        "v1-frames",
+        "v1-frames-ansi",
+        "v1-validation",
+        "v2-spec",
+        "v2-manifest",
+        "v2-binary-hash",
+        "v2-check",
+        "v2-text",
+        "v2-ansi",
+        "v2-selected",
+        "v2-frames",
+        "v2-frames-ansi",
+        "v2-validation",
+        "v3-spec",
+        "v3-manifest",
+        "v3-binary-hash",
+        "v3-check",
+        "v3-text",
+        "v3-ansi",
+        "v3-selected",
+        "v3-frames",
+        "v3-frames-ansi",
+        "v3-validation"
+      ]
+    },
+    "animation": {
+      "applicable": false,
+      "status": null,
+      "reason": "The frozen modal-runtime source asks for readable internal modules/seams/RPC paths, not motion. cases.json marks modal-runtime.animation optional, and expected.json also says optional. Thus source-backed N/A, not a motion pass. Four route occurrences appear stationary or sampling-aliased (v1-A/C and v2-A/C), and four short routes repeat local positions; the generator claim that all dot cells move every 100ms is not supported. These do not fail this static-reading source: every arrow remains traceable and all labels remain unobscured. This result makes no claim that required animation would pass.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#task",
+        "docs/visualize-eval/cases/modal-runtime/source.md#original-line-5-user",
+        "docs/visualize-eval/cases/modal-runtime/source.md#original-line-12-user",
+        "docs/visualize-eval/cases.json#/cases/6/animation",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/animation"
+      ],
+      "evidence_ids": [
+        "source",
+        "dataset",
+        "expected",
+        "stage-a",
+        "v1-frames",
+        "v2-frames",
+        "v3-frames",
+        "v1-frames-ansi",
+        "v2-frames-ansi",
+        "v3-frames-ansi"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference"
+      ],
+      "expected": "modal-worker -> modal-runtime: task input + control RPCs (worker gRPC seam).",
+      "observed": "v1-A: modal-worker bottom -> stem(21,11), down to bends(21,13)/(20,13), then down arrowhead(20,14) into modal-runtime; caption task+ctrl [23,12,9,1]. v2-A: stem(25,19), bends(25,21)/(24,21), down head(24,22); caption gRPC call [27,20,9,1]. Incoming task/control meaning and protocol are carried jointly by the two captions and directed endpoint pair. Both complete, no crossing/junction/shared route; the adjacent bends are the same route. Optional dot is fixed at sampled positions but does not obscure the route.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            20,
+            11,
+            12,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            24,
+            19,
+            12,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference"
+      ],
+      "expected": "modal-runtime -> modal-worker: events + management RPCs (worker gRPC seam), distinct from e1.",
+      "observed": "v1-B: modal-runtime right stem(34,16), bend(35,16), up column35 to bend(35,8), left head(34,8) into modal-worker; events+mgmt [37,12,11,1]. v2-B: right stem(38,24), bend(39,24), up to bend(39,16), left head(38,16); gRPC events [41,20,11,1]. Management abbreviation is visibly in v1 and protocol in v2. Unique return corridor and unique arrowhead, not a bidirectional stem or an extra relation; no crossings/junctions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            34,
+            8,
+            14,
+            9
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            38,
+            16,
+            14,
+            9
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference"
+      ],
+      "expected": "modal-runtime -> Task engine: dispatches tasks.",
+      "observed": "v1-C: bottom stem(20,19), down, adjacent bends(20,21)/(21,21), down head(21,22) into Task engine; dispatches [22,21,10,1]. v2-C: stem(24,27), adjacent bends(24,29)/(25,29), down head(25,30); dispatch [26,29,8,1]. Task meaning is readable from the action into Task engine. Independent of the HTTP/UDS departure, no junction/crossing. Optional dot appears stationary in samples but arrow remains readable.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            20,
+            19,
+            12,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            24,
+            27,
+            10,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference"
+      ],
+      "expected": "Task engine -> Container backend: starts / manages.",
+      "observed": "v1-E: bottom stem(21,27), bend(21,29), left to bend(18,29), down head(18,30) into Container backend; starts/manages [20,30,14,1]. v3-A repeats via stem(21,19), bends(21,21)/(18,21), down head(18,22); starts / manages [20,22,16,1]. Source fan-out uses an independent stem rather than a shared-wire branch. No crossing/junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            18,
+            27,
+            16,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            18,
+            19,
+            18,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference"
+      ],
+      "expected": "Container backend -> Task container: runs user process.",
+      "observed": "v1-G: bottom stem(18,35), bend(18,37), right to bend(20,37), down head(20,38) into Task container; runs user proc [20,36,14,1]. v3-C: stem(18,27), bends(18,29)/(20,29), down head(20,30); full runs user process [20,28,17,1]. Both routes are complete and unique, with no crossing/junction. Short optional dot alternation does not erase either bend or arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            18,
+            35,
+            16,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            18,
+            27,
+            19,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference"
+      ],
+      "expected": "Task engine -> Filesystem + volumes: mounts / snapshots.",
+      "observed": "v1-F: bottom stem(23,27), bend(23,29), right to bend(41,29), down head(41,30) into Filesystem + volumes; mounts/snapshots [24,28,16,1]. v3-B: stem(23,19), bends(23,21)/(41,21), down head(41,22); mounts / snapshots [24,20,18,1]. Caption immediately follows its own vertical run, not a fused label. Distinct from the backend departure, no shared run, crossing or wire junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            23,
+            27,
+            19,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            23,
+            19,
+            19,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference"
+      ],
+      "expected": "Filesystem + volumes -> Blobnet: image + volume data.",
+      "observed": "v1-H: bottom stem(41,35), bend(41,37), right to bend(48,37), down head(48,38) into Blobnet; image+vol data [34,38,14,1] immediately precedes its own arrowhead. v3-D: stem(41,27), bends(41,29)/(48,29), down head(48,30); full image + volume data [22,27,19,1] abuts its own vertical at column41. The long caption begins beneath the left box but makes no contact with the left route at column18; owner remains readable as recorded blind. No crossing, junction, fake branch or ambiguity requiring spec inference.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            34,
+            35,
+            15,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            22,
+            27,
+            27,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference"
+      ],
+      "expected": "modal-runtime -> modal-daemon: filesystem HTTP over Unix-domain sockets, not the worker gRPC interface.",
+      "observed": "v1-D: bottom stem(22,19), bend(22,20), right to bend(45,20), down head(45,22) into modal-daemon; fs HTTP/UDS [28,19,11,1]. v2-D: stem(26,27), bend(26,28), right to bend(43,28), down head(43,30); HTTP over UDS [28,27,13,1]. Both distinguish this daemon path from dispatch and the two worker routes. No shared run, crossing, junction or label-owner uncertainty.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            22,
+            19,
+            24,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            26,
+            27,
+            18,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [],
+  "blockers": [],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:p6Z",
+      "w7E:p60",
+      "w7E:p71"
+    ],
+    "closed_pane_ids": [
+      "w7E:p6Z",
+      "w7E:p60",
+      "w7E:p71"
+    ],
+    "status": "done",
+    "reason": "All three frozen evidence manifests record confirmed_closed; the hash-verified capture harness closes the owned pane and probes pane-get failure before writing that state. Generation cleanup records agree. This reviewer opened no panes and did not replay cleanup. Rejected attempts were recorded as rejected before capture; no additional owned pane is recorded."
+  },
+  "overall": "pass"
+}

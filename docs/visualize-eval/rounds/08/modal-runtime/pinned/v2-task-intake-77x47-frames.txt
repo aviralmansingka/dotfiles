@@ -1,0 +1,145 @@
+viewport: 77x47 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 77x47 @100% · v2-task-intake.json · 2 nodes · 1 edges · q qu
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                ╭────────────╮                ╭─────────────╮
+                │modal-worker│───────────────▶│modal-runtime│
+                │            │ task+ctrl RPC  │             │
+                ╰────────────╯                ╰─────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 77x47 @100% · v2-task-intake.json · 2 nodes · 1 edges · q qu
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                ╭────────────╮                ╭─────────────╮
+                │modal-worker│───────────────▶│modal-runtime│
+                │            │ task+ctrl RPC  │             │
+                ╰────────────╯                ╰─────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 77x47 @100% · v2-task-intake.json · 2 nodes · 1 edges · q qu
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                ╭────────────╮                ╭─────────────╮
+                │modal-worker│───────────────▶│modal-runtime│
+                │            │ task+ctrl RPC  │             │
+                ╰────────────╯                ╰─────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+

@@ -1,0 +1,1025 @@
+[
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-modal--/2026-10-14T20-31-55-285Z_01a13c1d-4b94-70e7-a930-7631ea0f9b66.jsonl",
+    "line": 33,
+    "call_id": "chatcmpl-tool-85a9e36d8d24d6be",
+    "path": "/tmp/mm-arch.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "cp",
+          "label": "Modal control plane"
+        },
+        {
+          "id": "web",
+          "label": "humans + mmctl"
+        },
+        {
+          "id": "pgrpc",
+          "label": "private gRPC"
+        },
+        {
+          "id": "wapi",
+          "label": "webapi server"
+        },
+        {
+          "id": "pub",
+          "label": "public gRPC"
+        },
+        {
+          "id": "boot",
+          "label": "boot server"
+        },
+        {
+          "id": "q",
+          "label": "River job queue"
+        },
+        {
+          "id": "rec",
+          "label": "cluster reconcile loop"
+        },
+        {
+          "id": "ssh",
+          "label": "SSH + BMC ops"
+        },
+        {
+          "id": "db",
+          "label": "Postgres"
+        },
+        {
+          "id": "s3",
+          "label": "S3 object store"
+        },
+        {
+          "id": "reg",
+          "label": "provider registry"
+        },
+        {
+          "id": "prov",
+          "label": "bare-metal providers"
+        },
+        {
+          "id": "mch",
+          "label": "bare-metal machines"
+        },
+        {
+          "id": "agent",
+          "label": "machine-agent"
+        },
+        {
+          "id": "jan",
+          "label": "janitor app"
+        },
+        {
+          "id": "slack",
+          "label": "Slack"
+        }
+      ],
+      "edges": [
+        {
+          "from": "cp",
+          "to": "pgrpc",
+          "label": "create / terminate / repair",
+          "flow": 1.5
+        },
+        {
+          "from": "web",
+          "to": "wapi",
+          "label": "http",
+          "flow": 0.5
+        },
+        {
+          "from": "pgrpc",
+          "to": "q",
+          "label": "enqueue job",
+          "flow": 1.5
+        },
+        {
+          "from": "wapi",
+          "to": "q",
+          "label": "reinstall / reprovision",
+          "flow": 0.5
+        },
+        {
+          "from": "q",
+          "to": "reg",
+          "label": "provision job",
+          "flow": 1
+        },
+        {
+          "from": "reg",
+          "to": "prov",
+          "label": "provider API",
+          "flow": 1
+        },
+        {
+          "from": "prov",
+          "to": "mch",
+          "label": "allocate instance",
+          "flow": 1
+        },
+        {
+          "from": "mch",
+          "to": "boot",
+          "label": "iPXE request",
+          "flow": 0.5
+        },
+        {
+          "from": "boot",
+          "to": "mch",
+          "label": "boot.ipxe + S3 args",
+          "flow": 0.5
+        },
+        {
+          "from": "mch",
+          "to": "agent",
+          "label": "runs on host"
+        },
+        {
+          "from": "agent",
+          "to": "pub",
+          "label": "register + heartbeat",
+          "flow": 3
+        },
+        {
+          "from": "pub",
+          "to": "db",
+          "label": "machine state",
+          "flow": 3
+        },
+        {
+          "from": "pgrpc",
+          "to": "db",
+          "label": "machine rows",
+          "flow": 1
+        },
+        {
+          "from": "q",
+          "to": "db",
+          "label": "job rows",
+          "flow": 2
+        },
+        {
+          "from": "q",
+          "to": "ssh",
+          "label": "audit / verify reimage",
+          "flow": 0.5
+        },
+        {
+          "from": "ssh",
+          "to": "mch",
+          "label": "run machine-audit",
+          "flow": 0.5
+        },
+        {
+          "from": "mch",
+          "to": "s3",
+          "label": "pull boot image",
+          "flow": 0.5
+        },
+        {
+          "from": "q",
+          "to": "s3",
+          "label": "diagnose uploads",
+          "flow": 0.5
+        },
+        {
+          "from": "q",
+          "to": "jan",
+          "label": "diagnostic events",
+          "flow": 0.5
+        },
+        {
+          "from": "jan",
+          "to": "wapi",
+          "label": "proposed actions",
+          "flow": 0.5
+        },
+        {
+          "from": "wapi",
+          "to": "slack",
+          "label": "confirm + alerts",
+          "flow": 0.5
+        },
+        {
+          "from": "rec",
+          "to": "prov",
+          "label": "gcore sync, 1 min",
+          "flow": 0.5
+        },
+        {
+          "from": "rec",
+          "to": "db",
+          "label": "cluster state"
+        }
+      ]
+    }
+  },
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-modal--/2026-10-14T20-31-55-285Z_01a13c1d-4b94-70e7-a930-7631ea0f9b66.jsonl",
+    "line": 51,
+    "call_id": "chatcmpl-tool-b00e1b9791acdbd9",
+    "path": "/tmp/mm-arch-slow.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "cp",
+          "label": "Modal control plane"
+        },
+        {
+          "id": "web",
+          "label": "humans + mmctl"
+        },
+        {
+          "id": "pgrpc",
+          "label": "private gRPC"
+        },
+        {
+          "id": "wapi",
+          "label": "webapi server"
+        },
+        {
+          "id": "pub",
+          "label": "public gRPC"
+        },
+        {
+          "id": "boot",
+          "label": "boot server"
+        },
+        {
+          "id": "q",
+          "label": "River job queue"
+        },
+        {
+          "id": "rec",
+          "label": "cluster reconcile loop"
+        },
+        {
+          "id": "ssh",
+          "label": "SSH + BMC ops"
+        },
+        {
+          "id": "db",
+          "label": "Postgres"
+        },
+        {
+          "id": "s3",
+          "label": "S3 object store"
+        },
+        {
+          "id": "reg",
+          "label": "provider registry"
+        },
+        {
+          "id": "prov",
+          "label": "bare-metal providers"
+        },
+        {
+          "id": "mch",
+          "label": "bare-metal machines"
+        },
+        {
+          "id": "agent",
+          "label": "machine-agent"
+        },
+        {
+          "id": "jan",
+          "label": "janitor app"
+        },
+        {
+          "id": "slack",
+          "label": "Slack"
+        }
+      ],
+      "edges": [
+        {
+          "from": "cp",
+          "to": "pgrpc",
+          "label": "create / terminate / repair",
+          "flow": 0.3
+        },
+        {
+          "from": "web",
+          "to": "wapi",
+          "label": "http",
+          "flow": 0.15
+        },
+        {
+          "from": "pgrpc",
+          "to": "q",
+          "label": "enqueue job",
+          "flow": 0.3
+        },
+        {
+          "from": "wapi",
+          "to": "q",
+          "label": "reinstall / reprovision",
+          "flow": 0.15
+        },
+        {
+          "from": "q",
+          "to": "reg",
+          "label": "provision job",
+          "flow": 0.2
+        },
+        {
+          "from": "reg",
+          "to": "prov",
+          "label": "provider API",
+          "flow": 0.2
+        },
+        {
+          "from": "prov",
+          "to": "mch",
+          "label": "allocate instance",
+          "flow": 0.2
+        },
+        {
+          "from": "mch",
+          "to": "boot",
+          "label": "iPXE request",
+          "flow": 0.15
+        },
+        {
+          "from": "boot",
+          "to": "mch",
+          "label": "boot.ipxe + S3 args",
+          "flow": 0.15
+        },
+        {
+          "from": "mch",
+          "to": "agent",
+          "label": "runs on host"
+        },
+        {
+          "from": "agent",
+          "to": "pub",
+          "label": "register + heartbeat",
+          "flow": 0.5
+        },
+        {
+          "from": "pub",
+          "to": "db",
+          "label": "machine state",
+          "flow": 0.5
+        },
+        {
+          "from": "pgrpc",
+          "to": "db",
+          "label": "machine rows",
+          "flow": 0.2
+        },
+        {
+          "from": "q",
+          "to": "db",
+          "label": "job rows",
+          "flow": 0.4
+        },
+        {
+          "from": "q",
+          "to": "ssh",
+          "label": "audit / verify reimage",
+          "flow": 0.15
+        },
+        {
+          "from": "ssh",
+          "to": "mch",
+          "label": "run machine-audit",
+          "flow": 0.15
+        },
+        {
+          "from": "mch",
+          "to": "s3",
+          "label": "pull boot image",
+          "flow": 0.15
+        },
+        {
+          "from": "q",
+          "to": "s3",
+          "label": "diagnose uploads",
+          "flow": 0.15
+        },
+        {
+          "from": "q",
+          "to": "jan",
+          "label": "diagnostic events",
+          "flow": 0.15
+        },
+        {
+          "from": "jan",
+          "to": "wapi",
+          "label": "proposed actions",
+          "flow": 0.15
+        },
+        {
+          "from": "wapi",
+          "to": "slack",
+          "label": "confirm + alerts",
+          "flow": 0.15
+        },
+        {
+          "from": "rec",
+          "to": "prov",
+          "label": "gcore sync, 1 min",
+          "flow": 0.15
+        },
+        {
+          "from": "rec",
+          "to": "db",
+          "label": "cluster state"
+        }
+      ]
+    }
+  },
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-modal--/2026-10-14T20-31-55-285Z_01a13c1d-4b94-70e7-a930-7631ea0f9b66.jsonl",
+    "line": 67,
+    "call_id": "chatcmpl-tool-9722629a3a68179f",
+    "path": "/tmp/mm-arch-static.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "cp",
+          "label": "Modal control plane"
+        },
+        {
+          "id": "web",
+          "label": "humans + mmctl"
+        },
+        {
+          "id": "pgrpc",
+          "label": "private gRPC"
+        },
+        {
+          "id": "wapi",
+          "label": "webapi server"
+        },
+        {
+          "id": "pub",
+          "label": "public gRPC"
+        },
+        {
+          "id": "boot",
+          "label": "boot server"
+        },
+        {
+          "id": "q",
+          "label": "River job queue"
+        },
+        {
+          "id": "rec",
+          "label": "cluster reconcile loop"
+        },
+        {
+          "id": "ssh",
+          "label": "SSH + BMC ops"
+        },
+        {
+          "id": "db",
+          "label": "Postgres"
+        },
+        {
+          "id": "s3",
+          "label": "S3 object store"
+        },
+        {
+          "id": "reg",
+          "label": "provider registry"
+        },
+        {
+          "id": "prov",
+          "label": "bare-metal providers"
+        },
+        {
+          "id": "mch",
+          "label": "bare-metal machines"
+        },
+        {
+          "id": "agent",
+          "label": "machine-agent"
+        },
+        {
+          "id": "jan",
+          "label": "janitor app"
+        },
+        {
+          "id": "slack",
+          "label": "Slack"
+        }
+      ],
+      "edges": [
+        {
+          "from": "cp",
+          "to": "pgrpc",
+          "label": "create / terminate / repair"
+        },
+        {
+          "from": "web",
+          "to": "wapi",
+          "label": "http"
+        },
+        {
+          "from": "pgrpc",
+          "to": "q",
+          "label": "enqueue job"
+        },
+        {
+          "from": "wapi",
+          "to": "q",
+          "label": "reinstall / reprovision"
+        },
+        {
+          "from": "q",
+          "to": "reg",
+          "label": "provision job"
+        },
+        {
+          "from": "reg",
+          "to": "prov",
+          "label": "provider API"
+        },
+        {
+          "from": "prov",
+          "to": "mch",
+          "label": "allocate instance"
+        },
+        {
+          "from": "mch",
+          "to": "boot",
+          "label": "iPXE request"
+        },
+        {
+          "from": "boot",
+          "to": "mch",
+          "label": "boot.ipxe + S3 args"
+        },
+        {
+          "from": "mch",
+          "to": "agent",
+          "label": "runs on host"
+        },
+        {
+          "from": "agent",
+          "to": "pub",
+          "label": "register + heartbeat"
+        },
+        {
+          "from": "pub",
+          "to": "db",
+          "label": "machine state"
+        },
+        {
+          "from": "pgrpc",
+          "to": "db",
+          "label": "machine rows"
+        },
+        {
+          "from": "q",
+          "to": "db",
+          "label": "job rows"
+        },
+        {
+          "from": "q",
+          "to": "ssh",
+          "label": "audit / verify reimage"
+        },
+        {
+          "from": "ssh",
+          "to": "mch",
+          "label": "run machine-audit"
+        },
+        {
+          "from": "mch",
+          "to": "s3",
+          "label": "pull boot image"
+        },
+        {
+          "from": "q",
+          "to": "s3",
+          "label": "diagnose uploads"
+        },
+        {
+          "from": "q",
+          "to": "jan",
+          "label": "diagnostic events"
+        },
+        {
+          "from": "jan",
+          "to": "wapi",
+          "label": "proposed actions"
+        },
+        {
+          "from": "wapi",
+          "to": "slack",
+          "label": "confirm + alerts"
+        },
+        {
+          "from": "rec",
+          "to": "prov",
+          "label": "gcore sync, 1 min"
+        },
+        {
+          "from": "rec",
+          "to": "db",
+          "label": "cluster state"
+        }
+      ]
+    }
+  },
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-modal--/2026-10-14T20-31-55-285Z_01a13c1d-4b94-70e7-a930-7631ea0f9b66.jsonl",
+    "line": 112,
+    "call_id": "chatcmpl-tool-aa629c34965caad6",
+    "path": "/tmp/mm-arch-static.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "cp",
+          "label": "control plane"
+        },
+        {
+          "id": "web",
+          "label": "mmctl"
+        },
+        {
+          "id": "pgrpc",
+          "label": "private gRPC"
+        },
+        {
+          "id": "wapi",
+          "label": "webapi"
+        },
+        {
+          "id": "q",
+          "label": "River jobs"
+        },
+        {
+          "id": "slack",
+          "label": "Slack"
+        },
+        {
+          "id": "prov",
+          "label": "providers"
+        },
+        {
+          "id": "ssh",
+          "label": "SSH + BMC"
+        },
+        {
+          "id": "rec",
+          "label": "reconcile loop"
+        },
+        {
+          "id": "s3",
+          "label": "S3"
+        },
+        {
+          "id": "jan",
+          "label": "janitor"
+        },
+        {
+          "id": "mch",
+          "label": "machines"
+        },
+        {
+          "id": "pub",
+          "label": "public gRPC"
+        },
+        {
+          "id": "boot",
+          "label": "boot server"
+        },
+        {
+          "id": "db",
+          "label": "Postgres"
+        }
+      ],
+      "edges": [
+        {
+          "from": "cp",
+          "to": "pgrpc",
+          "label": "create / repair"
+        },
+        {
+          "from": "web",
+          "to": "wapi",
+          "label": "http"
+        },
+        {
+          "from": "pgrpc",
+          "to": "q",
+          "label": "enqueue"
+        },
+        {
+          "from": "wapi",
+          "to": "q",
+          "label": "reinstall"
+        },
+        {
+          "from": "wapi",
+          "to": "slack",
+          "label": "alerts"
+        },
+        {
+          "from": "q",
+          "to": "prov",
+          "label": "provision"
+        },
+        {
+          "from": "q",
+          "to": "ssh",
+          "label": "audit"
+        },
+        {
+          "from": "q",
+          "to": "s3",
+          "label": "diagnostics"
+        },
+        {
+          "from": "q",
+          "to": "jan",
+          "label": "events"
+        },
+        {
+          "from": "q",
+          "to": "db",
+          "label": "job rows"
+        },
+        {
+          "from": "pgrpc",
+          "to": "db",
+          "label": "writes"
+        },
+        {
+          "from": "rec",
+          "to": "prov",
+          "label": "gcore sync"
+        },
+        {
+          "from": "rec",
+          "to": "db",
+          "label": "cluster state"
+        },
+        {
+          "from": "ssh",
+          "to": "mch",
+          "label": "machine-audit"
+        },
+        {
+          "from": "prov",
+          "to": "mch",
+          "label": "allocates"
+        },
+        {
+          "from": "mch",
+          "to": "s3",
+          "label": "pull image"
+        },
+        {
+          "from": "mch",
+          "to": "boot",
+          "label": "iPXE"
+        },
+        {
+          "from": "boot",
+          "to": "mch",
+          "label": "boot.ipxe"
+        },
+        {
+          "from": "mch",
+          "to": "pub",
+          "label": "agent heartbeats"
+        },
+        {
+          "from": "pub",
+          "to": "db",
+          "label": "state"
+        },
+        {
+          "from": "jan",
+          "to": "wapi",
+          "label": "proposals"
+        }
+      ]
+    }
+  },
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-modal--/2026-10-14T20-31-55-285Z_01a13c1d-4b94-70e7-a930-7631ea0f9b66.jsonl",
+    "line": 124,
+    "call_id": "chatcmpl-tool-9c045d7f75eb65f9",
+    "path": "/tmp/mm-arch-static.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "cp",
+          "label": "control plane"
+        },
+        {
+          "id": "web",
+          "label": "mmctl"
+        },
+        {
+          "id": "pgrpc",
+          "label": "private gRPC"
+        },
+        {
+          "id": "wapi",
+          "label": "webapi"
+        },
+        {
+          "id": "q",
+          "label": "River jobs"
+        },
+        {
+          "id": "slack",
+          "label": "Slack"
+        },
+        {
+          "id": "prov",
+          "label": "providers"
+        },
+        {
+          "id": "ssh",
+          "label": "SSH + BMC"
+        },
+        {
+          "id": "jan",
+          "label": "janitor"
+        },
+        {
+          "id": "rec",
+          "label": "reconcile loop"
+        },
+        {
+          "id": "mch",
+          "label": "machines"
+        },
+        {
+          "id": "s3",
+          "label": "S3"
+        },
+        {
+          "id": "pub",
+          "label": "public gRPC"
+        },
+        {
+          "id": "boot",
+          "label": "boot server"
+        },
+        {
+          "id": "db",
+          "label": "Postgres"
+        }
+      ],
+      "edges": [
+        {
+          "from": "cp",
+          "to": "pgrpc",
+          "label": "create / repair"
+        },
+        {
+          "from": "web",
+          "to": "wapi",
+          "label": "http"
+        },
+        {
+          "from": "pgrpc",
+          "to": "q",
+          "label": "enqueue"
+        },
+        {
+          "from": "wapi",
+          "to": "q",
+          "label": "reinstall"
+        },
+        {
+          "from": "wapi",
+          "to": "slack",
+          "label": "alerts"
+        },
+        {
+          "from": "q",
+          "to": "prov",
+          "label": "provision"
+        },
+        {
+          "from": "q",
+          "to": "ssh",
+          "label": "audit"
+        },
+        {
+          "from": "q",
+          "to": "s3",
+          "label": "diagnostics"
+        },
+        {
+          "from": "q",
+          "to": "jan",
+          "label": "events"
+        },
+        {
+          "from": "q",
+          "to": "db",
+          "label": "job rows"
+        },
+        {
+          "from": "pgrpc",
+          "to": "db",
+          "label": "writes"
+        },
+        {
+          "from": "rec",
+          "to": "prov",
+          "label": "gcore sync"
+        },
+        {
+          "from": "rec",
+          "to": "db",
+          "label": "cluster state"
+        },
+        {
+          "from": "ssh",
+          "to": "mch",
+          "label": "machine-audit"
+        },
+        {
+          "from": "prov",
+          "to": "mch",
+          "label": "allocates"
+        },
+        {
+          "from": "mch",
+          "to": "s3",
+          "label": "pull image"
+        },
+        {
+          "from": "mch",
+          "to": "boot",
+          "label": "iPXE"
+        },
+        {
+          "from": "boot",
+          "to": "mch",
+          "label": "boot.ipxe"
+        },
+        {
+          "from": "mch",
+          "to": "pub",
+          "label": "agent heartbeats"
+        },
+        {
+          "from": "pub",
+          "to": "db",
+          "label": "state"
+        },
+        {
+          "from": "jan",
+          "to": "wapi",
+          "label": "proposals"
+        }
+      ],
+      "layers": [
+        [
+          "cp",
+          "web"
+        ],
+        [
+          "pgrpc",
+          "wapi"
+        ],
+        [
+          "q",
+          "slack"
+        ],
+        [
+          "prov",
+          "ssh",
+          "jan",
+          "rec"
+        ],
+        [
+          "mch",
+          "",
+          "s3"
+        ],
+        [
+          "pub",
+          "boot"
+        ],
+        [
+          "db"
+        ]
+      ]
+    }
+  }
+]

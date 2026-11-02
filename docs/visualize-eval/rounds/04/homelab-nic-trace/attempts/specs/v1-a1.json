@@ -1,0 +1,24 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "ts", "label": "tailscale0 100.113.153.49", "group": "overlay" },
+    { "id": "vm", "label": "VM vnet0", "group": "virt" },
+    { "id": "ctr", "label": "ctr veth", "group": "virt" },
+    { "id": "virbr", "label": "virbr0 NAT bridge", "group": "virt" },
+    { "id": "dkbr", "label": "dkbr 172.18.2.1", "group": "virt" },
+    { "id": "h", "label": "homelab ~/rack-bench", "group": "host" },
+    { "id": "bond0", "label": "bond0 192.168.1.197/24", "group": "phys" },
+    { "id": "wlp", "label": "wlp8s0 .213", "group": "phys" }
+  ],
+  "edges": [
+    { "from": "vm", "to": "virbr", "label": "192.168.122.x" },
+    { "from": "virbr", "to": "h", "label": "libvirt NAT" },
+    { "from": "ctr", "to": "dkbr", "label": "172.18.2.x" },
+    { "from": "dkbr", "to": "h", "label": "docker bridge" },
+    { "from": "ts", "to": "h", "label": "overlay" },
+    { "from": "ts", "to": "bond0", "label": "UDP encap" },
+    { "from": "h", "to": "bond0", "label": "eno1 2.5 GbE" },
+    { "from": "h", "to": "wlp", "label": "backup path" }
+  ]
+}

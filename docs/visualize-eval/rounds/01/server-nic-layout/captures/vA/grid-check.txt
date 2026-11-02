@@ -1,0 +1,27 @@
+boxes:
+  '7 NICs dark /'            rows 9-12 cols 12-24
+  'server2 R7725 .59 /'      rows 9-12 cols 33-51
+  'spare .60-.62 /'          rows 9-12 cols 56-70
+  'server1 R7725 .58 /'      rows 18-21 cols 9-27
+  'eno16595np0 25 GbE /'     rows 27-30 cols 9-28
+  'Arista .57 AS132717 /'    rows 36-39 cols 8-28
+
+arrowheads:
+  ▼ at row 17 col 10 -> into 'server1 R7725 .58 /'
+  ▼ at row 26 col 10 -> into 'eno16595np0 25 GbE /'
+  ▼ at row 35 col 9 -> into 'Arista .57 AS132717 /'
+  ▼ at row 35 col 11 -> into 'Arista .57 AS132717 /'
+  ▼ at row 35 col 13 -> into 'Arista .57 AS132717 /'
+
+stems (route glyph touching a box side):
+  from '7 NICs dark /' bottom col 13: '│'
+  from 'server2 R7725 .59 /' bottom col 34: '│'
+  from 'spare .60-.62 /' bottom col 57: '│'
+  from 'server1 R7725 .58 /' bottom col 10: '│'
+  from 'eno16595np0 25 GbE /' bottom col 10: '│'
+
+interior sanitation:
+  0 interior glyph problems
+
+border glyph sanity:
+  0 border problems

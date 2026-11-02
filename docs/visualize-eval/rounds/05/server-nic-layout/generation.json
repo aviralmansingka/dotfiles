@@ -1,0 +1,388 @@
+{
+  "case_id": "server-nic-layout",
+  "round": "03",
+  "round_spec_note": "The round-05 generator task text literally requires `round: \"03\"` in generation.json; this sample is round 05 and lives in rounds/05/server-nic-layout/. Both readings are recorded: `round` carries the literal required value, `round_dir` the actual round.",
+  "round_dir": "05",
+  "generator": {
+    "role": "generator",
+    "identity": "fresh DeepSeek diagram generator, worker label viz-ds05-4 (pi worker subagent in the fix-visualize-skill worktree)",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "exact_model_string": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "judges_spawned": 0,
+    "review_note": "No judge or reviewer was spawned. The candidate skill's Step 9 review is deferred to the captain's separate Sol judge."
+  },
+  "candidate_skill": {
+    "path": "docs/visualize-eval/rounds/05/SKILL.md",
+    "sha256": "ff4a9d3f32ba0bf86e54ee6bfbac02fdea3fac3b95b82a958b3411accef0a949",
+    "verified_with": "shasum -a 256"
+  },
+  "renderer": {
+    "path": "/tmp/visualize-eval/round-05/bin/rataflow-view",
+    "sha256": "b1ab9f2e78af11c2f2b005eea083a999079d184bf550e8d0b6d9c51867f22404",
+    "verified_with": "shasum -a 256",
+    "rebuilt": false,
+    "source_edited": false
+  },
+  "capture_tooling": [
+    "scripts/viz-evidence.sh --spec <spec> --bin /tmp/visualize-eval/round-05/bin/rataflow-view --out evidence/<view> --label <view> --frames 5",
+    "scripts/viz-validate.py evidence/<view> --require-select --require-frames --attempts attempts.json",
+    "COLUMNS=77 LINES=47 /tmp/visualize-eval/round-05/bin/rataflow-view --frames 5 <spec> > pinned77/<view>-frames-77x47.txt (supplementary, pinned-size dumps)"
+  ],
+  "animation_scope": {
+    "source_animated": false,
+    "decision": "static in every view",
+    "evidence": "every edge sets dots: 0 and no edge sets flow; --check reads `dots: 0 single-dot routes, 0 periodic routes, 0 violations`; the 5 timestamped frames of each view are byte-identical over the app's 51-row window"
+  },
+  "views": [
+    {
+      "id": "v1",
+      "title": "server1 8-port card and its one uplink",
+      "carries": "e1-e3; the 8-port count, the single active uplink eno16595np0 25 GbE, the seven dark ports, the gateway's full address plus AS132717, and the fresh-handoff state",
+      "direction": "tb",
+      "spec": "specs/v1-a3.json",
+      "spec_sha256": "9a168877e235238ef065eeeddf3c3424273ac85a9d1a745d23f73aff62b5e19e",
+      "evidence_dir": "evidence/v1",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "check": "evidence/v1/check.txt",
+      "frames": "evidence/v1/v1-frames.txt",
+      "frames_ansi": "evidence/v1/v1-frames.ansi",
+      "frames_count": 5,
+      "frame_step_ms": 100,
+      "pinned_77x47_frames": "pinned77/v1-frames-77x47.txt",
+      "manifest": "evidence/v1/manifest.json",
+      "measured": {
+        "viewport_token": "83x51 @100%",
+        "pane_cols": null,
+        "pane_rows": 51,
+        "pane_rect": null,
+        "note": "measured token comes from the running app's own header (evidence/v1/v1-text.txt:1); the harness could not read the pane rect (pane_rect null, pane_cols null), so width comes from the header token only"
+      },
+      "viewport_line": null,
+      "extent_cells": "34x32",
+      "check_highlights": {
+        "crossings": "0 bridges, 0 touching bends",
+        "labels": "3/3 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups": "server1(4) nxtgen /29(1)",
+        "trunks": "(none)",
+        "dots": "0 single-dot, 0 periodic, 0 violations",
+        "origins": "0/0",
+        "arrivals": "0/0"
+      },
+      "claims": [
+        {
+          "claim": "server1 is drawn as a Dell R7725 with the last octet .58, keyed by the gateway's full address on the same view",
+          "cite": "evidence/v1/v1-text.txt rows 24 and 40 (`server1 R7725 .58`, `Arista 103.19.91.57 AS132717`)"
+        },
+        {
+          "claim": "the port card shows one active NIC and seven dark ports out of eight",
+          "cite": "evidence/v1/v1-text.txt rows 16 (`7 of 8 dark`) and 32 (`eno16595np0 25 GbE`)"
+        },
+        {
+          "claim": "the seven dark ports are drawn as an uncertain negative (dashed route glyph, label with a question mark)",
+          "cite": "evidence/v1/v1-text.txt rows 19-22 (dashed `╎` stem and `no cable?` label)"
+        },
+        {
+          "claim": "the uplink terminates at the gateway with a stated 0.1 ms latency and the source's AS number",
+          "cite": "evidence/v1/v1-text.txt rows 36 (`def gw 0.1 ms`) and 39-42 (arrow `▼` into the `Arista 103.19.91.57 AS132717` box at columns 29-58)"
+        },
+        {
+          "claim": "the fresh-handoff state is present as its own box in the server1 hue family",
+          "cite": "evidence/v1/v1-text.txt row 12; border fg 38;2;125;160;184 in evidence/v1/v1-ansi.ansi row 11 col 25, same family as the other server1 boxes (38;2;151;184;206 / 38;2;98;132;156 / 38;2;176;205;224) and different from the gateway's 38;2;169;182;101 at row 39 col 29"
+        },
+        {
+          "claim": "the palette corner is free of graph content",
+          "cite": "evidence/v1/v1-text.txt rows 45-50 hold the palette box while the graph ends at row 42"
+        }
+      ]
+    },
+    {
+      "id": "v2",
+      "title": "the routed /29 address pool",
+      "carries": "e4-e6; the pool address .57/29, server1's uplink port on that pool, server2 R7725 .59 on the same /29, .60-.62 free, and the no-NAT/no-IPv6 attachment",
+      "direction": "lr",
+      "spec": "specs/v2-a2.json",
+      "spec_sha256": "36288a634dbcb7c4a832f4e63576f8c831059ba17e6575b2b3c9c926270813c6",
+      "evidence_dir": "evidence/v2",
+      "text": "evidence/v2/v2-text.txt",
+      "ansi": "evidence/v2/v2-ansi.ansi",
+      "selected_ansi": "evidence/v2/v2-selected.ansi",
+      "check": "evidence/v2/check.txt",
+      "frames": "evidence/v2/v2-frames.txt",
+      "frames_ansi": "evidence/v2/v2-frames.ansi",
+      "frames_count": 5,
+      "frame_step_ms": 100,
+      "pinned_77x47_frames": "pinned77/v2-frames-77x47.txt",
+      "manifest": "evidence/v2/manifest.json",
+      "measured": {
+        "viewport_token": "83x51 @100%",
+        "pane_cols": null,
+        "pane_rows": 51,
+        "pane_rect": null,
+        "note": "same harness limitation as v1: pane rect unreadable, header token is the measurement"
+      },
+      "viewport_line": null,
+      "extent_cells": "62x39",
+      "check_highlights": {
+        "crossings": "0 bridges, 0 touching bends",
+        "labels": "3/3 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups": "nxtgen /29(3) server1(1)",
+        "trunks": "(none)",
+        "dots": "0 single-dot, 0 periodic, 0 violations",
+        "origins": "0/0",
+        "arrivals": "0/0"
+      },
+      "claims": [
+        {
+          "claim": "the pool address 103.19.91.57/29 is drawn once, as the hub all three /29 members route into",
+          "cite": "evidence/v2/v2-text.txt rows 25-31, box at columns 54-70; three arrowheads enter it (`╰▶` row 26, `╰─▶` row 28, `╭▶` row 30)"
+        },
+        {
+          "claim": "server2 is drawn with its R7725 model and .59 address on the same /29",
+          "cite": "evidence/v2/v2-text.txt row 26 (`server2 R7725 .59`) with label `same /29` on row 25"
+        },
+        {
+          "claim": "the .60-.62 free range survives with its question-mark qualifier",
+          "cite": "evidence/v2/v2-text.txt rows 39-40 (`free? in /29` and `.60-.62 free?`)"
+        },
+        {
+          "claim": "the /29 is drawn as a public L3 attachment with no NAT and no IPv6",
+          "cite": "evidence/v2/v2-text.txt row 11 (`no NAT, no v6` on the uplink route)"
+        },
+        {
+          "claim": "the server1 and pool groups keep distinct hue families, and the gateway keeps the same hue as in v1",
+          "cite": "evidence/v2/v2-ansi.ansi: gateway border fg 38;2;169;182;101 at row 25 col 53 (identical to v1 row 39 col 29); server1 port fg 38;2;125;160;184 at row 11 col 15; pool members 38;2;189;201;124 and 38;2;143;157;79"
+        },
+        {
+          "claim": "the palette corner is free of graph content",
+          "cite": "evidence/v2/v2-text.txt rows 45-50 hold the palette box while the graph ends at row 42"
+        }
+      ]
+    },
+    {
+      "id": "v3",
+      "title": "observed upstream hops and what the trace cannot prove",
+      "carries": "e7-e9 plus caveat annotation a1; Airtel 14.143.x at 1.8 ms, Airtel backbone 14.141.x at 7.1 ms, Cloudflare 1.1.1.1 AS13335 at 8.3-8.6 ms, single visible ISP, and the silent-hop / unresolved-L2 caveat",
+      "direction": "tb",
+      "spec": "specs/v3-a3.json",
+      "spec_sha256": "e763922cf2b57393818e9c176ee697d63a25fc6906bd40ba7d0fd5cb8e9131a6",
+      "evidence_dir": "evidence/v3",
+      "text": "evidence/v3/v3-text.txt",
+      "ansi": "evidence/v3/v3-ansi.ansi",
+      "selected_ansi": "evidence/v3/v3-selected.ansi",
+      "check": "evidence/v3/check.txt",
+      "frames": "evidence/v3/v3-frames.txt",
+      "frames_ansi": "evidence/v3/v3-frames.ansi",
+      "frames_count": 5,
+      "frame_step_ms": 100,
+      "pinned_77x47_frames": "pinned77/v3-frames-77x47.txt",
+      "manifest": "evidence/v3/manifest.json",
+      "measured": {
+        "viewport_token": "83x51 @100%",
+        "pane_cols": null,
+        "pane_rows": 51,
+        "pane_rect": null,
+        "note": "same harness limitation as v1/v2"
+      },
+      "viewport_line": null,
+      "extent_cells": "64x32",
+      "check_highlights": {
+        "crossings": "0 bridges, 0 touching bends",
+        "labels": "4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups": "nxtgen /29(1) isp transit(2) cloudflare(1) trace caveats(1)",
+        "trunks": "(none)",
+        "dots": "0 single-dot, 0 periodic, 0 violations",
+        "origins": "0/0",
+        "arrivals": "0/0"
+      },
+      "claims": [
+        {
+          "claim": "the traceroute chain is drawn in the direction the source states, gateway outward, with each hop's latency",
+          "cite": "evidence/v3/v3-text.txt rows 18 (`1.8 ms, 1 ISP`), 26 (`7.1 ms`), 34 (`8.3-8.6 ms`) and rows 13-40 for the boxes and `▼` arrowheads"
+        },
+        {
+          "claim": "the 8.3-8.6 ms range survives as a range, not a point value",
+          "cite": "evidence/v3/v3-text.txt row 34"
+        },
+        {
+          "claim": "one visible ISP (no ECMP) is stated on the gateway-to-ISP hop",
+          "cite": "evidence/v3/v3-text.txt row 18"
+        },
+        {
+          "claim": "the silent-hop and unresolved-Layer-2 caveat is drawn, visibly, as a dashed annotation spur (not a device hop)",
+          "cite": "evidence/v3/v3-text.txt rows 17-24: dashed `╎` stem, `╌╌╌` run, arrow `▼`, box `L2? hops 3,6 nil` at columns 57-74"
+        },
+        {
+          "claim": "no invisible spine or leaf switch was invented: the only caveat node is the trace-uncertainty box, and the check lists 5 nodes with 4 routes",
+          "cite": "evidence/v3/check.txt line 2 (`nodes=5 edges=4`) and evidence/v3/v3-text.txt rows 21-24 (only the caveat box occupies the second rank)"
+        },
+        {
+          "claim": "the palette corner is free of graph content",
+          "cite": "evidence/v3/v3-text.txt rows 45-50 hold the palette box while the graph ends at row 40"
+        }
+      ]
+    }
+  ],
+  "meaning_ledger": [
+    { "fact": "server1 = 103.19.91.58, Dell PowerEdge R7725", "kind": "address+identifier", "fate": "drawn", "detail": "v1 node `server1 R7725 .58`; the last octet is keyed by the full address on the same view (v1 gateway label `Arista 103.19.91.57 AS132717`)" },
+    { "fact": "server1 is bare metal", "kind": "residency", "fate": "dropped", "reason": "no link or hop semantics; it describes provisioning, not topology" },
+    { "fact": "server2 = 103.19.91.59, Dell R7725", "kind": "address+identifier", "fate": "drawn", "detail": "v2 node `server2 R7725 .59`" },
+    { "fact": "site: NxtGen Cloud, AS132717, Bengaluru", "kind": "identifier", "fate": "abbreviated", "detail": "AS132717 drawn on the v1 gateway label; Bengaluru dropped (location, not topology)" },
+    { "fact": "8 physical NICs, one active `eno16595np0`, 25 GbE", "kind": "identifier+role", "fate": "drawn", "detail": "v1 nodes `7 of 8 dark` and `eno16595np0 25 GbE`; eight ports = seven dark plus the one active" },
+    { "fact": "seven ports dark", "kind": "state", "fate": "drawn", "detail": "v1 `7 of 8 dark` plus the dashed `no cable?` route" },
+    { "fact": "the /29: gateway .57, server1 .58, server2 .59, .60-.62 free", "kind": "address pool", "fate": "drawn", "detail": "v1 full address; v2 `103.19.91.57/29`, `.59`, `.60-.62 free?`" },
+    { "fact": "no NAT, public L3 straight to the host", "kind": "limitation", "fate": "abbreviated", "detail": "v2 edge label `no NAT, no v6`; the routed /29 address itself carries the public-L3 part" },
+    { "fact": "no IPv6", "kind": "limitation", "fate": "drawn", "detail": "v2 edge label `no NAT, no v6`" },
+    { "fact": "gateway .57 answers at 0.1 ms", "kind": "measurement", "fate": "drawn", "detail": "v1 edge label `def gw 0.1 ms`" },
+    { "fact": "MAC OUI = Arista Networks", "kind": "identifier", "fate": "abbreviated", "detail": "vendor name `Arista` on the gateway labels; the OUI-derived 'ToR / leaf' role claim is deliberately NOT drawn, because the brief says OUI does not prove a ToR role" },
+    { "fact": "Airtel 14.143.x, 1.8 ms", "kind": "hop+measurement", "fate": "drawn", "detail": "v3 node `Airtel 14.143.x`, edge label `1.8 ms, 1 ISP`" },
+    { "fact": "Airtel backbone 14.141.x, 7.1 ms", "kind": "hop+measurement", "fate": "drawn", "detail": "v3 node `Airtel BB 14.141.x`, edge label `7.1 ms`" },
+    { "fact": "Cloudflare 1.1.1.1 AS13335 at 8.6 ms (historical attempt stated 8.3 ms)", "kind": "hop+measurement+qualifier", "fate": "drawn", "detail": "v3 node `1.1.1.1 AS13335`, edge label `8.3-8.6 ms` keeps the disagreement as a range instead of picking one value" },
+    { "fact": "hops 3 and 6 answered nothing; hop 5 lost 80%", "kind": "evidence+uncertainty", "fate": "abbreviated", "detail": "v3 caveat box `L2? hops 3,6 nil`; the 80% loss at hop 5 is dropped for label budget and is the same ICMP-suppression evidence" },
+    { "fact": "one uplink, one visible ISP: no ECMP from this box", "kind": "topology+limitation", "fate": "abbreviated", "detail": "v3 edge label `1.8 ms, 1 ISP` plus the single-chain shape; a separate ECMP node does not exist in the source and was not invented" },
+    { "fact": "everything above the ToR (NxtGen spines, other transits) is invisible from the host; L2 is not proven", "kind": "uncertainty", "fate": "drawn", "detail": "v3 caveat box `L2? hops 3,6 nil` on a dashed annotation spur labelled `unproven`; no switch is invented" },
+    { "fact": "fresh handoff: no GPUs, no rack-bench installed, up 1.5 days", "kind": "state", "fate": "abbreviated", "detail": "v1 node `fresh 1.5d, no GPUs`; `no rack-bench` dropped for label budget (host readiness detail, not a NIC or egress relation)" },
+    { "fact": "a routed /29 off an Arista is the border-leaf pattern (datacenter-model reading)", "kind": "interpretation", "fate": "dropped", "reason": "an analogy to a previous diagram, not a topology fact; drawing it would add an unproven role claim" }
+  ],
+  "relationship_audit": [
+    { "id": "e1", "from": "dark", "to": "s1", "verb_tech": "no cable (inactive ports)", "label": "no cable?", "label_owner": "e1", "style": "dashed", "view": "v1", "source_fact": "`dark -> s1`: no cable" },
+    { "id": "e2", "from": "s1", "to": "nic", "verb_tech": "the one uplink out of the host", "label": "only uplink", "label_owner": "e2", "style": "solid", "view": "v1", "source_fact": "`s1 -> nic`: only uplink" },
+    { "id": "e3", "from": "nic", "to": "gw", "verb_tech": "default gateway, 0.1 ms", "label": "def gw 0.1 ms", "label_owner": "e3", "style": "solid", "view": "v1", "source_fact": "`nic -> gw`: default gw 0.1 ms" },
+    { "id": "e4", "from": "nic", "to": "gw", "verb_tech": "routed /29 attachment, no NAT, no IPv6", "label": "no NAT, no v6", "label_owner": "e4", "style": "solid", "view": "v2", "source_fact": "`nic -> gw` (same span as e3) plus 'No NAT ... No IPv6'" },
+    { "id": "e5", "from": "s2", "to": "gw", "verb_tech": "same /29 segment", "label": "same /29", "label_owner": "e5", "style": "solid", "view": "v2", "source_fact": "`s2 -> gw`: same /29" },
+    { "id": "e6", "from": "spare", "to": "gw", "verb_tech": "free addresses inside the /29", "label": "free? in /29", "label_owner": "e6", "style": "solid", "view": "v2", "source_fact": "`spare -> gw`: free in /29, qualified because an unresponsive address does not prove free" },
+    { "id": "e7", "from": "gw", "to": "airtel", "verb_tech": "transit, 1.8 ms, one visible ISP", "label": "1.8 ms, 1 ISP", "label_owner": "e7", "style": "solid", "view": "v3", "source_fact": "`gw -> airtel`: transit 1.8 ms" },
+    { "id": "e8", "from": "airtel", "to": "airtelbb", "verb_tech": "Airtel backbone hop, 7.1 ms", "label": "7.1 ms", "label_owner": "e8", "style": "solid", "view": "v3", "source_fact": "`airtel -> airtelbb`: 7.1 ms" },
+    { "id": "e9", "from": "airtelbb", "to": "cf", "verb_tech": "Cloudflare reachability, 8.3-8.6 ms", "label": "8.3-8.6 ms", "label_owner": "e9", "style": "solid", "view": "v3", "source_fact": "`airtelbb -> cf`: 8.3 ms (relationship list) vs 8.6 ms (chat line 120) - drawn as the range" },
+    { "id": "a1", "from": "gw", "to": "l2q", "verb_tech": "annotation, NOT a network link: the upstream trace's silence leaves the fabric's layering unproven", "label": "unproven", "label_owner": "a1", "style": "dashed", "view": "v3", "source_fact": "chat line 125: hops 3 and 6 silent; a missing hop proves nothing about Layer 2" }
+  ],
+  "label_ownership_note": "Every label sits on exactly one edge and no two edges share a label string. e3 and e4 are the same node pair in two different views, so no single frame has two same-pair routes; each carries the fact it labels (latency in v1, address semantics in v2).",
+  "trunk_decision": {
+    "trunks_used": 0,
+    "reason": "The only real shared bus in this source is the routed /29: gateway .57 plus .58/.59/.60-.62. The renderer's trunk draws one corridor from `from` to `to` and one spur from that corridor out to each branch, so a hub-shaped bus can only be written as `from: <one member>, to: gateway, branches: [the other members]`. The source states every member's direction as member -> gateway (`nic -> gw`, `s2 -> gw`, `spare -> gw`); a trunk would have made one member the corridor source and drawn the other two spurs pointing away from the gateway, reversing two stated edges. Per the round rule, plain edges carry it instead.",
+    "checked_with": "no trunk candidate was run; the decision is from the source's stated directions, so no attempt budget was spent"
+  },
+  "coverage_map": [
+    { "view": "v1", "carries": "e1, e2, e3; ports and uplink; gateway full address + AS132717; fresh-handoff state" },
+    { "view": "v2", "carries": "e4, e5, e6; the /29 pool and server2" },
+    { "view": "v3", "carries": "e7, e8, e9, a1; upstream hops, single ISP, silent-hop/L2 caveat" }
+  ],
+  "source_pointers": {
+    "case_brief": "docs/visualize-eval/cases/server-nic-layout/source.md",
+    "chat_session": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-rack-bench-feat-network-diagram--/2026-10-13T05-14-42-097Z_01a133af-3231-71ff-87c1-c56889a12a6c.jsonl (line 110 call chatcmpl-tool-bd5526a999aeb873; excerpts at lines 120, 121, 125 as quoted in the brief)",
+    "read_only": ["expected.json not read", "historical-variants.json not read", "no other case read", "no earlier round output or critique read", "globally installed skill not read", "renderer source read for schema only, never edited"]
+  },
+  "abbreviations": [
+    "`103.19.91.58` -> `.58` on the v1 server1 node, keyed by the full `103.19.91.57` on the same view",
+    "`103.19.91.59` -> `.59` on the v2 server2 node, keyed by `103.19.91.57/29` on the same view",
+    "`14.143.x` and `14.141.x` kept as the source wrote them (the host addresses were never given)",
+    "`eno16595np0` keeps the port name; the pool view drops the `.58` suffix, the port view keeps the full name"
+  ],
+  "deliberate_drops": [
+    { "fact": "server1 is bare metal", "reason": "provisioning state, no topology semantics" },
+    { "fact": "Bengaluru", "reason": "location, not topology; AS132717 carries the network identity" },
+    { "fact": "MAC OUI does not prove a ToR role (the role claim)", "reason": "the brief forbids promoting OUI to a role; labels name the vendor only, never `ToR`" },
+    { "fact": "hop 5 lost 80%", "reason": "the same ICMP-suppression evidence as the silent hops; label budget in a 14-character edge-label band" },
+    { "fact": "no rack-bench installed yet", "reason": "host readiness, not a NIC or egress relation; the fresh-handoff node keeps uptime and GPU state" },
+    { "fact": "the border-leaf / datacenter-model analogy", "reason": "interpretation of an earlier diagram, not a fact about this box" }
+  ],
+  "known_defects": [
+    "The frozen binary prints no `routes:` line at all (verified: `strings` on the binary has 0 hits for `near-minimal`/`detour`, and none of the 9 raw check outputs contains one), so route economy cannot be proven for any view. This is a renderer/validator gap, not a layout result.",
+    "Isolated (zero-edge) nodes are not always drawn: v3-a1 declared 6 nodes and the frame drew 5 boxes; the `L2? unproven` node was silently missing while `--check` still reported nodes=6 and 3/3 labels placed (only edge labels are counted). Worked around by keeping the caveat node on a dashed annotation spur; recorded rather than hidden.",
+    "`--check` cannot see this class of defect, so node-label coverage (as opposed to edge-label coverage) is only provable from the frame capture.",
+    "v2 does not restate server1's `.58` inside the pool view; the .58 side of the pool is represented by its port only. The address pair is complete across v1+v2, not inside v2 alone.",
+    "The v2 pool hub is vertically centred at natural zoom, so its three routes take long vertical runs (39 rows of the 83-column capture). Nothing is clipped and crossings are 0, but the picture is taller than it needs to be; a fourth view was not added because the pool reads correctly as one star.",
+    "The gateway box carries `Arista` and AS132717 together on the v1 label; v2 and v3 repeat `Arista`/the address without the AS, so the AS is stated once.",
+    "Group hue families are stable by name across views (gateway border fg 38;2;169;182;101 in v1 and v2), but the hash collides across views: server1's blue 38;2;125;160;184 equals Cloudflare's blue 38;2;125;160;184 in v3. They never appear in the same view, so no frame is ambiguous, but the collision is real."
+  ],
+  "blockers": [
+    {
+      "id": "routes-line-missing",
+      "blocker": "The round rule requires `routes: ... 0 detours` (or forced-only). The frozen round-05 binary never emits a `routes:` line, so this can neither be shown nor fixed without changing the binary (forbidden).",
+      "evidence": "attempts/*.check.txt and evidence/*/check.txt; `strings /tmp/visualize-eval/round-05/bin/rataflow-view | grep -c near-minimal` = 0",
+      "impact": "validator check `routes_economy_reported` fails on every view"
+    },
+    {
+      "id": "viewport-not-77x47",
+      "blocker": "The capture pane measures 83x51 @100%, not the 77x47 target. `scripts/viz-evidence.sh` splits the caller pane at a fixed ratio 0.5; this tab is 168x53, so the half pane is 83 wide, and no vertical split exists in the harness to reach 47 rows. The measured size is recorded as measured, not relabelled.",
+      "evidence": "every evidence/*/manifest.json viewport_token = `83x51 @100%`; evidence/*/*-text.txt line 1",
+      "impact": "validator check `viewport_matches_target` fails on every view",
+      "mitigation": "supplementary pinned-size dumps `pinned77/<view>-frames-77x47.txt` (COLUMNS=77 LINES=47, 5 frames each) report `viewport: 77x47 zoom: 1.00 natural` and contain no `graph overflows` notice; every graph extent (34x32, 62x39, 64x32) is inside 77x47"
+    },
+    {
+      "id": "pane-rect-unreadable",
+      "blocker": "`herdr pane layout` returned no rect for the capture panes, so manifest pane_rect/pane_cols are null and the width proof rests on the app's own header token.",
+      "evidence": "evidence/*/manifest.json: pane_rect null, pane_cols null, pane_rows 51"
+    }
+  ],
+  "cleanup": {
+    "status": "all three capture panes closed, each confirmed by the harness",
+    "panes": [
+      { "view": "v1", "pane_id": "w7E:pGB", "result": "confirmed_closed" },
+      { "view": "v2", "pane_id": "w7E:pGE", "result": "confirmed_closed" },
+      { "view": "v3", "pane_id": "w7E:pGG", "result": "confirmed_closed" }
+    ],
+    "failures": []
+  },
+  "validators": [
+    {
+      "view": "v1",
+      "command": "scripts/viz-validate.py evidence/v1 --require-select --require-frames --attempts attempts.json",
+      "output": "validators/v1.txt",
+      "exit": 1,
+      "summary": "31 checks passed, 2 failed",
+      "failing": [
+        { "check": "routes_economy_reported", "reason": "no 'routes: N/M near-minimal, K detours' line; route economy cannot be checked", "cause": "blocker routes-line-missing" },
+        { "check": "viewport_matches_target", "reason": "measured 83x51, target is 77x47", "cause": "blocker viewport-not-77x47" }
+      ]
+    },
+    {
+      "view": "v2",
+      "command": "scripts/viz-validate.py evidence/v2 --require-select --require-frames --attempts attempts.json",
+      "output": "validators/v2.txt",
+      "exit": 1,
+      "summary": "31 checks passed, 2 failed",
+      "failing": [
+        { "check": "routes_economy_reported", "reason": "no 'routes: N/M near-minimal, K detours' line; route economy cannot be checked", "cause": "blocker routes-line-missing" },
+        { "check": "viewport_matches_target", "reason": "measured 83x51, target is 77x47", "cause": "blocker viewport-not-77x47" }
+      ]
+    },
+    {
+      "view": "v3",
+      "command": "scripts/viz-validate.py evidence/v3 --require-select --require-frames --attempts attempts.json",
+      "output": "validators/v3.txt",
+      "exit": 1,
+      "summary": "31 checks passed, 2 failed",
+      "failing": [
+        { "check": "routes_economy_reported", "reason": "no 'routes: N/M near-minimal, K detours' line; route economy cannot be checked", "cause": "blocker routes-line-missing" },
+        { "check": "viewport_matches_target", "reason": "measured 83x51, target is 77x47", "cause": "blocker viewport-not-77x47" }
+      ]
+    }
+  ],
+  "attempts_file": "attempts.json",
+  "raw_attempt_checks": {
+    "v1-a1": "attempts/v1-a1.check.txt",
+    "v1-a2": "attempts/v1-a2.check.txt",
+    "v1-a3": "attempts/v1-a3.check.txt",
+    "v2-a1": "attempts/v2-a1.check.txt",
+    "v2-a2": "attempts/v2-a2.check.txt",
+    "v2-a3": "attempts/v2-a3.check.txt",
+    "v3-a1": "attempts/v3-a1.check.txt",
+    "v3-a2": "attempts/v3-a2.check.txt",
+    "v3-a3": "attempts/v3-a3.check.txt"
+  },
+  "raw_probe_records": {
+    "v2-a3_overflow_probe": "attempts/v2-a3.pinned-frames-77x47.txt (pinned 77x47 dump showing 'graph overflows · drag to pan') for the rejected 85x39 candidate",
+    "v3-a1_undrawn_node_probe": "attempts/v3-a1.pinned-frames-77x47.txt (header says 6 nodes, 5 box tops per frame, 0 'L2' hits) for the rejected undrawn-caveat-node candidate"
+  },
+  "budget_use": {
+    "views": 3,
+    "max_views": 4,
+    "spec_candidates_per_view": { "v1": 3, "v2": 3, "v3": 3 },
+    "max_spec_candidates_per_view": 3,
+    "checks_run_total": 9,
+    "note": "every distinct spec that reached --check is listed in attempts.json with its raw output preserved"
+  },
+  "self_assessment": "Not green, not independently approved. Three static views cover every audited relationship and every required identifier and qualifier at natural zoom with 0 ambiguous owners and 0 crossings; two validator checks fail for frozen-binary and pane-size reasons that I cannot fix without violating the round's constraints."
+}

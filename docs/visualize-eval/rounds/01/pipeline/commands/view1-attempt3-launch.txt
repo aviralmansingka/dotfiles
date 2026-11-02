@@ -1,0 +1,1 @@
+stty size > /Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/01/pipeline/captures/view1-attempt3-dims.txt 2>&1; /tmp/visualize-eval/round-01/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/01/pipeline/spec/view1.json; herdr pane close w7E:p3E

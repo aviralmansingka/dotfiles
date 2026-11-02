@@ -1,0 +1,526 @@
+viewport: 80x24 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           ●     enqueue job                           ●
+           ╰─────────────────────╮ ╭───────────────────╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 ● provision job           ▗▄▄▖      ▗▄▄▄
+                                 │                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 ● provider API
+frame 1 at 100ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰●────────────────────╮ ╭──────────────────●╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 ● provision job           ▗▄▄▖      ▗▄▄▄
+                                 │                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 ● provider API
+frame 2 at 200ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰─●───────────────────╮ ╭─────────────────●─╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 ● provision job           ▗▄▄▖      ▗▄▄▄
+                                 │                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 ● provider API
+frame 3 at 300ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰──●──────────────────╮ ╭────────────────●──╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 ● provision job           ▗▄▄▖      ▗▄▄▄
+                                 │                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 ● provider API
+frame 4 at 400ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰───●─────────────────╮ ╭───────────────●───╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 ● provision job           ▗▄▄▖      ▗▄▄▄
+                                 │                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 ● provider API
+frame 5 at 500ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰─────●───────────────╮ ╭──────────────●────╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 │ provision job           ▗▄▄▖      ▗▄▄▄
+                                 ●                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 │ provider API
+frame 6 at 600ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰──────●──────────────╮ ╭─────────────●─────╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 │ provision job           ▗▄▄▖      ▗▄▄▄
+                                 ●                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 │ provider API
+frame 7 at 700ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰───────●─────────────╮ ╭────────────●──────╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 │ provision job           ▗▄▄▖      ▗▄▄▄
+                                 ●                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 │ provider API
+frame 8 at 800ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰────────●────────────╮ ╭───────────●───────╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 │ provision job           ▗▄▄▖      ▗▄▄▄
+                                 ●                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 │ provider API
+frame 9 at 900ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰─────────●───────────╮ ╭──────────●────────╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 │ provision job           ▗▄▄▖      ▗▄▄▄
+                                 ●                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 │ provider API
+frame 10 at 1000ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰──────────●──────────╮ ╭─────────●─────────╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 │ provision job           ▗▄▄▖      ▗▄▄▄
+                                 ●                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 │ provider API
+frame 11 at 1100ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰───────────●─────────╮ ╭────────●──────────╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 │ provision job           ▗▄▄▖      ▗▄▄▄
+                                 ●                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 │ provider API
+frame 12 at 1200ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰────────────●────────╮ ╭───────●───────────╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 │ provision job           ▗▄▄▖      ▗▄▄▄
+                                 ●                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 │ provider API
+frame 13 at 1300ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰─────────────●───────╮ ╭──────●────────────╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 │ provision job           ▗▄▄▖      ▗▄▄▄
+                                 ●                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 │ provider API
+frame 14 at 1400ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰──────────────●──────╮ ╭─────●─────────────╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 │ provision job           ▗▄▄▖      ▗▄▄▄
+                                 ●                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 │ provider API
+frame 15 at 1500ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰────────────────●────╮ ╭────●──────────────╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 │ provision job           ▗▄▄▖      ▗▄▄▄
+                                 │                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 │ provider API
+frame 16 at 1600ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰─────────────────●───╮ ╭───●───────────────╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 │ provision job           ▗▄▄▖      ▗▄▄▄
+                                 │                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 │ provider API
+frame 17 at 1700ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰──────────────────●──╮ ╭──●────────────────╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 │ provision job           ▗▄▄▖      ▗▄▄▄
+                                 │                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 │ provider API
+frame 18 at 1800ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰───────────────────●─╮ ╭─●─────────────────╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 │ provision job           ▗▄▄▖      ▗▄▄▄
+                                 │                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 │ provider API
+frame 19 at 1900ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰────────────────────●╮ ╭●──────────────────╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 │ provision job           ▗▄▄▖      ▗▄▄▄
+                                 │                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 │ provider API
+frame 20 at 2000ms
+ rataflow-view · 80x24 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+           ▼                                      graph overflows · drag to pan
+          ╭────────────╮                              ╭─────────────╮
+          │private gRPC│                              │webapi server│
+          │            │                              │             │
+          ╰────────────╯                              ╰─────────────╯
+           │                                           │
+           │     enqueue job                           │
+           ╰─────────────────────╮ ╭───────────────────╯
+                                 ▼ ▼reinstall/reprovision
+                                ╭───────────────╮
+                                │River job queue│
+                                │               │
+                                ╰───────────────╯
+                                 │                         ▐████     ▐███
+                                 │ provision job           ▗▄▄▖      ▗▄▄▄
+                                 │                         ▝▀▀▘      ▝▀▀▀
+ ┌───────┐                       ▼                              ▗▄▄▄▖
+ │ + [+] │                      ╭─────────────────╮             ▝▀▀▀▘
+ │ − [-] │                      │provider registry│             ▐███▌
+ │ ⊡ [f] │                      │                 │
+ │ □ [i] │                      ╰─────────────────╯             ▐████▌
+ └───────┘                       │
+                                 │ provider API

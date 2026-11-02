@@ -1,0 +1,12 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "worker", "label": "modal-worker" },
+    { "id": "runtime", "label": "modal-runtime" }
+  ],
+  "edges": [
+    { "from": "worker", "to": "runtime", "label": "task+ctrl RPC" },
+    { "from": "runtime", "to": "worker", "label": "events+mg RPC" }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "rtr",   "label": "rtr = ToR+spine+FW, NAT+DHCP, pool 71.251.12.240" },
+    { "id": "ont",   "label": "ont 169.254.3.1 = demarc/MMR, 4.5 ms hist", "group": "egress: one ISP one path, no v6 (ULA)" },
+    { "id": "vzagg", "label": "vzagg 100.41.x, 6.6 ms hist",                "group": "egress: one ISP one path, no v6 (ULA)" },
+    { "id": "vzbb",  "label": "vzbb AS701, 6-9 ms hist",                    "group": "egress: one ISP one path, no v6 (ULA)" },
+    { "id": "cf",    "label": "cf AS13335 1.1.1.1 hist",                    "group": "egress: one ISP one path, no v6 (ULA)" }
+  ],
+  "edges": [
+    { "from": "rtr",   "to": "ont",   "label": "NAT out" },
+    { "from": "ont",   "to": "vzagg", "style": "dashed" },
+    { "from": "vzagg", "to": "vzbb",  "style": "dashed" },
+    { "from": "vzbb",  "to": "cf",    "style": "dashed" }
+  ]
+}

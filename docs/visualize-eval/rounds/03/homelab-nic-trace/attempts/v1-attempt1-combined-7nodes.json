@@ -1,0 +1,22 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {"id": "ts", "label": "tailscale0 100.113.153.49", "group": "overlay"},
+    {"id": "vm", "label": "vm vnet0", "group": "virtual"},
+    {"id": "ctr", "label": "ctr veth", "group": "virtual"},
+    {"id": "virbr", "label": "virbr0 libvirt NAT", "group": "virtual"},
+    {"id": "dkbr", "label": "docker 172.18.2.1", "group": "virtual"},
+    {"id": "box", "label": "homelab rack-bench", "group": "host"},
+    {"id": "bond0", "label": "bond0 192.168.1.197", "group": "wire"}
+  ],
+  "edges": [
+    {"from": "vm", "to": "virbr", "label": "192.168.122.x"},
+    {"from": "virbr", "to": "box", "label": "NAT bridge"},
+    {"from": "ctr", "to": "dkbr", "label": "172.18.2.x"},
+    {"from": "dkbr", "to": "box", "label": "docker bridge"},
+    {"from": "ts", "to": "box", "label": "overlay"},
+    {"from": "ts", "to": "bond0", "label": "UDP encap"},
+    {"from": "box", "to": "bond0", "label": "eno1 2.5GbE"}
+  ]
+}

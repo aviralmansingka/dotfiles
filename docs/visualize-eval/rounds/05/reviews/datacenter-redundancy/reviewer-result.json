@@ -1,0 +1,2646 @@
+{
+  "protocol_version": 1,
+  "round": 5,
+  "case_id": "datacenter-redundancy",
+  "candidate_sha256": "ff4a9d3f32ba0bf86e54ee6bfbac02fdea3fac3b95b82a958b3411accef0a949",
+  "renderer_sha256": "b1ab9f2e78af11c2f2b005eea083a999079d184bf550e8d0b6d9c51867f22404",
+  "rubric_sha256": "039b96252d25ad2078a539fdb1d081ebdb6c09d6f7a3487b96ffbbf3b082e292",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "82b065262467dd46367ca2d1c31c99421713b363a73be40fa55f77d66ee8e62a",
+  "generator": {
+    "worker_id": "viz-ds05-5",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge05-datacenter",
+    "model": "openai/gpt-6.1-sol"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 83,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind-first",
+      "path": "docs/visualize-eval/rounds/05/reviews/datacenter-redundancy/observed-first.md",
+      "sha256": "7571e62e237412f9f84fe58774de9bdd11e0dc26f7da91eccce98570f7734502",
+      "description": "Immutable stage-A record saved before expectations were revealed; saved_before_expected_reveal=true. Separate arithmetic addendum: perimeter table totals 452, not the prose 448.",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/05/reviews/datacenter-redundancy/spec-manifest.json",
+      "sha256": "82b065262467dd46367ca2d1c31c99421713b363a73be40fa55f77d66ee8e62a",
+      "description": "Deterministic sorted repository-relative path and actual SHA-256 pairs for all three final specs.",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/05/metadata.json",
+      "sha256": "edaec7c938fa0a27dbd04a44c1932ff9ef03c05f9270951fbb39a4fe7bced84d",
+      "description": "Frozen round-05 inputs, model identities, and pre-generation harness corrections.",
+      "capture": null
+    },
+    {
+      "id": "candidate-skill",
+      "path": "docs/visualize-eval/rounds/05/SKILL.md",
+      "sha256": "ff4a9d3f32ba0bf86e54ee6bfbac02fdea3fac3b95b82a958b3411accef0a949",
+      "description": "Frozen candidate skill, verified against metadata; renderer owns placement.",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/05/rubric.json",
+      "sha256": "039b96252d25ad2078a539fdb1d081ebdb6c09d6f7a3487b96ffbbf3b082e292",
+      "description": "Full frozen seven-category rubric and result schema.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen dataset manifest; only this case was evaluated.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+      "sha256": "a3051af3eeeec31aee53558dafbbea5d061dc74253618fd6940eba5c39b5bb98",
+      "description": "Only authorized historical excerpts, including original human corrections 248/270 and no-dots request 134.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/expected.json",
+      "sha256": "926e866fbdbb3eaac5b7a21360905d1f621a7a6386139afab303e8ba7e62ed47",
+      "description": "Required 18 concepts, 28 relations, and fixed constraints; historical claims not independent fact verification.",
+      "capture": null
+    },
+    {
+      "id": "historical-variants",
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/historical-variants.json",
+      "sha256": "a5753817a621b846abcb4105d028dbd0d0152214495f5b225044b3882f4f34b9",
+      "description": "Frozen revisions of this case only; human corrections supersede old generated diagrams.",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/generation.json",
+      "sha256": "32ed4e805fc64c450fa4e25c95308b9130ae9f4f3993bbf3a6ee25fc2870ff04",
+      "description": "Generator identities, convention, coverage, timestamps via manifests, declared defects, and cleanup assertions.",
+      "capture": null
+    },
+    {
+      "id": "generation-notes",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/generation.md",
+      "sha256": "8a699ac6cb9e8069c924fed27dd9d6e2f343676eea6ea51430caa916aa4a7dc0",
+      "description": "Generator explanation, commands, and disclosed limitations; not independent visual proof.",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/attempts.json",
+      "sha256": "96f73e12415d3b35f5537f138d16ec15a52e3055e130c1fc8b23e51893e35c61",
+      "description": "Two attempted specs per view, actual hashes, raw check locations, and recorded exit statuses.",
+      "capture": null
+    },
+    {
+      "id": "spec-v1",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/specs/v1-wan-mux-core.json",
+      "sha256": "3adbbf099facfc60bc6ed88c5def5acef81c71d3cb589e476ddbf053ee341a58",
+      "description": "Final v1 spec; actual hash verified against manifest and accepted attempt.",
+      "capture": null
+    },
+    {
+      "id": "text-v1",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v1/v1-text.txt",
+      "sha256": "6e448764289a1d7c5b9bf03ecbd765ef34df2e5f0a3e3f7db9d6275393ad0dc9",
+      "description": "Native live pane text; regions use rendered screen coordinates.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "still",
+        "timestamp": "2026-11-02T16:20:04Z to 2026-11-02T16:20:07Z",
+        "state": "ordinary",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi-v1",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v1/v1-ansi.ansi",
+      "sha256": "d1c370b4b5a8e046cc9911a8fe9c9517632761504c7250c35bdd6a801e25d4b8",
+      "description": "Native live pane RGB ANSI; 83 columns by 51 rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "still",
+        "timestamp": "2026-11-02T16:20:04Z to 2026-11-02T16:20:07Z",
+        "state": "ordinary",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected-v1",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v1/v1-selected.ansi",
+      "sha256": "ae2015cd7b508927428b75e56ccae11ded22922471d9061e579f76839b5e766a",
+      "description": "All-selected native live pane ANSI; every node occurrence has its own complete bold accent perimeter.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "all-selected still",
+        "timestamp": "2026-11-02T16:20:04Z to 2026-11-02T16:20:07Z",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "frames-v1",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v1/v1-frames.txt",
+      "sha256": "986f049ce64aaffb1d49e5210c0f9cddc13d940ae4b18fbf0a5278cb85c40b3e",
+      "description": "Native shell transcript and five frame screens at 0..400 ms; screen-relative regions exclude transcript and frame markers.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "frames 0..4; referenced regions are frame 0",
+        "timestamp": "2026-11-02T16:20:04Z to 2026-11-02T16:20:07Z",
+        "state": "static, no dots",
+        "format": "text"
+      }
+    },
+    {
+      "id": "frames-ansi-v1",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v1/v1-frames.ansi",
+      "sha256": "203b00178262368785ac2e7e71c7225680d1b23f3efc9a5668b8bb19f6745ebc",
+      "description": "Nominal ANSI motion export: frame screens themselves contain no SGR colors; supports glyph/time evidence only.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "frames 0..4",
+        "timestamp": "2026-11-02T16:20:04Z to 2026-11-02T16:20:07Z",
+        "state": "static, no dots",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "pin-v1",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v1/v1-frames-77x47.txt",
+      "sha256": "10c22fee5cbfbde6fe3a974cbb20454cd63746eee6c7d90e7648b8496d84bd53",
+      "description": "Pinned final-spec direct dump, five 77x47 natural-zoom frames; frame-0 screen-relative regions exclude viewport/frame annotations.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frames 0..4; referenced regions are frame 0",
+        "timestamp": "relative 0,100,200,300,400 ms; absolute capture timestamp unrecorded",
+        "state": "static, no dots",
+        "format": "text"
+      }
+    },
+    {
+      "id": "pin-original-v1",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v1-pin77/pinned-frames.txt",
+      "sha256": "10c22fee5cbfbde6fe3a974cbb20454cd63746eee6c7d90e7648b8496d84bd53",
+      "description": "Original pinned dump; byte-identical to the copy in the view bundle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frames 0..4",
+        "timestamp": "relative 0,100,200,300,400 ms; absolute capture timestamp unrecorded",
+        "state": "static, no dots",
+        "format": "text"
+      }
+    },
+    {
+      "id": "manifest-v1",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v1/manifest.json",
+      "sha256": "cca0fea7867bb6267adcefb414d99fad4d7d9da29992f88877fbdf21f22ea249",
+      "description": "Spec/binary/artifact hashes, capture/check time windows, pane id, measured 83x51 header token, and confirmed_closed assertion.",
+      "capture": null
+    },
+    {
+      "id": "check-v1",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v1/check.txt",
+      "sha256": "e66c71193eb553e9fcc5a403a1687eea859eee048e33f4bc3e9eb09b36ca08a0",
+      "description": "Full successful check stdout/stderr capture; exit 0 in manifest; unknown viewport is not fit proof.",
+      "capture": null
+    },
+    {
+      "id": "validator-v1",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v1/validate.txt",
+      "sha256": "869e78c67ce75c747f9edea7456a09a8d2934a0d6c1472b519798a54ef445130",
+      "description": "Preserved validator output, 32 PASS / 0 FAIL; does not replace independent visual judgment.",
+      "capture": null
+    },
+    {
+      "id": "binary-hash-v1",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v1/bin.sha256",
+      "sha256": "93a87351efa820a41a27baf97e90d9945ff00a10f4b64913524cd83ec5757f8b",
+      "description": "Capture-time frozen binary hash record; same binary hash independently verified during stage B.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v1-1",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/attempts/v1-a1-tb.json",
+      "sha256": "9e2da2e58791fa0450a746027526f4808147dd519bc5bd44eaebc347c42cb2aa",
+      "description": "Rejected tb spec",
+      "capture": null
+    },
+    {
+      "id": "raw-check-v1-1",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/checks/v1-a1-tb-check.txt",
+      "sha256": "949b21d56dfd7069d0e8c1eda24a2fe458ed951f3f33aacbb7b738edb8f44cc0",
+      "description": "Preserved full raw refusal, exit 1 recorded in attempts.json.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v1-2",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/attempts/v1-a2-lr.json",
+      "sha256": "3adbbf099facfc60bc6ed88c5def5acef81c71d3cb589e476ddbf053ee341a58",
+      "description": "Accepted lr spec, byte-identical to final spec",
+      "capture": null
+    },
+    {
+      "id": "raw-check-v1-2",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/checks/v1-a2-lr-check.txt",
+      "sha256": "e66c71193eb553e9fcc5a403a1687eea859eee048e33f4bc3e9eb09b36ca08a0",
+      "description": "Preserved full raw successful check, exit 0 recorded in attempts.json; byte-identical to evidence/check.txt.",
+      "capture": null
+    },
+    {
+      "id": "spec-v2",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/specs/v2-fw-border-spine.json",
+      "sha256": "89e36227a0ac6e618fc1ca99bac7883df1972f299ffa80cfbf158c81918c7970",
+      "description": "Final v2 spec; actual hash verified against manifest and accepted attempt.",
+      "capture": null
+    },
+    {
+      "id": "text-v2",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v2/v2-text.txt",
+      "sha256": "66e66b711fd59d5571c03ad3e910f33a03b97bc56a2105b8476c0fdcb7c6ba67",
+      "description": "Native live pane text; regions use rendered screen coordinates.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "still",
+        "timestamp": "2026-11-02T16:20:13Z to 2026-11-02T16:20:17Z",
+        "state": "ordinary",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi-v2",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v2/v2-ansi.ansi",
+      "sha256": "59850baba35e592c50b40caba86e9af84aef83614d91993c1344bc09e864cbd4",
+      "description": "Native live pane RGB ANSI; 83 columns by 51 rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "still",
+        "timestamp": "2026-11-02T16:20:13Z to 2026-11-02T16:20:17Z",
+        "state": "ordinary",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected-v2",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v2/v2-selected.ansi",
+      "sha256": "9c671597ae5407d5260aa3400436d5976a46c1b0ba95461520bde57da0834e53",
+      "description": "All-selected native live pane ANSI; every node occurrence has its own complete bold accent perimeter.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "all-selected still",
+        "timestamp": "2026-11-02T16:20:13Z to 2026-11-02T16:20:17Z",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "frames-v2",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v2/v2-frames.txt",
+      "sha256": "f9469aa812b5e83b5d83dd1a9c65d0d822847477375dc46d6dd06686bd497596",
+      "description": "Native shell transcript and five frame screens at 0..400 ms; screen-relative regions exclude transcript and frame markers.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "frames 0..4; referenced regions are frame 0",
+        "timestamp": "2026-11-02T16:20:13Z to 2026-11-02T16:20:17Z",
+        "state": "static, no dots",
+        "format": "text"
+      }
+    },
+    {
+      "id": "frames-ansi-v2",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v2/v2-frames.ansi",
+      "sha256": "cfe74e39203e7bf0ab4aa97b62229ed30ccb80bda1488263772273cf2b1fa0f5",
+      "description": "Nominal ANSI motion export: frame screens themselves contain no SGR colors; supports glyph/time evidence only.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "frames 0..4",
+        "timestamp": "2026-11-02T16:20:13Z to 2026-11-02T16:20:17Z",
+        "state": "static, no dots",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "pin-v2",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v2/v2-frames-77x47.txt",
+      "sha256": "f9e79b455c934ed9807265072f699ba82c111df73c99eedb2a1e94f46d858d7f",
+      "description": "Pinned final-spec direct dump, five 77x47 natural-zoom frames; frame-0 screen-relative regions exclude viewport/frame annotations.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "frames 0..4; referenced regions are frame 0",
+        "timestamp": "relative 0,100,200,300,400 ms; absolute capture timestamp unrecorded",
+        "state": "static, no dots",
+        "format": "text"
+      }
+    },
+    {
+      "id": "pin-original-v2",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v2-pin77/pinned-frames.txt",
+      "sha256": "f9e79b455c934ed9807265072f699ba82c111df73c99eedb2a1e94f46d858d7f",
+      "description": "Original pinned dump; byte-identical to the copy in the view bundle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "frames 0..4",
+        "timestamp": "relative 0,100,200,300,400 ms; absolute capture timestamp unrecorded",
+        "state": "static, no dots",
+        "format": "text"
+      }
+    },
+    {
+      "id": "manifest-v2",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v2/manifest.json",
+      "sha256": "a85b61b15e427804e5ac48e71f7f84e5efc6e95bb4cbc975381e24a8c711ff85",
+      "description": "Spec/binary/artifact hashes, capture/check time windows, pane id, measured 83x51 header token, and confirmed_closed assertion.",
+      "capture": null
+    },
+    {
+      "id": "check-v2",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v2/check.txt",
+      "sha256": "7a7311a500ba535cf77642b920d398553575091713b715b3bc2b4972f26f7458",
+      "description": "Full successful check stdout/stderr capture; exit 0 in manifest; unknown viewport is not fit proof.",
+      "capture": null
+    },
+    {
+      "id": "validator-v2",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v2/validate.txt",
+      "sha256": "869e78c67ce75c747f9edea7456a09a8d2934a0d6c1472b519798a54ef445130",
+      "description": "Preserved validator output, 32 PASS / 0 FAIL; does not replace independent visual judgment.",
+      "capture": null
+    },
+    {
+      "id": "binary-hash-v2",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v2/bin.sha256",
+      "sha256": "93a87351efa820a41a27baf97e90d9945ff00a10f4b64913524cd83ec5757f8b",
+      "description": "Capture-time frozen binary hash record; same binary hash independently verified during stage B.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v2-1",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/attempts/v2-a1-tb.json",
+      "sha256": "a21dd3e8f1b0400ee1109ac3537705adc10285a5955d02a1467c2be6a418e500",
+      "description": "Rejected tb spec",
+      "capture": null
+    },
+    {
+      "id": "raw-check-v2-1",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/checks/v2-a1-tb-check.txt",
+      "sha256": "1c8af4bd96336dde97a5c0d72314d1fe558832e04650972c24be2fa46b3d9645",
+      "description": "Preserved full raw refusal, exit 1 recorded in attempts.json.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v2-2",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/attempts/v2-a2-lr.json",
+      "sha256": "89e36227a0ac6e618fc1ca99bac7883df1972f299ffa80cfbf158c81918c7970",
+      "description": "Accepted lr spec, byte-identical to final spec",
+      "capture": null
+    },
+    {
+      "id": "raw-check-v2-2",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/checks/v2-a2-lr-check.txt",
+      "sha256": "7a7311a500ba535cf77642b920d398553575091713b715b3bc2b4972f26f7458",
+      "description": "Preserved full raw successful check, exit 0 recorded in attempts.json; byte-identical to evidence/check.txt.",
+      "capture": null
+    },
+    {
+      "id": "spec-v3",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/specs/v3-fabric-leaves-racks.json",
+      "sha256": "fcc12c64f14b41645f5fba4fbe960cb0693c8e756441d9bfd70de63172ffde2b",
+      "description": "Final v3 spec; actual hash verified against manifest and accepted attempt.",
+      "capture": null
+    },
+    {
+      "id": "text-v3",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v3/v3-text.txt",
+      "sha256": "91408fc0a37b94bf44bd49eea444df32eaceea6942a3af074631ab149eb71d44",
+      "description": "Native live pane text; regions use rendered screen coordinates.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "still",
+        "timestamp": "2026-11-02T16:20:19Z to 2026-11-02T16:20:23Z",
+        "state": "ordinary",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi-v3",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v3/v3-ansi.ansi",
+      "sha256": "48e6d4626ba305a8f1864931ce31454892267174e7bfea47a1d00928f95b1180",
+      "description": "Native live pane RGB ANSI; 83 columns by 51 rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "still",
+        "timestamp": "2026-11-02T16:20:19Z to 2026-11-02T16:20:23Z",
+        "state": "ordinary",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected-v3",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v3/v3-selected.ansi",
+      "sha256": "8663694d0256739f8afe01adec87fd7b33934473a5a7d96b6814999ad5a84314",
+      "description": "All-selected native live pane ANSI; every node occurrence has its own complete bold accent perimeter.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "all-selected still",
+        "timestamp": "2026-11-02T16:20:19Z to 2026-11-02T16:20:23Z",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "frames-v3",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v3/v3-frames.txt",
+      "sha256": "c003fb8c823ea8fe54a6c821d50be295618ef44f579e04ee59ce0182f3029795",
+      "description": "Native shell transcript and five frame screens at 0..400 ms; screen-relative regions exclude transcript and frame markers.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "frames 0..4; referenced regions are frame 0",
+        "timestamp": "2026-11-02T16:20:19Z to 2026-11-02T16:20:23Z",
+        "state": "static, no dots",
+        "format": "text"
+      }
+    },
+    {
+      "id": "frames-ansi-v3",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v3/v3-frames.ansi",
+      "sha256": "87af713ab8031060932c95b2634e9fc7668cf7727699c8f74eb320177309d121",
+      "description": "Nominal ANSI motion export: frame screens themselves contain no SGR colors; supports glyph/time evidence only.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "frames 0..4",
+        "timestamp": "2026-11-02T16:20:19Z to 2026-11-02T16:20:23Z",
+        "state": "static, no dots",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "pin-v3",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v3/v3-frames-77x47.txt",
+      "sha256": "9201472a3b9fc8f6385da89a812a5992bea7df43d7d3f87aa9fc882943398066",
+      "description": "Pinned final-spec direct dump, five 77x47 natural-zoom frames; frame-0 screen-relative regions exclude viewport/frame annotations.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "frames 0..4; referenced regions are frame 0",
+        "timestamp": "relative 0,100,200,300,400 ms; absolute capture timestamp unrecorded",
+        "state": "static, no dots",
+        "format": "text"
+      }
+    },
+    {
+      "id": "pin-original-v3",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v3-pin77/pinned-frames.txt",
+      "sha256": "9201472a3b9fc8f6385da89a812a5992bea7df43d7d3f87aa9fc882943398066",
+      "description": "Original pinned dump; byte-identical to the copy in the view bundle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "frames 0..4",
+        "timestamp": "relative 0,100,200,300,400 ms; absolute capture timestamp unrecorded",
+        "state": "static, no dots",
+        "format": "text"
+      }
+    },
+    {
+      "id": "manifest-v3",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v3/manifest.json",
+      "sha256": "4053ee014f546a6c2b37eec4e5272f0436327688a6beb6edb73bdf6e398a39ce",
+      "description": "Spec/binary/artifact hashes, capture/check time windows, pane id, measured 83x51 header token, and confirmed_closed assertion.",
+      "capture": null
+    },
+    {
+      "id": "check-v3",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v3/check.txt",
+      "sha256": "26c6b5f83ce3acb09f37b277a2ddc864db30fd2e9f4c91b8be0abf348c655483",
+      "description": "Full successful check stdout/stderr capture; exit 0 in manifest; unknown viewport is not fit proof.",
+      "capture": null
+    },
+    {
+      "id": "validator-v3",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v3/validate.txt",
+      "sha256": "869e78c67ce75c747f9edea7456a09a8d2934a0d6c1472b519798a54ef445130",
+      "description": "Preserved validator output, 32 PASS / 0 FAIL; does not replace independent visual judgment.",
+      "capture": null
+    },
+    {
+      "id": "binary-hash-v3",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/evidence/v3/bin.sha256",
+      "sha256": "93a87351efa820a41a27baf97e90d9945ff00a10f4b64913524cd83ec5757f8b",
+      "description": "Capture-time frozen binary hash record; same binary hash independently verified during stage B.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v3-1",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/attempts/v3-a1-tb.json",
+      "sha256": "5862c92c69522b63f9d8d1538fa50fddc279df738bd60b54c11ae02c3af6bfc0",
+      "description": "Rejected tb spec",
+      "capture": null
+    },
+    {
+      "id": "raw-check-v3-1",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/checks/v3-a1-tb-check.txt",
+      "sha256": "5416204c3cc787484722e29f38a2bfdc322b82eb0696c8532715cf60ca698979",
+      "description": "Preserved full raw refusal, exit 1 recorded in attempts.json.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v3-2",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/attempts/v3-a2-lr.json",
+      "sha256": "fcc12c64f14b41645f5fba4fbe960cb0693c8e756441d9bfd70de63172ffde2b",
+      "description": "Accepted lr spec, byte-identical to final spec",
+      "capture": null
+    },
+    {
+      "id": "raw-check-v3-2",
+      "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/checks/v3-a2-lr-check.txt",
+      "sha256": "26c6b5f83ce3acb09f37b277a2ddc864db30fd2e9f4c91b8be0abf348c655483",
+      "description": "Preserved full raw successful check, exit 0 recorded in attempts.json; byte-identical to evidence/check.txt.",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind-first",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 18 endpoint identities and all 28 independent connections are present; physical-link arrow convention is stated in generation.json/md. However D1 drops the explicit corrected elevation/tier relationship. Historical standby? wording retains the standby role; no extra protocol is invented on ISP links.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Original lines 126, 248, 270; all Fixed constraints"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "generation",
+        "spec-v1",
+        "spec-v2",
+        "spec-v3",
+        "text-v1",
+        "text-v2",
+        "text-v3",
+        "blind-first"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 28 physical stems reach distinct intact right-facing heads, 14 receiving occurrences have two heads each, and all six bridges are distinguishable from junctions. Routes are coordinate-monotone without observable avoidable loops. Nevertheless D2/D3/D4 leave five required label occurrences with uncertain owners; no recorded impossibility exception applies. Dash discontinuities are disclosed separately as a renderer style limitation, not an invented missing relationship.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Original lines 142 and 270; all relationship facts",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/arrow_traceability"
+      ],
+      "evidence_ids": [
+        "blind-first",
+        "text-v1",
+        "text-v2",
+        "text-v3",
+        "pin-v1",
+        "pin-v2",
+        "pin-v3",
+        "generation"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Pinned final-spec 77x47 frames show complete graph labels and boxes at natural 100%, while actual live panes are honestly recorded as 83x51. The frozen metadata expressly accepts pinned direct dumps when the live pane is larger. All six bridges are forced by the fixed local redundant fans in the supported lr arrangement; touching bends are not additional crossings. However D1 fails the required source-tier arrangement and no split view supplies the missing common leaf level with spines above.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Original lines 150, 158, 166, 248 and Fixed constraints",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/layout_fit"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "pin-v1",
+        "pin-v2",
+        "pin-v3",
+        "text-v1",
+        "text-v2",
+        "text-v3",
+        "raw-check-v1-1",
+        "raw-check-v2-1",
+        "raw-check-v3-1",
+        "generation"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Actual hue families and proximity group ISP/MUX/core, firewall/border-leaf/spine, and spine/leaf/rack concepts without arbitrary depth cycling. Reuse of teal for related network device groups is not independently disqualifying. But this category explicitly requires source-defined tiers to be respected, and D1 violates the corrected spine-above-both-leaf-classes tier relationship. This is the same known defect, not an additional color defect.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Original line 248; Fixed constraints",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/conceptual_grouping_color"
+      ],
+      "evidence_ids": [
+        "ansi-v1",
+        "ansi-v2",
+        "ansi-v3",
+        "blind-first",
+        "generation"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Ordinary and all-selected native ANSI stills prove complete, color-continuous perimeters for all 22 node occurrences: 452 perimeter cells. Selected coverage is 8/8 + 8/8 + 6/6, every selected perimeter bold RGB(216,166,87). No palette-overwritten border cell occurs; pinned text confirms no glyph overlap at target size. This does not claim pinned ANSI colors or 22 separate interactive selection operations.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/border_integrity"
+      ],
+      "evidence_ids": [
+        "ansi-v1",
+        "ansi-v2",
+        "ansi-v3",
+        "selected-v1",
+        "selected-v2",
+        "selected-v3",
+        "pin-v1",
+        "pin-v2",
+        "pin-v3",
+        "blind-first"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Frozen skill/binary/rubric/dataset/source/spec hashes verify; separate DeepSeek generator and actual Sol judge are identified; blind-first record predates reveal. All rejected specs, raw check refusals, registered exit statuses, final captures, selected frames, five timestamped static frames per view, and 77x47 pinned final-spec dumps exist. However E1 leaves the admitted exploratory probe commands, ids, statuses, and cleanup unproven. Clean validator reports cannot supply those missing records.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/05/SKILL.md — Step 8"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "candidate-skill",
+        "rubric",
+        "dataset",
+        "generation",
+        "attempts",
+        "blind-first",
+        "spec-manifest",
+        "manifest-v1",
+        "manifest-v2",
+        "manifest-v3",
+        "frames-v1",
+        "frames-v2",
+        "frames-v3",
+        "pin-v1",
+        "pin-v2",
+        "pin-v3"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Applicable as an explicit prohibition, not N/A: original human line 134 removes flowing dots and the frozen case manifest says animation off. Every supplied capture has zero U+25CF glyphs. All 28 specs set dots:0; five native and five pinned timestamped frame screens per view show zero dots and stable glyphs. No speed, origin, same-arrival, or full-lap motion proof is needed for these explicitly static routes.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Original line 134",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/animation",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/animation"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "dataset",
+        "check-v1",
+        "check-v2",
+        "check-v3",
+        "frames-v1",
+        "frames-v2",
+        "frames-v3",
+        "pin-v1",
+        "pin-v2",
+        "pin-v3",
+        "blind-first"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/0",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "ispA -> mux1; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; unlabeled, no invented protocol",
+      "observed": "Native screen chain (29,11) -> (36,11) -> (36,16) -> (37,16). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. No crossing on this route. No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. No edge label, correctly. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            29,
+            11,
+            9,
+            6
+          ]
+        },
+        {
+          "evidence_id": "pin-v1",
+          "region": [
+            26,
+            9,
+            9,
+            6
+          ]
+        },
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            37,
+            16,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/1",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "ispB -> mux1; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; unlabeled, no invented protocol",
+      "observed": "Native screen chain (29,21) -> (36,21) -> (36,18) -> (37,18). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. No crossing on this route. No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. No edge label, correctly. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            29,
+            18,
+            9,
+            4
+          ]
+        },
+        {
+          "evidence_id": "pin-v1",
+          "region": [
+            26,
+            16,
+            9,
+            4
+          ]
+        },
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            37,
+            18,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/2",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "ispC -> mux2; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; unlabeled, no invented protocol",
+      "observed": "Native screen chain (29,31) -> (36,31) -> (36,36) -> (37,36). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. No crossing on this route. No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. No edge label, correctly. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            29,
+            31,
+            9,
+            6
+          ]
+        },
+        {
+          "evidence_id": "pin-v1",
+          "region": [
+            26,
+            29,
+            9,
+            6
+          ]
+        },
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            37,
+            36,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/3",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "ispD -> mux2; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; unlabeled, no invented protocol",
+      "observed": "Native screen chain (29,41) -> (36,41) -> (36,38) -> (37,38). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. No crossing on this route. No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. No edge label, correctly. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            29,
+            38,
+            9,
+            4
+          ]
+        },
+        {
+          "evidence_id": "pin-v1",
+          "region": [
+            26,
+            36,
+            9,
+            4
+          ]
+        },
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            37,
+            38,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/4",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "mux1 -> core1; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning x-connect",
+      "observed": "Native screen chain (45,16) -> (53,16). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. No crossing on this route. No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible 'x-connect' label has a clear owner. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            45,
+            16,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pin-v1",
+          "region": [
+            42,
+            14,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            53,
+            16,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            45,
+            15,
+            9,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/5",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "mux1 -> core2; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning x-connect",
+      "observed": "Native screen chain (45,18) -> (51,18) -> (51,36) -> (53,36). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. Crossing: under e7 bridge at (51,19). No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible label text 'x-connect' remains legible but its individual owner is uncertain; see D2. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            45,
+            18,
+            9,
+            19
+          ]
+        },
+        {
+          "evidence_id": "pin-v1",
+          "region": [
+            42,
+            16,
+            9,
+            19
+          ]
+        },
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            53,
+            36,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            40,
+            21,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            40,
+            28,
+            9,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "D2"
+      ]
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/6",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "mux2 -> core1; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning x-connect",
+      "observed": "Native screen chain (45,36) -> (49,36) -> (49,19) -> (52,19) -> (52,18) -> (53,18). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. Crossing: over e6 at (51,19). No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible label text 'x-connect' remains legible but its individual owner is uncertain; see D2. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            45,
+            18,
+            9,
+            19
+          ]
+        },
+        {
+          "evidence_id": "pin-v1",
+          "region": [
+            42,
+            16,
+            9,
+            19
+          ]
+        },
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            53,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            40,
+            21,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            40,
+            28,
+            9,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "D2"
+      ]
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/7",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "mux2 -> core2; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning x-connect",
+      "observed": "Native screen chain (45,38) -> (53,38). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. No crossing on this route. No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible 'x-connect' label has a clear owner. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            45,
+            38,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pin-v1",
+          "region": [
+            42,
+            36,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            53,
+            38,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            45,
+            39,
+            9,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e9",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/8",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "core1 -> fw1; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning active",
+      "observed": "Native screen chain (19,22) -> (26,22) -> (26,30) -> (28,30). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. Crossing: under e12 bridge at (26,23). No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible 'active' label has a clear owner. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            19,
+            22,
+            10,
+            9
+          ]
+        },
+        {
+          "evidence_id": "pin-v2",
+          "region": [
+            16,
+            20,
+            10,
+            9
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            28,
+            30,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            28,
+            26,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e10",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/9",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "core2 -> fw1; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning active",
+      "observed": "Native screen chain (19,32) -> (28,32). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. No crossing on this route. No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible 'active' label has a clear owner. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            19,
+            32,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pin-v2",
+          "region": [
+            16,
+            30,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            28,
+            32,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            20,
+            33,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e11",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/10",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "core1 -> fw2; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning standby",
+      "observed": "Native screen chain (19,20) -> (28,20). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. No crossing on this route. No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Literal standby? label retains the standby role. Dashed ╌/╎ straight runs remain visible; ▶ and rounded corners/bridges are solid-looking. This renderer style limitation does not make the labeled route itself untraceable. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            19,
+            20,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pin-v2",
+          "region": [
+            16,
+            18,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            28,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            19,
+            19,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e12",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/11",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "core2 -> fw2; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning standby",
+      "observed": "Native screen chain (19,30) -> (24,30) -> (24,23) -> (27,23) -> (27,22) -> (28,22). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. Crossing: over e9 at (26,23). No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Literal standby? label retains the standby role. Dashed ╌/╎ straight runs remain visible; ▶ and rounded corners/bridges are solid-looking. This renderer style limitation does not make the labeled route itself untraceable. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            19,
+            22,
+            10,
+            9
+          ]
+        },
+        {
+          "evidence_id": "pin-v2",
+          "region": [
+            16,
+            20,
+            10,
+            9
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            28,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            15,
+            27,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e13",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/12",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "fw1 -> bl1; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning active",
+      "observed": "Native screen chain (34,30) -> (44,30) -> (44,22) -> (46,22). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. Crossing: under e16 bridge at (44,29). No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible label text 'active' remains legible but its individual owner is uncertain; see D3. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            34,
+            22,
+            13,
+            9
+          ]
+        },
+        {
+          "evidence_id": "pin-v2",
+          "region": [
+            31,
+            20,
+            13,
+            9
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            46,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            36,
+            29,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "D3"
+      ]
+    },
+    {
+      "edge_id": "e14",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/13",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "fw1 -> bl2; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning active",
+      "observed": "Native screen chain (34,32) -> (46,32). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. No crossing on this route. No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible 'active' label has a clear owner. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            34,
+            32,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pin-v2",
+          "region": [
+            31,
+            30,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            46,
+            32,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            37,
+            33,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e15",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/14",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "fw2 -> bl1; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning standby",
+      "observed": "Native screen chain (34,20) -> (46,20). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. No crossing on this route. No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Literal standby? label retains the standby role. Dashed ╌/╎ straight runs remain visible; ▶ and rounded corners/bridges are solid-looking. This renderer style limitation does not make the labeled route itself untraceable. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            34,
+            20,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pin-v2",
+          "region": [
+            31,
+            18,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            46,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            36,
+            19,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e16",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/15",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "fw2 -> bl2; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning standby",
+      "observed": "Native screen chain (34,22) -> (42,22) -> (42,29) -> (45,29) -> (45,30) -> (46,30). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. Crossing: over e13 at (44,29). No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Literal standby? label retains the standby role. Dashed ╌/╎ straight runs remain visible; ▶ and rounded corners/bridges are solid-looking. This renderer style limitation does not make the labeled route itself untraceable. Its own standby? owner is readable, although the neighboring active label for e13 misleadingly abuts its lower bend (D3). Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            34,
+            22,
+            13,
+            9
+          ]
+        },
+        {
+          "evidence_id": "pin-v2",
+          "region": [
+            31,
+            20,
+            13,
+            9
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            46,
+            30,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            34,
+            23,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "D3"
+      ]
+    },
+    {
+      "edge_id": "e17",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/16",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "bl1 -> sp1; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning ECMP",
+      "observed": "Native screen chain (53,22) -> (62,22) -> (62,30) -> (64,30). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. Crossing: under e20 bridge at (62,23). No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible label text 'ECMP' remains legible but its individual owner is uncertain; see D4. Endpoint/link audit is separate from the global corrected tier violation D1. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            53,
+            22,
+            12,
+            9
+          ]
+        },
+        {
+          "evidence_id": "pin-v2",
+          "region": [
+            50,
+            20,
+            12,
+            9
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            64,
+            30,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            55,
+            23,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            54,
+            29,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "D4"
+      ]
+    },
+    {
+      "edge_id": "e18",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/17",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "bl1 -> sp2; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning ECMP",
+      "observed": "Native screen chain (53,20) -> (64,20). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. No crossing on this route. No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible 'ECMP' label has a clear owner. Endpoint/link audit is separate from the global corrected tier violation D1. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            53,
+            20,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pin-v2",
+          "region": [
+            50,
+            18,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            64,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            56,
+            19,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e19",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/18",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "bl2 -> sp1; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning ECMP",
+      "observed": "Native screen chain (53,32) -> (64,32). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. No crossing on this route. No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible 'ECMP' label has a clear owner. Endpoint/link audit is separate from the global corrected tier violation D1. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            53,
+            32,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pin-v2",
+          "region": [
+            50,
+            30,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            64,
+            32,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            56,
+            33,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e20",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/19",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "bl2 -> sp2; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning ECMP",
+      "observed": "Native screen chain (53,30) -> (60,30) -> (60,23) -> (63,23) -> (63,22) -> (64,22). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. Crossing: over e17 at (62,23). No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible label text 'ECMP' remains legible but its individual owner is uncertain; see D4. Endpoint/link audit is separate from the global corrected tier violation D1. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            53,
+            22,
+            12,
+            9
+          ]
+        },
+        {
+          "evidence_id": "pin-v2",
+          "region": [
+            50,
+            20,
+            12,
+            9
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            64,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            55,
+            23,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            54,
+            29,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "D4"
+      ]
+    },
+    {
+      "edge_id": "e21",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/20",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "sp1 -> leaf1; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning ECMP",
+      "observed": "Native screen chain (29,20) -> (37,20). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. No crossing on this route. No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible 'ECMP' label has a clear owner. Endpoint/link audit is separate from the global corrected tier violation D1. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            29,
+            20,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pin-v3",
+          "region": [
+            26,
+            18,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            37,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            31,
+            19,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e22",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/21",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "sp1 -> leaf2; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning ECMP",
+      "observed": "Native screen chain (29,22) -> (35,22) -> (35,30) -> (37,30). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. Crossing: under e23 bridge at (35,23). No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible 'ECMP' label has a clear owner. Endpoint/link audit is separate from the global corrected tier violation D1. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            29,
+            22,
+            9,
+            9
+          ]
+        },
+        {
+          "evidence_id": "pin-v3",
+          "region": [
+            26,
+            20,
+            9,
+            9
+          ]
+        },
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            37,
+            30,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            37,
+            26,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e23",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/22",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "sp2 -> leaf1; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning ECMP",
+      "observed": "Native screen chain (29,30) -> (33,30) -> (33,23) -> (36,23) -> (36,22) -> (37,22). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. Crossing: over e22 at (35,23). No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible 'ECMP' label has a clear owner. Endpoint/link audit is separate from the global corrected tier violation D1. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            29,
+            22,
+            9,
+            9
+          ]
+        },
+        {
+          "evidence_id": "pin-v3",
+          "region": [
+            26,
+            20,
+            9,
+            9
+          ]
+        },
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            37,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            28,
+            27,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e24",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/23",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "sp2 -> leaf2; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning ECMP",
+      "observed": "Native screen chain (29,32) -> (37,32). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. No crossing on this route. No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible 'ECMP' label has a clear owner. Endpoint/link audit is separate from the global corrected tier violation D1. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            29,
+            32,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pin-v3",
+          "region": [
+            26,
+            30,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            37,
+            32,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            31,
+            33,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e25",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/24",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "leaf1 -> rack1; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning dual",
+      "observed": "Native screen chain (46,22) -> (53,22) -> (53,30) -> (55,30). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. Crossing: under e28 bridge at (53,23). No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible 'dual' label has a clear owner. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            46,
+            22,
+            10,
+            9
+          ]
+        },
+        {
+          "evidence_id": "pin-v3",
+          "region": [
+            43,
+            20,
+            10,
+            9
+          ]
+        },
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            55,
+            30,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            55,
+            26,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e26",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/25",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "leaf2 -> rack1; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning dual",
+      "observed": "Native screen chain (46,32) -> (55,32). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. No crossing on this route. No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible 'dual' label has a clear owner. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            46,
+            32,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pin-v3",
+          "region": [
+            43,
+            30,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            55,
+            32,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            48,
+            33,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e27",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/26",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "leaf1 -> rack2; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning dual",
+      "observed": "Native screen chain (46,20) -> (55,20). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. No crossing on this route. No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible 'dual' label has a clear owner. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            46,
+            20,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pin-v3",
+          "region": [
+            43,
+            18,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            55,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            48,
+            19,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e28",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/27",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts and physical-link Fixed constraint"
+      ],
+      "expected": "leaf2 -> rack2; independent physical link traced first-listed to second-listed endpoint, not a one-way traffic assertion; label meaning dual",
+      "observed": "Native screen chain (46,30) -> (51,30) -> (51,23) -> (54,23) -> (54,22) -> (55,22). First listed cell is the source stem outside its right border; last cell is an intact right-facing ▶ immediately left of the target border. Crossing: over e25 at (53,23). No shared run, tee, intentional bus, actual branch, dot, or coordinate-backtracking detour. Visible 'dual' label has a clear owner. Pinned screen coordinates subtract (3,2) from every native point.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            46,
+            22,
+            10,
+            9
+          ]
+        },
+        {
+          "evidence_id": "pin-v3",
+          "region": [
+            43,
+            20,
+            10,
+            9
+          ]
+        },
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            55,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            46,
+            27,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "apparent-connection-1",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Original line 270: independent links, never merged"
+      ],
+      "expected": null,
+      "observed": "Apparent connection candidate, not an extra actual relation: e7 passes over e6 at the ⌒ cell (51,19). Opposing adjacent rounded bends and separate route continuations resolve as a crossing, not a shared tee or branch. No additional source-to-target relationship is inferred.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            50,
+            18,
+            3,
+            3
+          ]
+        },
+        {
+          "evidence_id": "pin-v1",
+          "region": [
+            47,
+            16,
+            3,
+            3
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "apparent-connection-2",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Original line 270: independent links, never merged"
+      ],
+      "expected": null,
+      "observed": "Apparent connection candidate, not an extra actual relation: e12 passes over e9 at the ⌒ cell (26,23). Opposing adjacent rounded bends and separate route continuations resolve as a crossing, not a shared tee or branch. No additional source-to-target relationship is inferred.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            25,
+            22,
+            3,
+            3
+          ]
+        },
+        {
+          "evidence_id": "pin-v2",
+          "region": [
+            22,
+            20,
+            3,
+            3
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "apparent-connection-3",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Original line 270: independent links, never merged"
+      ],
+      "expected": null,
+      "observed": "Apparent connection candidate, not an extra actual relation: e16 passes over e13 at the ⌒ cell (44,29). Opposing adjacent rounded bends and separate route continuations resolve as a crossing, not a shared tee or branch. No additional source-to-target relationship is inferred.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            43,
+            28,
+            3,
+            3
+          ]
+        },
+        {
+          "evidence_id": "pin-v2",
+          "region": [
+            40,
+            26,
+            3,
+            3
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "apparent-connection-4",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Original line 270: independent links, never merged"
+      ],
+      "expected": null,
+      "observed": "Apparent connection candidate, not an extra actual relation: e20 passes over e17 at the ⌒ cell (62,23). Opposing adjacent rounded bends and separate route continuations resolve as a crossing, not a shared tee or branch. No additional source-to-target relationship is inferred.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            61,
+            22,
+            3,
+            3
+          ]
+        },
+        {
+          "evidence_id": "pin-v2",
+          "region": [
+            58,
+            20,
+            3,
+            3
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "apparent-connection-5",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Original line 270: independent links, never merged"
+      ],
+      "expected": null,
+      "observed": "Apparent connection candidate, not an extra actual relation: e23 passes over e22 at the ⌒ cell (35,23). Opposing adjacent rounded bends and separate route continuations resolve as a crossing, not a shared tee or branch. No additional source-to-target relationship is inferred.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            34,
+            22,
+            3,
+            3
+          ]
+        },
+        {
+          "evidence_id": "pin-v3",
+          "region": [
+            31,
+            20,
+            3,
+            3
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "apparent-connection-6",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Original line 270: independent links, never merged"
+      ],
+      "expected": null,
+      "observed": "Apparent connection candidate, not an extra actual relation: e28 passes over e25 at the ⌒ cell (53,23). Opposing adjacent rounded bends and separate route continuations resolve as a crossing, not a shared tee or branch. No additional source-to-target relationship is inferred.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            52,
+            22,
+            3,
+            3
+          ]
+        },
+        {
+          "evidence_id": "pin-v3",
+          "region": [
+            49,
+            20,
+            3,
+            3
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "D1",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e17",
+        "e18",
+        "e19",
+        "e20",
+        "e21",
+        "e22",
+        "e23",
+        "e24"
+      ],
+      "severity": "critical",
+      "description": "Known source-tier defect, not merely missing evidence: the corrected common border-leaf/rack-leaf elevation with both spines above is absent. v2 separates BL from spines horizontally, and v3 puts spines left of rack leaves with matching row centers. No view contains both leaf classes on a shared level with the spines above. The documented tb refusals explain the lr workaround but do not waive the human correction. This same defect also fails the tier clauses of layout_fit and conceptual_grouping_color.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Original line 248 and Fixed constraints",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/constraints/1"
+      ],
+      "locations": [
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            47,
+            19,
+            27,
+            15
+          ]
+        },
+        {
+          "evidence_id": "text-v3",
+          "region": [
+            20,
+            19,
+            26,
+            15
+          ]
+        },
+        {
+          "evidence_id": "pin-v2",
+          "region": [
+            44,
+            17,
+            27,
+            15
+          ]
+        },
+        {
+          "evidence_id": "pin-v3",
+          "region": [
+            17,
+            17,
+            26,
+            15
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D2",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "e6",
+        "e7"
+      ],
+      "severity": "medium",
+      "description": "Two visible x-connect occurrences both end at column 48 immediately left of the ascending diagonal in column 49; the descending diagonal is column 51. They cannot be allocated one-to-one to e6/e7 from the capture. Both strings are legible and both physical routes are traceable, but owner clarity fails. The generator claimed zero ambiguous owners, and did not record that no unambiguous placement existed.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Relationship facts: mux1/mux2 to both cores; Original line 270",
+        "docs/visualize-eval/rounds/05/rubric.json — label ownership rule in full judge task"
+      ],
+      "locations": [
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            40,
+            21,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v1",
+          "region": [
+            40,
+            28,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pin-v1",
+          "region": [
+            37,
+            19,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pin-v1",
+          "region": [
+            37,
+            26,
+            9,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D3",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "e13",
+        "e16"
+      ],
+      "severity": "high",
+      "description": "The active label for FW1 to BL 1 at [36,29,6,1] ends directly against the standby route corner (42,29), while its intended solid rising route is column 44. This provides a stronger local owner cue for the wrong role-bearing link. e13 fails its label-owner audit; e16 retains its own readable standby? label and independent route but is the misleading competing owner.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — Original lines 126 and 270; active/passive firewall relationship facts"
+      ],
+      "locations": [
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            36,
+            29,
+            10,
+            2
+          ]
+        },
+        {
+          "evidence_id": "pin-v2",
+          "region": [
+            33,
+            27,
+            10,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D4",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "e17",
+        "e20"
+      ],
+      "severity": "medium",
+      "description": "Two middle ECMP occurrences are on the same left flank of the ascending diagonal at column 60, one beside its bridge-bearing row 23 and one beside its vertical run on row 29. The descending diagonal at column 62 has no clear dedicated outside label. The words remain readable, but individual e17/e20 owners are uncertain. No impossibility exception was recorded.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md — BL-to-spine ECMP relationship facts and Original line 270"
+      ],
+      "locations": [
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            55,
+            23,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text-v2",
+          "region": [
+            54,
+            29,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pin-v2",
+          "region": [
+            52,
+            21,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pin-v2",
+          "region": [
+            51,
+            27,
+            4,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "E1",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Evidence gap: generation.json acknowledges a few exploratory no-focus probe panes, but the bundle contains no probe log, complete probe pane ids, exact probe commands/status output, pane-list result, or verbatim close results for those probes. The three final capture manifests contain normalized confirmed_closed assertions, not the raw close/probe transcript. Rejected tb drafts do have their raw refusals and registry exit statuses; these must not be confused with the missing exploratory-probe records. Since the missing evidence cannot be located in a capture, locations is intentionally empty.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/05/SKILL.md — Step 8 raw probe and cleanup requirements",
+        "docs/visualize-eval/rounds/05/datacenter-redundancy/generation.json#/cleanup"
+      ],
+      "locations": []
+    }
+  ],
+  "blockers": [
+    "B1 — Required vertical-elevation capability: frozen tb routing refused all three preserved drafts; only direction changed before lr succeeded. Engine-owned placement cannot be honestly claimed to meet the corrected spine/leaf arrangement. This explains known D1; it does not turn D1 into a pass or erase the fail verdict.",
+    "B2 — Evidence gap E1: admitted exploratory probes lack preserved commands, pane ids, status output, pane-list result and raw cleanup results. Final capture panes have confirmed_closed assertions, but all owned probe panes cannot be independently inventoried or proved closed.",
+    "B3 — Reported renderer capability gap: no node-height control to meet original line 166 directly; the bundle has no supported invocation demonstrating that control. Compact target-size fit is visible, so no extra small-height numerical threshold is invented.",
+    "B4 — Renderer style limitation: ordinary rounded corners, bridges and arrowheads cannot carry dashed appearance in these captures; eight corner cells and two bridge cells on standby paths look solid. Text and long dashed segments retain standby meaning, so this is not an independent missing-link failure or an unmet source request for dashed glyphs at every corner."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pHR",
+      "w7E:pHS",
+      "w7E:pHT"
+    ],
+    "closed_pane_ids": [
+      "w7E:pHR",
+      "w7E:pHS",
+      "w7E:pHT"
+    ],
+    "status": "blocked",
+    "reason": "The three named final capture panes are each recorded confirmed_closed in their manifests. generation.json also admits exploratory probes without ids or raw close results; complete owned-pane cleanup cannot be independently proved. The judge opened no pane, ran no viewer and performed no cleanup action."
+  },
+  "overall": "fail"
+}

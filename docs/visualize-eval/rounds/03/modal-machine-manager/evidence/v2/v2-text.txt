@@ -1,0 +1,46 @@
+ rataflow-view · 77x47 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+
+
+
+                   ╭────────────────────╮
+                   │bare-metal providers│
+                   │                    │
+                   ╰────────────────────╯
+                    │
+                    │ allocate instance
+                    ●
+                    ╰╮
+                     ▼              iPXE request
+                    ╭───────────────────╮    ╭───────────╮
+                    │                   │──●▶│           │
+                    │bare-metal machines│    │boot server│
+                    │                   │◀●──│           │
+                    ╰───────────────────╯    ╰───────────╯
+                     │            boot.ipxe + S3 args
+                     │ runs on host
+                     ╰●─╮
+                        ▼
+                       ╭─────────────╮
+                       │machine-agent│
+                       │             │
+                       ╰─────────────╯
+                        │
+                        │ register + heartbeat
+                        ●
+                        ╰╮
+                         ▼
+                        ╭───────────╮
+                        │public gRPC│
+                        │           │
+                        ╰───────────╯
+                         │
+                         │ machine state
+                         ●
+                         ╰╮
+                          ▼
+ ┌───────┐               ╭────────╮
+ │ + [+] │               │Postgres│
+ │ − [-] │               │        │
+ │ ⊡ [f] │               ╰────────╯
+ │ □ [i] │
+ └───────┘

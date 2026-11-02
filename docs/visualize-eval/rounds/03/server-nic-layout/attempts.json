@@ -1,0 +1,90 @@
+{
+  "case_id": "server-nic-layout",
+  "round": "03",
+  "views": [
+    {
+      "view": "v1",
+      "final_spec": "specs/v1-attempt3.json",
+      "carries": "server1 physical ports, the /29 membership trunk, dark ports, neighbour, free pool",
+      "attempts": [
+        {
+          "spec": "specs/v1-attempt1.json",
+          "spec_sha256": "25d5b80fadad4f9f47ffc57cf72d75170261c87929251ec4d1dd9816c99b4adf",
+          "note": "explicit layers [dark][s1][nic,s2,spare][gw], trunk gw->nic, spurs s2+spare: extent 56x30, crossings 3, labels 3/3"
+        },
+        {
+          "spec": "specs/v1-attempt2.json",
+          "spec_sha256": "1508d70d8f338f5321e29094ead7047d7525a3e3a4cf2a245b69d0e996ab7002",
+          "note": "same content with auto (sugiyama) placement instead of explicit layers: crossings 2 but extent 85 wide > 77-column target, rejected (would overflow at 100% zoom)"
+        },
+        {
+          "spec": "specs/v1-attempt3.json",
+          "spec_sha256": "3fcecbcfdcfb1dd15fdf72f4cf771f465bf22d2ac056ec7544071c79404da9d0",
+          "note": "back to explicit layers with the middle row reordered s2/nic/spare so the trunk end and its two spurs are centred: extent 55x28, crossings 2, labels 3/3 - CHOSEN"
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "final_spec": "specs/v2-attempt2.json",
+      "carries": "observed upstream hops with latencies, prefixes and AS numbers",
+      "attempts": [
+        {
+          "spec": "specs/v2-attempt1.json",
+          "spec_sha256": "c02a2ce40ed1faf01cf85e3f3b4912bf0816519ad5d45ddc7d62925bd2b4fcf7",
+          "note": "5-layer tb chain nic->gw->airtel->bb->cf: extent 35x37, crossings 0, labels 4/4; host label carries eno16595np0 but not the v4-only note"
+        },
+        {
+          "spec": "specs/v2-attempt2.json",
+          "spec_sha256": "9da8685bf2abf8944b7c78307f5690dcb6c829e06288408e1ad07bc40cc17574",
+          "note": "same chain with the nic node carrying the full 103.19.91.58 and v4-only, and the Airtel hop carrying no ECMP: extent 35x37, crossings 0, labels 4/4 - CHOSEN"
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "final_spec": "specs/v3-attempt1.json",
+      "carries": "qualified claims: what the OUI, the dark ports, the quiet pool and the mute traceroute hops do not prove",
+      "attempts": [
+        {
+          "spec": "specs/v3-attempt1.json",
+          "spec_sha256": "12110a71ab2acbb6b8d2b75a02fe4ab2083e1879900d70e824532734a7d9b4df",
+          "note": "lr fan: four observations stacked in one column feeding one claim node, one corridor per edge: extent 53x25, crossings 2, labels 4/4, every label on its own row - CHOSEN"
+        },
+        {
+          "spec": "specs/v3-attempt2.json",
+          "spec_sha256": "a852df43c5e944d731facee509bdfb9e235f5e08cdf6bf0f546aeccdcb0cb2b0",
+          "note": "same lr fan with the leaf order swapped (dark,oui,pool,hop): extent 53x25, crossings 2 - no gain, and swapping leaf order only reorders room, not meaning"
+        },
+        {
+          "spec": "specs/v3-attempt3.json",
+          "spec_sha256": "e06b1eac0e0a9bedcd9d9eaea1afd6a669c6ff330ed33ce54e137763c7ff97b5",
+          "note": "tb 2x2 observation grid into the claim: extent 44x22, crossings 1 (lowest) but the capture draws 'free?' and 'layer 2?' touching on one line, so two edge labels read as one ambiguous string; rejected on readability even though its crossing count is lower"
+        }
+      ]
+    }
+  ],
+  "rejected_view_designs": [
+    {
+      "view_design": "trace-limits",
+      "status": "abandoned after 3 specs, content re-composed inside v3",
+      "attempts": [
+        {
+          "spec": "specs/probes/trace-limits-a1.json",
+          "spec_sha256": "7aedf24d82660df01f8d659545dcba425ddce910c06e5c57d7358bbbac85baed",
+          "note": "tb 3-way fan (VXLAN/MPLS, ICMP limit, above .57 hidden) into one silence node into a claim node: extent 85x23 > 77 columns, crossings 4, rejected"
+        },
+        {
+          "spec": "specs/probes/trace-limits-a2.json",
+          "spec_sha256": "afda67ea0a05f5a4fd581e74b16f495594a040be2e018eb1a4a0406ee044e4e7",
+          "note": "same fan rotated to lr: extent 112x18 > 77 columns, rejected"
+        },
+        {
+          "spec": "specs/probes/trace-limits-a3.json",
+          "spec_sha256": "09aaed194a5d9e8de5dbe2b3a7fc2ae30b06d3f8cc325ed5586cfd98cdccfe1e",
+          "note": "shortened labels to fit: extent 61x23, crossings 1, but 3/4 labels placed - the 'hides fabric' label had no free slot, rejected"
+        }
+      ]
+    }
+  ]
+}

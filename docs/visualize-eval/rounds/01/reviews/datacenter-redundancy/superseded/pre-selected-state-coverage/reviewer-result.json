@@ -1,0 +1,3155 @@
+{
+  "protocol_version": 1,
+  "round": 1,
+  "case_id": "datacenter-redundancy",
+  "candidate_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+  "renderer_sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+  "rubric_sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "075c093b2bf489459a149d7e1bc2b5099a77e7d42ec29263062ebd9bf1c7f7a5",
+  "generator": {
+    "worker_id": "viz-ds01-datacenter-redundancy",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge01-datacenter-redundancy",
+    "model": "openai/gpt-6-astra"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 77,
+    "rows": 47
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/01/reviews/datacenter-redundancy/observed-first.md",
+      "sha256": "635c74dc1a54baf3ca70df5baed1ae332f19e2fdd1502430f3256a3aeef3ace2",
+      "description": "Blind Stage A observations saved before expected-source reveal; hash verified unchanged.",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/01/rubric.json",
+      "sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "description": "Frozen seven-category rubric and embedded result schema.",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/01/metadata.json",
+      "sha256": "b99735d09760e77b21a21c7491e7e03663c20e1787ad8ac900d319c4d7ad240a",
+      "description": "Frozen round01 identities and hashes; this renderer is a new baseline, not a skill-only gain.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen source-backed case manifest; datacenter animation off.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+      "sha256": "a3051af3eeeec31aee53558dafbbea5d061dc74253618fd6940eba5c39b5bb98",
+      "description": "Authorized source excerpts, qualified historical relations, and human corrections.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/expected.json",
+      "sha256": "926e866fbdbb3eaac5b7a21360905d1f621a7a6386139afab303e8ba7e62ed47",
+      "description": "All 18 required concepts and 28 required relationships.",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/01/SKILL.md",
+      "sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "description": "Executed candidate skill snapshot, hash verified.",
+      "capture": null
+    },
+    {
+      "id": "renderer",
+      "path": "../../../../../../tmp/visualize-eval/round-01/bin/rataflow-view",
+      "sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "description": "Frozen executed binary, hashed without executing; relative path resolves outside repository.",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/generation.json",
+      "sha256": "d3e7a881a8ef129ad74954ca893d1d960e4b27dcccb42d36fe9284014c397e6e",
+      "description": "Generator identity, arrow convention, coverage intent, commands and cleanup assertions; not visual proof.",
+      "capture": null
+    },
+    {
+      "id": "generation-prose",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/generation.md",
+      "sha256": "216d7293ac5a3b382dfba1bdd03c2e9b6d0f1ee8749144a35c07c4ce3a3e5b98",
+      "description": "Generator explanatory notes and arrow convention; raw capture wins over coordinate mistakes.",
+      "capture": null
+    },
+    {
+      "id": "capture-script",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/scripts/capture.sh",
+      "sha256": "39e95f1519fa8054c526e186f312310a87e31dbe217916e776bf861d2b075a86",
+      "description": "Frozen capture/launch/selection/cleanup procedure; read, not executed.",
+      "capture": null
+    },
+    {
+      "id": "capture-log",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/capture-log.jsonl",
+      "sha256": "06c06624b56c36771ef25bafc577e87686f9c233a957352429f696ace4f0b816",
+      "description": "Timestamped capture hashes, measured 47 77 PTY dimensions, and 24 closed-pane results.",
+      "capture": null
+    },
+    {
+      "id": "frames-note",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/frames/README.md",
+      "sha256": "a7dbf1a239127855a94c6a0780e8e7481c7b821115be9b045eb8337878f23f6c",
+      "description": "Static-frame intent; its no-motion inference is not adopted as a motion measurement.",
+      "capture": null
+    },
+    {
+      "id": "manifest",
+      "path": "docs/visualize-eval/rounds/01/reviews/datacenter-redundancy/spec-manifest.json",
+      "sha256": "075c093b2bf489459a149d7e1bc2b5099a77e7d42ec29263062ebd9bf1c7f7a5",
+      "description": "Deterministic sorted [repository-relative path, SHA256] pairs for four delivered specs only.",
+      "capture": null
+    },
+    {
+      "id": "verification",
+      "path": "docs/visualize-eval/rounds/01/reviews/datacenter-redundancy/verification.json",
+      "sha256": "a4d2d3041f700db8796b7e0ee11efdf81e94bb5dd61fc8d46ba4ed76b2182d29",
+      "description": "Independent hash, coverage, environment, raw dimension probe and check-file verification.",
+      "capture": null
+    },
+    {
+      "id": "spec1",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/specs/view1-isp-mux.json",
+      "sha256": "e2cd6d8e3c6fc18874a944a58d5b27270d0a125630b61868e4c3a14c51fc3f9d",
+      "description": "Delivered final view spec; intended endpoints checked against source.",
+      "capture": null
+    },
+    {
+      "id": "check1-stdout",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/checks/view1-isp-mux.check.stdout.txt",
+      "sha256": "0c4ef7eb464f18774a9909815bf751e0476d485ba579f2ed24aae31f07441a9d",
+      "description": "Frozen view1 --check stdout; exit 0 and empty stderr verified, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "check1-stderr",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/checks/view1-isp-mux.check.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Frozen view1 --check stderr; exit 0 and empty stderr verified, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "check1-exit",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/checks/view1-isp-mux.check.exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "description": "Frozen view1 --check exit; exit 0 and empty stderr verified, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "check1-meta",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/checks/view1-isp-mux.check.meta.txt",
+      "sha256": "a26858cea726b560e21bf6352bca11d03ec96b4735d741c48cc7b166350f792c",
+      "description": "Frozen view1 --check meta; exit 0 and empty stderr verified, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "v1-visible_text",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view1-20261102T083328Z-visible.txt",
+      "sha256": "795e694c547a487638db008d80027f411b4d2c841f9d8af104d23fd4c920e96a",
+      "description": "Actual view1 visible text; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "visible",
+        "timestamp": "20261102T083328Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-visible_ansi",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view1-20261102T083328Z-visible.ansi",
+      "sha256": "c40496ef73fb674f4706004cd793182abe6edea7c103a15b419a95ed8297f551",
+      "description": "Actual view1 visible ansi; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "visible",
+        "timestamp": "20261102T083328Z",
+        "state": "unselected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-selected_text",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view1-20261102T083328Z-selected.txt",
+      "sha256": "795e694c547a487638db008d80027f411b4d2c841f9d8af104d23fd4c920e96a",
+      "description": "Actual view1 selected text; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "selected",
+        "timestamp": "20261102T083328Z",
+        "state": "selected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-selected_ansi",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view1-20261102T083328Z-selected.ansi",
+      "sha256": "ee81c353834906a9ad25c96b033f38ab12f152faeed22d71cfbdc71d4376990d",
+      "description": "Actual view1 selected ansi; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "selected",
+        "timestamp": "20261102T083328Z",
+        "state": "selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frame2_text",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view1-20261102T083328Z-frame2.txt",
+      "sha256": "795e694c547a487638db008d80027f411b4d2c841f9d8af104d23fd4c920e96a",
+      "description": "Actual view1 frame2 text; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "frame2",
+        "timestamp": "20261102T083328Z",
+        "state": "second Tab selection; plain text cannot identify selected node",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-header-file",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view1-20261102T083328Z-header.txt",
+      "sha256": "618c8e23cd40ebea854388d928780a2e0f16f519ff5a64ecf8aac009e444b177",
+      "description": "Named header capture actually contains bottom control-box lines; full visible capture contains the real app header.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "header command output",
+        "timestamp": "20261102T083328Z",
+        "state": "unselected; partial excerpt",
+        "format": "text"
+      }
+    },
+    {
+      "id": "spec2",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/specs/view2-mux-core.json",
+      "sha256": "bf534caf77d60058529824cc699659e5c3281045b0c2b3a30e22b41282f6a5f6",
+      "description": "Delivered final view spec; intended endpoints checked against source.",
+      "capture": null
+    },
+    {
+      "id": "check2-stdout",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/checks/view2-mux-core.check.stdout.txt",
+      "sha256": "c35ddeb14869548305f36afa2f87eacf2124848527f6627b8dba6376d2f7eb0b",
+      "description": "Frozen view2 --check stdout; exit 0 and empty stderr verified, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "check2-stderr",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/checks/view2-mux-core.check.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Frozen view2 --check stderr; exit 0 and empty stderr verified, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "check2-exit",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/checks/view2-mux-core.check.exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "description": "Frozen view2 --check exit; exit 0 and empty stderr verified, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "check2-meta",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/checks/view2-mux-core.check.meta.txt",
+      "sha256": "e5221b605231a36e5ffc814a3b10f402c74eb15357615de9f89d2959fff5bf21",
+      "description": "Frozen view2 --check meta; exit 0 and empty stderr verified, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "v2-visible_text",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view2-20261102T083335Z-visible.txt",
+      "sha256": "f3aa3f72a6de925af44763f5dad5e3f03f9b7d7d4ff6e00faccceea732fd0e6d",
+      "description": "Actual view2 visible text; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view2",
+        "frame": "visible",
+        "timestamp": "20261102T083335Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-visible_ansi",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view2-20261102T083335Z-visible.ansi",
+      "sha256": "5611367375c3b1762a95dc762ab3b3881cacfa59ae65f3a806ee28b1568a47e7",
+      "description": "Actual view2 visible ansi; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view2",
+        "frame": "visible",
+        "timestamp": "20261102T083335Z",
+        "state": "unselected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-selected_text",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view2-20261102T083335Z-selected.txt",
+      "sha256": "f3aa3f72a6de925af44763f5dad5e3f03f9b7d7d4ff6e00faccceea732fd0e6d",
+      "description": "Actual view2 selected text; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view2",
+        "frame": "selected",
+        "timestamp": "20261102T083335Z",
+        "state": "selected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-selected_ansi",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view2-20261102T083335Z-selected.ansi",
+      "sha256": "c86bbf384a88266b1d8d1582574fe644660ab9f9f00bc2e9c60408e257a4cc98",
+      "description": "Actual view2 selected ansi; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view2",
+        "frame": "selected",
+        "timestamp": "20261102T083335Z",
+        "state": "selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frame2_text",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view2-20261102T083335Z-frame2.txt",
+      "sha256": "f3aa3f72a6de925af44763f5dad5e3f03f9b7d7d4ff6e00faccceea732fd0e6d",
+      "description": "Actual view2 frame2 text; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view2",
+        "frame": "frame2",
+        "timestamp": "20261102T083335Z",
+        "state": "second Tab selection; plain text cannot identify selected node",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-header-file",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view2-20261102T083335Z-header.txt",
+      "sha256": "618c8e23cd40ebea854388d928780a2e0f16f519ff5a64ecf8aac009e444b177",
+      "description": "Named header capture actually contains bottom control-box lines; full visible capture contains the real app header.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view2",
+        "frame": "header command output",
+        "timestamp": "20261102T083335Z",
+        "state": "unselected; partial excerpt",
+        "format": "text"
+      }
+    },
+    {
+      "id": "spec3",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/specs/view3-fw-ha.json",
+      "sha256": "196b286044375214c68e457d182a02a05323adcbf6741fb6941047217b91bd6b",
+      "description": "Delivered final view spec; intended endpoints checked against source.",
+      "capture": null
+    },
+    {
+      "id": "check3-stdout",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/checks/view3-fw-ha.check.stdout.txt",
+      "sha256": "9dd8d3680fd0a3b878c7dad96cbe8fd1a03bd9b9148080ee8c00d5f848f241d2",
+      "description": "Frozen view3 --check stdout; exit 0 and empty stderr verified, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "check3-stderr",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/checks/view3-fw-ha.check.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Frozen view3 --check stderr; exit 0 and empty stderr verified, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "check3-exit",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/checks/view3-fw-ha.check.exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "description": "Frozen view3 --check exit; exit 0 and empty stderr verified, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "check3-meta",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/checks/view3-fw-ha.check.meta.txt",
+      "sha256": "db735d60ef9811c6eb1c7a23d625c4420ab38037665f379f5f85c758bfa9e5d9",
+      "description": "Frozen view3 --check meta; exit 0 and empty stderr verified, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "v3-visible_text",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view3-20261102T083341Z-visible.txt",
+      "sha256": "fd372dee9fc70b8deba1047163d7997c9f16f9e5bd4087a421ff47338987045c",
+      "description": "Actual view3 visible text; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view3",
+        "frame": "visible",
+        "timestamp": "20261102T083341Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-visible_ansi",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view3-20261102T083341Z-visible.ansi",
+      "sha256": "9ae4f387d438c08e7d145a1be772a41afecf7f5da8b14f65bb84e18efc1fcb79",
+      "description": "Actual view3 visible ansi; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view3",
+        "frame": "visible",
+        "timestamp": "20261102T083341Z",
+        "state": "unselected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-selected_text",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view3-20261102T083341Z-selected.txt",
+      "sha256": "fd372dee9fc70b8deba1047163d7997c9f16f9e5bd4087a421ff47338987045c",
+      "description": "Actual view3 selected text; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view3",
+        "frame": "selected",
+        "timestamp": "20261102T083341Z",
+        "state": "selected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-selected_ansi",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view3-20261102T083341Z-selected.ansi",
+      "sha256": "4e768fefb063946d51168a2aa188afa6f484721aad4db88fc147bb4459cc6e68",
+      "description": "Actual view3 selected ansi; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view3",
+        "frame": "selected",
+        "timestamp": "20261102T083341Z",
+        "state": "selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-frame2_text",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view3-20261102T083341Z-frame2.txt",
+      "sha256": "fd372dee9fc70b8deba1047163d7997c9f16f9e5bd4087a421ff47338987045c",
+      "description": "Actual view3 frame2 text; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view3",
+        "frame": "frame2",
+        "timestamp": "20261102T083341Z",
+        "state": "second Tab selection; plain text cannot identify selected node",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-header-file",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view3-20261102T083341Z-header.txt",
+      "sha256": "618c8e23cd40ebea854388d928780a2e0f16f519ff5a64ecf8aac009e444b177",
+      "description": "Named header capture actually contains bottom control-box lines; full visible capture contains the real app header.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view3",
+        "frame": "header command output",
+        "timestamp": "20261102T083341Z",
+        "state": "unselected; partial excerpt",
+        "format": "text"
+      }
+    },
+    {
+      "id": "spec4",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/specs/view4-fabric.json",
+      "sha256": "ff24f445d9e2ef696063142efbf63e18ab7d0756c4d4ce3be402b19a10093257",
+      "description": "Delivered final view spec; intended endpoints checked against source.",
+      "capture": null
+    },
+    {
+      "id": "check4-stdout",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/checks/view4-fabric.check.stdout.txt",
+      "sha256": "8ae1f53af275cf6e76661913c709536d6cbf303a1330a663d87d4876e71566ad",
+      "description": "Frozen view4 --check stdout; exit 0 and empty stderr verified, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "check4-stderr",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/checks/view4-fabric.check.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Frozen view4 --check stderr; exit 0 and empty stderr verified, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "check4-exit",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/checks/view4-fabric.check.exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "description": "Frozen view4 --check exit; exit 0 and empty stderr verified, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "check4-meta",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/checks/view4-fabric.check.meta.txt",
+      "sha256": "64052b48fb2e42ae05cfae4f7e20cf77a31afb4c275a42f5a5a798317be743bd",
+      "description": "Frozen view4 --check meta; exit 0 and empty stderr verified, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "v4-visible_text",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view4-20261102T083348Z-visible.txt",
+      "sha256": "8e88af9e6244d8a3f8415377fd1b46fa2063919b5106b8de25110ee8b538f5be",
+      "description": "Actual view4 visible text; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view4",
+        "frame": "visible",
+        "timestamp": "20261102T083348Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-visible_ansi",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view4-20261102T083348Z-visible.ansi",
+      "sha256": "b3ee67313d63f0be25be6a3006df9bead62ead22f83967101af7f2fda186055e",
+      "description": "Actual view4 visible ansi; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view4",
+        "frame": "visible",
+        "timestamp": "20261102T083348Z",
+        "state": "unselected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-selected_text",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view4-20261102T083348Z-selected.txt",
+      "sha256": "8e88af9e6244d8a3f8415377fd1b46fa2063919b5106b8de25110ee8b538f5be",
+      "description": "Actual view4 selected text; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view4",
+        "frame": "selected",
+        "timestamp": "20261102T083348Z",
+        "state": "selected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-selected_ansi",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view4-20261102T083348Z-selected.ansi",
+      "sha256": "455c1af6f83a0ab2f17d41b12b966c01716db64f09b00b4257c5c36401de0e18",
+      "description": "Actual view4 selected ansi; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view4",
+        "frame": "selected",
+        "timestamp": "20261102T083348Z",
+        "state": "selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-frame2_text",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view4-20261102T083348Z-frame2.txt",
+      "sha256": "8e88af9e6244d8a3f8415377fd1b46fa2063919b5106b8de25110ee8b538f5be",
+      "description": "Actual view4 frame2 text; timestamp is capture-session start, not a separate per-frame clock reading.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view4",
+        "frame": "frame2",
+        "timestamp": "20261102T083348Z",
+        "state": "second Tab selection; plain text cannot identify selected node",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-header-file",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view4-20261102T083348Z-header.txt",
+      "sha256": "618c8e23cd40ebea854388d928780a2e0f16f519ff5a64ecf8aac009e444b177",
+      "description": "Named header capture actually contains bottom control-box lines; full visible capture contains the real app header.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view4",
+        "frame": "header command output",
+        "timestamp": "20261102T083348Z",
+        "state": "unselected; partial excerpt",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1c-visible-txt",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view1c-20261102T083435Z-visible.txt",
+      "sha256": "795e694c547a487638db008d80027f411b4d2c841f9d8af104d23fd4c920e96a",
+      "description": "Additional ISP B selection evidence inspected blind.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "visible",
+        "timestamp": "20261102T083435Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1c-visible-ansi",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view1c-20261102T083435Z-visible.ansi",
+      "sha256": "c40496ef73fb674f4706004cd793182abe6edea7c103a15b419a95ed8297f551",
+      "description": "Additional ISP B selection evidence inspected blind.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "visible",
+        "timestamp": "20261102T083435Z",
+        "state": "unselected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1c-selected2-txt",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view1c-20261102T083435Z-selected2.txt",
+      "sha256": "795e694c547a487638db008d80027f411b4d2c841f9d8af104d23fd4c920e96a",
+      "description": "Additional ISP B selection evidence inspected blind.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "selected2",
+        "timestamp": "20261102T083435Z",
+        "state": "ISP B selected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1c-selected2-ansi",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view1c-20261102T083435Z-selected2.ansi",
+      "sha256": "ed27a09a8fba4ef08c09de153d1b6455862379b2a698aee9c1ca162f52764b77",
+      "description": "Additional ISP B selection evidence inspected blind.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "selected2",
+        "timestamp": "20261102T083435Z",
+        "state": "ISP B selected",
+        "format": "ansi"
+      }
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 18 identities and all 28 directed endpoint pairs exist in the four final specs, with no invented protocol or extra edge; repeated MUX/Core/BL identities cover view boundaries. Arrow convention is explicitly physical connectivity in generation notes. However two V4 relations remain only visual candidates and seven other V4 relations have unresolved label ownership. Source intent in JSON is not readable visual coverage.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-visible_text",
+        "v2-visible_text",
+        "v3-visible_text",
+        "v4-visible_text",
+        "v1-visible_ansi",
+        "v2-visible_ansi",
+        "v3-visible_ansi",
+        "v4-visible_ansi",
+        "blind",
+        "generation",
+        "source",
+        "expected",
+        "manifest"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "26 of 28 endpoint paths were independently traceable; e18 and e19 remain text-interrupted candidates. V2/V3 crossings and all 14 V4 humps otherwise distinguish separate paths; no intentional bus, merged corridor or extra apparent link was identified. Fail is not waived by clean --check.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-visible_text",
+        "v2-visible_text",
+        "v3-visible_text",
+        "v4-visible_text",
+        "v1-visible_ansi",
+        "v2-visible_ansi",
+        "v3-visible_ansi",
+        "v4-visible_ansi",
+        "blind",
+        "spec4"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Final ANSI grids and original stty probes are 77×47. Frozen fresh-launch procedure has no pan/zoom/f command and records natural 100%; full node boxes and labels fit in all four views. Nevertheless V4 text occludes two routes and complete visual coverage is not established. No panning/zooming or rejected overview is used to rescue this view.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-visible_text",
+        "v2-visible_text",
+        "v3-visible_text",
+        "v4-visible_text",
+        "v1-visible_ansi",
+        "v2-visible_ansi",
+        "v3-visible_ansi",
+        "v4-visible_ansi",
+        "capture-log",
+        "capture-script",
+        "verification",
+        "generation"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Source-related pairs occupy related hue families. Fabric BL and rack leaves have aligned top edges at row 24 with related teal shades; both spines are above at row 12, racks below at row 34. BL1 extra row does not change tier. Cross-view hues are view-local, not stable global identity colors; the rubric does not require global identity colors and no unsupported global-color claim is credited.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-visible_ansi",
+        "v1-selected_ansi",
+        "v2-visible_ansi",
+        "v2-selected_ansi",
+        "v3-visible_ansi",
+        "v3-selected_ansi",
+        "v4-visible_ansi",
+        "v4-selected_ansi",
+        "v1c-selected2-ansi",
+        "blind",
+        "spec1",
+        "spec2",
+        "spec3",
+        "spec4"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 24 displayed node instances (18 unique concepts) have complete four sides and rounded corners; every perimeter cell is one RGB per node. Five observed selection states uniformly bold/recolor the whole selected border; ports/arrows remain outside borders. Selection hue change is not a mixed-border defect. ANSI proves continuity, not text alone.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-visible_ansi",
+        "v1-selected_ansi",
+        "v2-visible_ansi",
+        "v2-selected_ansi",
+        "v3-visible_ansi",
+        "v3-selected_ansi",
+        "v4-visible_ansi",
+        "v4-selected_ansi",
+        "v1c-selected2-ansi",
+        "blind"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Candidate, frozen binary, rubric, dataset, source, expected and all delivered spec/capture hashes verify. DeepSeek generator identity is recorded and actual reviewer environment is openai/gpt-6-astra; blind record predates reveal. Commands, check stdout/stderr/exit, captures, dimensions and states are preserved. Cleanup is independently logged for 24 of 25 owned panes, but w7E:p37 has only a generator assertion; raw final-layout or pane-close evidence for that initial/failed pane is not preserved. No live query is authorized, so the all-owned-pane cleanup clause remains unverified rather than assumed failed.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "skill",
+        "renderer",
+        "dataset",
+        "rubric",
+        "source",
+        "expected",
+        "generation",
+        "capture-script",
+        "capture-log",
+        "verification",
+        "blind",
+        "check1-stdout",
+        "check1-stderr",
+        "check1-exit",
+        "check1-meta",
+        "check2-stdout",
+        "check2-stderr",
+        "check2-exit",
+        "check2-meta",
+        "check3-stdout",
+        "check3-stderr",
+        "check3-exit",
+        "check3-meta",
+        "check4-stdout",
+        "check4-stderr",
+        "check4-exit",
+        "check4-meta",
+        "v1-visible_ansi",
+        "v1-selected_ansi",
+        "v2-visible_ansi",
+        "v2-selected_ansi",
+        "v3-visible_ansi",
+        "v3-selected_ansi",
+        "v4-visible_ansi",
+        "v4-selected_ansi",
+        "v1c-selected2-ansi"
+      ]
+    },
+    "animation": {
+      "applicable": false,
+      "status": null,
+      "reason": "Source user line 134 explicitly removes flow dots; no later excerpt requests them back. Frozen cases manifest says off, expected.json says off, final specs omit flow, and headers show 0 flows. Static-frame equality is not used to infer speed or direction.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#original-line-134-user",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/animation",
+        "docs/visualize-eval/cases.json#/cases/4/animation"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "dataset",
+        "frames-note",
+        "v1-frame2_text",
+        "v2-frame2_text",
+        "v3-frame2_text",
+        "v4-frame2_text"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e01",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/0"
+      ],
+      "expected": "ispA → mux1; unlabeled; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: ispA → mux1; source stem (18, 22); visible waypoints (18, 22) → (18, 25) → (29, 25) → (29, 26); target arrow ▼ at (29, 26). No crossings or intentional junctions on this route. Unlabeled as required; no protocol invented. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-visible_text",
+          "region": [
+            17,
+            18,
+            7,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-visible_text",
+          "region": [
+            18,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-visible_text",
+          "region": [
+            29,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-visible_text",
+          "region": [
+            28,
+            27,
+            7,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e02",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/1"
+      ],
+      "expected": "ispB → mux1; unlabeled; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: ispB → mux1; source stem (29, 22); visible waypoints (29, 22) → (29, 24) → (31, 24) → (31, 26); target arrow ▼ at (31, 26). No crossings or intentional junctions on this route. Unlabeled as required. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-visible_text",
+          "region": [
+            28,
+            18,
+            7,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-visible_text",
+          "region": [
+            29,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-visible_text",
+          "region": [
+            31,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-visible_text",
+          "region": [
+            28,
+            27,
+            7,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e03",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/2"
+      ],
+      "expected": "ispC → mux2; unlabeled; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: ispC → mux2; source stem (44, 22); visible waypoints (44, 22) → (44, 25) → (55, 25) → (55, 26); target arrow ▼ at (55, 26). No crossings or intentional junctions on this route. Unlabeled as required. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-visible_text",
+          "region": [
+            43,
+            18,
+            7,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-visible_text",
+          "region": [
+            44,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-visible_text",
+          "region": [
+            55,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-visible_text",
+          "region": [
+            54,
+            27,
+            7,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e04",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/3"
+      ],
+      "expected": "ispD → mux2; unlabeled; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: ispD → mux2; source stem (55, 22); visible waypoints (55, 22) → (55, 24) → (57, 24) → (57, 26); target arrow ▼ at (57, 26). No crossings or intentional junctions on this route. Unlabeled as required. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-visible_text",
+          "region": [
+            54,
+            18,
+            7,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-visible_text",
+          "region": [
+            55,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-visible_text",
+          "region": [
+            57,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-visible_text",
+          "region": [
+            54,
+            27,
+            7,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e05",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/4"
+      ],
+      "expected": "mux1 → core1; x-connect; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: mux1 → core1; source stem (24, 20); visible waypoints (24, 20) → (52, 20); target arrow ▶ at (52, 20). No crossings or intentional junctions on this route. x-conn above its source run means x-connect. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            17,
+            19,
+            7,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            24,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            52,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            53,
+            19,
+            8,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            35,
+            19,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e06",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/5"
+      ],
+      "expected": "mux1 → core2; x-connect; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: mux1 → core2; source stem (24, 22); visible waypoints (24, 22) → (50, 22) → (50, 26) → (52, 26); target arrow ▶ at (52, 26). Crossing humps (50, 23) have independent orthogonal continuations, not intentional junctions. x-conn above its source run means x-connect. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            17,
+            19,
+            7,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            24,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            52,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            53,
+            25,
+            8,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            50,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            34,
+            21,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e07",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/6"
+      ],
+      "expected": "mux2 → core1; x-connect; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: mux2 → core1; source stem (24, 26); visible waypoints (24, 26) → (48, 26) → (48, 23) → (51, 23) → (51, 22) → (52, 22); target arrow ▶ at (52, 22). Crossing humps (50, 23) have independent orthogonal continuations, not intentional junctions. x-conn above its source run means x-connect. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            17,
+            25,
+            7,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            24,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            52,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            53,
+            19,
+            8,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            50,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            33,
+            25,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e08",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/7"
+      ],
+      "expected": "mux2 → core2; x-connect; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: mux2 → core2; source stem (24, 28); visible waypoints (24, 28) → (52, 28); target arrow ▶ at (52, 28). No crossings or intentional junctions on this route. x-conn above its source run means x-connect. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            17,
+            25,
+            7,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            24,
+            28,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            52,
+            28,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            53,
+            25,
+            8,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-visible_text",
+          "region": [
+            35,
+            27,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e09",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/8"
+      ],
+      "expected": "core1 → fw1; active; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: core1 → fw1; source stem (14, 20); visible waypoints (14, 20) → (45, 20); target arrow ▶ at (45, 20). No crossings or intentional junctions on this route. act is active; direct run to FW1 active. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            6,
+            19,
+            8,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            14,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            45,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            46,
+            19,
+            12,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            28,
+            19,
+            3,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e10",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/9"
+      ],
+      "expected": "core2 → fw1; active; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: core2 → fw1; source stem (14, 26); visible waypoints (14, 26) → (43, 26) → (43, 22) → (45, 22); target arrow ▶ at (45, 22). Crossing humps (43, 25) have independent orthogonal continuations, not intentional junctions. act is active; label above source run. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            6,
+            25,
+            8,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            14,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            45,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            46,
+            19,
+            12,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            43,
+            25,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            27,
+            25,
+            3,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e11",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/10"
+      ],
+      "expected": "core1 → fw2; standby; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: core1 → fw2; source stem (14, 22); visible waypoints (14, 22) → (41, 22) → (41, 25) → (44, 25) → (44, 26) → (45, 26); target arrow ▶ at (45, 26). Crossing humps (43, 25) have independent orthogonal continuations, not intentional junctions. stby is standby; node FW2 stdby retains that meaning. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            6,
+            19,
+            8,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            14,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            45,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            46,
+            25,
+            11,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            43,
+            25,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            25,
+            21,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e12",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/11"
+      ],
+      "expected": "core2 → fw2; standby; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: core2 → fw2; source stem (14, 28); visible waypoints (14, 28) → (45, 28); target arrow ▶ at (45, 28). No crossings or intentional junctions on this route. stby is standby. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            6,
+            25,
+            8,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            14,
+            28,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            45,
+            28,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            46,
+            25,
+            11,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            27,
+            27,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e13",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/12"
+      ],
+      "expected": "fw1 → bl1; active; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: fw1 → bl1; source stem (58, 20); visible waypoints (58, 20) → (65, 20); target arrow ▶ at (65, 20). No crossings or intentional junctions on this route. act above direct run is active. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            46,
+            19,
+            12,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            58,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            65,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            66,
+            19,
+            6,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            60,
+            19,
+            3,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e14",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/13"
+      ],
+      "expected": "fw1 → bl2; active; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: fw1 → bl2; source stem (58, 22); visible waypoints (58, 22) → (63, 22) → (63, 26) → (65, 26); target arrow ▶ at (65, 26). Crossing humps (63, 23) have independent orthogonal continuations, not intentional junctions. act beside column-63 descent. Raw text is act at [65,24,3,1], not the location given in generator coverage. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            46,
+            19,
+            12,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            58,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            65,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            66,
+            25,
+            6,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            63,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            65,
+            24,
+            3,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e15",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/14"
+      ],
+      "expected": "fw2 → bl1; standby; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: fw2 → bl1; source stem (57, 26); visible waypoints (57, 26) → (61, 26) → (61, 23) → (64, 23) → (64, 22) → (65, 22); target arrow ▶ at (65, 22). Crossing humps (63, 23) have independent orthogonal continuations, not intentional junctions. stby beside column-61 ascent. Raw text is stby at [56,24,4,1], not the location given in generator coverage. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            46,
+            25,
+            11,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            57,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            65,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            66,
+            19,
+            6,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            63,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            56,
+            24,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e16",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/15"
+      ],
+      "expected": "fw2 → bl2; standby; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: fw2 → bl2; source stem (57, 28); visible waypoints (57, 28) → (65, 28); target arrow ▶ at (65, 28). No crossings or intentional junctions on this route. stby above direct run is standby. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            46,
+            25,
+            11,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            57,
+            28,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            65,
+            28,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            66,
+            25,
+            6,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-visible_text",
+          "region": [
+            59,
+            27,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e17",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/16"
+      ],
+      "expected": "bl1 → sp1; ECMP; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: bl1 → sp1; source stem (14, 25); visible waypoints (14, 25) → (28, 25) → (28, 13) → (27, 13); target arrow ◀ at (27, 13). Crossing humps (16, 25), (28, 23), (28, 22), (28, 20) have independent orthogonal continuations, not intentional junctions. ECMP at [19,24,4,1] lies between the row-23 and row-25 routes; exact ownership stayed ambiguous in blind reading. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic. Endpoint trace passes, but complete relationship audit fails the required readable label association; expected/JSON labels do not resolve a blind visual ambiguity.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            8,
+            24,
+            6,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            14,
+            25,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            27,
+            13,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            18,
+            12,
+            9,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            16,
+            25,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            28,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            28,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            28,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            19,
+            24,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F03"
+      ]
+    },
+    {
+      "edge_id": "e18",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/17"
+      ],
+      "expected": "bl1 → sp2; ECMP; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Candidate only: bl1 → sp2; source stem (14, 27); visible waypoints (14, 27) → (16, 27) → (16, 14) → (15, 14) → (15, 10) → (55, 10) → (55, 13) → (54, 13); target arrow ◀ at (54, 13). Crossing humps (16, 25), (16, 23), (15, 13) have independent orthogonal continuations, not intentional junctions. ECMP covers [16,21,1,1], a cell of the apparent column-16 source path. Candidate endpoint match only; do not supply that hidden segment from JSON. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            8,
+            24,
+            6,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            14,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            54,
+            13,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            45,
+            12,
+            9,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            16,
+            25,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            16,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            15,
+            13,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            14,
+            21,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F04"
+      ]
+    },
+    {
+      "edge_id": "e19",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/18"
+      ],
+      "expected": "bl2 → sp1; ECMP; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Candidate only: bl2 → sp1; source stem (30, 25); visible waypoints (30, 25) → (29, 25) → (29, 23) → (15, 23) → (15, 22) → (13, 22) → (13, 13) → (17, 13); target arrow ▶ at (17, 13). Crossing humps (28, 23), (16, 23), (15, 13) have independent orthogonal continuations, not intentional junctions. ECMP occupies four cells of row-23 stroke. Inline text suggests the intended candidate, but the blind full-path association remained qualified. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            31,
+            24,
+            6,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            30,
+            25,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            17,
+            13,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            18,
+            12,
+            9,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            28,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            16,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            15,
+            13,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            20,
+            23,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F02",
+        "F04"
+      ]
+    },
+    {
+      "edge_id": "e20",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/19"
+      ],
+      "expected": "bl2 → sp2; ECMP; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: bl2 → sp2; source stem (37, 25); visible waypoints (37, 25) → (44, 25) → (44, 21) → (55, 21) → (55, 15) → (54, 15); target arrow ◀ at (54, 15). Crossing humps (44, 22), (49, 21), (55, 20), (55, 18) have independent orthogonal continuations, not intentional junctions. ECMP beside the column-55 route is associated strongly enough to read this relation. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            31,
+            24,
+            6,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            37,
+            25,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            54,
+            15,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            45,
+            12,
+            9,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            44,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            49,
+            21,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            55,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            55,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            56,
+            17,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e21",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/20"
+      ],
+      "expected": "sp1 → leaf1; ECMP; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: sp1 → leaf1; source stem (19, 16); visible waypoints (19, 16) → (19, 22) → (47, 22) → (47, 23); target arrow ▼ at (47, 23). Crossing humps (28, 22), (44, 22) have independent orthogonal continuations, not intentional junctions. ECMP lies midway between row-20 and row-22 runs; individual edge-label ownership remains ambiguous. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic. Endpoint trace passes, but complete relationship audit fails the required readable label association; expected/JSON labels do not resolve a blind visual ambiguity.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            18,
+            12,
+            9,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            19,
+            16,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            47,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            46,
+            24,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            28,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            44,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            31,
+            21,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F03"
+      ]
+    },
+    {
+      "edge_id": "e22",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/21"
+      ],
+      "expected": "sp1 → leaf2; ECMP; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: sp1 → leaf2; source stem (21, 16); visible waypoints (21, 16) → (21, 20) → (63, 20) → (63, 23); target arrow ▼ at (63, 23). Crossing humps (28, 20), (49, 20), (55, 20) have independent orthogonal continuations, not intentional junctions. ECMP above row 20 is also beside the Spine 2 to Leaf 1 bend; blind ownership was not certain. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic. Endpoint trace passes, but complete relationship audit fails the required readable label association; expected/JSON labels do not resolve a blind visual ambiguity.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            18,
+            12,
+            9,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            21,
+            16,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            63,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            62,
+            24,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            28,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            49,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            55,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            40,
+            19,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F03"
+      ]
+    },
+    {
+      "edge_id": "e23",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/22"
+      ],
+      "expected": "sp2 → leaf1; ECMP; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: sp2 → leaf1; source stem (46, 17); visible waypoints (46, 17) → (46, 19) → (49, 19) → (49, 23); target arrow ▼ at (49, 23). Crossing humps (49, 20), (49, 21) have independent orthogonal continuations, not intentional junctions. ECMP immediately right of column-49 descent is associated strongly enough to read this relation. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            45,
+            12,
+            9,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            46,
+            17,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            49,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            46,
+            24,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            49,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            49,
+            21,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            50,
+            22,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e24",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/23"
+      ],
+      "expected": "sp2 → leaf2; ECMP; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: sp2 → leaf2; source stem (48, 17); visible waypoints (48, 17) → (48, 18) → (65, 18) → (65, 23); target arrow ▼ at (65, 23). Crossing humps (55, 18) have independent orthogonal continuations, not intentional junctions. ECMP between row-18 and row-20 runs and adjacent to column 55 has no unique edge association. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic. Endpoint trace passes, but complete relationship audit fails the required readable label association; expected/JSON labels do not resolve a blind visual ambiguity.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            45,
+            12,
+            9,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            48,
+            17,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            65,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            62,
+            24,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            55,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            51,
+            19,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F03"
+      ]
+    },
+    {
+      "edge_id": "e25",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/24"
+      ],
+      "expected": "leaf1 → rack1; dual; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: leaf1 → rack1; source stem (47, 28); visible waypoints (47, 28) → (47, 31) → (20, 31) → (20, 33); target arrow ▼ at (20, 33). Crossing humps (47, 30), (22, 31) have independent orthogonal continuations, not intentional junctions. dual between row-29 and row-31 routes has ambiguous ownership; the endpoints themselves are traceable. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic. Endpoint trace passes, but complete relationship audit fails the required readable label association; expected/JSON labels do not resolve a blind visual ambiguity.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            46,
+            24,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            47,
+            28,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            20,
+            33,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            19,
+            34,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            47,
+            30,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            22,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            32,
+            30,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F03"
+      ]
+    },
+    {
+      "edge_id": "e26",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/25"
+      ],
+      "expected": "leaf2 → rack1; dual; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: leaf2 → rack1; source stem (63, 28); visible waypoints (63, 28) → (63, 30) → (45, 30) → (45, 29) → (22, 29) → (22, 33); target arrow ▼ at (22, 33). Crossing humps (49, 30), (47, 30), (22, 31) have independent orthogonal continuations, not intentional junctions. dual directly above row-29 route gives a readable dual attachment; same-text label instance identity is not inferred from generator prose. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            62,
+            24,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            63,
+            28,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            22,
+            33,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            19,
+            34,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            49,
+            30,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            47,
+            30,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            22,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            32,
+            28,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e27",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/26"
+      ],
+      "expected": "leaf1 → rack2; dual; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: leaf1 → rack2; source stem (49, 28); visible waypoints (49, 28) → (49, 31) → (48, 31) → (48, 32) → (47, 32) → (47, 33); target arrow ▼ at (47, 33). Crossing humps (49, 30) have independent orthogonal continuations, not intentional junctions. dual near column 49 and above row 30 does not uniquely associate with this relation. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic. Endpoint trace passes, but complete relationship audit fails the required readable label association; expected/JSON labels do not resolve a blind visual ambiguity.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            46,
+            24,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            49,
+            28,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            47,
+            33,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            46,
+            34,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            49,
+            30,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            51,
+            29,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F03"
+      ]
+    },
+    {
+      "edge_id": "e28",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/27"
+      ],
+      "expected": "leaf2 → rack2; dual; independent physical link, arrow follows recorded order, not a one-way traffic assertion.",
+      "observed": "Independently traced: leaf2 → rack2; source stem (65, 28); visible waypoints (65, 28) → (65, 32) → (49, 32) → (49, 33); target arrow ▼ at (49, 33). No crossings or intentional junctions on this route. dual midway between row-30 and row-32 runs has ambiguous ownership. Final JSON contains the expected endpoint pair and label meaning. Arrows indicate recorded endpoint order only; this is physical connectivity, not asserted one-way traffic. Endpoint trace passes, but complete relationship audit fails the required readable label association; expected/JSON labels do not resolve a blind visual ambiguity.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            62,
+            24,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            65,
+            28,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            49,
+            33,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            46,
+            34,
+            8,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            55,
+            31,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F03"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F01",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "e18"
+      ],
+      "severity": "high",
+      "description": "BL 1 → Spine 2 is present in JSON but not independently complete in the blind capture: ECMP at [14,21,4,1] replaces the apparent source vertical at [16,21,1,1]. The arrow at [54,13,1,1] and long wrap are visible, but bridging the text gap requires reconstruction. Separate ports and a matching JSON pair do not satisfy the full-path gate.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#fixed-constraints"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            14,
+            21,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            16,
+            20,
+            1,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            14,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            54,
+            13,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F02",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "e19"
+      ],
+      "severity": "high",
+      "description": "BL 2 → Spine 1 has a four-cell text interruption: ECMP at [20,23,4,1] replaces its apparent horizontal stroke between crowded crossings. Blind Stage A retained the endpoint match as a candidate, not a fully verified path. JSON intent cannot upgrade the frozen visual result.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#fixed-constraints"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            19,
+            23,
+            6,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            30,
+            25,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            17,
+            13,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F03",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e17",
+        "e21",
+        "e22",
+        "e24",
+        "e25",
+        "e27",
+        "e28"
+      ],
+      "severity": "high",
+      "description": "Seven V4 links have traceable endpoints but unresolved edge-label ownership: ECMP/dual strings sit between or near multiple routes without a unique attachment. Identical words preserve a rough tier meaning, not the required independently readable per-relationship label meaning. Counting eight ECMP and four dual labels is not an association audit.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges",
+        "docs/visualize-eval/rounds/01/rubric.json#/categories/semantic_fidelity"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            19,
+            24,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            31,
+            21,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            40,
+            19,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            51,
+            19,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            32,
+            30,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            51,
+            29,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            55,
+            31,
+            4,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F04",
+      "category": "layout_fit",
+      "edge_ids": [
+        "e18",
+        "e19"
+      ],
+      "severity": "medium",
+      "description": "All nodes and labels fit in 77×47, but text overlays route cells in V4 at [16,21,1,1] and [20,23,4,1]. Thus the no-overlay-occlusion clause fails despite compact extents, no clipping, and clean checks.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/01/rubric.json#/categories/layout_fit"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            14,
+            21,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-visible_text",
+          "region": [
+            20,
+            23,
+            4,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "B01: Workflow cleanup evidence gap: w7E:p37 is listed among 25 owned panes but has no preserved pane_after_quit result in capture-log.jsonl. generation.json asserts all panes closed and final layout only w7E:p20; the underlying final-layout output or close result is absent. This does not prove a leaked pane. No pane operations were performed to fill the gap.",
+    "B02: Frozen V4 output cannot establish two text-obscured routes and seven per-edge label associations. This is an observed failed sample, not proof that all layouts or the renderer capability are impossible. No missing model/tool substitution occurred; general backward-edge routing impossibility claimed by the generator is not independently established."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:p37",
+      "w7E:p3J",
+      "w7E:p3M",
+      "w7E:p3Y",
+      "w7E:p42",
+      "w7E:p49",
+      "w7E:p4E",
+      "w7E:p4G",
+      "w7E:p4M",
+      "w7E:p4R",
+      "w7E:p4Y",
+      "w7E:p4Z",
+      "w7E:p51",
+      "w7E:p53",
+      "w7E:p59",
+      "w7E:p5C",
+      "w7E:p5E",
+      "w7E:p5F",
+      "w7E:p5G",
+      "w7E:p5H",
+      "w7E:p5J",
+      "w7E:p5N",
+      "w7E:p5P",
+      "w7E:p5Q",
+      "w7E:p5R"
+    ],
+    "closed_pane_ids": [
+      "w7E:p3J",
+      "w7E:p3M",
+      "w7E:p3Y",
+      "w7E:p42",
+      "w7E:p49",
+      "w7E:p4E",
+      "w7E:p4G",
+      "w7E:p4M",
+      "w7E:p4R",
+      "w7E:p4Y",
+      "w7E:p4Z",
+      "w7E:p51",
+      "w7E:p53",
+      "w7E:p59",
+      "w7E:p5C",
+      "w7E:p5E",
+      "w7E:p5F",
+      "w7E:p5G",
+      "w7E:p5H",
+      "w7E:p5J",
+      "w7E:p5N",
+      "w7E:p5P",
+      "w7E:p5R",
+      "w7E:p5Q"
+    ],
+    "status": "blocked",
+    "reason": "24 distinct pane closures directly recorded in frozen capture-log.jsonl, including all four final views and V1c. Initial w7E:p37 closure is asserted only in generation.json; no raw final-layout result is present. Reviewer created no panes and did not run cleanup or status queries."
+  },
+  "overall": "fail"
+}

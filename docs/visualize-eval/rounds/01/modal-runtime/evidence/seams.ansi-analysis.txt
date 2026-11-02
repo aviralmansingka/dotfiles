@@ -1,0 +1,11 @@
+file: captures/seams.ansi.none.txt
+grid: 77x47
+boxes: 4
+  box 'modal-worker'           at (23,14) 14x4 border-colours={'#d8a657': 36}
+  box 'modal-runtime'          at (22,22) 15x4 border-colours={'#7daea3': 38}
+  box 'modal-daemon'           at (23,30) 14x4 border-colours={'#d3869b': 36}
+  box 'Task engine'            at (41,30) 13x4 border-colours={'#e29caf': 34}
+arrows: {'◀': 1, '▼': 3}
+dot glyphs: 0
+overflow badge: False
+

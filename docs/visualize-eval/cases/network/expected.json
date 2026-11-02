@@ -1,0 +1,77 @@
+{
+  "case_id": "network",
+  "reference_kind": "historical_generated_relations_not_independent_fact_verification",
+  "source_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-dotfiles-fix-visualize--/2026-10-13T05-35-27-649Z_01a133c2-33a0-74b7-9033-3ad246285cff.jsonl",
+  "source_spec_line": 180,
+  "source_call_id": "chatcmpl-tool-bfad145e3b78162e",
+  "historical_reference": {
+    "nodes": [
+      {
+        "id": "wan",
+        "label": "WAN"
+      },
+      {
+        "id": "fw",
+        "label": "Firewall"
+      },
+      {
+        "id": "core",
+        "label": "Core switch"
+      },
+      {
+        "id": "web",
+        "label": "Web tier"
+      },
+      {
+        "id": "cache",
+        "label": "Redis"
+      },
+      {
+        "id": "db",
+        "label": "DB tier"
+      }
+    ],
+    "edges": [
+      {
+        "from": "wan",
+        "to": "fw",
+        "label": "1 GbE"
+      },
+      {
+        "from": "fw",
+        "to": "core",
+        "label": "10 GbE"
+      },
+      {
+        "from": "core",
+        "to": "web",
+        "label": "10 GbE"
+      },
+      {
+        "from": "core",
+        "to": "cache",
+        "label": "25 GbE"
+      },
+      {
+        "from": "web",
+        "to": "cache",
+        "label": "session"
+      },
+      {
+        "from": "web",
+        "to": "db",
+        "label": "queries"
+      },
+      {
+        "from": "cache",
+        "to": "db",
+        "label": "fill"
+      }
+    ]
+  },
+  "constraints": [
+    "Preserve separate core-to-cache and web-to-cache relations.",
+    "Keep speeds 1 GbE, 10 GbE, and 25 GbE visible without implying motion speed is a measurement."
+  ],
+  "animation": "required"
+}

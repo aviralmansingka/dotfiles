@@ -1,0 +1,1878 @@
+{
+  "protocol_version": 1,
+  "round": 1,
+  "case_id": "modal-runtime",
+  "candidate_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+  "renderer_sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+  "rubric_sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "7e6c2daf77ca55bf3ef5103e34034bbec9dcab31a14afeff85405acb9f5a6005",
+  "generator": {
+    "worker_id": "viz-ds01-modal-runtime",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge01-modal-runtime",
+    "model": "openai/gpt-6-astra"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 77,
+    "rows": 47
+  },
+  "evidence": [
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/01/rubric.json",
+      "sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "description": "Frozen round01 rubric and embedded result schema.",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/01/metadata.json",
+      "sha256": "b99735d09760e77b21a21c7491e7e03663c20e1787ad8ac900d319c4d7ad240a",
+      "description": "Frozen round01 identities, baseline and input hashes.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen case manifest; only modal-runtime is evaluated here.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/modal-runtime/source.md",
+      "sha256": "c6e4552d5842347bc9472e53a2351897c3624c92b5a14541aaa3c28216dc4a0d",
+      "description": "Source excerpts and fixed eight-component/eight-relation constraints; historical claims, not independent current implementation verification.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/modal-runtime/expected.json",
+      "sha256": "fd3963e207e9c433b7e5825c8a1691766bb13d5df7322ac97a05e379d2cbba99",
+      "description": "Revealed source-backed expected relation set; animation optional.",
+      "capture": null
+    },
+    {
+      "id": "candidate",
+      "path": "docs/visualize-eval/rounds/01/SKILL.md",
+      "sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "description": "Frozen standalone candidate skill; unchanged round01 baseline.",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/generation.json",
+      "sha256": "076728d99a8c00a1178c08ba7078c9b3fb63eb4888b51cb91b399a9cf0081b83",
+      "description": "Generator identity, coverage and cleanup claims. Not trusted as visual audit; discrepancies are reported.",
+      "capture": null
+    },
+    {
+      "id": "commands",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/commands.md",
+      "sha256": "8937eafd1330d2ea5afb47a13d192924f28f8ef0d94ecef5ef24bc3526d7ff12",
+      "description": "Recorded commands and chronology; overview only has retrospective template/sequence notes.",
+      "capture": null
+    },
+    {
+      "id": "capture-helper",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/capture.sh",
+      "sha256": "b642b94ff4da59e87bb50828dddd70ada6a8205ba4f54777ec97969698980e7e",
+      "description": "Read-only inspection of recorded helper; not executed by judge.",
+      "capture": null
+    },
+    {
+      "id": "artifact-manifest",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/manifest.tsv",
+      "sha256": "f43ebb06fcc6352004152a93c3e7815a63c39ecc89ebb74dd93542926a8f2a64",
+      "description": "Frozen artifact timestamps and hashes; overview chronology is inconsistent with generation claims.",
+      "capture": null
+    },
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/01/reviews/modal-runtime/observed-first.md",
+      "sha256": "b49b433d92fe06c005feeb3e64dd50c39fdd60fa89a80144a2a6e506c13b803b",
+      "description": "Unchanged observed-first report saved before expected reveal; hash independently reverified.",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/01/reviews/modal-runtime/spec-manifest.json",
+      "sha256": "7e6c2daf77ca55bf3ef5103e34034bbec9dcab31a14afeff85405acb9f5a6005",
+      "description": "Deterministic sorted repository-relative spec path/hash pairs.",
+      "capture": null
+    },
+    {
+      "id": "verification",
+      "path": "docs/visualize-eval/rounds/01/reviews/modal-runtime/verification.json",
+      "sha256": "12298597a1edd08a6f1a1171619469ecffd45013fc48ad6c17628b94acceb32a",
+      "description": "Judge hash verification, actual reviewer model/name, and explicit provenance limits.",
+      "capture": null
+    },
+    {
+      "id": "old-spec-hashes",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/spec-hashes.txt",
+      "sha256": "ea6b4d79e2ad7edc7388ef1e4b563ca145a6082fff0c0f5b1bc3c35fafe0258f",
+      "description": "Timestamped interim hash list; seams entry is stale, not used as the final spec hash.",
+      "capture": null
+    },
+    {
+      "id": "overview-spec-hashes",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/overview.spec-hashes.txt",
+      "sha256": "bca75140736066dff9eb1e7bb329c147c7f91032a78cf5bd2cbb205e75a70dc1",
+      "description": "Overview spec hash recorded before capture.",
+      "capture": null
+    },
+    {
+      "id": "overview-spec",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/spec/overview.json",
+      "sha256": "e6fdb516325c72692661235f3794e8660ce4809d3ada9af21e9f8f37dff7bf93",
+      "description": "Final overview spec, hashed independently; visible geometry remains decisive.",
+      "capture": null
+    },
+    {
+      "id": "overview-check-out",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/checks/final-overview.out",
+      "sha256": "43ecd60080e43d601242400a2d8072e0641289fe848e1f201fc2bfc33c64fd7a",
+      "description": "Preserved final --check full stdout. No rerun.",
+      "capture": null
+    },
+    {
+      "id": "overview-check-err",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/checks/final-overview.err",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Preserved final --check full stderr (empty). No rerun.",
+      "capture": null
+    },
+    {
+      "id": "overview-check-code",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/checks/final-overview.code",
+      "sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061",
+      "description": "Preserved final --check exit status. No rerun.",
+      "capture": null
+    },
+    {
+      "id": "overview-tty-size.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/overview.tty-size.txt",
+      "sha256": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "description": "Recorded overview tty-size.txt; terminal dimensions and lifecycle are assessed separately.",
+      "capture": null
+    },
+    {
+      "id": "overview-split.json",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/overview.split.json",
+      "sha256": "bf325c25187eb4917e3ecd61b2459f13ad960a7fd3730be363cd319799b94b7e",
+      "description": "Recorded overview split.json; terminal dimensions and lifecycle are assessed separately.",
+      "capture": null
+    },
+    {
+      "id": "overview-timeline.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/overview.timeline.txt",
+      "sha256": "d43fcbdc620d5a58c5eebb9b001e7442b135119f6870c86f010649fa618e2d32",
+      "description": "Recorded overview timeline.txt; terminal dimensions and lifecycle are assessed separately.",
+      "capture": null
+    },
+    {
+      "id": "overview-text-none",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.text.none.txt",
+      "sha256": "f7473d088464eb103e89c45aa586e384980890283e82049badeee90fe25f267a",
+      "description": "Final actual overview text capture, none. Timestamp is frozen manifest artifact mtime only; launch/capture chronology is inconsistent and unresolved.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "overview",
+        "frame": "none",
+        "timestamp": "2026-11-02T08:25:01Z",
+        "state": "none",
+        "format": "text"
+      }
+    },
+    {
+      "id": "overview-ansi-none",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.none.txt",
+      "sha256": "091cb97f1d579ec59f42e3901d8371464bc5d5eaa6f5b8aed4f61b5422e3b551",
+      "description": "Final actual overview ansi capture, none. Timestamp is frozen manifest artifact mtime only; launch/capture chronology is inconsistent and unresolved.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "overview",
+        "frame": "none",
+        "timestamp": "2026-11-02T08:25:24Z",
+        "state": "none",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "overview-text-sel-tab",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.text.sel-tab.txt",
+      "sha256": "f7473d088464eb103e89c45aa586e384980890283e82049badeee90fe25f267a",
+      "description": "Final actual overview text capture, sel-tab. Timestamp is frozen manifest artifact mtime only; launch/capture chronology is inconsistent and unresolved.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "overview",
+        "frame": "sel-tab",
+        "timestamp": "2026-11-02T08:25:44Z",
+        "state": "sel-tab",
+        "format": "text"
+      }
+    },
+    {
+      "id": "overview-ansi-sel-tab",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-tab.txt",
+      "sha256": "d6f89951395b3ef24d6feee72bbe113c46b6c2ba725f632fc7bd4f8498eefa7e",
+      "description": "Final actual overview ansi capture, sel-tab. Timestamp is frozen manifest artifact mtime only; launch/capture chronology is inconsistent and unresolved.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "overview",
+        "frame": "sel-tab",
+        "timestamp": "2026-11-02T08:25:29Z",
+        "state": "sel-tab",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "overview-text-sel-right",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.text.sel-right.txt",
+      "sha256": "f7473d088464eb103e89c45aa586e384980890283e82049badeee90fe25f267a",
+      "description": "Final actual overview text capture, sel-right. Timestamp is frozen manifest artifact mtime only; launch/capture chronology is inconsistent and unresolved.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "overview",
+        "frame": "sel-right",
+        "timestamp": "2026-11-02T08:25:44Z",
+        "state": "sel-right",
+        "format": "text"
+      }
+    },
+    {
+      "id": "overview-ansi-sel-right",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-right.txt",
+      "sha256": "7be36f81e2601489e2ee95cf6fa06066168a05bb2051a0f05d389e4771561707",
+      "description": "Final actual overview ansi capture, sel-right. Timestamp is frozen manifest artifact mtime only; launch/capture chronology is inconsistent and unresolved.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "overview",
+        "frame": "sel-right",
+        "timestamp": "2026-11-02T08:25:44Z",
+        "state": "sel-right",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "seams-spec",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/spec/seams.json",
+      "sha256": "f0d0da4a41d6419763af4e2c040f5b0b654d6a783ef3c0a564b5235ceb547867",
+      "description": "Final seams spec, hashed independently; visible geometry remains decisive.",
+      "capture": null
+    },
+    {
+      "id": "seams-check-out",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/checks/final-seams.out",
+      "sha256": "16778d53afbf98f804712fa9f6b087a064e1eca6f2ec2bbded0a48e35ef848c5",
+      "description": "Preserved final --check full stdout. No rerun.",
+      "capture": null
+    },
+    {
+      "id": "seams-check-err",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/checks/final-seams.err",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Preserved final --check full stderr (empty). No rerun.",
+      "capture": null
+    },
+    {
+      "id": "seams-check-code",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/checks/final-seams.code",
+      "sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061",
+      "description": "Preserved final --check exit status. No rerun.",
+      "capture": null
+    },
+    {
+      "id": "seams-tty-size.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/seams.tty-size.txt",
+      "sha256": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "description": "Recorded seams tty-size.txt; terminal dimensions and lifecycle are assessed separately.",
+      "capture": null
+    },
+    {
+      "id": "seams-split.json",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/seams.split.json",
+      "sha256": "8b211e86163d7c4490d4e486fc81b3bb3bbc40974f519cd65ace8f2d9977be7e",
+      "description": "Recorded seams split.json; terminal dimensions and lifecycle are assessed separately.",
+      "capture": null
+    },
+    {
+      "id": "seams-timeline.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/seams.timeline.txt",
+      "sha256": "a17a6fc9341920c10b3ead4fa7402ea0078784e9e69a5cba002eb973d2b2472a",
+      "description": "Recorded seams timeline.txt; terminal dimensions and lifecycle are assessed separately.",
+      "capture": null
+    },
+    {
+      "id": "seams-launch-cmd.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/seams.launch-cmd.txt",
+      "sha256": "9cf473ffee75cabf9d298cab8b293fe78556bb17607890b99c488b57baca7792",
+      "description": "Recorded seams launch-cmd.txt; read as evidence only.",
+      "capture": null
+    },
+    {
+      "id": "seams-pane-shell.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/seams.pane-shell.txt",
+      "sha256": "6f69615abb7f359674d12c2b14a9d0e996b64e123a76b1893ee05bbe7cc8988c",
+      "description": "Recorded seams pane-shell.txt; read as evidence only.",
+      "capture": null
+    },
+    {
+      "id": "seams-text-none",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.text.none.txt",
+      "sha256": "31a33e6a1d869b1871899b499bd76d1f6af5a2d4ef27a6a3a2d293388b2816a8",
+      "description": "Final actual seams text capture, none. Frozen manifest timestamp agrees with per-state capture timeline.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "seams",
+        "frame": "none",
+        "timestamp": "2026-11-02T08:27:00Z",
+        "state": "none",
+        "format": "text"
+      }
+    },
+    {
+      "id": "seams-ansi-none",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.ansi.none.txt",
+      "sha256": "dbd6dcc82f9cb04e2fd1fbec5958c9c7d0a69e8c653a6a70133257eda5f69996",
+      "description": "Final actual seams ansi capture, none. Frozen manifest timestamp agrees with per-state capture timeline.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "seams",
+        "frame": "none",
+        "timestamp": "2026-11-02T08:27:00Z",
+        "state": "none",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "seams-text-sel-tab",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.text.sel-tab.txt",
+      "sha256": "31a33e6a1d869b1871899b499bd76d1f6af5a2d4ef27a6a3a2d293388b2816a8",
+      "description": "Final actual seams text capture, sel-tab. Frozen manifest timestamp agrees with per-state capture timeline.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "seams",
+        "frame": "sel-tab",
+        "timestamp": "2026-11-02T08:27:01Z",
+        "state": "sel-tab",
+        "format": "text"
+      }
+    },
+    {
+      "id": "seams-ansi-sel-tab",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.ansi.sel-tab.txt",
+      "sha256": "40f53bc37889bd3aee862fc8d87d15c867ee29775d913c2d198e051497109bcc",
+      "description": "Final actual seams ansi capture, sel-tab. Frozen manifest timestamp agrees with per-state capture timeline.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "seams",
+        "frame": "sel-tab",
+        "timestamp": "2026-11-02T08:27:01Z",
+        "state": "sel-tab",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "seams-text-sel-right",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.text.sel-right.txt",
+      "sha256": "31a33e6a1d869b1871899b499bd76d1f6af5a2d4ef27a6a3a2d293388b2816a8",
+      "description": "Final actual seams text capture, sel-right. Frozen manifest timestamp agrees with per-state capture timeline.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "seams",
+        "frame": "sel-right",
+        "timestamp": "2026-11-02T08:27:02Z",
+        "state": "sel-right",
+        "format": "text"
+      }
+    },
+    {
+      "id": "seams-ansi-sel-right",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.ansi.sel-right.txt",
+      "sha256": "a9b1592e8aff4dbc5f480c251e65f8b299ddcb552017a35adabef553283ed4db",
+      "description": "Final actual seams ansi capture, sel-right. Frozen manifest timestamp agrees with per-state capture timeline.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "seams",
+        "frame": "sel-right",
+        "timestamp": "2026-11-02T08:27:02Z",
+        "state": "sel-right",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "execution-spec",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/spec/execution.json",
+      "sha256": "1e3d23a22364fd791094ace692dbb6db58d7a77a3eee6ef37fa6014e7139ae6d",
+      "description": "Final execution spec, hashed independently; visible geometry remains decisive.",
+      "capture": null
+    },
+    {
+      "id": "execution-check-out",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/checks/final-execution.out",
+      "sha256": "4037c94248e791a31986539f0ec7a6cebddd29ca4fafa821f3983d77d9a064ab",
+      "description": "Preserved final --check full stdout. No rerun.",
+      "capture": null
+    },
+    {
+      "id": "execution-check-err",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/checks/final-execution.err",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Preserved final --check full stderr (empty). No rerun.",
+      "capture": null
+    },
+    {
+      "id": "execution-check-code",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/checks/final-execution.code",
+      "sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061",
+      "description": "Preserved final --check exit status. No rerun.",
+      "capture": null
+    },
+    {
+      "id": "execution-tty-size.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/execution.tty-size.txt",
+      "sha256": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "description": "Recorded execution tty-size.txt; terminal dimensions and lifecycle are assessed separately.",
+      "capture": null
+    },
+    {
+      "id": "execution-split.json",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/execution.split.json",
+      "sha256": "2fce74740ff8e01bf2a00478ec4527dcece74536f6c7131ba3b18f6165e6458d",
+      "description": "Recorded execution split.json; terminal dimensions and lifecycle are assessed separately.",
+      "capture": null
+    },
+    {
+      "id": "execution-timeline.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/execution.timeline.txt",
+      "sha256": "4f39ec315920a45a8455243765bba3c0c4884da41e428040e8d5291abb0eb85e",
+      "description": "Recorded execution timeline.txt; terminal dimensions and lifecycle are assessed separately.",
+      "capture": null
+    },
+    {
+      "id": "execution-launch-cmd.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/execution.launch-cmd.txt",
+      "sha256": "cf623f794cc7b39873147dbb5fef89f241a4c12dd9802d2061c13a33e638f6d1",
+      "description": "Recorded execution launch-cmd.txt; read as evidence only.",
+      "capture": null
+    },
+    {
+      "id": "execution-pane-shell.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/execution.pane-shell.txt",
+      "sha256": "d9ad4a3e724b1f6be3730653714f9cb6c5936c4aad9c34ea9bfbea64428076b8",
+      "description": "Recorded execution pane-shell.txt; read as evidence only.",
+      "capture": null
+    },
+    {
+      "id": "execution-text-none",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.text.none.txt",
+      "sha256": "53b685bf6e07a8f1ea3846f9ff8c8fb8150a4ba2450fd3476950c80995466815",
+      "description": "Final actual execution text capture, none. Frozen manifest timestamp agrees with per-state capture timeline.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "execution",
+        "frame": "none",
+        "timestamp": "2026-11-02T08:27:08Z",
+        "state": "none",
+        "format": "text"
+      }
+    },
+    {
+      "id": "execution-ansi-none",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.none.txt",
+      "sha256": "5e4b7ea3ac0541fd04eef341ac106e864a9b47eae5c304c0f661ab60cda367f5",
+      "description": "Final actual execution ansi capture, none. Frozen manifest timestamp agrees with per-state capture timeline.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "execution",
+        "frame": "none",
+        "timestamp": "2026-11-02T08:27:08Z",
+        "state": "none",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "execution-text-sel-tab",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.text.sel-tab.txt",
+      "sha256": "53b685bf6e07a8f1ea3846f9ff8c8fb8150a4ba2450fd3476950c80995466815",
+      "description": "Final actual execution text capture, sel-tab. Frozen manifest timestamp agrees with per-state capture timeline.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "execution",
+        "frame": "sel-tab",
+        "timestamp": "2026-11-02T08:27:09Z",
+        "state": "sel-tab",
+        "format": "text"
+      }
+    },
+    {
+      "id": "execution-ansi-sel-tab",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.sel-tab.txt",
+      "sha256": "298242d65fb9b7f7fb6e6cd8ec112de8cca086137ae64b5a72302a6f1115fd2e",
+      "description": "Final actual execution ansi capture, sel-tab. Frozen manifest timestamp agrees with per-state capture timeline.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "execution",
+        "frame": "sel-tab",
+        "timestamp": "2026-11-02T08:27:09Z",
+        "state": "sel-tab",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "execution-text-sel-right",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.text.sel-right.txt",
+      "sha256": "53b685bf6e07a8f1ea3846f9ff8c8fb8150a4ba2450fd3476950c80995466815",
+      "description": "Final actual execution text capture, sel-right. Frozen manifest timestamp agrees with per-state capture timeline.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "execution",
+        "frame": "sel-right",
+        "timestamp": "2026-11-02T08:27:09Z",
+        "state": "sel-right",
+        "format": "text"
+      }
+    },
+    {
+      "id": "execution-ansi-sel-right",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.sel-right.txt",
+      "sha256": "803313eb41bbbe4125abf981b9bedef12262ed644ceffd12d512ae6093533ee7",
+      "description": "Final actual execution ansi capture, sel-right. Frozen manifest timestamp agrees with per-state capture timeline.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "execution",
+        "frame": "sel-right",
+        "timestamp": "2026-11-02T08:27:09Z",
+        "state": "sel-right",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "overview-v2-cleanup",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/overview-v2.timeline.txt",
+      "sha256": "ac5cd2b0244f6a92a9e0ccd04fd0275772dd41f5363b808aad6ec801399c9b99",
+      "description": "Only lifecycle lines inspected for owned-pane cleanup; prior variant captures are not scored.",
+      "capture": null
+    },
+    {
+      "id": "seams-v1-cleanup",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/seams-v1.timeline.txt",
+      "sha256": "3ba46fdd689516bf912aef3db2df809730bfffe86cf23e8b0153d49b3e6e9ca2",
+      "description": "Only lifecycle lines inspected for owned-pane cleanup; prior variant captures are not scored.",
+      "capture": null
+    },
+    {
+      "id": "seams-v3-cleanup",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/seams-v3.timeline.txt",
+      "sha256": "467168b4198e530f9a920b102ffe7053783f56622ae8fa7330fef9fa12a790ff",
+      "description": "Only lifecycle lines inspected for owned-pane cleanup; prior variant captures are not scored.",
+      "capture": null
+    },
+    {
+      "id": "execution-v2-cleanup",
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/evidence/execution-v2.timeline.txt",
+      "sha256": "e5691388914fc29655035e169af12012bafa1eff7a34e53f66377677e6f8c83c",
+      "description": "Only lifecycle lines inspected for owned-pane cleanup; prior variant captures are not scored.",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All eight nodes and eight directed endpoint pairs exist; overview covers all and seams/execution repeat four each with shared engine continuity. However required task-input and management meanings are omitted, user-process specificity is lost, and starts/manages and the seams HTTP-over-UDS label are not uniquely attached. JSON coverage cannot rescue these capture-level failures (F01–F05).",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "blind",
+        "overview-text-none",
+        "seams-text-none",
+        "execution-text-none",
+        "overview-spec",
+        "seams-spec",
+        "execution-spec"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All eight distinct directed relations are traceable stem-to-unique-head in each occurrence (16 total paths across three views). Both worker/runtime directions use separate routes. Runtime and engine fan out using distinct ports without shared runs; no fake branch, crossing or extra apparent endpoint relation occurs. Label-meaning/association defects are scored under semantic_fidelity, not misreported as missing arrow geometry.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference"
+      ],
+      "evidence_ids": [
+        "blind",
+        "overview-text-none",
+        "seams-text-none",
+        "execution-text-none"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Actual tty measurements and all nine ANSI grids establish 77×47. Native four-row boxes and recorded default launches/no pan-or-zoom support natural 100%. All complete graph boxes, rendered graph labels and heads fit in all states and views; controls do not occlude them. Graph extents: overview [8,6,63,37], seams [23,15,32,20], execution [17,15,45,20]. Header help fragments are clipped, but no required graph label is clipped. Timing/launch archival defects are separately failed under workflow_evidence.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/01/rubric.json#/categories/layout_fit",
+        "docs/visualize-eval/cases/modal-runtime/source.md#task"
+      ],
+      "evidence_ids": [
+        "blind",
+        "overview-tty-size.txt",
+        "seams-tty-size.txt",
+        "execution-tty-size.txt",
+        "overview-ansi-none",
+        "seams-ansi-none",
+        "execution-ansi-none",
+        "commands",
+        "generation",
+        "candidate"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Geometric row depth determines hue, including unsupported same-hue groups of backend/filesystem/daemon and container/Blobnet. Source execution/container and filesystem/storage relations are not expressed as related hue families. The source does not define these geometric tiers; no visible legend qualifies them (F06). Cross-view color changes are corroboration, not a separate fixed-color requirement.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#original-line-55-assistant",
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/01/rubric.json#/categories/conceptual_grouping_color"
+      ],
+      "evidence_ids": [
+        "blind",
+        "overview-ansi-none",
+        "seams-ansi-none",
+        "execution-ansi-none",
+        "generation"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Independent raw ANSI parsing and perimeter character inspection prove all four sides and corners complete and uniformly colored on all 17 node occurrences in all three states (51 box-state instances). Selected perimeter cells uniformly become bold amber; stems/heads stay muted outside borders. No visible handles interrupt borders. Actual selected nodes are backend/filesystem in overview, daemon/engine in seams, backend/container in execution. Shared selection/base hue is not itself a border-integrity failure.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/01/rubric.json#/categories/border_integrity"
+      ],
+      "evidence_ids": [
+        "blind",
+        "overview-ansi-none",
+        "overview-ansi-sel-tab",
+        "overview-ansi-sel-right",
+        "seams-ansi-none",
+        "seams-ansi-sel-tab",
+        "seams-ansi-sel-right",
+        "execution-ansi-none",
+        "execution-ansi-sel-tab",
+        "execution-ansi-sel-right"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Frozen candidate, binary, rubric, dataset, case source/expected, three specs and all eighteen final capture hashes match. DeepSeek generator identity matches metadata/generation; this separate Astra judge identity is confirmed by session env. Blind report hash is unchanged. Final --check stdout, empty stderr and exit=0 are preserved. Nevertheless overview chronology/launch/cleanup evidence is incomplete and contradictory, and submitted selected-state descriptions conflict with ANSI (F07,F08). Six helper pane closures are recorded; overview closure is only asserted. Known record defects remain failure rather than becoming blocked-only.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/01/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/01/modal-runtime/evidence/commands.md",
+        "docs/visualize-eval/rounds/01/modal-runtime/evidence/manifest.tsv",
+        "docs/visualize-eval/rounds/01/modal-runtime/generation.json"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "verification",
+        "candidate",
+        "rubric",
+        "dataset",
+        "generation",
+        "commands",
+        "artifact-manifest",
+        "blind",
+        "spec-manifest",
+        "overview-timeline.txt",
+        "seams-timeline.txt",
+        "execution-timeline.txt",
+        "overview-check-out",
+        "overview-check-err",
+        "overview-check-code",
+        "seams-check-out",
+        "seams-check-err",
+        "seams-check-code",
+        "execution-check-out",
+        "execution-check-err",
+        "execution-check-code"
+      ]
+    },
+    "animation": {
+      "applicable": false,
+      "status": null,
+      "reason": "Frozen modal-runtime manifest/expected mark animation optional, and the source user request asks for readable components, seams, modules and RPCs without requesting motion. Thus animation is not requested for this case. All final specs contain no flows, headers say 0 flows, and no dot appears; no unrequested motion damages paths. No speed/direction claim is inferred from still frames. This is N/A, not a pass.",
+      "source_refs": [
+        "docs/visualize-eval/cases.json#/cases/6/animation",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/animation",
+        "docs/visualize-eval/cases/modal-runtime/source.md#original-line-5-user",
+        "docs/visualize-eval/cases/modal-runtime/source.md#original-line-12-user"
+      ],
+      "evidence_ids": [
+        "dataset",
+        "source",
+        "expected",
+        "blind",
+        "overview-spec",
+        "seams-spec",
+        "execution-spec"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "R1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference/edges/0"
+      ],
+      "expected": "worker → runtime: task input + control RPCs. Independent directed relationship; not a bus.",
+      "observed": "overview: worker→runtime; stem [12, 10, 1, 2], route [[11, 12, 2, 1]], target head [11, 13, 1, 1]; label 'control gRPC' at [14, 11, 12, 1]. seams: worker→runtime; stem [25, 19, 1, 2], route [[24, 21, 2, 1]], target head [24, 22, 1, 1]; label 'control gRPC' at [27, 20, 12, 1]. Downward edge is clear. Label means control only, missing task input; its final character abuts the unrelated return corridor, but path tracing remains possible. No edge-edge crossing, shared run, unintended junction or missing head is visible.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            12,
+            10,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            11,
+            12,
+            2,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            11,
+            13,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            14,
+            11,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            25,
+            19,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            24,
+            21,
+            2,
+            1
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            24,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            27,
+            20,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01"
+      ]
+    },
+    {
+      "edge_id": "R2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference/edges/1"
+      ],
+      "expected": "runtime → worker: events + management RPCs. Independent directed relationship; not a bus.",
+      "observed": "overview: runtime→worker; stem [25, 15, 1, 1], route [[26, 7, 1, 9]], target head [25, 7, 1, 1]; label 'events gRPC' at [28, 11, 11, 1]. seams: runtime→worker; stem [38, 24, 1, 1], route [[39, 16, 1, 9]], target head [38, 16, 1, 1]; label 'events gRPC' at [41, 20, 11, 1]. Separate right-side stem goes up and ends in a left-pointing head at worker. Events is visible; management is absent. No merged bidirectional corridor. No edge-edge crossing, shared run, unintended junction or missing head is visible.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            25,
+            15,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            26,
+            7,
+            1,
+            9
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            25,
+            7,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            28,
+            11,
+            11,
+            1
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            38,
+            24,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            39,
+            16,
+            1,
+            9
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            38,
+            16,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            41,
+            20,
+            11,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F02"
+      ]
+    },
+    {
+      "edge_id": "R3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference/edges/2"
+      ],
+      "expected": "runtime → engine: dispatches tasks. Independent directed relationship; not a bus.",
+      "observed": "overview: runtime→engine; stem [11, 18, 1, 2], route [[11, 20, 2, 1]], target head [12, 21, 1, 1]; label 'task dispatch' at [14, 20, 13, 1]. seams: runtime→engine; stem [26, 27, 1, 1], route [[26, 28, 18, 1], [43, 29, 1, 1]], target head [43, 30, 1, 1]; label 'task dispatch' at [28, 27, 13, 1]. Correct dispatch endpoints, downward heads and equivalent label meaning. Parallel daemon exit has its own stem; no fake branch. No edge-edge crossing, shared run, unintended junction or missing head is visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            11,
+            18,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            11,
+            20,
+            2,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            12,
+            21,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            14,
+            20,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            26,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            26,
+            28,
+            18,
+            1
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            43,
+            29,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            43,
+            30,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            28,
+            27,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "R4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference/edges/3"
+      ],
+      "expected": "engine → backend: starts / manages. Independent directed relationship; not a bus.",
+      "observed": "overview: engine→backend; stem [12, 26, 1, 3], route [[9, 29, 4, 1]], target head [9, 30, 1, 1]; label 'starts/manages' at [14, 30, 14, 1]. execution: engine→backend; stem [21, 19, 1, 2], route [[18, 21, 4, 1]], target head [18, 22, 1, 1]; label 'starts/manages' at [23, 22, 14, 1]. Topological route to backend is clear. Label assignment remains ambiguous between backend and filesystem branches in both captures; Stage B does not overwrite blind uncertainty. No edge-edge crossing, shared run, unintended junction or missing head is visible.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            12,
+            26,
+            1,
+            3
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            9,
+            29,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            9,
+            30,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            14,
+            30,
+            14,
+            1
+          ]
+        },
+        {
+          "evidence_id": "execution-text-none",
+          "region": [
+            21,
+            19,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "execution-text-none",
+          "region": [
+            18,
+            21,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "execution-text-none",
+          "region": [
+            18,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "execution-text-none",
+          "region": [
+            23,
+            22,
+            14,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F03"
+      ]
+    },
+    {
+      "edge_id": "R5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference/edges/4"
+      ],
+      "expected": "backend → container: runs user process. Independent directed relationship; not a bus.",
+      "observed": "overview: backend→container; stem [9, 35, 1, 2], route [[9, 37, 27, 1]], target head [35, 38, 1, 1]; label 'runs process' at [16, 36, 12, 1]. execution: backend→container; stem [18, 27, 1, 2], route [[18, 29, 3, 1]], target head [20, 30, 1, 1]; label 'runs process' at [20, 27, 12, 1]. Correct uniquely traced backend→container path and clear label attachment. Source user-process qualifier is absent in both views. No edge-edge crossing, shared run, unintended junction or missing head is visible.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            9,
+            35,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            9,
+            37,
+            27,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            35,
+            38,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            16,
+            36,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "execution-text-none",
+          "region": [
+            18,
+            27,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "execution-text-none",
+          "region": [
+            18,
+            29,
+            3,
+            1
+          ]
+        },
+        {
+          "evidence_id": "execution-text-none",
+          "region": [
+            20,
+            30,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "execution-text-none",
+          "region": [
+            20,
+            27,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F05"
+      ]
+    },
+    {
+      "edge_id": "R6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference/edges/5"
+      ],
+      "expected": "engine → filesystem: mounts / snapshots. Independent directed relationship; not a bus.",
+      "observed": "overview: engine→filesystem; stem [14, 26, 1, 3], route [[14, 29, 19, 1]], target head [32, 30, 1, 1]; label 'mount/snapshot' at [16, 28, 14, 1]. execution: engine→filesystem; stem [23, 19, 1, 2], route [[23, 21, 19, 1]], target head [41, 22, 1, 1]; label 'mount/snapshot' at [25, 20, 14, 1]. Independent engine exit into filesystem with visible downward head; singular shorthand preserves both source actions. No crossing with backend branch. Nearby starts/manages ambiguity is scored on R4, not invented as an extra topological link. No edge-edge crossing, shared run, unintended junction or missing head is visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            14,
+            26,
+            1,
+            3
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            14,
+            29,
+            19,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            32,
+            30,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            16,
+            28,
+            14,
+            1
+          ]
+        },
+        {
+          "evidence_id": "execution-text-none",
+          "region": [
+            23,
+            19,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "execution-text-none",
+          "region": [
+            23,
+            21,
+            19,
+            1
+          ]
+        },
+        {
+          "evidence_id": "execution-text-none",
+          "region": [
+            41,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "execution-text-none",
+          "region": [
+            25,
+            20,
+            14,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "R7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference/edges/6"
+      ],
+      "expected": "filesystem → blobnet: image + volume data. Independent directed relationship; not a bus.",
+      "observed": "overview: filesystem→blobnet; stem [32, 35, 1, 1], route [[32, 36, 30, 1], [61, 37, 1, 1]], target head [61, 38, 1, 1]; label 'image/vol data' at [39, 35, 14, 1]. execution: filesystem→blobnet; stem [41, 27, 1, 2], route [[41, 29, 8, 1]], target head [48, 30, 1, 1]; label 'image/vol data' at [26, 28, 14, 1]. Both source data kinds remain legible in conventional shorthand. Overview label lies above its route. Execution label sits left of its source stem with one blank cell; attachment is weaker but traceable and is not asserted to be an unknown endpoint. No edge-edge crossing, shared run, unintended junction or missing head is visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            32,
+            35,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            32,
+            36,
+            30,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            61,
+            37,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            61,
+            38,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            39,
+            35,
+            14,
+            1
+          ]
+        },
+        {
+          "evidence_id": "execution-text-none",
+          "region": [
+            41,
+            27,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "execution-text-none",
+          "region": [
+            41,
+            29,
+            8,
+            1
+          ]
+        },
+        {
+          "evidence_id": "execution-text-none",
+          "region": [
+            48,
+            30,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "execution-text-none",
+          "region": [
+            26,
+            28,
+            14,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "R8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference/edges/7"
+      ],
+      "expected": "runtime → daemon: filesystem HTTP over UDS. Independent directed relationship; not a bus.",
+      "observed": "overview: runtime→daemon; stem [13, 18, 1, 1], route [[13, 19, 46, 1], [58, 20, 1, 10]], target head [58, 30, 1, 1]; label 'fs HTTP over UDS' at [27, 18, 16, 1]. seams: runtime→daemon; stem [24, 27, 1, 2], route [[24, 29, 2, 1]], target head [25, 30, 1, 1]; label 'fs HTTP over UDS' at [27, 29, 16, 1]. Runtime→daemon stem and head are clear in both views. Overview clearly preserves HTTP over UDS separately from gRPC. Seams label attachment remains unknown/ambiguous, ending against the engine branch. Source/spec intent does not erase that defect. No edge-edge crossing, shared run, unintended junction or missing head is visible.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            13,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            13,
+            19,
+            46,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            58,
+            20,
+            1,
+            10
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            58,
+            30,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            27,
+            18,
+            16,
+            1
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            24,
+            27,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            24,
+            29,
+            2,
+            1
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            25,
+            30,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            27,
+            29,
+            16,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F04"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F01",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "R1"
+      ],
+      "severity": "critical",
+      "description": "The required worker→runtime seam carries task input AND control RPCs. Both final views say only control gRPC. Task-input meaning is absent from every visible label/legend. The prose abbreviation expansion in generation.json cannot restore a missing source concept in the diagram.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference"
+      ],
+      "locations": [
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            14,
+            11,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            27,
+            20,
+            12,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F02",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "R2"
+      ],
+      "severity": "critical",
+      "description": "The required runtime→worker seam carries events AND management RPCs. Both final views say only events gRPC; management meaning is omitted everywhere in the rendered set. Endpoints and direction are correct, but this is a narrower relationship than the frozen source.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference"
+      ],
+      "locations": [
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            28,
+            11,
+            11,
+            1
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            41,
+            20,
+            11,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F03",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "R4"
+      ],
+      "severity": "high",
+      "description": "starts/manages is visibly between two heads and directly below the filesystem branch in both overview and execution. Blind Stage A could not uniquely associate it with engine→backend. Reading the revealed JSON establishes author intent, not capture readability; neither occurrence independently preserves that label-to-edge association.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference"
+      ],
+      "locations": [
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            9,
+            28,
+            24,
+            3
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            14,
+            30,
+            14,
+            1
+          ]
+        },
+        {
+          "evidence_id": "execution-text-none",
+          "region": [
+            18,
+            20,
+            24,
+            3
+          ]
+        },
+        {
+          "evidence_id": "execution-text-none",
+          "region": [
+            23,
+            22,
+            14,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F04",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "R8"
+      ],
+      "severity": "high",
+      "description": "In seams, fs HTTP over UDS starts beside the daemon approach but lies beneath the engine horizontal route and ends flush against its vertical route. Blind Stage A left its exclusive association unknown. Overview is clear, but it does not rescue a misleading required detail view or establish that HTTP-over-UDS belongs to daemon from the seams capture alone.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference"
+      ],
+      "locations": [
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            24,
+            27,
+            20,
+            4
+          ]
+        },
+        {
+          "evidence_id": "seams-text-none",
+          "region": [
+            27,
+            29,
+            16,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F05",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "R5"
+      ],
+      "severity": "medium",
+      "description": "runs process preserves the execution direction/action but drops the source qualifier user from runs user process in both occurrences. No rendered legend restores that distinction. This is a localized label-meaning loss, not a reversed or missing topological edge.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-runtime/source.md#fixed-constraints",
+        "docs/visualize-eval/cases/modal-runtime/expected.json#/historical_reference"
+      ],
+      "locations": [
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            16,
+            36,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "execution-text-none",
+          "region": [
+            20,
+            27,
+            12,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F06",
+      "category": "conceptual_grouping_color",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "The hue families encode geometric rows rather than the source-described execution/container and filesystem/storage concepts. Overview groups backend, filesystem and daemon as three green siblings while the closely related container and Blobnet form an unrelated shared blue tier; execution similarly gives backend/filesystem teal and container/Blobnet pink. No source-defined tier or legend supports those same-hue groups. Seams then pairs daemon with engine in pink. Cross-view hue changes corroborate the depth encoding, but hue stability alone is not an added rubric requirement.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md#original-line-55-assistant",
+        "docs/visualize-eval/cases/modal-runtime/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/01/rubric.json#/categories/conceptual_grouping_color"
+      ],
+      "locations": [
+        {
+          "evidence_id": "overview-ansi-none",
+          "region": [
+            8,
+            31,
+            63,
+            12
+          ]
+        },
+        {
+          "evidence_id": "execution-ansi-none",
+          "region": [
+            17,
+            23,
+            45,
+            12
+          ]
+        },
+        {
+          "evidence_id": "seams-ansi-none",
+          "region": [
+            24,
+            31,
+            31,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F07",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Overview executed provenance is internally inconsistent: generation/commands claim launch 08:25:29Z and captures 08:25:30–08:25:38Z, but the frozen manifest records text-none at 08:25:01Z, ANSI-none at 08:25:24Z and right-selected at 08:25:44Z. Its timeline contains only three unlabelled times; no exact per-view launch record, per-state event log or p2Z close response was preserved. The actual captures are readable and hash-match, but the complete reproducible state/timing/cleanup chain cannot be verified.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/01/modal-runtime/generation.json#/views/0/timestamps_utc",
+        "docs/visualize-eval/rounds/01/modal-runtime/evidence/commands.md#sequence-notes-a-judge-needs",
+        "docs/visualize-eval/rounds/01/modal-runtime/evidence/manifest.tsv",
+        "docs/visualize-eval/rounds/01/modal-runtime/evidence/overview.timeline.txt",
+        "docs/visualize-eval/rounds/01/rubric.json#/categories/workflow_evidence"
+      ],
+      "locations": [
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            1,
+            1,
+            77,
+            1
+          ]
+        },
+        {
+          "evidence_id": "overview-ansi-sel-tab",
+          "region": [
+            8,
+            31,
+            19,
+            4
+          ]
+        },
+        {
+          "evidence_id": "overview-ansi-sel-right",
+          "region": [
+            31,
+            31,
+            22,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F08",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "Generation state descriptions are incorrect: seams sel-tab highlights modal-daemon, not modal-worker; execution sel-tab highlights Container backend, not Task engine. Execution sel-right highlights Task container. Generator route coordinates also contain off-by-one errors (overview reverse head is [25,7], not [24,7]). Independent ANSI evidence corrects these facts, but the submitted workflow state/coverage record is not reliable as written.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/01/modal-runtime/generation.json#/views",
+        "docs/visualize-eval/rounds/01/modal-runtime/generation.json#/relationship_coverage",
+        "docs/visualize-eval/rounds/01/rubric.json#/categories/workflow_evidence"
+      ],
+      "locations": [
+        {
+          "evidence_id": "seams-ansi-sel-tab",
+          "region": [
+            24,
+            31,
+            14,
+            4
+          ]
+        },
+        {
+          "evidence_id": "execution-ansi-sel-tab",
+          "region": [
+            17,
+            23,
+            19,
+            4
+          ]
+        },
+        {
+          "evidence_id": "execution-ansi-sel-right",
+          "region": [
+            19,
+            31,
+            16,
+            4
+          ]
+        },
+        {
+          "evidence_id": "overview-text-none",
+          "region": [
+            25,
+            7,
+            1,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "Overview capture event timestamps and exact launch/close sequence cannot be recovered from the retained record: three bare timeline entries conflict with generation claims and artifact timestamps. No new rendering or pane query was performed.",
+    "Owned overview pane w7E:p2Z closure is asserted in generation.json but lacks a retained per-step close event/final pane-list response; verified cleanup covers the other six panes only.",
+    "No missing model/tool capability was observed. The frozen documented spec exposes neither semantic per-node/group colors independent of layout nor explicit edge-label anchors; label-placement and color fixes may need renderer support, but this review did not inspect code or test unsupported fields."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:p2Z",
+      "w7E:p39",
+      "w7E:p3F",
+      "w7E:p3K",
+      "w7E:p3N",
+      "w7E:p3S",
+      "w7E:p3W"
+    ],
+    "closed_pane_ids": [
+      "w7E:p39",
+      "w7E:p3F",
+      "w7E:p3K",
+      "w7E:p3N",
+      "w7E:p3S",
+      "w7E:p3W"
+    ],
+    "status": "blocked",
+    "reason": "Six helper timelines record successful self-close. The original overview p2Z close and final single-pane state appear only as retrospective generator assertions; no retained event/output verifies them. This judge created no panes and performed no live pane/session operation."
+  },
+  "overall": "fail"
+}

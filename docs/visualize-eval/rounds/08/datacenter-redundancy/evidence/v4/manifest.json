@@ -1,0 +1,35 @@
+{
+  "spec_path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/08/datacenter-redundancy/specs/v4-access.json",
+  "spec_sha256": "ab96ec5e04bbf79588e2d9ae3fa475010a24ad8a82e70e863de4a5e19a1bbf73",
+  "binary_path": "/tmp/visualize-eval/round-08/bin/rataflow-view",
+  "binary_sha256": "ea24593b0f80c1617573eef4766f2bacaaf4315a8133a65d5331e9daec1c1f30",
+  "pane_id": "w7E:pKS",
+  "pane_rect": null,
+  "pane_cols": null,
+  "pane_rows": 51,
+  "viewport_line": null,
+  "viewport_token": "83x51 @100%",
+  "check_exit": 0,
+  "check_window": [
+    "2026-11-02T21:02:55Z",
+    "2026-11-02T21:02:55Z"
+  ],
+  "capture_window": [
+    "2026-11-02T21:02:55Z",
+    "2026-11-02T21:02:59Z"
+  ],
+  "cleanup": "confirmed_closed",
+  "select_all_frame": true,
+  "frames": 5,
+  "frame_step_ms": 100,
+  "artifacts": {
+    "bin.sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+    "check.txt": "e92936048157d91704be46967244916267bccae3b4d0cd1c4fd08acc952cbec5",
+    "v4-ansi.ansi": "d01ed43e5ee787b6c8ab1248beaccb9454213334b3d2759582bace767099a914",
+    "v4-frames.ansi": "1952240340da052e50f08ee52cfd08b3098542e93c2a50b111d5b86899fcd14c",
+    "v4-frames.txt": "d5d08d18753840cdfe83ae460fc1c22e7427ce5a52f9f2df0eb7897b8c470b8a",
+    "v4-pinned-77x47-frames.txt": "bdc9b2320652f93e061bf2ea2cefccf1f5da671b57081e695042a5997c19e3c4",
+    "v4-selected.ansi": "f0c7273426695849791df4d8b3c648330ec888fd199f94d790a737ba5a23ca26",
+    "v4-text.txt": "c4145221a5ba5f967ca5de7427f7a88aa62fe71b6f5beb9f6ec630c6592f21f8"
+  }
+}

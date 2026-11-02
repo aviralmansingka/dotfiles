@@ -1,0 +1,75 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "layers": [
+    [
+      "web",
+      "cp"
+    ],
+    [
+      "wapi",
+      "pgrpc"
+    ],
+    [],
+    [
+      "q"
+    ]
+  ],
+  "nodes": [
+    {
+      "id": "web",
+      "label": "humans + mmctl",
+      "group": "people"
+    },
+    {
+      "id": "cp",
+      "label": "control plane",
+      "group": "control"
+    },
+    {
+      "id": "wapi",
+      "label": "webapi",
+      "group": "control"
+    },
+    {
+      "id": "pgrpc",
+      "label": "private gRPC",
+      "group": "rpc"
+    },
+    {
+      "id": "q",
+      "label": "River queue",
+      "group": "control"
+    }
+  ],
+  "edges": [
+    {
+      "from": "web",
+      "to": "wapi",
+      "label": "http",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "cp",
+      "to": "pgrpc",
+      "label": "create/terminate/repair",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "pgrpc",
+      "to": "q",
+      "label": "enqueue job",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "wapi",
+      "to": "q",
+      "label": "reinstall/reprovision",
+      "dots": 1,
+      "flow": true
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=6 edges=6 flows=6 direction=tb theme=gruvbox
+extent=52x32 cells
+crossings: 1 bridges, 0 touching bends
+labels: 6/6 placed, 0 on route cells, 0 skipped, 2 ambiguous owners
+warning: 2 label(s) have an ambiguous owner: another route is as close to the text as its own edge
+groups: control(3) humans(1) queue(1) state(1)
+trunks:
+dots: 6 single-dot routes, 0 periodic routes, 1 violations, 6 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 6/6 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

@@ -1,0 +1,16 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    {"id": "auth", "label": "Auth"},
+    {"id": "queue", "label": "Job queue"},
+    {"id": "worker", "label": "Worker pool"},
+    {"id": "db", "label": "Postgres"}
+  ],
+  "edges": [
+    {"from": "queue", "to": "worker", "flow": 0.2},
+    {"from": "worker", "to": "db", "label": "write", "flow": 0.2},
+    {"from": "auth", "to": "db", "label": "read", "flow": 0.2}
+  ],
+  "layers": [["auth", "queue"], ["", "worker"], ["", "db"]]
+}

@@ -1,0 +1,12 @@
+{
+  "specs": [
+    {
+      "path": "docs/visualize-eval/rounds/03/network/specs/v1.json",
+      "sha256": "fead45b1bab31f168dbbac73a67b5a8a32901fc6e666e0fc0ea963ed8e081b60"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/03/network/specs/v2.json",
+      "sha256": "1babbfc8af2f71d751c58e9e5adbdf4b5f01a46973033e8db6802b3369a27510"
+    }
+  ]
+}

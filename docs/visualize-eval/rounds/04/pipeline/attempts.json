@@ -1,0 +1,38 @@
+{
+  "case_id": "pipeline",
+  "notes": "One final view. Three spec attempts total (budget 3, exhausted). Every --check run on a distinct spec is recorded below with its raw output file in attempts/. The accepted spec is attempt 2, preserved byte-identically as specs/v1-final.json and captured in evidence/v1.",
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "specs/v1-attempt1-lr.json",
+          "spec_sha256": "30fe44701f2121053bbbfda31065a20db512df6109f3d9e38865b3a4212350ec",
+          "direction": "lr",
+          "raw_check": "attempts/v1-attempt1-lr.check.txt",
+          "note": "Orientation probe: the skill prefers lr for chains of 5+ layers, and a left-to-right request flow matches the source. REJECTED: extent=119x19 cells, 42 columns wider than the 77-column target, so it could not fit at natural zoom. Gates were otherwise clean (0 bridges, 4/4 labels, 0 ambiguous owners, 0 detours, origins 6/6), which isolates the failure to width alone and is the evidence behind choosing tb.",
+          "verdict": "rejected: 119 columns > 77"
+        },
+        {
+          "attempt": 2,
+          "spec": "specs/v1-attempt2-tb.json",
+          "spec_sha256": "fd8c35436a83da8412417e3a72037092fa4800d17ed6eced13779290979159ad",
+          "direction": "tb",
+          "raw_check": "attempts/v1-attempt2-tb.check.txt",
+          "note": "Only the direction changed (lr -> tb), so every relationship, label and qualifier from attempt 1 survives. extent=36x40 cells, inside 77x47. crossings 0 bridges / 0 touching bends, labels 4/4 with 0 ambiguous owners, routes 6/6 near-minimal with 0 detours, origins 6/6, dots 6 constant at 0.5c/step with 0 violations. ACCEPTED; identical bytes captured as specs/v1-final.json.",
+          "verdict": "accepted"
+        },
+        {
+          "attempt": 3,
+          "spec": "specs/v1-attempt3-tb-offset.json",
+          "spec_sha256": "a1dfb316bb3b25714ddb445d55310b2b9d7b3894893c3cf6928d12a01a2296c8",
+          "direction": "tb, explicit layers: cli | api | queue,auth | empty,worker | db (reserved slot)",
+          "raw_check": "attempts/v1-attempt3-tb-offset.check.txt",
+          "note": "Probe aimed at one measured defect of attempt 2: the two purely vertical hops (cli->api, queue->worker) have only 2 traversable cells, so their dots oscillate instead of travelling. The reserved slot pushed the worker one slot right to turn those hops into elbows. REJECTED: extent dropped to 33x37 but it cost meaning -- labels: 4/4 with 1 ambiguous owner (warning: another route is as close to the label as its own edge), and route e5 (auth->db) grew to 51 cells against a 29-cell straight stair, reported forced. A 51-cell wrap around the right and bottom of the canvas is not a near-minimal route, so the trade was negative against attempt 2's 0 bridges / 0 ambiguous / 0 detours.",
+          "verdict": "rejected: 1 ambiguous owner + 51-cell forced wrap on e5"
+        }
+      ]
+    }
+  ]
+}

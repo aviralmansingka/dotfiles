@@ -1,0 +1,1782 @@
+{
+  "protocol_version": 1,
+  "round": 8,
+  "case_id": "datacenter-redundancy",
+  "candidate_sha256": "b1bdb4d3d38336cb7783db34da7f9f19edf80704a890de32285d9e582b4221eb",
+  "renderer_sha256": "ea24593b0f80c1617573eef4766f2bacaaf4315a8133a65d5331e9daec1c1f30",
+  "rubric_sha256": "ef092e343d622654fe3eb6115eafb395b53a5d4f4b47b2f0c4a165256b1d00b3",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "9c47f06af3b4a1ab219c439fbbdbf882ab20e73fe6f24556512e49332f6bf585",
+  "generator": {
+    "worker_id": "viz-ds08-5",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge08-datacenter",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": false
+  },
+  "live_pane": {
+    "columns": 83,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/08/reviews/datacenter-redundancy/observed-first.md",
+      "sha256": "7dcb79035cf234e8251c98a561ac79714683623710a7f97b8c413bed7f608b1a",
+      "description": "Blind record, saved before expectation reveal",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/08/reviews/datacenter-redundancy/spec-manifest.json",
+      "sha256": "9c47f06af3b4a1ab219c439fbbdbf882ab20e73fe6f24556512e49332f6bf585",
+      "description": "Sorted final spec path and SHA-256 pairs",
+      "capture": null
+    },
+    {
+      "id": "spec1",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/specs/v1-uplink.json",
+      "sha256": "e973aa007d70fecc8f6b530eeb85b8ec4436b2b934a730ae1fce9655582c6509",
+      "description": "Final specification",
+      "capture": null
+    },
+    {
+      "id": "spec2",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/specs/v2-security.json",
+      "sha256": "7b226b5bbfa129c409866f65cf6e4dfe96ae37fafdb6928f8c693d1dd8fcd01d",
+      "description": "Final specification",
+      "capture": null
+    },
+    {
+      "id": "spec3",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/specs/v3-fabric.json",
+      "sha256": "d151786d9d53a7346bf00495dc4d0dceb67e679d7ffa8717fe582afecb2b3212",
+      "description": "Final specification",
+      "capture": null
+    },
+    {
+      "id": "spec4",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/specs/v4-access.json",
+      "sha256": "ab96ec5e04bbf79588e2d9ae3fa475010a24ad8a82e70e863de4a5e19a1bbf73",
+      "description": "Final specification",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+      "sha256": "a3051af3eeeec31aee53558dafbbea5d061dc74253618fd6940eba5c39b5bb98",
+      "description": "source frozen input or generation record",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/expected.json",
+      "sha256": "926e866fbdbb3eaac5b7a21360905d1f621a7a6386139afab303e8ba7e62ed47",
+      "description": "expected frozen input or generation record",
+      "capture": null
+    },
+    {
+      "id": "variants",
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/historical-variants.json",
+      "sha256": "a5753817a621b846abcb4105d028dbd0d0152214495f5b225044b3882f4f34b9",
+      "description": "variants frozen input or generation record",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "dataset frozen input or generation record",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/08/rubric.json",
+      "sha256": "ef092e343d622654fe3eb6115eafb395b53a5d4f4b47b2f0c4a165256b1d00b3",
+      "description": "rubric frozen input or generation record",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/08/metadata.json",
+      "sha256": "83084698e7d2bf4a6e2e0f411ef5b0b5454e5dc37c04f9ce45b8b82ea591ebf0",
+      "description": "metadata frozen input or generation record",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/08/SKILL.md",
+      "sha256": "b1bdb4d3d38336cb7783db34da7f9f19edf80704a890de32285d9e582b4221eb",
+      "description": "skill frozen input or generation record",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/generation.json",
+      "sha256": "fc56908f27193c41e6c6ef17e4e7fe2757aaad7551180abbc41b96b158f461b1",
+      "description": "generation frozen input or generation record",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/attempts.json",
+      "sha256": "45bd4a234b7e796ce8472a3692c4e162c09cc56fd51883e9a8921f685ae560a1",
+      "description": "attempts frozen input or generation record",
+      "capture": null
+    },
+    {
+      "id": "raw-check-v1-a2-lr",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/raw/check-v1-a2-lr.txt",
+      "sha256": "f2776af2ef0440cb313441c2776f87f8815fcc1ec0f4ba781673373450dc3343",
+      "description": "Recorded candidate check output; no separate exit-status record",
+      "capture": null
+    },
+    {
+      "id": "raw-check-v1-a3-minlen",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/raw/check-v1-a3-minlen.txt",
+      "sha256": "fd965e837e887e1364aa834461ecb3fc330d769e02e7b72b3620267e51ff08c8",
+      "description": "Recorded candidate check output; no separate exit-status record",
+      "capture": null
+    },
+    {
+      "id": "raw-check-v1-edge-core-a1",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/raw/check-v1-edge-core-a1.txt",
+      "sha256": "26551b50c9684f9d1e907af3b5cca62ce64fd2737c15a57c923acc4a9f4d575a",
+      "description": "Recorded candidate check output; no separate exit-status record",
+      "capture": null
+    },
+    {
+      "id": "raw-check-v2-a2-labelrank",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/raw/check-v2-a2-labelrank.txt",
+      "sha256": "c8dc77ecc1f063438b5d5e69162ece3046514860c40eb9c2b8113278aa3942dc",
+      "description": "Recorded candidate check output; no separate exit-status record",
+      "capture": null
+    },
+    {
+      "id": "raw-check-v2-a3-lr",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/raw/check-v2-a3-lr.txt",
+      "sha256": "c5363e5b95e97b5ee78740aa4fc5275a47c81f8f4a9d64bd16eb11148bb6e1ff",
+      "description": "Recorded candidate check output; no separate exit-status record",
+      "capture": null
+    },
+    {
+      "id": "raw-check-v2-firewall-pair-a1",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/raw/check-v2-firewall-pair-a1.txt",
+      "sha256": "d2ad74b0eebb31414d6ee858c37370113f6c1bd68a80e40f2a053f31cc1d1000",
+      "description": "Recorded candidate check output; no separate exit-status record",
+      "capture": null
+    },
+    {
+      "id": "raw-check-v3-a2-fabric",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/raw/check-v3-a2-fabric.txt",
+      "sha256": "152380ba7e963d5c5934aa2b9deb8b941d8fada83a890d1e59efdafb9385e9fd",
+      "description": "Recorded candidate check output; no separate exit-status record",
+      "capture": null
+    },
+    {
+      "id": "raw-check-v3-a3-order",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/raw/check-v3-a3-order.txt",
+      "sha256": "3037283dd758ce9711fac0fbc4765081269f4a25ed4f8227b601ff05bec17ca0",
+      "description": "Recorded candidate check output; no separate exit-status record",
+      "capture": null
+    },
+    {
+      "id": "raw-check-v3-spine-fabric-a1",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/raw/check-v3-spine-fabric-a1.txt",
+      "sha256": "215900968701706f40077233a177e8098ae06c13cb871e9ba3d6af1b3e6cca65",
+      "description": "Recorded candidate check output; no separate exit-status record",
+      "capture": null
+    },
+    {
+      "id": "raw-check-v4-a1-access",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/raw/check-v4-a1-access.txt",
+      "sha256": "7a5834e6dda09851dac35dc487c0eb7ebe5c488dd7b5770545fc16c29a711041",
+      "description": "Recorded candidate check output; no separate exit-status record",
+      "capture": null
+    },
+    {
+      "id": "raw-check-v4-a2-lr",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/raw/check-v4-a2-lr.txt",
+      "sha256": "e92936048157d91704be46967244916267bccae3b4d0cd1c4fd08acc952cbec5",
+      "description": "Recorded candidate check output; no separate exit-status record",
+      "capture": null
+    },
+    {
+      "id": "v1-bin-sha256",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v1/bin.sha256",
+      "sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+      "description": "Frozen view evidence bin.sha256",
+      "capture": null
+    },
+    {
+      "id": "v1-check",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v1/check.txt",
+      "sha256": "26551b50c9684f9d1e907af3b5cca62ce64fd2737c15a57c923acc4a9f4d575a",
+      "description": "Frozen view evidence check.txt",
+      "capture": null
+    },
+    {
+      "id": "v1-manifest",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v1/manifest.json",
+      "sha256": "2ebe5f1ba5cda050ef68f89cd20bf17216c2ae603345e027a36373bc4f364b32",
+      "description": "Frozen view evidence manifest.json",
+      "capture": null
+    },
+    {
+      "id": "v1-ansi",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v1/v1-ansi.ansi",
+      "sha256": "ab3f2cb33283eb56e5cc892f94c0958d9a1bc0df0e51168bce6671ad6ea8fae9",
+      "description": "Frozen view evidence v1-ansi.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:02:32Z to 2026-11-02T21:02:36Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-v1-frames-ansi",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v1/v1-frames.ansi",
+      "sha256": "d22a481e711e8ca9d615ef27c2a1c711daf90fedd1bffbd6034bac77f9b149e9",
+      "description": "Frozen view evidence v1-frames.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "five recorded frames",
+        "timestamp": "2026-11-02T21:02:32Z to 2026-11-02T21:02:36Z",
+        "state": "normal static",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-v1-frames-txt",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v1/v1-frames.txt",
+      "sha256": "fc306017e0f7edc002e09d61157f72d85c85364b70efc9ee2cc1e6dae8ab97a5",
+      "description": "Frozen view evidence v1-frames.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "five recorded frames",
+        "timestamp": "2026-11-02T21:02:32Z to 2026-11-02T21:02:36Z",
+        "state": "normal static",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-target",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v1/v1-pinned-77x47-frames.txt",
+      "sha256": "655298acf1c7aee25ad3b11acda396a408a6b3a58f1135865558440f310f6aec",
+      "description": "Frozen view evidence v1-pinned-77x47-frames.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0..4 at 0,100,200,300,400ms",
+        "timestamp": "relative 0..400ms; wall clock not recorded",
+        "state": "direct dump, not live pane",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-selected",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v1/v1-selected.ansi",
+      "sha256": "dc84eadd13748a1acc3d5bca4969322fbc9200f309ae1da4de7a9e84de413b76",
+      "description": "Frozen view evidence v1-selected.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:02:32Z to 2026-11-02T21:02:36Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-text",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v1/v1-text.txt",
+      "sha256": "63f38ae8b542aaa9d7ea2c7073b720bc2384f722ba6ea0ad6d40a9922806fe91",
+      "description": "Frozen view evidence v1-text.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:02:32Z to 2026-11-02T21:02:36Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-validator-txt",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v1/validator.txt",
+      "sha256": "b72f1bf903ac327539d32f6dbb02cd650b735dd03c77b91383a89628dcad9d18",
+      "description": "Frozen view evidence validator.txt",
+      "capture": null
+    },
+    {
+      "id": "v2-bin-sha256",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v2/bin.sha256",
+      "sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+      "description": "Frozen view evidence bin.sha256",
+      "capture": null
+    },
+    {
+      "id": "v2-check",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v2/check.txt",
+      "sha256": "c8dc77ecc1f063438b5d5e69162ece3046514860c40eb9c2b8113278aa3942dc",
+      "description": "Frozen view evidence check.txt",
+      "capture": null
+    },
+    {
+      "id": "v2-manifest",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v2/manifest.json",
+      "sha256": "c993ebb6a5eafd65813c09710a234cbf304b2a46a27eae0935243e2fd074be47",
+      "description": "Frozen view evidence manifest.json",
+      "capture": null
+    },
+    {
+      "id": "v2-ansi",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v2/v2-ansi.ansi",
+      "sha256": "0a641290c8ba9260f8db0a593eea770207a19fc0b9b3a6f231525f99150f396d",
+      "description": "Frozen view evidence v2-ansi.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:02:46Z to 2026-11-02T21:02:50Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-v2-frames-ansi",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v2/v2-frames.ansi",
+      "sha256": "970b24bc3717cc2450a493cdcde97bccc847c0a89995271bc31f31af7f87a349",
+      "description": "Frozen view evidence v2-frames.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "five recorded frames",
+        "timestamp": "2026-11-02T21:02:46Z to 2026-11-02T21:02:50Z",
+        "state": "normal static",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-v2-frames-txt",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v2/v2-frames.txt",
+      "sha256": "04e974d0862001325369271b10726f2d249dd4dafe4e978cfb5061e209d01b34",
+      "description": "Frozen view evidence v2-frames.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "five recorded frames",
+        "timestamp": "2026-11-02T21:02:46Z to 2026-11-02T21:02:50Z",
+        "state": "normal static",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-target",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v2/v2-pinned-77x47-frames.txt",
+      "sha256": "690a07755c10fe6d0e1e52a6416c7663a001643834298fc11034b81a5b3308a6",
+      "description": "Frozen view evidence v2-pinned-77x47-frames.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0..4 at 0,100,200,300,400ms",
+        "timestamp": "relative 0..400ms; wall clock not recorded",
+        "state": "direct dump, not live pane",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-selected",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v2/v2-selected.ansi",
+      "sha256": "caf260a27a45feb8deef7061d3415fd98f38bce65814fbcd72ee7ea1ab1bf338",
+      "description": "Frozen view evidence v2-selected.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:02:46Z to 2026-11-02T21:02:50Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-text",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v2/v2-text.txt",
+      "sha256": "087174eef611901341d55d7d9bc1b4b64c22ab7e349b6fb1e2c6d9b31dd03422",
+      "description": "Frozen view evidence v2-text.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:02:46Z to 2026-11-02T21:02:50Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-validator-txt",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v2/validator.txt",
+      "sha256": "b72f1bf903ac327539d32f6dbb02cd650b735dd03c77b91383a89628dcad9d18",
+      "description": "Frozen view evidence validator.txt",
+      "capture": null
+    },
+    {
+      "id": "v3-bin-sha256",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v3/bin.sha256",
+      "sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+      "description": "Frozen view evidence bin.sha256",
+      "capture": null
+    },
+    {
+      "id": "v3-check",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v3/check.txt",
+      "sha256": "152380ba7e963d5c5934aa2b9deb8b941d8fada83a890d1e59efdafb9385e9fd",
+      "description": "Frozen view evidence check.txt",
+      "capture": null
+    },
+    {
+      "id": "v3-manifest",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v3/manifest.json",
+      "sha256": "a24dd1f41ae8a00044fc8db3deaf9c69160e10899fbd3f97a464c70037fdd368",
+      "description": "Frozen view evidence manifest.json",
+      "capture": null
+    },
+    {
+      "id": "v3-ansi",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v3/v3-ansi.ansi",
+      "sha256": "06b0605b91906bd9c3a81a4967c18ed3fa3a2fe2c6829d3438b4bd9e06cc8dc3",
+      "description": "Frozen view evidence v3-ansi.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:02:50Z to 2026-11-02T21:02:54Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-v3-frames-ansi",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v3/v3-frames.ansi",
+      "sha256": "5b2ec15b1d735c2828f78fe0e871bee75164f55d538516dcc0146447d97222fe",
+      "description": "Frozen view evidence v3-frames.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "five recorded frames",
+        "timestamp": "2026-11-02T21:02:50Z to 2026-11-02T21:02:54Z",
+        "state": "normal static",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-v3-frames-txt",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v3/v3-frames.txt",
+      "sha256": "d2f7f0ff0d7b97bacb9d607bb91514910e3222ba8297486df7142ce40c08c7b5",
+      "description": "Frozen view evidence v3-frames.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "five recorded frames",
+        "timestamp": "2026-11-02T21:02:50Z to 2026-11-02T21:02:54Z",
+        "state": "normal static",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-target",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v3/v3-pinned-77x47-frames.txt",
+      "sha256": "e5af4f17f021b55420ba2551b12b815ef7f9ba5547f56ff77b1f9a62bf3067cd",
+      "description": "Frozen view evidence v3-pinned-77x47-frames.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "0..4 at 0,100,200,300,400ms",
+        "timestamp": "relative 0..400ms; wall clock not recorded",
+        "state": "direct dump, not live pane",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-selected",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v3/v3-selected.ansi",
+      "sha256": "ad575ed4cd87e99c51eb5ce78cae2e3eedb3f0ea610be657d7d33536e809e452",
+      "description": "Frozen view evidence v3-selected.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:02:50Z to 2026-11-02T21:02:54Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-text",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v3/v3-text.txt",
+      "sha256": "a29e98d37e35b1e78e8e9a54d9bab86bfc10035d4c36bd111c47ed9d1252c109",
+      "description": "Frozen view evidence v3-text.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:02:50Z to 2026-11-02T21:02:54Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-validator-txt",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v3/validator.txt",
+      "sha256": "b72f1bf903ac327539d32f6dbb02cd650b735dd03c77b91383a89628dcad9d18",
+      "description": "Frozen view evidence validator.txt",
+      "capture": null
+    },
+    {
+      "id": "v4-bin-sha256",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v4/bin.sha256",
+      "sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+      "description": "Frozen view evidence bin.sha256",
+      "capture": null
+    },
+    {
+      "id": "v4-check",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v4/check.txt",
+      "sha256": "e92936048157d91704be46967244916267bccae3b4d0cd1c4fd08acc952cbec5",
+      "description": "Frozen view evidence check.txt",
+      "capture": null
+    },
+    {
+      "id": "v4-manifest",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v4/manifest.json",
+      "sha256": "efb31be310f1d8572a271fe167d063d7d841a86a75bf124fd1f6081d22f5cfc4",
+      "description": "Frozen view evidence manifest.json",
+      "capture": null
+    },
+    {
+      "id": "v4-ansi",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v4/v4-ansi.ansi",
+      "sha256": "d01ed43e5ee787b6c8ab1248beaccb9454213334b3d2759582bace767099a914",
+      "description": "Frozen view evidence v4-ansi.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:02:55Z to 2026-11-02T21:02:59Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-v4-frames-ansi",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v4/v4-frames.ansi",
+      "sha256": "1952240340da052e50f08ee52cfd08b3098542e93c2a50b111d5b86899fcd14c",
+      "description": "Frozen view evidence v4-frames.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "five recorded frames",
+        "timestamp": "2026-11-02T21:02:55Z to 2026-11-02T21:02:59Z",
+        "state": "normal static",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-v4-frames-txt",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v4/v4-frames.txt",
+      "sha256": "d5d08d18753840cdfe83ae460fc1c22e7427ce5a52f9f2df0eb7897b8c470b8a",
+      "description": "Frozen view evidence v4-frames.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "five recorded frames",
+        "timestamp": "2026-11-02T21:02:55Z to 2026-11-02T21:02:59Z",
+        "state": "normal static",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-target",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v4/v4-pinned-77x47-frames.txt",
+      "sha256": "bdc9b2320652f93e061bf2ea2cefccf1f5da671b57081e695042a5997c19e3c4",
+      "description": "Frozen view evidence v4-pinned-77x47-frames.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "0..4 at 0,100,200,300,400ms",
+        "timestamp": "relative 0..400ms; wall clock not recorded",
+        "state": "direct dump, not live pane",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-selected",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v4/v4-selected.ansi",
+      "sha256": "f0c7273426695849791df4d8b3c648330ec888fd199f94d790a737ba5a23ca26",
+      "description": "Frozen view evidence v4-selected.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:02:55Z to 2026-11-02T21:02:59Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-text",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v4/v4-text.txt",
+      "sha256": "c4145221a5ba5f967ca5de7427f7a88aa62fe71b6f5beb9f6ec630c6592f21f8",
+      "description": "Frozen view evidence v4-text.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:02:55Z to 2026-11-02T21:02:59Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-validator-txt",
+      "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/evidence/v4/validator.txt",
+      "sha256": "869e78c67ce75c747f9edea7456a09a8d2934a0d6c1472b519798a54ef445130",
+      "description": "Frozen view evidence validator.txt",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All source nodes and 28 pairs are declared, but dense v3 routes and ambiguous ownership prevent complete visually readable relationship coverage.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "evidence_ids": [
+        "v1-text",
+        "v2-text",
+        "v3-text",
+        "v4-text",
+        "generation"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Six ambiguous label owners and tangled v3 reverse routes impair independent endpoint-to-head traceability and route economy.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "evidence_ids": [
+        "v1-text",
+        "v2-text",
+        "v3-text",
+        "v4-text",
+        "v1-check",
+        "v2-check",
+        "v3-check"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "v3 edge label and arrowheads overwrite region title; 14 bridges in fabric with no established minimum; target live 77x47 pane evidence missing.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "evidence_ids": [
+        "v1-target",
+        "v2-target",
+        "v3-target",
+        "v4-target",
+        "v3-text"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Most declared group boxes are empty slivers detached from members; v3 distinct spine and rack-leaf groups share similar hues.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "evidence_ids": [
+        "v1-text",
+        "v2-text",
+        "v3-text",
+        "v4-text",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v4-ansi"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Normal and select-all ANSI prove all 24 occurrence perimeters and corners complete and per-node color continuous, not separate selection navigation.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "evidence_ids": [
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v4-ansi",
+        "v1-selected",
+        "v2-selected",
+        "v3-selected",
+        "v4-selected"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Candidate raw check records omit individual exit status and separately identified stderr, preflight probe raw evidence is missing, and actual target pane was not captured.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "skill",
+        "rubric",
+        "dataset",
+        "generation",
+        "attempts",
+        "blind",
+        "spec-manifest",
+        "v1-manifest",
+        "v2-manifest",
+        "v3-manifest",
+        "v4-manifest"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Explicit no-flowing-dots source demand, zero dots on all specs and in all captures, including five pinned target frames.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "evidence_ids": [
+        "v1-target",
+        "v2-target",
+        "v3-target",
+        "v4-target",
+        "source"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Correct source-backed redundant-fabrics classification and tier pins, but visible independent labeled lane recipe fails in the dense fabric."
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "ispA → mux1; physical access link (unlabeled in source); arrow denotes recording order, not physical traffic direction",
+      "observed": "Separate stem and downward arrowhead can be followed through the ISP to MUX region border.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            35,
+            20,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "ispB → mux1; physical access link (unlabeled in source); arrow denotes recording order, not physical traffic direction",
+      "observed": "Separate stem and downward arrowhead can be followed through the ISP to MUX region border.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            37,
+            20,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "ispC → mux2; physical access link (unlabeled in source); arrow denotes recording order, not physical traffic direction",
+      "observed": "Separate stem and downward arrowhead can be followed through the ISP to MUX region border.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            45,
+            20,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "ispD → mux2; physical access link (unlabeled in source); arrow denotes recording order, not physical traffic direction",
+      "observed": "Separate stem and downward arrowhead can be followed through the ISP to MUX region border.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            47,
+            20,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "mux1 → core1; x-connect; arrow denotes recording order, not physical traffic direction",
+      "observed": "Downward target head is visible; two-cell-spaced MUX stems and repeated x-connect labels make individual label ownership uncertain. Checker does not identify exact affected edge.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            34,
+            36,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "mux1 → core2; x-connect; arrow denotes recording order, not physical traffic direction",
+      "observed": "Downward target head is visible; two-cell-spaced MUX stems and repeated x-connect labels make individual label ownership uncertain. Checker does not identify exact affected edge.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            45,
+            36,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "mux2 → core1; x-connect; arrow denotes recording order, not physical traffic direction",
+      "observed": "Downward target head is visible; two-cell-spaced MUX stems and repeated x-connect labels make individual label ownership uncertain. Checker does not identify exact affected edge.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            36,
+            36,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "mux2 → core2; x-connect; arrow denotes recording order, not physical traffic direction",
+      "observed": "Downward target head is visible; two-cell-spaced MUX stems and repeated x-connect labels make individual label ownership uncertain. Checker does not identify exact affected edge.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            47,
+            36,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e9",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "core1 → fw1; active; arrow denotes recording order, not physical traffic direction",
+      "observed": "Downward head visible and solid/dashed style distinguishes the active/standby families, but crowded paired lanes and repeated labels do not establish an unambiguous individual owner; exact checker flags not localized.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            29,
+            24,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e10",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "core2 → fw1; active; arrow denotes recording order, not physical traffic direction",
+      "observed": "Downward head visible and solid/dashed style distinguishes the active/standby families, but crowded paired lanes and repeated labels do not establish an unambiguous individual owner; exact checker flags not localized.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            31,
+            24,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e11",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "core1 → fw2; standby (unconfirmed, dashed); arrow denotes recording order, not physical traffic direction",
+      "observed": "Downward head visible and solid/dashed style distinguishes the active/standby families, but crowded paired lanes and repeated labels do not establish an unambiguous individual owner; exact checker flags not localized.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            44,
+            24,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e12",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "core2 → fw2; standby (unconfirmed, dashed); arrow denotes recording order, not physical traffic direction",
+      "observed": "Downward head visible and solid/dashed style distinguishes the active/standby families, but crowded paired lanes and repeated labels do not establish an unambiguous individual owner; exact checker flags not localized.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            46,
+            24,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e13",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "fw1 → bl1; active; arrow denotes recording order, not physical traffic direction",
+      "observed": "Downward head visible and solid/dashed style distinguishes the active/standby families, but crowded paired lanes and repeated labels do not establish an unambiguous individual owner; exact checker flags not localized.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            35,
+            39,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e14",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "fw1 → bl2; active; arrow denotes recording order, not physical traffic direction",
+      "observed": "Downward head visible and solid/dashed style distinguishes the active/standby families, but crowded paired lanes and repeated labels do not establish an unambiguous individual owner; exact checker flags not localized.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            44,
+            39,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e15",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "fw2 → bl1; standby (unconfirmed, dashed); arrow denotes recording order, not physical traffic direction",
+      "observed": "Downward head visible and solid/dashed style distinguishes the active/standby families, but crowded paired lanes and repeated labels do not establish an unambiguous individual owner; exact checker flags not localized.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            37,
+            39,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e16",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "fw2 → bl2; standby (unconfirmed, dashed); arrow denotes recording order, not physical traffic direction",
+      "observed": "Downward head visible and solid/dashed style distinguishes the active/standby families, but crowded paired lanes and repeated labels do not establish an unambiguous individual owner; exact checker flags not localized.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            46,
+            39,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e17",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "bl1 → sp1; ECMP; arrow denotes recording order, not physical traffic direction",
+      "observed": "Arrowheads visible (four rightward at spine sides, four downward at rack-leaf tops), but this particular endpoint-to-head path and ECMP owner are not reliably distinguished through the crowded reverse loops, bridges and region overlays.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            25,
+            14,
+            41,
+            25
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1",
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e18",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "bl1 → sp2; ECMP; arrow denotes recording order, not physical traffic direction",
+      "observed": "Arrowheads visible (four rightward at spine sides, four downward at rack-leaf tops), but this particular endpoint-to-head path and ECMP owner are not reliably distinguished through the crowded reverse loops, bridges and region overlays.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            25,
+            14,
+            41,
+            25
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1",
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e19",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "bl2 → sp1; ECMP; arrow denotes recording order, not physical traffic direction",
+      "observed": "Arrowheads visible (four rightward at spine sides, four downward at rack-leaf tops), but this particular endpoint-to-head path and ECMP owner are not reliably distinguished through the crowded reverse loops, bridges and region overlays.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            25,
+            14,
+            41,
+            25
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1",
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e20",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "bl2 → sp2; ECMP; arrow denotes recording order, not physical traffic direction",
+      "observed": "Arrowheads visible (four rightward at spine sides, four downward at rack-leaf tops), but this particular endpoint-to-head path and ECMP owner are not reliably distinguished through the crowded reverse loops, bridges and region overlays.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            25,
+            14,
+            41,
+            25
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1",
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e21",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "sp1 → leaf1; ECMP; arrow denotes recording order, not physical traffic direction",
+      "observed": "Arrowheads visible (four rightward at spine sides, four downward at rack-leaf tops), but this particular endpoint-to-head path and ECMP owner are not reliably distinguished through the crowded reverse loops, bridges and region overlays.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            25,
+            14,
+            41,
+            25
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1",
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e22",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "sp1 → leaf2; ECMP; arrow denotes recording order, not physical traffic direction",
+      "observed": "Arrowheads visible (four rightward at spine sides, four downward at rack-leaf tops), but this particular endpoint-to-head path and ECMP owner are not reliably distinguished through the crowded reverse loops, bridges and region overlays.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            25,
+            14,
+            41,
+            25
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1",
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e23",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "sp2 → leaf1; ECMP; arrow denotes recording order, not physical traffic direction",
+      "observed": "Arrowheads visible (four rightward at spine sides, four downward at rack-leaf tops), but this particular endpoint-to-head path and ECMP owner are not reliably distinguished through the crowded reverse loops, bridges and region overlays.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            25,
+            14,
+            41,
+            25
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1",
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e24",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "sp2 → leaf2; ECMP; arrow denotes recording order, not physical traffic direction",
+      "observed": "Arrowheads visible (four rightward at spine sides, four downward at rack-leaf tops), but this particular endpoint-to-head path and ECMP owner are not reliably distinguished through the crowded reverse loops, bridges and region overlays.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            25,
+            14,
+            41,
+            25
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1",
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e25",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "leaf1 → rack1; dual; arrow denotes recording order, not physical traffic direction",
+      "observed": "Separate left-to-right lane and rightward rack arrowhead visible; the two crossed lanes use a bridge, and dual label ownership is clear.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            49,
+            22,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e26",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "leaf2 → rack1; dual; arrow denotes recording order, not physical traffic direction",
+      "observed": "Separate left-to-right lane and rightward rack arrowhead visible; the two crossed lanes use a bridge, and dual label ownership is clear.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            49,
+            24,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e27",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "leaf1 → rack2; dual; arrow denotes recording order, not physical traffic direction",
+      "observed": "Separate left-to-right lane and rightward rack arrowhead visible; the two crossed lanes use a bridge, and dual label ownership is clear.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            49,
+            28,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e28",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": "leaf2 → rack2; dual; arrow denotes recording order, not physical traffic direction",
+      "observed": "Separate left-to-right lane and rightward rack arrowhead visible; the two crossed lanes use a bridge, and dual label ownership is clear.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            49,
+            30,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "apparent-v3-region-branch",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "expected": null,
+      "observed": "The region outline intersects route lines around the row-30 title and presents branch-like contacts; no additional real endpoint or new network relation is established. It is a misleading overlay rather than an asserted extra topology edge.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            23,
+            29,
+            40,
+            7
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1",
+        "F3",
+        "F4"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "e17",
+        "e18",
+        "e19",
+        "e20",
+        "e21",
+        "e22",
+        "e23",
+        "e24"
+      ],
+      "severity": "high",
+      "description": "Dense v3 reverse-edge loops, bridges and route/border contacts prevent reliable independent tracing; no evidence proves all 14 bridges or long detours are forced.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            25,
+            14,
+            41,
+            25
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "e5",
+        "e6",
+        "e7",
+        "e8",
+        "e9",
+        "e10",
+        "e11",
+        "e12",
+        "e13",
+        "e14",
+        "e15",
+        "e16",
+        "e17",
+        "e18",
+        "e19",
+        "e20",
+        "e21",
+        "e22",
+        "e23",
+        "e24"
+      ],
+      "severity": "high",
+      "description": "Checks flag six ambiguous label owners across v1–v3; capture contains sibling lanes two cells apart and crowded repeated labels. Exact flagged identities are not recorded.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            26,
+            25,
+            32,
+            11
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            26,
+            18,
+            23,
+            22
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            27,
+            23,
+            35,
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "category": "layout_fit",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "ECMP and arrowheads overwrite the rack-leaf region title in the target dump and live pane; checker only tests edge labels against routes.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            23,
+            30,
+            21,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "category": "conceptual_grouping_color",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Multiple declared group rectangles collapse into detached empty slivers; v3 rack-leaf wraps its members but its title is interrupted.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            62,
+            20,
+            6,
+            22
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            52,
+            24,
+            6,
+            21
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            23,
+            17,
+            39,
+            19
+          ]
+        },
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            25,
+            20,
+            34,
+            16
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F5",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Raw candidate exit codes and independently identified stderr, preflight raw close/status evidence, and an actual 77x47 live half-pane capture are missing. Pinned direct dumps and final check exits exist.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "locations": []
+    },
+    {
+      "id": "F6",
+      "category": "category_fit",
+      "edge_ids": [
+        "e17",
+        "e18",
+        "e19",
+        "e20",
+        "e21",
+        "e22",
+        "e23",
+        "e24"
+      ],
+      "severity": "high",
+      "description": "Family classification is appropriate, but dense fabric recipe does not produce independently traceable, unambiguous links in the capture.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            25,
+            14,
+            41,
+            25
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "Actual 77x47 live half-pane capture missing; target pinned frame dumps are not live pane evidence.",
+    "Candidate raw check exit codes and separately identifiable stderr and preflight probe command/status/closure evidence missing.",
+    "Renderer multi-group region enclosure and reversed-edge near-side entry are reported capability limitations; source-preserving alternative route optimality is not established.",
+    "Repeated label ownership is unresolved in v1–v3; no proof excludes every source-preserving layout."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pKN",
+      "w7E:pKQ",
+      "w7E:pKR",
+      "w7E:pKS",
+      "w7E:pKK"
+    ],
+    "closed_pane_ids": [
+      "w7E:pKN",
+      "w7E:pKQ",
+      "w7E:pKR",
+      "w7E:pKS",
+      "w7E:pKK"
+    ],
+    "status": "done",
+    "reason": "Four manifest records say confirmed_closed; generation reports preflight pKK closed, but no independent probe transcript. Reviewer opened none."
+  },
+  "overall": "fail"
+}

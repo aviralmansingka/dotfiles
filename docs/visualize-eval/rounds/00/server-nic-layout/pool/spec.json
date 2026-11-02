@@ -1,0 +1,40 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "s2",
+      "label": "server2 .59"
+    },
+    {
+      "id": "spare",
+      "label": ".60-.62 unverified"
+    },
+    {
+      "id": "gw",
+      "label": "GW .57 Arista OUI"
+    }
+  ],
+  "edges": [
+    {
+      "from": "s2",
+      "to": "gw",
+      "label": "same /29"
+    },
+    {
+      "from": "spare",
+      "to": "gw",
+      "label": "free? in /29"
+    }
+  ],
+  "layers": [
+    [
+      "s2",
+      "spare"
+    ],
+    [
+      "",
+      "gw"
+    ]
+  ]
+}

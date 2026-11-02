@@ -1,0 +1,209 @@
+{
+  "all_match": true,
+  "checks": [
+    {
+      "label": "skill",
+      "path": "docs/visualize-eval/rounds/03/SKILL.md",
+      "expected_sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+      "actual_sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+      "matches": true
+    },
+    {
+      "label": "renderer",
+      "path": "/tmp/visualize-eval/round-03/bin/rataflow-view",
+      "expected_sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7",
+      "actual_sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7",
+      "matches": true
+    },
+    {
+      "label": "rubric",
+      "path": "docs/visualize-eval/rounds/03/rubric.json",
+      "expected_sha256": "5519fd84f6b75973dbf7b5f5544c909a8f32a8841a876c8e7af00a1fcb119335",
+      "actual_sha256": "5519fd84f6b75973dbf7b5f5544c909a8f32a8841a876c8e7af00a1fcb119335",
+      "matches": true
+    },
+    {
+      "label": "cases",
+      "path": "docs/visualize-eval/cases.json",
+      "expected_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "actual_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "matches": true
+    },
+    {
+      "label": "source",
+      "path": "docs/visualize-eval/cases/gb300-rack-software/source.md",
+      "expected_sha256": "10d440af0be8d3730c448e710a48d4dfbd527a966f532084e7f98fd2d4b83fda",
+      "actual_sha256": "10d440af0be8d3730c448e710a48d4dfbd527a966f532084e7f98fd2d4b83fda",
+      "matches": true
+    },
+    {
+      "label": "expected",
+      "path": "docs/visualize-eval/cases/gb300-rack-software/expected.json",
+      "expected_sha256": "9a947233493973c247544ae6e9c175b940feb9d87fc850d4693565c90042c0ab",
+      "actual_sha256": "9a947233493973c247544ae6e9c175b940feb9d87fc850d4693565c90042c0ab",
+      "matches": true
+    },
+    {
+      "label": "variants",
+      "path": "docs/visualize-eval/cases/gb300-rack-software/historical-variants.json",
+      "expected_sha256": "fd9892244406ec1b2b09ee2cc7adb2af5534ebb52ede5036664f238b776eff31",
+      "actual_sha256": "fd9892244406ec1b2b09ee2cc7adb2af5534ebb52ede5036664f238b776eff31",
+      "matches": true
+    },
+    {
+      "label": "v1 spec",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/specs/v1.json",
+      "expected_sha256": "c798ed30eccca73502abdf6bd71ad098a93368f971f637a54ea8b1caf5bf0f07",
+      "actual_sha256": "c798ed30eccca73502abdf6bd71ad098a93368f971f637a54ea8b1caf5bf0f07",
+      "matches": true
+    },
+    {
+      "label": "v1 artifact",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/evidence/v1/bin.sha256",
+      "expected_sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "actual_sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "matches": true
+    },
+    {
+      "label": "v1 artifact",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/evidence/v1/check.txt",
+      "expected_sha256": "fabc9be9109e14d94e79b48db062ce86d57580e99f0e279081d3acb4aa8c2a17",
+      "actual_sha256": "fabc9be9109e14d94e79b48db062ce86d57580e99f0e279081d3acb4aa8c2a17",
+      "matches": true
+    },
+    {
+      "label": "v1 artifact",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/evidence/v1/v1-ansi.ansi",
+      "expected_sha256": "1860c3425912c726d4c734aca784935945e1028f50d63313951b21df8c111c0e",
+      "actual_sha256": "1860c3425912c726d4c734aca784935945e1028f50d63313951b21df8c111c0e",
+      "matches": true
+    },
+    {
+      "label": "v1 artifact",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/evidence/v1/v1-frames.ansi",
+      "expected_sha256": "997e598389e603176dbe149e7890aac22b7b7d85285cd1847f444629ec6028b2",
+      "actual_sha256": "997e598389e603176dbe149e7890aac22b7b7d85285cd1847f444629ec6028b2",
+      "matches": true
+    },
+    {
+      "label": "v1 artifact",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/evidence/v1/v1-frames.txt",
+      "expected_sha256": "8d1bd5cb666015280f9e128e9d6388a343751e51202bb974db4e6fb8525d4f9d",
+      "actual_sha256": "8d1bd5cb666015280f9e128e9d6388a343751e51202bb974db4e6fb8525d4f9d",
+      "matches": true
+    },
+    {
+      "label": "v1 artifact",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/evidence/v1/v1-selected.ansi",
+      "expected_sha256": "8c5ac72cc647f53372253642d5fa589f96d258d4fdcc15fb7e82ca3916fbf1d4",
+      "actual_sha256": "8c5ac72cc647f53372253642d5fa589f96d258d4fdcc15fb7e82ca3916fbf1d4",
+      "matches": true
+    },
+    {
+      "label": "v1 artifact",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/evidence/v1/v1-text.txt",
+      "expected_sha256": "35fbe4c9a9b59da86ed78dedcf68fabd52443e1a6c762a2782eda53d83fd6033",
+      "actual_sha256": "35fbe4c9a9b59da86ed78dedcf68fabd52443e1a6c762a2782eda53d83fd6033",
+      "matches": true
+    },
+    {
+      "label": "v2 spec",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/specs/v2.json",
+      "expected_sha256": "c660806f0e4547e7aca587de341bd71e65a0a0cce996f539f8ad460d329f04a0",
+      "actual_sha256": "c660806f0e4547e7aca587de341bd71e65a0a0cce996f539f8ad460d329f04a0",
+      "matches": true
+    },
+    {
+      "label": "v2 artifact",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/evidence/v2/bin.sha256",
+      "expected_sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "actual_sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "matches": true
+    },
+    {
+      "label": "v2 artifact",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/evidence/v2/check.txt",
+      "expected_sha256": "2db2b3aee434a973c74a13f64f9e468fa98fd20f0fe695c12cbc1428f908060f",
+      "actual_sha256": "2db2b3aee434a973c74a13f64f9e468fa98fd20f0fe695c12cbc1428f908060f",
+      "matches": true
+    },
+    {
+      "label": "v2 artifact",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/evidence/v2/v2-ansi.ansi",
+      "expected_sha256": "4e1ea324a0a4e734d5ed0d85a3a1e977411faf5ebe18e494c70bcdeaa52b8cb6",
+      "actual_sha256": "4e1ea324a0a4e734d5ed0d85a3a1e977411faf5ebe18e494c70bcdeaa52b8cb6",
+      "matches": true
+    },
+    {
+      "label": "v2 artifact",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/evidence/v2/v2-frames.ansi",
+      "expected_sha256": "03f95fcec6cdee1ca38680abb0c8ac8379900416eaf03bfa6cfc053e1167976a",
+      "actual_sha256": "03f95fcec6cdee1ca38680abb0c8ac8379900416eaf03bfa6cfc053e1167976a",
+      "matches": true
+    },
+    {
+      "label": "v2 artifact",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/evidence/v2/v2-frames.txt",
+      "expected_sha256": "88bd0b030e7d90e20e1f0679bbbba1f280f59cab71cb131c92f3a3c52cafc490",
+      "actual_sha256": "88bd0b030e7d90e20e1f0679bbbba1f280f59cab71cb131c92f3a3c52cafc490",
+      "matches": true
+    },
+    {
+      "label": "v2 artifact",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/evidence/v2/v2-selected.ansi",
+      "expected_sha256": "c1d8880d9ec7b59b5b7164948595aa8ef5441a5bb8696a97aa3f724cbfc3683e",
+      "actual_sha256": "c1d8880d9ec7b59b5b7164948595aa8ef5441a5bb8696a97aa3f724cbfc3683e",
+      "matches": true
+    },
+    {
+      "label": "v2 artifact",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/evidence/v2/v2-text.txt",
+      "expected_sha256": "4a81275bbf4a6aa30c6e300202a9ca203a9550593cb6b371d2af3c741c48365b",
+      "actual_sha256": "4a81275bbf4a6aa30c6e300202a9ca203a9550593cb6b371d2af3c741c48365b",
+      "matches": true
+    },
+    {
+      "label": "attempt",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/specs/attempts-v1-a.json",
+      "expected_sha256": "f09bf4622d4dd305faed41af38e723a8d614cc508a3c7943ab30292e1a8f5004",
+      "actual_sha256": "f09bf4622d4dd305faed41af38e723a8d614cc508a3c7943ab30292e1a8f5004",
+      "matches": true
+    },
+    {
+      "label": "attempt",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/specs/attempts-v1-b.json",
+      "expected_sha256": "300f82698f8df1d01f7b9d6972c7d43aca579e02f59545f735bd4843feb4cb1a",
+      "actual_sha256": "300f82698f8df1d01f7b9d6972c7d43aca579e02f59545f735bd4843feb4cb1a",
+      "matches": true
+    },
+    {
+      "label": "attempt",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/specs/attempts-all-c.json",
+      "expected_sha256": "88b4e584e92b778ad4272691898f8c11a1bfe348f18de64b958215550825320c",
+      "actual_sha256": "88b4e584e92b778ad4272691898f8c11a1bfe348f18de64b958215550825320c",
+      "matches": true
+    },
+    {
+      "label": "attempt",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/specs/v2.json",
+      "expected_sha256": "c660806f0e4547e7aca587de341bd71e65a0a0cce996f539f8ad460d329f04a0",
+      "actual_sha256": "c660806f0e4547e7aca587de341bd71e65a0a0cce996f539f8ad460d329f04a0",
+      "matches": true
+    },
+    {
+      "label": "attempt",
+      "path": "docs/visualize-eval/rounds/03/gb300-rack-software/specs/attempts-v0-all.json",
+      "expected_sha256": "ff63b8bb05c155afa06a6c7990326b12448b53d7717c184f731c16a7c3781d03",
+      "actual_sha256": "ff63b8bb05c155afa06a6c7990326b12448b53d7717c184f731c16a7c3781d03",
+      "matches": true
+    },
+    {
+      "label": "blind record",
+      "path": "docs/visualize-eval/rounds/03/reviews/gb300-rack-software/observed-first.md",
+      "expected_sha256": "374994fd9a796073edf0906ea60604b723f4cd8ffb4e8854e73ee59b3eaa065f",
+      "actual_sha256": "374994fd9a796073edf0906ea60604b723f4cd8ffb4e8854e73ee59b3eaa065f",
+      "matches": true
+    }
+  ],
+  "note": "Paths are repository-relative except the explicitly external frozen renderer binary. No renderer was executed."
+}

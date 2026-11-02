@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>modal-machine-manager — React Flow twin (round 07)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xyflow/react@12.3.5/dist/style.css">
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; padding: 0; background: #282828; color: #ebdbb2;
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .page { padding: 14px 0 26px 24px; }
+  h1 { font-size: 15px; font-weight: 600; margin: 0 0 12px; color: #ebdbb2; letter-spacing: .02em; }
+  .view { margin: 0 0 22px; }
+  .caption { font-size: 11px; color: #a89984; margin: 0 0 6px; white-space: nowrap; }
+  .caption b { color: #d79921; font-weight: 600; }
+  .caption .hash { color: #665c54; }
+  .canvas { width: 1100px; height: 700px; background: #1d2021; border: 1px solid #3c3836; }
+  .rf-node { font-size: 12.5px; line-height: 1.1; text-align: center; padding: 0 8px; }
+  .rf-group-label { position: absolute; top: 6px; left: 9px; font-size: 10.5px;
+    letter-spacing: .06em; text-transform: uppercase; opacity: .95; }
+  .rf-edge-label { background: #282828; color: #a89984; border: 1px solid #504945;
+    border-radius: 3px; padding: 0 5px; font-size: 10.5px; line-height: 1.5;
+    white-space: nowrap; pointer-events: none; }
+  
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react/": "https://esm.sh/react@18.3.1/",
+    "react-dom": "https://esm.sh/react-dom@18.3.1?deps=react@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client?deps=react@18.3.1",
+    "@xyflow/react": "https://esm.sh/@xyflow/react@12.3.5?external=react,react-dom",
+    "@dagrejs/dagre": "https://esm.sh/@dagrejs/dagre@1.1.5"
+  }
+}
+</script>
+</head>
+<body>
+<div id="root"></div>
+<script type="module">
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import {
+  ReactFlow, Background, BaseEdge, EdgeLabelRenderer, Handle, Position, getSmoothStepPath,
+} from '@xyflow/react';
+import dagre from '@dagrejs/dagre';
+
+const VIEWS = [
+ {
+  "view": "v1",
+  "title": "ingress + jobs + confirm (e1-e4, e13, e14, e21)",
+  "spec": "rounds/05/modal-machine-manager/specs/v1.json",
+  "spec_sha256": "51940826d898a708dd305bee0318861eef11c5bfd9e6a01e90f58f3d0df864fe",
+  "direction": "tb",
+  "nodes": [
+   {
+    "id": "web",
+    "label": "humans + mmctl",
+    "group": "humans",
+    "color": "#e78a4e"
+   },
+   {
+    "id": "cp",
+    "label": "control plane",
+    "group": "control",
+    "color": "#d3869b"
+   },
+   {
+    "id": "wapi",
+    "label": "webapi",
+    "group": "control",
+    "color": "#e29caf"
+   },
+   {
+    "id": "pgrpc",
+    "label": "private gRPC",
+    "group": "control",
+    "color": "#bb6c83"
+   },
+   {
+    "id": "q",
+    "label": "River queue",
+    "group": "queue",
+    "color": "#7da0b8"
+   },
+   {
+    "id": "db",
+    "label": "Postgres",
+    "group": "state",
+    "color": "#a9b665"
+   },
+   {
+    "id": "slack",
+    "label": "Slack",
+    "group": "humans",
+    "color": "#f1a46c"
+   }
+  ],
+  "edges": [
+   {
+    "id": "cp->pgrpc",
+    "from": "cp",
+    "to": "pgrpc",
+    "label": "create/terminate/repair",
+    "dashed": false,
+    "animated": true
+   },
+   {
+    "id": "web->wapi",
+    "from": "web",
+    "to": "wapi",
+    "label": "http",
+    "dashed": false,
+    "animated": true
+   },
+   {
+    "id": "wapi->q",
+    "from": "wapi",
+    "to": "q",
+    "label": "reinstall/reprov",
+    "dashed": false,
+    "animated": true
+   },
+   {
+    "id": "pgrpc->q",
+    "from": "pgrpc",
+    "to": "q",
+    "label": "enqueue job",
+    "dashed": false,
+    "animated": true
+   },
+   {
+    "id": "pgrpc->db",
+    "from": "pgrpc",
+    "to": "db",
+    "label": "machine rows",
+    "dashed": false,
+    "animated": true
+   },
+   {
+    "id": "q->db",
+    "from": "q",
+    "to": "db",
+    "label": "job rows",
+    "dashed": false,
+    "animated": true
+   },
+   {
+    "id": "wapi->slack",
+    "from": "wapi",
+    "to": "slack",
+    "label": "confirm/alerts",
+    "dashed": false,
+    "animated": true
+   }
+  ],
+  "groups": [
+   {
+    "name": "humans",
+    "color": "#e78a4e"
+   },
+   {
+    "name": "control",
+    "color": "#d3869b"
+   },
+   {
+    "name": "queue",
+    "color": "#7da0b8"
+   },
+   {
+    "name": "state",
+    "color": "#a9b665"
+   }
+  ]
+ },
+ {
+  "view": "v2",
+  "title": "provisioning chain: q -> registry -> providers -> machines -> boot (e5-e9)",
+  "spec": "rounds/05/modal-machine-manager/specs/v2.json",
+  "spec_sha256": "b8c0d4df662084787af45751c955502c9579c552460fee63fbdf6e9f9722315a",
+  "direction": "tb",
+  "nodes": [
+   {
+    "id": "q",
+    "label": "River queue",
+    "group": "queue",
+    "color": "#7da0b8"
+   },
+   {
+    "id": "rec",
+    "label": "reconcile loop",
+    "group": "control",
+    "color": "#d3869b"
+   },
+   {
+    "id": "reg",
+    "label": "prov registry",
+    "group": "providers",
+    "color": "#e78a4e"
+   },
+   {
+    "id": "prov",
+    "label": "metal providers",
+    "group": "providers",
+    "color": "#f1a46c"
+   },
+   {
+    "id": "mch",
+    "label": "machines",
+    "group": "machines",
+    "color": "#7da0b8"
+   },
+   {
+    "id": "boot",
+    "label": "boot server",
+    "group": "machines",
+    "color": "#97b8ce"
+   },
+   {
+    "id": "db",
+    "label": "Postgres",
+    "group": "state",
+    "color": "#a9b665"
+   }
+  ],
+  "edges": [
+   {
+    "id": "q->reg",
+    "from": "q",
+    "to": "reg",
+    "label": "provision job",
+    "dashed": false,
+    "animated": true
+   },
+   {
+    "id": "rec->prov",
+    "from": "rec",
+    "to": "prov",
+    "label": "gcore sync 1m",
+    "dashed": false,
+    "animated": true
+   },
+   {
+    "id": "rec->db",
+    "from": "rec",
+    "to": "db",
+    "label": "cluster state",
+    "dashed": false,
+    "animated": true
+   },
+   {
+    "id": "reg->prov",
+    "from": "reg",
+    "to": "prov",
+    "label": "provider API",
+    "dashed": false,
+    "animated": true
+   },
+   {
+    "id": "prov->mch",
+    "from": "prov",
+    "to": "mch",
+    "label": "alloc instance",
+    "dashed": false,
+    "animated": true
+   },
+   {
+    "id": "mch->boot",
+    "from": "mch",
+    "to": "boot",
+    "label": "iPXE request",
+    "dashed": false,
+    "animated": true
+   },
+   {
+    "id": "boot->mch",
+    "from": "boot",
+    "to": "mch",
+    "label": "boot.ipxe + S3 args",
+    "dashed": false,
+    "animated": true
+   }
+  ],
+  "groups": [
+   {
+    "name": "queue",
+    "color": "#7da0b8"
+   },
+   {
+    "name": "control",
+    "color": "#d3869b"
+   },
+   {
+    "name": "providers",
+    "color": "#e78a4e"
+   },
+   {
+    "name": "machines",
+    "color": "#7da0b8"
+   },
+   {
+    "name": "state",
+    "color": "#a9b665"
+   }
+  ]
+ },
+ {
+  "view": "v3",
+  "title": "in-host agent, object store, public gRPC -> Postgres (e10-e12, e17, e18)",
+  "spec": "rounds/05/modal-machine-manager/specs/v3.json",
+  "spec_sha256": "f17f920df3eb652afb9a525be1a77ace11469b721240dfca58a34f42e5357f0d",
+  "direction": "tb",
+  "nodes": [
+   {
+    "id": "q",
+    "label": "River queue",
+    "group": "queue",
+    "color": "#7da0b8"
+   },
+   {
+    "id": "mch",
+    "label": "machines",
+    "group": "machines",
+    "color": "#7da0b8"
+   },
+   {
+    "id": "s3",
+    "label": "S3 store",
+    "group": "state",
+    "color": "#a9b665"
+   },
+   {
+    "id": "agent",
+    "label": "machine-agent",
+    "group": "machines",
+    "color": "#97b8ce"
+   },
+   {
+    "id": "pub",
+    "label": "public gRPC",
+    "group": "control",
+    "color": "#d3869b"
+   },
+   {
+    "id": "db",
+    "label": "Postgres",
+    "group": "state",
+    "color": "#bdc97c"
+   }
+  ],
+  "edges": [
+   {
+    "id": "mch->s3",
+    "from": "mch",
+    "to": "s3",
+    "label": "pull boot img",
+    "dashed": false,
+    "animated": true
+   },
+   {
+    "id": "q->s3",
+    "from": "q",
+    "to": "s3",
+    "label": "diag uploads",
+    "dashed": false,
+    "animated": true
+   },
+   {
+    "id": "mch->agent",
+    "from": "mch",
+    "to": "agent",
+    "label": "runs on host",
+    "dashed": false,
+    "animated": true
+   },
+   {
+    "id": "agent->pub",
+    "from": "agent",
+    "to": "pub",
+    "label": "register+hb",
+    "dashed": false,
+    "animated": true
+   },
+   {
+    "id": "pub->db",
+    "from": "pub",
+    "to": "db",
+    "label": "machine state",
+    "dashed": false,
+    "animated": true
+   }
+  ],
+  "groups": [
+   {
+    "name": "queue",
+    "color": "#7da0b8"
+   },
+   {
+    "name": "machines",
+    "color": "#7da0b8"
+   },
+   {
+    "name": "state",
+    "color": "#a9b665"
+   },
+   {
+    "name": "control",
+    "color": "#d3869b"
+   }
+  ]
+ },
+ {
+  "view": "v4",
+  "title": "bounded autonomy: audit reimage, janitor proposals (e15, e16, e19, e20)",
+  "spec": "rounds/05/modal-machine-manager/specs/v4.json",
+  "spec_sha256": "63afda58ce4738d175ffe73230d5886b1fa15b91f4fffad0e54f9c8d9c473074",
+  "direction": "tb",
+  "nodes": [
+   {
+    "id": "q",
+    "label": "River queue",
+    "group": "queue",
+    "color": "#7da0b8"
+   },
+   {
+    "id": "ssh",
+    "label": "SSH + BMC ops",
+    "group": "ops",
+    "color": "#a9b665"
+   },
+   {
+    "id": "jan",
+    "label": "janitor",
+    "group": "ops",
+    "color": "#bdc97c"
+   },
+   {
+    "id": "mch",
+    "label": "machines",
+    "group": "machines",
+    "color": "#7da0b8"
+   },
+   {
+    "id": "wapi",
+    "label": "webapi",
+    "group": "control",
+    "color": "#d3869b"
+   }
+  ],
+  "edges": [
+   {
+    "id": "q->ssh",
+    "from": "q",
+    "to": "ssh",
+    "label": "audit reimage",
+    "dashed": false,
+    "animated": true
+   },
+   {
+    "id": "q->jan",
+    "from": "q",
+    "to": "jan",
+    "label": "diag events",
+    "dashed": false,
+    "animated": true
+   },
+   {
+    "id": "ssh->mch",
+    "from": "ssh",
+    "to": "mch",
+    "label": "machine-audit",
+    "dashed": false,
+    "animated": true
+   },
+   {
+    "id": "jan->wapi",
+    "from": "jan",
+    "to": "wapi",
+    "label": "propose actions",
+    "dashed": false,
+    "animated": true
+   }
+  ],
+  "groups": [
+   {
+    "name": "queue",
+    "color": "#7da0b8"
+   },
+   {
+    "name": "ops",
+    "color": "#a9b665"
+   },
+   {
+    "name": "machines",
+    "color": "#7da0b8"
+   },
+   {
+    "name": "control",
+    "color": "#d3869b"
+   }
+  ]
+ }
+];
+
+const NODE_W = 168, NODE_H = 46;
+const PAD_X = 14, PAD_TOP = 26, PAD_BOTTOM = 8;
+const DAGRE = {
+ "ranksep": 90,
+ "nodesep": 56,
+ "edgesep": 20,
+ "marginx": 0,
+ "marginy": 0
+};
+
+// ------------------------------------------------------------------ layout
+function layout(view) {
+  const g = new dagre.graphlib.Graph({ compound: true, multigraph: true });
+  g.setGraph({
+    rankdir: view.direction === 'lr' ? 'LR' : 'TB',
+    ranksep: DAGRE.ranksep,
+    nodesep: DAGRE.nodesep,
+    edgesep: DAGRE.edgesep,
+    marginx: DAGRE.marginx,
+    marginy: DAGRE.marginy,
+  });
+  g.setDefaultEdgeLabel(() => ({}));
+  view.nodes.forEach((n) => g.setNode(n.id, { width: NODE_W, height: NODE_H }));
+  view.groups.forEach((grp) => {
+    const gid = 'grp::' + grp.name;
+    g.setNode(gid, {});
+    view.nodes.filter((n) => n.group === grp.name).forEach((n) => g.setParent(n.id, gid));
+  });
+  view.edges.forEach((e) => g.setEdge(e.from, e.to, {}, e.id));
+  dagre.layout(g);
+
+  const rfNodes = [];
+  const groupRects = {};
+  view.groups.forEach((grp) => {
+    const c = g.node('grp::' + grp.name);
+    if (!c || typeof c.width !== 'number') return;
+    groupRects[grp.name] = {
+      x: c.x - c.width / 2 - PAD_X,
+      y: c.y - c.height / 2 - PAD_TOP,
+      w: c.width + 2 * PAD_X,
+      h: c.height + PAD_TOP + PAD_BOTTOM,
+    };
+  });
+  view.groups.forEach((grp) => {
+    const r = groupRects[grp.name];
+    if (!r) return;
+    rfNodes.push({
+      id: 'grp::' + grp.name,
+      type: 'groupBox',
+      position: { x: r.x, y: r.y },
+      data: { label: grp.name, color: grp.color },
+      style: { width: r.w, height: r.h },
+      draggable: false,
+      selectable: false,
+      zIndex: 0,
+    });
+  });
+  view.nodes.forEach((n) => {
+    const p = g.node(n.id);
+    const abs = { x: p.x - NODE_W / 2, y: p.y - NODE_H / 2 };
+    const gr = n.group ? groupRects[n.group] : null;
+    const rel = gr ? { x: abs.x - gr.x, y: abs.y - gr.y } : abs;
+    rfNodes.push({
+      id: n.id,
+      type: 'plain',
+      position: rel,
+      data: { label: n.label, color: n.color },
+      ...(gr ? { parentId: 'grp::' + n.group, extent: 'parent' } : {}),
+      draggable: false,
+      zIndex: 1,
+    });
+  });
+
+  const rfEdges = view.edges.map((e) => ({
+    id: e.id,
+    source: e.from,
+    target: e.to,
+    type: 'labeled',
+    data: { label: e.label, dot: e.animated, branch: !!e.branch, trunk: e.trunk || null },
+    style: {
+      stroke: '#7c6f64',
+      strokeWidth: 1.4,
+      ...(e.dashed ? { strokeDasharray: '6 4' } : {}),
+    },
+    markerEnd: { type: 'arrowclosed', color: '#a89984', width: 14, height: 14 },
+  }));
+
+  return { rfNodes, rfEdges };
+}
+
+// ------------------------------------------------------------------- nodes
+function PlainNode({ data }) {
+  return React.createElement(
+    'div',
+    {
+      className: 'rf-node',
+      style: {
+        width: NODE_W,
+        height: NODE_H,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#32302f',
+        color: '#ebdbb2',
+        border: '1.5px solid ' + data.color,
+        borderRadius: 6,
+        boxSizing: 'border-box',
+      },
+    },
+    data.label
+  );
+}
+
+function GroupBox({ data, style }) {
+  const bg = data.color + '1f';
+  return React.createElement(
+    'div',
+    {
+      style: {
+        width: '100%',
+        height: '100%',
+        boxSizing: 'border-box',
+        border: '1px solid ' + data.color,
+        borderRadius: 9,
+        background: bg,
+      },
+    },
+    React.createElement(
+      'div',
+      { className: 'rf-group-label', style: { color: data.color } },
+      data.label
+    )
+  );
+}
+
+// ------------------------------------------------------------------- edges
+function LabeledEdge(props) {
+  const { id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition,
+          data, markerEnd, style } = props;
+  const [path, labelX, labelY] = getSmoothStepPath({
+    sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, borderRadius: 0,
+  });
+  const pathRef = useRef(null);
+  const [dur, setDur] = useState('3s');
+  useEffect(() => {
+    if (!data || !data.dot || !pathRef.current) return;
+    const len = pathRef.current.getTotalLength();
+    // constant pixel speed: 55 px/s keeps one dot per edge and every dot moving
+    setDur((len / 55).toFixed(3) + 's');
+  }, [data, path]);
+  const children = [
+    React.createElement(BaseEdge, { key: 'e', id, path, markerEnd, style }),
+  ];
+  if (data && data.dot) {
+    children.push(
+      React.createElement(
+        'circle',
+        { key: 'd', r: 3.6, fill: '#fabd2f' },
+        React.createElement('animateMotion', {
+          dur, repeatCount: 'indefinite', path,
+        })
+      )
+    );
+  }
+  if (data && data.label) {
+    children.push(
+      React.createElement(
+        EdgeLabelRenderer,
+        { key: 'l' },
+        React.createElement(
+          'div',
+          {
+            className: 'rf-edge-label',
+            style: { transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` },
+          },
+          data.label
+        )
+      )
+    );
+  }
+  if (data && data.dot) {
+    // path ref must exist for getTotalLength: render a hidden copy under the dot
+    children.push(
+      React.createElement('path', { key: 'p', ref: pathRef, d: path, fill: 'none',
+        stroke: 'none', pointerEvents: 'none' })
+    );
+  }
+  return React.createElement('g', null, children);
+}
+
+const nodeTypes = { plain: PlainNode, groupBox: GroupBox };
+const edgeTypes = { labeled: LabeledEdge };
+
+function View({ view, index }) {
+  const { rfNodes, rfEdges } = useMemo(() => layout(view), [view]);
+  const nodeCount = view.nodes.length;
+  const edgeCount = view.edges.length;
+  return React.createElement(
+    'section',
+    { className: 'view', id: 'view-' + view.view },
+    React.createElement(
+      'div',
+      { className: 'caption' },
+      React.createElement('b', null, view.view),
+      ' — ' + view.title + '   ·   ' + nodeCount + ' nodes / ' + edgeCount + ' edges' +
+        '   ·   direction ' + view.direction +
+        (view.groups.length ? '   ·   subflows: ' + view.groups.map((g) => g.name).join(', ') : ''),
+      React.createElement('span', { className: 'hash' }, '   ·   spec ' + view.spec_sha256.slice(0, 12))
+    ),
+    React.createElement(
+      'div',
+      { className: 'canvas' },
+      React.createElement(
+        ReactFlow,
+        {
+          nodes: rfNodes,
+          edges: rfEdges,
+          nodeTypes,
+          edgeTypes,
+          fitView: true,
+          fitViewOptions: { padding: 0.14, maxZoom: 1.1, minZoom: 0.15 },
+          nodesDraggable: false,
+          nodesConnectable: false,
+          elementsSelectable: false,
+          panOnDrag: false,
+          zoomOnScroll: false,
+          zoomOnPinch: false,
+          zoomOnDoubleClick: false,
+          preventScrolling: false,
+          minZoom: 0.15,
+          maxZoom: 1.1,
+          proOptions: { hideAttribution: false },
+        },
+        React.createElement(Background, { variant: 'dots', gap: 26, size: 1, color: '#3c3836' })
+      )
+    )
+  );
+}
+
+function App() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      window.__rfReady = true;
+      window.__rfFacts = VIEWS.map((v) => ({
+        view: v.view,
+        nodes: v.nodes.length,
+        edges: v.edges.length,
+        groups: v.groups.map((g) => g.name),
+        direction: v.direction,
+        spec_sha256: v.spec_sha256,
+      }));
+      setReady(true);
+    }, 1500);
+    return () => clearTimeout(t);
+  }, []);
+  return React.createElement(
+    'div',
+    { className: 'page' },
+    React.createElement('h1', null, 'modal-machine-manager — React Flow twin (round 07 pilot, dagre ranksep 90 / nodesep 56 / edgesep 20)'),
+    VIEWS.map((v, i) => React.createElement(View, { key: v.view, view: v, index: i })),
+    ready ? null : React.createElement('div', { style: { fontSize: 11, color: '#665c54' } }, 'laying out…')
+  );
+}
+
+createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>

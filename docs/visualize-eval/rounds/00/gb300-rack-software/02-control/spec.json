@@ -1,0 +1,80 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "rms",
+      "label": "nv-rms"
+    },
+    {
+      "id": "oob",
+      "label": "OOB Ethernet"
+    },
+    {
+      "id": "c",
+      "label": "Compute BMCs"
+    },
+    {
+      "id": "p",
+      "label": "Power shelf"
+    },
+    {
+      "id": "os",
+      "label": "NVOS"
+    },
+    {
+      "id": "nmx",
+      "label": "NMX-C/T"
+    }
+  ],
+  "edges": [
+    {
+      "from": "rms",
+      "to": "c",
+      "label": "Redfish/HTTPS"
+    },
+    {
+      "from": "rms",
+      "to": "p",
+      "label": "Redfish/HTTPS"
+    },
+    {
+      "from": "rms",
+      "to": "os",
+      "label": "NVUE SSH/SFTP"
+    },
+    {
+      "from": "rms",
+      "to": "nmx",
+      "label": "NMX-C gRPC"
+    },
+    {
+      "from": "oob",
+      "to": "os",
+      "label": "reaches"
+    },
+    {
+      "from": "os",
+      "to": "nmx",
+      "label": "hosts"
+    }
+  ],
+  "layers": [
+    [
+      "rms",
+      "oob"
+    ],
+    [
+      "",
+      "c",
+      "p",
+      "os"
+    ],
+    [
+      "",
+      "",
+      "",
+      "nmx"
+    ]
+  ]
+}

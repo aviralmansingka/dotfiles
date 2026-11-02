@@ -1,0 +1,58 @@
+{
+  "direction": "tb",
+  "nodes": [
+    {
+      "id": "src",
+      "label": "source",
+      "group": "dev"
+    },
+    {
+      "id": "build",
+      "label": "build",
+      "group": "dev"
+    },
+    {
+      "id": "test",
+      "label": "test",
+      "group": "ci"
+    },
+    {
+      "id": "pkg",
+      "label": "package",
+      "group": "ci"
+    },
+    {
+      "id": "deploy",
+      "label": "deploy",
+      "group": "prod"
+    }
+  ],
+  "edges": [
+    {
+      "from": "src",
+      "to": "build",
+      "flow": true
+    },
+    {
+      "from": "build",
+      "to": "test",
+      "flow": true
+    },
+    {
+      "from": "test",
+      "to": "pkg",
+      "flow": true
+    },
+    {
+      "from": "pkg",
+      "to": "deploy",
+      "flow": true
+    },
+    {
+      "from": "src",
+      "to": "deploy",
+      "flow": true,
+      "label": "hotfix path"
+    }
+  ]
+}

@@ -1,0 +1,222 @@
+{
+ "round": 4,
+ "rubric_sha256": "18412615f82841b34cf131976c6b5f4b00cd4fc031a710cdfc81058e2dd68d10",
+ "metrics": {
+  "green_cases": 0,
+  "total_cases": 8,
+  "passed_applicable_categories": 24,
+  "failed_applicable_categories": 25,
+  "blocked_applicable_categories": 6,
+  "applicable_categories": 55,
+  "finding_severities": {
+   "critical": 5,
+   "high": 26,
+   "medium": 22,
+   "low": 0
+  }
+ },
+ "green_cases": [],
+ "cases": {
+  "pipeline": {
+   "categories": {
+    "semantic_fidelity": "pass",
+    "arrow_traceability": "fail",
+    "layout_fit": "pass",
+    "conceptual_grouping_color": "pass",
+    "border_integrity": "pass",
+    "workflow_evidence": "blocked",
+    "animation": "fail"
+   },
+   "overall": "fail",
+   "findings": 4,
+   "severities": {
+    "critical": 0,
+    "high": 3,
+    "medium": 1,
+    "low": 0
+   },
+   "edges_total": 6,
+   "edges_pass": 0,
+   "blockers": 2,
+   "report": "docs/visualize-eval/rounds/04/reviews/pipeline/reviewer-result.json",
+   "report_sha256": "413fc0856cbbff5bc9d0922286388a55a5794d5f144f70cae7f3007ea48818b4",
+   "blind_observation_sha256": null
+  },
+  "network": {
+   "categories": {
+    "semantic_fidelity": "pass",
+    "arrow_traceability": "fail",
+    "layout_fit": "pass",
+    "conceptual_grouping_color": "pass",
+    "border_integrity": "pass",
+    "workflow_evidence": "blocked",
+    "animation": "fail"
+   },
+   "overall": "fail",
+   "findings": 5,
+   "severities": {
+    "critical": 0,
+    "high": 3,
+    "medium": 2,
+    "low": 0
+   },
+   "edges_total": 7,
+   "edges_pass": 0,
+   "blockers": 2,
+   "report": "docs/visualize-eval/rounds/04/reviews/network/reviewer-result.json",
+   "report_sha256": "3858a45d19a41b82598f93244ad74cc7299b1054653d167999e02665e266d77a",
+   "blind_observation_sha256": null
+  },
+  "homelab-nic-trace": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "fail",
+    "layout_fit": "fail",
+    "conceptual_grouping_color": "pass",
+    "border_integrity": "fail",
+    "workflow_evidence": "blocked",
+    "animation": "fail"
+   },
+   "overall": "fail",
+   "findings": 9,
+   "severities": {
+    "critical": 2,
+    "high": 4,
+    "medium": 3,
+    "low": 0
+   },
+   "edges_total": 16,
+   "edges_pass": 5,
+   "blockers": 2,
+   "report": "docs/visualize-eval/rounds/04/reviews/homelab-nic-trace/reviewer-result.json",
+   "report_sha256": "914c8708f6f1b4820c25877c815907f4e33530deaf1d71fd239ceb30e212fac2",
+   "blind_observation_sha256": null
+  },
+  "server-nic-layout": {
+   "categories": {
+    "semantic_fidelity": "pass",
+    "arrow_traceability": "pass",
+    "layout_fit": "pass",
+    "conceptual_grouping_color": "pass",
+    "border_integrity": "pass",
+    "workflow_evidence": "blocked",
+    "animation": "na"
+   },
+   "overall": "blocked",
+   "findings": 2,
+   "severities": {
+    "critical": 0,
+    "high": 1,
+    "medium": 1,
+    "low": 0
+   },
+   "edges_total": 9,
+   "edges_pass": 9,
+   "blockers": 2,
+   "report": "docs/visualize-eval/rounds/04/reviews/server-nic-layout/reviewer-result.json",
+   "report_sha256": "60e6c7c70482aee5c0bf883effdca4467de287228befeee08e576bf26646e90b",
+   "blind_observation_sha256": null
+  },
+  "datacenter-redundancy": {
+   "categories": {
+    "semantic_fidelity": "pass",
+    "arrow_traceability": "fail",
+    "layout_fit": "fail",
+    "conceptual_grouping_color": "pass",
+    "border_integrity": "pass",
+    "workflow_evidence": "blocked",
+    "animation": "pass"
+   },
+   "overall": "fail",
+   "findings": 5,
+   "severities": {
+    "critical": 0,
+    "high": 1,
+    "medium": 4,
+    "low": 0
+   },
+   "edges_total": 28,
+   "edges_pass": 26,
+   "blockers": 3,
+   "report": "docs/visualize-eval/rounds/04/reviews/datacenter-redundancy/reviewer-result.json",
+   "report_sha256": "668d7fdf9a39ccd434d9cb33cfd125f03a7359a9371c3af470c4238dc548844b",
+   "blind_observation_sha256": null
+  },
+  "modal-machine-manager": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "fail",
+    "layout_fit": "fail",
+    "conceptual_grouping_color": "pass",
+    "border_integrity": "pass",
+    "workflow_evidence": "fail",
+    "animation": "fail"
+   },
+   "overall": "fail",
+   "findings": 12,
+   "severities": {
+    "critical": 0,
+    "high": 7,
+    "medium": 5,
+    "low": 0
+   },
+   "edges_total": 23,
+   "edges_pass": 0,
+   "blockers": 2,
+   "report": "docs/visualize-eval/rounds/04/reviews/modal-machine-manager/reviewer-result.json",
+   "report_sha256": "5d200285a1c8178d09312e4ba1ae89043f332d2042a86352222f9bec49c96b14",
+   "blind_observation_sha256": null
+  },
+  "modal-runtime": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "pass",
+    "layout_fit": "fail",
+    "conceptual_grouping_color": "pass",
+    "border_integrity": "fail",
+    "workflow_evidence": "blocked",
+    "animation": "fail"
+   },
+   "overall": "fail",
+   "findings": 7,
+   "severities": {
+    "critical": 3,
+    "high": 1,
+    "medium": 3,
+    "low": 0
+   },
+   "edges_total": 8,
+   "edges_pass": 4,
+   "blockers": 4,
+   "report": "docs/visualize-eval/rounds/04/reviews/modal-runtime/reviewer-result.json",
+   "report_sha256": "668580921f850221b8c8a499c75b501b5bade4398c26e7912597e6d6ec5e170e",
+   "blind_observation_sha256": null
+  },
+  "gb300-rack-software": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "fail",
+    "layout_fit": "fail",
+    "conceptual_grouping_color": "pass",
+    "border_integrity": "pass",
+    "workflow_evidence": "fail",
+    "animation": "fail"
+   },
+   "overall": "fail",
+   "findings": 9,
+   "severities": {
+    "critical": 0,
+    "high": 6,
+    "medium": 3,
+    "low": 0
+   },
+   "edges_total": 17,
+   "edges_pass": 9,
+   "blockers": 4,
+   "report": "docs/visualize-eval/rounds/04/reviews/gb300-rack-software/reviewer-result.json",
+   "report_sha256": "f3e5cc99b41b8f822f8f752be9ee837d2574680184710e4d69405dd019c62b77",
+   "blind_observation_sha256": null
+  }
+ },
+ "problems": []
+}

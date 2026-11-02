@@ -1,0 +1,56 @@
+[
+  {
+    "state": "unselected; no input since launch",
+    "started_at": "2026-11-02T08:20:07.777148+00:00",
+    "finished_at": "2026-11-02T08:20:07.801892+00:00",
+    "text": "visible.txt",
+    "ansi": "visible.ansi",
+    "header_verified": true,
+    "dots_in_text": 1
+  },
+  {
+    "state": "unselected; no input since launch",
+    "started_at": "2026-11-02T08:20:09.104354+00:00",
+    "finished_at": "2026-11-02T08:20:09.128273+00:00",
+    "text": "visible-phase2.txt",
+    "ansi": "visible-phase2.ansi",
+    "header_verified": true,
+    "dots_in_text": 1
+  },
+  {
+    "state": "unselected; no input since launch",
+    "started_at": "2026-11-02T08:20:10.428358+00:00",
+    "finished_at": "2026-11-02T08:20:10.447051+00:00",
+    "text": "visible-phase3.txt",
+    "ansi": "visible-phase3.ansi",
+    "header_verified": true,
+    "dots_in_text": 1
+  },
+  {
+    "state": "unselected; no input since launch",
+    "started_at": "2026-11-02T08:20:11.750362+00:00",
+    "finished_at": "2026-11-02T08:20:11.775499+00:00",
+    "text": "visible-phase4.txt",
+    "ansi": "visible-phase4.ansi",
+    "header_verified": true,
+    "dots_in_text": 1
+  },
+  {
+    "state": "after one Tab; no zoom/pan",
+    "started_at": "2026-11-02T08:20:13.489594+00:00",
+    "finished_at": "2026-11-02T08:20:13.511635+00:00",
+    "text": "selected.txt",
+    "ansi": "selected.ansi",
+    "header_verified": true,
+    "dots_in_text": 1
+  },
+  {
+    "state": "after one Tab; no zoom/pan",
+    "started_at": "2026-11-02T08:20:14.816672+00:00",
+    "finished_at": "2026-11-02T08:20:14.841431+00:00",
+    "text": "selected-phase2.txt",
+    "ansi": "selected-phase2.ansi",
+    "header_verified": true,
+    "dots_in_text": 1
+  }
+]

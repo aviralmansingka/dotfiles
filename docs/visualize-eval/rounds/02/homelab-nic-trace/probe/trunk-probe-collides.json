@@ -1,0 +1,5 @@
+{"direction":"tb","theme":"gruvbox",
+ "nodes":[{"id":"ont","label":"ONT? 169.254.3.1","group":"demarc"},{"id":"rtr","label":"Fios rtr? NAT/DHCP","group":"nat"},{"id":"bond0","label":"bond0 192.168.1.197","group":"nic"},{"id":"wlp","label":"wlp8s0 192.168.1.213","group":"nic"}],
+ "layers":[["ont"],["rtr"],["bond0","wlp"]],
+ "edges":[{"from":"rtr","to":"ont","label":"NAT 71.251.12.240","dots":1,"style":"dashed"}],
+ "trunks":[{"id":"lan","label":"LAN 192.168.1.0/24","from":"rtr","to":"bond0","branches":["wlp"]}]}

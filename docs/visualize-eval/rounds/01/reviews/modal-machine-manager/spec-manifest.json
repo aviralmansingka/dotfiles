@@ -1,0 +1,18 @@
+[
+  [
+    "docs/visualize-eval/rounds/01/modal-machine-manager/specs/v1-provisioning.json",
+    "312446362348afbe5b28a7b4833f989494c52ad42288b6f34dafa2e9e99f61e3"
+  ],
+  [
+    "docs/visualize-eval/rounds/01/modal-machine-manager/specs/v2-boot-image.json",
+    "f38501e19e235bfde82ac489c7b9dadb1f7972e4e0d53eae99d3bf1deb135709"
+  ],
+  [
+    "docs/visualize-eval/rounds/01/modal-machine-manager/specs/v3-state-writes.json",
+    "2e46a0ee1a1a4772cd86cd3d34faac8d1fa1ca0890e490fb6f9b94b974c6549f"
+  ],
+  [
+    "docs/visualize-eval/rounds/01/modal-machine-manager/specs/v4-ops-diagnostics.json",
+    "fc58a0f4dedddb8adba2abb9795c2e113987ba63f9e98c9d75d9fed2f4ec3085"
+  ]
+]

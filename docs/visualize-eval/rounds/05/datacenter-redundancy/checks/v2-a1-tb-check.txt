@@ -1,0 +1,1 @@
+rataflow-view: no obstacle-safe route for core2 -> fw2, fw1 -> bl1, bl2 -> sp2; increase node/layer spacing

@@ -1,0 +1,68 @@
+{
+  "case_id": "gb300-rack-software",
+  "round": "02",
+  "worker_id": "viz-ds02-gb300-rack-software",
+  "note": "One attempt = one spec design submitted to the frozen renderer's --check. Layer-array permutations inside the accepted design are listed in that attempt's note; they are placement tuning of the same design, not new designs.",
+  "views": [
+    {
+      "view": "v1",
+      "carries": "off-rack management, OOB hardware control, NVSwitch software: rms southbound API calls vs one OOB physical trunk",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "attempts/v1-a1-single-graph.json",
+          "spec_sha256": "3bbc727c69f61077b5ae273d7929f3045c8805b6056fdaaf783644b7611f6390",
+          "check": "ok nodes=13 edges=11, extent=154x40, labels 12/12",
+          "result": "rejected",
+          "note": "whole case in one graph: extent 154x40 does not fit 77x47, and --check warns '13 nodes / 11 edges is above the readable budget (12/16); split it into an overview and detail graphs'. Split into a rack-control view (v1) plus an in-band view (v2)."
+        },
+        {
+          "attempt": 2,
+          "spec": "attempts/v1-a2-plain-tb.json",
+          "spec_sha256": "23622e4b15645258acd076010b33ec30eab196194b00eed6151b4f01ccc789aa",
+          "check": "exit 1: no obstacle-safe route for rms -> oob, rms -> bmc_c",
+          "result": "rejected",
+          "note": "7-node v1 with engine placement: the five rms spokes leave one node in one row, so the router finds no obstacle-safe corridor."
+        },
+        {
+          "attempt": 3,
+          "spec": "v1.json",
+          "spec_sha256": "d459325771c09e7402acb88a3c6c670d537c813b4d016962a04e3aaf28c7a04d",
+          "check": "ok nodes=7 edges=6, extent=77x24, labels 7/7, 0 on route cells, 0 skipped, 0 dot violations, no warnings",
+          "result": "accepted",
+          "note": "explicit 3 layers spread the rms spokes across three rows; flow:true added so each dots:1 route carries one live dot. Layer permutations checked inside this attempt: [rms][oob][4 devices][nmxc]=49x32 (2 labels skipped), [rms nvos][oob][4 devices]=62x24 (1 label skipped), [rms][oob nvos][4 devices]=62x24, [rms][_ oob nvos][_ 4 devices]=77x24 (0 skipped) -> kept."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "carries": "in-band compute software: k8s -> GPU Operator -> DCGM -> {dcgm-exporter, driver+CUDA ~ Fabric Mgr}",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "attempts/v2-a1-plain-tb.json",
+          "spec_sha256": "e82675dbac2107c7efbc65e7a3710312988dedc16bcf59ba1abd5dfbef744c15",
+          "check": "ok nodes=6 edges=5, extent=47x40, labels 5/5",
+          "result": "rejected",
+          "note": "tb on engine placement: 40 rows of content in a 47-row pane leaves no room for the header and the floated control palette, and the column band drifts. Skill rule: 5-layer chains go lr."
+        },
+        {
+          "attempt": 2,
+          "spec": "attempts/v2-a2-lr-layers.json",
+          "spec_sha256": "301e77b96a5745b8a7848d2eb49b695cd46d27ad22283ec5b9249b5fba1587fa",
+          "check": "ok nodes=6 edges=5, extent=133x11, labels 5/5",
+          "result": "rejected",
+          "note": "lr turns the 5-layer chain sideways into 133 columns, far past the 77-column target; panning/zooming out is forbidden, so the direction is wrong for this pane."
+        },
+        {
+          "attempt": 3,
+          "spec": "v2.json",
+          "spec_sha256": "e645856239d27a20b4ffe8c55b12c2dab360ac45454b5af0812eb5ebc4f9a083",
+          "check": "ok nodes=6 edges=5, extent=33x37, labels 5/5, 0 on route cells, 0 skipped, 0 dot violations, no warnings",
+          "result": "accepted",
+          "note": "tb with explicit 5 layers folds the chain into a narrow column that fits 77x47 with the palette corner free; flow:true added so each dots:1 route carries one live dot. Layer permutations checked inside this attempt: engine=[k8s gpuop][dcgm][dcgmx drvk][fm] rejected by the renderer, explicit 5 layers accepted."
+        }
+      ]
+    }
+  ]
+}

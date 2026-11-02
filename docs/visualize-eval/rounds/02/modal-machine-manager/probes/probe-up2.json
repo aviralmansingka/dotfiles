@@ -1,0 +1,1 @@
+{"direction": "tb", "nodes": [{"id": "a", "label": "alpha", "group": "g1"}, {"id": "b", "label": "beta", "group": "g2"}, {"id": "c", "label": "gamma", "group": "g3"}], "layers": [["a"], ["b"], ["c"]], "edges": [{"from": "a", "to": "b", "label": "down one", "dots": 1, "flow": 0.5}, {"from": "c", "to": "a", "label": "up two", "dots": 1, "flow": 0.5}]}

@@ -1,0 +1,288 @@
+/tmp/visualize-eval/round-05/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotfi
+les/fix-visualize-skill/docs/visualize-eval/rounds/05/homelab-nic-trace/specs/v1.js
+on
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-05/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/05/homelab-nic-trace/specs/v1.
+json
+viewport: 83x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-05/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/05/homelab-nic-trace/specs/v1.
+json --select-all
+viewport: 83x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-05/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/05/homelab-nic-trace/specs/v1.
+json --frames 5 --step-ms 100
+viewport: 83x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 83x51 @100% · v1.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        ╭──────────╮                                          ╭──────────╮
+        │ctr · veth│                                          │vm · vnet0│
+        │          │                                          │          │
+        ╰──────────╯                                          ╰──────────╯
+         │                                                     │
+         │ 172.18.2.x                             192.168.122.x│
+         │                                                     │
+         ▼                                                     ▼
+        ╭─────────────────╮                                   ╭──────────╮
+        │docker 172.18.2.1│                                   │virbr0 NAT│
+        │                 │                                   │          │
+        ╰─────────────────╯                                   ╰──────────╯
+         │                                                     │
+         │      docker bridge                 NAT bridge       │
+         ╰──────────────────────────╮ ╭────────────────────────╯
+                                    ▼ ▼
+                                   ╭─────────────────────────╮
+                                   │homelab (ASUS, Linux 7.0)│
+                                   │                         │
+                                   ╰─────────────────────────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 83x51 @100% · v1.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        ╭──────────╮                                          ╭──────────╮
+        │ctr · veth│                                          │vm · vnet0│
+        │          │                                          │          │
+        ╰──────────╯                                          ╰──────────╯
+         │                                                     │
+         │ 172.18.2.x                             192.168.122.x│
+         │                                                     │
+         ▼                                                     ▼
+        ╭─────────────────╮                                   ╭──────────╮
+        │docker 172.18.2.1│                                   │virbr0 NAT│
+        │                 │                                   │          │
+        ╰─────────────────╯                                   ╰──────────╯
+         │                                                     │
+         │      docker bridge                 NAT bridge       │
+         ╰──────────────────────────╮ ╭────────────────────────╯
+                                    ▼ ▼
+                                   ╭─────────────────────────╮
+                                   │homelab (ASUS, Linux 7.0)│
+                                   │                         │
+                                   ╰─────────────────────────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 83x51 @100% · v1.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        ╭──────────╮                                          ╭──────────╮
+        │ctr · veth│                                          │vm · vnet0│
+        │          │                                          │          │
+        ╰──────────╯                                          ╰──────────╯
+         │                                                     │
+         │ 172.18.2.x                             192.168.122.x│
+         │                                                     │
+         ▼                                                     ▼
+        ╭─────────────────╮                                   ╭──────────╮
+        │docker 172.18.2.1│                                   │virbr0 NAT│
+        │                 │                                   │          │
+        ╰─────────────────╯                                   ╰──────────╯
+         │                                                     │
+         │      docker bridge                 NAT bridge       │
+         ╰──────────────────────────╮ ╭────────────────────────╯
+                                    ▼ ▼
+                                   ╭─────────────────────────╮
+                                   │homelab (ASUS, Linux 7.0)│
+                                   │                         │
+                                   ╰─────────────────────────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 83x51 @100% · v1.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        ╭──────────╮                                          ╭──────────╮
+        │ctr · veth│                                          │vm · vnet0│
+        │          │                                          │          │
+        ╰──────────╯                                          ╰──────────╯
+         │                                                     │
+         │ 172.18.2.x                             192.168.122.x│
+         │                                                     │
+         ▼                                                     ▼
+        ╭─────────────────╮                                   ╭──────────╮
+        │docker 172.18.2.1│                                   │virbr0 NAT│
+        │                 │                                   │          │
+        ╰─────────────────╯                                   ╰──────────╯
+         │                                                     │
+         │      docker bridge                 NAT bridge       │
+         ╰──────────────────────────╮ ╭────────────────────────╯
+                                    ▼ ▼
+                                   ╭─────────────────────────╮
+                                   │homelab (ASUS, Linux 7.0)│
+                                   │                         │
+                                   ╰─────────────────────────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 83x51 @100% · v1.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        ╭──────────╮                                          ╭──────────╮
+        │ctr · veth│                                          │vm · vnet0│
+        │          │                                          │          │
+        ╰──────────╯                                          ╰──────────╯
+         │                                                     │
+         │ 172.18.2.x                             192.168.122.x│
+         │                                                     │
+         ▼                                                     ▼
+        ╭─────────────────╮                                   ╭──────────╮
+        │docker 172.18.2.1│                                   │virbr0 NAT│
+        │                 │                                   │          │
+        ╰─────────────────╯                                   ╰──────────╯
+         │                                                     │
+         │      docker bridge                 NAT bridge       │
+         ╰──────────────────────────╮ ╭────────────────────────╯
+                                    ▼ ▼
+                                   ╭─────────────────────────╮
+                                   │homelab (ASUS, Linux 7.0)│
+                                   │                         │
+                                   ╰─────────────────────────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯

@@ -1,0 +1,606 @@
+{
+  "hashes": [
+    {
+      "id": "skill",
+      "expected": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "actual": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "match": true
+    },
+    {
+      "id": "renderer",
+      "expected": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "actual": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "match": true
+    },
+    {
+      "id": "rubric",
+      "expected": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "actual": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "match": true
+    },
+    {
+      "id": "dataset",
+      "expected": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "actual": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "match": true
+    },
+    {
+      "id": "source",
+      "expected": "a3051af3eeeec31aee53558dafbbea5d061dc74253618fd6940eba5c39b5bb98",
+      "actual": "a3051af3eeeec31aee53558dafbbea5d061dc74253618fd6940eba5c39b5bb98",
+      "match": true
+    },
+    {
+      "id": "expected",
+      "expected": "926e866fbdbb3eaac5b7a21360905d1f621a7a6386139afab303e8ba7e62ed47",
+      "actual": "926e866fbdbb3eaac5b7a21360905d1f621a7a6386139afab303e8ba7e62ed47",
+      "match": true
+    },
+    {
+      "id": "blind",
+      "expected": "635c74dc1a54baf3ca70df5baed1ae332f19e2fdd1502430f3256a3aeef3ace2",
+      "actual": "635c74dc1a54baf3ca70df5baed1ae332f19e2fdd1502430f3256a3aeef3ace2",
+      "match": true
+    }
+  ],
+  "specs": [
+    {
+      "view": "view1",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/specs/view1-isp-mux.json",
+      "hash": "e2cd6d8e3c6fc18874a944a58d5b27270d0a125630b61868e4c3a14c51fc3f9d",
+      "matches_generation": true,
+      "edges": [
+        {
+          "from": "ispA",
+          "to": "mux1"
+        },
+        {
+          "from": "ispB",
+          "to": "mux1"
+        },
+        {
+          "from": "ispC",
+          "to": "mux2"
+        },
+        {
+          "from": "ispD",
+          "to": "mux2"
+        }
+      ]
+    },
+    {
+      "view": "view2",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/specs/view2-mux-core.json",
+      "hash": "bf534caf77d60058529824cc699659e5c3281045b0c2b3a30e22b41282f6a5f6",
+      "matches_generation": true,
+      "edges": [
+        {
+          "from": "mux1",
+          "to": "core1",
+          "label": "x-conn"
+        },
+        {
+          "from": "mux1",
+          "to": "core2",
+          "label": "x-conn"
+        },
+        {
+          "from": "mux2",
+          "to": "core1",
+          "label": "x-conn"
+        },
+        {
+          "from": "mux2",
+          "to": "core2",
+          "label": "x-conn"
+        }
+      ]
+    },
+    {
+      "view": "view3",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/specs/view3-fw-ha.json",
+      "hash": "196b286044375214c68e457d182a02a05323adcbf6741fb6941047217b91bd6b",
+      "matches_generation": true,
+      "edges": [
+        {
+          "from": "core1",
+          "to": "fw1",
+          "label": "act"
+        },
+        {
+          "from": "core2",
+          "to": "fw1",
+          "label": "act"
+        },
+        {
+          "from": "core1",
+          "to": "fw2",
+          "label": "stby"
+        },
+        {
+          "from": "core2",
+          "to": "fw2",
+          "label": "stby"
+        },
+        {
+          "from": "fw1",
+          "to": "bl1",
+          "label": "act"
+        },
+        {
+          "from": "fw1",
+          "to": "bl2",
+          "label": "act"
+        },
+        {
+          "from": "fw2",
+          "to": "bl1",
+          "label": "stby"
+        },
+        {
+          "from": "fw2",
+          "to": "bl2",
+          "label": "stby"
+        }
+      ]
+    },
+    {
+      "view": "view4",
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/specs/view4-fabric.json",
+      "hash": "ff24f445d9e2ef696063142efbf63e18ab7d0756c4d4ce3be402b19a10093257",
+      "matches_generation": true,
+      "edges": [
+        {
+          "from": "bl1",
+          "to": "sp1",
+          "label": "ECMP"
+        },
+        {
+          "from": "bl1",
+          "to": "sp2",
+          "label": "ECMP"
+        },
+        {
+          "from": "bl2",
+          "to": "sp1",
+          "label": "ECMP"
+        },
+        {
+          "from": "bl2",
+          "to": "sp2",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp1",
+          "to": "leaf1",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp1",
+          "to": "leaf2",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp2",
+          "to": "leaf1",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp2",
+          "to": "leaf2",
+          "label": "ECMP"
+        },
+        {
+          "from": "leaf1",
+          "to": "rack1",
+          "label": "dual"
+        },
+        {
+          "from": "leaf2",
+          "to": "rack1",
+          "label": "dual"
+        },
+        {
+          "from": "leaf1",
+          "to": "rack2",
+          "label": "dual"
+        },
+        {
+          "from": "leaf2",
+          "to": "rack2",
+          "label": "dual"
+        }
+      ]
+    }
+  ],
+  "capture_hash_checks": [
+    {
+      "view": "view1",
+      "kind": "visible_text",
+      "match": true
+    },
+    {
+      "view": "view1",
+      "kind": "visible_ansi",
+      "match": true
+    },
+    {
+      "view": "view1",
+      "kind": "selected_text",
+      "match": true
+    },
+    {
+      "view": "view1",
+      "kind": "selected_ansi",
+      "match": true
+    },
+    {
+      "view": "view1",
+      "kind": "frame2_text",
+      "match": true
+    },
+    {
+      "view": "view2",
+      "kind": "visible_text",
+      "match": true
+    },
+    {
+      "view": "view2",
+      "kind": "visible_ansi",
+      "match": true
+    },
+    {
+      "view": "view2",
+      "kind": "selected_text",
+      "match": true
+    },
+    {
+      "view": "view2",
+      "kind": "selected_ansi",
+      "match": true
+    },
+    {
+      "view": "view2",
+      "kind": "frame2_text",
+      "match": true
+    },
+    {
+      "view": "view3",
+      "kind": "visible_text",
+      "match": true
+    },
+    {
+      "view": "view3",
+      "kind": "visible_ansi",
+      "match": true
+    },
+    {
+      "view": "view3",
+      "kind": "selected_text",
+      "match": true
+    },
+    {
+      "view": "view3",
+      "kind": "selected_ansi",
+      "match": true
+    },
+    {
+      "view": "view3",
+      "kind": "frame2_text",
+      "match": true
+    },
+    {
+      "view": "view4",
+      "kind": "visible_text",
+      "match": true
+    },
+    {
+      "view": "view4",
+      "kind": "visible_ansi",
+      "match": true
+    },
+    {
+      "view": "view4",
+      "kind": "selected_text",
+      "match": true
+    },
+    {
+      "view": "view4",
+      "kind": "selected_ansi",
+      "match": true
+    },
+    {
+      "view": "view4",
+      "kind": "frame2_text",
+      "match": true
+    },
+    {
+      "view": "final-view1",
+      "kind": "header.txt",
+      "match": true
+    },
+    {
+      "view": "final-view1",
+      "kind": "visible.txt",
+      "match": true
+    },
+    {
+      "view": "final-view1",
+      "kind": "visible.ansi",
+      "match": true
+    },
+    {
+      "view": "final-view1",
+      "kind": "selected.txt",
+      "match": true
+    },
+    {
+      "view": "final-view1",
+      "kind": "selected.ansi",
+      "match": true
+    },
+    {
+      "view": "final-view1",
+      "kind": "frame2.txt",
+      "match": true
+    },
+    {
+      "view": "final-view2",
+      "kind": "header.txt",
+      "match": true
+    },
+    {
+      "view": "final-view2",
+      "kind": "visible.txt",
+      "match": true
+    },
+    {
+      "view": "final-view2",
+      "kind": "visible.ansi",
+      "match": true
+    },
+    {
+      "view": "final-view2",
+      "kind": "selected.txt",
+      "match": true
+    },
+    {
+      "view": "final-view2",
+      "kind": "selected.ansi",
+      "match": true
+    },
+    {
+      "view": "final-view2",
+      "kind": "frame2.txt",
+      "match": true
+    },
+    {
+      "view": "final-view3",
+      "kind": "header.txt",
+      "match": true
+    },
+    {
+      "view": "final-view3",
+      "kind": "visible.txt",
+      "match": true
+    },
+    {
+      "view": "final-view3",
+      "kind": "visible.ansi",
+      "match": true
+    },
+    {
+      "view": "final-view3",
+      "kind": "selected.txt",
+      "match": true
+    },
+    {
+      "view": "final-view3",
+      "kind": "selected.ansi",
+      "match": true
+    },
+    {
+      "view": "final-view3",
+      "kind": "frame2.txt",
+      "match": true
+    },
+    {
+      "view": "final-view4",
+      "kind": "header.txt",
+      "match": true
+    },
+    {
+      "view": "final-view4",
+      "kind": "visible.txt",
+      "match": true
+    },
+    {
+      "view": "final-view4",
+      "kind": "visible.ansi",
+      "match": true
+    },
+    {
+      "view": "final-view4",
+      "kind": "selected.txt",
+      "match": true
+    },
+    {
+      "view": "final-view4",
+      "kind": "selected.ansi",
+      "match": true
+    },
+    {
+      "view": "final-view4",
+      "kind": "frame2.txt",
+      "match": true
+    },
+    {
+      "view": "final-view1c",
+      "kind": "visible.txt",
+      "match": true
+    },
+    {
+      "view": "final-view1c",
+      "kind": "visible.ansi",
+      "match": true
+    },
+    {
+      "view": "final-view1c",
+      "kind": "selected2.txt",
+      "match": true
+    },
+    {
+      "view": "final-view1c",
+      "kind": "selected2.ansi",
+      "match": true
+    }
+  ],
+  "checks": [
+    {
+      "view": "view1",
+      "stdout": "ok: nodes=6 edges=4 flows=0 direction=tb theme=gruvbox\nlayers=2 (explicit placement, sugiyama skipped)\nextent=45x14 cells\n",
+      "stderr": "",
+      "exit": "0\n",
+      "meta": "command: /tmp/visualize-eval/round-01/bin/rataflow-view --check specs/view1-isp-mux.json\ntimestamp_utc: 20261102T083542Z\nexit: 0\nspec_sha256: e2cd6d8e3c6fc18874a944a58d5b27270d0a125630b61868e4c3a14c51fc3f9d\n"
+    },
+    {
+      "view": "view2",
+      "stdout": "ok: nodes=4 edges=4 flows=0 direction=lr theme=gruvbox\nlayers=3 (explicit placement, sugiyama skipped)\nextent=45x12 cells\n",
+      "stderr": "",
+      "exit": "0\n",
+      "meta": "command: /tmp/visualize-eval/round-01/bin/rataflow-view --check specs/view2-mux-core.json\ntimestamp_utc: 20261102T083542Z\nexit: 0\nspec_sha256: bf534caf77d60058529824cc699659e5c3281045b0c2b3a30e22b41282f6a5f6\n"
+    },
+    {
+      "view": "view3",
+      "stdout": "ok: nodes=6 edges=8 flows=0 direction=lr theme=gruvbox\nlayers=4 (explicit placement, sugiyama skipped)\nextent=67x12 cells\n",
+      "stderr": "",
+      "exit": "0\n",
+      "meta": "command: /tmp/visualize-eval/round-01/bin/rataflow-view --check specs/view3-fw-ha.json\ntimestamp_utc: 20261102T083542Z\nexit: 0\nspec_sha256: 196b286044375214c68e457d182a02a05323adcbf6741fb6941047217b91bd6b\n"
+    },
+    {
+      "view": "view4",
+      "stdout": "ok: nodes=8 edges=12 flows=0 direction=tb theme=gruvbox\nlayers=3 (explicit placement, sugiyama skipped)\nextent=63x28 cells\n",
+      "stderr": "",
+      "exit": "0\n",
+      "meta": "command: /tmp/visualize-eval/round-01/bin/rataflow-view --check specs/view4-fabric.json\ntimestamp_utc: 20261102T083542Z\nexit: 0\nspec_sha256: ff24f445d9e2ef696063142efbf63e18ab7d0756c4d4ce3be402b19a10093257\n"
+    }
+  ],
+  "coverage": {
+    "expected": 28,
+    "actual": 28,
+    "unique": 28,
+    "missing": [],
+    "extra": [],
+    "nodes": [
+      "bl1",
+      "bl2",
+      "core1",
+      "core2",
+      "fw1",
+      "fw2",
+      "ispA",
+      "ispB",
+      "ispC",
+      "ispD",
+      "leaf1",
+      "leaf2",
+      "mux1",
+      "mux2",
+      "rack1",
+      "rack2",
+      "sp1",
+      "sp2"
+    ]
+  },
+  "cleanup": {
+    "created": [
+      "w7E:p37",
+      "w7E:p3J",
+      "w7E:p3M",
+      "w7E:p3Y",
+      "w7E:p42",
+      "w7E:p49",
+      "w7E:p4E",
+      "w7E:p4G",
+      "w7E:p4M",
+      "w7E:p4R",
+      "w7E:p4Y",
+      "w7E:p4Z",
+      "w7E:p51",
+      "w7E:p53",
+      "w7E:p59",
+      "w7E:p5C",
+      "w7E:p5E",
+      "w7E:p5F",
+      "w7E:p5G",
+      "w7E:p5H",
+      "w7E:p5J",
+      "w7E:p5N",
+      "w7E:p5P",
+      "w7E:p5Q",
+      "w7E:p5R"
+    ],
+    "raw_log_closed": [
+      "w7E:p3J",
+      "w7E:p3M",
+      "w7E:p3Y",
+      "w7E:p42",
+      "w7E:p49",
+      "w7E:p4E",
+      "w7E:p4G",
+      "w7E:p4M",
+      "w7E:p4R",
+      "w7E:p4Y",
+      "w7E:p4Z",
+      "w7E:p51",
+      "w7E:p53",
+      "w7E:p59",
+      "w7E:p5C",
+      "w7E:p5E",
+      "w7E:p5F",
+      "w7E:p5G",
+      "w7E:p5H",
+      "w7E:p5J",
+      "w7E:p5N",
+      "w7E:p5P",
+      "w7E:p5R",
+      "w7E:p5Q"
+    ],
+    "only_generation_record": [
+      "w7E:p37"
+    ]
+  },
+  "reviewer_env": {
+    "provider": "openai",
+    "model": "gpt-6-astra"
+  },
+  "dimension_probes": [
+    {
+      "original_path": "/tmp/vizdim-final-view1.txt",
+      "sha256": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "raw_text": "47 77\n"
+    },
+    {
+      "original_path": "/tmp/vizdim-final-view2.txt",
+      "sha256": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "raw_text": "47 77\n"
+    },
+    {
+      "original_path": "/tmp/vizdim-final-view3.txt",
+      "sha256": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "raw_text": "47 77\n"
+    },
+    {
+      "original_path": "/tmp/vizdim-final-view4.txt",
+      "sha256": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "raw_text": "47 77\n"
+    },
+    {
+      "original_path": "/tmp/vizdim-final-view1c.txt",
+      "sha256": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "raw_text": "47 77\n"
+    }
+  ],
+  "reviewer_worker_id": "viz-judge01-datacenter-redundancy",
+  "purpose": "Independent Stage B hash and file verification, not generator approval; original blind record unchanged."
+}

@@ -1,0 +1,1 @@
+{"direction": "tb", "nodes": [{"id": "mch", "label": "bare-metal machines", "group": "metal"}, {"id": "boot", "label": "boot server", "group": "artifact"}], "layers": [["mch"], ["boot"]], "edges": [{"from": "mch", "to": "boot", "label": "iPXE request", "dots": 1, "flow": 0.5}, {"from": "boot", "to": "mch", "label": "boot.ipxe", "dots": 1, "flow": 0.5}]}

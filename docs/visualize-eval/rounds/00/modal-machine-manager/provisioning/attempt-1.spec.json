@@ -1,0 +1,76 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "q",
+      "label": "River jobs"
+    },
+    {
+      "id": "rec",
+      "label": "Reconcile loop"
+    },
+    {
+      "id": "reg",
+      "label": "Provider registry"
+    },
+    {
+      "id": "prov",
+      "label": "BM providers"
+    },
+    {
+      "id": "db",
+      "label": "Postgres"
+    },
+    {
+      "id": "mch",
+      "label": "BM machines"
+    }
+  ],
+  "layers": [
+    [
+      "q",
+      "rec"
+    ],
+    [
+      "reg",
+      ""
+    ],
+    [
+      "prov",
+      "db"
+    ],
+    [
+      "mch",
+      ""
+    ]
+  ],
+  "edges": [
+    {
+      "to": "reg",
+      "label": "provision job",
+      "from": "q",
+      "flow": 0.1
+    },
+    {
+      "to": "prov",
+      "label": "provider API",
+      "from": "reg"
+    },
+    {
+      "to": "mch",
+      "label": "allocate",
+      "from": "prov"
+    },
+    {
+      "to": "prov",
+      "label": "gcore sync 1m",
+      "from": "rec"
+    },
+    {
+      "to": "db",
+      "label": "cluster state",
+      "from": "rec"
+    }
+  ]
+}

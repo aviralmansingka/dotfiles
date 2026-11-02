@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "target": {
+    "columns": 77,
+    "rows": 47,
+    "zoom": 1.0
+  },
+  "cases": [
+    {
+      "id": "pipeline",
+      "source": "docs/visualize-eval/cases/pipeline/source.md",
+      "expected": "docs/visualize-eval/cases/pipeline/expected.json",
+      "variants": "docs/visualize-eval/cases/pipeline/historical-variants.json",
+      "source_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-dotfiles-fix-visualize--/2026-10-13T05-35-27-649Z_01a133c2-33a0-74b7-9033-3ad246285cff.jsonl",
+      "source_line": 180,
+      "animation": "required"
+    },
+    {
+      "id": "network",
+      "source": "docs/visualize-eval/cases/network/source.md",
+      "expected": "docs/visualize-eval/cases/network/expected.json",
+      "variants": "docs/visualize-eval/cases/network/historical-variants.json",
+      "source_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-dotfiles-fix-visualize--/2026-10-13T05-35-27-649Z_01a133c2-33a0-74b7-9033-3ad246285cff.jsonl",
+      "source_line": 180,
+      "animation": "required"
+    },
+    {
+      "id": "homelab-nic-trace",
+      "source": "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+      "expected": "docs/visualize-eval/cases/homelab-nic-trace/expected.json",
+      "variants": "docs/visualize-eval/cases/homelab-nic-trace/historical-variants.json",
+      "source_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-rack-bench-feat-network-diagram--/2026-10-13T05-14-42-097Z_01a133af-3231-71ff-87c1-c56889a12a6c.jsonl",
+      "source_line": 62,
+      "animation": "optional"
+    },
+    {
+      "id": "server-nic-layout",
+      "source": "docs/visualize-eval/cases/server-nic-layout/source.md",
+      "expected": "docs/visualize-eval/cases/server-nic-layout/expected.json",
+      "variants": "docs/visualize-eval/cases/server-nic-layout/historical-variants.json",
+      "source_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-rack-bench-feat-network-diagram--/2026-10-13T05-14-42-097Z_01a133af-3231-71ff-87c1-c56889a12a6c.jsonl",
+      "source_line": 110,
+      "animation": "optional"
+    },
+    {
+      "id": "datacenter-redundancy",
+      "source": "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+      "expected": "docs/visualize-eval/cases/datacenter-redundancy/expected.json",
+      "variants": "docs/visualize-eval/cases/datacenter-redundancy/historical-variants.json",
+      "source_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-rack-bench-feat-network-diagram--/2026-10-13T05-14-42-097Z_01a133af-3231-71ff-87c1-c56889a12a6c.jsonl",
+      "source_line": 151,
+      "animation": "off"
+    },
+    {
+      "id": "modal-machine-manager",
+      "source": "docs/visualize-eval/cases/modal-machine-manager/source.md",
+      "expected": "docs/visualize-eval/cases/modal-machine-manager/expected.json",
+      "variants": "docs/visualize-eval/cases/modal-machine-manager/historical-variants.json",
+      "source_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-modal--/2026-10-14T20-31-55-285Z_01a13c1d-4b94-70e7-a930-7631ea0f9b66.jsonl",
+      "source_line": 33,
+      "animation": "required"
+    },
+    {
+      "id": "modal-runtime",
+      "source": "docs/visualize-eval/cases/modal-runtime/source.md",
+      "expected": "docs/visualize-eval/cases/modal-runtime/expected.json",
+      "variants": "docs/visualize-eval/cases/modal-runtime/historical-variants.json",
+      "source_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-modal-learn-runtime-arch--/2026-10-14T20-36-14-065Z_01a13c21-3e70-754d-a101-f5817da3e05a.jsonl",
+      "source_line": 55,
+      "animation": "optional"
+    },
+    {
+      "id": "gb300-rack-software",
+      "source": "docs/visualize-eval/cases/gb300-rack-software/source.md",
+      "expected": "docs/visualize-eval/cases/gb300-rack-software/expected.json",
+      "variants": "docs/visualize-eval/cases/gb300-rack-software/historical-variants.json",
+      "source_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-vault-research-grace-blackwell--/2026-10-31T11-22-16-652Z_01a191b2-30cc-7236-b360-f3de1efcfa9a.jsonl",
+      "source_line": 285,
+      "animation": "optional"
+    }
+  ],
+  "deduplication": "One case per distinct intent; preserved revisions remain variants, not discarded evidence. Current Modal split views are required to cover the full original relation set."
+}

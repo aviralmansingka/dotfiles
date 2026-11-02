@@ -1,0 +1,22 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "q", "label": "River job queue" },
+    { "id": "ssh", "label": "SSH + BMC ops" },
+    { "id": "s3", "label": "S3 object store" },
+    { "id": "jan", "label": "janitor app" },
+    { "id": "mch", "label": "Bare-metal machines" },
+    { "id": "wapi", "label": "webapi server" },
+    { "id": "slack", "label": "Slack" }
+  ],
+  "layers": [["q"], ["ssh", "s3", "jan"], ["mch", "wapi"], ["slack"]],
+  "edges": [
+    { "from": "q", "to": "ssh", "label": "audit/reimage" },
+    { "from": "ssh", "to": "mch", "label": "machine-audit" },
+    { "from": "q", "to": "s3", "label": "upload diags" },
+    { "from": "q", "to": "jan", "label": "diag events" },
+    { "from": "jan", "to": "wapi", "label": "propose action" },
+    { "from": "wapi", "to": "slack", "label": "confirm/alerts" }
+  ]
+}

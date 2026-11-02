@@ -1,0 +1,25 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "oob-switch", "label": "OOB switch", "group": "transport" },
+    { "id": "nvos", "label": "NV-OS", "group": "transport" },
+    { "id": "c1", "label": "tenant 1", "group": "tenants" },
+    { "id": "c2", "label": "tenant 2", "group": "tenants" },
+    { "id": "c3", "label": "tenant 3", "group": "tenants" },
+    { "id": "mgmt", "label": "NV-RMS", "group": "management" }
+  ],
+  "layers": [
+    ["", "oob-switch", ""],
+    ["c1", "", "c2", "", "c3"],
+    ["", "nvos", "", "mgmt"]
+  ],
+  "edges": [
+    { "from": "oob-switch", "to": "nvos", "label": "uplink", "flow": 0.5, "dots": 1 },
+    { "from": "nvos", "to": "mgmt", "label": "telemetry", "flow": 1, "style": "dashed" }
+  ],
+  "trunks": [
+    { "id": "oob", "label": "OOB LAN", "from": "oob-switch", "to": "nvos",
+      "branches": ["c1", "c2", "c3"] }
+  ]
+}

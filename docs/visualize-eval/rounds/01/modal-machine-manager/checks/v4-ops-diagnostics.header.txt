@@ -1,0 +1,2 @@
+ rataflow-view · v4-ops-diagnostics.json · 7 nodes · 6 edges · 0 flows · drag
+header_ok=yes (line 1 carries the rataflow-view · viewer banner)

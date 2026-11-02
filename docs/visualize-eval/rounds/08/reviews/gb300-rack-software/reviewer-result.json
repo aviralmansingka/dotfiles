@@ -1,0 +1,1815 @@
+{
+  "protocol_version": 1,
+  "round": 8,
+  "case_id": "gb300-rack-software",
+  "candidate_sha256": "b1bdb4d3d38336cb7783db34da7f9f19edf80704a890de32285d9e582b4221eb",
+  "renderer_sha256": "ea24593b0f80c1617573eef4766f2bacaaf4315a8133a65d5331e9daec1c1f30",
+  "rubric_sha256": "ef092e343d622654fe3eb6115eafb395b53a5d4f4b47b2f0c4a165256b1d00b3",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "bc29f0279c6f159f3f6ef9e28eb492696fa5fb6fded6be53f7720b3e285b0d2e",
+  "generator": {
+    "worker_id": "viz-ds08-8",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge08-gb300-rack-software",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": false
+  },
+  "live_pane": {
+    "columns": 83,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/08/reviews/gb300-rack-software/observed-first.md",
+      "sha256": "887b88d1f3a80f5c37fceb45325b0f0dceb6dd40f78750cd897a4e4d8a0e5a7f",
+      "description": "Blind observation saved before expected reveal",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/08/reviews/gb300-rack-software/spec-manifest.json",
+      "sha256": "bc29f0279c6f159f3f6ef9e28eb492696fa5fb6fded6be53f7720b3e285b0d2e",
+      "description": "Sorted repository-relative spec paths and SHA-256 pairs",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/08/SKILL.md",
+      "sha256": "b1bdb4d3d38336cb7783db34da7f9f19edf80704a890de32285d9e582b4221eb",
+      "description": "Frozen skill",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/08/rubric.json",
+      "sha256": "ef092e343d622654fe3eb6115eafb395b53a5d4f4b47b2f0c4a165256b1d00b3",
+      "description": "Frozen rubric and result schema",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/08/metadata.json",
+      "sha256": "83084698e7d2bf4a6e2e0f411ef5b0b5454e5dc37c04f9ce45b8b82ea591ebf0",
+      "description": "Frozen input hashes and identities",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen dataset and optional animation",
+      "capture": null
+    },
+    {
+      "id": "source.md",
+      "path": "docs/visualize-eval/cases/gb300-rack-software/source.md",
+      "sha256": "10d440af0be8d3730c448e710a48d4dfbd527a966f532084e7f98fd2d4b83fda",
+      "description": "Case source and frozen expectations",
+      "capture": null
+    },
+    {
+      "id": "expected.json",
+      "path": "docs/visualize-eval/cases/gb300-rack-software/expected.json",
+      "sha256": "9a947233493973c247544ae6e9c175b940feb9d87fc850d4693565c90042c0ab",
+      "description": "Case source and frozen expectations",
+      "capture": null
+    },
+    {
+      "id": "historical-variants.json",
+      "path": "docs/visualize-eval/cases/gb300-rack-software/historical-variants.json",
+      "sha256": "fd9892244406ec1b2b09ee2cc7adb2af5534ebb52ede5036664f238b776eff31",
+      "description": "Case source and frozen expectations",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/generation.json",
+      "sha256": "0ea89a23c1fd0c9e2ff4247519555758b8cfd189a5f90ac276f3d9ea76226c10",
+      "description": "Generator ledger, family line, limitations and cleanup claim",
+      "capture": null
+    },
+    {
+      "id": "generation-md",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/generation.md",
+      "sha256": "abe9ce6958af54430d6e47d8e01fbf2019d08987c7b1a513ad8ff553a52bf5d5",
+      "description": "Generator narrative and known defects",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/attempts.json",
+      "sha256": "a47b44162103956e19636afe3a3b58a646df2d684268d62e45924e827582ade4",
+      "description": "Attempt ledger and admitted missing probe output",
+      "capture": null
+    },
+    {
+      "id": "check-v1-a1",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/checks/v1-a1.txt",
+      "sha256": "ea01333b720f956b1d9618b9b25671e315b89ec00323e26af52cdc0c60b2bef4",
+      "description": "Preserved attempt check output and exit",
+      "capture": null
+    },
+    {
+      "id": "check-v1-a2",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/checks/v1-a2.txt",
+      "sha256": "5378e4352e55e2838740ff77a4ca8996bd993d813ebae20b5775bb15fc180585",
+      "description": "Preserved attempt check output and exit",
+      "capture": null
+    },
+    {
+      "id": "check-v2-a1",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/checks/v2-a1.txt",
+      "sha256": "44eef1f01395317e2dfe37e5d739b5a5284190abadbfa990c59727c31b1b4433",
+      "description": "Preserved attempt check output and exit",
+      "capture": null
+    },
+    {
+      "id": "check-v2-a2",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/checks/v2-a2.txt",
+      "sha256": "ce035c78dcdeb0d828918e972177828711acdf70ad3561e3493c3de454c25127",
+      "description": "Preserved attempt check output and exit",
+      "capture": null
+    },
+    {
+      "id": "check-v2-a3",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/checks/v2-a3.txt",
+      "sha256": "b4a024b598d2c241e157fffacff7dd8f0109d4c137b66a004cbf197597fb400f",
+      "description": "Preserved attempt check output and exit",
+      "capture": null
+    },
+    {
+      "id": "check-v3-a1",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/checks/v3-a1.txt",
+      "sha256": "f9f562d67af4e9691f1545e5bfde02fbbf406d2450256fcfec3700a309937f5b",
+      "description": "Preserved attempt check output and exit",
+      "capture": null
+    },
+    {
+      "id": "check-v3-a2",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/checks/v3-a2.txt",
+      "sha256": "f5b279c552d084d6876d362a9feafaca5b064c54149cec8cb85987a6593ba143",
+      "description": "Preserved attempt check output and exit",
+      "capture": null
+    },
+    {
+      "id": "check-v3-a3",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/checks/v3-a3.txt",
+      "sha256": "282f772682ea6ae09ade4c4297f3ccafe0571a8369b6a6a4be39c9376e75fe62",
+      "description": "Preserved attempt check output and exit",
+      "capture": null
+    },
+    {
+      "id": "check-v4-a1",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/checks/v4-a1.txt",
+      "sha256": "6a1014aa1978d5766c2588963ef74c752214a31162efe1f6be0ed173ce967dd3",
+      "description": "Preserved attempt check output and exit",
+      "capture": null
+    },
+    {
+      "id": "check-v4-a2",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/checks/v4-a2.txt",
+      "sha256": "18016aac779a874bae640fcbe114fb39848683a1f026279ed5db9daa1a4f7cb9",
+      "description": "Preserved attempt check output and exit",
+      "capture": null
+    },
+    {
+      "id": "check-v4-a3",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/checks/v4-a3.txt",
+      "sha256": "6547d282e6717b219db78d611ebf09e6c5649ed3821db302ebcda8349026f5d7",
+      "description": "Preserved attempt check output and exit",
+      "capture": null
+    },
+    {
+      "id": "spec1",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/specs/v1-oob-bus.json",
+      "sha256": "a4f507b39e37ec25c857c201c421026782aa114759bba5defdbb72363ad46893",
+      "description": "Final spec",
+      "capture": null
+    },
+    {
+      "id": "v1-manifest",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v1/manifest.json",
+      "sha256": "b52131b44e133051435ffe4cc8d75bc4587fd9b003ab9d7d18146d3befae8b29",
+      "description": "Manifest with pane and artifact hashes",
+      "capture": null
+    },
+    {
+      "id": "v1-check",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v1/check.txt",
+      "sha256": "efa8a0ebc6df368c3c016b7e7a776fe06d922b92429fa26f011f46a87626abb0",
+      "description": "Final check output",
+      "capture": null
+    },
+    {
+      "id": "v1-validator",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v1/validator.txt",
+      "sha256": "761c3c0967d020623a2b669574ae93bdca318bc6113017c3225ccf06e7a0e39d",
+      "description": "Validator output",
+      "capture": null
+    },
+    {
+      "id": "v1-bin",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v1/bin.sha256",
+      "sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+      "description": "Frozen binary hash record",
+      "capture": null
+    },
+    {
+      "id": "v1-text",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v1/v1-text.txt",
+      "sha256": "47255c8151f25573b988ac000cbcf82f83667b3477e80d82159736ae227a01c0",
+      "description": "Live pane text.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:03:34Z to 2026-11-02T21:03:38Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-ansi-ansi",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v1/v1-ansi.ansi",
+      "sha256": "fa84c9949f62ad74b8be1f836160114e699bf7ca29f98c77bc749ceb5a4fa58a",
+      "description": "Live pane ansi.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:03:34Z to 2026-11-02T21:03:38Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-selected-ansi",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v1/v1-selected.ansi",
+      "sha256": "958047d2cbf3267960b12878cac17be012f758a74fa03c564017536d16f91ab3",
+      "description": "Live pane selected.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:03:34Z to 2026-11-02T21:03:38Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frames",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v1/v1-frames.txt",
+      "sha256": "70d359aad02b17b44eb336c558eb945673915ccf61ac7eb56f1b11ffbc4ec951",
+      "description": "Live pane frames.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0..4 at 0..400ms",
+        "timestamp": "2026-11-02T21:03:34Z to 2026-11-02T21:03:38Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frames-ansi",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v1/v1-frames.ansi",
+      "sha256": "0f4d7fa95b4752b62872e2c517a6efa45f65944e6c8c92e2c9f662b96f4e80a5",
+      "description": "Live pane frames.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0..4 at 0..400ms",
+        "timestamp": "2026-11-02T21:03:34Z to 2026-11-02T21:03:38Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-pinned",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/pinned/v1-77x47-frames.txt",
+      "sha256": "1aa1efed54bc074b95813b14c40f5a5c5dccebc96f11879a104f519b9aec2d8a",
+      "description": "Pinned direct render, not measured live pane",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0..2",
+        "timestamp": "relative 0ms, 100ms, 200ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-pinned-copy",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v1/v1-77x47-frames.txt",
+      "sha256": "1aa1efed54bc074b95813b14c40f5a5c5dccebc96f11879a104f519b9aec2d8a",
+      "description": "Pinned direct render bundle copy",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0..2",
+        "timestamp": "relative 0ms, 100ms, 200ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "spec2",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/specs/v2-oob-plant.json",
+      "sha256": "32d6b034f4870d5ea3a5270d3e3590dace94e4b9d54f8586da2351699cbd102b",
+      "description": "Final spec",
+      "capture": null
+    },
+    {
+      "id": "v2-manifest",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v2/manifest.json",
+      "sha256": "ad026c1be6daaf466f24fe6a5fe5244c6547bcc3f89b91bc5a38695381b9f993",
+      "description": "Manifest with pane and artifact hashes",
+      "capture": null
+    },
+    {
+      "id": "v2-check",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v2/check.txt",
+      "sha256": "dab0e959760cb8a7dfcc3d5a274ab973b0a1e871b2c6a992bfbfda7f9adf0682",
+      "description": "Final check output",
+      "capture": null
+    },
+    {
+      "id": "v2-validator",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v2/validator.txt",
+      "sha256": "869e78c67ce75c747f9edea7456a09a8d2934a0d6c1472b519798a54ef445130",
+      "description": "Validator output",
+      "capture": null
+    },
+    {
+      "id": "v2-bin",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v2/bin.sha256",
+      "sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+      "description": "Frozen binary hash record",
+      "capture": null
+    },
+    {
+      "id": "v2-text",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v2/v2-text.txt",
+      "sha256": "92c560dcd3d4c13326b41fcd3d6fa1d42188a9d059d479e8a48969caccd34b76",
+      "description": "Live pane text.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:03:49Z to 2026-11-02T21:03:53Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-ansi-ansi",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v2/v2-ansi.ansi",
+      "sha256": "85b872d2f1198b09c9dfdf4e529d0ae5923cfdfc50dae0e217d4d623172a9ffc",
+      "description": "Live pane ansi.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:03:49Z to 2026-11-02T21:03:53Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-selected-ansi",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v2/v2-selected.ansi",
+      "sha256": "b6f98e18dd92dd85586c93ac83140933e07318a7e192e639b4552c4b2fe92069",
+      "description": "Live pane selected.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:03:49Z to 2026-11-02T21:03:53Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frames",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v2/v2-frames.txt",
+      "sha256": "123a0950556168f693ad05dfb61f6f593eac4ef0a3f792e57a54486511b4ae90",
+      "description": "Live pane frames.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "0..4 at 0..400ms",
+        "timestamp": "2026-11-02T21:03:49Z to 2026-11-02T21:03:53Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frames-ansi",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v2/v2-frames.ansi",
+      "sha256": "581035bc289606279be37124ce20126df2f43487897e3a63ecd925d6c48451f7",
+      "description": "Live pane frames.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "0..4 at 0..400ms",
+        "timestamp": "2026-11-02T21:03:49Z to 2026-11-02T21:03:53Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-pinned",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/pinned/v2-77x47-frames.txt",
+      "sha256": "8d1513ef58002920d4b90e107239ba78bba05fe3f1ad2387f70d0fd05ad322af",
+      "description": "Pinned direct render, not measured live pane",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0..2",
+        "timestamp": "relative 0ms, 100ms, 200ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-pinned-copy",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v2/v2-77x47-frames.txt",
+      "sha256": "8d1513ef58002920d4b90e107239ba78bba05fe3f1ad2387f70d0fd05ad322af",
+      "description": "Pinned direct render bundle copy",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0..2",
+        "timestamp": "relative 0ms, 100ms, 200ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "spec3",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/specs/v3-nvswitch-sw.json",
+      "sha256": "9b65a2818975fbaaab7454e04e242f7dc044e2707781a32e68ba1126c8690fb6",
+      "description": "Final spec",
+      "capture": null
+    },
+    {
+      "id": "v3-manifest",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v3/manifest.json",
+      "sha256": "1d0755fae37c9969c7c366fe4adcaeaf23e45a6e2e9acbc31b7c0525faa4e9df",
+      "description": "Manifest with pane and artifact hashes",
+      "capture": null
+    },
+    {
+      "id": "v3-check",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v3/check.txt",
+      "sha256": "c2bb995a13ea51b180e5019ebe7631eeebccdc79ea9ed6af018e88634e46d705",
+      "description": "Final check output",
+      "capture": null
+    },
+    {
+      "id": "v3-validator",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v3/validator.txt",
+      "sha256": "869e78c67ce75c747f9edea7456a09a8d2934a0d6c1472b519798a54ef445130",
+      "description": "Validator output",
+      "capture": null
+    },
+    {
+      "id": "v3-bin",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v3/bin.sha256",
+      "sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+      "description": "Frozen binary hash record",
+      "capture": null
+    },
+    {
+      "id": "v3-text",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v3/v3-text.txt",
+      "sha256": "f97ef4257ed66d0853472777df902274e77b40c2728ad116dff050cb17254879",
+      "description": "Live pane text.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:03:53Z to 2026-11-02T21:03:57Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-ansi-ansi",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v3/v3-ansi.ansi",
+      "sha256": "dd1eec3836fdc7c8d61dd3d35b2203cd430400090890eaac3cca0ee1dcf51944",
+      "description": "Live pane ansi.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:03:53Z to 2026-11-02T21:03:57Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-selected-ansi",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v3/v3-selected.ansi",
+      "sha256": "4ceefcd656dd3486e41926dfc98eead3e881dec183694b54a11a6b18e78ffbfc",
+      "description": "Live pane selected.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:03:53Z to 2026-11-02T21:03:57Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-frames",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v3/v3-frames.txt",
+      "sha256": "41d8b71239cea31b88386e02566a4b8f0b8b482a2b320fc239224216cffed6d7",
+      "description": "Live pane frames.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "0..4 at 0..400ms",
+        "timestamp": "2026-11-02T21:03:53Z to 2026-11-02T21:03:57Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frames-ansi",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v3/v3-frames.ansi",
+      "sha256": "b19633fa195a9e1c2933dd2f93cca990d9f727e729ce0cbd5ca3c424218e6629",
+      "description": "Live pane frames.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "0..4 at 0..400ms",
+        "timestamp": "2026-11-02T21:03:53Z to 2026-11-02T21:03:57Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-pinned",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/pinned/v3-77x47-frames.txt",
+      "sha256": "2b7484b4849e62265648a5d2eedf5174abdfa0297986172cc45b1900a1f19f3a",
+      "description": "Pinned direct render, not measured live pane",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "0..2",
+        "timestamp": "relative 0ms, 100ms, 200ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-pinned-copy",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v3/v3-77x47-frames.txt",
+      "sha256": "2b7484b4849e62265648a5d2eedf5174abdfa0297986172cc45b1900a1f19f3a",
+      "description": "Pinned direct render bundle copy",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "0..2",
+        "timestamp": "relative 0ms, 100ms, 200ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "spec4",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/specs/v4-inband-sw.json",
+      "sha256": "3761a61aff7058f0dc1b6aa5897be3e6d7113626cad7f0de7b1df72f31cd15b0",
+      "description": "Final spec",
+      "capture": null
+    },
+    {
+      "id": "v4-manifest",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v4/manifest.json",
+      "sha256": "a3437038d28163b1eb3d2d966e75c57da674e1e0a9761eebfb07c364372f63f0",
+      "description": "Manifest with pane and artifact hashes",
+      "capture": null
+    },
+    {
+      "id": "v4-check",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v4/check.txt",
+      "sha256": "ca45673df71870e1058a98900db1b2df6668b92e6b33ec7b64e4916df6eb811e",
+      "description": "Final check output",
+      "capture": null
+    },
+    {
+      "id": "v4-validator",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v4/validator.txt",
+      "sha256": "869e78c67ce75c747f9edea7456a09a8d2934a0d6c1472b519798a54ef445130",
+      "description": "Validator output",
+      "capture": null
+    },
+    {
+      "id": "v4-bin",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v4/bin.sha256",
+      "sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+      "description": "Frozen binary hash record",
+      "capture": null
+    },
+    {
+      "id": "v4-text",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v4/v4-text.txt",
+      "sha256": "7dd2f7be07c86d8bd855bf5208d70259eba29da839da99b02ba5bdfefca24fdf",
+      "description": "Live pane text.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:04:59Z to 2026-11-02T21:05:03Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-ansi-ansi",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v4/v4-ansi.ansi",
+      "sha256": "5d741012157df7609824c636e8ee10723d5a1952238b25c833bf80f45c690f44",
+      "description": "Live pane ansi.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:04:59Z to 2026-11-02T21:05:03Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-selected-ansi",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v4/v4-selected.ansi",
+      "sha256": "49ab587ab42dc9ca57ccb78d5ad537462ec8eab0bebfae357cbe939887efc024",
+      "description": "Live pane selected.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:04:59Z to 2026-11-02T21:05:03Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-frames",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v4/v4-frames.txt",
+      "sha256": "c5a683309d6b365d2d332e61e7307a1896cba05aec83dbae5fb929d726849432",
+      "description": "Live pane frames.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "0..4 at 0..400ms",
+        "timestamp": "2026-11-02T21:04:59Z to 2026-11-02T21:05:03Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-frames-ansi",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v4/v4-frames.ansi",
+      "sha256": "8520c12fc159961eecdf494e258414c6f6eea4c930d78a35aa9870e8c933afb0",
+      "description": "Live pane frames.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "0..4 at 0..400ms",
+        "timestamp": "2026-11-02T21:04:59Z to 2026-11-02T21:05:03Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-pinned",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/pinned/v4-77x47-frames.txt",
+      "sha256": "cc7f538b73873f91080b8e4ba490e1ec37c7311d50d54cd812cfdd0f262aa4d9",
+      "description": "Pinned direct render, not measured live pane",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "0..2",
+        "timestamp": "relative 0ms, 100ms, 200ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-pinned-copy",
+      "path": "docs/visualize-eval/rounds/08/gb300-rack-software/evidence/v4/v4-77x47-frames.txt",
+      "sha256": "cc7f538b73873f91080b8e4ba490e1ec37c7311d50d54cd812cfdd0f262aa4d9",
+      "description": "Pinned direct render bundle copy",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "0..2",
+        "timestamp": "relative 0ms, 100ms, 200ms",
+        "state": "normal",
+        "format": "text"
+      }
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Direct RMS-to-compute-BMC and RMS-to-power control absent; physical LAN conflated with APIs. An unsupported directed driver→Fabric Manager relation and an air-gap connection are drawn; residency and qualifications omitted.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-text",
+        "v2-text",
+        "v3-text",
+        "v4-text",
+        "generation"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "The one visible junction adjoins a bridge over the middle arrow, so the required three-way split and bus-wide label cannot be traced confidently. v2 dashed arrow depicts separation as a directed link.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-text",
+        "v2-text",
+        "v1-check"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "The required rack hw title loses its a to the Power shelf arrowhead, and cross-view coverage is incomplete. The 77×47 dumps are not captures of an actual 77×47 live pane; independent fit proof is missing.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-text",
+        "v2-text",
+        "v3-text",
+        "v4-text",
+        "v1-pinned",
+        "v2-pinned",
+        "v3-pinned",
+        "v4-pinned"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Actual region geometry fails to contain and identify off-rack management, rack members, NVSwitch software, and compute-host plane; related colors/proximity do not recover the omitted placement.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-text",
+        "v2-text",
+        "v3-text",
+        "v4-text",
+        "v1-ansi-ansi",
+        "v4-ansi-ansi"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Placement-planes is plausible and a source-backed family line plus secondary identity recipe exist, but separate titled side-by-side worlds are not rendered, the bus is ambiguous, and source qualifier coverage is incomplete. The line incorrectly describes the bus as joining the OOB and in-band worlds."
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 23 node outlines, normal and select-all, have all four sides and corners, with one continuous RGB color per node; the damaged rack-region title is not a node border and is charged to fit/grouping. Select-all is one simultaneous frame, not per-node interactive captures.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-ansi-ansi",
+        "v1-selected-ansi",
+        "v2-ansi-ansi",
+        "v2-selected-ansi",
+        "v3-ansi-ansi",
+        "v3-selected-ansi",
+        "v4-ansi-ansi",
+        "v4-selected-ansi"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Model identities, hashes, blind record, check outputs, ANSI and static frames are present, and family line is in generation.json. Raw calibration probe outputs, rejected spec bytes and exact per-attempt commands are not preserved; fifth pane identity/close proof and actual target-size live pane are missing.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "generation",
+        "attempts",
+        "metadata",
+        "v1-manifest",
+        "v4-manifest"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Static submission has no flow-dot glyphs in timestamped 83×51 or pinned 77×47 frames, and source does not request animation. Motion rules are vacuous; no dot violations.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "evidence_ids": [
+        "dataset",
+        "v1-frames",
+        "v2-frames",
+        "v3-frames",
+        "v4-frames",
+        "v1-pinned",
+        "v2-pinned",
+        "v3-pinned",
+        "v4-pinned"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "rms-oob",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "nv-rms → OOB LAN as client",
+      "observed": "v1 downward LAN client, head [39,22], traceable.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            39,
+            7,
+            13,
+            18
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "rms-compute",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "nv-rms → Compute BMC via Redfish/HTTPS controller API",
+      "observed": "No distinct direct controller edge; physical LAN branch does not show API.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            18,
+            7,
+            30,
+            40
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "rms-power",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "nv-rms → Power shelf via Redfish/HTTPS controller API",
+      "observed": "No distinct direct controller edge; LAN shelf branch is physical reachability.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            39,
+            7,
+            29,
+            40
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "oob-bus",
+      "kind": "named_bus",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "OOB LAN → three named rack endpoints as one trunk split once",
+      "observed": "One source stem, one ┴ [39,41], ⌒ [38,41] over middle ▼; three heads are visible, but middle attachment and common label owner are ambiguous.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            19,
+            25,
+            37,
+            18
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "bus-compute",
+      "kind": "bus_branch",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "OOB trunk → Compute BMC×18",
+      "observed": "Leftward trunk arm and downward head [19,42] visible; common split is congested.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            18,
+            40,
+            22,
+            7
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "bus-switch",
+      "kind": "bus_branch",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "OOB trunk → NVSwitch BMC",
+      "observed": "Head [38,42] beneath bridge [38,41], not traceable as branch without guessing.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            37,
+            40,
+            14,
+            7
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "bus-power",
+      "kind": "bus_branch",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "OOB trunk → Power shelf",
+      "observed": "Rightward arm and ▼ [55,42] visible; head overwrites rack title.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            39,
+            41,
+            29,
+            6
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F7"
+      ]
+    },
+    {
+      "edge_id": "oob-compute",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "OOB LAN → Compute BMC×18 physical reach",
+      "observed": "leftward route through bridge at [45,28], ▼[16,30]; identifiable with care.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            15,
+            28,
+            32,
+            7
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "oob-cdu",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "OOB LAN → CDU ctlr physical reach",
+      "observed": "bridge [45,29], ▼[35,30]; identifiable with care.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            34,
+            28,
+            13,
+            7
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "oob-pdu",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "OOB LAN → PDUs physical reach",
+      "observed": "downward ▼[48,30]; identifiable with care.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            47,
+            28,
+            6,
+            7
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "oob-shelf",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "OOB LAN → Power shelf physical reach",
+      "observed": "Redfish/HTTPS, downward ▼[57,30]; identifiable with care.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            52,
+            22,
+            17,
+            13
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "airgap",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": null,
+      "observed": "Dashed OOB LAN → in-band net arrow ▼[43,38] reads as a connection despite air-gapped label; source says usually separate, not a directed link.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            33,
+            20,
+            12,
+            20
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "rms-nvos",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "nv-rms → NVOS via NVUE REST and SSH/SFTP",
+      "observed": "Rightward arrow ▶[42,27], NVUE/SSH/SFTP; REST qualification not visible.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            15,
+            26,
+            34,
+            5
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F4"
+      ]
+    },
+    {
+      "edge_id": "rms-nmx",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "nv-rms → NMX-C via gRPC",
+      "observed": "Rightward lower route ▶[60,27], label NMX-C gRPC; traceable.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            15,
+            27,
+            55,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "nvos-nmx",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "NVOS hosts NMX-C/T",
+      "observed": "Rightward hosts edge ▶[60,25], traceable; tray residency itself is not shown.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            43,
+            24,
+            27,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F4"
+      ]
+    },
+    {
+      "edge_id": "oob-switch",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "OOB LAN → NVSwitch BMC for power and serial",
+      "observed": "Rightward power+serial ▶[38,22], traceable.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            14,
+            21,
+            39,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "k8s-operator",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "Kubernetes → GPU Operator",
+      "observed": "Downward ▼[36,13], traceable, no action label.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            35,
+            6,
+            14,
+            12
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "operator-dcgm",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "GPU Operator deploys DCGM as DaemonSet",
+      "observed": "Downward ▼[34,21], traceable; node DaemonSet label but action deploys not explicit.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            33,
+            14,
+            18,
+            13
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F6"
+      ]
+    },
+    {
+      "edge_id": "dcgm-exporter",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "DCGM → exporter metrics feed",
+      "observed": "Downward ▼[25,35], metrics label visible; exporter :9400 visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            24,
+            23,
+            27,
+            17
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "dcgm-driver",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "DCGM reads GPU state via NVML against local driver",
+      "observed": "Downward ▼[49,35], NVML visible; read action and local qualifier omitted.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            40,
+            23,
+            21,
+            17
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F4"
+      ]
+    },
+    {
+      "edge_id": "driver-fm",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "Historical driver→Fabric Manager only if a source-supported meaning can be stated; otherwise block unsupported relation",
+      "observed": "Downward ▼[40,43]; no relation verb, only bundled qualifier on node.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            39,
+            36,
+            22,
+            12
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F5"
+      ]
+    },
+    {
+      "edge_id": "exporter-net",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": "dcgm-exporter serves Prometheus metrics :9400 on in-band network",
+      "observed": "Downward ▼[24,43]; :9400 on exporter, metrics label placed on upstream DCGM edge; Prometheus not explicit.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            23,
+            33,
+            22,
+            15
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F6"
+      ]
+    },
+    {
+      "edge_id": "no-oob-dcgm",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": null,
+      "observed": "No OOB→DCGM route appears in any of the four captures; explicit negative preserved.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            23,
+            20,
+            38,
+            28
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "old-oob-nvos",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "expected": null,
+      "observed": "Historical OOB→NVOS is absent; later correction distinguishes RMS→NVOS from OOB→NVSwitch BMC.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            14,
+            21,
+            56,
+            11
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "rms-compute",
+        "rms-power"
+      ],
+      "severity": "critical",
+      "description": "RMS direct Redfish/HTTPS control of compute BMC and power shelf is absent; LAN-client attachment plus physical LAN drops does not establish controller API calls. Source correction explicitly requires them.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            18,
+            6,
+            56,
+            41
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "oob-bus",
+        "bus-switch"
+      ],
+      "severity": "high",
+      "description": "One ┴ at [39,41] immediately adjoins ⌒ [38,41] over the NVSwitch head; an apparent crossing rather than a single clean three-way split makes the middle path and Redfish/HTTPS bus ownership uncertain. The shared-cells warning is not itself sufficient to reject an intentional bus.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            19,
+            40,
+            37,
+            3
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "airgap"
+      ],
+      "severity": "critical",
+      "description": "The OOB→in-band net dashed arrow labelled air-gapped turns a usually separate/non-connected relationship into a directed link and drops the usually qualification; dashed styling does not say usually.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            33,
+            21,
+            12,
+            18
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "rms-nvos",
+        "nvos-nmx"
+      ],
+      "severity": "high",
+      "description": "NVOS→NMX hosts and SSH/SFTP are visible, but no NVSwitch tray/host region establishes NVOS residency; NVUE label omits REST. Compute host residency for DCGM, driver/CUDA and Fabric Manager is also absent.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            15,
+            21,
+            55,
+            11
+          ]
+        },
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            23,
+            22,
+            38,
+            26
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F5",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "driver-fm"
+      ],
+      "severity": "critical",
+      "description": "Unlabelled driver+CUDA→Fabric Manager arrow invents a directed relationship: bundled is not a verb, and the source requires supported read/monitor/host semantics or a block.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            39,
+            36,
+            22,
+            12
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F6",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "operator-dcgm",
+        "exporter-net"
+      ],
+      "severity": "medium",
+      "description": "GPU Operator→DCGM lacks explicit deploys; DCGM (DaemonSet) does not alone specify the action. Exporter→network is unlabeled; metrics appears on DCGM→exporter. The licensing caveat and usually qualifier are outside the captured diagram.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            24,
+            14,
+            27,
+            34
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F7",
+      "category": "layout_fit",
+      "edge_ids": [
+        "bus-power"
+      ],
+      "severity": "medium",
+      "description": "The required group title rack hw is rendered r▼ck hw, one glyph overwritten by the arrowhead at [55,42]. Target dumps have full nodes but the v3 UI header is clipped at 77×47.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            52,
+            42,
+            17,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F8",
+      "category": "conceptual_grouping_color",
+      "edge_ids": [
+        "oob-bus",
+        "nvos-nmx"
+      ],
+      "severity": "high",
+      "description": "v1 rack hw frame contains only the shelf; compute and switch BMCs sit outside; off-rack management and OOB labels vanish into displaced fragments. v2/v4 similarly have missing region corners/titles; v3 has no switch region and v4 no compute host region.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            18,
+            5,
+            56,
+            42
+          ]
+        },
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            23,
+            5,
+            38,
+            43
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F9",
+      "category": "category_fit",
+      "edge_ids": [
+        "oob-bus"
+      ],
+      "severity": "high",
+      "description": "The source-backed placement-planes evidence line is recorded in generation.json, but the required side-by-side worlds and region memberships are not present in captures; the middle bus connection is ambiguous and qualifier coverage is incomplete.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            18,
+            40,
+            50,
+            7
+          ]
+        },
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            23,
+            5,
+            38,
+            43
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F10",
+      "category": "workflow_evidence",
+      "edge_ids": [
+        "oob-bus"
+      ],
+      "severity": "high",
+      "description": "Rejected draft specs overwritten; calibration probe raw logs expressly not kept; attempt records contain exit/status and checks but not exact commands. Only four pane IDs/confirmed closures are individually preserved although five panes are claimed. Actual live pane is 83×51, not required 77×47.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            1,
+            1,
+            75,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "Actual live pane at 77×47 is missing; pinned 77×47 dumps prove only direct render, not live half-pane.",
+    "Raw calibration probes, rejected draft bytes and exact per-attempt commands are not preserved; fifth pane ID and individual closure evidence missing.",
+    "Renderer region placement and one-hub bus readability are observed limitations; general impossibility is not established without the missing probes.",
+    "A source-supported directed driver→Fabric Manager action is not established by the frozen excerpts."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pKW",
+      "w7E:pKX",
+      "w7E:pKY",
+      "w7E:pM4"
+    ],
+    "closed_pane_ids": [
+      "w7E:pKW",
+      "w7E:pKX",
+      "w7E:pKY",
+      "w7E:pM4"
+    ],
+    "status": "blocked",
+    "reason": "Four listed manifests confirm closure; generation claims five panes closed but the fifth identity and individual closure record are not preserved."
+  },
+  "overall": "fail"
+}

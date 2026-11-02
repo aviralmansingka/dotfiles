@@ -1,0 +1,54 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "dark",
+      "label": "7 inactive NICs"
+    },
+    {
+      "id": "s1",
+      "label": "server1 .58/29"
+    },
+    {
+      "id": "nic",
+      "label": "eno16595np0"
+    },
+    {
+      "id": "gw",
+      "label": "GW .57 Arista OUI"
+    }
+  ],
+  "edges": [
+    {
+      "from": "dark",
+      "to": "s1",
+      "label": "cable unknown"
+    },
+    {
+      "from": "s1",
+      "to": "nic",
+      "label": "only uplink"
+    },
+    {
+      "from": "nic",
+      "to": "gw",
+      "label": "25G; GW 0.1ms"
+    }
+  ],
+  "layers": [
+    [
+      "dark"
+    ],
+    [
+      "s1"
+    ],
+    [
+      "nic"
+    ],
+    [
+      "",
+      "gw"
+    ]
+  ]
+}

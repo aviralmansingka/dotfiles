@@ -1,0 +1,10 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/08/network/v1.json",
+    "sha256": "321eed73e17298b4d738e89f5c49c412e20c3e15e3b4922c717eab069351575a"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/08/network/v2.json",
+    "sha256": "779f9d1345394061563eac2525ae879cf8d3e6f53e8a3ec163c19d77109d03fc"
+  }
+]

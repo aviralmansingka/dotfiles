@@ -1,0 +1,7 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=9 edges=8 flows=0 direction=tb theme=gruvbox
+extent=95x56 cells
+labels: 8/8 placed, 0 on route cells, 0 skipped
+groups: ports(2) hosts(2) pool(1) fabric(1) transit(2) internet(1)
+trunks:
+dots: 5 single-dot routes, 0 periodic routes, 0 violations

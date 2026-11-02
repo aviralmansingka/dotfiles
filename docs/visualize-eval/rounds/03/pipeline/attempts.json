@@ -1,0 +1,45 @@
+{
+  "case_id": "pipeline",
+  "round": "03",
+  "views": [
+    {
+      "view": "v1",
+      "status": "final",
+      "spec": "spec-v1.json",
+      "attempts": [
+        {
+          "spec": "attempts/v1-attempt1.json",
+          "spec_sha256": "6cf73930c797538bef1af8238fc9d298014bb756fe98973142a6442043195677",
+          "note": "tb with explicit layers (cli|api|auth,queue|worker|db). Fit fine (29x37, crossings 0) but api->queue's dot began one cell past the port on a corner: 1 dot violation, origins 4/5. Rejected on the round-03 origin rule."
+        },
+        {
+          "spec": "attempts/v1-attempt2.json",
+          "spec_sha256": "003588e9c884f7be3e37feb0c4351bff447cff33e6d8af220d3dd63c0109f776",
+          "note": "same node/edge set, explicit layers removed so sugiyama places the nodes. Dots 0 violations, origins 5/5, crossings 0, extent 36x40. Missing the auth->db read edge (it had been held back for a second view)."
+        },
+        {
+          "spec": "attempts/v1-attempt3.json",
+          "spec_sha256": "4e0c24c911506682e6788059e8075fc85aa6659c7426714b6e53cf33bf04a7d8",
+          "note": "FINAL: auth->db read added back to the sugiyama layout. All six audited relations in one view: labels 4/4, 0 on route cells, 0 skipped, crossings 0, dots 6 single-dot / 0 violations / 6 synchronized at 3000ms, origins 6/6, extent 36x40. Kept because it covers the whole graph with no crossing, no lost label and no lost relation, so no second view was needed."
+        }
+      ]
+    }
+  ],
+  "probes": [
+    {
+      "spec": "attempts/v0-lr-overview.json",
+      "spec_sha256": "22166a651a1ccd57de2694e3c983e70e34ded22f40f6370677561d5d75e18303",
+      "note": "Orientation probe before laying out the view: full 6-edge graph in lr. Clean (crossings 0, origins 6/6) but extent 119x19 exceeds the 77-column target, so the view was laid out in tb instead. Never captured as evidence."
+    }
+  ],
+  "rejected_specs": [
+    {
+      "spec_preserved": false,
+      "note": "First draft carried a top-level \"duration_ms\": 3000 (the candidate skill documents it). The frozen binary rejected it: unknown field duration_ms, expected one of direction, theme, nodes, layers, edges, trunks. Nothing rendered; the rate moved to a per-edge duration_ms on every route."
+    },
+    {
+      "spec_preserved": false,
+      "note": "tb draft with explicit layers and the auth->db read edge in place was rejected by the router: no obstacle-safe route for worker -> db; increase node/layer spacing. Nothing rendered. Removing the explicit layers (attempt 2/3) let the same six relations route cleanly."
+    }
+  ]
+}

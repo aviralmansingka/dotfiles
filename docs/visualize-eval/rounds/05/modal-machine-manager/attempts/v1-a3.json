@@ -1,0 +1,20 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "cp", "label": "control plane", "group": "control" },
+    { "id": "web", "label": "humans + mmctl", "group": "humans" },
+    { "id": "pgrpc", "label": "private gRPC", "group": "control" },
+    { "id": "wapi", "label": "webapi", "group": "control" },
+    { "id": "q", "label": "River queue", "group": "queue" },
+    { "id": "db", "label": "Postgres", "group": "state" }
+  ],
+  "edges": [
+    { "from": "cp", "to": "pgrpc", "label": "create/terminate/repair", "dots": 1, "flow": true },
+    { "from": "web", "to": "wapi", "label": "http", "dots": 1, "flow": true },
+    { "from": "wapi", "to": "q", "label": "reinstall/reprov", "dots": 1, "flow": true },
+    { "from": "pgrpc", "to": "q", "label": "enqueue job", "dots": 1, "flow": true },
+    { "from": "pgrpc", "to": "db", "label": "machine rows", "dots": 1, "flow": true },
+    { "from": "q", "to": "db", "label": "job rows", "dots": 1, "flow": true }
+  ]
+}

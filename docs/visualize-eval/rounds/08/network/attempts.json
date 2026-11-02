@@ -1,0 +1,70 @@
+{
+  "case_id": "network",
+  "round": "08",
+  "budget": "at most three spec candidates per view; every --check run on a distinct spec counted",
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "spec": "v1-attempt1.json",
+          "spec_sha256": "11dcaa732c2b05522a41aba5e4d8391f472ebffdbbd914bdf5a099306bcba945",
+          "check_log": "attempts/v1-attempt1.check.txt",
+          "frames_log": "attempts/v1-attempt1.frames77.txt",
+          "note": "Earliest candidate: whole 6-node case in one tb view, groups transit/edge/tiers. Rejected on fit: check reported extent=34x69 (34 cols wide x 69 rows tall) and the pinned 77x47 dump printed the 'graph overflows - drag to pan' banner; the WAN node was off-screen. Region boxes for the one-member groups (transit, tiers) rendered detached from their member.",
+          "outcome": "rejected (overflow, 69 rows > 47)"
+        },
+        {
+          "spec": "v1-attempt2.json",
+          "spec_sha256": "781cbd85b21c1af1efae919d10fee493b49dcec83d4ae77c8d3a0da64b641ee8",
+          "check_log": "attempts/v1-attempt2.check.txt",
+          "frames_log": "attempts/v1-attempt2.frames77.txt",
+          "note": "Front path wan->fw->core->web in lr with three regions transit/edge/tiers. Fit was fine (extent=77x12) and the 'edge' region rendered as a titled band, but both one-member regions (transit for WAN, tiers for Web tier) rendered one row-block BELOW their member instead of around it (see frames log rows 30-32 vs Web tier rows 25-28, rows 33-35 vs WAN rows 25-28). Rejected: a declared region that does not enclose its member is a lie in the drawing.",
+          "outcome": "rejected (one-member regions detach from their member)"
+        },
+        {
+          "spec": "v1-attempt3.json",
+          "spec_sha256": "321eed73e17298b4d738e89f5c49c412e20c3e15e3b4922c717eab069351575a",
+          "check_log": "attempts/v1-attempt3.check.txt",
+          "frames_log": "attempts/v1-attempt3.frames77.txt",
+          "note": "Final v1: same four nodes and three edges in lr, one region 'network' (wan, fw, core) that renders as a titled bordered band enclosing all three members; web tier deliberately ungrouped so no one-member region exists. extent=76x6, 0 bridges, 0 ambiguous owners, origins 3/3.",
+          "outcome": "final (shipped as v1.json)"
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "attempts": [
+        {
+          "spec": "v2-attempt1.json",
+          "spec_sha256": "54d11f4dfe76be15ad2fd69b29a2c8d4346b867e39fbaaede0c2590823b4eb18",
+          "check_log": "attempts/v2-attempt1.check.txt",
+          "frames_log": "attempts/v2-attempt1.frames77.txt",
+          "note": "Mesh in lr (core and web both sources, tiers region). extent=61x12, 1 bridge; the tiers region's top border carried no title because the core->cache route runs along that same row, and the region's left wall collided with the ungrouped Core switch box. Also rendered the core label as 'Coreiswitch'.",
+          "outcome": "rejected (untitled region, border/node collision)"
+        },
+        {
+          "spec": "v2-attempt2.json",
+          "spec_sha256": "779f9d1345394061563eac2525ae879cf8d3e6f53e8a3ec163c19d77109d03fc",
+          "check_log": "attempts/v2-attempt2.check.txt",
+          "frames_log": "attempts/v2-attempt2.frames77.txt",
+          "note": "Final v2: same four nodes in tb with edges core->cache, web->cache, web->db, cache->db and one region 'tiers' (web, cache, db). extent=28x31; the region is titled ('-- tiers --') and encloses its three members. Known defect kept: the region's rectangle also covers the ungrouped Core switch at its top-left, and its left wall is hidden behind the core box.",
+          "outcome": "final (shipped as v2.json)"
+        },
+        {
+          "spec": "v2-attempt3.json",
+          "spec_sha256": "84a77dfc594a04445fb03ac31137d10a0a1347849271e288a88843b0930c3c03",
+          "check_log": "attempts/v2-attempt3.check.txt",
+          "frames_log": "attempts/v2-attempt3.frames77.txt",
+          "note": "Same mesh in tb plus the core->web 10 GbE anchor and a 'network' region for core. extent=32x44 fits, the network region rendered correctly around core, but the region-disjointness pass then gave the tiers region its own column band (cols 46-49) with NO member inside it: an empty, untitled 3-cell box ran down the right side. Rejected in favour of attempt 2.",
+          "outcome": "rejected (declared tiers region rendered empty and untitled)"
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "spec_candidates": 6,
+    "check_runs": 6,
+    "final_views": 2
+  }
+}

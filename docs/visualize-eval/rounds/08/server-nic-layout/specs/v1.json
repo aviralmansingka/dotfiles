@@ -1,0 +1,13 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "dark", "label": "7 of 8 ports dark", "group": "srv1" },
+    { "id": "s1", "label": "server1 R7725 bare metal", "group": "srv1" },
+    { "id": "nic", "label": "eno16595np0 25 GbE", "group": "srv1" }
+  ],
+  "edges": [
+    { "from": "dark", "to": "s1", "label": "no cable?", "style": "dashed" },
+    { "from": "s1", "to": "nic", "label": "only uplink" }
+  ]
+}

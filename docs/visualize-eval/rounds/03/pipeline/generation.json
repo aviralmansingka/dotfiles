@@ -1,0 +1,381 @@
+{
+  "case_id": "pipeline",
+  "round": "03",
+  "generator": {
+    "identity": "fresh round-03 diagram generator (worker subagent, isolated context, no earlier round review read)",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "pi_provider": "fireworks",
+    "pi_session": "01a19bf8-4ca5-7605-9156-51edcc9770e7"
+  },
+  "frozen_inputs": {
+    "candidate_skill": {
+      "path": "docs/visualize-eval/rounds/03/SKILL.md",
+      "sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c"
+    },
+    "renderer": {
+      "path": "/tmp/visualize-eval/round-03/bin/rataflow-view",
+      "sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7"
+    },
+    "case_source": "docs/visualize-eval/cases/pipeline/source.md"
+  },
+  "views": [
+    {
+      "id": "v1",
+      "title": "Job pipeline: gateway fan-out, auth read path and worker write path into Postgres",
+      "status": "final",
+      "spec": "spec-v1.json",
+      "checked_at_attempt": "attempts/v1-attempt3.json",
+      "carries": "all 6 nodes and all 6 audited relations",
+      "evidence": {
+        "bundle": "evidence/v1",
+        "text": "evidence/v1/v1-text.txt",
+        "ansi": "evidence/v1/v1-ansi.ansi",
+        "selected_ansi": "evidence/v1/v1-selected.ansi",
+        "check": "evidence/v1/check.txt",
+        "frames": "evidence/v1/v1-frames.txt",
+        "frames_ansi": "evidence/v1/v1-frames.ansi",
+        "manifest": "evidence/v1/manifest.json",
+        "frames_count": 21,
+        "frame_step_ms": 150,
+        "frames_cover_ms": 3000,
+        "measured": "77x47",
+        "viewport_line": null,
+        "viewport_token": "77x47 @100%",
+        "pane_id": "w7E:pBP",
+        "pane_rect": {
+          "height": 49,
+          "width": 79,
+          "x": 80,
+          "y": 0
+        },
+        "cleanup": "confirmed_closed",
+        "extent": "36x40 cells"
+      },
+      "supplementary_evidence": {
+        "bundle": "evidence/v1-origin",
+        "reason": "the 21-frame capture is 21 x 48 = 1008 lines and the pane read returned 1000, so its first 8 lines (the 'frame 0 at 0ms' header and the top of CLI) were cut. This second capture of the SAME spec keeps frame 0, which shows all six dots on the first drawn cell after their own source port.",
+        "text": "evidence/v1-origin/v1-origin-text.txt",
+        "ansi": "evidence/v1-origin/v1-origin-ansi.ansi",
+        "selected_ansi": "evidence/v1-origin/v1-origin-selected.ansi",
+        "check": "evidence/v1-origin/check.txt",
+        "frames": "evidence/v1-origin/v1-origin-frames.txt",
+        "manifest": "evidence/v1-origin/manifest.json",
+        "frames_count": 4,
+        "frame_step_ms": 150,
+        "pane_id": "w7E:pBT",
+        "cleanup": "confirmed_closed",
+        "measured": "77x47",
+        "viewport_token": "77x47 @100%"
+      },
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=6 edges=6 flows=6 direction=tb theme=gruvbox",
+        "extent=36x40 cells",
+        "crossings: 0",
+        "labels: 4/4 placed, 0 on route cells, 0 skipped",
+        "groups: client(1) edge(1) control(2) compute(1) state(1)",
+        "trunks:",
+        "dots: 6 single-dot routes, 0 periodic routes, 0 violations, 6 synchronized at 3000ms",
+        "origins: 6/6 routes start at their arrow origin"
+      ],
+      "crossings_chosen": {
+        "value": 0,
+        "why": "zero crossings on the first layout that kept every relation: attempt 1 (explicit layers) also had 0 but broke the origin rule, attempt 2 had 0 with only 5 of 6 relations, attempt 3 has 0 with all 6. Nothing left to lower, so no reordering, merging or label dropping was considered."
+      },
+      "validator": {
+        "command": "python3 scripts/viz-validate.py docs/visualize-eval/rounds/03/pipeline/evidence/v1 --require-select --require-frames --attempts docs/visualize-eval/rounds/03/pipeline/attempts.json",
+        "verdict": "all checks passed",
+        "checks_passed": 28,
+        "checks_failed": 0,
+        "output": "validator-v1.txt"
+      }
+    }
+  ],
+  "view_count": 1,
+  "coverage_map": [
+    {
+      "view": "v1",
+      "carries": "all 6 nodes (cli, api, auth, queue, worker, db) and all 6 audited edges e1-e6 with their four labels; groups, motion, tier colors"
+    }
+  ],
+  "meaning_ledger": [
+    {
+      "fact": "node `cli` = CLI",
+      "kind": "identifier/role",
+      "fate": "drawn",
+      "where": "v1 node cli, label CLI"
+    },
+    {
+      "fact": "node `api` = API gateway",
+      "kind": "identifier/role",
+      "fate": "drawn",
+      "where": "v1 node api, label API gateway"
+    },
+    {
+      "fact": "node `auth` = Auth",
+      "kind": "identifier/role",
+      "fate": "drawn",
+      "where": "v1 node auth, label Auth"
+    },
+    {
+      "fact": "node `queue` = Job queue",
+      "kind": "identifier/role",
+      "fate": "drawn",
+      "where": "v1 node queue, label Job queue"
+    },
+    {
+      "fact": "node `worker` = Worker pool",
+      "kind": "identifier/role",
+      "fate": "drawn",
+      "where": "v1 node worker, label Worker pool"
+    },
+    {
+      "fact": "node `db` = Postgres",
+      "kind": "identifier/role",
+      "fate": "drawn",
+      "where": "v1 node db, label Postgres"
+    },
+    {
+      "fact": "`cli -> api` is an unlabeled historical relation; do not invent a protocol",
+      "kind": "edge without a stated verb",
+      "fate": "drawn unlabeled",
+      "where": "v1 e1 \u2014 deliberately carries no label so no protocol is invented"
+    },
+    {
+      "fact": "`api -> auth`: verify",
+      "kind": "action verb",
+      "fate": "drawn",
+      "where": "v1 e2 label verify"
+    },
+    {
+      "fact": "`api -> queue`: enqueue",
+      "kind": "action verb",
+      "fate": "drawn",
+      "where": "v1 e3 label enqueue"
+    },
+    {
+      "fact": "`queue -> worker` is an unlabeled historical relation",
+      "kind": "edge without a stated verb",
+      "fate": "drawn unlabeled",
+      "where": "v1 e4"
+    },
+    {
+      "fact": "`worker -> db`: write",
+      "kind": "action verb on the state tier",
+      "fate": "drawn",
+      "where": "v1 e5 label write, arrowhead into Postgres"
+    },
+    {
+      "fact": "`auth -> db`: read",
+      "kind": "action verb on the state tier",
+      "fate": "drawn",
+      "where": "v1 e6 label read, arrowhead into Postgres"
+    },
+    {
+      "fact": "the auth database read must not be confused with the worker database write",
+      "kind": "qualifier / disambiguation",
+      "fate": "drawn",
+      "where": "v1: two separate routes into Postgres from two separate sources, labelled read and write, arriving at two distinct arrowheads"
+    },
+    {
+      "fact": "authentication path and queue path are separate paths",
+      "kind": "topology",
+      "fate": "drawn",
+      "where": "v1: API gateway fans into Auth (right band) and Job queue (left band); the two paths only meet again at Postgres"
+    },
+    {
+      "fact": "semantic tiers with related color shades",
+      "kind": "presentation constraint",
+      "fate": "drawn",
+      "where": "v1 groups client(#d8a657) edge(#7daea3) control(Job queue #e29caf, Auth #d3869b \u2014 one pink family) compute(#a9b261) state(#7da0b8)"
+    },
+    {
+      "fact": "plain background, every box the same bg, no border dots, gruvbox",
+      "kind": "presentation constraint",
+      "fate": "drawn",
+      "where": "theme gruvbox; every box and the field use bg #282828 (48;2;40;40;40) in evidence/v1/v1-ansi.ansi; dots live on routes, frame 0 shows each one off the source border"
+    },
+    {
+      "fact": "slow, sparse motion for traffic",
+      "kind": "motion constraint",
+      "fate": "drawn",
+      "where": "every route flow:true with dots:1 (one dot per route = sparse) and per-edge duration_ms 3000, slower than the 2000 default; check reports 6 synchronized at 3000ms"
+    },
+    {
+      "fact": "original request: dots must not sit behind boxes / in the background",
+      "kind": "historical style directive",
+      "fate": "drawn",
+      "where": "dots render on the route cells in front of the plain field; no dot on a node border in frame 0 or the final frame"
+    },
+    {
+      "fact": "original request: the visualize pane should be an even split",
+      "kind": "pane geometry directive from the old session, not a graph fact",
+      "fate": "dropped with reason",
+      "where": "reason: this evaluation fixes the pane at one half of the caller tab, 77x47; pane sizing is the harness's, not the spec's"
+    },
+    {
+      "fact": "historical chat is evidence, not authority to replay its commands",
+      "kind": "qualification",
+      "fate": "drawn",
+      "where": "no historical command was replayed; only the six node names and six relations were used, each qualified by the brief"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "cli",
+      "to": "api",
+      "verb": "unlabeled historical relation (no protocol stated)",
+      "label_owner": "none \u2014 a label here would invent a protocol",
+      "view": "v1"
+    },
+    {
+      "id": "e2",
+      "from": "api",
+      "to": "auth",
+      "verb": "verify",
+      "label_owner": "e2",
+      "view": "v1"
+    },
+    {
+      "id": "e3",
+      "from": "api",
+      "to": "queue",
+      "verb": "enqueue",
+      "label_owner": "e3",
+      "view": "v1"
+    },
+    {
+      "id": "e4",
+      "from": "queue",
+      "to": "worker",
+      "verb": "unlabeled historical relation (no protocol stated)",
+      "label_owner": "none \u2014 a label here would invent a protocol",
+      "view": "v1"
+    },
+    {
+      "id": "e5",
+      "from": "worker",
+      "to": "db",
+      "verb": "write",
+      "label_owner": "e5",
+      "view": "v1"
+    },
+    {
+      "id": "e6",
+      "from": "auth",
+      "to": "db",
+      "verb": "read",
+      "label_owner": "e6",
+      "view": "v1"
+    }
+  ],
+  "relationship_mapping": [
+    {
+      "source_relation": "cli -> api",
+      "visible_as": "e1, v1: arrow from CLI down into API gateway, no label",
+      "direction_kept": true
+    },
+    {
+      "source_relation": "api -> auth",
+      "visible_as": "e2, v1: arrow from API gateway into Auth, label verify",
+      "direction_kept": true
+    },
+    {
+      "source_relation": "api -> queue",
+      "visible_as": "e3, v1: arrow from API gateway into Job queue, label enqueue",
+      "direction_kept": true
+    },
+    {
+      "source_relation": "queue -> worker",
+      "visible_as": "e4, v1: arrow from Job queue into Worker pool, no label",
+      "direction_kept": true
+    },
+    {
+      "source_relation": "worker -> db",
+      "visible_as": "e5, v1: arrow from Worker pool into Postgres, label write",
+      "direction_kept": true
+    },
+    {
+      "source_relation": "auth -> db",
+      "visible_as": "e6, v1: long arrow from Auth across the worker band into Postgres, label read",
+      "direction_kept": true
+    }
+  ],
+  "source_pointers": [
+    "docs/visualize-eval/cases/pipeline/source.md \u2014 Task paragraph (CLI, API gateway, authentication, job queue, worker pool, Postgres; separate read/write and authentication/queue paths; slow sparse motion)",
+    "same file, 'Relationship facts from the historical attempt' \u2014 the six node names and the six relations, each used as stated",
+    "same file, 'Fixed constraints' \u2014 keep every relation; keep auth read distinct from worker write; semantic tiers, related shades, plain background, no border dots",
+    "same file, 'Original line 5 (user)' \u2014 style history only: no dots behind boxes, same box bg as field, gruvbox, live dots whose direction means traffic flow",
+    "original chat write: line 180, call chatcmpl-tool-8bf56de848923fd1 (not read; the brief's excerpts were the only source)"
+  ],
+  "abbreviations": [
+    {
+      "label": "Auth",
+      "from": "authentication / Auth node",
+      "reason": "the source names the node `auth`; the short label stays readable at one-node width and matches the source id"
+    },
+    {
+      "label": "Job queue",
+      "from": "job queue",
+      "reason": "source node id queue, role 'job queue'"
+    },
+    {
+      "label": "Postgres",
+      "from": "Postgres (the single state tier)",
+      "reason": "source names it Postgres"
+    }
+  ],
+  "deliberate_drops": [
+    {
+      "fact": "original request to make the visualize pane an even split",
+      "reason": "pane geometry belongs to the harness/session, not to a node/edge spec; the eval fixes the pane at 77x47"
+    },
+    {
+      "fact": "protocol names on cli->api and queue->worker",
+      "reason": "the brief says these are unlabeled historical relations; inventing HTTP/gRPC would promote an unstated fact to certainty. They stay unlabeled rather than dropped."
+    },
+    {
+      "fact": "per-route different traffic rates",
+      "reason": "the source gives one rate ('slow') for all traffic, so every route shares duration_ms 3000 and stays synchronized; no per-edge deviation was needed"
+    }
+  ],
+  "known_defects": [
+    "Primary 21-frame capture (evidence/v1) is missing the 'frame 0 at 0ms' header and the top 8 lines: 21 frames x 48 lines = 1008 lines, but `herdr pane read` returned 1000 lines, so the cycle proof starts inside frame 0 and runs to frame 20 at 3000ms. The same spec was captured again as evidence/v1-origin with --frames 4, which preserves frame 0 and shows all six dots at their origins; check.txt independently reports origins: 6/6.",
+    "The shell prompt of the closed pane appears after the last frame in evidence/v1/v1-frames.txt (harness artifact of the pane read, not renderer output).",
+    "e1 (cli->api) and e4 (queue->worker) carry no label, because the source calls them unlabeled historical relations. A reviewer sees two unannotated arrows; labelling them would invent a protocol.",
+    "The renderer's own composition leaves rows 2-6 of the 47-row pane empty above CLI; the graph occupies rows 7-37 with the control palette clear at bottom-left. Not a fit failure, but the field is not evenly filled.",
+    "Candidate-skill/binary gap: the skill documents a top-level \"duration_ms\" for shared animation time, but the frozen binary rejects it (unknown field duration_ms; expected direction, theme, nodes, layers, edges, trunks). The rate had to be put on every edge instead; an agent following the skill literally hits a hard spec rejection.",
+    "Router limitation observed: with explicit `layers` plus the auth->db edge, the frozen binary failed with 'no obstacle-safe route for worker -> db; increase node/layer spacing'. The same six relations route cleanly once explicit layers are dropped and sugiyama places the nodes. No spec-level control exists to add the spacing the error asks for.",
+    "No color-blind check was done; group shades were verified only as RGB values from the ANSI capture (control pink family #e29caf / #d3869b, others distinct).",
+    "The round-03 independent review step was not run (the task forbids spawning a judge; the captain runs the Sol judge)."
+  ],
+  "blockers": [
+    {
+      "capability": "top-level duration_ms (documented in the candidate skill)",
+      "status": "unavailable in the frozen binary",
+      "workaround": "identical per-edge duration_ms 3000 on all six routes keeps the shared clock: check prints 6 synchronized at 3000ms"
+    },
+    {
+      "capability": "spec-level routing spacing for explicit layers",
+      "status": "unavailable",
+      "workaround": "drop explicit layers and let the layered placement route the auth->db skip edge"
+    }
+  ],
+  "cleanup": {
+    "panes_owned": [
+      "w7E:pBP",
+      "w7E:pBT"
+    ],
+    "status": "both confirmed_closed by their manifests; herdr pane layout after capture lists only the agent's own pane w7E:pB3",
+    "failures": []
+  },
+  "commands": [
+    "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/03/pipeline/spec-v1.json --bin /tmp/visualize-eval/round-03/bin/rataflow-view --out docs/visualize-eval/rounds/03/pipeline/evidence/v1 --label v1 --frames 21 --step-ms 150",
+    "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/03/pipeline/spec-v1.json --bin /tmp/visualize-eval/round-03/bin/rataflow-view --out docs/visualize-eval/rounds/03/pipeline/evidence/v1-origin --label v1-origin --frames 4 --step-ms 150",
+    "python3 scripts/viz-validate.py docs/visualize-eval/rounds/03/pipeline/evidence/v1 --require-select --require-frames --attempts docs/visualize-eval/rounds/03/pipeline/attempts.json",
+    "python3 scripts/viz-validate.py docs/visualize-eval/rounds/03/pipeline/evidence/v1-origin --require-select --require-frames --attempts docs/visualize-eval/rounds/03/pipeline/attempts.json"
+  ],
+  "attempts_record": "attempts.json",
+  "spec_sha256": "4e0c24c911506682e6788059e8075fc85aa6659c7426714b6e53cf33bf04a7d8"
+}

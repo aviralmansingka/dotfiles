@@ -1,0 +1,30 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "rms", "label": "nv-rms", "group": "mgmt" },
+    { "id": "oob", "label": "OOB LAN", "group": "oob" },
+    { "id": "nvos", "label": "NVOS", "group": "nvswitch" },
+    { "id": "bmc_c", "label": "Compute BMC", "group": "oob" },
+    { "id": "bmc_s", "label": "NVSwitch BMC", "group": "oob" },
+    { "id": "pwr", "label": "Power shelf", "group": "oob" },
+    { "id": "nmxc", "label": "NMX-C/T", "group": "nvswitch" }
+  ],
+  "layers": [
+    ["rms"],
+    ["oob", "nvos"],
+    ["bmc_c", "bmc_s", "pwr"],
+    ["nmxc"]
+  ],
+  "trunks": [
+    { "id": "oobdrop", "label": "OOB drops", "from": "oob", "to": "bmc_c",
+      "branches": ["bmc_s", "pwr"] }
+  ],
+  "edges": [
+    { "from": "rms", "to": "oob", "label": "client on LAN" },
+    { "from": "rms", "to": "bmc_c", "label": "Redfish/HTTPS" },
+    { "from": "rms", "to": "pwr", "label": "Redfish/HTTPS" },
+    { "from": "rms", "to": "nvos", "label": "NVUE/NMX gRPC" },
+    { "from": "nvos", "to": "nmxc", "label": "hosts NMX-C/T" }
+  ]
+}

@@ -1,0 +1,7 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=2 edges=2 flows=2 direction=lr theme=gruvbox
+extent=67x8 cells
+labels: 2/2 placed, 0 on route cells, 0 skipped
+groups: metal(1) artifact(1)
+trunks:
+dots: 2 single-dot routes, 0 periodic routes, 0 violations

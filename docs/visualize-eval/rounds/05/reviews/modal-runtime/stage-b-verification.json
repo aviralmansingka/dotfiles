@@ -1,0 +1,339 @@
+{
+  "scope": "Read-only frozen evidence verification; no viewer session, model switch, subagent, or fix.",
+  "frozen_hash_checks": {
+    "docs/visualize-eval/rounds/05/SKILL.md": {
+      "actual_sha256": "ff4a9d3f32ba0bf86e54ee6bfbac02fdea3fac3b95b82a958b3411accef0a949",
+      "matches_frozen": true
+    },
+    "docs/visualize-eval/rounds/05/rubric.json": {
+      "actual_sha256": "039b96252d25ad2078a539fdb1d081ebdb6c09d6f7a3487b96ffbbf3b082e292",
+      "matches_frozen": true
+    },
+    "docs/visualize-eval/cases.json": {
+      "actual_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "matches_frozen": true
+    },
+    "docs/visualize-eval/cases/modal-runtime/source.md": {
+      "actual_sha256": "c6e4552d5842347bc9472e53a2351897c3624c92b5a14541aaa3c28216dc4a0d",
+      "matches_frozen": true
+    },
+    "docs/visualize-eval/cases/modal-runtime/expected.json": {
+      "actual_sha256": "fd3963e207e9c433b7e5825c8a1691766bb13d5df7322ac97a05e379d2cbba99",
+      "matches_frozen": true
+    },
+    "docs/visualize-eval/cases/modal-runtime/historical-variants.json": {
+      "actual_sha256": "1e5a6add0f9d62670f8c884a2f4df679112e233df8539b3983d80c122bdcf8e7",
+      "matches_frozen": true
+    },
+    "/tmp/visualize-eval/round-05/bin/rataflow-view": {
+      "actual_sha256": "b1ab9f2e78af11c2f2b005eea083a999079d184bf550e8d0b6d9c51867f22404",
+      "matches_frozen": true
+    }
+  },
+  "blind_sha256": "b6c99b121354a8a1d4921e7cd748e524db2832236c95b2d0061fd5a8d930cc77",
+  "blind_saved_before_expected_reveal": true,
+  "spec_manifest_sha256": "99e54f9cc169d4ae1a5fcc93dcac110f91be3d0667bc3b2760f1d7600fea69fc",
+  "reviewer_identity_from_environment": {
+    "PI_SUBAGENT_NAME": "viz-judge05-runtime",
+    "PI_MODEL": "gpt-6.1-sol"
+  },
+  "generator_identity_from_generation_json": {
+    "identity": "fresh generator worker (isolated subagent session)",
+    "subagent_name": "viz-ds05-7",
+    "surface": "herdr pane w7E:pFN, tab w7E:t63",
+    "provider": "fireworks",
+    "model": "accounts/fireworks/routers/deepseek-flash-latest",
+    "judges_or_reviewers_spawned": false,
+    "note": "No judge and no reviewer subagent was spawned; the captain starts the Sol judge."
+  },
+  "attempts": [
+    {
+      "spec": "docs/visualize-eval/rounds/05/modal-runtime/specs/v1-a5.json",
+      "sha256": "729bbd45f3afb18e2eec2970fbc93478999e55b833b6b5a0997a3830d84c9b55",
+      "exit_record": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v1-a5/exit.txt",
+      "exit_text": "exit=0\n",
+      "check": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v1-a5/check.txt"
+    },
+    {
+      "spec": "docs/visualize-eval/rounds/05/modal-runtime/specs/v2-a4.json",
+      "sha256": "89dc3b3a59735954b66eda8bd6fb38dab6c1490623eddcf03511891f3fa86b5e",
+      "exit_record": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v2-a4/exit.txt",
+      "exit_text": "exit=0\n",
+      "check": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v2-a4/check.txt"
+    },
+    {
+      "spec": "docs/visualize-eval/rounds/05/modal-runtime/specs/v3-a1.json",
+      "sha256": "2cb9289096cdf5672e4f6e86eac92c9a1074b9211e875002f793f2734c307ccb",
+      "exit_record": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v3-a1/exit.txt",
+      "exit_text": "exit=0\n",
+      "check": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v3-a1/check.txt"
+    },
+    {
+      "spec": "docs/visualize-eval/rounds/05/modal-runtime/specs/v1-a1.json",
+      "sha256": "960562a56a8be9fd81152b874cb3dc4b2cfffd697f4dc601d2d4b4b7a2a6f385",
+      "exit_record": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v1-a1/exit.txt",
+      "exit_text": "exit=0\n",
+      "check": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v1-a1/check.txt"
+    },
+    {
+      "spec": "docs/visualize-eval/rounds/05/modal-runtime/specs/v1-a2.json",
+      "sha256": "c1369e716824cab3350e92a8fafcbaac230b40407d2298f07096b2222977d8f9",
+      "exit_record": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v1-a2/exit.txt",
+      "exit_text": "exit=0\n",
+      "check": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v1-a2/check.txt"
+    },
+    {
+      "spec": "docs/visualize-eval/rounds/05/modal-runtime/specs/v1-a3.json",
+      "sha256": "ec7b2c10d79405d7d8f0714f677221e2ecb34cae789105301632a7ae54933ad1",
+      "exit_record": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v1-a3/exit.txt",
+      "exit_text": "exit=0\n",
+      "check": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v1-a3/check.txt"
+    },
+    {
+      "spec": "docs/visualize-eval/rounds/05/modal-runtime/specs/v1-a4.json",
+      "sha256": "ad418c64888ea36e256db1f7fc77c61fbeb1673a58c8508adad986616233bf07",
+      "exit_record": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v1-a4/exit.txt",
+      "exit_text": "exit=0\n",
+      "check": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v1-a4/check.txt"
+    },
+    {
+      "spec": "docs/visualize-eval/rounds/05/modal-runtime/specs/v2-a1.json",
+      "sha256": "7eafa8cfe29ed30614fec5e69eb7b27f2cd7676edd3d4896d9eda566411204e5",
+      "exit_record": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v2-a1/exit.txt",
+      "exit_text": "exit=0\n",
+      "check": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v2-a1/check.txt"
+    },
+    {
+      "spec": "docs/visualize-eval/rounds/05/modal-runtime/specs/v2-a2.json",
+      "sha256": "81e66acb2d9ec9de0f1c6b5521ca1d471308c4a8a92051a0ec3373f5724d1b29",
+      "exit_record": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v2-a2/exit.txt",
+      "exit_text": "exit=0\n",
+      "check": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v2-a2/check.txt"
+    },
+    {
+      "spec": "docs/visualize-eval/rounds/05/modal-runtime/specs/v2-a3.json",
+      "sha256": "00b3e18a4b4982f4ad56078081629b4306f616fa8190da1c994bf1fe3883e20e",
+      "exit_record": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v2-a3/exit.txt",
+      "exit_text": "exit=0\n",
+      "check": "docs/visualize-eval/rounds/05/modal-runtime/attempts/v2-a3/check.txt"
+    }
+  ],
+  "captures": {
+    "v1": {
+      "artifact_hashes_match": true,
+      "pinned_copy_identical": true,
+      "streams": [
+        {
+          "path": "docs/visualize-eval/rounds/05/modal-runtime/evidence/v1/v1-frames.ansi",
+          "frames": 5,
+          "frame_times_ms": [
+            0,
+            100,
+            200,
+            300,
+            400
+          ],
+          "display_payloads_byte_identical": true,
+          "payload_sha256": "fef17a3335497faf7bfba948c9ab897c09705d48cf640d5b41bd01bf48f72c0e",
+          "flow_dot_counts": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "path": "docs/visualize-eval/rounds/05/modal-runtime/evidence/v1/v1-frames.txt",
+          "frames": 5,
+          "frame_times_ms": [
+            0,
+            100,
+            200,
+            300,
+            400
+          ],
+          "display_payloads_byte_identical": true,
+          "payload_sha256": "bbdcbe08b60596afb030d0350cdd1e74516d9a109f88bc8bd11e83b385d70ecc",
+          "flow_dot_counts": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "path": "docs/visualize-eval/rounds/05/modal-runtime/pinned-77x47/v1-frames.txt",
+          "frames": 5,
+          "frame_times_ms": [
+            0,
+            100,
+            200,
+            300,
+            400
+          ],
+          "display_payloads_byte_identical": true,
+          "payload_sha256": "6e91b9633acc610f6c33c65ca6e01b67b3a68cf536035a7b878be113dd762f11",
+          "flow_dot_counts": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "cleanup": "confirmed_closed",
+      "pane_id": "w7E:pGX"
+    },
+    "v2": {
+      "artifact_hashes_match": true,
+      "pinned_copy_identical": true,
+      "streams": [
+        {
+          "path": "docs/visualize-eval/rounds/05/modal-runtime/evidence/v2/v2-frames.ansi",
+          "frames": 5,
+          "frame_times_ms": [
+            0,
+            100,
+            200,
+            300,
+            400
+          ],
+          "display_payloads_byte_identical": true,
+          "payload_sha256": "6f558a9a5ad02e085aa10f14f778da6ab6ea937e996aa5508e08b3f03cce8e06",
+          "flow_dot_counts": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "path": "docs/visualize-eval/rounds/05/modal-runtime/evidence/v2/v2-frames.txt",
+          "frames": 5,
+          "frame_times_ms": [
+            0,
+            100,
+            200,
+            300,
+            400
+          ],
+          "display_payloads_byte_identical": true,
+          "payload_sha256": "4997c9e626ccacc1a499d736ba915532e9fb823dcad94b166d7a6c74f44c4859",
+          "flow_dot_counts": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "path": "docs/visualize-eval/rounds/05/modal-runtime/pinned-77x47/v2-frames.txt",
+          "frames": 5,
+          "frame_times_ms": [
+            0,
+            100,
+            200,
+            300,
+            400
+          ],
+          "display_payloads_byte_identical": true,
+          "payload_sha256": "52666af76e938028aa8793ef4a52125d37d7b3f42fd3a0bac91e6c2067ff8188",
+          "flow_dot_counts": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "cleanup": "confirmed_closed",
+      "pane_id": "w7E:pGY"
+    },
+    "v3": {
+      "artifact_hashes_match": true,
+      "pinned_copy_identical": true,
+      "streams": [
+        {
+          "path": "docs/visualize-eval/rounds/05/modal-runtime/evidence/v3/v3-frames.ansi",
+          "frames": 5,
+          "frame_times_ms": [
+            0,
+            100,
+            200,
+            300,
+            400
+          ],
+          "display_payloads_byte_identical": true,
+          "payload_sha256": "78cf0c28d85fd76be4d7671e2d6dbebf8c4d2c590928bf8a976c5f9ab1628036",
+          "flow_dot_counts": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "path": "docs/visualize-eval/rounds/05/modal-runtime/evidence/v3/v3-frames.txt",
+          "frames": 5,
+          "frame_times_ms": [
+            0,
+            100,
+            200,
+            300,
+            400
+          ],
+          "display_payloads_byte_identical": true,
+          "payload_sha256": "1a71e6ab4879ecf45d55dcfd3a8b29231949ac8b634a407d758ebf2263af2c9d",
+          "flow_dot_counts": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "path": "docs/visualize-eval/rounds/05/modal-runtime/pinned-77x47/v3-frames.txt",
+          "frames": 5,
+          "frame_times_ms": [
+            0,
+            100,
+            200,
+            300,
+            400
+          ],
+          "display_payloads_byte_identical": true,
+          "payload_sha256": "55dd7cbfa1d956c3cbd18c9086f800559823f01a2a752f07a38802f3e9347b86",
+          "flow_dot_counts": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "cleanup": "confirmed_closed",
+      "pane_id": "w7E:pGW"
+    }
+  },
+  "stage_A_addendum": {
+    "normal_perimeter_cells": 374,
+    "selected_perimeter_cells": 374,
+    "unique_node_names": 8,
+    "visible_node_occurrences": 11,
+    "reason": "Corrects arithmetic/count totals in the immutable blind record; its coordinate tables and qualitative observations stand."
+  },
+  "missing_target_capture_types": [
+    "77x47 normal ANSI/buffer",
+    "77x47 select-all ANSI/buffer"
+  ],
+  "cleanup_basis": "Three manifest confirmed_closed values plus generation.json reported reprobes; no new live probe performed."
+}

@@ -1,0 +1,1 @@
+/tmp/visualize-eval/round-01/bin/rataflow-view '/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/01/modal-runtime/attempts/overview.v2.json'; herdr pane close w7E:p39

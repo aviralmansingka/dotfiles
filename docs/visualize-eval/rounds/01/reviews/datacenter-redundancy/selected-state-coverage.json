@@ -1,0 +1,610 @@
+{
+  "scope": "Existing raw ANSI capture records whose spec SHA256 matches one of the four final delivered specs, including matching pre-final renders and V1b/V1c; no new rendering. Frames for different specs do not establish final-view occurrence selection. Plain-text frame2 cannot establish bold/RGB or selected-node identity.",
+  "occurrence_count": 24,
+  "unselected_covered": 24,
+  "selected_covered": 5,
+  "selected_missing": 19,
+  "known_border_defects": 0,
+  "scan": [
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/view1-a2-aligned-20261102T082753Z-visible.ansi",
+      "sha256": "c9e2b282b85bad28786783d7bd6f5f3252ee4171c7ac33daaeb3d249ed578579",
+      "view": "V1",
+      "matching_final_spec_sha256": "e2cd6d8e3c6fc18874a944a58d5b27270d0a125630b61868e4c3a14c51fc3f9d",
+      "actually_selected_nodes": []
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/view1-a2-aligned-20261102T082753Z-selected.ansi",
+      "sha256": "ebb6511023f15c1439884ed9436bccd02076173ac9a8d24e51861ecfff2285b8",
+      "view": "V1",
+      "matching_final_spec_sha256": "e2cd6d8e3c6fc18874a944a58d5b27270d0a125630b61868e4c3a14c51fc3f9d",
+      "actually_selected_nodes": [
+        "ISP A"
+      ]
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/view2-a3-lr-20261102T082903Z-visible.ansi",
+      "sha256": "75285daef117f41095494c5c6bdd51edd194d0baf6eb2d35a01809af7400e0dd",
+      "view": "V2",
+      "matching_final_spec_sha256": "bf534caf77d60058529824cc699659e5c3281045b0c2b3a30e22b41282f6a5f6",
+      "actually_selected_nodes": []
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/view2-a3-lr-20261102T082903Z-selected.ansi",
+      "sha256": "1c4540f319622064d88eae5cdced43dc4cf9b6cd5bb7893b99d1e76802d7bd8a",
+      "view": "V2",
+      "matching_final_spec_sha256": "bf534caf77d60058529824cc699659e5c3281045b0c2b3a30e22b41282f6a5f6",
+      "actually_selected_nodes": [
+        "Core 1"
+      ]
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/view3-a3-lr-wide-20261102T083020Z-visible.ansi",
+      "sha256": "fd4523f501f59786d1074ebbe1d2a1e7a31aa6d8ed7cce7aa5f63ac120528f40",
+      "view": "V3",
+      "matching_final_spec_sha256": "196b286044375214c68e457d182a02a05323adcbf6741fb6941047217b91bd6b",
+      "actually_selected_nodes": []
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/view3-a3-lr-wide-20261102T083020Z-selected.ansi",
+      "sha256": "d2dedf661ca542ab2d166e79155a4fbff1e0317d6d48835f196dbc465b31f152",
+      "view": "V3",
+      "matching_final_spec_sha256": "196b286044375214c68e457d182a02a05323adcbf6741fb6941047217b91bd6b",
+      "actually_selected_nodes": [
+        "BL 1"
+      ]
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/view4-final-20261102T083034Z-visible.ansi",
+      "sha256": "b3ee67313d63f0be25be6a3006df9bead62ead22f83967101af7f2fda186055e",
+      "view": "V4",
+      "matching_final_spec_sha256": "ff24f445d9e2ef696063142efbf63e18ab7d0756c4d4ce3be402b19a10093257",
+      "actually_selected_nodes": []
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/view4-final-20261102T083034Z-selected.ansi",
+      "sha256": "455c1af6f83a0ab2f17d41b12b966c01716db64f09b00b4257c5c36401de0e18",
+      "view": "V4",
+      "matching_final_spec_sha256": "ff24f445d9e2ef696063142efbf63e18ab7d0756c4d4ce3be402b19a10093257",
+      "actually_selected_nodes": [
+        "BL 1"
+      ]
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view1-20261102T083328Z-visible.ansi",
+      "sha256": "c40496ef73fb674f4706004cd793182abe6edea7c103a15b419a95ed8297f551",
+      "view": "V1",
+      "matching_final_spec_sha256": "e2cd6d8e3c6fc18874a944a58d5b27270d0a125630b61868e4c3a14c51fc3f9d",
+      "actually_selected_nodes": []
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view1-20261102T083328Z-selected.ansi",
+      "sha256": "ee81c353834906a9ad25c96b033f38ab12f152faeed22d71cfbdc71d4376990d",
+      "view": "V1",
+      "matching_final_spec_sha256": "e2cd6d8e3c6fc18874a944a58d5b27270d0a125630b61868e4c3a14c51fc3f9d",
+      "actually_selected_nodes": [
+        "ISP A"
+      ]
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view2-20261102T083335Z-visible.ansi",
+      "sha256": "5611367375c3b1762a95dc762ab3b3881cacfa59ae65f3a806ee28b1568a47e7",
+      "view": "V2",
+      "matching_final_spec_sha256": "bf534caf77d60058529824cc699659e5c3281045b0c2b3a30e22b41282f6a5f6",
+      "actually_selected_nodes": []
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view2-20261102T083335Z-selected.ansi",
+      "sha256": "c86bbf384a88266b1d8d1582574fe644660ab9f9f00bc2e9c60408e257a4cc98",
+      "view": "V2",
+      "matching_final_spec_sha256": "bf534caf77d60058529824cc699659e5c3281045b0c2b3a30e22b41282f6a5f6",
+      "actually_selected_nodes": [
+        "Core 1"
+      ]
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view3-20261102T083341Z-visible.ansi",
+      "sha256": "9ae4f387d438c08e7d145a1be772a41afecf7f5da8b14f65bb84e18efc1fcb79",
+      "view": "V3",
+      "matching_final_spec_sha256": "196b286044375214c68e457d182a02a05323adcbf6741fb6941047217b91bd6b",
+      "actually_selected_nodes": []
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view3-20261102T083341Z-selected.ansi",
+      "sha256": "4e768fefb063946d51168a2aa188afa6f484721aad4db88fc147bb4459cc6e68",
+      "view": "V3",
+      "matching_final_spec_sha256": "196b286044375214c68e457d182a02a05323adcbf6741fb6941047217b91bd6b",
+      "actually_selected_nodes": [
+        "BL 1"
+      ]
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view4-20261102T083348Z-visible.ansi",
+      "sha256": "b3ee67313d63f0be25be6a3006df9bead62ead22f83967101af7f2fda186055e",
+      "view": "V4",
+      "matching_final_spec_sha256": "ff24f445d9e2ef696063142efbf63e18ab7d0756c4d4ce3be402b19a10093257",
+      "actually_selected_nodes": []
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view4-20261102T083348Z-selected.ansi",
+      "sha256": "455c1af6f83a0ab2f17d41b12b966c01716db64f09b00b4257c5c36401de0e18",
+      "view": "V4",
+      "matching_final_spec_sha256": "ff24f445d9e2ef696063142efbf63e18ab7d0756c4d4ce3be402b19a10093257",
+      "actually_selected_nodes": [
+        "BL 1"
+      ]
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view1b-20261102T083424Z-visible.ansi",
+      "sha256": "c40496ef73fb674f4706004cd793182abe6edea7c103a15b419a95ed8297f551",
+      "view": "V1",
+      "matching_final_spec_sha256": "e2cd6d8e3c6fc18874a944a58d5b27270d0a125630b61868e4c3a14c51fc3f9d",
+      "actually_selected_nodes": []
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view1b-20261102T083424Z-selected.ansi",
+      "sha256": "ee81c353834906a9ad25c96b033f38ab12f152faeed22d71cfbdc71d4376990d",
+      "view": "V1",
+      "matching_final_spec_sha256": "e2cd6d8e3c6fc18874a944a58d5b27270d0a125630b61868e4c3a14c51fc3f9d",
+      "actually_selected_nodes": [
+        "ISP A"
+      ]
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view1c-20261102T083435Z-visible.ansi",
+      "sha256": "c40496ef73fb674f4706004cd793182abe6edea7c103a15b419a95ed8297f551",
+      "view": "V1",
+      "matching_final_spec_sha256": "e2cd6d8e3c6fc18874a944a58d5b27270d0a125630b61868e4c3a14c51fc3f9d",
+      "actually_selected_nodes": []
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view1c-20261102T083435Z-selected2.ansi",
+      "sha256": "ed27a09a8fba4ef08c09de153d1b6455862379b2a698aee9c1ca162f52764b77",
+      "view": "V1",
+      "matching_final_spec_sha256": "e2cd6d8e3c6fc18874a944a58d5b27270d0a125630b61868e4c3a14c51fc3f9d",
+      "actually_selected_nodes": [
+        "ISP B"
+      ]
+    }
+  ],
+  "occurrences": [
+    {
+      "view": "V1",
+      "node": "ISP A",
+      "box": [
+        17,
+        18,
+        7,
+        4
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "proven for captured state",
+      "selected_raw_proofs": [
+        {
+          "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/view1-a2-aligned-20261102T082753Z-selected.ansi",
+          "sha256": "ebb6511023f15c1439884ed9436bccd02076173ac9a8d24e51861ecfff2285b8",
+          "region": [
+            17,
+            18,
+            7,
+            4
+          ],
+          "perimeter_cells": 18,
+          "style": "Entire perimeter bold with RGB 216,166,87; all sides/corners complete."
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view1-20261102T083328Z-selected.ansi",
+          "sha256": "ee81c353834906a9ad25c96b033f38ab12f152faeed22d71cfbdc71d4376990d",
+          "region": [
+            17,
+            18,
+            7,
+            4
+          ],
+          "perimeter_cells": 18,
+          "style": "Entire perimeter bold with RGB 216,166,87; all sides/corners complete."
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view1b-20261102T083424Z-selected.ansi",
+          "sha256": "ee81c353834906a9ad25c96b033f38ab12f152faeed22d71cfbdc71d4376990d",
+          "region": [
+            17,
+            18,
+            7,
+            4
+          ],
+          "perimeter_cells": 18,
+          "style": "Entire perimeter bold with RGB 216,166,87; all sides/corners complete."
+        }
+      ]
+    },
+    {
+      "view": "V1",
+      "node": "ISP B",
+      "box": [
+        28,
+        18,
+        7,
+        4
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "proven for captured state",
+      "selected_raw_proofs": [
+        {
+          "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view1c-20261102T083435Z-selected2.ansi",
+          "sha256": "ed27a09a8fba4ef08c09de153d1b6455862379b2a698aee9c1ca162f52764b77",
+          "region": [
+            28,
+            18,
+            7,
+            4
+          ],
+          "perimeter_cells": 18,
+          "style": "Entire perimeter bold with RGB 216,166,87; all sides/corners complete."
+        }
+      ]
+    },
+    {
+      "view": "V1",
+      "node": "ISP C",
+      "box": [
+        43,
+        18,
+        7,
+        4
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "missing evidence",
+      "selected_raw_proofs": []
+    },
+    {
+      "view": "V1",
+      "node": "ISP D",
+      "box": [
+        54,
+        18,
+        7,
+        4
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "missing evidence",
+      "selected_raw_proofs": []
+    },
+    {
+      "view": "V1",
+      "node": "MUX 1",
+      "box": [
+        28,
+        27,
+        7,
+        4
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "missing evidence",
+      "selected_raw_proofs": []
+    },
+    {
+      "view": "V1",
+      "node": "MUX 2",
+      "box": [
+        54,
+        27,
+        7,
+        4
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "missing evidence",
+      "selected_raw_proofs": []
+    },
+    {
+      "view": "V2",
+      "node": "MUX 1",
+      "box": [
+        17,
+        19,
+        7,
+        5
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "missing evidence",
+      "selected_raw_proofs": []
+    },
+    {
+      "view": "V2",
+      "node": "MUX 2",
+      "box": [
+        17,
+        25,
+        7,
+        5
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "missing evidence",
+      "selected_raw_proofs": []
+    },
+    {
+      "view": "V2",
+      "node": "Core 1",
+      "box": [
+        53,
+        19,
+        8,
+        5
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "proven for captured state",
+      "selected_raw_proofs": [
+        {
+          "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/view2-a3-lr-20261102T082903Z-selected.ansi",
+          "sha256": "1c4540f319622064d88eae5cdced43dc4cf9b6cd5bb7893b99d1e76802d7bd8a",
+          "region": [
+            53,
+            19,
+            8,
+            5
+          ],
+          "perimeter_cells": 22,
+          "style": "Entire perimeter bold with RGB 216,166,87; all sides/corners complete."
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view2-20261102T083335Z-selected.ansi",
+          "sha256": "c86bbf384a88266b1d8d1582574fe644660ab9f9f00bc2e9c60408e257a4cc98",
+          "region": [
+            53,
+            19,
+            8,
+            5
+          ],
+          "perimeter_cells": 22,
+          "style": "Entire perimeter bold with RGB 216,166,87; all sides/corners complete."
+        }
+      ]
+    },
+    {
+      "view": "V2",
+      "node": "Core 2",
+      "box": [
+        53,
+        25,
+        8,
+        5
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "missing evidence",
+      "selected_raw_proofs": []
+    },
+    {
+      "view": "V3",
+      "node": "Core 1",
+      "box": [
+        6,
+        19,
+        8,
+        5
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "missing evidence",
+      "selected_raw_proofs": []
+    },
+    {
+      "view": "V3",
+      "node": "Core 2",
+      "box": [
+        6,
+        25,
+        8,
+        5
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "missing evidence",
+      "selected_raw_proofs": []
+    },
+    {
+      "view": "V3",
+      "node": "FW1 active",
+      "box": [
+        46,
+        19,
+        12,
+        5
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "missing evidence",
+      "selected_raw_proofs": []
+    },
+    {
+      "view": "V3",
+      "node": "FW2 stdby",
+      "box": [
+        46,
+        25,
+        11,
+        5
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "missing evidence",
+      "selected_raw_proofs": []
+    },
+    {
+      "view": "V3",
+      "node": "BL 1",
+      "box": [
+        66,
+        19,
+        6,
+        5
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "proven for captured state",
+      "selected_raw_proofs": [
+        {
+          "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/view3-a3-lr-wide-20261102T083020Z-selected.ansi",
+          "sha256": "d2dedf661ca542ab2d166e79155a4fbff1e0317d6d48835f196dbc465b31f152",
+          "region": [
+            66,
+            19,
+            6,
+            5
+          ],
+          "perimeter_cells": 18,
+          "style": "Entire perimeter bold with RGB 216,166,87; all sides/corners complete."
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view3-20261102T083341Z-selected.ansi",
+          "sha256": "4e768fefb063946d51168a2aa188afa6f484721aad4db88fc147bb4459cc6e68",
+          "region": [
+            66,
+            19,
+            6,
+            5
+          ],
+          "perimeter_cells": 18,
+          "style": "Entire perimeter bold with RGB 216,166,87; all sides/corners complete."
+        }
+      ]
+    },
+    {
+      "view": "V3",
+      "node": "BL 2",
+      "box": [
+        66,
+        25,
+        6,
+        5
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "missing evidence",
+      "selected_raw_proofs": []
+    },
+    {
+      "view": "V4",
+      "node": "Spine 1",
+      "box": [
+        18,
+        12,
+        9,
+        4
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "missing evidence",
+      "selected_raw_proofs": []
+    },
+    {
+      "view": "V4",
+      "node": "Spine 2",
+      "box": [
+        45,
+        12,
+        9,
+        5
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "missing evidence",
+      "selected_raw_proofs": []
+    },
+    {
+      "view": "V4",
+      "node": "BL 1",
+      "box": [
+        8,
+        24,
+        6,
+        5
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "proven for captured state",
+      "selected_raw_proofs": [
+        {
+          "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/view4-final-20261102T083034Z-selected.ansi",
+          "sha256": "455c1af6f83a0ab2f17d41b12b966c01716db64f09b00b4257c5c36401de0e18",
+          "region": [
+            8,
+            24,
+            6,
+            5
+          ],
+          "perimeter_cells": 18,
+          "style": "Entire perimeter bold with RGB 216,166,87; all sides/corners complete."
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/datacenter-redundancy/captures/final-view4-20261102T083348Z-selected.ansi",
+          "sha256": "455c1af6f83a0ab2f17d41b12b966c01716db64f09b00b4257c5c36401de0e18",
+          "region": [
+            8,
+            24,
+            6,
+            5
+          ],
+          "perimeter_cells": 18,
+          "style": "Entire perimeter bold with RGB 216,166,87; all sides/corners complete."
+        }
+      ]
+    },
+    {
+      "view": "V4",
+      "node": "BL 2",
+      "box": [
+        31,
+        24,
+        6,
+        4
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "missing evidence",
+      "selected_raw_proofs": []
+    },
+    {
+      "view": "V4",
+      "node": "Leaf 1",
+      "box": [
+        46,
+        24,
+        8,
+        4
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "missing evidence",
+      "selected_raw_proofs": []
+    },
+    {
+      "view": "V4",
+      "node": "Leaf 2",
+      "box": [
+        62,
+        24,
+        8,
+        4
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "missing evidence",
+      "selected_raw_proofs": []
+    },
+    {
+      "view": "V4",
+      "node": "Rack 1",
+      "box": [
+        19,
+        34,
+        8,
+        4
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "missing evidence",
+      "selected_raw_proofs": []
+    },
+    {
+      "view": "V4",
+      "node": "Rack 2",
+      "box": [
+        46,
+        34,
+        8,
+        4
+      ],
+      "unselected_correctness": "proven in final visible ANSI",
+      "selected_status": "missing evidence",
+      "selected_raw_proofs": []
+    }
+  ],
+  "decision": "border_integrity blocked, not failed; workflow_evidence also blocked by missing selected-state coverage."
+}

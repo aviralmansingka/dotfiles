@@ -1,0 +1,34 @@
+PASS manifest_readable
+PASS binary_path_absolute
+PASS binary_hash_recorded
+PASS artifact_hashes
+PASS check_output_present
+PASS check_exit_zero
+FAIL check_warnings_absent — warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge
+PASS labels_parsed
+PASS labels_complete
+PASS labels_off_routes
+PASS labels_not_skipped
+PASS dots_parsed
+PASS dots_no_violations
+PASS origins_reported
+PASS origins_complete
+PASS dots_sync_reported
+PASS arrivals_reported
+PASS arrivals_complete
+PASS labels_ownership_reported
+FAIL labels_ownership_clear — 1 label(s) sit as close to another route as to their own edge; a reader cannot pair them
+PASS crossings_reported
+PASS viewport_proven
+PASS viewport_proven_measurable
+PASS viewport_matches_target
+PASS cleanup_confirmed
+PASS select_all_frame
+PASS select_all_artifact
+PASS frames_artifact
+PASS frames_timestamped
+PASS attempts_readable
+PASS attempts_view_budget
+PASS attempts_spec_budget
+
+2 check(s) failed: check_warnings_absent, labels_ownership_clear

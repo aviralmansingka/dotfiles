@@ -1,0 +1,25 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "rms", "label": "nv-rms (mgmt)", "group": "off-rack mgmt" },
+    { "id": "bmc_c", "label": "Compute BMC", "group": "rack hardware" },
+    { "id": "bmc_s", "label": "NVSwitch BMC", "group": "rack hardware" },
+    { "id": "pwr", "label": "Power shelf", "group": "rack hardware" },
+    { "id": "nvos", "label": "NVOS (tray)", "group": "switch software" },
+    { "id": "nmxc", "label": "NMX-C/T", "group": "switch software" }
+  ],
+  "layers": [
+    ["rms"],
+    [],
+    ["bmc_c", "bmc_s", "pwr", "nvos"],
+    ["", "", "", "nmxc"]
+  ],
+  "edges": [
+    { "from": "rms", "to": "bmc_c", "label": "Redfish/HTTPS", "flow": true, "dots": 1 },
+    { "from": "rms", "to": "bmc_s", "label": "power/serial", "flow": true, "dots": 1 },
+    { "from": "rms", "to": "pwr", "label": "Redfish power", "flow": true, "dots": 1 },
+    { "from": "rms", "to": "nvos", "label": "NVUE/NMX gRPC", "flow": true, "dots": 1 },
+    { "from": "nvos", "to": "nmxc", "label": "hosts" }
+  ]
+}

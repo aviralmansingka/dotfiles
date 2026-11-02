@@ -1,0 +1,31 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "layers": [
+    ["worker"],
+    ["runtime"],
+    ["engine", "daemon"],
+    ["backend", "filesystem"],
+    ["container", "blobnet"]
+  ],
+  "nodes": [
+    { "id": "worker", "label": "modal-worker", "group": "client" },
+    { "id": "runtime", "label": "modal-runtime", "group": "control" },
+    { "id": "engine", "label": "Task engine", "group": "control" },
+    { "id": "daemon", "label": "modal-daemon", "group": "host" },
+    { "id": "backend", "label": "Container backend", "group": "compute" },
+    { "id": "filesystem", "label": "Filesystem + volumes", "group": "storage" },
+    { "id": "container", "label": "Task container", "group": "compute" },
+    { "id": "blobnet", "label": "Blobnet", "group": "storage" }
+  ],
+  "edges": [
+    { "from": "worker", "to": "runtime", "label": "task+ctrl RPCs", "dots": 1, "flow": 1 },
+    { "from": "runtime", "to": "worker", "label": "events+mgmt", "dots": 1, "flow": 1 },
+    { "from": "runtime", "to": "engine", "label": "dispatches", "dots": 1, "flow": 1 },
+    { "from": "runtime", "to": "daemon", "label": "fs HTTP/UDS", "dots": 1, "flow": 1 },
+    { "from": "engine", "to": "backend", "label": "starts/manages", "dots": 1, "flow": 1 },
+    { "from": "engine", "to": "filesystem", "label": "mounts/snapshots", "dots": 1, "flow": 1 },
+    { "from": "backend", "to": "container", "label": "runs user proc", "dots": 1, "flow": 1 },
+    { "from": "filesystem", "to": "blobnet", "label": "image+vol data", "dots": 1, "flow": 1 }
+  ]
+}

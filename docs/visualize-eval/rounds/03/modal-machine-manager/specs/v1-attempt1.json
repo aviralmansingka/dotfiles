@@ -1,0 +1,25 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "web", "label": "humans + mmctl", "group": "humans" },
+    { "id": "cp", "label": "Modal control plane", "group": "control" },
+    { "id": "wapi", "label": "webapi server", "group": "control" },
+    { "id": "pgrpc", "label": "private gRPC", "group": "api" },
+    { "id": "q", "label": "River job queue", "group": "jobs" },
+    { "id": "reg", "label": "provider registry", "group": "provision" },
+    { "id": "prov", "label": "bare-metal providers", "group": "provision" },
+    { "id": "mch", "label": "bare-metal machines", "group": "machines" },
+    { "id": "s3", "label": "S3 object store", "group": "state" }
+  ],
+  "edges": [
+    { "from": "web", "to": "wapi", "label": "http", "dots": 1, "flow": true },
+    { "from": "cp", "to": "pgrpc", "label": "create/terminate/repair", "dots": 1, "flow": true },
+    { "from": "wapi", "to": "q", "label": "reinstall/reprovision", "dots": 1, "flow": true },
+    { "from": "pgrpc", "to": "q", "label": "enqueue job", "dots": 1, "flow": true },
+    { "from": "q", "to": "reg", "label": "provision job", "dots": 1, "flow": true },
+    { "from": "reg", "to": "prov", "label": "provider API", "dots": 1, "flow": true },
+    { "from": "prov", "to": "mch", "label": "allocate instance", "dots": 1, "flow": true },
+    { "from": "mch", "to": "s3", "label": "pull boot image", "dots": 1, "flow": true }
+  ]
+}

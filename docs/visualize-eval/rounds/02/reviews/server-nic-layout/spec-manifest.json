@@ -1,0 +1,10 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/02/server-nic-layout/v1.json",
+    "sha256": "da86859d62efecd2c25ab261c2ddb7644fefd8ae6cfeec3b16bed07661c637d0"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/02/server-nic-layout/v2.json",
+    "sha256": "8f4ccba2eacadae5c1a24157a44c42ced9ba87d304c0d3e5be5f96022e7cdfa7"
+  }
+]

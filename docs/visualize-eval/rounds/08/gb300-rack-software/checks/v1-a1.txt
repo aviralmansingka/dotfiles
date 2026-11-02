@@ -1,0 +1,15 @@
+# v1 attempt 1 (tb, layers pin rms/oob/devices, 2-branch trunk => hub split)
+viewport: unknown zoom: 1.00 natural
+ok: nodes=5 edges=1 flows=0 direction=tb theme=gruvbox
+layers=3 (5 pinned, within-rank order automatic)
+pins: 5 pinned, 0 conflict(s)
+extent=62x46 cells
+crossings: 1 bridges, 1 touching bends
+warning: two edges share 2 cell(s), including ports; increase routing space
+labels: 2/2 placed, 0 on route cells, 0 skipped, 0 ambiguous owners
+groups: off-rack mgmt(1) OOB plant(1) rack hw(3)
+trunks: oob-bus from oob to bmc_c, 2 branches, 1 junctions
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step
+exit=0

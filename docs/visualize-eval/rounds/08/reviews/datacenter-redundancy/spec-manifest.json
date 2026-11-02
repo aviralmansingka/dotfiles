@@ -1,0 +1,18 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/specs/v1-uplink.json",
+    "sha256": "e973aa007d70fecc8f6b530eeb85b8ec4436b2b934a730ae1fce9655582c6509"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/specs/v2-security.json",
+    "sha256": "7b226b5bbfa129c409866f65cf6e4dfe96ae37fafdb6928f8c693d1dd8fcd01d"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/specs/v3-fabric.json",
+    "sha256": "d151786d9d53a7346bf00495dc4d0dceb67e679d7ffa8717fe582afecb2b3212"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/08/datacenter-redundancy/specs/v4-access.json",
+    "sha256": "ab96ec5e04bbf79588e2d9ae3fa475010a24ad8a82e70e863de4a5e19a1bbf73"
+  }
+]

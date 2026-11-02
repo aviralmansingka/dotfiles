@@ -1,0 +1,119 @@
+{
+  "case_id": "homelab-nic-trace",
+  "round": "08",
+  "frozen_binary": "/tmp/visualize-eval/round-08/bin/rataflow-view",
+  "note": "One entry per spec candidate checked with --check, in order. Every --check run on a distinct spec is listed; the budget is three candidates per view and no view exceeded it.",
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "label": "v1-a1",
+          "spec": "specs/attempts/v1-a1.json",
+          "spec_sha256": "1fba883728c1edf0bae696493a56ac5884428ad71a0ab941d6b9bd1470db5f16",
+          "raw_check": "checks/v1-a1.check.txt",
+          "note": "First layout probe for the local virtual nets: 6 nodes including tailscale0, four groups. extent=75x46, 0 warnings, but the frame dump showed the graph filling the whole 77x47 viewport with no slack, and groups rendered as slivers (see known_defects). Rejected on height/width slack.",
+          "raw_check_provenance": "The check file was overwritten by a later run of the same view's final spec; its text is restored verbatim from this session's transcript, and the overwritten final-spec output is preserved as checks/v1-a3.check.txt."
+        },
+        {
+          "label": "v1-a2",
+          "spec": "specs/attempts/v1-a2.json",
+          "spec_sha256": "61e8c9fada38beafe704ef61e617ef1e78a297bb756df91f91c22bcea2ab035c",
+          "raw_check": "checks/v1-a2.check.txt",
+          "note": "Dropped tailscale0 to the overlay view (v4) and shortened node labels. extent=42x46, but one warning: edge e0 label 192.168.122.x had no clear cell, labels 3/4 placed, 1 skipped. Rejected: a skipped label is a defect.",
+          "warnings": ["edge e0 label \"192.168.122.x\" had no clear cell; shorten it or add routing space", "1 edge label(s) had no free slot; shorten the labels or split the graph"]
+        },
+        {
+          "label": "v1-a3 (final)",
+          "spec": "specs/v1.spec.json",
+          "spec_sha256": "2c62b75ef750df747df7dcb969044d365850d5f86b17c7dc7c478cf1d6fee5b2",
+          "raw_check": "checks/v1-a3.check.txt",
+          "note": "Final v1. Subnets moved into the workload node labels (192.168.122.x, 172.18.2.x), edge labels reduced to libvirt/docker/NAT bridge/docker bridge. extent=67x40, 0 warnings, 4/4 labels placed, 0 ambiguous owners, 0 crossings. Budget exhausted (3/3)."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "attempts": [
+        {
+          "label": "v2-a1",
+          "spec": "specs/attempts/v2-a1-reconstructed.json",
+          "spec_sha256": "reconstructed-not-authoritative",
+          "raw_check": "checks/v2-a1.check.txt",
+          "note": "First v2 candidate: four concept groups (homelab host, wired uplink, wifi backup, egress rtr) plus layers pins. extent=56x37, 0 warnings, pins honored (layers=3, 4 pinned, 0 conflicts). Rejected after the frame dump showed three of the four group regions collapsing to 3-column slivers at the right edge while their members stayed outside the box.",
+          "raw_check_provenance": "Spec bytes were overwritten when the view's final candidate replaced specs/v2.spec.json; the spec above is reconstructed verbatim from this session, the raw --check output is the original file."
+        },
+        {
+          "label": "v2-a2",
+          "spec": "specs/attempts/v2-a2.json",
+          "spec_sha256": "02f83fa8074c0efa1d36330d3f43e66453cea09cccf82fae3d1ae6ca66f53111",
+          "raw_check": "checks/v2-a2.check.txt",
+          "note": "Single concept region (uplinks: wired + wifi backup, not ECMP), 36 rows. Correct bordered region with its members inside. Title text collided with a route crossing the region border, reading 'nvt ECMP' in the capture. Rejected for that legibility defect.",
+          "crossings_chosen": 0
+        },
+        {
+          "label": "v2-a3 (final)",
+          "spec": "specs/v2.spec.json",
+          "spec_sha256": "762f484b003e8ff2419dfb2292c31ab7b8a92d18f12a1c3d3ed9f70bc3906ea8",
+          "raw_check": "checks/v2-a3.check.txt",
+          "note": "Final v2. Region title shortened to 'uplinks: wired + wifi' so the title stops before the second border crossing; 'not ECMP' moved into the wlp node label. extent=66x36, 0 warnings, 4/4 labels, 0 ambiguous, 0 crossings, layers=3 with 4 pinned and 0 conflicts. Budget 3/3."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "attempts": [
+        {
+          "label": "v3-a1",
+          "spec": "specs/attempts/v3-a1-reconstructed.json",
+          "spec_sha256": "reconstructed-not-authoritative",
+          "raw_check": "checks/v3-a1.check.txt",
+          "note": "First v3 candidate: two groups (egress rtr / wan path) and hop latencies in node labels. extent=53x44, 0 warnings. Rejected: the wan region collapsed to a 3-column sliver at the right edge (cols 58-60) with all four members outside it, and the long region titles were silently dropped.",
+          "raw_check_provenance": "Spec bytes overwritten when the final candidate replaced specs/v3.spec.json; reconstructed verbatim from this session, raw --check output is the original file."
+        },
+        {
+          "label": "v3-a2",
+          "spec": "specs/attempts/v3-a2.json",
+          "spec_sha256": "36269bc6529d796e96478f404e234ec60d844b8ded82356c4dad630c3f35ea28",
+          "raw_check": "checks/v3-a2.check.txt",
+          "note": "Single wan region (rtr left ungrouped). extent=51x44, 0 warnings, region correct with members inside, but a route arrowhead on the region's top border overwrote the title's first letters ('▼egress: one ISP...'). Rejected as a legibility defect.",
+          "crossings_chosen": 0
+        },
+        {
+          "label": "v3-a3 (final)",
+          "spec": "specs/v3.spec.json",
+          "spec_sha256": "a45b241565a2b753bf7e8488fdd4653817061294da7c273707ab6b1d18b421e4",
+          "raw_check": "checks/v3-a3.check.txt",
+          "note": "Final v3: the whole egress path in one region, so the title rides a border no route crosses (rtr is the source). extent=52x44, 0 warnings, 1/1 labels, 0 ambiguous, 0 crossings. Budget 3/3."
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "attempts": [
+        {
+          "label": "v4-a1",
+          "spec": "specs/attempts/v4-a1-reconstructed.json",
+          "spec_sha256": "reconstructed-not-authoritative",
+          "raw_check": "checks/v4-a1.check.txt",
+          "note": "First overlay view: three groups (overlay, homelab host, wired uplink). extent=44x22, 0 warnings, but two of three regions collapsed to slivers. Rejected on the region defect.",
+          "raw_check_provenance": "Spec bytes overwritten when the final candidate replaced specs/v4.spec.json; reconstructed verbatim from this session, raw --check output is the original file."
+        },
+        {
+          "label": "v4-a2",
+          "spec": "specs/attempts/v4-a2.json",
+          "spec_sha256": "5dac8f6143d7910ff2f4c648450e7381485e554401caa329794bbe1c09713dc3",
+          "raw_check": "checks/v4-a2.check.txt",
+          "note": "Single overlay region, tailscale0 label widened so the region fits its title. extent=44x21, 0 warnings, region correct. Captured, then superseded by v4-a3 for coverage reasons (that capture is kept at evidence/attempt-v4-a2-superseded/)."
+        },
+        {
+          "label": "v4-a3 (final)",
+          "spec": "specs/v4.spec.json",
+          "spec_sha256": "4bd1c2251c999ed239b0ab34a8f6d4e875002b90272ff6e9c1302315948efbc9",
+          "raw_check": "checks/v4-a3.check.txt",
+          "note": "Final v4: overlay region kept, and the gateway added below the wired path so the source's 'bench internet' answers (NAT, no committed rate, no v6) are drawn instead of dropped. extent=59x34, 0 warnings, 3/3 labels, 0 ambiguous, 0 crossings. Budget 3/3."
+        }
+      ]
+    }
+  ]
+}

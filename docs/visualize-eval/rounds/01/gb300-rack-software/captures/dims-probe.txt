@@ -1,0 +1,9 @@
+
+rounds/01/gb300-rack-software on  fix/visualize-skill [$!?] via 🐍 v3.9.6 on
+ ☁️  (ap-south-1) on ☁️  aviralmansingka@gmail.com
+❯ stty size > dims-probe-raw.txt 2>&1; cat dims-probe-raw.txt
+47 77
+
+rounds/01/gb300-rack-software on  fix/visualize-skill [$!?] via 🐍 v3.9.6 on
+ ☁️  (ap-south-1) on ☁️  aviralmansingka@gmail.com
+❯

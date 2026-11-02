@@ -1,0 +1,238 @@
+{
+  "case_id": "network",
+  "round": "03",
+  "generator": {
+    "role": "fresh diagram generator (no prior round output read)",
+    "harness": "pi worker subagent, isolated worktree session",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "note": "Generator is not a judge and did not run a reviewer; the captain starts the Sol judge separately."
+  },
+  "frozen_inputs": {
+    "candidate_skill_path": "docs/visualize-eval/rounds/03/SKILL.md",
+    "candidate_skill_sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+    "renderer_path": "/tmp/visualize-eval/round-03/bin/rataflow-view",
+    "renderer_sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7",
+    "target_viewport": "77x47 columns, natural 100% zoom"
+  },
+  "commands": [
+    "/tmp/visualize-eval/round-03/bin/rataflow-view --check docs/visualize-eval/rounds/03/network/specs/<spec>.json",
+    "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/03/network/specs/v1.json --bin /tmp/visualize-eval/round-03/bin/rataflow-view --out docs/visualize-eval/rounds/03/network/evidence/v1 --label v1 --frames 21",
+    "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/03/network/specs/v2.json --bin /tmp/visualize-eval/round-03/bin/rataflow-view --out docs/visualize-eval/rounds/03/network/evidence/v2 --label v2 --frames 21",
+    "COLUMNS=77 LINES=47 /tmp/visualize-eval/round-03/bin/rataflow-view --step-ms 100 --frames 21 docs/visualize-eval/rounds/03/network/specs/v1.json > docs/visualize-eval/rounds/03/network/frames/v1-direct-frames.txt",
+    "COLUMNS=77 LINES=47 /tmp/visualize-eval/round-03/bin/rataflow-view --step-ms 100 --frames 21 docs/visualize-eval/rounds/03/network/specs/v2.json > docs/visualize-eval/rounds/03/network/frames/v2-direct-frames.txt",
+    "python3 scripts/viz-validate.py docs/visualize-eval/rounds/03/network/evidence/v1 --require-select --require-frames --attempts docs/visualize-eval/rounds/03/network/attempts.json",
+    "python3 scripts/viz-validate.py docs/visualize-eval/rounds/03/network/evidence/v2 --require-select --require-frames --attempts docs/visualize-eval/rounds/03/network/attempts.json"
+  ],
+  "views": [
+    {
+      "view": "v1",
+      "carries": "physical / link-speed path: WAN - Firewall - Core switch - Web tier, plus the Core switch - Redis 25 GbE link",
+      "spec": "docs/visualize-eval/rounds/03/network/specs/v1.json",
+      "spec_sha256": "fead45b1bab31f168dbbac73a67b5a8a32901fc6e666e0fc0ea963ed8e081b60",
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": 5,
+      "edges": 4,
+      "extent": "40x32 cells",
+      "crossings": 0,
+      "measured_pane": "77x47",
+      "viewport_line": null,
+      "viewport_token": "77x47 @100%",
+      "direct_frames_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+      "evidence": {
+        "bundle_dir": "docs/visualize-eval/rounds/03/network/evidence/v1",
+        "manifest": "docs/visualize-eval/rounds/03/network/evidence/v1/manifest.json",
+        "check": "docs/visualize-eval/rounds/03/network/evidence/v1/check.txt",
+        "text": "docs/visualize-eval/rounds/03/network/evidence/v1/v1-text.txt",
+        "ansi": "docs/visualize-eval/rounds/03/network/evidence/v1/v1-ansi.ansi",
+        "selected_ansi": "docs/visualize-eval/rounds/03/network/evidence/v1/v1-selected.ansi",
+        "frames": "docs/visualize-eval/rounds/03/network/evidence/v1/v1-frames.txt",
+        "frames_ansi": "docs/visualize-eval/rounds/03/network/evidence/v1/v1-frames.ansi",
+        "frames_captured": 20,
+        "frames_note": "harness capture holds frames 1-20; frame 0 is in the direct frozen-binary run below",
+        "direct_frames_77x47": "docs/visualize-eval/rounds/03/network/frames/v1-direct-frames.txt",
+        "direct_frames_count": 21
+      },
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=5 edges=4 flows=4 direction=tb theme=gruvbox",
+        "extent=40x32 cells",
+        "crossings: 0",
+        "labels: 4/4 placed, 0 on route cells, 0 skipped",
+        "groups: edge(2) switching(1) app(1) data(1)",
+        "trunks:",
+        "dots: 4 single-dot routes, 0 periodic routes, 0 violations, 4 synchronized at 2000ms",
+        "origins: 4/4 routes start at their arrow origin"
+      ],
+      "validator": {
+        "command": "python3 scripts/viz-validate.py docs/visualize-eval/rounds/03/network/evidence/v1 --require-select --require-frames --attempts docs/visualize-eval/rounds/03/network/attempts.json",
+        "exit": 0,
+        "verdict": "all checks passed (26 PASS, 0 FAIL)",
+        "output": "docs/visualize-eval/rounds/03/network/validate-v1.txt"
+      }
+    },
+    {
+      "view": "v2",
+      "carries": "application relations across the web tier into the data tier: session, queries, fill",
+      "spec": "docs/visualize-eval/rounds/03/network/specs/v2.json",
+      "spec_sha256": "1babbfc8af2f71d751c58e9e5adbdf4b5f01a46973033e8db6802b3369a27510",
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": 3,
+      "edges": 3,
+      "extent": "24x24 cells",
+      "crossings": 1,
+      "measured_pane": "77x47",
+      "viewport_line": null,
+      "viewport_token": "77x47 @100%",
+      "direct_frames_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+      "evidence": {
+        "bundle_dir": "docs/visualize-eval/rounds/03/network/evidence/v2",
+        "manifest": "docs/visualize-eval/rounds/03/network/evidence/v2/manifest.json",
+        "check": "docs/visualize-eval/rounds/03/network/evidence/v2/check.txt",
+        "text": "docs/visualize-eval/rounds/03/network/evidence/v2/v2-text.txt",
+        "ansi": "docs/visualize-eval/rounds/03/network/evidence/v2/v2-ansi.ansi",
+        "selected_ansi": "docs/visualize-eval/rounds/03/network/evidence/v2/v2-selected.ansi",
+        "frames": "docs/visualize-eval/rounds/03/network/evidence/v2/v2-frames.txt",
+        "frames_ansi": "docs/visualize-eval/rounds/03/network/evidence/v2/v2-frames.ansi",
+        "frames_captured": 20,
+        "frames_note": "harness capture holds frames 1-20; frame 0 is in the direct frozen-binary run below",
+        "direct_frames_77x47": "docs/visualize-eval/rounds/03/network/frames/v2-direct-frames.txt",
+        "direct_frames_count": 21
+      },
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=3 edges=3 flows=3 direction=tb theme=gruvbox",
+        "extent=24x24 cells",
+        "crossings: 1",
+        "labels: 3/3 placed, 0 on route cells, 0 skipped",
+        "groups: app(1) data(2)",
+        "trunks:",
+        "dots: 3 single-dot routes, 0 periodic routes, 0 violations, 3 synchronized at 2000ms",
+        "origins: 3/3 routes start at their arrow origin"
+      ],
+      "validator": {
+        "command": "python3 scripts/viz-validate.py docs/visualize-eval/rounds/03/network/evidence/v2 --require-select --require-frames --attempts docs/visualize-eval/rounds/03/network/attempts.json",
+        "exit": 0,
+        "verdict": "all checks passed (26 PASS, 0 FAIL)",
+        "output": "docs/visualize-eval/rounds/03/network/validate-v2.txt"
+      }
+    }
+  ],
+  "coverage_map": [
+    {
+      "view": "v1",
+      "carries": "e1 wan->fw (1 GbE), e2 fw->core (10 GbE), e3 core->web (10 GbE), e4 core->cache (25 GbE); nodes wan, fw, core, web, cache",
+      "ledger_rows": ["n1", "n2", "n3", "n4", "n5", "e1", "e2", "e3", "e4", "m1", "q3"]
+    },
+    {
+      "view": "v2",
+      "carries": "e5 web->cache (session), e6 web->db (queries), e7 cache->db (fill); nodes web, cache, db",
+      "ledger_rows": ["n4", "n5", "n6", "e5", "e6", "e7", "m1", "q3"]
+    }
+  ],
+  "meaning_ledger": [
+    { "id": "n1", "fact": "Node `wan`: WAN", "kind": "role", "fate": "drawn", "view": "v1" },
+    { "id": "n2", "fact": "Node `fw`: Firewall", "kind": "role", "fate": "drawn", "view": "v1" },
+    { "id": "n3", "fact": "Node `core`: Core switch", "kind": "role", "fate": "drawn", "view": "v1" },
+    { "id": "n4", "fact": "Node `web`: Web tier", "kind": "role", "fate": "drawn", "view": "v1, v2" },
+    { "id": "n5", "fact": "Node `cache`: Redis", "kind": "role", "fate": "drawn", "view": "v1, v2" },
+    { "id": "n6", "fact": "Node `db`: DB tier", "kind": "role", "fate": "drawn", "view": "v2" },
+    { "id": "e1", "fact": "`wan -> fw`: 1 GbE", "kind": "link speed", "fate": "drawn", "view": "v1" },
+    { "id": "e2", "fact": "`fw -> core`: 10 GbE", "kind": "link speed", "fate": "drawn", "view": "v1" },
+    { "id": "e3", "fact": "`core -> web`: 10 GbE", "kind": "link speed", "fate": "drawn", "view": "v1" },
+    { "id": "e4", "fact": "`core -> cache`: 25 GbE", "kind": "link speed", "fate": "drawn", "view": "v1" },
+    { "id": "e5", "fact": "`web -> cache`: session", "kind": "application relation", "fate": "drawn", "view": "v2" },
+    { "id": "e6", "fact": "`web -> db`: queries", "kind": "application relation", "fate": "drawn", "view": "v2" },
+    { "id": "e7", "fact": "`cache -> db`: fill", "kind": "application relation", "fate": "drawn", "view": "v2" },
+    { "id": "m1", "fact": "Live dots flow along the lines, direction = traffic direction (historical line 5)", "kind": "qualifier / motion", "fate": "drawn", "view": "v1, v2", "how": "`flow: true`, `dots: 1` on every edge; direction follows each audited from -> to" },
+    { "id": "q1", "fact": "Motion speed should represent an indicated speed (historical line 5 wish)", "kind": "qualifier / uncertainty", "fate": "dropped with reason", "reason": "Fixed constraint: motion speed must not be a measurement. Every route runs the same 2000 ms shared clock, so no dot speed encodes 1/10/25 GbE. Link speeds stay in the edge labels only." },
+    { "id": "q2", "fact": "Slow, sparse motion (case task)", "kind": "qualifier / motion", "fate": "drawn", "how": "`dots: 1` gives exactly one dot per route (sparse); the shared 2000 ms default is the whole cycle per route (slow). The source gives no numeric rate, so no per-edge `duration_ms` override is written." },
+    { "id": "q3", "fact": "Gruvbox color scheme (historical line 5)", "kind": "qualifier / style", "fate": "drawn", "how": "`theme: gruvbox` in both views" },
+    { "id": "q4", "fact": "Node boxes should share one background so borders render smoothly; no dots behind the drawing (historical line 5)", "kind": "qualifier / style", "fate": "dropped with reason", "reason": "Renderer chrome, not a graph fact: the spec has no field for node fill or for background dots, and the frozen binary's viewer already paints the flat box/background style. Asserting it in the spec would mean inventing a capability." },
+    { "id": "q5", "fact": "The visualise pane should be an even split (historical line 48)", "kind": "qualifier / capture", "fate": "dropped with reason", "reason": "A pane/composition requirement, not a relationship. The evidence capture did split at ratio 0.5 (half pane, 77x47 measured)." },
+    { "id": "q6", "fact": "Preserve core->cache and web->cache as separate relations", "kind": "constraint", "fate": "drawn", "how": "Two distinct edges in two views (e4 in v1, e5 in v2); no trunk, no merge" },
+    { "id": "q7", "fact": "Keep 1 GbE, 10 GbE and 25 GbE visible without implying motion speed is a measurement", "kind": "constraint", "fate": "drawn", "how": "Every speed is an edge label; all motion shares one synchronized duration" }
+  ],
+  "relationship_audit": [
+    { "id": "e1", "from": "wan", "to": "fw", "verb_tech": "1 GbE uplink", "label_owner": "e1", "label": "1 GbE", "view": "v1", "dots": 1, "flow": true },
+    { "id": "e2", "from": "fw", "to": "core", "verb_tech": "10 GbE link", "label_owner": "e2", "label": "10 GbE", "view": "v1", "dots": 1, "flow": true },
+    { "id": "e3", "from": "core", "to": "web", "verb_tech": "10 GbE link", "label_owner": "e3", "label": "10 GbE", "view": "v1", "dots": 1, "flow": true },
+    { "id": "e4", "from": "core", "to": "cache", "verb_tech": "25 GbE link", "label_owner": "e4", "label": "25 GbE", "view": "v1", "dots": 1, "flow": true },
+    { "id": "e5", "from": "web", "to": "cache", "verb_tech": "session traffic", "label_owner": "e5", "label": "session", "view": "v2", "dots": 1, "flow": true },
+    { "id": "e6", "from": "web", "to": "db", "verb_tech": "queries", "label_owner": "e6", "label": "queries", "view": "v2", "dots": 1, "flow": true },
+    { "id": "e7", "from": "cache", "to": "db", "verb_tech": "fill", "label_owner": "e7", "label": "fill", "view": "v2", "dots": 1, "flow": true }
+  ],
+  "source_relationship_mapping": [
+    { "source_fact": "wan -> fw: 1 GbE", "visible_as": "v1 edge WAN -> Firewall, label `1 GbE`, animated dot", "preserved": true },
+    { "source_fact": "fw -> core: 10 GbE", "visible_as": "v1 edge Firewall -> Core switch, label `10 GbE`, animated dot", "preserved": true },
+    { "source_fact": "core -> web: 10 GbE", "visible_as": "v1 edge Core switch -> Web tier, label `10 GbE`, animated dot", "preserved": true },
+    { "source_fact": "core -> cache: 25 GbE", "visible_as": "v1 edge Core switch -> Redis, label `25 GbE`, animated dot", "preserved": true },
+    { "source_fact": "web -> cache: session", "visible_as": "v2 edge Web tier -> Redis, label `session`, animated dot", "preserved": true },
+    { "source_fact": "web -> db: queries", "visible_as": "v2 edge Web tier -> DB tier, label `queries`, animated dot", "preserved": true },
+    { "source_fact": "cache -> db: fill", "visible_as": "v2 edge Redis -> DB tier, label `fill`, animated dot", "preserved": true }
+  ],
+  "source_pointers": {
+    "brief": "docs/visualize-eval/cases/network/source.md",
+    "chat_log": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-dotfiles-fix-visualize--/2026-10-13T05-35-27-649Z_01a133c2-33a0-74b7-9033-3ad246285cff.jsonl",
+    "original_graph_write": "line 180, call chatcmpl-tool-bfad145e3b78162e (relationship facts block of source.md); the jsonl itself was not opened",
+    "excerpts": ["original line 5 (user style/motion request)", "original line 48 (even pane split)"],
+    "qualification": "Relationship facts are historical claims. Nothing in the brief marks any of the seven relations as unconfirmed, so no edge is drawn dashed; the brief gives no rate per route, so no duration_ms override is set."
+  },
+  "abbreviations": [
+    "Node ids are short keys (wan, fw, core, web, cache, db); every visible node label is the source role in full: WAN, Firewall, Core switch, Web tier, Redis, DB tier.",
+    "No addresses, AS numbers, ports or device identifiers appear in the brief, so none had to be abbreviated."
+  ],
+  "deliberate_drops": [
+    { "fact": "dot speed encodes link speed", "reason": "removed by the case's fixed constraint; uniform synchronized motion is the honest reading" },
+    { "fact": "single overview showing all 6 nodes and 7 edges", "reason": "does not fit 77x47: the 6-layer chain measured 40x48 in tb (one row over) and 144x20 in lr (67 columns over). Split into v1 + v2 with the coverage map above rather than shrinking text or reordering tiers." },
+    { "fact": "box fill / background-dot styling and pane split size", "reason": "renderer and capture concerns, not graph facts (see ledger q4, q5)" }
+  ],
+  "motion": {
+    "flow": true,
+    "duration_ms": null,
+    "effective_duration_ms": 2000,
+    "dots_per_route": 1,
+    "reason": "Round-03 rule: write `flow: true` plus `duration_ms` only when the source gives a rate. The brief asks for slow, sparse motion but names no rate, so the shared 2000 ms default is used and no per-edge override exists; every route leaves and arrives together.",
+    "check_evidence": [
+      "v1: dots: 4 single-dot routes, 0 periodic routes, 0 violations, 4 synchronized at 2000ms; origins: 4/4",
+      "v2: dots: 3 single-dot routes, 0 periodic routes, 0 violations, 3 synchronized at 2000ms; origins: 3/3"
+    ],
+    "frame_evidence": "frames/<view>-direct-frames.txt holds frames 0-20 at 100 ms (0 ms = every dot at its arrow origin, 2000 ms = arrival). The harness pane capture holds frames 1-20."
+  },
+  "layout_attempts": {
+    "v1": [
+      { "spec": "specs/v1-a1.json", "extent": "40x48", "crossings": 1, "verdict": "rejected: one row taller than the 47-row target" },
+      { "spec": "specs/v1-a2.json", "extent": "144x20", "crossings": 1, "verdict": "rejected: 144 columns, far past 77" },
+      { "spec": "specs/v1-a3.json", "extent": "40x32", "crossings": 0, "verdict": "kept (byte-identical to specs/v1.json)" }
+    ],
+    "v2": [
+      { "spec": "specs/v2-a1.json", "extent": "24x24", "crossings": 1, "verdict": "kept (byte-identical to specs/v2.json)" },
+      { "spec": "specs/v2-a2.json", "extent": "54x15", "crossings": 1, "verdict": "rejected: lr keeps the same structural crossing and uses more width" }
+    ],
+    "source_order_preserved": true,
+    "note": "No source group, layer order or tier band was reordered in any attempt; no relation was merged and no label dropped."
+  },
+  "known_defects": [
+    { "id": "d1", "view": "v2", "severity": "medium", "defect": "crossings: 1", "detail": "The 2-hop web -> db route leaves the Web tier beside the web -> Redis route and bridges it (`⌒` glyph in the capture) before passing the Redis band. Both tb and lr layouts report 1, because two edges leave one node toward the same side while a third link (cache -> db) sits between them. Not removable without reordering the tiers or dropping a relation, which the protocol forbids." },
+    { "id": "d2", "view": "v1, v2", "severity": "low", "defect": "no single view carries the whole network", "detail": "6 nodes / 7 edges in one drawing needs 6 layers: 40x48 (tb) or 144x20 (lr) at natural zoom. The honest resolution was a two-view split with an explicit coverage map; a judge that requires one self-contained graph will see this as a gap." },
+    { "id": "d3", "view": "v1, v2", "severity": "low", "defect": "harness pane capture starts at frame 1", "detail": "scripts/viz-evidence.sh --frames 21 captures frames 1-20 in v*-frames.txt (frame 0 is not in the pane scrollback window; reproduced twice, so it is not a race). Frame 0 evidence therefore comes from the frozen binary run directly at COLUMNS=77 LINES=47 in frames/<view>-direct-frames.txt, which is deterministic output of the same binary and spec." },
+    { "id": "d4", "view": "v1, v2", "severity": "low", "defect": "arrival frame shows no visible dot", "detail": "At 2000 ms every dot is absorbed by its arrowhead glyph (documented round-03 renderer behaviour for a synchronized single-dot route), so frame 20 shows the finished drawing with no dot. Origin (frame 0) and synchronous progress (frames 1-19) are the motion proof." },
+    { "id": "d5", "view": "v1, v2", "severity": "informational", "defect": "manifest pane_cols is null", "detail": "`herdr pane layout` reports only the workspace-focused tab, and this worktree session runs in a background tab, so the script's rect lookup returned nothing. Rows come from the pane viewport (47) and the size proof is the app's own header token `77x47 @100%`." },
+    { "id": "d6", "view": "case directory", "severity": "informational", "defect": "case root is not itself a validation bundle", "detail": "The literal command `python3 scripts/viz-validate.py docs/visualize-eval/rounds/03/network --require-select --require-frames --attempts .../attempts.json` fails manifest_readable because manifests live per view under evidence/<view> (see validate-case-root.txt). The per-bundle commands both pass." }
+  ],
+  "blockers": [],
+  "cleanup": {
+    "panes_opened": 3,
+    "panes_closed": 3,
+    "status": "all panes this generator opened are confirmed_closed",
+    "detail": [
+      "two geometry probes (split + immediate close) — both gone",
+      "evidence v1 pane closed and proved by the harness (manifest.cleanup = confirmed_closed)",
+      "evidence v2 pane closed and proved by the harness (manifest.cleanup = confirmed_closed)"
+    ],
+    "untouched_foreign_panes": "The tab hosts pre-existing panes from other sessions (w7E:pB3 in tab w7E:t3Q and stale panes in tabs w7E:t3R..t3Y). They were not opened by this generator and were not closed.",
+    "failures": []
+  },
+  "self_assessment": "Not green-marked and not independently reviewed: this is one generator sample awaiting its Sol judge. Both bundles pass the frozen validator, every check line is clean except v2's single structural crossing, and the two known meaning-level limits are the two-view split (d2) and the unmeasurable 'slow' preference (uniform 2000 ms)."
+}

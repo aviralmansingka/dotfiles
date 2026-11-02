@@ -1,0 +1,288 @@
+/tmp/visualize-eval/round-08/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotfi
+les/fix-visualize-skill/docs/visualize-eval/rounds/08/gb300-rack-software/specs/v3-
+nvswitch-sw.json
+
+[0m[1m[38;5;6mfix-visualize-skill[0m on [0m[1m[38;5;5m fix/visualize-skill[0m [0m[1m[38;5;1m[$!?][0m on [0m[1m[38;5;3m☁️  (ap-south-1) [0mon [0m[1m[38;5;4m☁️  avira[0m
+[0m[1m[38;5;4mlmansingka@gmail.com[0m 
+[0m[1m[38;5;2m❯[0m [0m[38;5;2m/tmp/visualize-eval/round-08/bin/rataflow-view[0m [0m[4m/Users/aviral/.herdr/worktrees/dot[0m
+[0m[4mfiles/fix-visualize-skill/docs/visualize-eval/rounds/08/gb300-rack-software/specs/v[0m
+[0m[4m3-nvswitch-sw.json[0m
+viewport: 83x51 zoom: 1.00 natural
+
+[0m[1m[38;5;6mfix-visualize-skill[0m on [0m[1m[38;5;5m fix/visualize-skill[0m [0m[1m[38;5;1m[$!?][0m on [0m[1m[38;5;3m☁️  (ap-south-1) [0mon [0m[1m[38;5;4m☁️  avira[0m
+[0m[1m[38;5;4mlmansingka@gmail.com[0m 
+[0m[1m[38;5;2m❯[0m [0m[38;5;2m/tmp/visualize-eval/round-08/bin/rataflow-view[0m [0m[4m/Users/aviral/.herdr/worktrees/dot[0m
+[0m[4mfiles/fix-visualize-skill/docs/visualize-eval/rounds/08/gb300-rack-software/specs/v[0m
+[0m[4m3-nvswitch-sw.json[0m --select-all
+viewport: 83x51 zoom: 1.00 natural
+
+[0m[1m[38;5;6mfix-visualize-skill[0m on [0m[1m[38;5;5m fix/visualize-skill[0m [0m[1m[38;5;1m[$!?][0m on [0m[1m[38;5;3m☁️  (ap-south-1) [0mon [0m[1m[38;5;4m☁️  avira[0m
+[0m[1m[38;5;4mlmansingka@gmail.com[0m 
+[0m[1m[38;5;2m❯[0m [0m[38;5;2m/tmp/visualize-eval/round-08/bin/rataflow-view[0m [0m[4m/Users/aviral/.herdr/worktrees/dot[0m
+[0m[4mfiles/fix-visualize-skill/docs/visualize-eval/rounds/08/gb300-rack-software/specs/v[0m
+[0m[4m3-nvswitch-sw.json[0m --frames 5 --step-ms 100
+viewport: 83x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 83x51 @100% · v3-nvswitch-sw.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                      ╭────────────╮
+             ╭───────╮ power+serial ╭▶│NVSwitch BMC│
+             │OOB LAN│──────────────╯ │            │
+             │       │                ╰────────────╯        ╭───────╮
+             ╰───────╯                                   ╭─▶│       │
+                                          ╭────╮  hosts  │  │NMX-C/T│
+              ╭──────╮   NVUE/SSH/SFTP  ╭▶│NVOS│─────────╯╭▶│       │
+              │      │──────────────────╯ │    │          │ ╰───────╯
+              │nv-rms│                    ╰────╯          │
+              │      │──────────────────╮                 │
+              ╰──────╯    NMX-C gRPC    ╰─────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 83x51 @100% · v3-nvswitch-sw.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                      ╭────────────╮
+             ╭───────╮ power+serial ╭▶│NVSwitch BMC│
+             │OOB LAN│──────────────╯ │            │
+             │       │                ╰────────────╯        ╭───────╮
+             ╰───────╯                                   ╭─▶│       │
+                                          ╭────╮  hosts  │  │NMX-C/T│
+              ╭──────╮   NVUE/SSH/SFTP  ╭▶│NVOS│─────────╯╭▶│       │
+              │      │──────────────────╯ │    │          │ ╰───────╯
+              │nv-rms│                    ╰────╯          │
+              │      │──────────────────╮                 │
+              ╰──────╯    NMX-C gRPC    ╰─────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 83x51 @100% · v3-nvswitch-sw.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                      ╭────────────╮
+             ╭───────╮ power+serial ╭▶│NVSwitch BMC│
+             │OOB LAN│──────────────╯ │            │
+             │       │                ╰────────────╯        ╭───────╮
+             ╰───────╯                                   ╭─▶│       │
+                                          ╭────╮  hosts  │  │NMX-C/T│
+              ╭──────╮   NVUE/SSH/SFTP  ╭▶│NVOS│─────────╯╭▶│       │
+              │      │──────────────────╯ │    │          │ ╰───────╯
+              │nv-rms│                    ╰────╯          │
+              │      │──────────────────╮                 │
+              ╰──────╯    NMX-C gRPC    ╰─────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 83x51 @100% · v3-nvswitch-sw.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                      ╭────────────╮
+             ╭───────╮ power+serial ╭▶│NVSwitch BMC│
+             │OOB LAN│──────────────╯ │            │
+             │       │                ╰────────────╯        ╭───────╮
+             ╰───────╯                                   ╭─▶│       │
+                                          ╭────╮  hosts  │  │NMX-C/T│
+              ╭──────╮   NVUE/SSH/SFTP  ╭▶│NVOS│─────────╯╭▶│       │
+              │      │──────────────────╯ │    │          │ ╰───────╯
+              │nv-rms│                    ╰────╯          │
+              │      │──────────────────╮                 │
+              ╰──────╯    NMX-C gRPC    ╰─────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 83x51 @100% · v3-nvswitch-sw.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                      ╭────────────╮
+             ╭───────╮ power+serial ╭▶│NVSwitch BMC│
+             │OOB LAN│──────────────╯ │            │
+             │       │                ╰────────────╯        ╭───────╮
+             ╰───────╯                                   ╭─▶│       │
+                                          ╭────╮  hosts  │  │NMX-C/T│
+              ╭──────╮   NVUE/SSH/SFTP  ╭▶│NVOS│─────────╯╭▶│       │
+              │      │──────────────────╯ │    │          │ ╰───────╯
+              │nv-rms│                    ╰────╯          │
+              │      │──────────────────╮                 │
+              ╰──────╯    NMX-C gRPC    ╰─────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+[0m[1m[38;5;6mfix-visualize-skill[0m on [0m[1m[38;5;5m fix/visualize-skill[0m [0m[1m[38;5;1m[$!?][0m on [0m[1m[38;5;3m☁️  (ap-south-1) [0mon [0m[1m[38;5;4m☁️  avira[0m
+[0m[1m[38;5;4mlmansingka@gmail.com[0m 
+[0m[1m[38;5;2m❯[0m 

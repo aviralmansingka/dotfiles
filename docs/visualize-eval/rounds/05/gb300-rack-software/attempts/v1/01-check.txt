@@ -1,0 +1,11 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=5 edges=1 flows=0 direction=tb theme=gruvbox
+extent=85x24 cells
+crossings: 14 bridges, 2 touching bends
+warning: two edges share 15 cell(s), including ports; increase routing space
+labels: 2/2 placed, 0 on route cells, 0 skipped, 0 ambiguous owners
+groups: off-rack mgmt(1) OOB plant(1) rack hardware(3)
+trunks: oob_rail from oob to pwr, 2 branches, 1 junctions
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

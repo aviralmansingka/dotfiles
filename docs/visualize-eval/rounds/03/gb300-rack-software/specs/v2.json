@@ -1,0 +1,26 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "k8s", "label": "Kubernetes", "group": "inband" },
+    { "id": "gpuop", "label": "GPU Operator", "group": "inband" },
+    { "id": "dcgm", "label": "DCGM", "group": "inband" },
+    { "id": "dcgmx", "label": "dcgm-exporter", "group": "inband" },
+    { "id": "drvk", "label": "Driver+CUDA", "group": "inband" },
+    { "id": "fm", "label": "Fabric Mgr", "group": "nvswitch" }
+  ],
+  "layers": [
+    ["k8s"],
+    ["gpuop"],
+    ["dcgm"],
+    ["dcgmx", "drvk"],
+    ["fm"]
+  ],
+  "edges": [
+    { "from": "k8s", "to": "gpuop", "label": "runs on K8s" },
+    { "from": "gpuop", "to": "dcgm", "label": "DaemonSet" },
+    { "from": "dcgm", "to": "dcgmx", "label": "Prometheus :9400" },
+    { "from": "dcgm", "to": "drvk", "label": "NVML (local)" },
+    { "from": "drvk", "to": "fm", "label": "hosts FM?", "style": "dashed" }
+  ]
+}

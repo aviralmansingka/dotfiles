@@ -1,0 +1,7 @@
+# cmd: /tmp/visualize-eval/round-01/bin/rataflow-view --check specs/v3-lan-wan.json
+# utc: 2026-11-02T08:30:23Z
+# stdout+stderr:
+ok: nodes=7 edges=6 flows=5 direction=tb theme=gruvbox
+layers=6 (explicit placement, sugiyama skipped)
+extent=43x45 cells
+# exit=0

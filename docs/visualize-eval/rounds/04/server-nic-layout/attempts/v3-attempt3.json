@@ -1,0 +1,18 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "gw",       "label": "Arista 103.19.91.57 AS132717", "group": "access" },
+    { "id": "airtel",   "label": "Airtel 14.143.x",              "group": "transit" },
+    { "id": "airtelbb", "label": "Airtel BB 14.141.x",           "group": "transit" },
+    { "id": "cf",       "label": "Cloudflare 1.1.1.1 AS13335",   "group": "internet" },
+    { "id": "fabric",   "label": "fabric: bridge? tunnel? silent?", "group": "facts" },
+    { "id": "ecmp",     "label": "1 uplink · no ECMP",           "group": "facts" }
+  ],
+  "layers": [["gw"], ["airtel", "fabric"], ["airtelbb", "ecmp"], ["cf"]],
+  "edges": [
+    { "from": "gw",       "to": "airtel",   "label": "1.8 ms · L2?", "style": "dashed", "dots": 0 },
+    { "from": "airtel",   "to": "airtelbb", "label": "7.1 ms",       "dots": 0 },
+    { "from": "airtelbb", "to": "cf",       "label": "8.3-8.6 ms",   "dots": 0 }
+  ]
+}

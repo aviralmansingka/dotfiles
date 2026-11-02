@@ -1,0 +1,46 @@
+ rataflow-view · spec.json · 6 nodes · 6 edges · 1 flows · drag pan · scroll
+
+
+
+
+
+
+
+                  ╭───────────╮
+                ╭─│Boot server│
+                │ │           │
+                │ ╰───────────╯
+                │  │
+                │  │ boot.ipxe+S3
+                │  ▼
+                │ ╭───────────╮     pull boot img     ╭──╮
+                ╰─│BM machines│──────────────────────▶│S3│
+                  │           │                       │  │
+                  ╰───────────╯                       ╰──╯
+                   │ runs on host
+                   ╰────────────────╮
+                                    │
+                                   ╭─────────────╮
+                                   │Machine-agent│
+                                   │             │
+                                   ╰─────────────╯
+                                    │ reg+heartbeat
+                                    ●╮
+                                     │
+                                    ╭───────────╮
+                                    │Public gRPC│
+                                    │           │
+                                    ╰───────────╯
+                                machine state
+                                     ╰─╮
+                                       │
+                                      ╭────────╮
+                                      │Postgres│
+                                      │        │
+                                      ╰────────╯
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘

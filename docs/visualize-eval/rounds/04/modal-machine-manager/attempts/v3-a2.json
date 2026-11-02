@@ -1,0 +1,117 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "layers": [
+    [
+      "mch"
+    ],
+    [
+      "agent",
+      "rec"
+    ],
+    [
+      "pub",
+      "pgrpc",
+      "q"
+    ],
+    [],
+    [
+      "",
+      "db",
+      "prov"
+    ]
+  ],
+  "nodes": [
+    {
+      "id": "mch",
+      "label": "bare-metal machines",
+      "group": "host"
+    },
+    {
+      "id": "agent",
+      "label": "machine-agent",
+      "group": "host"
+    },
+    {
+      "id": "pub",
+      "label": "public gRPC",
+      "group": "rpc"
+    },
+    {
+      "id": "pgrpc",
+      "label": "private gRPC",
+      "group": "rpc"
+    },
+    {
+      "id": "q",
+      "label": "River queue",
+      "group": "control"
+    },
+    {
+      "id": "rec",
+      "label": "reconcile loop",
+      "group": "control"
+    },
+    {
+      "id": "db",
+      "label": "Postgres",
+      "group": "state"
+    },
+    {
+      "id": "prov",
+      "label": "bare-metal providers",
+      "group": "providers"
+    }
+  ],
+  "edges": [
+    {
+      "from": "mch",
+      "to": "agent",
+      "label": "runs on host",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "agent",
+      "to": "pub",
+      "label": "register + heartbeat",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "pub",
+      "to": "db",
+      "label": "machine state",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "pgrpc",
+      "to": "db",
+      "label": "machine rows",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "q",
+      "to": "db",
+      "label": "job rows",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "rec",
+      "to": "db",
+      "label": "cluster state",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "rec",
+      "to": "prov",
+      "label": "gcore sync, 1 min",
+      "dots": 1,
+      "flow": true
+    }
+  ]
+}

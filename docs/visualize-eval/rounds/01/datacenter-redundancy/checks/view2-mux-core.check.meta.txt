@@ -1,0 +1,4 @@
+command: /tmp/visualize-eval/round-01/bin/rataflow-view --check specs/view2-mux-core.json
+timestamp_utc: 20261102T083542Z
+exit: 0
+spec_sha256: bf534caf77d60058529824cc699659e5c3281045b0c2b3a30e22b41282f6a5f6

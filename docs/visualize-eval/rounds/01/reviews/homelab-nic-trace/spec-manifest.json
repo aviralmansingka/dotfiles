@@ -1,0 +1,14 @@
+[
+  [
+    "docs/visualize-eval/rounds/01/homelab-nic-trace/specs/v1-local-nets.json",
+    "75f8726b25bdfb82e1e748ab24b020b41d0e3c67828035d28fa38b4c228dae29"
+  ],
+  [
+    "docs/visualize-eval/rounds/01/homelab-nic-trace/specs/v2-host-nics.json",
+    "c74d69c2e9ca5caffa1656a61aa13629c1a7f0bb2bc6f87023b7c78ce827721f"
+  ],
+  [
+    "docs/visualize-eval/rounds/01/homelab-nic-trace/specs/v3-lan-wan.json",
+    "454a27aa771de81413696af518f94c97f024fa9556f4c518f5c5410400f33213"
+  ]
+]

@@ -1,0 +1,699 @@
+{
+  "case_id": "gb300-rack-software",
+  "round": "05",
+  "round_template_note": "generator-task.md's output spec still says round \"03\"; this bundle is round 05, recorded as \"05\".",
+  "generator": {
+    "identity": "fresh diagram generator, round 05 (worker label viz-ds05-8)",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "frozen_inputs": {
+    "candidate_skill": "docs/visualize-eval/rounds/05/SKILL.md",
+    "candidate_skill_sha256": "ff4a9d3f32ba0bf86e54ee6bfbac02fdea3fac3b95b82a958b3411accef0a949",
+    "renderer_binary": "/tmp/visualize-eval/round-05/bin/rataflow-view",
+    "renderer_sha256": "b1ab9f2e78af11c2f2b005eea083a999079d184bf550e8d0b6d9c51867f22404",
+    "renderer_dir": "/tmp/visualize-eval/round-05",
+    "case_source": "docs/visualize-eval/cases/gb300-rack-software/source.md"
+  },
+  "motion": {
+    "source_animated": false,
+    "dots_in_spec": "none (no edge declares flow or dots)",
+    "check_line": "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+    "static_proof": "every view carries 5 timestamped pane frames plus 3 pinned 77x47 frames; the drawing is identical in every frame (e.g. evidence/v1/v1-frames.txt)"
+  },
+  "views": [
+    {
+      "view": "v1",
+      "title": "off-rack management on the OOB rail (physical reach)",
+      "spec": "specs/v1-oob-rail.json",
+      "spec_sha256": "0239c7b29fa04f96bdc0f8b736d6fe18ce54ec39d272d7fad6f93d47b5d8a801",
+      "check": "evidence/v1/check.txt",
+      "check_lines": [
+        "extent=74x24 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 2/2 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: off-rack mgmt(1) OOB plant(1) rack hardware(3)",
+        "trunks: oob_rail from oob to bmc_s, 2 branches, 2 junctions",
+        "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 0/0 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "frames": "evidence/v1/v1-frames.txt",
+      "frames_ansi": "evidence/v1/v1-frames.ansi",
+      "frames_count": 5,
+      "target_dump": "evidence/v1/v1-target-77x47-frames.txt",
+      "target_dump_frames": 3,
+      "manifest": "evidence/v1/manifest.json",
+      "measured": {
+        "cols": 83,
+        "rows": 51,
+        "zoom": 1.0
+      },
+      "viewport_line": null,
+      "viewport_token": "83x51 @100%",
+      "pane_cleanup": "confirmed_closed"
+    },
+    {
+      "view": "v2",
+      "title": "nv-rms southbound APIs into rack hardware",
+      "spec": "specs/v2-rms-apis.json",
+      "spec_sha256": "fa5c790f1c76f9a8dd390ce1ed7482652c0142f3614cc60285952408cabffc42",
+      "check": "evidence/v2/check.txt",
+      "check_lines": [
+        "extent=48x19 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 2/2 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: off-rack mgmt(1) rack hardware(2)",
+        "trunks: ",
+        "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 0/0 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "text": "evidence/v2/v2-text.txt",
+      "ansi": "evidence/v2/v2-ansi.ansi",
+      "selected_ansi": "evidence/v2/v2-selected.ansi",
+      "frames": "evidence/v2/v2-frames.txt",
+      "frames_ansi": "evidence/v2/v2-frames.ansi",
+      "frames_count": 5,
+      "target_dump": "evidence/v2/v2-target-77x47-frames.txt",
+      "target_dump_frames": 3,
+      "manifest": "evidence/v2/manifest.json",
+      "measured": {
+        "cols": 83,
+        "rows": 51,
+        "zoom": 1.0
+      },
+      "viewport_line": null,
+      "viewport_token": "83x51 @100%",
+      "pane_cleanup": "confirmed_closed"
+    },
+    {
+      "view": "v3",
+      "title": "NVSwitch tray software (NVOS hosts NMX-C/T)",
+      "spec": "specs/v3-nvswitch-sw.json",
+      "spec_sha256": "3425e2863c313eb2dc214f9afa424e10dd61bbd71969150846d01d5dc6d67920",
+      "check": "evidence/v3/check.txt",
+      "check_lines": [
+        "extent=34x24 cells",
+        "crossings: 1 bridges, 0 touching bends",
+        "labels: 3/3 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: off-rack mgmt(1) NVSwitch tray(2)",
+        "trunks: ",
+        "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 0/0 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "text": "evidence/v3/v3-text.txt",
+      "ansi": "evidence/v3/v3-ansi.ansi",
+      "selected_ansi": "evidence/v3/v3-selected.ansi",
+      "frames": "evidence/v3/v3-frames.txt",
+      "frames_ansi": "evidence/v3/v3-frames.ansi",
+      "frames_count": 5,
+      "target_dump": "evidence/v3/v3-target-77x47-frames.txt",
+      "target_dump_frames": 3,
+      "manifest": "evidence/v3/manifest.json",
+      "measured": {
+        "cols": 83,
+        "rows": 51,
+        "zoom": 1.0
+      },
+      "viewport_line": null,
+      "viewport_token": "83x51 @100%",
+      "pane_cleanup": "confirmed_closed"
+    },
+    {
+      "view": "v4",
+      "title": "in-band compute software on the compute hosts",
+      "spec": "specs/v4-inband-compute.json",
+      "spec_sha256": "70cafa96988990a96badf8cecef0d01ad30671db40705df15f4d96b2da20973f",
+      "check": "evidence/v4/check.txt",
+      "check_lines": [
+        "extent=49x40 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 5/5 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: in-band cluster(2) compute host(4)",
+        "trunks: ",
+        "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 0/0 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "text": "evidence/v4/v4-text.txt",
+      "ansi": "evidence/v4/v4-ansi.ansi",
+      "selected_ansi": "evidence/v4/v4-selected.ansi",
+      "frames": "evidence/v4/v4-frames.txt",
+      "frames_ansi": "evidence/v4/v4-frames.ansi",
+      "frames_count": 5,
+      "target_dump": "evidence/v4/v4-target-77x47-frames.txt",
+      "target_dump_frames": 3,
+      "manifest": "evidence/v4/manifest.json",
+      "measured": {
+        "cols": 83,
+        "rows": 51,
+        "zoom": 1.0
+      },
+      "viewport_line": null,
+      "viewport_token": "83x51 @100%",
+      "pane_cleanup": "confirmed_closed"
+    }
+  ],
+  "meaning_ledger": [
+    {
+      "fact": "nv-rms is the rack aggregator: one API fronting every device class",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v1 (nv-rms node), v2 (fans to compute BMC and power shelf), v3 (fans to NVOS and NMX)"
+    },
+    {
+      "fact": "nv-rms runs on a management node, off the rack, as a client on the OOB LAN",
+      "kind": "residency",
+      "fate": "drawn",
+      "where": "v1 node label 'nv-rms' + group 'off-rack mgmt' (blue #7da0b8 border in v1/v2/v3) + edge 'client' rms->oob (v1 text rows 24-27)"
+    },
+    {
+      "fact": "OOB LAN is a separate physical Ethernet rail, its own switch pair, air-gapped from the data plane",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v1: OOB LAN node in group 'OOB plant', the trunk's source"
+    },
+    {
+      "fact": "OOB reach: one drop to every BMC in the rack (18 compute tray BMCs in a GB300 NVL72), the NVSwitch tray BMCs, the power shelf controllers",
+      "kind": "reach",
+      "fate": "drawn",
+      "where": "v1 trunk oob -> {Compute BMC, Power shelf} with NVSwitch BMC as the corridor target; see check 'trunks: oob_rail from oob to bmc_s, 2 branches'"
+    },
+    {
+      "fact": "18 compute tray BMCs per GB300 NVL72",
+      "kind": "identifier/count",
+      "fate": "abbreviated",
+      "reason": "one 'Compute BMC' node stands for the device class; a 'x18' suffix pushed the 5-node trunk view to extent 85x? / 78x? and overflowed the 77-column target (probes: /tmp dumps recorded in generation.md). The class, not the count, is what the source's correction requires."
+    },
+    {
+      "fact": "OOB also reaches the CDU controller and the PDUs",
+      "kind": "reach",
+      "fate": "dropped",
+      "reason": "the source's fixed constraint pins the trunk to exactly three destinations (compute BMC, NVSwitch BMC, power shelf); adding CDU/PDU would break the 'splits ONCE into three' requirement"
+    },
+    {
+      "fact": "Protocol on the OOB rail: Redfish over HTTPS (legacy IPMI)",
+      "kind": "protocol",
+      "fate": "drawn",
+      "where": "v2 edge labels 'Redfish/HTTPS' and 'Redfish shelf' (controller -> device hops, not the physical rail)"
+    },
+    {
+      "fact": "The OOB rail is the only channel that works when a node is powered off or the OS is hung",
+      "kind": "role",
+      "fate": "abbreviated",
+      "reason": "carried by the trunk's 'physical reach' label and the physical-vs-API split between v1 and v2; the operational sentence itself is not drawn"
+    },
+    {
+      "fact": "nv-rms southbound: Compute BMCs via Redfish/HTTPS",
+      "kind": "protocol/path",
+      "fate": "drawn",
+      "where": "v2 edge rms -> compute BMC, label 'Redfish/HTTPS'"
+    },
+    {
+      "fact": "nv-rms southbound: power-shelf controllers via Redfish/HTTPS",
+      "kind": "protocol/path",
+      "fate": "drawn",
+      "where": "v2 edge rms -> power shelf, label 'Redfish shelf' (abbreviated: the full 'Redfish/HTTPS' string on a second parallel edge produced 1 ambiguous label owner, see attempts/v2/01 and /02)"
+    },
+    {
+      "fact": "nv-rms southbound: NVSwitch trays via NVUE REST, SSH/SFTP and NMX-C gRPC",
+      "kind": "protocol/path",
+      "fate": "drawn",
+      "where": "v3 edges rms -> NVOS ('NVUE REST') and rms -> NMX-C/T ('gRPC'); SSH/SFTP is abbreviated away"
+    },
+    {
+      "fact": "nv-rms reaches the NVSwitch through NVOS, not through the NVSwitch BMC",
+      "kind": "correction",
+      "fate": "drawn",
+      "where": "v3 topology: rms -> NVOS -> NMX-C/T, with no rms -> NVSwitch BMC edge; NVSwitch BMC appears only as an OOB endpoint in v1"
+    },
+    {
+      "fact": "NVOS hosts NMX-C/T",
+      "kind": "residency",
+      "fate": "drawn",
+      "where": "v3 edge NVOS -> NMX-C/T labelled 'hosts'; both nodes in group 'NVSwitch tray' (pink #d3869b / #e29caf borders)"
+    },
+    {
+      "fact": "NVOS runs on the NVSwitch tray",
+      "kind": "residency",
+      "fate": "drawn",
+      "where": "v3 node label 'NVOS (tray)' + group 'NVSwitch tray'"
+    },
+    {
+      "fact": "DCGM is a host-resident daemon, in-band, both edges in-band",
+      "kind": "residency",
+      "fate": "drawn",
+      "where": "v4 node label 'DCGM (host)' in group 'compute host'; no OOB edge anywhere touches DCGM"
+    },
+    {
+      "fact": "DCGM reads GPU state via NVML against the driver over the local PCIe/driver path, no network",
+      "kind": "path",
+      "fate": "drawn",
+      "where": "v4 edge DCGM -> Driver+CUDA labelled 'reads NVML'"
+    },
+    {
+      "fact": "dcgm-exporter serves Prometheus metrics on :9400 over the normal in-band network",
+      "kind": "identifier/port",
+      "fate": "drawn",
+      "where": "v4 edge DCGM -> dcgm-exporter labelled 'serves :9400'"
+    },
+    {
+      "fact": "DCGM is deployed as a DaemonSet by the GPU Operator over Kubernetes",
+      "kind": "deployment",
+      "fate": "drawn",
+      "where": "v4 edges Kubernetes -> GPU Operator ('hosts') and GPU Operator -> DCGM ('DaemonSet')"
+    },
+    {
+      "fact": "Driver, CUDA, DCGM and Fabric Manager run on the compute hosts, not on the GPU die",
+      "kind": "residency",
+      "fate": "drawn",
+      "where": "v4 group 'compute host' holds DCGM, dcgm-exporter, Driver+CUDA, Fabric Mgr (teal family #7daea3 / #93c2b7 / #a8d3c8 borders)"
+    },
+    {
+      "fact": "Fabric Manager is bundled with the hardware (no line item)",
+      "kind": "licensing",
+      "fate": "drawn",
+      "where": "v4 Fabric Mgr node; nothing marks it as paid"
+    },
+    {
+      "fact": "nv-rms source is Apache-2.0 and free; its prebuilt NGC image is entitlement-gated",
+      "kind": "qualifier",
+      "fate": "abbreviated",
+      "reason": "a licensing nuance, not residency; the diagram does not claim NGC images are free and names no paid component. Recorded here instead of on the canvas."
+    },
+    {
+      "fact": "Paid software removed: Mission Control, UFM, NetQ, BCM, NGC-gated images",
+      "kind": "exclusion",
+      "fate": "dropped",
+      "reason": "the source forbids paid software in the diagram; excluding them is the requirement"
+    },
+    {
+      "fact": "UFM is the InfiniBand fabric manager; NMX-M/NetQ NVLink is the NVLink one (merged in error earlier)",
+      "kind": "correction",
+      "fate": "dropped",
+      "reason": "both sides of that correction are paid software, so neither appears; the NVLink fabric is represented by the free Fabric Manager in v4"
+    },
+    {
+      "fact": "Slurm left out because it added no distinct edge",
+      "kind": "exclusion",
+      "fate": "dropped",
+      "reason": "source says it added no distinct relationship"
+    },
+    {
+      "fact": "Compute BMC, NVSwitch BMC and power shelf have no edges between them; they share only one controller and one wire",
+      "kind": "non-relation",
+      "fate": "drawn",
+      "where": "v1 draws no edge between the three hardware nodes; they meet only at the OOB trunk"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "rms",
+      "to": "oob",
+      "verb": "is a client on (no protocol asserted)",
+      "label_owner": "e1",
+      "label": "client",
+      "view": "v1"
+    },
+    {
+      "id": "t1",
+      "from": "oob",
+      "to": "bmc_c",
+      "verb": "physical reach (trunk branch, no protocol asserted)",
+      "label_owner": "t1",
+      "label": "physical reach",
+      "view": "v1"
+    },
+    {
+      "id": "t2",
+      "from": "oob",
+      "to": "bmc_s",
+      "verb": "physical reach (trunk corridor target)",
+      "label_owner": "t1",
+      "label": "physical reach",
+      "view": "v1"
+    },
+    {
+      "id": "t3",
+      "from": "oob",
+      "to": "pwr",
+      "verb": "physical reach (trunk branch)",
+      "label_owner": "t1",
+      "label": "physical reach",
+      "view": "v1"
+    },
+    {
+      "id": "e2",
+      "from": "rms",
+      "to": "bmc_c",
+      "verb": "Redfish over HTTPS",
+      "label_owner": "e2",
+      "label": "Redfish/HTTPS",
+      "view": "v2"
+    },
+    {
+      "id": "e3",
+      "from": "rms",
+      "to": "pwr",
+      "verb": "Redfish over HTTPS",
+      "label_owner": "e3",
+      "label": "Redfish shelf",
+      "view": "v2"
+    },
+    {
+      "id": "e4",
+      "from": "rms",
+      "to": "nvos",
+      "verb": "NVUE REST (also SSH/SFTP in source)",
+      "label_owner": "e4",
+      "label": "NVUE REST",
+      "view": "v3"
+    },
+    {
+      "id": "e5",
+      "from": "rms",
+      "to": "nmxc",
+      "verb": "NMX-C gRPC",
+      "label_owner": "e5",
+      "label": "gRPC",
+      "view": "v3"
+    },
+    {
+      "id": "e6",
+      "from": "nvos",
+      "to": "nmxc",
+      "verb": "hosts (residency)",
+      "label_owner": "e6",
+      "label": "hosts",
+      "view": "v3"
+    },
+    {
+      "id": "e7",
+      "from": "k8s",
+      "to": "gpuop",
+      "verb": "hosts (platform for the operator)",
+      "label_owner": "e7",
+      "label": "hosts",
+      "view": "v4"
+    },
+    {
+      "id": "e8",
+      "from": "gpuop",
+      "to": "dcgm",
+      "verb": "deploys as a DaemonSet",
+      "label_owner": "e8",
+      "label": "DaemonSet",
+      "view": "v4"
+    },
+    {
+      "id": "e9",
+      "from": "dcgm",
+      "to": "dcgmx",
+      "verb": "serves Prometheus metrics on :9400",
+      "label_owner": "e9",
+      "label": "serves :9400",
+      "view": "v4"
+    },
+    {
+      "id": "e10",
+      "from": "dcgm",
+      "to": "drvk",
+      "verb": "reads GPU state via NVML against the driver (no network)",
+      "label_owner": "e10",
+      "label": "reads NVML",
+      "view": "v4"
+    },
+    {
+      "id": "e11",
+      "from": "drvk",
+      "to": "fm",
+      "verb": "unsupported: the excerpts never state this relation (historical unlabelled edge)",
+      "label_owner": "e11",
+      "label": "unconfirmed",
+      "view": "v4",
+      "style": "dashed"
+    }
+  ],
+  "relationship_map": [
+    {
+      "original": "rms -> oob",
+      "drawn_as": "e1 rms -> oob, label 'client'",
+      "view": "v1"
+    },
+    {
+      "original": "oob -> bmc_c",
+      "drawn_as": "t1 trunk branch oob -> bmc_c",
+      "view": "v1"
+    },
+    {
+      "original": "oob -> bmc_s",
+      "drawn_as": "t2 trunk corridor target oob -> bmc_s",
+      "view": "v1"
+    },
+    {
+      "original": "oob -> pwr",
+      "drawn_as": "t3 trunk branch oob -> pwr",
+      "view": "v1"
+    },
+    {
+      "original": "oob -> nvos",
+      "drawn_as": "dropped (see deliberate_drops)",
+      "view": null
+    },
+    {
+      "original": "nvos -> nmxc",
+      "drawn_as": "e6 NVOS -> NMX-C/T, label 'hosts'",
+      "view": "v3"
+    },
+    {
+      "original": "k8s -> gpuop",
+      "drawn_as": "e7 Kubernetes -> GPU Operator, label 'hosts'",
+      "view": "v4"
+    },
+    {
+      "original": "gpuop -> dcgm",
+      "drawn_as": "e8 GPU Operator -> DCGM, label 'DaemonSet'",
+      "view": "v4"
+    },
+    {
+      "original": "dcgm -> dcgmx",
+      "drawn_as": "e9 DCGM -> dcgm-exporter, label 'serves :9400'",
+      "view": "v4"
+    },
+    {
+      "original": "dcgm -> drvk",
+      "drawn_as": "e10 DCGM -> Driver+CUDA, label 'reads NVML'",
+      "view": "v4"
+    },
+    {
+      "original": "drvk -> fm",
+      "drawn_as": "e11 Driver+CUDA -> Fabric Mgr, dashed, label 'unconfirmed'",
+      "view": "v4"
+    },
+    {
+      "original": "nv-rms southbound table (line 283): device classes",
+      "drawn_as": "e2, e3 (v2) and e4, e5 (v3)",
+      "view": "v2+v3"
+    },
+    {
+      "original": "nv-rms direct edge to the NVSwitch BMC (line 283 fixed list, contradicted by line 283's own nuance)",
+      "drawn_as": "dropped (see deliberate_drops)",
+      "view": null
+    }
+  ],
+  "coverage_map": [
+    {
+      "view": "v1",
+      "carries": "off-rack mgmt node, OOB plant, rack hardware class, the ONE OOB trunk with its three destinations (e1, t1-t3)"
+    },
+    {
+      "view": "v2",
+      "carries": "nv-rms control APIs into compute BMC and power shelf (e2, e3)"
+    },
+    {
+      "view": "v3",
+      "carries": "NVSwitch tray software residency and rms control of it (e4, e5, e6)"
+    },
+    {
+      "view": "v4",
+      "carries": "in-band compute software residency and the in-band chain (e7-e11)"
+    }
+  ],
+  "groups": {
+    "off-rack mgmt": "nv-rms, on a management node off the rack (border #7da0b8 in v1, v2, v3)",
+    "OOB plant": "the OOB LAN itself, physical plant (v1)",
+    "rack hardware": "compute BMC class, NVSwitch BMC, power shelf (orange family #e78a4e / #d27438 / #f1a46c in v1, v2)",
+    "NVSwitch tray": "NVOS and NMX-C/T, software inside the switch tray (pink family #d3869b / #e29caf in v3)",
+    "in-band cluster": "Kubernetes and the GPU Operator (pink family in v4)",
+    "compute host": "DCGM, dcgm-exporter, Driver+CUDA, Fabric Mgr on the compute hosts (teal family #7daea3 / #93c2b7 / #a8d3c8 in v4)"
+  },
+  "residency_framing": {
+    "mechanism": "group names give every node a stable hue family (the renderer draws group identity as border colour, not as a drawn block label); node labels carry an explicit location where a hue alone would be too thin",
+    "visible_in_capture": [
+      "v1 evidence/v1/v1-ansi.ansi: nv-rms border #7da0b8 at row 25/col 6, rack-hardware borders #e78a4e and #d27438 at row 17/col 62 and row 33/col 62 - three distinct hue families for three residencies",
+      "v2 evidence/v2/v2-ansi.ansi: nv-rms #7da0b8 (row 26/col 20) vs compute BMC #e78a4e (row 20/col 50) and power shelf #f1a46c (row 30/col 50)",
+      "v3 evidence/v3/v3-ansi.ansi: nv-rms #7da0b8 (row 17/col 41) vs NVOS #d3869b (row 25/col 26) and NMX-C/T #e29caf (row 33/col 41)",
+      "v4 evidence/v4/v4-ansi.ansi: Kubernetes #d3869b (row 9/col 34), GPU Operator #e29caf (row 17/col 34) vs DCGM #7daea3 (row 25/col 34), dcgm-exporter #93c2b7 (row 33/col 49), Fabric Mgr #a8d3c8 (row 41/col 19)",
+      "v4 text: label 'DCGM (host)' at evidence/v4/v4-text.txt row 26; v3 text: label 'NVOS (tray)' at evidence/v3/v3-text.txt row 26"
+    ],
+    "honest_limit": "the renderer does not print group names in the pane, so a plain-text-only reader learns residency from node labels and from the view split; the groups line in --check and the border hues carry the rest"
+  },
+  "source_pointers": [
+    "source.md line 271 (assistant): OOB LAN is a separate physical Ethernet network; everything with a BMC hangs off it; paid software removed",
+    "source.md line 272/277 (user/assistant): nv-rms rides the OOB LAN as a client; DCGM has nothing to do with OOB; host-resident daemon; in : NVML against the driver; out: dcgm-exporter :9400 over in-band; DaemonSet by the GPU Operator",
+    "source.md line 278/283 (user/assistant): nv-rms is the rack aggregator; southbound table (Redfish/HTTPS, NVUE REST + SSH/SFTP + NMX-C gRPC); the device classes share only the controller and the wire; 'nv-rms reaches the NVSwitch through NVOS, not through the NVSwitch BMC'",
+    "source.md line 284 (user): one arrow out of the OOB LAN that splits in exactly one spot into three things",
+    "source.md 'Fixed constraints' (exclusion of paid software, physical reach vs controller API, the single OOB trunk, NVOS hosting NMX-C/T, no invented deploys dependency, host residency, qualify uncertain claims)"
+  ],
+  "abbreviations": [
+    {
+      "text": "Redfish shelf",
+      "full": "Redfish over HTTPS to the power-shelf controllers",
+      "why": "a duplicate 'Redfish/HTTPS' string on a second parallel edge cost 1 ambiguous label owner (attempts/v2/01, attempts/v2/02)"
+    },
+    {
+      "text": "physical reach",
+      "full": "the physical OOB LAN drop that reaches the device, distinct from any controller API call",
+      "why": "one trunk label carries the reach distinction for all three destinations"
+    },
+    {
+      "text": "trunk corridor target NVSwitch BMC + branches Compute BMC and Power shelf",
+      "full": "OOB LAN -> {compute BMC, NVSwitch BMC, power shelf}",
+      "why": "a trunk has one corridor target and up to two branch destinations; which of the three is the corridor target is a rendering choice, not a source ordering"
+    }
+  ],
+  "deliberate_drops": [
+    {
+      "fact": "oob -> nvos",
+      "reason": "the source's own reach list for the OOB rail (BMCs, power-shelf controllers, CDU, PDUs) never includes NVOS, and the line-283 correction puts NVOS behind nv-rms (NVUE REST) rather than on the rail; the user also pinned the trunk to three destinations. Keeping it would have added a fourth arrow out of the OOB LAN - exactly the 'mixed-up arrows' the user rejected."
+    },
+    {
+      "fact": "nv-rms -> NVSwitch BMC (direct API edge)",
+      "reason": "line 283 states a direct edge to each device class in one sentence and then corrects it in the next ('through NVOS, not through the NVSwitch BMC'). Drawing both would be a contradiction and also cost 1 ambiguous label owner (attempts/v2/01, /02). The NVSwitch BMC stays visible in v1 as an OOB endpoint (power/serial)."
+    },
+    {
+      "fact": "18 compute tray BMCs count",
+      "reason": "count suffix pushed the trunk view past the 77-column target; one node represents the class (see meaning_ledger)"
+    },
+    {
+      "fact": "CDU controller and PDUs on the OOB rail",
+      "reason": "would break the required three-destination split"
+    },
+    {
+      "fact": "SSH/SFTP southbound path to the NVSwitch trays",
+      "reason": "same tray, same controller, no distinct relation; NVUE REST carries the label"
+    },
+    {
+      "fact": "Pipeline 'traffic-carrying fabrics' (front-end, scale-out) as nodes",
+      "reason": "the source names them only to say the OOB rail does not carry their traffic; drawing them would invent topology"
+    },
+    {
+      "fact": "Mission Control, UFM, NetQ, BCM, NGC gated images",
+      "reason": "paid-only, excluded by the source's fixed constraint"
+    },
+    {
+      "fact": "Slurm",
+      "reason": "source says it added no distinct edge"
+    }
+  ],
+  "known_defects": [
+    {
+      "view": "v1",
+      "defect": "trunks line reports 2 junctions, not 1",
+      "evidence": "evidence/v1/check.txt: 'trunks: oob_rail from oob to bmc_s, 2 branches, 2 junctions' vs the round-05 expectation of a single split point",
+      "explanation": "the single-split hub (try_hub) does not fit this arrangement and falls back to one tap per branch; the capture shows the two taps adjacent (evidence/v1/v1-text.txt row 33: '...\u252c\u2534\u2500\u25b6...'), so it reads as one fork, but the check counts two",
+      "why_not_fixed": "the arrangements whose --check would report 1 junction (trunk to = Compute BMC, or to = Power shelf) either carry 3-14 bridges or a shared-run warning; the to=Compute BMC arrangement was found only in offline 77x47 dumps after the third checked candidate for v1 and the per-view budget (3) forbade a fourth check. Alternative probe preserved: probes/v1-alt-trunk-to-bmc_c.json + probes/v1-alt-trunk-to-bmc_c-dump.txt, permutation table in probes/v1-trunk-permutations.txt"
+    },
+    {
+      "view": "v3",
+      "defect": "1 bridge: the rms -> NMX-C/T gRPC edge crosses the rms -> NVOS NVUE REST run",
+      "evidence": "evidence/v3/check.txt 'crossings: 1 bridges, 0 touching bends'; the crossing glyph is visible in evidence/v3/v3-text.txt row 23",
+      "explanation": "a long edge (rank 0 -> rank 2) must pass the rank-1 column; lr was probed (probes/v3-lr-dump.txt) and also kept 1 bridge with a more tangled path",
+      "why_not_fixed": "a third candidate was not needed to remove a non-warning crossing; no relationship was dropped to hide it"
+    },
+    {
+      "view": "v1",
+      "defect": "group membership is colour-only; group names are not drawn in the pane",
+      "evidence": "evidence/v1/v1-text.txt shows no group block titles; only the --check 'groups:' line and the ANSI border hues carry membership",
+      "explanation": "the frozen renderer colours grouped nodes by a hash of the group name but draws no bordered block with the group name; the candidate skill's Step 7 describes bordered blocks, so this is a skill/renderer mismatch",
+      "why_not_fixed": "renderer behaviour, not a spec choice; residency is carried in node labels instead where it matters ('nv-rms', 'NVOS (tray)', 'DCGM (host)')"
+    },
+    {
+      "view": "v2",
+      "defect": "the power-shelf API label is 'Redfish shelf' rather than 'Redfish/HTTPS'",
+      "evidence": "attempts/v2/01-check.txt and 02-check.txt show the duplicate 'Redfish/HTTPS' label costing 1 ambiguous owner",
+      "explanation": "abbreviation recorded in abbreviations; the protocol is still named (Redfish), the transport suffix is shared with the compute-BMC edge"
+    }
+  ],
+  "blockers": [
+    {
+      "blocker": "caption/legend capability absent",
+      "detail": "the renderer has no title, caption or key field, so the view titles in this file ('off-rack management on the OOB rail', etc.) exist only in the bundle, never in the pane; nothing pretends otherwise in the diagram"
+    },
+    {
+      "blocker": "group-name blocks",
+      "detail": "the candidate skill says groups draw as bordered blocks with a name; the frozen renderer draws colour families only (see known_defects). Residency is therefore labelled per node instead of by block title."
+    },
+    {
+      "blocker": "single-split hub infeasible for this trunk arrangement",
+      "detail": "one OOB trunk whose three destinations spread across one rank does not find a hub cell that can carry both arms (or does so only with a shared run); recorded in known_defects v1 rather than hidden"
+    }
+  ],
+  "capture_geometry": {
+    "target": "77x47 at 100% zoom",
+    "pane_measured": "83x51 @100% (header token in every evidence/<view>/<view>-text.txt line 1)",
+    "why_not_exact": "the harness splits half of the calling pane, and the calling pane is this worker's own tab (170x53); herdr clamps split ratios to 0.1-0.9, so a 158-wide calling pane (needed for a 79-wide half) cannot be created. The measured pane is larger than the target on both axes.",
+    "target_fit_proof": "pinned direct dumps at COLUMNS=77 LINES=47 exist per view (evidence/<view>/<view>-target-77x47-frames.txt): header '77x47 @100%', 3 timestamped frames, no overflow banner, whole graph inside the frame",
+    "extent_at_target": {
+      "v1": "74x24",
+      "v2": "48x19",
+      "v3": "34x24",
+      "v4": "49x40"
+    }
+  },
+  "cleanup": {
+    "panes": "every evidence capture closed its own pane; each manifest.json records cleanup=confirmed_closed",
+    "stray_panes_closed": [
+      "w7E:pFX",
+      "w7E:pG2",
+      "w7E:pG3",
+      "w7E:pG5",
+      "w7E:pG6"
+    ],
+    "note": "the first split probe resolved '--current' to another worker's pane (w7E:pFX) before HERDR_PANE_ID was confirmed to be this worker's pane; that pane was closed immediately and nothing was captured in it"
+  },
+  "commands": [
+    "shasum -a 256 docs/visualize-eval/rounds/05/SKILL.md /tmp/visualize-eval/round-05/bin/rataflow-view",
+    "/tmp/visualize-eval/round-05/bin/rataflow-view --check specs/<view>.json",
+    "COLUMNS=77 LINES=47 /tmp/visualize-eval/round-05/bin/rataflow-view --frames 3 specs/<view>.json",
+    "scripts/viz-evidence.sh --spec specs/<view>.json --bin /tmp/visualize-eval/round-05/bin/rataflow-view --out evidence/<view> --label <view> --frames 5",
+    "scripts/viz-validate.py evidence/<view> --require-select --require-frames --attempts attempts.json"
+  ],
+  "validator": {
+    "attempts": "attempts.json",
+    "outputs": {
+      "v1": "validation/v1.txt",
+      "v2": "validation/v2.txt",
+      "v3": "validation/v3.txt",
+      "v4": "validation/v4.txt"
+    },
+    "verdict": {
+      "v1": "all checks passed",
+      "v2": "all checks passed",
+      "v3": "all checks passed",
+      "v4": "all checks passed",
+      "note": "scripts/viz-validate.py <bundle> --require-select --require-frames --attempts attempts.json; the pinned 77x47 dump satisfies viewport_matches_target because generation.json names each view's final spec"
+    },
+    "target_dumps": "evidence/target-dumps.sha256"
+  },
+  "honesty": {
+    "not_claimed": "no independent visual approval; no reviewer subagent was spawned (the captain starts the Sol judge separately); no claim of green status",
+    "static": "no dots anywhere: the source never animates, and no spec field requests flow",
+    "routes_line": "the frozen binary emits no 'routes:' line (route economy was dropped with the round-04 revert); its absence is expected and is not reported as a defect"
+  }
+}

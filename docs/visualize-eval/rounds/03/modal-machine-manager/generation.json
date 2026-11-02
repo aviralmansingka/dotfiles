@@ -1,0 +1,894 @@
+{
+  "case_id": "modal-machine-manager",
+  "round": "03",
+  "generator": {
+    "kind": "fresh generator subagent (round 03)",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "note": "DeepSeek generator model by design; no judge was spawned from this session."
+  },
+  "candidate_skill": {
+    "path": "docs/visualize-eval/rounds/03/SKILL.md",
+    "sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c"
+  },
+  "renderer": {
+    "path": "/tmp/visualize-eval/round-03/bin/rataflow-view",
+    "sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7"
+  },
+  "case_source": {
+    "path": "docs/visualize-eval/cases/modal-machine-manager/source.md",
+    "pointers": [
+      "original chat line 5 (user: 'the architecture of the machine manager')",
+      "original chat line 31 (assistant: the three path groups)",
+      "original graph write: line 33, call chatcmpl-tool-85a9e36d8d24d6be",
+      "human corrections: lines 50, 64, 148, 217 (dot behaviour, fit on one screen)"
+    ]
+  },
+  "views": [
+    {
+      "view": "v1",
+      "purpose": "Request path: humans+mmctl / control plane -> webapi + private gRPC -> River queue -> provider registry -> bare-metal providers",
+      "spec": "specs/v1-attempt2.json",
+      "spec_sha256": "7846cd75b300d13052f30651bc7dc50bc8f5aa17be829ccd99a9bfe650386368",
+      "evidence_dir": "evidence/v1",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "check": "evidence/v1/check.txt",
+      "frames": "evidence/v1/v1-frames.txt",
+      "frames_ansi": "evidence/v1/v1-frames.ansi",
+      "frame_count_requested": 21,
+      "frame_step_ms": 100,
+      "frames_present_in_capture": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "measured_size": {
+        "cols": 77,
+        "rows": 47,
+        "source": "app header token; manifest.pane_cols is null and pane_rows is 47"
+      },
+      "viewport_line": "77x47 @100%",
+      "check_lines": {
+        "extent": "extent=64x40 cells",
+        "crossings": "crossings: 0",
+        "labels": "labels: 6/6 placed, 0 on route cells, 0 skipped",
+        "groups": "groups: humans(1) control(2) api(1) jobs(1) provision(2)",
+        "dots": "dots: 6 single-dot routes, 0 periodic routes, 0 violations, 6 synchronized at 2000ms",
+        "origins": "origins: 6/6 routes start at their arrow origin"
+      },
+      "crossings": 0,
+      "validator": {
+        "output_file": "validator-v1.txt",
+        "verdict": "all checks passed"
+      },
+      "pane_id": "w7E:pBG",
+      "cleanup": "confirmed_closed",
+      "manifest": "evidence/v1/manifest.json"
+    },
+    {
+      "view": "v2",
+      "purpose": "Provisioning handoff, iPXE book boot, and the fast heartbeat path: providers -> machines <-> boot server, machine-agent -> public gRPC -> Postgres",
+      "spec": "specs/v2-attempt3.json",
+      "spec_sha256": "a35c41b69f31da13aef1256e0c798d9a6c9e432ba3b09ec64bcb2a00b7d2b0f1",
+      "evidence_dir": "evidence/v2",
+      "text": "evidence/v2/v2-text.txt",
+      "ansi": "evidence/v2/v2-ansi.ansi",
+      "selected_ansi": "evidence/v2/v2-selected.ansi",
+      "check": "evidence/v2/check.txt",
+      "frames": "evidence/v2/v2-frames.txt",
+      "frames_ansi": "evidence/v2/v2-frames.ansi",
+      "frame_count_requested": 21,
+      "frame_step_ms": 100,
+      "frames_present_in_capture": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "measured_size": {
+        "cols": 77,
+        "rows": 47,
+        "source": "app header token; manifest.pane_cols is null and pane_rows is 47"
+      },
+      "viewport_line": "77x47 @100%",
+      "check_lines": {
+        "extent": "extent=40x41 cells",
+        "crossings": "crossings: 0",
+        "labels": "labels: 6/6 placed, 0 on route cells, 0 skipped",
+        "groups": "groups: provision(1) machines(3) api(1) state(1)",
+        "dots": "dots: 6 single-dot routes, 0 periodic routes, 0 violations, 6 synchronized at 2000ms",
+        "origins": "origins: 6/6 routes start at their arrow origin"
+      },
+      "crossings": 0,
+      "validator": {
+        "output_file": "validator-v2.txt",
+        "verdict": "all checks passed"
+      },
+      "pane_id": "w7E:pBH",
+      "cleanup": "confirmed_closed",
+      "manifest": "evidence/v2/manifest.json"
+    },
+    {
+      "view": "v3",
+      "purpose": "Slow ops path: River jobs -> SSH/BMC audits, diagnostics -> janitor -> webapi -> Slack, and S3 image/diagnostic traffic",
+      "spec": "specs/v3-attempt3.json",
+      "spec_sha256": "603a0d518e9c6950b59976a1d9005394ab8e69c0f6e54a1e469256764fc6f46a",
+      "evidence_dir": "evidence/v3",
+      "text": "evidence/v3/v3-text.txt",
+      "ansi": "evidence/v3/v3-ansi.ansi",
+      "selected_ansi": "evidence/v3/v3-selected.ansi",
+      "check": "evidence/v3/check.txt",
+      "frames": "evidence/v3/v3-frames.txt",
+      "frames_ansi": "evidence/v3/v3-frames.ansi",
+      "frame_count_requested": 21,
+      "frame_step_ms": 100,
+      "frames_present_in_capture": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "measured_size": {
+        "cols": 77,
+        "rows": 47,
+        "source": "app header token; manifest.pane_cols is null and pane_rows is 47"
+      },
+      "viewport_line": "77x47 @100%",
+      "check_lines": {
+        "extent": "extent=42x32 cells",
+        "crossings": "crossings: 0",
+        "labels": "labels: 7/7 placed, 0 on route cells, 0 skipped",
+        "groups": "groups: jobs(2) machines(2) state(1) control(1) humans(1)",
+        "dots": "dots: 7 single-dot routes, 0 periodic routes, 0 violations, 7 synchronized at 2000ms",
+        "origins": "origins: 7/7 routes start at their arrow origin"
+      },
+      "crossings": 0,
+      "validator": {
+        "output_file": "validator-v3.txt",
+        "verdict": "all checks passed"
+      },
+      "pane_id": "w7E:pBK",
+      "cleanup": "confirmed_closed",
+      "manifest": "evidence/v3/manifest.json"
+    },
+    {
+      "view": "v4",
+      "purpose": "State writers and the reconcile loop: cluster reconcile loop -> providers + Postgres, private/public gRPC and River -> Postgres",
+      "spec": "specs/v4-attempt2.json",
+      "spec_sha256": "25a1971517889b3be13c45cc0e6e65a71d971976895ffbb0aae3f3e3da48f237",
+      "evidence_dir": "evidence/v4",
+      "text": "evidence/v4/v4-text.txt",
+      "ansi": "evidence/v4/v4-ansi.ansi",
+      "selected_ansi": "evidence/v4/v4-selected.ansi",
+      "check": "evidence/v4/check.txt",
+      "frames": "evidence/v4/v4-frames.txt",
+      "frames_ansi": "evidence/v4/v4-frames.ansi",
+      "frame_count_requested": 21,
+      "frame_step_ms": 100,
+      "frames_present_in_capture": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "measured_size": {
+        "cols": 77,
+        "rows": 47,
+        "source": "app header token; manifest.pane_cols is null and pane_rows is 47"
+      },
+      "viewport_line": "77x47 @100%",
+      "check_lines": {
+        "extent": "extent=69x23 cells",
+        "crossings": "crossings: 1",
+        "labels": "labels: 5/5 placed, 0 on route cells, 0 skipped",
+        "groups": "groups: jobs(2) api(2) provision(1) state(1)",
+        "dots": "dots: 5 single-dot routes, 0 periodic routes, 0 violations, 5 synchronized at 2000ms",
+        "origins": "origins: 5/5 routes start at their arrow origin"
+      },
+      "crossings": 1,
+      "validator": {
+        "output_file": "validator-v4.txt",
+        "verdict": "all checks passed"
+      },
+      "pane_id": "w7E:pBM",
+      "cleanup": "confirmed_closed",
+      "manifest": "evidence/v4/manifest.json"
+    }
+  ],
+  "coverage_map": {
+    "v1": "e1 e2 e3 e4 e5 e6 \u2014 the provisioning request chain (web, cp, wapi, pgrpc, q, reg, prov)",
+    "v2": "e7 e8 e9 e10 e11 e12 \u2014 provisioning handoff, iPXE boot both directions, heartbeat (prov, mch, boot, agent, pub, db)",
+    "v3": "e15 e16 e17 e18 e19 e20 e21 \u2014 slow ops path, diagnostics, S3 traffic (q, ssh, jan, mch, s3, wapi, slack)",
+    "v4": "e13 e14 e22 e23 (+ e12 restated) \u2014 state writers and reconcile (rec, pgrpc, q, pub, prov, db)",
+    "all_23_edges": "e1-e23 each appear in at least one view; e12 appears in v2 and v4",
+    "all_17_nodes": "web v1; cp v1; wapi v1,v3; pgrpc v1,v4; q v1,v3,v4; reg v1; prov v1,v2,v4; mch v2,v3; boot v2; agent v2; pub v2,v4; db v2,v4; ssh v3; jan v3; s3 v3; slack v3; rec v4"
+  },
+  "groups": {
+    "humans": [
+      "web",
+      "slack"
+    ],
+    "control": [
+      "cp",
+      "wapi"
+    ],
+    "api": [
+      "pgrpc",
+      "pub"
+    ],
+    "jobs": [
+      "q",
+      "rec",
+      "jan"
+    ],
+    "provision": [
+      "reg",
+      "prov"
+    ],
+    "machines": [
+      "mch",
+      "agent",
+      "boot",
+      "ssh"
+    ],
+    "state": [
+      "db",
+      "s3"
+    ],
+    "note": "Groups follow the source's own concepts (humans, control surfaces, gRPC transports, async jobs/automation, provider provisioning, bare-metal plant, state stores). No node was grouped by row or column; every node carries an honest group."
+  },
+  "meaning_ledger": [
+    {
+      "fact": "Modal control plane (node cp)",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v1"
+    },
+    {
+      "fact": "humans + mmctl (node web)",
+      "kind": "identifier/role",
+      "fate": "drawn",
+      "where": "v1"
+    },
+    {
+      "fact": "private gRPC (node pgrpc)",
+      "kind": "protocol",
+      "fate": "drawn",
+      "where": "v1, v4"
+    },
+    {
+      "fact": "webapi server (node wapi)",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v1, v3"
+    },
+    {
+      "fact": "public gRPC (node pub)",
+      "kind": "protocol",
+      "fate": "drawn",
+      "where": "v2, v4"
+    },
+    {
+      "fact": "boot server (node boot)",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v2"
+    },
+    {
+      "fact": "River job queue (node q)",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v1, v3, v4"
+    },
+    {
+      "fact": "cluster reconcile loop (node rec)",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v4"
+    },
+    {
+      "fact": "SSH + BMC ops (node ssh)",
+      "kind": "role/access path",
+      "fate": "drawn",
+      "where": "v3"
+    },
+    {
+      "fact": "Postgres (node db)",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v2, v4"
+    },
+    {
+      "fact": "S3 object store (node s3)",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v3"
+    },
+    {
+      "fact": "provider registry (node reg)",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v1"
+    },
+    {
+      "fact": "bare-metal providers (node prov)",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v1, v2, v4"
+    },
+    {
+      "fact": "bare-metal machines (node mch)",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v2, v3"
+    },
+    {
+      "fact": "machine-agent (node agent)",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v2"
+    },
+    {
+      "fact": "janitor app (node jan)",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v3"
+    },
+    {
+      "fact": "Slack (node slack)",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v3"
+    },
+    {
+      "fact": "Request path is the provisioning path: control plane -> private gRPC -> River jobs -> provider registry -> bare-metal providers -> machines",
+      "kind": "path",
+      "fate": "drawn",
+      "where": "v1 chain, v2 providers->machines"
+    },
+    {
+      "fact": "Machines iPXE-boot from the boot server",
+      "kind": "path/protocol",
+      "fate": "drawn",
+      "where": "v2"
+    },
+    {
+      "fact": "Machines pull boot images from S3",
+      "kind": "path/payload",
+      "fate": "abbreviated",
+      "where": "v3, label 'boot image' (pull is carried by the arrow direction)"
+    },
+    {
+      "fact": "Heartbeat path (fastest): machine-agent -> public gRPC -> Postgres",
+      "kind": "path",
+      "fate": "drawn",
+      "where": "v2"
+    },
+    {
+      "fact": "Ops path (slow): River jobs SSH into machines for audits",
+      "kind": "verb/path",
+      "fate": "abbreviated",
+      "where": "v3, label 'audit + verify' (source label 'audit / verify reimage')"
+    },
+    {
+      "fact": "Jobs post diagnostics to the janitor app",
+      "kind": "verb/payload",
+      "fate": "drawn",
+      "where": "v3, label 'diagnostic events'"
+    },
+    {
+      "fact": "Janitor proposes actions back through webapi",
+      "kind": "verb",
+      "fate": "drawn",
+      "where": "v3, label 'proposed actions'"
+    },
+    {
+      "fact": "webapi confirms via Slack",
+      "kind": "verb",
+      "fate": "drawn",
+      "where": "v3, label 'confirm + alerts'"
+    },
+    {
+      "fact": "Reconcile loop syncs gcore clusters every minute",
+      "kind": "verb + rate",
+      "fate": "drawn",
+      "where": "v4, label 'gcore sync, 1 min'"
+    },
+    {
+      "fact": "Provider registry and machine-agent are groupable but must not be dropped",
+      "kind": "constraint",
+      "fate": "drawn",
+      "where": "own nodes in v1 and v2, each in its own group family (provision / machines)"
+    },
+    {
+      "fact": "Slow, sparse dots: one live dot per line",
+      "kind": "presentation",
+      "fate": "drawn",
+      "where": "every edge dots:1 + flow:true, synchronized 2000ms"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "cp",
+      "to": "pgrpc",
+      "verb_tech": "create / terminate / repair",
+      "label_owner": "e1",
+      "view": "v1"
+    },
+    {
+      "id": "e2",
+      "from": "web",
+      "to": "wapi",
+      "verb_tech": "http",
+      "label_owner": "e2",
+      "view": "v1"
+    },
+    {
+      "id": "e3",
+      "from": "pgrpc",
+      "to": "q",
+      "verb_tech": "enqueue job",
+      "label_owner": "e3",
+      "view": "v1"
+    },
+    {
+      "id": "e4",
+      "from": "wapi",
+      "to": "q",
+      "verb_tech": "reinstall / reprovision",
+      "label_owner": "e4",
+      "view": "v1"
+    },
+    {
+      "id": "e5",
+      "from": "q",
+      "to": "reg",
+      "verb_tech": "provision job",
+      "label_owner": "e5",
+      "view": "v1"
+    },
+    {
+      "id": "e6",
+      "from": "reg",
+      "to": "prov",
+      "verb_tech": "provider API",
+      "label_owner": "e6",
+      "view": "v1"
+    },
+    {
+      "id": "e7",
+      "from": "prov",
+      "to": "mch",
+      "verb_tech": "allocate instance",
+      "label_owner": "e7",
+      "view": "v2"
+    },
+    {
+      "id": "e8",
+      "from": "mch",
+      "to": "boot",
+      "verb_tech": "iPXE request",
+      "label_owner": "e8",
+      "view": "v2"
+    },
+    {
+      "id": "e9",
+      "from": "boot",
+      "to": "mch",
+      "verb_tech": "boot.ipxe + S3 args",
+      "label_owner": "e9",
+      "view": "v2"
+    },
+    {
+      "id": "e10",
+      "from": "mch",
+      "to": "agent",
+      "verb_tech": "runs on host",
+      "label_owner": "e10",
+      "view": "v2"
+    },
+    {
+      "id": "e11",
+      "from": "agent",
+      "to": "pub",
+      "verb_tech": "register + heartbeat",
+      "label_owner": "e11",
+      "view": "v2"
+    },
+    {
+      "id": "e12",
+      "from": "pub",
+      "to": "db",
+      "verb_tech": "machine state",
+      "label_owner": "e12",
+      "view": "v2, v4"
+    },
+    {
+      "id": "e13",
+      "from": "pgrpc",
+      "to": "db",
+      "verb_tech": "machine rows",
+      "label_owner": "e13",
+      "view": "v4"
+    },
+    {
+      "id": "e14",
+      "from": "q",
+      "to": "db",
+      "verb_tech": "job rows",
+      "label_owner": "e14",
+      "view": "v4"
+    },
+    {
+      "id": "e15",
+      "from": "q",
+      "to": "ssh",
+      "verb_tech": "audit / verify reimage",
+      "label_owner": "e15",
+      "view": "v3 (label 'audit + verify')"
+    },
+    {
+      "id": "e16",
+      "from": "ssh",
+      "to": "mch",
+      "verb_tech": "run machine-audit",
+      "label_owner": "e16",
+      "view": "v3"
+    },
+    {
+      "id": "e17",
+      "from": "mch",
+      "to": "s3",
+      "verb_tech": "pull boot image",
+      "label_owner": "e17",
+      "view": "v3 (label 'boot image')"
+    },
+    {
+      "id": "e18",
+      "from": "q",
+      "to": "s3",
+      "verb_tech": "diagnose uploads",
+      "label_owner": "e18",
+      "view": "v3"
+    },
+    {
+      "id": "e19",
+      "from": "q",
+      "to": "jan",
+      "verb_tech": "diagnostic events",
+      "label_owner": "e19",
+      "view": "v3"
+    },
+    {
+      "id": "e20",
+      "from": "jan",
+      "to": "wapi",
+      "verb_tech": "proposed actions",
+      "label_owner": "e20",
+      "view": "v3"
+    },
+    {
+      "id": "e21",
+      "from": "wapi",
+      "to": "slack",
+      "verb_tech": "confirm + alerts",
+      "label_owner": "e21",
+      "view": "v3"
+    },
+    {
+      "id": "e22",
+      "from": "rec",
+      "to": "prov",
+      "verb_tech": "gcore sync, 1 min",
+      "label_owner": "e22",
+      "view": "v4"
+    },
+    {
+      "id": "e23",
+      "from": "rec",
+      "to": "db",
+      "verb_tech": "cluster state",
+      "label_owner": "e23",
+      "view": "v4"
+    }
+  ],
+  "relationship_to_view_relation": [
+    {
+      "original": "e1: cp -> pgrpc (create / terminate / repair)",
+      "visible_as": "v1: edge cp->pgrpc labelled by e1"
+    },
+    {
+      "original": "e2: web -> wapi (http)",
+      "visible_as": "v1: edge web->wapi labelled by e2"
+    },
+    {
+      "original": "e3: pgrpc -> q (enqueue job)",
+      "visible_as": "v1: edge pgrpc->q labelled by e3"
+    },
+    {
+      "original": "e4: wapi -> q (reinstall / reprovision)",
+      "visible_as": "v1: edge wapi->q labelled by e4"
+    },
+    {
+      "original": "e5: q -> reg (provision job)",
+      "visible_as": "v1: edge q->reg labelled by e5"
+    },
+    {
+      "original": "e6: reg -> prov (provider API)",
+      "visible_as": "v1: edge reg->prov labelled by e6"
+    },
+    {
+      "original": "e7: prov -> mch (allocate instance)",
+      "visible_as": "v2: edge prov->mch labelled by e7"
+    },
+    {
+      "original": "e8: mch -> boot (iPXE request)",
+      "visible_as": "v2: edge mch->boot labelled by e8"
+    },
+    {
+      "original": "e9: boot -> mch (boot.ipxe + S3 args)",
+      "visible_as": "v2: edge boot->mch labelled by e9"
+    },
+    {
+      "original": "e10: mch -> agent (runs on host)",
+      "visible_as": "v2: edge mch->agent labelled by e10"
+    },
+    {
+      "original": "e11: agent -> pub (register + heartbeat)",
+      "visible_as": "v2: edge agent->pub labelled by e11"
+    },
+    {
+      "original": "e12: pub -> db (machine state)",
+      "visible_as": "v2, v4: edge pub->db labelled by e12"
+    },
+    {
+      "original": "e13: pgrpc -> db (machine rows)",
+      "visible_as": "v4: edge pgrpc->db labelled by e13"
+    },
+    {
+      "original": "e14: q -> db (job rows)",
+      "visible_as": "v4: edge q->db labelled by e14"
+    },
+    {
+      "original": "e15: q -> ssh (audit / verify reimage)",
+      "visible_as": "v3 (label 'audit + verify'): edge q->ssh labelled by e15"
+    },
+    {
+      "original": "e16: ssh -> mch (run machine-audit)",
+      "visible_as": "v3: edge ssh->mch labelled by e16"
+    },
+    {
+      "original": "e17: mch -> s3 (pull boot image)",
+      "visible_as": "v3 (label 'boot image'): edge mch->s3 labelled by e17"
+    },
+    {
+      "original": "e18: q -> s3 (diagnose uploads)",
+      "visible_as": "v3: edge q->s3 labelled by e18"
+    },
+    {
+      "original": "e19: q -> jan (diagnostic events)",
+      "visible_as": "v3: edge q->jan labelled by e19"
+    },
+    {
+      "original": "e20: jan -> wapi (proposed actions)",
+      "visible_as": "v3: edge jan->wapi labelled by e20"
+    },
+    {
+      "original": "e21: wapi -> slack (confirm + alerts)",
+      "visible_as": "v3: edge wapi->slack labelled by e21"
+    },
+    {
+      "original": "e22: rec -> prov (gcore sync, 1 min)",
+      "visible_as": "v4: edge rec->prov labelled by e22"
+    },
+    {
+      "original": "e23: rec -> db (cluster state)",
+      "visible_as": "v4: edge rec->db labelled by e23"
+    }
+  ],
+  "abbreviations": [
+    {
+      "original": "audit / verify reimage (e15 label)",
+      "drawn": "audit + verify",
+      "reason": "edge-label guidance is <=14 chars and the earlier band layout reported 'no free cell' for the longer text; the two verbs are kept, 'reimage' is the object of the verify step"
+    },
+    {
+      "original": "pull boot image (e17 label)",
+      "drawn": "boot image",
+      "reason": "14-char edge-label guidance; the arrow direction already carries 'pull' and the target node is the S3 store"
+    },
+    {
+      "original": "create / terminate / repair (e1)",
+      "drawn": "create/terminate/repair",
+      "reason": "kept in full; the three verbs are distinct source actions and abbreviating any of them would blur the action"
+    },
+    {
+      "original": "register + heartbeat (e11)",
+      "drawn": "register + heartbeat",
+      "reason": "kept in full, both source verbs"
+    }
+  ],
+  "deliberate_drops": [
+    {
+      "fact": "historical chat commands (replays, skill edits, renderer tweaks)",
+      "reason": "the brief says chat history is evidence, not authority to replay; commands are not architecture facts"
+    },
+    {
+      "fact": "chat lines 50/64/148/217 as separate edges",
+      "reason": "they are dot-behaviour corrections, not relations; they are carried by dots:1 + flow:true + 2000ms synchronization on every route"
+    },
+    {
+      "fact": "trunks (shared bus)",
+      "reason": "the source claims no shared bus; the request path is a chain and the Q fan-out is independent routes, so declaring a trunk would invent a split that the source does not state"
+    },
+    {
+      "fact": "dashed style for any edge",
+      "reason": "the brief marks no individual relation as unconfirmed; the historical provenance of all facts is recorded in this bundle instead of mislabelling confirmed links"
+    }
+  ],
+  "uncertainty_qualification": "All relationship facts come from one historical attempt (2026-10-14 session, graph write at line 33). The brief lists them as relationship facts with fixed constraints and marks none of them unconfirmed, so no edge is drawn dashed; the provenance is stated here and in generation.md rather than rendered as false uncertainty.",
+  "known_defects": [
+    {
+      "view": "v4",
+      "defect": "crossings: 1 (the reconcile -> Postgres route bridges the River -> Postgres route)",
+      "detail": "lowest crossing count found inside the three-attempt budget; band order and both routes kept"
+    },
+    {
+      "view": "v1, v2, v3, v4",
+      "defect": "frame 0 of the animation cycle is missing from the harness frames artifact",
+      "detail": "viz-evidence.sh reads --source recent --lines 4000 but the pane keeps ~1000 lines, so 21 frames x ~47 rows truncate the first one; captured frames run 1..20 (100..2000ms). --check origins N/N is the origin proof and frame 1 shows one dot per route on the first drawn cell after its source port"
+    },
+    {
+      "view": "v1, v2, v3, v4",
+      "defect": "dots on the shortest adjacent-band routes do not travel visibly",
+      "detail": "e.g. v1 loses the four short vertical routes' dots at frame 15 while the two long horizontal routes keep theirs until frame 20; the dot quantizes to a single cell whose glyph is then replaced by the arrowhead. --check still reports 0 dot violations and synchronization at 2000ms, so this is a legibility defect, not a rule violation; fixing it would need larger inter-band gaps the spec cannot request, and making those routes static would drop required flow"
+    },
+    {
+      "view": "all",
+      "defect": "manifest.pane_cols is null",
+      "detail": "the frozen harness's `herdr pane layout` rect probe returned no rect for these panes; pane_rows is 47 and the app header reports 77x47 @100%, which the validator accepts as the measured size and natural zoom"
+    },
+    {
+      "view": "v1",
+      "defect": "uses 40 of the 46 usable rows",
+      "detail": "extent 64x40 fits 77x47 and the viewer reports no overflow, but the graph is vertically dense; no further layer reduction is possible without splitting the chain again"
+    }
+  ],
+  "blockers": [],
+  "capability_preflight": {
+    "flow": "present (flow: true, shared 2000ms clock)",
+    "dots": "present (dots: 1 per route)",
+    "group": "present (7 semantic families)",
+    "layers": "present (explicit band placement used in v2, v3, v4)",
+    "style_dashed": "available, deliberately unused (see deliberate_drops)",
+    "trunks": "available, deliberately unused (no real shared bus in the source)"
+  },
+  "cleanup": {
+    "panes": [
+      {
+        "view": "v1",
+        "pane_id": "w7E:pBG",
+        "status": "confirmed_closed"
+      },
+      {
+        "view": "v2",
+        "pane_id": "w7E:pBH",
+        "status": "confirmed_closed"
+      },
+      {
+        "view": "v3",
+        "pane_id": "w7E:pBK",
+        "status": "confirmed_closed"
+      },
+      {
+        "view": "v4",
+        "pane_id": "w7E:pBM",
+        "status": "confirmed_closed"
+      }
+    ],
+    "verification": "herdr pane get on each pane id fails after the run; no pane left open",
+    "leftover_state": "none"
+  },
+  "attempts_file": "attempts.json",
+  "supplementary_checks": {
+    "path": "checks/",
+    "note": "checks/<view>-frames-full.txt are direct `rataflow-view --frames 21 --step-ms 100` runs kept as supplementary frame dumps. They render at the binary's own 80x24 default (not a pane), report 'graph overflows', and are therefore NOT evidence of layout; the pane captures under evidence/ are authoritative and the validator only reads those."
+  },
+  "validator": {
+    "command": "python3 scripts/viz-validate.py docs/visualize-eval/rounds/03/modal-machine-manager/evidence/<view> --require-select --require-frames --attempts docs/visualize-eval/rounds/03/modal-machine-manager/attempts.json",
+    "per_view": [
+      {
+        "view": "v1",
+        "output_file": "validator-v1.txt",
+        "verdict": "all checks passed (28/28)",
+        "failing_checks": []
+      },
+      {
+        "view": "v2",
+        "output_file": "validator-v2.txt",
+        "verdict": "all checks passed (28/28)",
+        "failing_checks": []
+      },
+      {
+        "view": "v3",
+        "output_file": "validator-v3.txt",
+        "verdict": "all checks passed (28/28)",
+        "failing_checks": []
+      },
+      {
+        "view": "v4",
+        "output_file": "validator-v4.txt",
+        "verdict": "all checks passed (28/28)",
+        "failing_checks": []
+      }
+    ]
+  },
+  "status": "generated for independent Sol judging; this bundle does not mark itself green and no reviewer was spawned from this session."
+}

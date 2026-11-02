@@ -1,0 +1,36 @@
+warning: edge e1 label "events+mg RPC" had no clear cell; shorten it or add routing space
+viewport: 77x47 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 77x47 @100% · v1-a2.json · 3 nodes · 3 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                      task+ctrl RPC
+                                              ╭─────────────╮
+                                           ╭─▶│modal-runtime│
+                                           │  │             │
+                                           │  ╰─────────────╯
+                          HTTP over UDS    │   │ │
+                 ╭─────────────────────────⌒───╯ │
+                 │                         │   ╭─╯
+                 ▼                         │   ▼
+                ╭────────────╮             │  ╭────────────╮
+                │modal-daemon│             ╰──│modal-worker│
+                │            │                │            │
+                ╰────────────╯                ╰────────────╯
+
+
+

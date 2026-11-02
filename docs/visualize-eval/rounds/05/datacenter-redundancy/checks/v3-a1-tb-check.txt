@@ -1,0 +1,1 @@
+rataflow-view: no obstacle-safe route for sp2 -> leaf1, leaf2 -> rack2; increase node/layer spacing

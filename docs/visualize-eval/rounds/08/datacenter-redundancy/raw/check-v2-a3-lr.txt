@@ -1,0 +1,12 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=6 edges=8 flows=0 direction=lr theme=gruvbox
+layers=5 (6 pinned, within-rank order automatic)
+pins: 6 pinned, 0 conflict(s)
+extent=80x19 cells
+crossings: 2 bridges, 2 touching bends
+labels: 8/8 placed, 0 on route cells, 0 skipped, 0 ambiguous owners
+groups: core(2) firewall(2) border-leaf(2)
+trunks:
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

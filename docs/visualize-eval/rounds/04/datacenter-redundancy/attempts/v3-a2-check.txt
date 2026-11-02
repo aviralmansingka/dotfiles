@@ -1,0 +1,14 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=8 edges=8 flows=0 direction=tb theme=gruvbox
+layers=3 (explicit placement, sugiyama skipped)
+extent=65x27 cells
+crossings: 6 bridges, 3 touching bends
+labels: 8/8 placed, 0 on route cells, 0 skipped, 1 ambiguous owners
+warning: 1 label(s) have an ambiguous owner: another route is as close to the label as its own edge, so a reader cannot tell which edge the label names
+groups: spine(2) edge(2) leaf(2) racks(2)
+trunks:
+routes: 8/8 near-minimal, 0 detours, 1 forced, 0 shortened
+note: route e5 (leaf2 -> rack1) runs 75 cells against a 57 cell straight stair; no obstacle-safe route is shorter, so the length is forced, not a detour
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

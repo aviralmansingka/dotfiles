@@ -1,0 +1,99 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "layers": [
+    [
+      "q"
+    ],
+    [
+      "reg"
+    ],
+    [
+      "prov"
+    ],
+    [
+      "mch"
+    ],
+    [],
+    [
+      "boot",
+      "s3"
+    ]
+  ],
+  "nodes": [
+    {
+      "id": "q",
+      "label": "River queue",
+      "group": "control"
+    },
+    {
+      "id": "reg",
+      "label": "provider registry",
+      "group": "providers"
+    },
+    {
+      "id": "prov",
+      "label": "bare-metal providers",
+      "group": "providers"
+    },
+    {
+      "id": "mch",
+      "label": "bare-metal machines",
+      "group": "host"
+    },
+    {
+      "id": "boot",
+      "label": "boot server",
+      "group": "boot"
+    },
+    {
+      "id": "s3",
+      "label": "S3 object store",
+      "group": "state"
+    }
+  ],
+  "edges": [
+    {
+      "from": "q",
+      "to": "reg",
+      "label": "provision job",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "reg",
+      "to": "prov",
+      "label": "provider API",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "prov",
+      "to": "mch",
+      "label": "allocate instance",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "mch",
+      "to": "boot",
+      "label": "iPXE request",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "boot",
+      "to": "mch",
+      "label": "boot.ipxe + S3 args",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "mch",
+      "to": "s3",
+      "label": "pull boot image",
+      "dots": 1,
+      "flow": true
+    }
+  ]
+}

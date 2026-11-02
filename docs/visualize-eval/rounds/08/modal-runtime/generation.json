@@ -1,0 +1,487 @@
+{
+  "case_id": "modal-runtime",
+  "round": "08",
+  "generator": {
+    "harness": "pi subagent worker",
+    "subagent_name": "viz-ds08-7",
+    "model": "accounts/fireworks/routers/deepseek-flash-latest",
+    "provider": "fireworks",
+    "reasoning_level": "high"
+  },
+  "candidate_skill": {
+    "path": "docs/visualize-eval/rounds/08/SKILL.md",
+    "sha256": "b1bdb4d3d38336cb7783db34da7f9f19edf80704a890de32285d9e582b4221eb"
+  },
+  "renderer": {
+    "path": "/tmp/visualize-eval/round-08/bin/rataflow-view",
+    "sha256": "ea24593b0f80c1617573eef4766f2bacaaf4315a8133a65d5331e9daec1c1f30"
+  },
+  "family": {
+    "line": "family: service-meshes",
+    "evidence": "one core (modal-runtime) fans to 2-3 neighbours and carries an anti-parallel pair (worker -> runtime 'task+ctrl RPC' / runtime -> worker 'events+mg RPC'); 8 nodes, 8 edges, no motion in the source.",
+    "recipe_applied": [
+      "declare the core first and give its fan a stable order (runtime -> worker, engine, daemon, in source order)",
+      "keep the anti-parallel pair's two directions as two labelled edges with their own ports",
+      "never merge the pair into one bidirectional arrow"
+    ]
+  },
+  "meaning_ledger": [
+    {
+      "fact": "modal-worker",
+      "kind": "identifier",
+      "fate": "drawn",
+      "view": "v1, v2"
+    },
+    {
+      "fact": "modal-runtime",
+      "kind": "identifier",
+      "fate": "drawn",
+      "view": "v1, v2, v3"
+    },
+    {
+      "fact": "Task engine",
+      "kind": "identifier",
+      "fate": "drawn",
+      "view": "v3"
+    },
+    {
+      "fact": "Container backend",
+      "kind": "identifier",
+      "fate": "drawn",
+      "view": "v3, v4"
+    },
+    {
+      "fact": "Task container",
+      "kind": "identifier",
+      "fate": "drawn",
+      "view": "v4"
+    },
+    {
+      "fact": "Filesystem + volumes",
+      "kind": "identifier",
+      "fate": "drawn",
+      "view": "v3, v4"
+    },
+    {
+      "fact": "Blobnet",
+      "kind": "identifier",
+      "fate": "drawn",
+      "view": "v4"
+    },
+    {
+      "fact": "modal-daemon",
+      "kind": "identifier",
+      "fate": "drawn",
+      "view": "v1"
+    },
+    {
+      "fact": "worker -> runtime: task input + control RPCs",
+      "kind": "protocol",
+      "fate": "abbreviated to 'task+ctrl RPC' (kept distinguishable from the daemon's UDS interface)",
+      "view": "v2"
+    },
+    {
+      "fact": "runtime -> worker: events + management RPCs",
+      "kind": "protocol",
+      "fate": "abbreviated to 'events+mg RPC'",
+      "view": "v1"
+    },
+    {
+      "fact": "runtime -> engine: dispatch of tasks",
+      "kind": "verb",
+      "fate": "abbreviated to 'task dispatch' (one cell shorter, needed for 47-row fit)",
+      "view": "v3"
+    },
+    {
+      "fact": "engine -> backend: starts / manages",
+      "kind": "verb",
+      "fate": "abbreviated to 'starts/manages'",
+      "view": "v3"
+    },
+    {
+      "fact": "backend -> container: runs user process",
+      "kind": "verb + payload",
+      "fate": "drawn verbatim ('runs user process')",
+      "view": "v4"
+    },
+    {
+      "fact": "engine -> filesystem: mounts / snapshots",
+      "kind": "verb",
+      "fate": "abbreviated to 'mount/snapshot'",
+      "view": "v3"
+    },
+    {
+      "fact": "filesystem -> blobnet: image + volume data",
+      "kind": "payload",
+      "fate": "abbreviated to 'image+volume data'",
+      "view": "v4"
+    },
+    {
+      "fact": "runtime -> daemon: filesystem HTTP over UDS",
+      "kind": "protocol/path",
+      "fate": "drawn as 'HTTP over UDS' on its own hop, kept distinct from the worker gRPC seams",
+      "view": "v1"
+    },
+    {
+      "fact": "go and Rust runtime source discussed at original chat lines 27-51",
+      "kind": "provenance",
+      "fate": "dropped \u2014 provenance, not a relationship; recorded here only",
+      "view": "none"
+    },
+    {
+      "fact": "historical status of every relation (the graph write is a historical attempt)",
+      "kind": "qualifier",
+      "fate": "carried in this record and in generation.md, not on the boxes: no unconfirmed edge exists, and mark text on every box would obscure the labels",
+      "view": "case"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "worker",
+      "to": "runtime",
+      "verb": "task input + control RPCs",
+      "label": "task+ctrl RPC",
+      "label_owner": "e1",
+      "view": "v2"
+    },
+    {
+      "id": "e2",
+      "from": "runtime",
+      "to": "worker",
+      "verb": "events + management RPCs",
+      "label": "events+mg RPC",
+      "label_owner": "e2",
+      "view": "v1"
+    },
+    {
+      "id": "e3",
+      "from": "runtime",
+      "to": "engine",
+      "verb": "dispatches tasks",
+      "label": "task dispatch",
+      "label_owner": "e3",
+      "view": "v3"
+    },
+    {
+      "id": "e4",
+      "from": "engine",
+      "to": "backend",
+      "verb": "starts / manages",
+      "label": "starts/manages",
+      "label_owner": "e4",
+      "view": "v3"
+    },
+    {
+      "id": "e5",
+      "from": "backend",
+      "to": "container",
+      "verb": "runs user process",
+      "label": "runs user process",
+      "label_owner": "e5",
+      "view": "v4"
+    },
+    {
+      "id": "e6",
+      "from": "engine",
+      "to": "filesystem",
+      "verb": "mounts / snapshots",
+      "label": "mount/snapshot",
+      "label_owner": "e6",
+      "view": "v3"
+    },
+    {
+      "id": "e7",
+      "from": "filesystem",
+      "to": "blobnet",
+      "verb": "image + volume data",
+      "label": "image+volume data",
+      "label_owner": "e7",
+      "view": "v4"
+    },
+    {
+      "id": "e8",
+      "from": "runtime",
+      "to": "daemon",
+      "verb": "filesystem HTTP over UDS",
+      "label": "HTTP over UDS",
+      "label_owner": "e8",
+      "view": "v1"
+    }
+  ],
+  "coverage_map": [
+    {
+      "view": "v1-return-seams",
+      "carries": "e2, e8 (return/management seam + daemon UDS hop)"
+    },
+    {
+      "view": "v2-task-intake",
+      "carries": "e1 (intake seam; the pair's other direction, kept out of v1's channel)"
+    },
+    {
+      "view": "v3-dispatch-fan",
+      "carries": "e3, e4, e6 (dispatch hop + engine's two legs)"
+    },
+    {
+      "view": "v4-data-plane",
+      "carries": "e5, e7 (compute leaf + storage leaf)"
+    }
+  ],
+  "views": [
+    {
+      "view": "v1-return-seams",
+      "spec": "specs/v1-return-seams.json",
+      "direction": "lr",
+      "family_line": "family: service-meshes",
+      "family_evidence": "runtime is the core with a 3-leg fan (worker, engine, daemon) and an anti-parallel RPC pair against one of them (worker -> runtime + runtime -> worker); E == N (8/8).",
+      "text": "evidence/v1-return-seams/v1-text.txt",
+      "ansi": "evidence/v1-return-seams/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1-return-seams/v1-selected.ansi",
+      "check": "evidence/v1-return-seams/check.txt",
+      "frames": "evidence/v1-return-seams/v1-frames.txt",
+      "frames_ansi": "evidence/v1-return-seams/v1-frames.ansi",
+      "measured": {
+        "manifest_token": "83x51 @100%",
+        "pane_rows": 51,
+        "pane_cols": 83,
+        "spec_extent": "56x9",
+        "pinned_target_dump": "pinned/v1-return-seams-77x47-frames.txt"
+      },
+      "viewport_line": null,
+      "viewport_token": "83x51 @100%",
+      "carries_edges": [
+        "e2",
+        "e8"
+      ],
+      "carries_nodes": [
+        "runtime",
+        "worker",
+        "daemon"
+      ],
+      "levers": {
+        "regions": [],
+        "layers": null,
+        "minlen": {},
+        "trunks": [],
+        "why": "No region: a group box around runtime+worker straddles this view's only labelled channel, and the measured probes (v1b/v1c) lost a pair label exactly there. No rank pin: the source states no geometry (no uplink row, no spine), so `layers` stays empty."
+      },
+      "claims": [
+        "modal-runtime box rows 24-28, cols 20-34; modal-daemon box rows 22-25, cols 50-63; modal-worker box rows 27-30, cols 50-63 (evidence/v1-return-seams/v1-text.txt).",
+        "'HTTP over UDS' rides row 24, cols 36-48, with the arrowhead '\u256d\u25b6' on row 23 reaching modal-daemon's left border (v1-text.txt rows 23-24).",
+        "'events+mg RPC' rides row 28, cols 36-48, with the arrowhead '\u2570\u25b6' on row 28 reaching modal-worker's left border (v1-text.txt row 28).",
+        "The two directions leave modal-runtime's right border on separate ports: the UDS hop turns up on row 24-25, the events hop turns down on row 27-28, so neither pair label sits beside the other pair's route.",
+        "Static proof: the three timestamped frames in v1-frames.txt show identical glyphs (no dot is drawn anywhere; 'dots: 0 single-dot routes, 0 periodic routes' in check.txt)."
+      ]
+    },
+    {
+      "view": "v2-task-intake",
+      "spec": "specs/v2-task-intake.json",
+      "direction": "lr",
+      "family_line": "family: service-meshes",
+      "family_evidence": "same core/fan structure; this view holds the intake leg of the anti-parallel pair so it keeps its own port and label (the return leg is v1's).",
+      "text": "evidence/v2-task-intake/v2-task-intake-text.txt",
+      "ansi": "evidence/v2-task-intake/v2-task-intake-ansi.ansi",
+      "selected_ansi": "evidence/v2-task-intake/v2-task-intake-selected.ansi",
+      "check": "evidence/v2-task-intake/check.txt",
+      "frames": "evidence/v2-task-intake/v2-task-intake-frames.txt",
+      "frames_ansi": "evidence/v2-task-intake/v2-task-intake-frames.ansi",
+      "measured": {
+        "manifest_token": "83x51 @100%",
+        "pane_rows": 51,
+        "pane_cols": 83,
+        "spec_extent": "56x4",
+        "pinned_target_dump": "pinned/v2-task-intake-77x47-frames.txt"
+      },
+      "viewport_line": null,
+      "viewport_token": "83x51 @100%",
+      "carries_edges": [
+        "e1"
+      ],
+      "carries_nodes": [
+        "worker",
+        "runtime"
+      ],
+      "levers": {
+        "regions": [],
+        "layers": null,
+        "minlen": {},
+        "trunks": [],
+        "why": "Deliberately minimal: the pair is split across v1/v2 because no single view measured clean with both labels (see rejected_candidates). No pin: no source geometry."
+      },
+      "claims": [
+        "modal-worker box rows 25-28, label at row 26 cols 21-32; modal-runtime box rows 25-28, label at row 26 cols 51-63 (evidence/v2-task-intake/v2-task-intake-text.txt).",
+        "The 'task+ctrl RPC' edge runs on row 26 with its arrowhead '\u25b6' at col 49 on runtime's left border, and the label rides row 27, cols 35-47, inside the channel.",
+        "No detour and no second route in this channel, so the label owns its row (check.txt: labels 1/1, 0 ambiguous).",
+        "Static proof: v2-task-intake-frames.txt frame 0/1/2 are identical; no dot is drawn."
+      ]
+    },
+    {
+      "view": "v3-dispatch-fan",
+      "spec": "specs/v3-dispatch-fan.json",
+      "direction": "tb",
+      "family_line": "family: service-meshes",
+      "family_evidence": "runtime hands off to the engine, which fans to a compute leg (Container backend) and a storage leg (Filesystem + volumes); the fan out of one core is the mesh signature.",
+      "text": "evidence/v3-dispatch-fan/v3-dispatch-fan-text.txt",
+      "ansi": "evidence/v3-dispatch-fan/v3-dispatch-fan-ansi.ansi",
+      "selected_ansi": "evidence/v3-dispatch-fan/v3-dispatch-fan-selected.ansi",
+      "check": "evidence/v3-dispatch-fan/check.txt",
+      "frames": "evidence/v3-dispatch-fan/v3-dispatch-fan-frames.txt",
+      "frames_ansi": "evidence/v3-dispatch-fan/v3-dispatch-fan-frames.ansi",
+      "measured": {
+        "manifest_token": "83x51 @100%",
+        "pane_rows": 51,
+        "pane_cols": 83,
+        "spec_extent": "57x47",
+        "pinned_target_dump": "pinned/v3-dispatch-fan-77x47-frames.txt"
+      },
+      "viewport_line": null,
+      "viewport_token": "83x51 @100%",
+      "carries_edges": [
+        "e3",
+        "e4",
+        "e6"
+      ],
+      "carries_nodes": [
+        "runtime",
+        "engine",
+        "backend",
+        "filesystem"
+      ],
+      "levers": {
+        "regions": [
+          "orchestration -> Task engine",
+          "compute -> Container backend",
+          "storage -> Filesystem + volumes"
+        ],
+        "layers": null,
+        "minlen": {},
+        "trunks": [],
+        "why": "Group by source concept (orchestration / compute / storage), declared regions, not rows. No rank pin: the source gives no tier geometry. No minlen: the dispatch hop is adjacent, not a corridor spanning stages. No trunk: the two fan legs are independent relations, not one bus."
+      },
+      "claims": [
+        "Region borders and titles share the row at pinned/v3-dispatch-fan-77x47-frames.txt first frame line 44: '\u2500\u2500\u25bccompute \u2500\u2500\u2500\u2500\u2500' at col 16 (title partially overwritten by a route crossing the border, which the renderer allows) and '\u2500\u2500 storage \u2500\u2500\u2500\u2500' at col 47.",
+        "Members sit inside their regions: Container backend at line 46, col 18 (inside the compute box whose left border is col 15); Filesystem + volumes at line 46, col 40 (inside the storage box).",
+        "'task dispatch' rides line 15, col 35, in the runtime->engine gap; 'starts/manages' rides line 42, col 19; 'mount/snapshot' rides line 35, col 38 \u2014 each label beside its own route only (check.txt: 3/3 placed, 0 ambiguous, 0 skipped).",
+        "Group hues are distinct within the view: orchestration, compute and storage resolve to different families (check.txt 'groups: orchestration(1) compute(1) storage(1)'; regions are tinted from the group name, not from depth).",
+        "Static proof: pinned/v3-dispatch-fan-77x47-frames.txt carries 3 timestamped frames with identical glyphs; 'dots: 0' in check.txt."
+      ]
+    },
+    {
+      "view": "v4-data-plane",
+      "spec": "specs/v4-data-plane.json",
+      "direction": "tb",
+      "family_line": "family: service-meshes",
+      "family_evidence": "the core's two data legs terminate here: each fan branch resolves to its own leaf (backend -> container, filesystem -> blobnet), which is a mesh branch, not a chain of stages.",
+      "text": "evidence/v4-data-plane/v4-data-plane-text.txt",
+      "ansi": "evidence/v4-data-plane/v4-data-plane-ansi.ansi",
+      "selected_ansi": "evidence/v4-data-plane/v4-data-plane-selected.ansi",
+      "check": "evidence/v4-data-plane/check.txt",
+      "frames": "evidence/v4-data-plane/v4-data-plane-frames.txt",
+      "frames_ansi": "evidence/v4-data-plane/v4-data-plane-frames.ansi",
+      "measured": {
+        "manifest_token": "83x51 @100%",
+        "pane_rows": 51,
+        "pane_cols": 83,
+        "spec_extent": "57x30",
+        "pinned_target_dump": "pinned/v4-data-plane-77x47-frames.txt"
+      },
+      "viewport_line": null,
+      "viewport_token": "83x51 @100%",
+      "carries_edges": [
+        "e5",
+        "e7"
+      ],
+      "carries_nodes": [
+        "backend",
+        "container",
+        "filesystem",
+        "blobnet"
+      ],
+      "levers": {
+        "regions": [
+          "compute -> Container backend + Task container",
+          "storage -> Filesystem + volumes + Blobnet"
+        ],
+        "layers": null,
+        "minlen": {},
+        "trunks": [],
+        "why": "The two planes the source names (container backend/compute, filesystem+Blobnet/storage) are declared regions that span both rank rows, so each concept keeps one hue and its members one block. No pins (no source geometry), no trunk (two independent data paths)."
+      },
+      "claims": [
+        "Two titled region borders on the same row: pinned/v4-data-plane-77x47-frames.txt first frame line 12 \u2014 '\u2500\u2500 compute \u2500\u2500\u2500\u2500' at col 16 and '\u2500\u2500 storage \u2500\u2500\u2500\u2500' at col 42.",
+        "Members inside their region boxes: Container backend line 14 col 18 and Task container line 38 col 26 (compute); Filesystem + volumes line 14 col 40 and Blobnet line 38 col 45 (storage).",
+        "'runs user process' rides line 26 col 20 and 'image+volume data' rides line 26 col 42; each sits inside its own region, on the side of its route away from the other plane's route (check.txt: 2/2 placed, 0 ambiguous, 0 skipped).",
+        "The palette box occupies the bottom-left corner (evidence/v4-data-plane/v4-data-plane-text.txt rows 40-45, cols 2-10) and no region border is overwritten: the compute box's left border sits at col 15.",
+        "Static proof: 3 timestamped frames, identical glyphs; 'dots: 0' in check.txt."
+      ]
+    }
+  ],
+  "source_pointers": [
+    "docs/visualize-eval/cases/modal-runtime/source.md \u00a7Relationship facts from the historical attempt",
+    "original chat line 55 (assistant graph write)",
+    "original chat lines 5/12 (user task)",
+    "fixed constraints block"
+  ],
+  "abbreviations": [
+    {
+      "text": "task+ctrl RPC",
+      "from": "task input + control RPCs"
+    },
+    {
+      "text": "events+mg RPC",
+      "from": "events + management RPCs"
+    },
+    {
+      "text": "task dispatch",
+      "from": "dispatches tasks"
+    },
+    {
+      "text": "starts/manages",
+      "from": "starts / manages"
+    },
+    {
+      "text": "mount/snapshot",
+      "from": "mounts / snapshots"
+    },
+    {
+      "text": "image+volume data",
+      "from": "image + volume data"
+    }
+  ],
+  "drops": [
+    {
+      "fact": "provenance of the source findings (chat lines 27-51, go/Rust runtime)",
+      "reason": "provenance, not a relationship; no box or edge to carry it"
+    },
+    {
+      "fact": "historical qualifier on the whole graph",
+      "reason": "every relation in the brief is the same historical attempt; it is stated in this record and generation.md instead of stamping eight labels"
+    }
+  ],
+  "levers_summary": {
+    "regions": [
+      "v3: orchestration, compute, storage",
+      "v4: compute, storage"
+    ],
+    "rank_pins": "none \u2014 the source states no tier geometry, so `layers` is empty everywhere",
+    "minlen": "none in the final specs (measured attempts with minlen are in attempts-raw/)",
+    "trunks": "none \u2014 no source-named shared bus; the fan legs are independent relations"
+  },
+  "known_defects": [
+    "The anti-parallel pair (worker <-> runtime) is not held in ONE view: no measured candidate placed both of its 13-cell labels at once (attempts-raw/v1b, v1c, v1-seam-pair, v1-runtime-seams-*). Per round-07's ruling it is split across v1 and v2, and neither view's channel holds two pair routes.",
+    "The seam views (v1, v2) carry no group region: every measured candidate that boxed the pair lost a label to the region border, so regions appear only in v3/v4.",
+    "'task dispatch' and 'mount/snapshot' are one and two cells shorter than 'dispatch tasks'/'mounts / snapshots' because a tb rank gap is sized to its longest label and the 3-rank v3 overflowed by one row otherwise (attempts-raw/v3-dispatch-fan-a-check.txt: 57x48)."
+  ],
+  "blockers": [
+    "Pane size: the harness splits a half pane of this session's tab, which measured 83x51 @100%, not 77x47. The target-size fit is proven by pinned COLUMNS=77 LINES=47 dumps (pinned/*-77x47-frames.txt, no 'overflows' banner, 'viewport: 77x47 zoom: 1.00 natural').",
+    "Renderer gap (structural, not worked around): in tb the rank gap is sized to the longest label in it, and in lr a rank gap is ~2x the label width, so a labelled chain of 3+ stages cannot fit 77x47 at natural zoom with 13-17 cell labels. A 2-node tb pair cannot carry a 13-cell label either: the extent is only as wide as the boxes."
+  ],
+  "cleanup": "all four capture panes closed and proven (manifest.json cleanup=confirmed_closed in every bundle); no pane left open, no failed close.",
+  "validator_output": {
+    "v1-return-seams": "all checks passed (see validation.txt)",
+    "v2-task-intake": "all checks passed (see validation.txt)",
+    "v3-dispatch-fan": "all checks passed (see validation.txt)",
+    "v4-data-plane": "all checks passed (see validation.txt)",
+    "note": "validation.txt holds the full per-bundle output of scripts/viz-validate.py with --require-select --require-frames --attempts; viewport_matches_target passes because the pinned 77x47 dumps prove the fit while the harness pane measured 83x51."
+  }
+}

@@ -1,6 +1,6 @@
 ---
 name: visualize
-description: Live, ratatui-rendered visualizations in terminal panes — today the rataflow node graph, laid out to fit on a single screen beside the chat text in fullscreen, with slow dots flowing along its edges. Build a small JSON spec and open it with the rataflow-view binary in a herdr pane the human can drag, pan, and zoom. For HTML artifacts (decks, dashboards, infographics) use the artifact skill; for diagrams inside the chat reply use the mermaid tool; for static terminal art or PNG export use the mermaid skill.
+description: Live, ratatui-rendered visualizations in terminal panes — today the rataflow node graph, laid out to fit beside the chat text, with related layer colors, routed arrows, and an independent Astra readability review. Build a small JSON spec and open it with the rataflow-view binary in a herdr pane the human can drag, pan, and zoom. For HTML artifacts (decks, dashboards, infographics) use the artifact skill; for diagrams inside the chat reply use the mermaid tool; for static terminal art or PNG export use the mermaid skill.
 ---
 
 # visualize
@@ -9,11 +9,10 @@ Live visualizations rendered by ratatui, in a real terminal pane — the
 surface the chat transcript cannot host, because it cannot run a TUI.
 Today this skill renders node graphs: the `rataflow-view` binary (crate at
 `rataflow/` in the dotfiles repo, built on the rataflow library) turns a
-JSON spec into a pane the human can drag, pan, and zoom. Lay the graph out
-so it fits on a single screen: in fullscreen the pane sits beside the chat
-text, and the whole graph must read without pan or zoom. Edges render as
-arrows; an optional `flow` field adds slow dots that travel source →
-target.
+JSON spec into a pane the human can drag, pan, and zoom.
+
+The graph must read without pan or zoom. That is a property of the spec,
+not of the viewer: the viewer never shrinks text to fit (see Sizing).
 
 ## Routing: pick the surface first
 
@@ -31,9 +30,9 @@ default. The full surface map:
 
 Never paste rataflow pane art or ANSI escapes into pi chat or nvim buffers.
 
-Use rataflow-view when the human should *explore* the graph: many nodes,
-rearranging, tracing edges, zooming into one region. Use mermaid when the diagram is
-part of an answer (chat, doc, PR).
+Use rataflow-view when the human should *explore* the graph: tracing
+edges, zooming into one region, dragging boxes. Use mermaid when the
+diagram is part of an answer.
 
 ## Read the relationships first
 
@@ -48,10 +47,6 @@ group is enough:
 - **Names.** Label edges with the relationship, not the endpoints: verbs
   or link tech ("enqueue", "grpc", "10 GbE", "replicates"). Label nodes
   with what they *are*, a few words at most.
-
-Layout direction: `tb` for pipelines and hierarchies (stages read top to
-bottom), `lr` for request flow that reads left to right. Pick the one that
-matches how the human describes the flow ("client → … → db" is `lr`).
 
 ## Spec format
 
@@ -83,35 +78,75 @@ node, and `label` defaults to `id`:
   the error names the problem — fix what it names and re-run.
 - `flow` on an edge: `true` or a small positive number — dots travel
   `from → to` along the line. One speed unit is about 10 cells per second;
-  keep values at or below 0.5 so motion stays slow. Dot spacing is fixed,
-  so slow edges are as sparse as fast ones.
+  keep values at or below `0.5`. Dots sit at least 7 cells apart.
 - `layers`: optional explicit placement — an array of arrays, one inner
   array per layer (a row in `tb`, a column in `lr`); the declared order
-  runs across the perpendicular axis, and `""` reserves a slot so a
-  node can align under another layer's column. Every node must be placed
-  exactly once. With `layers` present, automatic ranking is skipped and
-  each column is only as wide as its widest node — the tightest way to
-  fit a pane.
+  runs across the perpendicular axis, and `""` reserves a slot.
+  Every node must be placed exactly once.
 
-Styling is automatic and gruvbox-native (it matches the terminal): a plain
-background with no dot grid, node boxes filled with the canvas color so
-their rounded borders sit flush, and node borders cycling the gruvbox
-bright accents (yellow, orange, aqua, blue, purple, green). Selection uses the
-gruvbox yellow accent. Edges attach at node borders with no marker dot —
-the only dots on the canvas are the flowing ones.
+## How it draws
+
+The renderer owns the character grid, so the rules are predictable:
+
+- **Separate relationships.** Every edge needs a distinct source, route,
+  and target. A crossing must not look like a branch. Check the actual
+  render; separate ports alone do not prove separate routes.
+- **Ports fan out.** A node widens to fit its busiest side, so parallel
+  edges leave from separate cells. Fan-in lands on separate cells too.
+- **Forward edges follow the flow.** In `tb`, an edge to a later layer
+  leaves the bottom and enters the top, however far apart the boxes sit.
+  Same-layer and backward edges are routed by geometry and cost more
+  space — avoid them in a layered spec.
+- **Arrow attachment matters.** Each edge needs a clear source stem and
+  an arrowhead that points into its target. A sideways start, missing
+  arrowhead, or detached arrowhead fails the readability check.
+- **Color encodes the layer.** Each layer gets its own hue family, and
+  nodes inside a layer take related shades of that family: siblings read
+  as one group, nearby layers never share a hue. Edges stay one muted
+  stroke, and the accent marks selection and flow dots only. Group your
+  `layers` by what belongs together — the color then shows the structure
+  without a legend.
+- **Labels use free space** after routing. A label with no free slot is
+  omitted; `--check` reports the count. An omitted relationship label is
+  a defect to fix, not proof that the diagram is simpler.
+- **Boxes are at least 4x4 cells.** The library places connection handles
+  at the box centre; a 3-cell box puts that handle on a corner.
+
+## Sizing: what fits
+
+Aim for at most **12 nodes and 16 edges**, with at most ~3 edges per node.
+Above that, show an overview graph and offer one detail graph per region.
+The research is blunt about this: crossings dominate readability, and a
+second diagram beats a denser first one.
+
+- **Orientation.** `lr` spends width, `tb` spends height. A chat-beside
+  pane is taller than it is wide but the graph text is wide: use `lr` for
+  chains of 5 or more layers, `tb` for 4 layers or fewer.
+- **Labels:** node labels a few words; edge labels 14 characters or fewer.
+  Node width follows the label, so a long label widens the whole column.
+- **Depth:** `layers` is the tightest placement. Keep them at most ~7.
+- **Density per layer:** 3 nodes per layer reads well; 4 starts to crowd.
+- **The fit never shrinks text.** The viewer fits at 100% and no less. A
+  graph larger than the pane is cut and shows `graph overflows · drag to
+  pan` in the corner. Do not fight that with pan; shrink the spec.
+- Keep the bottom-left corner of the layout clear: the control palette
+  floats there. Reserve that slot with `""`.
+
+`--check` prints the graph's extent in cells. Compare it with the pane
+size before opening anything.
 
 ## Open the viewer
 
-Validate the spec before opening anything — the check needs no terminal
-and works from any shell:
+Validate the spec before opening anything — the check needs no terminal:
 
 ```sh
 rataflow-view --check "$SPEC"
 ```
 
-It prints `ok: nodes=N edges=M direction=… theme=…` on success, or
-exits non-zero with the exact problem. Fix the spec until it passes, then
-open the pane. Inside Herdr (the normal case), split a sibling and launch:
+It prints a summary, the extent, and a warning line for each problem it
+can predict without drawing: density above budget, two edges sharing a
+corridor, and edge labels that had no free slot. Fix the spec until those
+warnings are gone, then open the pane. Inside Herdr, split and launch:
 
 ```sh
 test "${HERDR_ENV:-}" = 1
@@ -121,72 +156,83 @@ herdr pane run <pane-id> "rataflow-view <spec>; herdr pane close <pane-id>"
 ```
 
 - The launch command is self-cleaning: when the app exits — `q`, Esc, or
-  Ctrl+C — the pane's shell runs the trailing `herdr pane close` and the
-  pane removes itself. Substitute the real pane id in both places.
-
-- `--ratio 0.5` is an even split: the graph pane gets half of the current
-  pane, never a narrowed sliver. Split direction follows the herdr
+  Ctrl+C — the trailing `herdr pane close` removes the pane.
+- `--ratio 0.5` is an even split. Split direction follows the herdr
   geometry rule: `right` when the calling pane is wide, `down` when it is
   narrow or tall.
-- The viewer fits the graph on open and on resize, but never zooms past
-  100%: a spec that overflows the pane at natural size stays cut, and the
-  `f` key cannot shrink it. Fit is a property of the spec — shallow
-  chains, short labels, explicit `layers` — not of the viewer.
-- Verify the render with `herdr pane read <pane-id> --source visible`: the
-  header line `rataflow-view · N nodes · M edges · …` proves the
-  app started, and every node label appearing in that read proves the
-  graph fits. A missing or half-cut label means the spec overflows the
-  pane — cut nodes or shorten labels and re-open.
-- Tell the human what appeared and where. Keys for the human: drag a node
-  to move it, drag empty space to pan, scroll to zoom, `f` to fit, arrows
-  or Tab to navigate, `q` (or Esc) to quit. Dragging from a node border to
-  another node creates an edge; dragging an edge end reconnects it.
-  Quitting closes the pane with the app.
-- Cleanup: automatic — the pane closes itself the moment the app exits.
-  Close it early with `herdr pane close <pane-id>` only when replacing
-  the graph with a new spec or when a pane wedges.
+- Read the render with `herdr pane read <pane-id> --source visible`.
+  Check all of these:
+  1. The `rataflow-view · …` header proves the app started, not readability.
+  2. Every complete node box and relationship label fits. Check the actual
+     pane size and viewport; zoom can change fit after the initial render.
+  3. Every edge has a clear source stem and a visible target arrowhead.
+     Trace the full route. Reject false branches and unrelated box contacts.
+  4. No arrow glyph sits inside a word (`al▼ocat`). No `●` sits on a
+     node border. Controls must not cover nodes, routes, or labels.
+  5. Each node has four complete sides and corners. All border cells use
+     that node's border color, including connection handles. Plain-text
+     capture cannot prove color: use `--format ansi` or buffer-cell tests.
+- Complete the independent review below before claiming the diagram is ready.
+- Tell the human what appeared and where. Keys: drag a node to move it,
+  drag empty space to pan, scroll to zoom, `f` to fit, arrows or Tab to
+  navigate, `q` (or Esc) to quit. Dragging from a node border to another
+  node creates an edge; dragging an edge end reconnects it. Quitting
+  closes the pane with the app. A dragged node's edge falls back to the
+  library router until you reopen the spec.
+- Cleanup is automatic. Close a pane early with
+  `herdr pane close <pane-id>` only when replacing the graph with a new
+  spec or when a pane wedges.
 - Outside Herdr (`HERDR_ENV` unset): say so and offer the mermaid tool
   instead. Never run rataflow-view in the agent's own pane — the bash tool
   has no TTY there, and the call blocks until it times out.
+
+## Independent readability review
+
+After each generated or revised diagram, use the `subagent` tool:
+`agent: "worker"`, `model: "openai/gpt-6-astra"`. The reviewer must be
+separate from the worker that made the diagram or renderer change.
+
+Give the reviewer the spec path, pane id, pane dimensions, and captures.
+Ask for a read-only review of the actual render before inspecting the
+router code. The reviewer must trace every arrow, then compare its source,
+target, direction, and label with the spec. Require concrete edge names
+for missing labels, false branches, ambiguous crossings, detached stems,
+missing arrowheads, border defects, and clipped content.
+
+Require a pass/fail verdict and a list of remaining defects. A valid spec,
+clean `--check`, passing tests, or visible node labels is not a visual pass.
+If Astra is unavailable, report that the review did not run. Do not silently
+use a different model. Plain-text review does not establish color correctness.
+
+The result arrives automatically. Do not poll. After corrections, capture
+the new render and use `subagent_message` to request another review. Do not
+claim approval before the review result arrives. Report unresolved defects.
+
+Preserve relationship meaning during corrections. Do not delete an edge,
+reverse it, or remove its label to hide a routing defect. If the graph needs
+separate views, keep the full spec and account for each relationship across
+the views. State any deliberate abstraction.
 
 ## When something goes wrong
 
 - `command not found` — install.sh builds the binary; from the dotfiles
   checkout run `cargo install --path rataflow --locked`.
-- `herdr pane read <pane-id> --source visible` shows no
-  `rataflow-view · …` header — the pane is too small or the app died.
-  Close it with `herdr pane close <pane-id>`, then re-split wider
-  (`--direction down` gives a tall graph more room), or shrink the spec.
-- The human closed the pane while the app ran — nothing to clean up; the
-  app exits with its pane.
+- No `rataflow-view · …` header in the pane read — the pane is too small
+  or the app died. Close it and re-split, or shrink the spec.
+- The pane shows the `graph overflows` badge — the graph is bigger than the pane.
+  Cut layers, shorten labels, or switch `tb` to `lr`.
+- `--check` warns about a shared corridor — the router could not separate
+  two edges. Change placement or use separate views. Do not delete a real
+  relationship to make the warning disappear.
+- `--check` reports skipped labels — provide more space or shorten labels
+  without changing their meaning. Do not hide the warning by removing labels.
+- The human closed the pane while the app ran — nothing to clean up.
 - The pane vanished while the human was still reading — the app exited
-  (`q`, Esc, Ctrl+C) and the pane closed itself with it. Relaunch the same
-  spec if they want it back.
-- The graph renders but is unreadable — close the pane and cut the spec
-  down (see Sizing and hygiene), or re-split with more room.
-
-## Sizing and hygiene
-
-- `id` is a key: short, stable, unique. `label` is display text: a few
-  words at most — node width follows its label.
-- Fit the whole graph on one screen in fullscreen, where the pane sits
-  beside the chat text: prefer under ~20 nodes, short labels, and at most
-  ~7 layers deep, so the graph reads without pan or zoom. For larger
-  subjects, show a summary graph first and offer detail graphs per region.
-- Keep the bottom-left corner of the layout clear: the viewer's control
-  palette (zoom, fit, info) floats there and occludes whatever the spec
-  places underneath — reserve that slot with `""`.
-- Edge labels: a few words at most. Long labels widen the edge routes.
-- One graph per pane. When an updated spec replaces an old pane, close the
-  old one first with `herdr pane close <pane-id>`, then open the new one.
-- The spec is a file the human can keep and re-open. For a throwaway, use
-  a temp path; for a keeper, write it next to the work (for example
-  `docs/graphs/<name>.json`) and say the path.
+  (`q`, Esc, Ctrl+C) and closed its own pane. Relaunch the same spec.
 
 ## Install and repair
 
-`install.sh` builds the binary with `cargo install --path rataflow`. If
-the command is missing, run that from the dotfiles checkout. Example specs
-live at `rataflow/examples/pipeline.json` (a job pipeline) and
-`rataflow/examples/network.json` (a network diagram); the
-schema and its rejection rules live in `rataflow/src/lib.rs`.
+`install.sh` builds the binary with `cargo install --path rataflow --locked`.
+Example specs live at `rataflow/examples/pipeline.json` and
+`rataflow/examples/network.json`; the schema and its rejection rules live
+in `rataflow/src/lib.rs`, and the router in `rataflow/src/router.rs`.

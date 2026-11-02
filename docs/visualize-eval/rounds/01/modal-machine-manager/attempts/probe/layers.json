@@ -1,0 +1,13 @@
+{
+  "direction": "tb",
+  "nodes": [
+    { "id": "a", "label": "Alpha" },
+    { "id": "b", "label": "Beta" },
+    { "id": "c", "label": "Gamma" }
+  ],
+  "layers": [["a"], ["b", "c"]],
+  "edges": [
+    { "from": "a", "to": "b", "label": "one" },
+    { "from": "a", "to": "c", "label": "two" }
+  ]
+}

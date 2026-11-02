@@ -1,0 +1,46 @@
+ rataflow-view · spec.json · 3 nodes · 2 edges · 0 flows · drag pan · scroll
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          ╭───────────╮
+                          │Task engine│
+                          │           │
+                          ╰───────────╯
+                           │ mount/snapshot
+                      ╭────╯
+                      │
+                     ╭────────────────────╮
+                     │Filesystem + volumes│
+                     │                    │
+                     ╰────────────────────╯
+                      │     image+vol data
+                      ╰─────────────────────────╮
+                                                │
+                                               ╭───────╮
+                                               │Blobnet│
+                                               │       │
+                                               ╰───────╯
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘

@@ -1,0 +1,887 @@
+{
+  "case_id": "server-nic-layout",
+  "round": "08",
+  "generator": {
+    "identity": "pi worker subagent (round-08 visualize evaluation, generator role)",
+    "agent_name": "viz-ds08-4",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "reasoning_level": "high",
+    "judges_spawned": 0
+  },
+  "frozen_inputs": {
+    "skill_path": "docs/visualize-eval/rounds/08/SKILL.md",
+    "skill_sha256": "b1bdb4d3d38336cb7783db34da7f9f19edf80704a890de32285d9e582b4221eb",
+    "skill_hash_verified_with": "shasum -a 256",
+    "renderer_path": "/tmp/visualize-eval/round-08/bin/rataflow-view",
+    "renderer_sha256": "ea24593b0f80c1617573eef4766f2bacaaf4315a8133a65d5331e9daec1c1f30",
+    "renderer_hash_verified_with": "shasum -a 256; also recorded per bundle in evidence/<view>/bin.sha256"
+  },
+  "step0_family": {
+    "family": "identity-probe-maps",
+    "evidence": "The source's structure is one deep egress chain whose content is identifiers and qualifiers: 103.19.91.57/.58/.59/.60-.62, 14.143.x, 14.141.x, 1.1.1.1, AS132717, AS13335, eno16595np0, R7725, plus qualified facts ('free?', 'L2?', 'no cable'). Density is low (9 relations over 9 named elements) and depth is 4 observed hops, so depth alone cannot decide; per tie-breaker 3, identifier and qualifier content outranks shape, which makes this an identity-probe-map. Recipe applied: every identifier and qualifier became a ledger row and got a named view before any spec existed; the layout is the deep chain the recipe calls for, split along the fact clusters the source gives (host NICs, the /29, the DC boundary, the external hops). No spine/leaf nodes were invented.",
+    "per_view_family_lines": {
+      "v1": "family: identity-probe-maps \u2014 evidence: server1's own box is a chain of device identifiers (R7725, 103.19.91.58, eno16595np0, 25 GbE) plus one qualified state ('7 of 8 ports dark' -> 'no cable?'), i.e. identifier coverage, not topology.",
+      "v2": "family: identity-probe-maps \u2014 evidence: the /29 view is label-dense addressing (103.19.91.57/.58/.59/.60-.62) whose hard part is covering every address and the 'free?' qualifier; no shape carries meaning here.",
+      "v3": "family: identity-probe-maps \u2014 evidence: the hop from 103.19.91.57 to Airtel 14.143.x exists in the source mainly to carry a qualifier ('the fabric either bridges, tunnels, or stays silent'), so the view's job is to keep that uncertainty next to the addresses.",
+      "v4": "family: identity-probe-maps \u2014 evidence: three observed upstream hops whose content is prefixes (14.143.x, 14.141.x), an address (1.1.1.1), two AS numbers and rrt qualifiers (7.1 ms, 8.3-8.6 ms) \u2014 address coverage, not a flow shape."
+    }
+  },
+  "views": [
+    {
+      "view": "v1",
+      "title": "server1's box: one live NIC among eight",
+      "spec": "specs/v1.json",
+      "spec_sha256": "7800b7c83e22fc8e662f598018cdf94ad614198a7a4f7cb6d179b702e8237817",
+      "check": "evidence/v1/check.txt",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "frames": "evidence/v1/v1-frames.txt",
+      "frames_count": 5,
+      "pinned_target_dump": "v1-pinned-77x47-frames.txt",
+      "measured": {
+        "pane_cols": 83,
+        "pane_rows": 51,
+        "viewport_token": "83x51 @100%",
+        "viewport_line": null,
+        "pinned_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "note": "The half pane in this worker tab measures 83x51 (the app's own header token). Target is 77x47, so a pinned direct dump at COLUMNS=77 LINES=47 proves the same spec fits the target with no overflow banner."
+      },
+      "check_summary": {
+        "ok": "nodes=3 edges=2 flows=0 direction=tb theme=gruvbox",
+        "extent": "39x40 cells",
+        "crossings": "0 bridges, 0 touching bends",
+        "labels": "2/2 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups": "srv1(3)",
+        "trunks": "none",
+        "dots": "0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins": "0/0 routes start at their arrow origin",
+        "arrivals": "0/0 same-arrival routes show their dot at the arrowhead on the final step",
+        "warnings": "none"
+      },
+      "regions": [
+        {
+          "name": "srv1",
+          "members": [
+            "dark",
+            "s1",
+            "nic"
+          ],
+          "ranks_spanned": 3,
+          "source_fact": "'Server1: 8 physical NICs, one active ... Seven ports dark' \u2014 one host's physical plant, so one region.",
+          "capture_proof": "v1-text.txt rows 6-44: '\u2500\u2500 srv1 \u2500\u2500' title on row 6, left/right borders at columns 27 and 54 through row 45; the three member boxes (rows 7-10 '7 of 8 ports dark', rows 23-26 'server1 R7725 bare metal', rows 41-44 'eno16595np0 25 GbE') all sit inside those columns."
+        }
+      ],
+      "levers": {
+        "groups": "one region 'srv1' (3 members, 3 ranks). Safe because it is the only region in the view, so the region-disjointness pass has no sibling to push it off its members.",
+        "layers": "none. The source states no row/plane geometry for a single host's NICs; the dark->s1->nic order is the source's own relation direction, and the engine derives the ranks from it.",
+        "minlen": "none. No hop in this view spans stages in the source.",
+        "trunks": "none. Two relations, no shared bus."
+      }
+    },
+    {
+      "view": "v2",
+      "title": "the /29: gateway, server1, server2, free pool",
+      "spec": "specs/v2.json",
+      "spec_sha256": "d6add6253d241e425076a76b6620f85ad44d701916457dd16d3ba73284a8985b",
+      "check": "evidence/v2/check.txt",
+      "text": "evidence/v2/v2-text.txt",
+      "ansi": "evidence/v2/v2-ansi.ansi",
+      "selected_ansi": "evidence/v2/v2-selected.ansi",
+      "frames": "evidence/v2/v2-frames.txt",
+      "frames_count": 5,
+      "pinned_target_dump": "v2-pinned-77x47-frames.txt",
+      "measured": {
+        "pane_cols": 83,
+        "pane_rows": 51,
+        "viewport_token": "83x51 @100%",
+        "viewport_line": null,
+        "pinned_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "note": "Same tab half-pane measurement; pinned 77x47 dump of this exact spec shows no overflow."
+      },
+      "check_summary": {
+        "ok": "nodes=4 edges=3 flows=0 direction=tb theme=gruvbox",
+        "extent": "64x25 cells",
+        "crossings": "0 bridges, 0 touching bends",
+        "labels": "3/3 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups": "srv1(1) srv2(1) address pool(1)",
+        "trunks": "none",
+        "dots": "0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins": "0/0 routes start at their arrow origin",
+        "arrivals": "0/0 same-arrival routes show their dot at the arrowhead on the final step",
+        "warnings": "none"
+      },
+      "regions": [
+        {
+          "name": "srv1",
+          "members": [
+            "nic"
+          ],
+          "ranks_spanned": 1,
+          "source_fact": "'103.19.91.58 = server1' \u2014 its own host box.",
+          "capture_proof": "v2-text.txt title row 13 ('\u2500\u2500 srv1 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'), box columns 9-31, member label row 15."
+        },
+        {
+          "name": "srv2",
+          "members": [
+            "s2"
+          ],
+          "ranks_spanned": 1,
+          "source_fact": "'103.19.91.59 = server2 \u2014 both Dell PowerEdge R7725' \u2014 a neighbouring host, not part of server1.",
+          "capture_proof": "v2-text.txt title row 13 ('\u2500\u2500 srv2 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'), box columns 33-54, member label row 15 '103.19.91.59 R7725'."
+        },
+        {
+          "name": "address pool",
+          "members": [
+            "spare"
+          ],
+          "ranks_spanned": 1,
+          "source_fact": "'.60-.62 free' \u2014 the free tail of the /29, the source's third distinct thing to tell apart.",
+          "capture_proof": "v2-text.txt title row 13 ('\u2500\u2500 address pool \u2500'), box columns 56-72, member label row 15 '.60-.62 free?'."
+        }
+      ],
+      "hue_check": {
+        "method": "ANSI capture, SGR 38;2;r;g;b per border cell, one row (the title row) across all three regions",
+        "observed": {
+          "srv1": "rgb(140,108,57)",
+          "srv2": "rgb(150,90,51)",
+          "address pool": "rgb(110,118,66)"
+        },
+        "verdict": "three distinct hues in one view (no round-07 style collision)"
+      },
+      "levers": {
+        "groups": "three single-rank regions. Deliberately single-rank: a region whose members sit in two ranks loses member containment in this engine (measured in attempt 1 and in evidence/hue-probe), because every rank is centred on the widest rank while region bands are column-disjoint. The gateway is therefore left ungrouped here and grouped as 'DC edge' in v3.",
+        "layers": "none. The source states no geometry; the member->gateway direction is carried by edge direction, and the engine puts the gateway one rank below its members (measured: v2-text.txt rows 34-37).",
+        "minlen": "none. All three relations are one hop in the source.",
+        "trunks": "none, deliberately. A trunk is one bus that splits from a single source into branches; the source's /29 relations all run member -> gateway (many -> one), so a trunk would have to reverse the source direction. Plain edges were used instead and the gateway shows three separate arrowheads (v2-text.txt row 33: '\u25bc \u25bc \u25bc')."
+      }
+    },
+    {
+      "view": "v3",
+      "title": "DC edge: gateway to the first observed ISP hop, with the unproven interior",
+      "spec": "specs/v3.json",
+      "spec_sha256": "e4773830999c05113dbbb6e035cf9e120666e67535ccfc0b40d570c3533a285f",
+      "check": "evidence/v3/check.txt",
+      "text": "evidence/v3/v3-text.txt",
+      "ansi": "evidence/v3/v3-ansi.ansi",
+      "selected_ansi": "evidence/v3/v3-selected.ansi",
+      "frames": "evidence/v3/v3-frames.txt",
+      "frames_count": 5,
+      "pinned_target_dump": "v3-pinned-77x47-frames.txt",
+      "measured": {
+        "pane_cols": 83,
+        "pane_rows": 51,
+        "viewport_token": "83x51 @100%",
+        "viewport_line": null,
+        "pinned_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "note": "Same tab half-pane measurement; pinned 77x47 dump of this exact spec shows no overflow."
+      },
+      "check_summary": {
+        "ok": "nodes=2 edges=2 flows=0 direction=tb theme=gruvbox",
+        "extent": "46x19 cells",
+        "crossings": "0 bridges, 0 touching bends",
+        "labels": "2/2 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups": "DC edge(2)",
+        "trunks": "none",
+        "dots": "0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins": "0/0 routes start at their arrow origin",
+        "arrivals": "0/0 same-arrival routes show their dot at the arrowhead on the final step",
+        "warnings": "none"
+      },
+      "regions": [
+        {
+          "name": "DC edge",
+          "members": [
+            "gw",
+            "airtel"
+          ],
+          "ranks_spanned": 3,
+          "source_fact": "'Between .57 and Airtel, the NxtGen fabric either bridges, tunnels, or stays silent. From the host, these three look identical.' \u2014 the boundary itself is the concept, so both ends sit in one region.",
+          "capture_proof": "v3-text.txt title row 16 ('\u2500\u2500 DC edge \u2500\u2500'), region frame columns 24-58 down to row 34 (node boxes at columns 25-57 and 33-49); the gateway box (rows 17-20) and the Airtel box (rows 30-33) both inside."
+        }
+      ],
+      "hue_check": {
+        "method": "ANSI capture SGR on the title row",
+        "observed": {
+          "DC edge": "rgb(81,113,106)"
+        },
+        "verdict": "single region in this view; distinct from every other region name in the case (see case_hue_map)"
+      },
+      "levers": {
+        "groups": "one region 'DC edge' spanning both ranks. Safe as the only region in the view; it is the structural shape of the source's own claim that the interior is unobservable.",
+        "layers": "none. Two nodes; the source gives no geometry to pin.",
+        "minlen": "e7 'L2? no hop' uses minlen 2. Source justification: 'hops 3 and 6 in the server1 trace answered nothing' \u2014 the interior between .57 and Airtel is a stage the trace cannot name, so the unproven relation reserves that rank instead of squeezing its label between two neighbours. The confirmed relation e6 stays one rank apart and its label sits in the first gap (v3-text.txt row 29 '1.8 ms'), while the dashed route's label sits in the reserved rank (row 25 'L2? no hop').",
+        "trunks": "none. Nothing in this view is a shared bus."
+      }
+    },
+    {
+      "view": "v4",
+      "title": "external hops: the observed path beyond the /29",
+      "spec": "specs/v4.json",
+      "spec_sha256": "376630ba7e72fcea89504499e8b1e3ad732aa7b839a6eb368bc1e286fb175a7f",
+      "check": "evidence/v4/check.txt",
+      "text": "evidence/v4/v4-text.txt",
+      "ansi": "evidence/v4/v4-ansi.ansi",
+      "selected_ansi": "evidence/v4/v4-selected.ansi",
+      "frames": "evidence/v4/v4-frames.txt",
+      "frames_count": 5,
+      "pinned_target_dump": "v4-pinned-77x47-frames.txt",
+      "measured": {
+        "pane_cols": 83,
+        "pane_rows": 51,
+        "viewport_token": "83x51 @100%",
+        "viewport_line": null,
+        "pinned_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "note": "Same tab half-pane measurement; pinned 77x47 dump of this exact spec shows no overflow."
+      },
+      "check_summary": {
+        "ok": "nodes=3 edges=2 flows=0 direction=tb theme=gruvbox",
+        "extent": "41x36 cells",
+        "crossings": "0 bridges, 0 touching bends",
+        "labels": "2/2 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups": "external hops(3)",
+        "trunks": "none",
+        "dots": "0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins": "0/0 routes start at their arrow origin",
+        "arrivals": "0/0 same-arrival routes show their dot at the arrowhead on the final step",
+        "warnings": "none"
+      },
+      "regions": [
+        {
+          "name": "external hops",
+          "members": [
+            "airtel",
+            "airtelbb",
+            "cf"
+          ],
+          "ranks_spanned": 3,
+          "source_fact": "'Upstream: Airtel (14.143.x, 1.8 ms) -> Airtel backbone (14.141.x, 7.1 ms) -> Cloudflare 1.1.1.1' \u2014 the observed hops outside the /29 form one group.",
+          "capture_proof": "v4-text.txt title row 8 ('\u2500\u2500 external hops \u2500\u2500'), borders columns 26-55 down to row 43; the three member boxes at rows 9-12, 22-25 and 39-42."
+        }
+      ],
+      "hue_check": {
+        "method": "ANSI capture SGR on the title row",
+        "observed": {
+          "external hops": "rgb(81,104,120)"
+        },
+        "verdict": "renamed from 'upstream hops' (rgb 81,113,106 = the same aqua as v3's 'DC edge') to 'external hops' (rgb 81,104,120) so no two region names in the case share a hue."
+      },
+      "levers": {
+        "groups": "one region 'external hops' (3 members, 3 ranks; the only region in the view).",
+        "layers": "none. The chain order is stated by the source's arrow list, which edge direction already carries.",
+        "minlen": "none. Each hop is one stage in the source.",
+        "trunks": "none. Three sequential hops, no shared bus."
+      }
+    }
+  ],
+  "case_hue_map": {
+    "method": "region border colour read from each view's ANSI capture (SGR 38;2;r;g;b); probe measurements recorded in evidence/hue-probe2",
+    "map": {
+      "srv1": "rgb(140,108,57) \u2014 identical in v1 and v2 (name-stable)",
+      "srv2": "rgb(150,90,51)",
+      "address pool": "rgb(110,118,66)",
+      "DC edge": "rgb(81,113,106)",
+      "external hops": "rgb(81,104,120)"
+    },
+    "verdict": "five region names, five distinct hues; no view contains two regions with the same hue"
+  },
+  "meaning_ledger": [
+    {
+      "id": "f1",
+      "fact": "server1 = 103.19.91.58",
+      "kind": "address",
+      "fate": "drawn",
+      "where": "v1 s1 label; v2 nic label"
+    },
+    {
+      "id": "f2",
+      "fact": "server2 = 103.19.91.59",
+      "kind": "address",
+      "fate": "drawn",
+      "where": "v2 s2 label plus the 'srv2' region title"
+    },
+    {
+      "id": "f3",
+      "fact": "both hosts are Dell PowerEdge R7725",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "v1 s1 label 'server1 R7725 bare metal'; v2 s2 label '103.19.91.59 R7725'"
+    },
+    {
+      "id": "f4",
+      "fact": "bare metal",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v1 s1 label"
+    },
+    {
+      "id": "f5",
+      "fact": "at NxtGen Cloud, AS132717",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "v3 gateway label '103.19.91.57 AS132717'"
+    },
+    {
+      "id": "f6",
+      "fact": "Bengaluru",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "v3 gateway label '... Bengaluru'"
+    },
+    {
+      "id": "f7",
+      "fact": "8 physical NICs, one active",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v1 '7 of 8 ports dark' + 'only uplink'"
+    },
+    {
+      "id": "f8",
+      "fact": "eno16595np0, 25 GbE",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "v1 nic label"
+    },
+    {
+      "id": "f9",
+      "fact": "public 103.19.91.58/29 on the NIC, no NAT",
+      "kind": "address",
+      "fate": "drawn",
+      "where": "v2 nic label '103.19.91.58 s1 NIC' + e3 label '0.1 ms no NAT' + 'same /29' / 'in /29 pool'"
+    },
+    {
+      "id": "f10",
+      "fact": "seven ports dark",
+      "kind": "state",
+      "fate": "drawn",
+      "where": "v1 dark node; its edge label 'no cable?' keeps the source's caveat"
+    },
+    {
+      "id": "f11",
+      "fact": "gateway .57",
+      "kind": "address",
+      "fate": "drawn",
+      "where": "v2 and v3 gateway labels '103.19.91.57'"
+    },
+    {
+      "id": "f12",
+      "fact": "server1 .58 / server2 .59 / .60-.62 free",
+      "kind": "address",
+      "fate": "drawn",
+      "where": "v2 three rank-0 labels"
+    },
+    {
+      "id": "f13",
+      "fact": "no NAT, public L3 straight to the host",
+      "kind": "limitation",
+      "fate": "drawn",
+      "where": "v2 e3 label '0.1 ms no NAT' (public addresses are the labels themselves)"
+    },
+    {
+      "id": "f14",
+      "fact": "no IPv6",
+      "kind": "limitation",
+      "fate": "drawn",
+      "where": "v2 gateway label '103.19.91.57 Arista, no v6'"
+    },
+    {
+      "id": "f15",
+      "fact": "gateway answers at 0.1 ms",
+      "kind": "measurement",
+      "fate": "drawn",
+      "where": "v2 e3 label"
+    },
+    {
+      "id": "f16",
+      "fact": "MAC OUI = Arista Networks",
+      "kind": "identifier/qualifier",
+      "fate": "drawn",
+      "where": "v2 gateway label 'Arista'. The role word 'ToR' is deliberately not asserted: the source states the OUI does not prove a ToR role."
+    },
+    {
+      "id": "f17",
+      "fact": "NxtGen's access layer is Arista",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "same as f16"
+    },
+    {
+      "id": "f18",
+      "fact": "Airtel 14.143.x, 1.8 ms",
+      "kind": "address+measurement",
+      "fate": "drawn",
+      "where": "v3 airtel label + e6 label '1.8 ms'"
+    },
+    {
+      "id": "f19",
+      "fact": "Airtel backbone 14.141.x, 7.1 ms",
+      "kind": "address+measurement",
+      "fate": "drawn",
+      "where": "v4 airtelbb label + e8 label '7.1 ms'"
+    },
+    {
+      "id": "f20",
+      "fact": "Cloudflare 1.1.1.1 at 8.6 ms (source also says 8.3 ms)",
+      "kind": "address+measurement",
+      "fate": "drawn",
+      "where": "v4 cf label + e9 label '8.3-8.6 ms' (the range keeps both readings)"
+    },
+    {
+      "id": "f21",
+      "fact": "Cloudflare AS13335",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "v4 cf label"
+    },
+    {
+      "id": "f22",
+      "fact": "hops 3 and 6 answered nothing, hop 5 lost 80%",
+      "kind": "qualifier/evidence",
+      "fate": "abbreviated",
+      "where": "compressed into v3's dashed edge label 'L2? no hop' \u2014 the per-hop loss detail is not drawn separately (8.3 spec chars would cost 2 extra ranks; the qualifier is what the source uses the detail for)"
+    },
+    {
+      "id": "f23",
+      "fact": "a missing hop proves nothing about Layer 2; the fabric may bridge, tunnel or stay silent",
+      "kind": "qualifier",
+      "fate": "drawn",
+      "where": "v3 dashed parallel edge labelled 'L2? no hop' \u2014 uncertain relation drawn dashed, exact qualifier text kept"
+    },
+    {
+      "id": "f24",
+      "fact": "do not invent invisible spine/leaf switches from the traceroute",
+      "kind": "constraint",
+      "fate": "drawn as an absence",
+      "where": "no spine, leaf, fabric or vxlan node exists in any view; the uncertainty is a dashed edge, not a device"
+    },
+    {
+      "id": "f25",
+      "fact": "one uplink, one visible ISP, no ECMP from this box",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v1 'only uplink'; v3/v4 draw exactly one observed path"
+    },
+    {
+      "id": "f26",
+      "fact": "everything above the ToR (NxtGen spines, other transits) is invisible from the host",
+      "kind": "qualifier",
+      "fate": "drawn",
+      "where": "v3 'L2? no hop' edge \u2014 the invisible interior is marked, not filled in"
+    },
+    {
+      "id": "f27",
+      "fact": "a routed /29 off an Arista ToR is the border-leaf, routed-access pattern",
+      "kind": "interpretation",
+      "fate": "abbreviated",
+      "where": "carried by v2's /29 view structure and the gateway labels; the interpretive word 'border-leaf' is not drawn as a device"
+    },
+    {
+      "id": "f28",
+      "fact": "no GPUs, no rack-bench installed yet, up 1.5 days",
+      "kind": "state",
+      "fate": "dropped",
+      "reason": "fresh-handoff state of the box; no relation in the NIC/egress layout depends on it (source line 120 bullet 'Fresh handoff')"
+    },
+    {
+      "id": "f29",
+      "fact": "specs on disk at /tmp/server1-network-layout.json",
+      "kind": "artifact path",
+      "fate": "dropped",
+      "reason": "historical artifact path, not a fact about the network (and the frozen brief forbids replaying old commands)"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "dark",
+      "to": "s1",
+      "verb": "no cable",
+      "label_owner": "e1",
+      "label": "no cable?",
+      "style": "dashed",
+      "view": "v1",
+      "note": "qualified: an inactive interface does not prove there is no cable"
+    },
+    {
+      "id": "e2",
+      "from": "s1",
+      "to": "nic",
+      "verb": "only uplink",
+      "label_owner": "e2",
+      "label": "only uplink",
+      "style": "solid",
+      "view": "v1"
+    },
+    {
+      "id": "e3",
+      "from": "nic",
+      "to": "gw",
+      "verb": "default gateway, public L3",
+      "label_owner": "e3",
+      "label": "0.1 ms no NAT",
+      "style": "solid",
+      "view": "v2"
+    },
+    {
+      "id": "e4",
+      "from": "s2",
+      "to": "gw",
+      "verb": "same /29",
+      "label_owner": "e4",
+      "label": "same /29",
+      "style": "solid",
+      "view": "v2"
+    },
+    {
+      "id": "e5",
+      "from": "spare",
+      "to": "gw",
+      "verb": "free in /29",
+      "label_owner": "e5",
+      "label": "in /29 pool",
+      "style": "dashed",
+      "view": "v2",
+      "note": "qualified: an unresponsive address does not prove the address is free"
+    },
+    {
+      "id": "e6",
+      "from": "gw",
+      "to": "airtel",
+      "verb": "transit, 1.8 ms",
+      "label_owner": "e6",
+      "label": "1.8 ms",
+      "style": "solid",
+      "view": "v3"
+    },
+    {
+      "id": "e7",
+      "from": "gw",
+      "to": "airtel",
+      "verb": "unproven interior",
+      "label_owner": "e7",
+      "label": "L2? no hop",
+      "style": "dashed",
+      "minlen": 2,
+      "view": "v3"
+    },
+    {
+      "id": "e8",
+      "from": "airtel",
+      "to": "airtelbb",
+      "verb": "Airtel backbone, 7.1 ms",
+      "label_owner": "e8",
+      "label": "7.1 ms",
+      "style": "solid",
+      "view": "v4"
+    },
+    {
+      "id": "e9",
+      "from": "airtelbb",
+      "to": "cf",
+      "verb": "Cloudflare, 8.3-8.6 ms",
+      "label_owner": "e9",
+      "label": "8.3-8.6 ms",
+      "style": "solid",
+      "view": "v4"
+    }
+  ],
+  "coverage_map": [
+    {
+      "view": "v1",
+      "carries": "e1, e2; f1, f3, f4, f7, f8, f10, f25"
+    },
+    {
+      "view": "v2",
+      "carries": "e3, e4, e5; f1, f2, f9, f11, f12, f13, f14, f15, f16, f17"
+    },
+    {
+      "view": "v3",
+      "carries": "e6, e7; f5, f6, f11, f18, f22, f23, f26, f27"
+    },
+    {
+      "view": "v4",
+      "carries": "e8, e9; f19, f20, f21"
+    }
+  ],
+  "relationship_to_view": {
+    "e1": "v1 dark -> s1 (dashed, 'no cable?')",
+    "e2": "v1 s1 -> nic ('only uplink')",
+    "e3": "v2 nic -> gw ('0.1 ms no NAT')",
+    "e4": "v2 s2 -> gw ('same /29')",
+    "e5": "v2 spare -> gw ('in /29 pool', dashed)",
+    "e6": "v3 gw -> airtel ('1.8 ms')",
+    "e7": "v3 gw -> airtel (dashed, 'L2? no hop', minlen 2)",
+    "e8": "v4 airtel -> airtelbb ('7.1 ms')",
+    "e9": "v4 airtelbb -> cf ('8.3-8.6 ms')",
+    "all_nine_drawn": true,
+    "reversed_or_merged": "none"
+  },
+  "abbreviations": [
+    {
+      "text": "AirtelBB",
+      "means": "Airtel backbone",
+      "key_on_view": "the node also carries 14.141.x, and the region title 'external hops' scopes it to the observed outside path"
+    },
+    {
+      "text": ".60-.62",
+      "means": "103.19.91.60 - 103.19.91.62",
+      "key_on_view": "same rank shows the full 103.19.91.58 / 103.19.91.59 addresses, and e5 says 'in /29 pool'"
+    }
+  ],
+  "deliberate_drops": [
+    {
+      "fact": "f28 fresh-handoff state (no GPUs, no rack-bench, up 1.5 days)",
+      "reason": "no relation in the NIC/egress layout depends on it"
+    },
+    {
+      "fact": "f29 historical spec paths on disk",
+      "reason": "artifact paths, not network facts"
+    },
+    {
+      "fact": "the role word 'ToR' for 103.19.91.57",
+      "reason": "the source says the MAC OUI does not prove a ToR role, so only 'Arista' is asserted"
+    }
+  ],
+  "known_defects": [
+    {
+      "id": "d1",
+      "defect": "Region boxes render with straight '\u2500' corners instead of '\u256d\u256e\u2570\u256f'.",
+      "evidence": "v1-text.txt row 6 starts '\u2500\u2500 srv1 \u2500\u2500\u2500\u2500'; v2-text.txt row 13; v3-text.txt row 16; v4-text.txt row 8. The node boxes in the same captures keep their corners (e.g. v2-text.txt row 14 '\u2502\u256d\u2500\u2500\u2500\u256e\u2502').",
+      "cause": "frozen binary: the region border run is painted first and the corner glyphs are then refused because the cells are no longer blank.",
+      "affects": "cosmetic; region identity is carried by the hue and the title",
+      "owned_by": "renderer, not the spec (renderer edits are forbidden in this evaluation)"
+    },
+    {
+      "id": "d2",
+      "defect": "A long region title eats the top border and can blank the top-right corner cell.",
+      "evidence": "v2-text.txt row 13: the 'address pool' title runs to the box's right edge (columns 57-73).",
+      "affects": "cosmetic",
+      "owned_by": "renderer"
+    },
+    {
+      "id": "d3",
+      "defect": "A region whose members sit in two ranks loses member containment whenever the view has another region: the box is pushed off its members into a sliver.",
+      "evidence": "attempt 1 of v2 (attempts/v2-attempt1-77x47.txt: gateway at columns 28-48, its region box at columns 54-68) and evidence/hue-probe/hueprobe-text.txt rows 19-40 (each chained single-node region becomes a 3-wide sliver at columns 44-56).",
+      "affects": "structural; avoided in every final view (v1/v4: single region; v2: single-rank regions; v3: one region spanning ranks)",
+      "owned_by": "renderer (rank centring vs column-disjoint region bands)"
+    },
+    {
+      "id": "d4",
+      "defect": "In v2 the three region boxes all extend down to row 32 instead of hugging their single-rank members (rows 13-17).",
+      "evidence": "v2-text.txt rows 13-32.",
+      "affects": "cosmetic; no member or route is covered and members stay inside their boxes",
+      "owned_by": "renderer region-extent computation"
+    },
+    {
+      "id": "d5",
+      "defect": "The /29's gateway is ungrouped in v2 (no region of its own).",
+      "evidence": "v2-text.txt rows 34-37 show the gateway box with no region frame, while v3-text.txt rows 16-34 show it inside 'DC edge'.",
+      "affects": "structural choice forced by d3; the /29 membership is still stated by the label and by e3/e4/e5",
+      "owned_by": "spec (deliberate), documented here"
+    }
+  ],
+  "blockers": [],
+  "not_blockers": [
+    "No 'routes:' line is printed by this binary; round 08 states its absence is expected.",
+    "Region corners and title-overrun are renderer behaviours; the spec cannot set them."
+  ],
+  "static_proof": {
+    "claim": "The source never animates anything, so every view is static: no edge sets flow and --check reports flows=0 with 0 single-dot and 0 periodic routes.",
+    "evidence": "each view's frames capture holds 5 timestamped frames (0/100/200/300/400 ms) whose graph bodies are byte-identical (e.g. evidence/v3/v3-frames.txt lines 25-76 vs 233-284; the only difference in the file is the trailing shell prompt after the last frame)."
+  },
+  "cleanup": {
+    "panes_opened_by_me": [
+      "viz-evidence half-pane for v1",
+      "v2",
+      "v3",
+      "v4",
+      "hue-probe",
+      "hue-probe2"
+    ],
+    "manifest_cleanup_fields": "all six bundles report cleanup: confirmed_closed",
+    "leftover_panes": "none; every capture used the repository script, which closes its own split and re-probes the pane id"
+  },
+  "commands": {
+    "family_and_ledger": "read docs/visualize-eval/cases/server-nic-layout/source.md, wrote the ledger and audit before any spec",
+    "check": "/tmp/visualize-eval/round-08/bin/rataflow-view --check <spec>  (raw output per attempt in attempts/)",
+    "fit_probe": "COLUMNS=77 LINES=47 /tmp/visualize-eval/round-08/bin/rataflow-view --frames 1 <candidate spec>  (no --check; used to measure the 46-row canvas before spending an attempt)",
+    "capture": "scripts/viz-evidence.sh --spec <spec> --bin /tmp/visualize-eval/round-08/bin/rataflow-view --out evidence/<view> --label <view> --frames 5",
+    "validate": "uv run scripts/viz-validate.py evidence/<view> --require-select --require-frames --attempts attempts.json",
+    "hue_read": "uv run python (ANSI SGR 38;2;r;g;b per border cell in evidence/<view>/<view>-ansi.ansi)"
+  },
+  "validator": {
+    "v1": {
+      "command": "uv run scripts/viz-validate.py evidence/v1 --require-select --require-frames --attempts attempts.json",
+      "output_path": "evidence/v1/validator.txt",
+      "exit_code": 0,
+      "verdict": "all checks passed",
+      "failing_checks": [],
+      "full_output": [
+        "PASS manifest_readable",
+        "PASS binary_path_absolute",
+        "PASS binary_hash_recorded",
+        "PASS artifact_hashes",
+        "PASS check_output_present",
+        "PASS check_exit_zero",
+        "PASS check_warnings_absent",
+        "PASS labels_parsed",
+        "PASS labels_complete",
+        "PASS labels_off_routes",
+        "PASS labels_not_skipped",
+        "PASS dots_parsed",
+        "PASS dots_no_violations",
+        "PASS origins_reported",
+        "PASS origins_complete",
+        "PASS dots_sync_reported",
+        "PASS arrivals_reported",
+        "PASS arrivals_complete",
+        "PASS labels_ownership_reported",
+        "PASS labels_ownership_clear",
+        "PASS crossings_reported",
+        "PASS viewport_proven",
+        "PASS viewport_proven_measurable",
+        "PASS viewport_matches_target",
+        "PASS cleanup_confirmed",
+        "PASS select_all_frame",
+        "PASS select_all_artifact",
+        "PASS frames_artifact",
+        "PASS frames_timestamped",
+        "PASS attempts_readable",
+        "PASS attempts_view_budget",
+        "PASS attempts_spec_budget",
+        "",
+        "all checks passed"
+      ]
+    },
+    "v2": {
+      "command": "uv run scripts/viz-validate.py evidence/v2 --require-select --require-frames --attempts attempts.json",
+      "output_path": "evidence/v2/validator.txt",
+      "exit_code": 0,
+      "verdict": "all checks passed",
+      "failing_checks": [],
+      "full_output": [
+        "PASS manifest_readable",
+        "PASS binary_path_absolute",
+        "PASS binary_hash_recorded",
+        "PASS artifact_hashes",
+        "PASS check_output_present",
+        "PASS check_exit_zero",
+        "PASS check_warnings_absent",
+        "PASS labels_parsed",
+        "PASS labels_complete",
+        "PASS labels_off_routes",
+        "PASS labels_not_skipped",
+        "PASS dots_parsed",
+        "PASS dots_no_violations",
+        "PASS origins_reported",
+        "PASS origins_complete",
+        "PASS dots_sync_reported",
+        "PASS arrivals_reported",
+        "PASS arrivals_complete",
+        "PASS labels_ownership_reported",
+        "PASS labels_ownership_clear",
+        "PASS crossings_reported",
+        "PASS viewport_proven",
+        "PASS viewport_proven_measurable",
+        "PASS viewport_matches_target",
+        "PASS cleanup_confirmed",
+        "PASS select_all_frame",
+        "PASS select_all_artifact",
+        "PASS frames_artifact",
+        "PASS frames_timestamped",
+        "PASS attempts_readable",
+        "PASS attempts_view_budget",
+        "PASS attempts_spec_budget",
+        "",
+        "all checks passed"
+      ]
+    },
+    "v3": {
+      "command": "uv run scripts/viz-validate.py evidence/v3 --require-select --require-frames --attempts attempts.json",
+      "output_path": "evidence/v3/validator.txt",
+      "exit_code": 0,
+      "verdict": "all checks passed",
+      "failing_checks": [],
+      "full_output": [
+        "PASS manifest_readable",
+        "PASS binary_path_absolute",
+        "PASS binary_hash_recorded",
+        "PASS artifact_hashes",
+        "PASS check_output_present",
+        "PASS check_exit_zero",
+        "PASS check_warnings_absent",
+        "PASS labels_parsed",
+        "PASS labels_complete",
+        "PASS labels_off_routes",
+        "PASS labels_not_skipped",
+        "PASS dots_parsed",
+        "PASS dots_no_violations",
+        "PASS origins_reported",
+        "PASS origins_complete",
+        "PASS dots_sync_reported",
+        "PASS arrivals_reported",
+        "PASS arrivals_complete",
+        "PASS labels_ownership_reported",
+        "PASS labels_ownership_clear",
+        "PASS crossings_reported",
+        "PASS viewport_proven",
+        "PASS viewport_proven_measurable",
+        "PASS viewport_matches_target",
+        "PASS cleanup_confirmed",
+        "PASS select_all_frame",
+        "PASS select_all_artifact",
+        "PASS frames_artifact",
+        "PASS frames_timestamped",
+        "PASS attempts_readable",
+        "PASS attempts_view_budget",
+        "PASS attempts_spec_budget",
+        "",
+        "all checks passed"
+      ]
+    },
+    "v4": {
+      "command": "uv run scripts/viz-validate.py evidence/v4 --require-select --require-frames --attempts attempts.json",
+      "output_path": "evidence/v4/validator.txt",
+      "exit_code": 0,
+      "verdict": "all checks passed",
+      "failing_checks": [],
+      "full_output": [
+        "PASS manifest_readable",
+        "PASS binary_path_absolute",
+        "PASS binary_hash_recorded",
+        "PASS artifact_hashes",
+        "PASS check_output_present",
+        "PASS check_exit_zero",
+        "PASS check_warnings_absent",
+        "PASS labels_parsed",
+        "PASS labels_complete",
+        "PASS labels_off_routes",
+        "PASS labels_not_skipped",
+        "PASS dots_parsed",
+        "PASS dots_no_violations",
+        "PASS origins_reported",
+        "PASS origins_complete",
+        "PASS dots_sync_reported",
+        "PASS arrivals_reported",
+        "PASS arrivals_complete",
+        "PASS labels_ownership_reported",
+        "PASS labels_ownership_clear",
+        "PASS crossings_reported",
+        "PASS viewport_proven",
+        "PASS viewport_proven_measurable",
+        "PASS viewport_matches_target",
+        "PASS cleanup_confirmed",
+        "PASS select_all_frame",
+        "PASS select_all_artifact",
+        "PASS frames_artifact",
+        "PASS frames_timestamped",
+        "PASS attempts_readable",
+        "PASS attempts_view_budget",
+        "PASS attempts_spec_budget",
+        "",
+        "all checks passed"
+      ]
+    },
+    "viewport_note": "The live half pane in this worker tab measures 83x51, which is larger than the 77x47 target, so viewport_matches_target is satisfied by the pinned direct dumps v1..v4-pinned-77x47-frames.txt (each contains 'viewport: 77x47 zoom: 1.00 natural', names its own final spec, and has no overflow banner). No pane geometry was hardcoded as a measurement: 83x51 is the app's own header token, 77x47 is the pinned dump's own viewport line."
+  }
+}

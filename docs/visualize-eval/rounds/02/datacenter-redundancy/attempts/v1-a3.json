@@ -1,0 +1,111 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "ispA",
+      "label": "ISP A",
+      "group": "wan"
+    },
+    {
+      "id": "ispB",
+      "label": "ISP B",
+      "group": "wan"
+    },
+    {
+      "id": "ispC",
+      "label": "ISP C",
+      "group": "wan"
+    },
+    {
+      "id": "ispD",
+      "label": "ISP D",
+      "group": "wan"
+    },
+    {
+      "id": "mux1",
+      "label": "MUX 1",
+      "group": "mux"
+    },
+    {
+      "id": "mux2",
+      "label": "MUX 2",
+      "group": "mux"
+    },
+    {
+      "id": "core1",
+      "label": "Core 1",
+      "group": "routing"
+    },
+    {
+      "id": "core2",
+      "label": "Core 2",
+      "group": "routing"
+    }
+  ],
+  "layers": [
+    [
+      "ispA",
+      "ispB",
+      "ispC",
+      "ispD"
+    ],
+    [
+      "mux1",
+      "mux2"
+    ],
+    [
+      ""
+    ],
+    [
+      "core1",
+      "core2"
+    ]
+  ],
+  "edges": [
+    {
+      "from": "ispA",
+      "to": "mux1",
+      "dots": 1
+    },
+    {
+      "from": "ispB",
+      "to": "mux1",
+      "dots": 1
+    },
+    {
+      "from": "ispC",
+      "to": "mux2",
+      "dots": 1
+    },
+    {
+      "from": "ispD",
+      "to": "mux2",
+      "dots": 1
+    },
+    {
+      "from": "mux1",
+      "to": "core1",
+      "label": "x-connect",
+      "dots": 1
+    },
+    {
+      "from": "mux1",
+      "to": "core2",
+      "label": "x-connect",
+      "dots": 1
+    },
+    {
+      "from": "mux2",
+      "to": "core1",
+      "label": "x-connect",
+      "dots": 1
+    },
+    {
+      "from": "mux2",
+      "to": "core2",
+      "label": "x-connect",
+      "dots": 1
+    }
+  ]
+}

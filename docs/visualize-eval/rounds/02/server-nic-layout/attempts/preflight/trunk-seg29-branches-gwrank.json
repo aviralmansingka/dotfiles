@@ -1,0 +1,85 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "dark",
+      "label": "7 ports dark",
+      "group": "ports"
+    },
+    {
+      "id": "s1",
+      "label": "server1 .58",
+      "group": "hosts"
+    },
+    {
+      "id": "s2",
+      "label": "server2 .59",
+      "group": "hosts"
+    },
+    {
+      "id": "spare",
+      "label": "free? .60-.62",
+      "group": "pool"
+    },
+    {
+      "id": "nic",
+      "label": "eno16595np0 25G",
+      "group": "ports"
+    },
+    {
+      "id": "gw",
+      "label": "Arista ToR .57",
+      "group": "fabric"
+    }
+  ],
+  "layers": [
+    [
+      "dark",
+      "",
+      ""
+    ],
+    [
+      "",
+      "s1",
+      ""
+    ],
+    [
+      "",
+      "nic",
+      ""
+    ],
+    [
+      "s2",
+      "gw",
+      "spare"
+    ]
+  ],
+  "edges": [
+    {
+      "from": "dark",
+      "to": "s1",
+      "label": "no link seen",
+      "style": "dashed",
+      "dots": 0
+    },
+    {
+      "from": "s1",
+      "to": "nic",
+      "label": "only uplink",
+      "dots": 1
+    }
+  ],
+  "trunks": [
+    {
+      "id": "seg29",
+      "label": "/29 gw 0.1ms",
+      "from": "nic",
+      "to": "gw",
+      "branches": [
+        "s2",
+        "spare"
+      ]
+    }
+  ]
+}

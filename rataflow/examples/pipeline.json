@@ -9,12 +9,13 @@
     { "id": "worker", "label": "Worker pool" },
     { "id": "db", "label": "Postgres" }
   ],
+  "layers": [["cli"], ["api"], ["auth", "queue"], ["worker"], ["db"]],
   "edges": [
-    { "from": "cli", "to": "api", "flow": 1 },
-    { "from": "api", "to": "auth", "label": "verify", "flow": 1 },
-    { "from": "api", "to": "queue", "label": "enqueue", "flow": 1 },
-    { "from": "queue", "to": "worker", "flow": 3 },
-    { "from": "worker", "to": "db", "label": "write", "flow": 2 },
+    { "from": "cli", "to": "api", "flow": 0.5 },
+    { "from": "api", "to": "auth", "label": "verify", "flow": 0.5 },
+    { "from": "api", "to": "queue", "label": "enqueue", "flow": 0.5 },
+    { "from": "queue", "to": "worker", "flow": 0.5 },
+    { "from": "worker", "to": "db", "flow": 0.5 },
     { "from": "auth", "to": "db", "label": "read" }
   ]
 }

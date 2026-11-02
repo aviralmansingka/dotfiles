@@ -1,0 +1,2 @@
+ rataflow-view · v2-boot-image.json · 4 nodes · 4 edges · 1 flows · drag pan
+header_ok=yes (line 1 carries the rataflow-view · viewer banner)

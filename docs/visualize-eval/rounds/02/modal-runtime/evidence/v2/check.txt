@@ -1,0 +1,8 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=4 edges=4 flows=4 direction=tb theme=gruvbox
+layers=3 (explicit placement, sugiyama skipped)
+extent=34x21 cells
+labels: 4/4 placed, 0 on route cells, 0 skipped
+groups: client(1) control(2) host(1)
+trunks:
+dots: 4 single-dot routes, 0 periodic routes, 0 violations

@@ -1,0 +1,205 @@
+{
+  "case_id": "modal-machine-manager",
+  "reference_kind": "historical_generated_relations_not_independent_fact_verification",
+  "source_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-modal--/2026-10-14T20-31-55-285Z_01a13c1d-4b94-70e7-a930-7631ea0f9b66.jsonl",
+  "source_spec_line": 33,
+  "source_call_id": "chatcmpl-tool-85a9e36d8d24d6be",
+  "historical_reference": {
+    "nodes": [
+      {
+        "id": "cp",
+        "label": "Modal control plane"
+      },
+      {
+        "id": "web",
+        "label": "humans + mmctl"
+      },
+      {
+        "id": "pgrpc",
+        "label": "private gRPC"
+      },
+      {
+        "id": "wapi",
+        "label": "webapi server"
+      },
+      {
+        "id": "pub",
+        "label": "public gRPC"
+      },
+      {
+        "id": "boot",
+        "label": "boot server"
+      },
+      {
+        "id": "q",
+        "label": "River job queue"
+      },
+      {
+        "id": "rec",
+        "label": "cluster reconcile loop"
+      },
+      {
+        "id": "ssh",
+        "label": "SSH + BMC ops"
+      },
+      {
+        "id": "db",
+        "label": "Postgres"
+      },
+      {
+        "id": "s3",
+        "label": "S3 object store"
+      },
+      {
+        "id": "reg",
+        "label": "provider registry"
+      },
+      {
+        "id": "prov",
+        "label": "bare-metal providers"
+      },
+      {
+        "id": "mch",
+        "label": "bare-metal machines"
+      },
+      {
+        "id": "agent",
+        "label": "machine-agent"
+      },
+      {
+        "id": "jan",
+        "label": "janitor app"
+      },
+      {
+        "id": "slack",
+        "label": "Slack"
+      }
+    ],
+    "edges": [
+      {
+        "from": "cp",
+        "to": "pgrpc",
+        "label": "create / terminate / repair"
+      },
+      {
+        "from": "web",
+        "to": "wapi",
+        "label": "http"
+      },
+      {
+        "from": "pgrpc",
+        "to": "q",
+        "label": "enqueue job"
+      },
+      {
+        "from": "wapi",
+        "to": "q",
+        "label": "reinstall / reprovision"
+      },
+      {
+        "from": "q",
+        "to": "reg",
+        "label": "provision job"
+      },
+      {
+        "from": "reg",
+        "to": "prov",
+        "label": "provider API"
+      },
+      {
+        "from": "prov",
+        "to": "mch",
+        "label": "allocate instance"
+      },
+      {
+        "from": "mch",
+        "to": "boot",
+        "label": "iPXE request"
+      },
+      {
+        "from": "boot",
+        "to": "mch",
+        "label": "boot.ipxe + S3 args"
+      },
+      {
+        "from": "mch",
+        "to": "agent",
+        "label": "runs on host"
+      },
+      {
+        "from": "agent",
+        "to": "pub",
+        "label": "register + heartbeat"
+      },
+      {
+        "from": "pub",
+        "to": "db",
+        "label": "machine state"
+      },
+      {
+        "from": "pgrpc",
+        "to": "db",
+        "label": "machine rows"
+      },
+      {
+        "from": "q",
+        "to": "db",
+        "label": "job rows"
+      },
+      {
+        "from": "q",
+        "to": "ssh",
+        "label": "audit / verify reimage"
+      },
+      {
+        "from": "ssh",
+        "to": "mch",
+        "label": "run machine-audit"
+      },
+      {
+        "from": "mch",
+        "to": "s3",
+        "label": "pull boot image"
+      },
+      {
+        "from": "q",
+        "to": "s3",
+        "label": "diagnose uploads"
+      },
+      {
+        "from": "q",
+        "to": "jan",
+        "label": "diagnostic events"
+      },
+      {
+        "from": "jan",
+        "to": "wapi",
+        "label": "proposed actions"
+      },
+      {
+        "from": "wapi",
+        "to": "slack",
+        "label": "confirm + alerts"
+      },
+      {
+        "from": "rec",
+        "to": "prov",
+        "label": "gcore sync, 1 min"
+      },
+      {
+        "from": "rec",
+        "to": "db",
+        "label": "cluster state"
+      }
+    ]
+  },
+  "constraints": [
+    "Cover all 17 original components and 23 original directed relations across views.",
+    "Provider registry and machine-agent may be explicitly grouped, but not silently dropped.",
+    "Preserve BOTH machines -> boot server iPXE request AND boot server -> machines boot.ipxe response.",
+    "Preserve janitor -> webapi proposals; never delete a relation to fix routing.",
+    "River jobs -> S3 diagnostics is separate from providers, janitor, and machine image retrieval.",
+    "Use slow, sparse dots on selected communication edges; never on borders."
+  ],
+  "animation": "required"
+}

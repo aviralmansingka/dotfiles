@@ -1,0 +1,945 @@
+{
+  "case_id": "homelab-nic-trace",
+  "round": "03",
+  "round_note": "the output template asks for round \"03\"; this sample was generated in the round-04 evaluation directory (docs/visualize-eval/rounds/04) with the round-04 candidate skill and frozen binary",
+  "eval_round_dir": "docs/visualize-eval/rounds/04",
+  "generator": {
+    "identity": "pi worker subagent, fresh generation for the visualize evaluation (no prior-round context read)",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "subagent_name": "viz-ds04-3",
+    "subagent_id": "566b35de",
+    "judge_spawned": false,
+    "review_spawned": false,
+    "review_note": "the candidate skill's independent-review step was not run: the round-04 brief forbids spawning a reviewer; a separate Sol judge follows"
+  },
+  "frozen_inputs": {
+    "candidate_skill": {
+      "path": "docs/visualize-eval/rounds/04/SKILL.md",
+      "sha256": "ac431c6d3035e466e29136f36d9579c551c2e070a354dc5df72999b1bb1beb3c"
+    },
+    "renderer": {
+      "path": "/tmp/visualize-eval/round-04/bin/rataflow-view",
+      "sha256": "0da16d8d8ed46e2a25eb773fc71ecad4de9e310cd33e303a4c7fe77231ad95bc",
+      "used_absolute": true,
+      "rebuilt": false
+    },
+    "case_source": {
+      "path": "docs/visualize-eval/cases/homelab-nic-trace/source.md"
+    },
+    "source_pointers": [
+      "source.md > Task (rack-bench host, not the devbox)",
+      "source.md > Original line 48 (user request)",
+      "source.md > What the probes found (host, uplink, gateway, WAN path, virtual nets, overlay, IPv6)",
+      "source.md > Mapped onto the datacenter model",
+      "source.md > Relationship facts from the historical attempt (16 edges + node ids)",
+      "source.md > Fixed constraints (claimed ONT/router identity; separate wired, Wi-Fi, Tailscale, docker, libvirt; no SSH)"
+    ]
+  },
+  "views": {
+    "v1": {
+      "view": "v1",
+      "title": "inside the host: libvirt NAT and the docker bridge",
+      "spec": "specs/v1.json",
+      "spec_sha256": "62b7d422292799f591c09328b69df9cfdfa63a18c806a007d1ce9abfe50c1d99",
+      "evidence_dir": "evidence/v1",
+      "captures": {
+        "check": "evidence/v1/check.txt",
+        "text": "evidence/v1/v1-text.txt",
+        "ansi": "evidence/v1/v1-ansi.ansi",
+        "selected_ansi": "evidence/v1/v1-selected.ansi",
+        "frames_in_pane": null,
+        "frames_in_pane_ansi": null,
+        "frames_pinned_77x47": null,
+        "frames_pinned_sha256": null,
+        "manifest": "evidence/v1/manifest.json",
+        "validator_output": "evidence/v1/validator.txt"
+      },
+      "measured": {
+        "viewport_token": "77x47 @100%",
+        "viewport_line": null,
+        "pane_cols_reported": null,
+        "pane_rows_reported": 47,
+        "check_extent_cells": "67x24",
+        "frame_columns": 77,
+        "frame_rows": 47,
+        "note": "the app header token is the measurement; the headless --check extent is the drawn canvas, the header token is the pane the human sees"
+      },
+      "pane": {
+        "pane_id": "w7E:pD0",
+        "cleanup": "confirmed_closed"
+      },
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=5 edges=4 flows=0 direction=tb theme=gruvbox",
+        "extent=67x24 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: virt(4) host(1)",
+        "trunks:",
+        "routes: 4/4 near-minimal, 0 detours, 0 shortened",
+        "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 0/0 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "check_parsed": {
+        "crossings": "0 bridges, 0 touching bends",
+        "labels": "4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "routes": "4/4 near-minimal, 0 detours, 0 shortened",
+        "dots": "0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins": "0/0 routes start at their arrow origin",
+        "arrivals": "0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      },
+      "validator_output": [
+        "PASS manifest_readable",
+        "PASS binary_path_absolute",
+        "PASS binary_hash_recorded",
+        "PASS artifact_hashes",
+        "PASS check_output_present",
+        "PASS check_exit_zero",
+        "PASS check_warnings_absent",
+        "PASS labels_parsed",
+        "PASS labels_complete",
+        "PASS labels_off_routes",
+        "PASS labels_not_skipped",
+        "PASS dots_parsed",
+        "PASS dots_no_violations",
+        "PASS origins_reported",
+        "PASS origins_complete",
+        "PASS dots_sync_reported",
+        "PASS arrivals_reported",
+        "PASS arrivals_complete",
+        "PASS labels_ownership_reported",
+        "PASS labels_ownership_clear",
+        "PASS routes_economy_reported",
+        "PASS routes_no_detours",
+        "PASS crossings_reported",
+        "PASS viewport_proven",
+        "PASS viewport_proven_measurable",
+        "PASS viewport_matches_target",
+        "PASS cleanup_confirmed",
+        "PASS select_all_frame",
+        "PASS select_all_artifact",
+        "PASS attempts_readable",
+        "PASS attempts_view_budget",
+        "PASS attempts_spec_budget",
+        "",
+        "all checks passed"
+      ]
+    },
+    "v2-lan": {
+      "view": "v2-lan",
+      "title": "LAN uplink, gateway, and the host egress answers",
+      "spec": "specs/v2-lan.json",
+      "spec_sha256": "341c30f13c4bad79e5e49227fb58fbba97df639ea36ea41932456475cee729f1",
+      "evidence_dir": "evidence/v2-lan",
+      "captures": {
+        "check": "evidence/v2-lan/check.txt",
+        "text": "evidence/v2-lan/v2-lan-text.txt",
+        "ansi": "evidence/v2-lan/v2-lan-ansi.ansi",
+        "selected_ansi": "evidence/v2-lan/v2-lan-selected.ansi",
+        "frames_in_pane": "evidence/v2-lan/v2-lan-frames.txt",
+        "frames_in_pane_ansi": "evidence/v2-lan/v2-lan-frames.ansi",
+        "frames_pinned_77x47": "evidence/v2-lan/v2-lan-frames-pinned.txt",
+        "frames_pinned_sha256": "e80dbe91e6d09ba458952cb87dfebe693ae4a083fd34c4fdc7be4b28949be3a2",
+        "manifest": "evidence/v2-lan/manifest.json",
+        "validator_output": "evidence/v2-lan/validator.txt"
+      },
+      "measured": {
+        "viewport_token": "77x47 @100%",
+        "viewport_line": null,
+        "pane_cols_reported": null,
+        "pane_rows_reported": 47,
+        "check_extent_cells": "74x32",
+        "frame_columns": 77,
+        "frame_rows": 47,
+        "note": "the app header token is the measurement; the headless --check extent is the drawn canvas, the header token is the pane the human sees"
+      },
+      "pane": {
+        "pane_id": "w7E:pE1",
+        "cleanup": "confirmed_closed"
+      },
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=5 edges=5 flows=5 direction=tb theme=gruvbox",
+        "extent=74x32 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 5/5 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+        "warning: 1 label(s) have an ambiguous owner: another route is as close to the label as its own edge, so a reader cannot tell which edge the label names",
+        "groups: host(1) phys(2) edge(2)",
+        "trunks:",
+        "routes: 5/5 near-minimal, 0 detours, 0 shortened",
+        "dots: 5 single-dot routes, 0 periodic routes, 0 violations, 5 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 5/5 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "check_parsed": {
+        "crossings": "0 bridges, 0 touching bends",
+        "labels": "5/5 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+        "routes": "5/5 near-minimal, 0 detours, 0 shortened",
+        "dots": "5 single-dot routes, 0 periodic routes, 0 violations, 5 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins": "5/5 routes start at their arrow origin",
+        "arrivals": "0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      },
+      "validator_output": [
+        "PASS manifest_readable",
+        "PASS binary_path_absolute",
+        "PASS binary_hash_recorded",
+        "PASS artifact_hashes",
+        "PASS check_output_present",
+        "PASS check_exit_zero",
+        "FAIL check_warnings_absent \u2014 warning: 1 label(s) have an ambiguous owner: another route is as close to the label as its own edge, so a reader cannot tell which edge the label names",
+        "PASS labels_parsed",
+        "PASS labels_complete",
+        "PASS labels_off_routes",
+        "PASS labels_not_skipped",
+        "PASS dots_parsed",
+        "PASS dots_no_violations",
+        "PASS origins_reported",
+        "PASS origins_complete",
+        "PASS dots_sync_reported",
+        "PASS arrivals_reported",
+        "PASS arrivals_complete",
+        "PASS labels_ownership_reported",
+        "FAIL labels_ownership_clear \u2014 1 label(s) sit as close to another route as to their own edge; a reader cannot pair them",
+        "PASS routes_economy_reported",
+        "PASS routes_no_detours",
+        "PASS crossings_reported",
+        "PASS viewport_proven",
+        "PASS viewport_proven_measurable",
+        "PASS viewport_matches_target",
+        "PASS cleanup_confirmed",
+        "PASS select_all_frame",
+        "PASS select_all_artifact",
+        "PASS frames_artifact",
+        "PASS frames_timestamped",
+        "PASS attempts_readable",
+        "PASS attempts_view_budget",
+        "PASS attempts_spec_budget",
+        "",
+        "2 check(s) failed: check_warnings_absent, labels_ownership_clear"
+      ]
+    },
+    "v3-overlay": {
+      "view": "v3-overlay",
+      "title": "tailscale encapsulation over the wired path",
+      "spec": "specs/v3-overlay.json",
+      "spec_sha256": "0ad360e08757b87c8ce57ee22626882363d76495947a22b0ec10920f147ca8d2",
+      "evidence_dir": "evidence/v3-overlay",
+      "captures": {
+        "check": "evidence/v3-overlay/check.txt",
+        "text": "evidence/v3-overlay/v3-overlay-text.txt",
+        "ansi": "evidence/v3-overlay/v3-overlay-ansi.ansi",
+        "selected_ansi": "evidence/v3-overlay/v3-overlay-selected.ansi",
+        "frames_in_pane": "evidence/v3-overlay/v3-overlay-frames.txt",
+        "frames_in_pane_ansi": "evidence/v3-overlay/v3-overlay-frames.ansi",
+        "frames_pinned_77x47": "evidence/v3-overlay/v3-overlay-frames-pinned.txt",
+        "frames_pinned_sha256": "baefa82fa5e166a81c94026c7f4da15c26ee9b55d3dd97e66abf75fdf3873ff0",
+        "manifest": "evidence/v3-overlay/manifest.json",
+        "validator_output": "evidence/v3-overlay/validator.txt"
+      },
+      "measured": {
+        "viewport_token": "77x47 @100%",
+        "viewport_line": null,
+        "pane_cols_reported": null,
+        "pane_rows_reported": 47,
+        "check_extent_cells": "63x11",
+        "frame_columns": 77,
+        "frame_rows": 47,
+        "note": "the app header token is the measurement; the headless --check extent is the drawn canvas, the header token is the pane the human sees"
+      },
+      "pane": {
+        "pane_id": "w7E:pE2",
+        "cleanup": "confirmed_closed"
+      },
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=3 edges=2 flows=2 direction=lr theme=gruvbox",
+        "layers=2 (explicit placement, sugiyama skipped)",
+        "extent=63x11 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 2/2 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: overlay(1) host(1) phys(1)",
+        "trunks:",
+        "routes: 2/2 near-minimal, 0 detours, 0 shortened",
+        "dots: 2 single-dot routes, 0 periodic routes, 0 violations, 2 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 2/2 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "check_parsed": {
+        "crossings": "0 bridges, 0 touching bends",
+        "labels": "2/2 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "routes": "2/2 near-minimal, 0 detours, 0 shortened",
+        "dots": "2 single-dot routes, 0 periodic routes, 0 violations, 2 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins": "2/2 routes start at their arrow origin",
+        "arrivals": "0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      },
+      "validator_output": [
+        "PASS manifest_readable",
+        "PASS binary_path_absolute",
+        "PASS binary_hash_recorded",
+        "PASS artifact_hashes",
+        "PASS check_output_present",
+        "PASS check_exit_zero",
+        "PASS check_warnings_absent",
+        "PASS labels_parsed",
+        "PASS labels_complete",
+        "PASS labels_off_routes",
+        "PASS labels_not_skipped",
+        "PASS dots_parsed",
+        "PASS dots_no_violations",
+        "PASS origins_reported",
+        "PASS origins_complete",
+        "PASS dots_sync_reported",
+        "PASS arrivals_reported",
+        "PASS arrivals_complete",
+        "PASS labels_ownership_reported",
+        "PASS labels_ownership_clear",
+        "PASS routes_economy_reported",
+        "PASS routes_no_detours",
+        "PASS crossings_reported",
+        "PASS viewport_proven",
+        "PASS viewport_proven_measurable",
+        "PASS viewport_matches_target",
+        "PASS cleanup_confirmed",
+        "PASS select_all_frame",
+        "PASS select_all_artifact",
+        "PASS frames_artifact",
+        "PASS frames_timestamped",
+        "PASS attempts_readable",
+        "PASS attempts_view_budget",
+        "PASS attempts_spec_budget",
+        "",
+        "all checks passed"
+      ]
+    },
+    "v4-wan": {
+      "view": "v4-wan",
+      "title": "ISP and WAN hops with claimed identities",
+      "spec": "specs/v4-wan.json",
+      "spec_sha256": "198f2eb19ac4537530f001de6e1173d25af2bec45489e8f123cb65c01f9f8b83",
+      "evidence_dir": "evidence/v4-wan",
+      "captures": {
+        "check": "evidence/v4-wan/check.txt",
+        "text": "evidence/v4-wan/v4-wan-text.txt",
+        "ansi": "evidence/v4-wan/v4-wan-ansi.ansi",
+        "selected_ansi": "evidence/v4-wan/v4-wan-selected.ansi",
+        "frames_in_pane": "evidence/v4-wan/v4-wan-frames.txt",
+        "frames_in_pane_ansi": "evidence/v4-wan/v4-wan-frames.ansi",
+        "frames_pinned_77x47": "evidence/v4-wan/v4-wan-frames-pinned.txt",
+        "frames_pinned_sha256": "ff8fd4695b51b1d63703f6279716f4f74a76cd0c77052e96391329c1c3de5843",
+        "manifest": "evidence/v4-wan/manifest.json",
+        "validator_output": "evidence/v4-wan/validator.txt"
+      },
+      "measured": {
+        "viewport_token": "77x47 @100%",
+        "viewport_line": null,
+        "pane_cols_reported": null,
+        "pane_rows_reported": 47,
+        "check_extent_cells": "67x40",
+        "frame_columns": 77,
+        "frame_rows": 47,
+        "note": "the app header token is the measurement; the headless --check extent is the drawn canvas, the header token is the pane the human sees"
+      },
+      "pane": {
+        "pane_id": "w7E:pE3",
+        "cleanup": "confirmed_closed"
+      },
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=6 edges=5 flows=4 direction=tb theme=gruvbox",
+        "extent=67x40 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 5/5 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: edge(1) isp(3) v6(1) cf(1)",
+        "trunks:",
+        "routes: 5/5 near-minimal, 0 detours, 0 shortened",
+        "dots: 4 single-dot routes, 0 periodic routes, 0 violations, 4 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 4/4 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "check_parsed": {
+        "crossings": "0 bridges, 0 touching bends",
+        "labels": "5/5 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "routes": "5/5 near-minimal, 0 detours, 0 shortened",
+        "dots": "4 single-dot routes, 0 periodic routes, 0 violations, 4 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins": "4/4 routes start at their arrow origin",
+        "arrivals": "0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      },
+      "validator_output": [
+        "PASS manifest_readable",
+        "PASS binary_path_absolute",
+        "PASS binary_hash_recorded",
+        "PASS artifact_hashes",
+        "PASS check_output_present",
+        "PASS check_exit_zero",
+        "PASS check_warnings_absent",
+        "PASS labels_parsed",
+        "PASS labels_complete",
+        "PASS labels_off_routes",
+        "PASS labels_not_skipped",
+        "PASS dots_parsed",
+        "PASS dots_no_violations",
+        "PASS origins_reported",
+        "PASS origins_complete",
+        "PASS dots_sync_reported",
+        "PASS arrivals_reported",
+        "PASS arrivals_complete",
+        "PASS labels_ownership_reported",
+        "PASS labels_ownership_clear",
+        "PASS routes_economy_reported",
+        "PASS routes_no_detours",
+        "PASS crossings_reported",
+        "PASS viewport_proven",
+        "PASS viewport_proven_measurable",
+        "PASS viewport_matches_target",
+        "PASS cleanup_confirmed",
+        "PASS select_all_frame",
+        "PASS select_all_artifact",
+        "PASS frames_artifact",
+        "PASS frames_timestamped",
+        "PASS attempts_readable",
+        "PASS attempts_view_budget",
+        "PASS attempts_spec_budget",
+        "",
+        "all checks passed"
+      ]
+    }
+  },
+  "coverage": {
+    "view_count": 4,
+    "split_reason": "one host graph carrying virtual nets, overlay, LAN and WAN at once rendered 139 columns wide (host hub with four in-edges pushes routes onto side ports) and the six-node uplink view stayed 76-82 columns with two ambiguous owners; the graph is split along four honest seams - inside the host (v1), LAN/gateway/answers (v2-lan), overlay encapsulation (v3-overlay), ISP hops (v4-wan)",
+    "every_audited_relationship_placed": true,
+    "cross_view_duplication": [
+      "the host node appears in v1 ('homelab ~/rack-bench'), v2-lan ('homelab ASUS/Linux7') and v3-overlay ('homelab ~/rack-bench'): same entity; the v2 label carries the hardware/OS facts, the other two carry the workload path",
+      "bond0 appears in v2-lan ('bond0 192.168.1.197/24') and v3-overlay ('bond0 192.168.1.197'): v3 omits the mask because the overlay route does not touch the LAN",
+      "the Fios path is coarse-grained as x2 in v2-lan while v4-wan draws the four hops x2 stands for"
+    ]
+  },
+  "meaning_ledger": [
+    {
+      "fact": "host `homelab` \u2014 ASUS bare metal, Linux 7.0",
+      "kind": "identity",
+      "fate": "drawn",
+      "where": "v1/v3 host node 'homelab ~/rack-bench'; v2 host node 'homelab ASUS/Linux7'. 'bare metal' is carried by the ASUS vendor + Linux7 text and not spelled out (see deliberate_drops)."
+    },
+    {
+      "fact": "`~/rack-bench` on that host, latest runs from Oct 11",
+      "kind": "residency",
+      "fate": "drawn (path) / dropped (date)",
+      "where": "v1/v3 host node 'homelab ~/rack-bench'. The Oct 11 run date is run accounting, not topology, and is dropped with that reason."
+    },
+    {
+      "fact": "`bond0` over `eno1`, 2.5 GbE wired uplink",
+      "kind": "interface + link",
+      "fate": "drawn",
+      "where": "v2 node 'bond0 192.168.1.197/24', edge label 'eno1 2.5 GbE'; v3 node 'bond0 192.168.1.197'."
+    },
+    {
+      "fact": "`192.168.1.197`",
+      "kind": "address",
+      "fate": "drawn",
+      "where": "v1/v2 bond0 node label; v3 bond0 node label."
+    },
+    {
+      "fact": "LAN `192.168.1.0/24`",
+      "kind": "address",
+      "fate": "abbreviated",
+      "where": "written in interface form '192.168.1.197/24' on the bond0 node: same CIDR, mask key on the same view. The network address form is not spelled out."
+    },
+    {
+      "fact": "`wlp8s0`, `.213`, on the same LAN",
+      "kind": "interface + address",
+      "fate": "drawn",
+      "where": "v2 node 'wlp8s0 .213 failover'. '.213' is kept exactly as the source writes it."
+    },
+    {
+      "fact": "backup Wi-Fi route: metric 600, metric failover, not ECMP",
+      "kind": "qualifier + mechanism",
+      "fate": "drawn",
+      "where": "v2: edge 'backup path' (host to Wi-Fi), edge 'metric 600, not ECMP' (Wi-Fi to gateway), node suffix 'failover'."
+    },
+    {
+      "fact": "gateway `192.168.1.1`",
+      "kind": "address",
+      "fate": "drawn",
+      "where": "v2 edge label '192.168.1.1'."
+    },
+    {
+      "fact": "gateway RTT 0.5 ms",
+      "kind": "measurement",
+      "fate": "drawn",
+      "where": "v2 node 'claimed Fios rtr 0.5ms'."
+    },
+    {
+      "fact": "router identity 'Verizon Fios router' is a claimed interpretation (WNC OUI)",
+      "kind": "qualifier",
+      "fate": "drawn (claim) / dropped (OUI)",
+      "where": "'claimed' is on the v2 router node; v4 labels the same hop by behaviour ('Fios rtr: NAT, DHCP'). The WNC OUI is dropped \u2014 see deliberate_drops."
+    },
+    {
+      "fact": "the router does NAT and DHCP",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v4 node 'Fios rtr: NAT, DHCP'."
+    },
+    {
+      "fact": "one Fios pool IP `71.251.12.240` shared by the whole home",
+      "kind": "address + qualifier",
+      "fate": "drawn",
+      "where": "v4 edge label 'pool 71.251.12.240' on the NAT hop to the ONT."
+    },
+    {
+      "fact": "ONT / Verizon edge `169.254.3.1`, claimed identity, 4.5 ms",
+      "kind": "address + qualifier + measurement",
+      "fate": "drawn",
+      "where": "v4 node 'claimed ONT 169.254.3.1', edge label '4.5ms'."
+    },
+    {
+      "fact": "Verizon aggregation `100.41.x`, 6.6 ms",
+      "kind": "prefix + measurement",
+      "fate": "drawn",
+      "where": "v4 node 'VZ agg 100.41.x', edge '6.6ms'."
+    },
+    {
+      "fact": "Verizon backbone AS701, 6-9 ms",
+      "kind": "AS number + measurement",
+      "fate": "drawn",
+      "where": "v4 node 'VZ bbone AS701', edge '6-9ms'."
+    },
+    {
+      "fact": "Cloudflare AS13335, `1.1.1.1`",
+      "kind": "AS number + address",
+      "fate": "drawn",
+      "where": "v4 node 'CF AS13335 1.1.1.1'."
+    },
+    {
+      "fact": "libvirt VM behind a NAT bridge on `192.168.122.x` (`vnet0`, `virbr0`)",
+      "kind": "interface + segment",
+      "fate": "drawn",
+      "where": "v1 nodes 'VM vnet0', 'virbr0 NAT bridge'; edges '192.168.122.x', 'libvirt NAT'."
+    },
+    {
+      "fact": "Docker container on `172.18.2.x` (`dkbr` `172.18.2.1`, veth)",
+      "kind": "interface + segment",
+      "fate": "drawn",
+      "where": "v1 nodes 'ctr veth', 'dkbr 172.18.2.1'; edges '172.18.2.x', 'docker bridge'."
+    },
+    {
+      "fact": "Tailscale overlay `tailscale0` `100.113.153.49`, encapsulated over UDP on the wired path",
+      "kind": "overlay",
+      "fate": "drawn",
+      "where": "v3 node 'tailscale0 100.113.153.49'; edges 'overlay' and 'UDP encap'."
+    },
+    {
+      "fact": "IPv6 ULA prefixes only \u2014 no global v6, so v6 internet is unreachable",
+      "kind": "limitation",
+      "fate": "drawn",
+      "where": "v4 node 'v6 internet' plus a dashed edge 'ULA only, no route' from the Fios router."
+    },
+    {
+      "fact": "`bench internet` answers: NAT on egress, no committed rate, no v6",
+      "kind": "limitation (Part B)",
+      "fate": "drawn",
+      "where": "NAT: v4 'Fios rtr: NAT, DHCP'. No committed rate: v2 edge 'no committed rate'. No v6: v4 'ULA only, no route'."
+    },
+    {
+      "fact": "Fios router is the whole collapsed fabric \u2014 ToR, spine, border and firewall in one box",
+      "kind": "interpretation",
+      "fate": "dropped",
+      "where": "Analogy to another design; drawing it needs nodes that do not exist on this host. See deliberate_drops."
+    },
+    {
+      "fact": "ONT is the demarc / MMR analog; one ISP, one path (opposite of the 4-ISP, 2-MMR design)",
+      "kind": "interpretation",
+      "fate": "abbreviated + dropped",
+      "where": "Abbreviated: '1 ISP' in the v2 path node. Dropped: the MMR analogy and the 4-ISP contrast, same reason as above."
+    },
+    {
+      "fact": "traceroute hops and MAC-vendor roles are historical interpretations, not verified physical topology",
+      "kind": "qualifier",
+      "fate": "drawn",
+      "where": "'claimed' on the ONT (v4) and on the Fios router (v2); WAN hops keep their measured-prefix names and no confirmed physical topology is asserted."
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "vm",
+      "to": "virbr",
+      "verb_tech": "192.168.122.x segment",
+      "label_owner": "e1",
+      "label_text": "192.168.122.x",
+      "view": "v1"
+    },
+    {
+      "id": "e2",
+      "from": "virbr",
+      "to": "box",
+      "verb_tech": "libvirt NAT bridge",
+      "label_owner": "e2",
+      "label_text": "libvirt NAT",
+      "view": "v1"
+    },
+    {
+      "id": "e3",
+      "from": "ctr",
+      "to": "dkbr",
+      "verb_tech": "172.18.2.x segment",
+      "label_owner": "e3",
+      "label_text": "172.18.2.x",
+      "view": "v1"
+    },
+    {
+      "id": "e4",
+      "from": "dkbr",
+      "to": "box",
+      "verb_tech": "docker bridge",
+      "label_owner": "e4",
+      "label_text": "docker bridge",
+      "view": "v1"
+    },
+    {
+      "id": "e5",
+      "from": "ts",
+      "to": "box",
+      "verb_tech": "tailscale overlay",
+      "label_owner": "e5",
+      "label_text": "overlay",
+      "view": "v3-overlay"
+    },
+    {
+      "id": "e6",
+      "from": "ts",
+      "to": "bond0",
+      "verb_tech": "encap over UDP on the wired path",
+      "label_owner": "e6",
+      "label_text": "UDP encap",
+      "view": "v3-overlay"
+    },
+    {
+      "id": "e7",
+      "from": "box",
+      "to": "bond0",
+      "verb_tech": "eno1 2.5 GbE physical uplink",
+      "label_owner": "e7",
+      "label_text": "eno1 2.5 GbE",
+      "view": "v2-lan"
+    },
+    {
+      "id": "e8",
+      "from": "box",
+      "to": "wlp",
+      "verb_tech": "Wi-Fi backup route",
+      "label_owner": "e8",
+      "label_text": "backup path",
+      "view": "v2-lan"
+    },
+    {
+      "id": "e9",
+      "from": "bond0",
+      "to": "rtr",
+      "verb_tech": "default gateway 0.5 ms",
+      "label_owner": "e9",
+      "label_text": "192.168.1.1",
+      "view": "v2-lan",
+      "carrier_note": "latency 0.5 ms is on the rtr node label in the same view"
+    },
+    {
+      "id": "e10",
+      "from": "wlp",
+      "to": "rtr",
+      "verb_tech": "metric 600 failover, not ECMP",
+      "label_owner": "e10",
+      "label_text": "metric 600, not ECMP",
+      "view": "v2-lan"
+    },
+    {
+      "id": "e11",
+      "from": "rtr",
+      "to": "ont",
+      "verb_tech": "NAT out",
+      "label_owner": "e11",
+      "label_text": "pool 71.251.12.240",
+      "view": "v4-wan",
+      "carrier_note": "NAT/DHCP is on the rtr node label in the same view; the pool IP is the NAT'd source"
+    },
+    {
+      "id": "e12",
+      "from": "ont",
+      "to": "vzagg",
+      "verb_tech": "4.5 ms hop",
+      "label_owner": "e12",
+      "label_text": "4.5ms",
+      "view": "v4-wan"
+    },
+    {
+      "id": "e13",
+      "from": "vzagg",
+      "to": "vzbb",
+      "verb_tech": "6.6 ms hop",
+      "label_owner": "e13",
+      "label_text": "6.6ms",
+      "view": "v4-wan"
+    },
+    {
+      "id": "e14",
+      "from": "vzbb",
+      "to": "cf",
+      "verb_tech": "6-9 ms hop",
+      "label_owner": "e14",
+      "label_text": "6-9ms",
+      "view": "v4-wan"
+    },
+    {
+      "id": "x1",
+      "from": "rtr",
+      "to": "v6",
+      "verb_tech": "absent route (ULA only)",
+      "label_owner": "x1",
+      "label_text": "ULA only, no route",
+      "view": "v4-wan",
+      "derived": true,
+      "source_pointer": "source.md > What the probes found > IPv6"
+    },
+    {
+      "id": "x2",
+      "from": "rtr",
+      "to": "fios",
+      "verb_tech": "coarse-grained Fios path",
+      "label_owner": "x2",
+      "label_text": "(none: node label 'Fios path: 1 ISP' and edge label 'no committed rate' on the same route)",
+      "view": "v2-lan",
+      "derived": true,
+      "source_pointer": "source.md: 'bench internet ... measures the Fios path'"
+    }
+  ],
+  "relationship_mapping": [
+    {
+      "source_relationship": "vm -> virbr: 192.168.122.x",
+      "drawn_as": "e1 in v1",
+      "visible_text": "edge label '192.168.122.x'"
+    },
+    {
+      "source_relationship": "virbr -> box: NAT bridge",
+      "drawn_as": "e2 in v1",
+      "visible_text": "edge label 'libvirt NAT', node 'virbr0 NAT bridge'"
+    },
+    {
+      "source_relationship": "ctr -> dkbr: 172.18.2.x",
+      "drawn_as": "e3 in v1",
+      "visible_text": "edge label '172.18.2.x'"
+    },
+    {
+      "source_relationship": "dkbr -> box: docker bridge",
+      "drawn_as": "e4 in v1",
+      "visible_text": "edge label 'docker bridge', node 'dkbr 172.18.2.1'"
+    },
+    {
+      "source_relationship": "ts -> box: overlay",
+      "drawn_as": "e5 in v3-overlay",
+      "visible_text": "edge label 'overlay'"
+    },
+    {
+      "source_relationship": "ts -> bond0: encap over UDP",
+      "drawn_as": "e6 in v3-overlay",
+      "visible_text": "edge label 'UDP encap'"
+    },
+    {
+      "source_relationship": "box -> bond0: eno1 2.5 GbE",
+      "drawn_as": "e7 in v2-lan",
+      "visible_text": "edge label 'eno1 2.5 GbE'"
+    },
+    {
+      "source_relationship": "box -> wlp: backup path",
+      "drawn_as": "e8 in v2-lan",
+      "visible_text": "edge label 'backup path'"
+    },
+    {
+      "source_relationship": "bond0 -> rtr: default gw 0.5 ms",
+      "drawn_as": "e9 in v2-lan",
+      "visible_text": "edge label '192.168.1.1' plus node 'claimed Fios rtr 0.5ms'"
+    },
+    {
+      "source_relationship": "wlp -> rtr: metric 600",
+      "drawn_as": "e10 in v2-lan",
+      "visible_text": "edge label 'metric 600, not ECMP'"
+    },
+    {
+      "source_relationship": "rtr -> ont: NAT out",
+      "drawn_as": "e11 in v4-wan",
+      "visible_text": "edge label 'pool 71.251.12.240' plus node 'Fios rtr: NAT, DHCP'"
+    },
+    {
+      "source_relationship": "ont -> vzagg: 4.5 ms",
+      "drawn_as": "e12 in v4-wan",
+      "visible_text": "edge label '4.5ms'"
+    },
+    {
+      "source_relationship": "vzagg -> vzbb: 6.6 ms",
+      "drawn_as": "e13 in v4-wan",
+      "visible_text": "edge label '6.6ms'"
+    },
+    {
+      "source_relationship": "vzbb -> cf: 6-9 ms",
+      "drawn_as": "e14 in v4-wan",
+      "visible_text": "edge label '6-9ms'"
+    },
+    {
+      "source_relationship": "(derived) no global IPv6 -> v6 internet unreachable",
+      "drawn_as": "x1 in v4-wan",
+      "visible_text": "dashed edge 'ULA only, no route' to node 'v6 internet'"
+    },
+    {
+      "source_relationship": "(derived) bench internet answers on the Fios path",
+      "drawn_as": "x2 in v2-lan",
+      "visible_text": "node 'Fios path: 1 ISP', unlabeled route, edge label 'no committed rate'"
+    }
+  ],
+  "abbreviations": [
+    "'192.168.1.0/24 LAN' -> interface notation '192.168.1.197/24' on the bond0 node",
+    "'the whole home shares one Fios pool IP, 71.251.12.240' -> edge label 'pool 71.251.12.240'",
+    "'one ISP, one path' -> path node 'Fios path: 1 ISP'",
+    "'ASUS bare metal, Linux 7.0' -> host node 'homelab ASUS/Linux7'",
+    "'Verizon aggregation 100.41.x' -> 'VZ agg 100.41.x'; 'Verizon backbone AS701' -> 'VZ bbone AS701'; 'Cloudflare AS13335' -> 'CF AS13335 1.1.1.1'",
+    "'libvirt VM behind a NAT bridge' -> 'VM vnet0' + 'virbr0 NAT bridge' + edge 'libvirt NAT'",
+    "'metric failover, not ECMP' -> node suffix 'failover' + edge 'metric 600, not ECMP'"
+  ],
+  "deliberate_drops": [
+    {
+      "fact": "WNC OUI (MAC vendor behind the 'Fios router' claim)",
+      "reason": "vendor OUI is the evidence for the claim, not a relation; the claim itself is drawn as 'claimed'",
+      "coverage_gap": true
+    },
+    {
+      "fact": "'bare metal' in 'ASUS bare metal'",
+      "reason": "the host node already carries the vendor and the OS; the bare-metal qualifier is the only part of that clause not spelled out",
+      "coverage_gap": true
+    },
+    {
+      "fact": "Oct 11 run date for ~/rack-bench",
+      "reason": "run accounting, not topology",
+      "coverage_gap": false
+    },
+    {
+      "fact": "Fios router = collapsed ToR/spine/border/firewall; ONT = demarc/MMR analog; 4-ISP 2-MMR contrast",
+      "reason": "analogies to another design; drawing them needs nodes this host does not have (recorded rather than invented)",
+      "coverage_gap": true
+    },
+    {
+      "fact": "explicit 'DHCP' word",
+      "reason": "not dropped - it is in the v4 node 'Fios rtr: NAT, DHCP'",
+      "coverage_gap": false
+    }
+  ],
+  "known_defects": [
+    {
+      "view": "v2-lan",
+      "severity": "label ownership",
+      "detail": "1 ambiguous label owner. Measured on evidence/v2-lan/v2-lan-frames-pinned.txt frame 0: the label 'no committed rate' spans columns 30-46 of row 31, centre (38,31). Its own route (rtr -> fios) is the vertical stem at column 28, 10 cells from the centre; the competing wlp -> rtr straight run occupies row 24 and passes through column 38, 7 cells from the centre, so another route is closer than its own. Label placement had no unambiguous alternative in this geometry: the rtr -> fios route is a 4-cell vertical, and a 17-cell label placed beside a vertical run is offset 9 cells while the two converging LAN runs sit 7 rows below.",
+      "validator_effect": "check_warnings_absent FAIL, labels_ownership_clear FAIL"
+    },
+    {
+      "view": "v4-wan",
+      "severity": "composition",
+      "detail": "the control palette (columns 1-9, rows 40-45) overlaps the bottom node: the CF box occupies columns 7-26, rows 38-41, so its lower-left border at columns 7-9, rows 40-41 is painted over (evidence/v4-wan/v4-wan-text.txt rows 40-41). The 40-row chain is centred in a 46-row area and lands on the palette band; the validator does not test this, a reader sees it.",
+      "validator_effect": "none (not tested)"
+    },
+    {
+      "view": "v4-wan",
+      "severity": "density",
+      "detail": "40 of 46 rows used; a taller chain would not fit, so no further hop can be added to this view.",
+      "validator_effect": "none"
+    },
+    {
+      "view": "all",
+      "severity": "observation",
+      "detail": "phase-0 dots sit on the first dot cell the router allocated, which is one cell beyond the port stem cell (e.g. v2-lan frame 0 dot at (28,15) under the host port stem at (28,14); v4-wan frame 0 dot at (8,19) under the ONT port stem at (8,18)). The check's origins line reads full for every animated view, so under the renderer's own definition the dot starts at its arrow origin; a reader sees it one cell past the box border.",
+      "validator_effect": "none"
+    }
+  ],
+  "blockers": [],
+  "cleanup": {
+    "panes": [
+      {
+        "view": "v1",
+        "pane_id": "w7E:pD0",
+        "cleanup": "confirmed_closed"
+      },
+      {
+        "view": "v2-lan",
+        "pane_id": "w7E:pE1",
+        "cleanup": "confirmed_closed"
+      },
+      {
+        "view": "v3-overlay",
+        "pane_id": "w7E:pE2",
+        "cleanup": "confirmed_closed"
+      },
+      {
+        "view": "v4-wan",
+        "pane_id": "w7E:pE3",
+        "cleanup": "confirmed_closed"
+      }
+    ],
+    "failures": [],
+    "note": "every pane was split no-focus from this worker's own tab by scripts/viz-evidence.sh and closed by the same script; each manifest records cleanup=confirmed_closed"
+  },
+  "evidence_artifacts": {
+    "extra_after_manifest": [
+      "evidence/v2-lan/v2-lan-frames-pinned.txt",
+      "evidence/v3-overlay/v3-overlay-frames-pinned.txt",
+      "evidence/v4-wan/v4-wan-frames-pinned.txt"
+    ],
+    "extra_after_manifest_note": "the in-pane --frames capture keeps only the last 1000 pane scrollback lines, so frame 0 was truncated; the pinned COLUMNS=77 LINES=47 dumps carry all 21 frames and were added after the manifests were written, so they are not in the manifests' artifact hashes (their sha256 values are in each view's captures block)",
+    "attempts_index": "attempts.json (per-view candidates with raw --check files, plus the superseded combined-view probes)",
+    "validator_runs": "evidence/<view>/validator.txt, produced with scripts/viz-validate.py --require-select --require-frames (v1: no --require-frames, the view is static) and --attempts attempts.json"
+  },
+  "claims_with_captures": [
+    {
+      "claim": "fits 77x47 at natural 100% zoom, no pan",
+      "capture": "evidence/<view>/<label>-text.txt line 0 header token '77x47 @100%' for all four views; no 'graph overflows' badge anywhere in the four text captures",
+      "coordinates": "line 0, columns 1-30"
+    },
+    {
+      "claim": "all dots advance at the same constant speed (0.5 cells per 100 ms step)",
+      "capture": "evidence/v2-lan/v2-lan-frames-pinned.txt",
+      "coordinates": "route host->bond0: dot at (27,16) on frame 2 and (23,16) on frame 10 = 4 cells in 8 steps; route bond0->rtr: (5,24) -> (9,24) = 4 cells; route wlp->rtr: (51,24) -> (47,24) = 4 cells"
+    },
+    {
+      "claim": "both overlay routes advance together",
+      "capture": "evidence/v3-overlay/v3-overlay-frames-pinned.txt",
+      "coordinates": "frame 2 dots at (36,20) and (36,22); frame 10 dots at (40,20) and (40,22) = 4 cells in 8 steps on both routes"
+    },
+    {
+      "claim": "every dot starts at its arrow origin (renderer definition)",
+      "capture": "evidence/v2-lan/v2-lan-frames-pinned.txt frame 0",
+      "coordinates": "dots at (28,15),(30,15),(4,23),(52,23),(28,31); v3-overlay frame 0 dots at (35,20),(35,22); v4-wan frame 0 dots at (33,11),(8,19),(8,27),(8,35); check lines read origins 5/5, 2/2, 4/4"
+    },
+    {
+      "claim": "no dot sits on a corner, bridge, junction or label",
+      "capture": "the same 21-frame dumps",
+      "coordinates": "'dots: N single-dot routes, 0 periodic routes, 0 violations' in every check line, and no frame shows a dot over a box-drawing corner or over a label's text cells"
+    },
+    {
+      "claim": "the UDP encap label owns its own route",
+      "capture": "evidence/v3-overlay/v3-overlay-text.txt",
+      "coordinates": "label \"UDP encap\" occupies row 23, columns 35-43, one row below its own encap run at row 22 (columns 34-42, dot at (38,22), corner at (42,22)) and three rows below the overlay run at row 20 (columns 34-45); check line reads 2/2 placed, 0 ambiguous owners"
+    },
+    {
+      "claim": "each view is a distinct conceptual group set, not a layout band",
+      "capture": "the check 'groups:' lines",
+      "coordinates": "v1 virt(4) host(1); v2-lan host(1) phys(2) edge(2); v3-overlay overlay(1) host(1) phys(1); v4-wan edge(1) isp(3) v6(1) cf(1)"
+    }
+  ],
+  "validator_summary": {
+    "v1": "all checks passed",
+    "v2-lan": "2 checks failed: check_warnings_absent, labels_ownership_clear",
+    "v3-overlay": "all checks passed",
+    "v4-wan": "all checks passed"
+  },
+  "motion_decisions": {
+    "dots_used": "yes on the three directed-flow views (v2-lan, v3-overlay, v4-wan): one live dot per route, constant-speed default (0.5 cells per 100 ms step), no same-arrival timing because the source asks for no synchronised arrival and constant speed is the round-04 default",
+    "dots_omitted": "v1 carries no dots: it is an attachment view where four routes converge into one host hub; dots would queue on the two host ports and add nothing to the direction the arrowheads already show",
+    "style_dashed": "v4-wan's v6 link is dashed because the source states the opposite of a link - ULA prefixes only, no global v6, v6 internet unreachable - and the label says so"
+  }
+}

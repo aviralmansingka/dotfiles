@@ -1,0 +1,9 @@
+{
+  "recorded_at": "2026-11-02T08:20:19.466777+00:00",
+  "sha256": {
+    "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/00/SKILL.md": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+    "/tmp/visualize-eval/round-00/bin/rataflow-view": "b6e11b05b4fb79ce969dc2646c667572535a949bd1a396fd711e1a5466298c8f",
+    "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/00/network/links/spec.json": "edd0c334c888e4273ad893816a2a35a2958e2fef93c1c25e78a60296756d4288",
+    "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/00/network/application/spec.json": "66bc2203f23bb7aff84dc1191f8ac6599edd4409242d9de5e35fc554b46d556c"
+  }
+}

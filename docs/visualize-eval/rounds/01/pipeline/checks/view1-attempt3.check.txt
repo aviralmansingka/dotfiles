@@ -1,0 +1,5 @@
+# cmd: rataflow-view --check attempts/view1-attempt3.json
+# date: 2026-11-02T08:26:11Z
+ok: nodes=6 edges=6 flows=6 direction=tb theme=gruvbox
+extent=36x40 cells
+# exit=0

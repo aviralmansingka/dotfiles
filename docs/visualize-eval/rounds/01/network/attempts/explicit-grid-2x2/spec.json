@@ -1,0 +1,1 @@
+{"direction":"tb","nodes":[{"id":"core","label":"Core switch"},{"id":"web","label":"Web tier"},{"id":"cache","label":"Redis"},{"id":"db","label":"DB tier"}],"layers":[["core","web"],["cache","db"]],"edges":[{"from":"core","to":"cache","label":"25 GbE","flow":0.2},{"from":"web","to":"db","label":"queries","flow":0.2}]}

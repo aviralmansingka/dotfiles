@@ -1,0 +1,26 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "web", "label": "Humans + mmctl" },
+    { "id": "cp", "label": "Control plane" },
+    { "id": "wapi", "label": "webapi server" },
+    { "id": "pgrpc", "label": "private gRPC" },
+    { "id": "q", "label": "River job queue" },
+    { "id": "reg", "label": "Provider registry" },
+    { "id": "rec", "label": "Reconcile loop" },
+    { "id": "prov", "label": "Bare-metal providers" },
+    { "id": "mch", "label": "Bare-metal machines" }
+  ],
+  "layers": [["web", "cp"], ["wapi", "pgrpc"], ["q"], ["reg", "rec"], ["prov"], ["", "mch"]],
+  "edges": [
+    { "from": "web", "to": "wapi", "label": "http" },
+    { "from": "cp", "to": "pgrpc", "label": "create/terminate", "flow": 0.15 },
+    { "from": "wapi", "to": "q", "label": "reinstall" },
+    { "from": "pgrpc", "to": "q", "label": "enqueue job", "flow": 0.15 },
+    { "from": "q", "to": "reg", "label": "provision job", "flow": 0.15 },
+    { "from": "reg", "to": "prov", "label": "provider API", "flow": 0.15 },
+    { "from": "rec", "to": "prov", "label": "gcore sync 1m" },
+    { "from": "prov", "to": "mch", "label": "allocate", "flow": 0.15 }
+  ]
+}

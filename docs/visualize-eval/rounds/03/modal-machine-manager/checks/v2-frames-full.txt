@@ -1,0 +1,526 @@
+viewport: 80x24 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │─●─▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀─●─│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      ● runs on host
+                      ╰──╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         ● register + heartbeat               ▗▄▄▄▖▗▄▄
+                         │                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 1 at 100ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │─●─▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀─●─│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      ● runs on host
+                      ╰──╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         ● register + heartbeat               ▗▄▄▄▖▗▄▄
+                         │                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 2 at 200ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │─●─▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀─●─│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      ● runs on host
+                      ╰──╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         ● register + heartbeat               ▗▄▄▄▖▗▄▄
+                         │                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 3 at 300ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │─●─▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀─●─│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      ● runs on host
+                      ╰──╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         ● register + heartbeat               ▗▄▄▄▖▗▄▄
+                         │                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 4 at 400ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │─●─▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀─●─│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      │ runs on host
+                      ╰●─╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         ● register + heartbeat               ▗▄▄▄▖▗▄▄
+                         │                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 5 at 500ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │──●▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀●──│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      │ runs on host
+                      ╰●─╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         │ register + heartbeat               ▗▄▄▄▖▗▄▄
+                         ●                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 6 at 600ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │──●▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀●──│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      │ runs on host
+                      ╰●─╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         │ register + heartbeat               ▗▄▄▄▖▗▄▄
+                         ●                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 7 at 700ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │──●▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀●──│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      │ runs on host
+                      ╰●─╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         │ register + heartbeat               ▗▄▄▄▖▗▄▄
+                         ●                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 8 at 800ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │──●▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀●──│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      │ runs on host
+                      ╰●─╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         │ register + heartbeat               ▗▄▄▄▖▗▄▄
+                         ●                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 9 at 900ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │──●▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀●──│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      │ runs on host
+                      ╰●─╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         │ register + heartbeat               ▗▄▄▄▖▗▄▄
+                         ●                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 10 at 1000ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │──●▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀●──│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      │ runs on host
+                      ╰─●╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         │ register + heartbeat               ▗▄▄▄▖▗▄▄
+                         ●                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 11 at 1100ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │──●▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀●──│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      │ runs on host
+                      ╰─●╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         │ register + heartbeat               ▗▄▄▄▖▗▄▄
+                         ●                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 12 at 1200ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │──●▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀●──│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      │ runs on host
+                      ╰─●╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         │ register + heartbeat               ▗▄▄▄▖▗▄▄
+                         ●                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 13 at 1300ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │──●▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀●──│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      │ runs on host
+                      ╰─●╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         │ register + heartbeat               ▗▄▄▄▖▗▄▄
+                         ●                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 14 at 1400ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │──●▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀●──│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      │ runs on host
+                      ╰─●╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         │ register + heartbeat               ▗▄▄▄▖▗▄▄
+                         ●                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 15 at 1500ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │───▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀───│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      │ runs on host
+                      ╰─●╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         │ register + heartbeat               ▗▄▄▄▖▗▄▄
+                         │                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 16 at 1600ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │───▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀───│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      │ runs on host
+                      ╰─●╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         │ register + heartbeat               ▗▄▄▄▖▗▄▄
+                         │                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 17 at 1700ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │───▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀───│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      │ runs on host
+                      ╰──╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         │ register + heartbeat               ▗▄▄▄▖▗▄▄
+                         │                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 18 at 1800ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │───▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀───│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      │ runs on host
+                      ╰──╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         │ register + heartbeat               ▗▄▄▄▖▗▄▄
+                         │                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 19 at 1900ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │───▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀───│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      │ runs on host
+                      ╰──╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         │ register + heartbeat               ▗▄▄▄▖▗▄▄
+                         │                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │
+frame 20 at 2000ms
+ rataflow-view · 80x24 @100% · v2-attempt3.json · 6 nodes · 6 edges · q quit
+                     ╭───────────────────╮    ╭───graph overflows · drag to pan
+                     │                   │───▶│           │
+                     │bare-metal machines│    │boot server│
+                     │                   │◀───│           │
+                     ╰───────────────────╯    ╰───────────╯
+                      │            boot.ipxe + S3 args
+                      │ runs on host
+                      ╰──╮
+                         ▼
+                        ╭─────────────╮
+                        │machine-agent│
+                        │             │
+                        ╰─────────────╯
+                         │                                    ▐████
+                         │ register + heartbeat               ▗▄▄▄▖▗▄▄
+                         │                                    ▝▀▀▀▘▝▀▀
+ ┌───────┐               ╰╮                                    ▄▄▄
+ │ + [+] │                ▼                                    ▀▀▀
+ │ − [-] │               ╭───────────╮                         ▐██
+ │ ⊡ [f] │               │public gRPC│
+ │ □ [i] │               │           │                         ▐█▌
+ └───────┘               ╰───────────╯
+                          │

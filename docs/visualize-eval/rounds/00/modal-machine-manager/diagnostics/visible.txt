@@ -1,0 +1,46 @@
+ rataflow-view · spec.json · 7 nodes · 6 edges · 1 flows · drag pan · scroll
+
+
+
+
+
+
+                                     ╭──────────╮
+                                     │River jobs│
+                                     │          │
+                                     ╰──────────╯
+                                      │─┬─╮
+                                      │ │ │
+                                      │ │ │
+                                      │ │ │
+                                      │ │ │
+                                      │ │ │
+                                      │ │ │
+                                      │ │ │
+                                      │ │ │
+                      audit/verify    │ │ │ diag uploads
+                  ╭───────────────────╯ │ ╰───────────────╮
+                  │                     ▼                 │
+                 ╭─────────╮           ╭───────╮         ╭──╮
+                 │SSH + BMC│           │Janitor│         │S3│
+                 │         │           │       │         │  │
+                 ╰─────────╯           ╰───────╯         ╰──╯
+                  │ machine-audit       │
+                 ╭╯                     ● propose action
+                 │                      ▼
+                ╭───────────╮          ╭──────╮
+                │BM machines│          │Webapi│
+                │           │          │      │
+                ╰───────────╯          ╰──────╯
+                                        │ confirm/alerts
+                                        ╰╮
+                                         │
+                                        ╭─────╮
+                                        │Slack│
+                                        │     │
+ ┌───────┐                              ╰─────╯
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘

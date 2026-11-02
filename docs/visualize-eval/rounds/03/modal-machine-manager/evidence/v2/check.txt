@@ -1,0 +1,10 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=6 edges=6 flows=6 direction=tb theme=gruvbox
+layers=5 (explicit placement, sugiyama skipped)
+extent=40x41 cells
+crossings: 0
+labels: 6/6 placed, 0 on route cells, 0 skipped
+groups: provision(1) machines(3) api(1) state(1)
+trunks:
+dots: 6 single-dot routes, 0 periodic routes, 0 violations, 6 synchronized at 2000ms
+origins: 6/6 routes start at their arrow origin

@@ -1,0 +1,222 @@
+{
+ "round": 5,
+ "rubric_sha256": "039b96252d25ad2078a539fdb1d081ebdb6c09d6f7a3487b96ffbbf3b082e292",
+ "metrics": {
+  "green_cases": 0,
+  "total_cases": 8,
+  "passed_applicable_categories": 20,
+  "failed_applicable_categories": 24,
+  "blocked_applicable_categories": 8,
+  "applicable_categories": 52,
+  "finding_severities": {
+   "critical": 5,
+   "high": 27,
+   "medium": 20,
+   "low": 1
+  }
+ },
+ "green_cases": [],
+ "cases": {
+  "pipeline": {
+   "categories": {
+    "semantic_fidelity": "pass",
+    "arrow_traceability": "fail",
+    "layout_fit": "blocked",
+    "conceptual_grouping_color": "pass",
+    "border_integrity": "pass",
+    "workflow_evidence": "blocked",
+    "animation": "fail"
+   },
+   "overall": "fail",
+   "findings": 2,
+   "severities": {
+    "critical": 0,
+    "high": 1,
+    "medium": 1,
+    "low": 0
+   },
+   "edges_total": 6,
+   "edges_pass": 0,
+   "blockers": 3,
+   "report": "docs/visualize-eval/rounds/05/reviews/pipeline/reviewer-result.json",
+   "report_sha256": "56c6eeb997ca0c77a12be114e7dacc74e4f12969bb8d2a5763577240d1758138",
+   "blind_observation_sha256": null
+  },
+  "network": {
+   "categories": {
+    "semantic_fidelity": "pass",
+    "arrow_traceability": "fail",
+    "layout_fit": "pass",
+    "conceptual_grouping_color": "pass",
+    "border_integrity": "pass",
+    "workflow_evidence": "blocked",
+    "animation": "fail"
+   },
+   "overall": "fail",
+   "findings": 6,
+   "severities": {
+    "critical": 0,
+    "high": 4,
+    "medium": 2,
+    "low": 0
+   },
+   "edges_total": 7,
+   "edges_pass": 0,
+   "blockers": 3,
+   "report": "docs/visualize-eval/rounds/05/reviews/network/reviewer-result.json",
+   "report_sha256": "f32461b0b4d586f5755c7b1663ed6fe78f76f185c50420d721d947260660ba4b",
+   "blind_observation_sha256": null
+  },
+  "homelab-nic-trace": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "pass",
+    "layout_fit": "fail",
+    "conceptual_grouping_color": "pass",
+    "border_integrity": "fail",
+    "workflow_evidence": "blocked",
+    "animation": "na"
+   },
+   "overall": "fail",
+   "findings": 7,
+   "severities": {
+    "critical": 1,
+    "high": 6,
+    "medium": 0,
+    "low": 0
+   },
+   "edges_total": 16,
+   "edges_pass": 15,
+   "blockers": 4,
+   "report": "docs/visualize-eval/rounds/05/reviews/homelab-nic-trace/reviewer-result.json",
+   "report_sha256": "f182ccab7080a51347832062d1d83b36fbe13cce9d8a3ec47a82af33a70a8e36",
+   "blind_observation_sha256": null
+  },
+  "server-nic-layout": {
+   "categories": {
+    "semantic_fidelity": "pass",
+    "arrow_traceability": "pass",
+    "layout_fit": "pass",
+    "conceptual_grouping_color": "fail",
+    "border_integrity": "pass",
+    "workflow_evidence": "fail",
+    "animation": "na"
+   },
+   "overall": "fail",
+   "findings": 3,
+   "severities": {
+    "critical": 0,
+    "high": 1,
+    "medium": 2,
+    "low": 0
+   },
+   "edges_total": 11,
+   "edges_pass": 11,
+   "blockers": 3,
+   "report": "docs/visualize-eval/rounds/05/reviews/server-nic-layout/reviewer-result.json",
+   "report_sha256": "9125b8434ef357acb8b1ce10da57f8b83272dce5d1eae5e286268baf3b5e5fb1",
+   "blind_observation_sha256": null
+  },
+  "datacenter-redundancy": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "fail",
+    "layout_fit": "fail",
+    "conceptual_grouping_color": "fail",
+    "border_integrity": "pass",
+    "workflow_evidence": "blocked",
+    "animation": "pass"
+   },
+   "overall": "fail",
+   "findings": 5,
+   "severities": {
+    "critical": 1,
+    "high": 2,
+    "medium": 2,
+    "low": 0
+   },
+   "edges_total": 34,
+   "edges_pass": 29,
+   "blockers": 4,
+   "report": "docs/visualize-eval/rounds/05/reviews/datacenter-redundancy/reviewer-result.json",
+   "report_sha256": "b1652183a1e1570cbf35c19d31d7c1209307b5f8b3c9e3890c8e7a24c0e07a84",
+   "blind_observation_sha256": null
+  },
+  "modal-machine-manager": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "fail",
+    "layout_fit": "fail",
+    "conceptual_grouping_color": "pass",
+    "border_integrity": "blocked",
+    "workflow_evidence": "fail",
+    "animation": "fail"
+   },
+   "overall": "fail",
+   "findings": 12,
+   "severities": {
+    "critical": 1,
+    "high": 5,
+    "medium": 5,
+    "low": 1
+   },
+   "edges_total": 23,
+   "edges_pass": 0,
+   "blockers": 4,
+   "report": "docs/visualize-eval/rounds/05/reviews/modal-machine-manager/reviewer-result.json",
+   "report_sha256": "f30ae20f8640dfa3bc0db926d8519d38dabde2d9937ee71fd90717c4f9f712e2",
+   "blind_observation_sha256": null
+  },
+  "modal-runtime": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "pass",
+    "layout_fit": "pass",
+    "conceptual_grouping_color": "fail",
+    "border_integrity": "pass",
+    "workflow_evidence": "blocked",
+    "animation": "na"
+   },
+   "overall": "fail",
+   "findings": 5,
+   "severities": {
+    "critical": 0,
+    "high": 2,
+    "medium": 3,
+    "low": 0
+   },
+   "edges_total": 8,
+   "edges_pass": 4,
+   "blockers": 3,
+   "report": "docs/visualize-eval/rounds/05/reviews/modal-runtime/reviewer-result.json",
+   "report_sha256": "899fcad55a0a54bc39745ec298e57ff53580ae8cae3858eced301f06add90c82",
+   "blind_observation_sha256": null
+  },
+  "gb300-rack-software": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "fail",
+    "layout_fit": "fail",
+    "conceptual_grouping_color": "pass",
+    "border_integrity": "blocked",
+    "workflow_evidence": "fail",
+    "animation": "na"
+   },
+   "overall": "fail",
+   "findings": 13,
+   "severities": {
+    "critical": 2,
+    "high": 6,
+    "medium": 5,
+    "low": 0
+   },
+   "edges_total": 23,
+   "edges_pass": 15,
+   "blockers": 4,
+   "report": "docs/visualize-eval/rounds/05/reviews/gb300-rack-software/reviewer-result.json",
+   "report_sha256": "0acbfd17915c10608950b19618fd31294a14a71b7bbcc4af19d547b5cb7bbf1f",
+   "blind_observation_sha256": null
+  }
+ },
+ "problems": []
+}

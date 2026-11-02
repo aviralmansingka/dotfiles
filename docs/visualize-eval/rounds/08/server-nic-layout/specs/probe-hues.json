@@ -1,0 +1,15 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "n1", "label": "a", "group": "DC edge" },
+    { "id": "n2", "label": "b", "group": "upstream hops" },
+    { "id": "n3", "label": "c", "group": "observed hops" },
+    { "id": "n4", "label": "d", "group": "ISP hops" }
+  ],
+  "edges": [
+    { "from": "n1", "to": "n2" },
+    { "from": "n2", "to": "n3" },
+    { "from": "n3", "to": "n4" }
+  ]
+}

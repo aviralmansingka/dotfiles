@@ -1,0 +1,1408 @@
+{
+  "scope": "Existing final overview/seams/execution ANSI none, sel-tab, sel-right captures only; no rendering or new capture. Each view/node is a distinct occurrence.",
+  "criterion": "Selected appearance requires the complete bold-amber perimeter change observed in these captures. A node remaining unselected in a frame named sel-tab or sel-right is not selected-state evidence.",
+  "node_occurrences": 17,
+  "frame_instances": {
+    "selected": 6,
+    "unselected": 45
+  },
+  "unique_unselected_occurrences_covered": 17,
+  "unique_selected_occurrences_covered": 6,
+  "missing_selected_occurrences": [
+    {
+      "view": "overview",
+      "node_label": "modal-worker",
+      "region": [
+        11,
+        6,
+        14,
+        4
+      ]
+    },
+    {
+      "view": "overview",
+      "node_label": "modal-runtime",
+      "region": [
+        10,
+        14,
+        15,
+        4
+      ]
+    },
+    {
+      "view": "overview",
+      "node_label": "Task engine",
+      "region": [
+        11,
+        22,
+        13,
+        4
+      ]
+    },
+    {
+      "view": "overview",
+      "node_label": "modal-daemon",
+      "region": [
+        57,
+        31,
+        14,
+        4
+      ]
+    },
+    {
+      "view": "overview",
+      "node_label": "Task container",
+      "region": [
+        34,
+        39,
+        16,
+        4
+      ]
+    },
+    {
+      "view": "overview",
+      "node_label": "Blobnet",
+      "region": [
+        60,
+        39,
+        9,
+        4
+      ]
+    },
+    {
+      "view": "seams",
+      "node_label": "modal-worker",
+      "region": [
+        24,
+        15,
+        14,
+        4
+      ]
+    },
+    {
+      "view": "seams",
+      "node_label": "modal-runtime",
+      "region": [
+        23,
+        23,
+        15,
+        4
+      ]
+    },
+    {
+      "view": "execution",
+      "node_label": "Task engine",
+      "region": [
+        20,
+        15,
+        13,
+        4
+      ]
+    },
+    {
+      "view": "execution",
+      "node_label": "Filesystem + volumes",
+      "region": [
+        40,
+        23,
+        22,
+        4
+      ]
+    },
+    {
+      "view": "execution",
+      "node_label": "Blobnet",
+      "region": [
+        47,
+        31,
+        9,
+        4
+      ]
+    }
+  ],
+  "border_integrity_status": "blocked",
+  "observed_border_defect": false,
+  "nodes": [
+    {
+      "view": "overview",
+      "node_label": "modal-worker",
+      "region": [
+        11,
+        6,
+        14,
+        4
+      ],
+      "unselected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.none.txt",
+          "sha256": "091cb97f1d579ec59f42e3901d8371464bc5d5eaa6f5b8aed4f61b5422e3b551",
+          "evidence_id": "overview-ansi-none",
+          "capture_state": "none",
+          "region": [
+            11,
+            6,
+            14,
+            4
+          ],
+          "border_rgb": [
+            216,
+            166,
+            87
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-tab.txt",
+          "sha256": "d6f89951395b3ef24d6feee72bbe113c46b6c2ba725f632fc7bd4f8498eefa7e",
+          "evidence_id": "overview-ansi-sel-tab",
+          "capture_state": "sel-tab",
+          "region": [
+            11,
+            6,
+            14,
+            4
+          ],
+          "border_rgb": [
+            216,
+            166,
+            87
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-right.txt",
+          "sha256": "7be36f81e2601489e2ee95cf6fa06066168a05bb2051a0f05d389e4771561707",
+          "evidence_id": "overview-ansi-sel-right",
+          "capture_state": "sel-right",
+          "region": [
+            11,
+            6,
+            14,
+            4
+          ],
+          "border_rgb": [
+            216,
+            166,
+            87
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "selected_evidence": [],
+      "unselected_covered": true,
+      "selected_covered": false
+    },
+    {
+      "view": "overview",
+      "node_label": "modal-runtime",
+      "region": [
+        10,
+        14,
+        15,
+        4
+      ],
+      "unselected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.none.txt",
+          "sha256": "091cb97f1d579ec59f42e3901d8371464bc5d5eaa6f5b8aed4f61b5422e3b551",
+          "evidence_id": "overview-ansi-none",
+          "capture_state": "none",
+          "region": [
+            10,
+            14,
+            15,
+            4
+          ],
+          "border_rgb": [
+            125,
+            174,
+            163
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-tab.txt",
+          "sha256": "d6f89951395b3ef24d6feee72bbe113c46b6c2ba725f632fc7bd4f8498eefa7e",
+          "evidence_id": "overview-ansi-sel-tab",
+          "capture_state": "sel-tab",
+          "region": [
+            10,
+            14,
+            15,
+            4
+          ],
+          "border_rgb": [
+            125,
+            174,
+            163
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-right.txt",
+          "sha256": "7be36f81e2601489e2ee95cf6fa06066168a05bb2051a0f05d389e4771561707",
+          "evidence_id": "overview-ansi-sel-right",
+          "capture_state": "sel-right",
+          "region": [
+            10,
+            14,
+            15,
+            4
+          ],
+          "border_rgb": [
+            125,
+            174,
+            163
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "selected_evidence": [],
+      "unselected_covered": true,
+      "selected_covered": false
+    },
+    {
+      "view": "overview",
+      "node_label": "Task engine",
+      "region": [
+        11,
+        22,
+        13,
+        4
+      ],
+      "unselected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.none.txt",
+          "sha256": "091cb97f1d579ec59f42e3901d8371464bc5d5eaa6f5b8aed4f61b5422e3b551",
+          "evidence_id": "overview-ansi-none",
+          "capture_state": "none",
+          "region": [
+            11,
+            22,
+            13,
+            4
+          ],
+          "border_rgb": [
+            211,
+            134,
+            155
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-tab.txt",
+          "sha256": "d6f89951395b3ef24d6feee72bbe113c46b6c2ba725f632fc7bd4f8498eefa7e",
+          "evidence_id": "overview-ansi-sel-tab",
+          "capture_state": "sel-tab",
+          "region": [
+            11,
+            22,
+            13,
+            4
+          ],
+          "border_rgb": [
+            211,
+            134,
+            155
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-right.txt",
+          "sha256": "7be36f81e2601489e2ee95cf6fa06066168a05bb2051a0f05d389e4771561707",
+          "evidence_id": "overview-ansi-sel-right",
+          "capture_state": "sel-right",
+          "region": [
+            11,
+            22,
+            13,
+            4
+          ],
+          "border_rgb": [
+            211,
+            134,
+            155
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "selected_evidence": [],
+      "unselected_covered": true,
+      "selected_covered": false
+    },
+    {
+      "view": "overview",
+      "node_label": "Container backend",
+      "region": [
+        8,
+        31,
+        19,
+        4
+      ],
+      "unselected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.none.txt",
+          "sha256": "091cb97f1d579ec59f42e3901d8371464bc5d5eaa6f5b8aed4f61b5422e3b551",
+          "evidence_id": "overview-ansi-none",
+          "capture_state": "none",
+          "region": [
+            8,
+            31,
+            19,
+            4
+          ],
+          "border_rgb": [
+            169,
+            182,
+            101
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-right.txt",
+          "sha256": "7be36f81e2601489e2ee95cf6fa06066168a05bb2051a0f05d389e4771561707",
+          "evidence_id": "overview-ansi-sel-right",
+          "capture_state": "sel-right",
+          "region": [
+            8,
+            31,
+            19,
+            4
+          ],
+          "border_rgb": [
+            169,
+            182,
+            101
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "selected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-tab.txt",
+          "sha256": "d6f89951395b3ef24d6feee72bbe113c46b6c2ba725f632fc7bd4f8498eefa7e",
+          "evidence_id": "overview-ansi-sel-tab",
+          "capture_state": "sel-tab",
+          "region": [
+            8,
+            31,
+            19,
+            4
+          ],
+          "border_rgb": [
+            216,
+            166,
+            87
+          ],
+          "bold": true,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "unselected_covered": true,
+      "selected_covered": true
+    },
+    {
+      "view": "overview",
+      "node_label": "Filesystem + volumes",
+      "region": [
+        31,
+        31,
+        22,
+        4
+      ],
+      "unselected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.none.txt",
+          "sha256": "091cb97f1d579ec59f42e3901d8371464bc5d5eaa6f5b8aed4f61b5422e3b551",
+          "evidence_id": "overview-ansi-none",
+          "capture_state": "none",
+          "region": [
+            31,
+            31,
+            22,
+            4
+          ],
+          "border_rgb": [
+            189,
+            201,
+            124
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-tab.txt",
+          "sha256": "d6f89951395b3ef24d6feee72bbe113c46b6c2ba725f632fc7bd4f8498eefa7e",
+          "evidence_id": "overview-ansi-sel-tab",
+          "capture_state": "sel-tab",
+          "region": [
+            31,
+            31,
+            22,
+            4
+          ],
+          "border_rgb": [
+            189,
+            201,
+            124
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "selected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-right.txt",
+          "sha256": "7be36f81e2601489e2ee95cf6fa06066168a05bb2051a0f05d389e4771561707",
+          "evidence_id": "overview-ansi-sel-right",
+          "capture_state": "sel-right",
+          "region": [
+            31,
+            31,
+            22,
+            4
+          ],
+          "border_rgb": [
+            216,
+            166,
+            87
+          ],
+          "bold": true,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "unselected_covered": true,
+      "selected_covered": true
+    },
+    {
+      "view": "overview",
+      "node_label": "modal-daemon",
+      "region": [
+        57,
+        31,
+        14,
+        4
+      ],
+      "unselected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.none.txt",
+          "sha256": "091cb97f1d579ec59f42e3901d8371464bc5d5eaa6f5b8aed4f61b5422e3b551",
+          "evidence_id": "overview-ansi-none",
+          "capture_state": "none",
+          "region": [
+            57,
+            31,
+            14,
+            4
+          ],
+          "border_rgb": [
+            143,
+            157,
+            79
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-tab.txt",
+          "sha256": "d6f89951395b3ef24d6feee72bbe113c46b6c2ba725f632fc7bd4f8498eefa7e",
+          "evidence_id": "overview-ansi-sel-tab",
+          "capture_state": "sel-tab",
+          "region": [
+            57,
+            31,
+            14,
+            4
+          ],
+          "border_rgb": [
+            143,
+            157,
+            79
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-right.txt",
+          "sha256": "7be36f81e2601489e2ee95cf6fa06066168a05bb2051a0f05d389e4771561707",
+          "evidence_id": "overview-ansi-sel-right",
+          "capture_state": "sel-right",
+          "region": [
+            57,
+            31,
+            14,
+            4
+          ],
+          "border_rgb": [
+            143,
+            157,
+            79
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "selected_evidence": [],
+      "unselected_covered": true,
+      "selected_covered": false
+    },
+    {
+      "view": "overview",
+      "node_label": "Task container",
+      "region": [
+        34,
+        39,
+        16,
+        4
+      ],
+      "unselected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.none.txt",
+          "sha256": "091cb97f1d579ec59f42e3901d8371464bc5d5eaa6f5b8aed4f61b5422e3b551",
+          "evidence_id": "overview-ansi-none",
+          "capture_state": "none",
+          "region": [
+            34,
+            39,
+            16,
+            4
+          ],
+          "border_rgb": [
+            125,
+            160,
+            184
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-tab.txt",
+          "sha256": "d6f89951395b3ef24d6feee72bbe113c46b6c2ba725f632fc7bd4f8498eefa7e",
+          "evidence_id": "overview-ansi-sel-tab",
+          "capture_state": "sel-tab",
+          "region": [
+            34,
+            39,
+            16,
+            4
+          ],
+          "border_rgb": [
+            125,
+            160,
+            184
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-right.txt",
+          "sha256": "7be36f81e2601489e2ee95cf6fa06066168a05bb2051a0f05d389e4771561707",
+          "evidence_id": "overview-ansi-sel-right",
+          "capture_state": "sel-right",
+          "region": [
+            34,
+            39,
+            16,
+            4
+          ],
+          "border_rgb": [
+            125,
+            160,
+            184
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "selected_evidence": [],
+      "unselected_covered": true,
+      "selected_covered": false
+    },
+    {
+      "view": "overview",
+      "node_label": "Blobnet",
+      "region": [
+        60,
+        39,
+        9,
+        4
+      ],
+      "unselected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.none.txt",
+          "sha256": "091cb97f1d579ec59f42e3901d8371464bc5d5eaa6f5b8aed4f61b5422e3b551",
+          "evidence_id": "overview-ansi-none",
+          "capture_state": "none",
+          "region": [
+            60,
+            39,
+            9,
+            4
+          ],
+          "border_rgb": [
+            151,
+            184,
+            206
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-tab.txt",
+          "sha256": "d6f89951395b3ef24d6feee72bbe113c46b6c2ba725f632fc7bd4f8498eefa7e",
+          "evidence_id": "overview-ansi-sel-tab",
+          "capture_state": "sel-tab",
+          "region": [
+            60,
+            39,
+            9,
+            4
+          ],
+          "border_rgb": [
+            151,
+            184,
+            206
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-right.txt",
+          "sha256": "7be36f81e2601489e2ee95cf6fa06066168a05bb2051a0f05d389e4771561707",
+          "evidence_id": "overview-ansi-sel-right",
+          "capture_state": "sel-right",
+          "region": [
+            60,
+            39,
+            9,
+            4
+          ],
+          "border_rgb": [
+            151,
+            184,
+            206
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "selected_evidence": [],
+      "unselected_covered": true,
+      "selected_covered": false
+    },
+    {
+      "view": "seams",
+      "node_label": "modal-worker",
+      "region": [
+        24,
+        15,
+        14,
+        4
+      ],
+      "unselected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.ansi.none.txt",
+          "sha256": "dbd6dcc82f9cb04e2fd1fbec5958c9c7d0a69e8c653a6a70133257eda5f69996",
+          "evidence_id": "seams-ansi-none",
+          "capture_state": "none",
+          "region": [
+            24,
+            15,
+            14,
+            4
+          ],
+          "border_rgb": [
+            216,
+            166,
+            87
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.ansi.sel-tab.txt",
+          "sha256": "40f53bc37889bd3aee862fc8d87d15c867ee29775d913c2d198e051497109bcc",
+          "evidence_id": "seams-ansi-sel-tab",
+          "capture_state": "sel-tab",
+          "region": [
+            24,
+            15,
+            14,
+            4
+          ],
+          "border_rgb": [
+            216,
+            166,
+            87
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.ansi.sel-right.txt",
+          "sha256": "a9b1592e8aff4dbc5f480c251e65f8b299ddcb552017a35adabef553283ed4db",
+          "evidence_id": "seams-ansi-sel-right",
+          "capture_state": "sel-right",
+          "region": [
+            24,
+            15,
+            14,
+            4
+          ],
+          "border_rgb": [
+            216,
+            166,
+            87
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "selected_evidence": [],
+      "unselected_covered": true,
+      "selected_covered": false
+    },
+    {
+      "view": "seams",
+      "node_label": "modal-runtime",
+      "region": [
+        23,
+        23,
+        15,
+        4
+      ],
+      "unselected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.ansi.none.txt",
+          "sha256": "dbd6dcc82f9cb04e2fd1fbec5958c9c7d0a69e8c653a6a70133257eda5f69996",
+          "evidence_id": "seams-ansi-none",
+          "capture_state": "none",
+          "region": [
+            23,
+            23,
+            15,
+            4
+          ],
+          "border_rgb": [
+            125,
+            174,
+            163
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.ansi.sel-tab.txt",
+          "sha256": "40f53bc37889bd3aee862fc8d87d15c867ee29775d913c2d198e051497109bcc",
+          "evidence_id": "seams-ansi-sel-tab",
+          "capture_state": "sel-tab",
+          "region": [
+            23,
+            23,
+            15,
+            4
+          ],
+          "border_rgb": [
+            125,
+            174,
+            163
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.ansi.sel-right.txt",
+          "sha256": "a9b1592e8aff4dbc5f480c251e65f8b299ddcb552017a35adabef553283ed4db",
+          "evidence_id": "seams-ansi-sel-right",
+          "capture_state": "sel-right",
+          "region": [
+            23,
+            23,
+            15,
+            4
+          ],
+          "border_rgb": [
+            125,
+            174,
+            163
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "selected_evidence": [],
+      "unselected_covered": true,
+      "selected_covered": false
+    },
+    {
+      "view": "seams",
+      "node_label": "modal-daemon",
+      "region": [
+        24,
+        31,
+        14,
+        4
+      ],
+      "unselected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.ansi.none.txt",
+          "sha256": "dbd6dcc82f9cb04e2fd1fbec5958c9c7d0a69e8c653a6a70133257eda5f69996",
+          "evidence_id": "seams-ansi-none",
+          "capture_state": "none",
+          "region": [
+            24,
+            31,
+            14,
+            4
+          ],
+          "border_rgb": [
+            211,
+            134,
+            155
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.ansi.sel-right.txt",
+          "sha256": "a9b1592e8aff4dbc5f480c251e65f8b299ddcb552017a35adabef553283ed4db",
+          "evidence_id": "seams-ansi-sel-right",
+          "capture_state": "sel-right",
+          "region": [
+            24,
+            31,
+            14,
+            4
+          ],
+          "border_rgb": [
+            211,
+            134,
+            155
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "selected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.ansi.sel-tab.txt",
+          "sha256": "40f53bc37889bd3aee862fc8d87d15c867ee29775d913c2d198e051497109bcc",
+          "evidence_id": "seams-ansi-sel-tab",
+          "capture_state": "sel-tab",
+          "region": [
+            24,
+            31,
+            14,
+            4
+          ],
+          "border_rgb": [
+            216,
+            166,
+            87
+          ],
+          "bold": true,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "unselected_covered": true,
+      "selected_covered": true
+    },
+    {
+      "view": "seams",
+      "node_label": "Task engine",
+      "region": [
+        42,
+        31,
+        13,
+        4
+      ],
+      "unselected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.ansi.none.txt",
+          "sha256": "dbd6dcc82f9cb04e2fd1fbec5958c9c7d0a69e8c653a6a70133257eda5f69996",
+          "evidence_id": "seams-ansi-none",
+          "capture_state": "none",
+          "region": [
+            42,
+            31,
+            13,
+            4
+          ],
+          "border_rgb": [
+            226,
+            156,
+            175
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.ansi.sel-tab.txt",
+          "sha256": "40f53bc37889bd3aee862fc8d87d15c867ee29775d913c2d198e051497109bcc",
+          "evidence_id": "seams-ansi-sel-tab",
+          "capture_state": "sel-tab",
+          "region": [
+            42,
+            31,
+            13,
+            4
+          ],
+          "border_rgb": [
+            226,
+            156,
+            175
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "selected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.ansi.sel-right.txt",
+          "sha256": "a9b1592e8aff4dbc5f480c251e65f8b299ddcb552017a35adabef553283ed4db",
+          "evidence_id": "seams-ansi-sel-right",
+          "capture_state": "sel-right",
+          "region": [
+            42,
+            31,
+            13,
+            4
+          ],
+          "border_rgb": [
+            216,
+            166,
+            87
+          ],
+          "bold": true,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "unselected_covered": true,
+      "selected_covered": true
+    },
+    {
+      "view": "execution",
+      "node_label": "Task engine",
+      "region": [
+        20,
+        15,
+        13,
+        4
+      ],
+      "unselected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.none.txt",
+          "sha256": "5e4b7ea3ac0541fd04eef341ac106e864a9b47eae5c304c0f661ab60cda367f5",
+          "evidence_id": "execution-ansi-none",
+          "capture_state": "none",
+          "region": [
+            20,
+            15,
+            13,
+            4
+          ],
+          "border_rgb": [
+            216,
+            166,
+            87
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.sel-tab.txt",
+          "sha256": "298242d65fb9b7f7fb6e6cd8ec112de8cca086137ae64b5a72302a6f1115fd2e",
+          "evidence_id": "execution-ansi-sel-tab",
+          "capture_state": "sel-tab",
+          "region": [
+            20,
+            15,
+            13,
+            4
+          ],
+          "border_rgb": [
+            216,
+            166,
+            87
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.sel-right.txt",
+          "sha256": "803313eb41bbbe4125abf981b9bedef12262ed644ceffd12d512ae6093533ee7",
+          "evidence_id": "execution-ansi-sel-right",
+          "capture_state": "sel-right",
+          "region": [
+            20,
+            15,
+            13,
+            4
+          ],
+          "border_rgb": [
+            216,
+            166,
+            87
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "selected_evidence": [],
+      "unselected_covered": true,
+      "selected_covered": false
+    },
+    {
+      "view": "execution",
+      "node_label": "Container backend",
+      "region": [
+        17,
+        23,
+        19,
+        4
+      ],
+      "unselected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.none.txt",
+          "sha256": "5e4b7ea3ac0541fd04eef341ac106e864a9b47eae5c304c0f661ab60cda367f5",
+          "evidence_id": "execution-ansi-none",
+          "capture_state": "none",
+          "region": [
+            17,
+            23,
+            19,
+            4
+          ],
+          "border_rgb": [
+            125,
+            174,
+            163
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.sel-right.txt",
+          "sha256": "803313eb41bbbe4125abf981b9bedef12262ed644ceffd12d512ae6093533ee7",
+          "evidence_id": "execution-ansi-sel-right",
+          "capture_state": "sel-right",
+          "region": [
+            17,
+            23,
+            19,
+            4
+          ],
+          "border_rgb": [
+            125,
+            174,
+            163
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "selected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.sel-tab.txt",
+          "sha256": "298242d65fb9b7f7fb6e6cd8ec112de8cca086137ae64b5a72302a6f1115fd2e",
+          "evidence_id": "execution-ansi-sel-tab",
+          "capture_state": "sel-tab",
+          "region": [
+            17,
+            23,
+            19,
+            4
+          ],
+          "border_rgb": [
+            216,
+            166,
+            87
+          ],
+          "bold": true,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "unselected_covered": true,
+      "selected_covered": true
+    },
+    {
+      "view": "execution",
+      "node_label": "Filesystem + volumes",
+      "region": [
+        40,
+        23,
+        22,
+        4
+      ],
+      "unselected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.none.txt",
+          "sha256": "5e4b7ea3ac0541fd04eef341ac106e864a9b47eae5c304c0f661ab60cda367f5",
+          "evidence_id": "execution-ansi-none",
+          "capture_state": "none",
+          "region": [
+            40,
+            23,
+            22,
+            4
+          ],
+          "border_rgb": [
+            147,
+            194,
+            183
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.sel-tab.txt",
+          "sha256": "298242d65fb9b7f7fb6e6cd8ec112de8cca086137ae64b5a72302a6f1115fd2e",
+          "evidence_id": "execution-ansi-sel-tab",
+          "capture_state": "sel-tab",
+          "region": [
+            40,
+            23,
+            22,
+            4
+          ],
+          "border_rgb": [
+            147,
+            194,
+            183
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.sel-right.txt",
+          "sha256": "803313eb41bbbe4125abf981b9bedef12262ed644ceffd12d512ae6093533ee7",
+          "evidence_id": "execution-ansi-sel-right",
+          "capture_state": "sel-right",
+          "region": [
+            40,
+            23,
+            22,
+            4
+          ],
+          "border_rgb": [
+            147,
+            194,
+            183
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "selected_evidence": [],
+      "unselected_covered": true,
+      "selected_covered": false
+    },
+    {
+      "view": "execution",
+      "node_label": "Task container",
+      "region": [
+        19,
+        31,
+        16,
+        4
+      ],
+      "unselected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.none.txt",
+          "sha256": "5e4b7ea3ac0541fd04eef341ac106e864a9b47eae5c304c0f661ab60cda367f5",
+          "evidence_id": "execution-ansi-none",
+          "capture_state": "none",
+          "region": [
+            19,
+            31,
+            16,
+            4
+          ],
+          "border_rgb": [
+            211,
+            134,
+            155
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.sel-tab.txt",
+          "sha256": "298242d65fb9b7f7fb6e6cd8ec112de8cca086137ae64b5a72302a6f1115fd2e",
+          "evidence_id": "execution-ansi-sel-tab",
+          "capture_state": "sel-tab",
+          "region": [
+            19,
+            31,
+            16,
+            4
+          ],
+          "border_rgb": [
+            211,
+            134,
+            155
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "selected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.sel-right.txt",
+          "sha256": "803313eb41bbbe4125abf981b9bedef12262ed644ceffd12d512ae6093533ee7",
+          "evidence_id": "execution-ansi-sel-right",
+          "capture_state": "sel-right",
+          "region": [
+            19,
+            31,
+            16,
+            4
+          ],
+          "border_rgb": [
+            216,
+            166,
+            87
+          ],
+          "bold": true,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "unselected_covered": true,
+      "selected_covered": true
+    },
+    {
+      "view": "execution",
+      "node_label": "Blobnet",
+      "region": [
+        47,
+        31,
+        9,
+        4
+      ],
+      "unselected_evidence": [
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.none.txt",
+          "sha256": "5e4b7ea3ac0541fd04eef341ac106e864a9b47eae5c304c0f661ab60cda367f5",
+          "evidence_id": "execution-ansi-none",
+          "capture_state": "none",
+          "region": [
+            47,
+            31,
+            9,
+            4
+          ],
+          "border_rgb": [
+            226,
+            156,
+            175
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.sel-tab.txt",
+          "sha256": "298242d65fb9b7f7fb6e6cd8ec112de8cca086137ae64b5a72302a6f1115fd2e",
+          "evidence_id": "execution-ansi-sel-tab",
+          "capture_state": "sel-tab",
+          "region": [
+            47,
+            31,
+            9,
+            4
+          ],
+          "border_rgb": [
+            226,
+            156,
+            175
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        },
+        {
+          "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.sel-right.txt",
+          "sha256": "803313eb41bbbe4125abf981b9bedef12262ed644ceffd12d512ae6093533ee7",
+          "evidence_id": "execution-ansi-sel-right",
+          "capture_state": "sel-right",
+          "region": [
+            47,
+            31,
+            9,
+            4
+          ],
+          "border_rgb": [
+            226,
+            156,
+            175
+          ],
+          "bold": false,
+          "complete_sides_and_corners": true,
+          "uniform_border_style": true
+        }
+      ],
+      "selected_evidence": [],
+      "unselected_covered": true,
+      "selected_covered": false
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "core1",
+      "label": "Core 1",
+      "group": "routing"
+    },
+    {
+      "id": "core2",
+      "label": "Core 2",
+      "group": "routing"
+    },
+    {
+      "id": "fw1",
+      "label": "FW1 active",
+      "group": "security"
+    },
+    {
+      "id": "fw2",
+      "label": "FW2 standby",
+      "group": "security"
+    },
+    {
+      "id": "bl1",
+      "label": "BL 1",
+      "group": "leaf"
+    },
+    {
+      "id": "bl2",
+      "label": "BL 2",
+      "group": "leaf"
+    }
+  ],
+  "layers": [
+    [
+      "core1",
+      "core2"
+    ],
+    [
+      "fw1",
+      "fw2"
+    ],
+    [
+      "bl1",
+      "bl2"
+    ]
+  ],
+  "edges": [
+    {
+      "from": "core1",
+      "to": "fw1",
+      "label": "active",
+      "dots": 1
+    },
+    {
+      "from": "core2",
+      "to": "fw1",
+      "label": "active",
+      "dots": 1
+    },
+    {
+      "from": "core1",
+      "to": "fw2",
+      "label": "standby",
+      "dots": 1,
+      "style": "dashed"
+    },
+    {
+      "from": "core2",
+      "to": "fw2",
+      "label": "standby",
+      "dots": 1,
+      "style": "dashed"
+    },
+    {
+      "from": "fw1",
+      "to": "bl1",
+      "label": "active",
+      "dots": 1
+    },
+    {
+      "from": "fw1",
+      "to": "bl2",
+      "label": "active",
+      "dots": 1
+    },
+    {
+      "from": "fw2",
+      "to": "bl1",
+      "label": "standby",
+      "dots": 1,
+      "style": "dashed"
+    },
+    {
+      "from": "fw2",
+      "to": "bl2",
+      "label": "standby",
+      "dots": 1,
+      "style": "dashed"
+    }
+  ]
+}

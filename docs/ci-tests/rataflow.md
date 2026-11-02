@@ -21,11 +21,13 @@ requests to it by default and builds single-file HTML for everything else.
 ## What the suite covers
 
 - Example specs. Every file in `rataflow/examples/` (`pipeline.json`,
-  `network.json`) parses as JSON and validates against the spec schema:
+  `network.json`, `rack-software.json`) parses as JSON and validates against the spec schema:
   known top-level fields only, `direction` in `{tb, lr}`, `theme` in
   `{gruvbox, dark, light}`, unique non-empty node ids, non-empty edge
-  endpoints, at least one edge, and `flow` (when present) equal to `true`
-  or a positive number.
+  endpoints, at least one edge, `flow` (when present) equal to `true`
+  or a positive number, `dots` in `{0, 1}`, `style` in `{solid, dashed}`,
+  a non-empty `group` string, and `trunks` entries with distinct
+  non-endpoint `branches` that name real nodes.
 - Skill spec block. The `json` block documented in the `visualize` skill's
   SKILL.md validates against the same schema, so the docs cannot drift
   from the format the binary accepts.

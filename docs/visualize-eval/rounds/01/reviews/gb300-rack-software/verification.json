@@ -1,0 +1,602 @@
+{
+  "intent": "Independent judge evidence verification; no renderer execution or generator audit helper used.",
+  "observed_first_sha256": "5d6e0e1910c3fc208810f32c3f92d2a670a5e848d26ca5abce16c326bcaf4e67",
+  "frozen_input_hashes": [
+    {
+      "path": "docs/visualize-eval/rounds/01/SKILL.md",
+      "sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "matches_frozen_metadata": true
+    },
+    {
+      "path": "../../../../../../tmp/visualize-eval/round-01/bin/rataflow-view",
+      "sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "matches_frozen_metadata": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/rubric.json",
+      "sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "matches_frozen_metadata": true
+    },
+    {
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "matches_frozen_metadata": true
+    },
+    {
+      "path": "docs/visualize-eval/cases/gb300-rack-software/source.md",
+      "sha256": "10d440af0be8d3730c448e710a48d4dfbd527a966f532084e7f98fd2d4b83fda",
+      "matches_frozen_metadata": true
+    },
+    {
+      "path": "docs/visualize-eval/cases/gb300-rack-software/expected.json",
+      "sha256": "9a947233493973c247544ae6e9c175b940feb9d87fc850d4693565c90042c0ab",
+      "matches_frozen_metadata": true
+    }
+  ],
+  "spec_and_capture_hashes_match_generation": true,
+  "reviewer_environment": {
+    "PI_PROVIDER": "openai",
+    "PI_MODEL": "gpt-6-astra",
+    "PI_SUBAGENT_NAME": "viz-judge01-gb300-rack-software"
+  },
+  "capture_audit": [
+    {
+      "view": "v1-a4",
+      "states": {
+        "unselected": {
+          "path": "docs/visualize-eval/rounds/01/gb300-rack-software/captures/v1-a4-unselected.ansi",
+          "dimensions": {
+            "columns": 77,
+            "rows": 47
+          },
+          "borders": [
+            {
+              "box": [
+                5,
+                18,
+                8,
+                4
+              ],
+              "border_fg": "#d8a657",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                29,
+                16,
+                9,
+                7
+              ],
+              "border_fg": "#7daea3",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                59,
+                18,
+                13,
+                4
+              ],
+              "border_fg": "#d3869b",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                59,
+                24,
+                14,
+                4
+              ],
+              "border_fg": "#e29caf",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                59,
+                29,
+                13,
+                4
+              ],
+              "border_fg": "#bb6c83",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            }
+          ],
+          "text_matches_after_padding_final_blank_row": true
+        },
+        "selected": {
+          "path": "docs/visualize-eval/rounds/01/gb300-rack-software/captures/v1-a4-selected.ansi",
+          "dimensions": {
+            "columns": 77,
+            "rows": 47
+          },
+          "borders": [
+            {
+              "box": [
+                5,
+                18,
+                8,
+                4
+              ],
+              "border_fg": "#d8a657",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                29,
+                16,
+                9,
+                7
+              ],
+              "border_fg": "#7daea3",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                59,
+                18,
+                13,
+                4
+              ],
+              "border_fg": "#d8a657",
+              "border_bg": "#282828",
+              "bold": true,
+              "complete": true
+            },
+            {
+              "box": [
+                59,
+                24,
+                14,
+                4
+              ],
+              "border_fg": "#e29caf",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                59,
+                29,
+                13,
+                4
+              ],
+              "border_fg": "#bb6c83",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            }
+          ],
+          "text_matches_after_padding_final_blank_row": true
+        }
+      }
+    },
+    {
+      "view": "v2-a2",
+      "states": {
+        "unselected": {
+          "path": "docs/visualize-eval/rounds/01/gb300-rack-software/captures/v2-a2-unselected.ansi",
+          "dimensions": {
+            "columns": 77,
+            "rows": 47
+          },
+          "borders": [
+            {
+              "box": [
+                22,
+                18,
+                8,
+                4
+              ],
+              "border_fg": "#d8a657",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                19,
+                27,
+                13,
+                4
+              ],
+              "border_fg": "#7daea3",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                36,
+                27,
+                13,
+                4
+              ],
+              "border_fg": "#93c2b7",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                53,
+                27,
+                6,
+                4
+              ],
+              "border_fg": "#63978d",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            }
+          ],
+          "text_matches_after_padding_final_blank_row": true
+        },
+        "selected": {
+          "path": "docs/visualize-eval/rounds/01/gb300-rack-software/captures/v2-a2-selected.ansi",
+          "dimensions": {
+            "columns": 77,
+            "rows": 47
+          },
+          "borders": [
+            {
+              "box": [
+                22,
+                18,
+                8,
+                4
+              ],
+              "border_fg": "#d8a657",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                19,
+                27,
+                13,
+                4
+              ],
+              "border_fg": "#d8a657",
+              "border_bg": "#282828",
+              "bold": true,
+              "complete": true
+            },
+            {
+              "box": [
+                36,
+                27,
+                13,
+                4
+              ],
+              "border_fg": "#93c2b7",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                53,
+                27,
+                6,
+                4
+              ],
+              "border_fg": "#63978d",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            }
+          ],
+          "text_matches_after_padding_final_blank_row": true
+        }
+      }
+    },
+    {
+      "view": "v3-a3",
+      "states": {
+        "unselected": {
+          "path": "docs/visualize-eval/rounds/01/gb300-rack-software/captures/v3-a3-unselected.ansi",
+          "dimensions": {
+            "columns": 77,
+            "rows": 47
+          },
+          "borders": [
+            {
+              "box": [
+                6,
+                20,
+                9,
+                5
+              ],
+              "border_fg": "#d8a657",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                36,
+                21,
+                14,
+                4
+              ],
+              "border_fg": "#7daea3",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                36,
+                26,
+                6,
+                4
+              ],
+              "border_fg": "#93c2b7",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                64,
+                21,
+                9,
+                4
+              ],
+              "border_fg": "#d3869b",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            }
+          ],
+          "text_matches_after_padding_final_blank_row": true
+        },
+        "selected": {
+          "path": "docs/visualize-eval/rounds/01/gb300-rack-software/captures/v3-a3-selected.ansi",
+          "dimensions": {
+            "columns": 77,
+            "rows": 47
+          },
+          "borders": [
+            {
+              "box": [
+                6,
+                20,
+                9,
+                5
+              ],
+              "border_fg": "#d8a657",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                36,
+                21,
+                14,
+                4
+              ],
+              "border_fg": "#d8a657",
+              "border_bg": "#282828",
+              "bold": true,
+              "complete": true
+            },
+            {
+              "box": [
+                36,
+                26,
+                6,
+                4
+              ],
+              "border_fg": "#93c2b7",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                64,
+                21,
+                9,
+                4
+              ],
+              "border_fg": "#d3869b",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            }
+          ],
+          "text_matches_after_padding_final_blank_row": true
+        }
+      }
+    },
+    {
+      "view": "v4-a2",
+      "states": {
+        "unselected": {
+          "path": "docs/visualize-eval/rounds/01/gb300-rack-software/captures/v4-a2-unselected.ansi",
+          "dimensions": {
+            "columns": 77,
+            "rows": 47
+          },
+          "borders": [
+            {
+              "box": [
+                23,
+                7,
+                12,
+                4
+              ],
+              "border_fg": "#d8a657",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                22,
+                15,
+                14,
+                4
+              ],
+              "border_fg": "#7daea3",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                26,
+                23,
+                6,
+                4
+              ],
+              "border_fg": "#d3869b",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                21,
+                31,
+                15,
+                4
+              ],
+              "border_fg": "#a9b665",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                44,
+                31,
+                13,
+                4
+              ],
+              "border_fg": "#bdc97c",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                23,
+                39,
+                12,
+                4
+              ],
+              "border_fg": "#7da0b8",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            }
+          ],
+          "text_matches_after_padding_final_blank_row": true
+        },
+        "selected": {
+          "path": "docs/visualize-eval/rounds/01/gb300-rack-software/captures/v4-a2-selected.ansi",
+          "dimensions": {
+            "columns": 77,
+            "rows": 47
+          },
+          "borders": [
+            {
+              "box": [
+                23,
+                7,
+                12,
+                4
+              ],
+              "border_fg": "#d8a657",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                22,
+                15,
+                14,
+                4
+              ],
+              "border_fg": "#7daea3",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                26,
+                23,
+                6,
+                4
+              ],
+              "border_fg": "#d8a657",
+              "border_bg": "#282828",
+              "bold": true,
+              "complete": true
+            },
+            {
+              "box": [
+                21,
+                31,
+                15,
+                4
+              ],
+              "border_fg": "#a9b665",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                44,
+                31,
+                13,
+                4
+              ],
+              "border_fg": "#bdc97c",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            },
+            {
+              "box": [
+                23,
+                39,
+                12,
+                4
+              ],
+              "border_fg": "#7da0b8",
+              "border_bg": "#282828",
+              "bold": false,
+              "complete": true
+            }
+          ],
+          "text_matches_after_padding_final_blank_row": true
+        }
+      }
+    }
+  ],
+  "natural_scale_provenance": "Final launch commands use defaults; generation.json records no pan/zoom/fit. Captures contain no numeric zoom readout. Stage B accepts recorded default launch provenance, not a new rendering.",
+  "cleanup_provenance": "generation.json cleanup records all nine panes closed; no live verification was attempted."
+}

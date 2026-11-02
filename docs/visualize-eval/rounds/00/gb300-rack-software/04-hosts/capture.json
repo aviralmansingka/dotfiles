@@ -1,0 +1,39 @@
+{
+  "pane_id": "w7E:p25",
+  "tab_id": "w7E:tG",
+  "header_verified": true,
+  "zoom": 1,
+  "rows": 47,
+  "cols": 77,
+  "dimensions_command": "stty size",
+  "viewer_command": "stty size > /Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/00/gb300-rack-software/04-hosts/dimensions.txt; /tmp/visualize-eval/round-00/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/00/gb300-rack-software/04-hosts/spec.json; herdr pane close w7E:p25",
+  "selection_command": [
+    "herdr",
+    "pane",
+    "send-keys",
+    "w7E:p25",
+    "Tab"
+  ],
+  "captures": [
+    {
+      "state": "unselected",
+      "path": "visible.txt",
+      "timestamp": "2026-11-02T08:19:55.044653+00:00"
+    },
+    {
+      "state": "unselected",
+      "path": "visible.ansi",
+      "timestamp": "2026-11-02T08:19:55.053073+00:00"
+    },
+    {
+      "state": "selected",
+      "path": "selected.txt",
+      "timestamp": "2026-11-02T08:19:55.323069+00:00"
+    },
+    {
+      "state": "selected",
+      "path": "selected.ansi",
+      "timestamp": "2026-11-02T08:19:55.330996+00:00"
+    }
+  ]
+}

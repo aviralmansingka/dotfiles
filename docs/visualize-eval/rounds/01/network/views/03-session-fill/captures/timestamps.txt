@@ -1,0 +1,8 @@
+2026-11-02T08:32:47Z frame-01
+2026-11-02T08:32:49Z frame-02
+2026-11-02T08:32:52Z frame-03
+2026-11-02T08:32:54Z frame-04
+2026-11-02T08:32:57Z unselected text+ansi captured
+2026-11-02T08:32:58Z selected-tab text+ansi captured
+2026-11-02T08:32:59Z selected-right text+ansi captured
+2026-11-02T08:32:59Z selected animation frame captured

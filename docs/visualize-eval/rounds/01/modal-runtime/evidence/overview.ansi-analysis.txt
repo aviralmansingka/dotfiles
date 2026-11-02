@@ -1,0 +1,15 @@
+file: captures/overview.ansi.none.txt
+grid: 77x47
+boxes: 8
+  box 'modal-worker'           at (10, 5) 14x4 border-colours={'#d8a657': 36}
+  box 'modal-runtime'          at ( 9,13) 15x4 border-colours={'#7daea3': 38}
+  box 'Task engine'            at (10,21) 13x4 border-colours={'#d3869b': 34}
+  box 'Container backend'      at ( 7,30) 19x4 border-colours={'#a9b665': 46}
+  box 'Filesystem + volumes'   at (30,30) 22x4 border-colours={'#bdc97c': 52}
+  box 'modal-daemon'           at (56,30) 14x4 border-colours={'#8f9d4f': 36}
+  box 'Task container'         at (33,38) 16x4 border-colours={'#7da0b8': 40}
+  box 'Blobnet'                at (59,38) 9x4 border-colours={'#97b8ce': 26}
+arrows: {'◀': 1, '▼': 7}
+dot glyphs: 0
+overflow badge: False
+

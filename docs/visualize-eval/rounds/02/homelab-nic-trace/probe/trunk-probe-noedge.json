@@ -1,0 +1,1 @@
+{"direction":"tb","theme":"gruvbox","nodes":[{"id":"a"},{"id":"b"},{"id":"c"}],"edges":[],"trunks":[{"id":"t","from":"a","to":"b","branches":["c"]}]}

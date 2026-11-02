@@ -1,0 +1,156 @@
+{
+  "case_id": "homelab-nic-trace",
+  "round": "04",
+  "budget": {
+    "spec_candidates_per_view": 3,
+    "rule": "every --check run on a distinct spec counts, including orientation and layout probes"
+  },
+  "views": [
+    {
+      "view": "v1",
+      "title": "inside the host: libvirt NAT and docker bridge",
+      "final_spec": "specs/v1.json",
+      "final_check": "evidence/v1/check.txt",
+      "attempts": [
+        {
+          "spec": "attempts/specs/v1-a1.json",
+          "spec_sha256": "599d59a308cf8103eb32743c53c67f9b5f3f74167c935462561c230f05b76544",
+          "check_output": "attempts/v1-a1-check.txt",
+          "verdict": "rejected",
+          "note": "8 nodes / 8 edges in one view (virtual nets + both uplinks + overlay). Amounted to extent 139x32: the host hub got four in-edges and two out-edges, the router put routes on the hub's side ports and pushed content 139 columns wide. Also 1 ambiguous owner.",
+          "reconstructed": true,
+          "reconstruction_note": "the rejected spec text was overwritten in place by the accepted candidate; the file is restored verbatim from the same session edit history and its raw --check output is preserved unedited"
+        },
+        {
+          "spec": "attempts/specs/v1-a2.json",
+          "spec_sha256": "62b7d422292799f591c09328b69df9cfdfa63a18c806a007d1ce9abfe50c1d99",
+          "check_output": "attempts/v1-a2-check.txt",
+          "verdict": "accepted",
+          "note": "5 nodes / 4 edges: the two virtual nets only. extent 67x24, 0 crossings, 0 detours, 0 ambiguous owners, fits 77x47 with room."
+        },
+        {
+          "spec": "attempts/specs/v1-a3.json",
+          "spec_sha256": "6d1a5ef761860efe3b7f69a3d1733b83462921e52a100d2ccea62e56657f3f06",
+          "check_output": "attempts/v1-a3-check.txt",
+          "verdict": "rejected",
+          "note": "probe: fold the overlay pair (ts->h overlay, ts->bond0 UDP encap) into v1 to reach three views. extent 139x32 again; the third in-edge on the host hub re-triggers side-port fan-out. Overlay therefore got its own view (v3)."
+        }
+      ]
+    },
+    {
+      "view": "v2-lan",
+      "title": "LAN uplink, gateway, host egress answers",
+      "final_spec": "specs/v2-lan.json",
+      "final_check": "evidence/v2-lan/check.txt",
+      "attempts": [
+        {
+          "spec": "attempts/specs/v2-lan-a1.json",
+          "spec_sha256": "341c30f13c4bad79e5e49227fb58fbba97df639ea36ea41932456475cee729f1",
+          "check_output": "attempts/v2-lan-a1-check.txt",
+          "verdict": "accepted (best of three; one defect remains)",
+          "note": "5 nodes / 5 edges, extent 74x32, fits, 0 crossings, 0 detours, 5/5 origins, but 1 ambiguous label owner."
+        },
+        {
+          "spec": "attempts/specs/v2-lan-a2.json",
+          "spec_sha256": "f4eb7fb7d9fe66c4dc617bfb4d25d4139af71022b61a089134e4a3c68cb650fc",
+          "check_output": "attempts/v2-lan-a2-check.txt",
+          "verdict": "rejected",
+          "note": "moved the whole Fios answer into the path node label (30 chars) to empty the short vertical route of text; 0 ambiguous owners but extent jumped to 90x32 -> graph overflows 77x47."
+        },
+        {
+          "spec": "attempts/specs/v2-lan-a3.json",
+          "spec_sha256": "d622ea485340d78c7c0d5f6111e32338dfcbc32ded28d16ab6d185500190d4c6",
+          "check_output": "attempts/v2-lan-a3-check.txt",
+          "verdict": "rejected",
+          "note": "shortened the two convergence labels to 11 and 10 cells against the same wide path node; still extent 90x32, so the wide path label, not the edge labels, drives the width. Reverted to a1."
+        }
+      ]
+    },
+    {
+      "view": "v3-overlay",
+      "title": "tailscale encapsulation over the wired path",
+      "final_spec": "specs/v3-overlay.json",
+      "final_check": "evidence/v3-overlay/check.txt",
+      "attempts": [
+        {
+          "spec": "attempts/specs/v3-overlay-a1.json",
+          "spec_sha256": "e4fd54375422cec633dabd9ed16deab4a91a925c6aa2640d1d055c9a268e746f",
+          "check_output": "attempts/v3-overlay-a1-check.txt",
+          "verdict": "rejected",
+          "note": "tb, ts over a layer holding h and bond0: extent 53x13, but 1 ambiguous owner - the 7-cell overlay route is too short, so its label was parked one cell under the encap route's horizontal run."
+        },
+        {
+          "spec": "attempts/specs/v3-overlay-a2.json",
+          "spec_sha256": "0ad360e08757b87c8ce57ee22626882363d76495947a22b0ec10920f147ca8d2",
+          "check_output": "attempts/v3-overlay-a2-check.txt",
+          "verdict": "accepted",
+          "note": "same two layers in lr: both routes become horizontal runs, so each label sits one cell off its own route. extent 63x11, 0 ambiguous owners, 0 detours, 2/2 origins."
+        }
+      ]
+    },
+    {
+      "view": "v4-wan",
+      "title": "ISP and WAN hops with claimed identities",
+      "final_spec": "specs/v4-wan.json",
+      "final_check": "evidence/v4-wan/check.txt",
+      "attempts": [
+        {
+          "spec": "attempts/specs/v4-wan-a1.json",
+          "spec_sha256": "87b64303aae8ec2e801c227b1a6e4d95ab244bd917f6a9efe65b9d4e3b311f71",
+          "check_output": "attempts/v4-wan-a1-check.txt",
+          "verdict": "rejected",
+          "note": "v6 node label 'v6 internet (ULA only)' with edge label 'no global v6': extent 78x40, one column over the 77-column target."
+        },
+        {
+          "spec": "attempts/specs/v4-wan-a2.json",
+          "spec_sha256": "198f2eb19ac4537530f001de6e1173d25af2bec45489e8f123cb65c01f9f8b83",
+          "check_output": "attempts/v4-wan-a2-check.txt",
+          "verdict": "accepted (one composition defect remains)",
+          "note": "short v6 node label plus 'ULA only, no route' on the dashed edge: extent 67x40, 0 crossings, 0 detours, 0 ambiguous owners, 4/4 origins. The chain sits left of centre, so the bottom node's lower-left corner (cols 7-9, rows 40-41) is covered by the control palette."
+        },
+        {
+          "spec": "attempts/specs/v4-wan-a3.json",
+          "spec_sha256": "ffe09aa8cb32e02d921505b7546a83d11f25520fdd50e4ce4b74e4dd01184a26",
+          "check_output": "attempts/v4-wan-a3-check.txt",
+          "verdict": "rejected",
+          "note": "explicit layers with the v6 branch left of the ONT: extent 51x37 and the bottom node clears the palette, but the branch label became 1 ambiguous owner again. Kept a2, whose only defect is the palette overlap."
+        }
+      ]
+    }
+  ],
+  "superseded_probes": [
+    {
+      "note": "one combined view was tried first: host uplinks + LAN + gateway + egress answers (6 nodes / 7 edges). All three candidates rendered 76-82 columns wide with 2 ambiguous owners, so the skill's third crossing remedy - a re-split along a different seam - was applied and the content was split into v2-lan and v3-overlay. These probes are recorded here rather than as a fifth view; each candidate's raw --check output is preserved.",
+      "attempts": [
+        {
+          "spec": "attempts/specs/v2-combined-a1.json",
+          "spec_sha256": "4985e70f642b32b8b75c88689eb2844ba71441673ec18a47a1b1b3958aebebe7",
+          "check_output": "attempts/v2-a1-check.txt",
+          "note": "extent 82x40, 2 ambiguous owners"
+        },
+        {
+          "spec": "attempts/specs/v2-combined-a2.json",
+          "spec_sha256": "4f40ae90b30e3577272556ae58dce0ddf1ae5ba07ba0b20f1d9acc4422b5e406",
+          "check_output": "attempts/v2-a2-check.txt",
+          "note": "moved addresses/latency between node and edge labels: still extent 82x40, 2 ambiguous owners"
+        },
+        {
+          "spec": "attempts/specs/v2-combined-a3.json",
+          "spec_sha256": "7fbcb7140f7303a7325e04e8359321ef660b0a2a7b3ad089757bb909733859c6",
+          "check_output": "attempts/v2-a3-check.txt",
+          "note": "short tailscale0 node label plus a 22-cell overlay edge label: extent 76x40 (fits) but still 2 ambiguous owners; re-split instead of trading more labels"
+        }
+      ]
+    }
+  ],
+  "verification_reruns": [
+    {
+      "note": "restored candidate files re-checked for byte-equivalence of behaviour, not counted as new candidates",
+      "items": [
+        { "spec": "specs/v2-lan.json", "check_output": "attempts/v2-lan-a1-verify-check.txt", "matches": "attempts/v2-lan-a1-check.txt" },
+        { "spec": "specs/v4-wan.json", "check_output": "attempts/v4-wan-a2-verify-check.txt", "matches": "attempts/v4-wan-a2-check.txt" },
+        { "spec": "specs/v2.json", "check_output": "attempts/v2-combined-probe3-verify-check.txt", "matches": "attempts/v2-a3-check.txt" }
+      ]
+    }
+  ]
+}

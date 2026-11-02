@@ -1,0 +1,8 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=3 edges=3 flows=3 direction=tb theme=gruvbox
+layers=2 (explicit placement, sugiyama skipped)
+extent=24x13 cells
+labels: 3/3 placed, 0 on route cells, 0 skipped
+groups: compute(1) state(2)
+trunks:
+dots: 3 single-dot routes, 0 periodic routes, 0 violations

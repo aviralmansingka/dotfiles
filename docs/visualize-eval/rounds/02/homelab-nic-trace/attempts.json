@@ -1,0 +1,84 @@
+{
+  "case_id": "homelab-nic-trace",
+  "round": "02",
+  "worker_id": "viz-ds02-homelab-nic-trace",
+  "binary": "/tmp/visualize-eval/round-02/bin/rataflow-view",
+  "recorded_before_capture": true,
+  "views": [
+    {
+      "view": "v1",
+      "carries": "host stack: libvirt NAT, docker bridge, tailscale overlay, wired/uplink fan-out (e1-e8)",
+      "final_spec": "v1.json",
+      "attempts": [
+        {
+          "spec": "attempts/v1-a1.json",
+          "spec_sha256": "8ca8f96fb5184ff3644ec970b2e037a374b74c79d6ccd63a234a79490e7b85d7",
+          "note": "auto (sugiyama) tb layout: extent 113x32, too wide for 77 columns; all 8 labels placed, no warnings"
+        },
+        {
+          "spec": "attempts/v1-a2.json",
+          "spec_sha256": "baa5082f022a2e5613a1460bb7d99a192a8ebcf037d8a0e8be3f6256c651fcf3",
+          "note": "moved wlp to v2 and lengthened the tailscale0 label with its overlay IP: auto tb extent 139x32, still far too wide; width driven by the fan-out layer, not by the node count"
+        },
+        {
+          "spec": "attempts/v1-a3.json",
+          "spec_sha256": "097e1b77f7be20d3f1ece744c14cc5f64044484f426d527026df2824540d1084",
+          "note": "FINAL: explicit layers [vm,ctr]/[virbr,dkbr]/[box]/[ts,bond0,wlp], wlp restored, host label carries the v6 ULA limitation: extent 74x30, 8/8 labels, 0 on route cells, 0 skipped, 0 dot violations, no warnings"
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "carries": "home side: LAN default vs metric-600 failover into the Fios gateway, NAT to the shared pool address, historic demarc (e9-e11)",
+      "final_spec": "v2.json",
+      "attempts": [
+        {
+          "spec": "attempts/v2-a1.json",
+          "spec_sha256": "5ba37cf848464bd31f9d92de23b599c5d40b9c297a6063b7ff93a10046b496bc",
+          "note": "auto tb layout: extent 52x24, clean (3/3 labels, no warnings) but the corridor spacing is loose"
+        },
+        {
+          "spec": "attempts/v2-a2.json",
+          "spec_sha256": "e93e48bfcd8557c5037fe7dc6cbf5c0f0deaa8ebda74a6a2300b638dfbc3b57c",
+          "note": "explicit layers [bond0,wlp]/[rtr]/[ont]: extent 33x21, 3/3 labels, 0 on route cells, 0 skipped, no warnings; the 16-char pool-address label is placed on the dashed NAT route without overflow. Superseded: the gateway address 192.168.1.1 and the router's DHCP role were missing from the rtr label"
+        },
+        {
+          "spec": "attempts/v2-a3.json",
+          "spec_sha256": "1c794901d822ef3da274ce48538b190d19726ab886e8ff4a68dcf4f2e2e08eb1",
+          "note": "FINAL: same layers and edges, rtr label widened to 'Fios rtr? 192.168.1.1 NAT/DHCP' so the gateway address and the NAT/DHCP roles are drawn and the historical-identity qualifier is kept: extent 45x21, 3/3 labels, 0 on route cells, 0 skipped, no warnings"
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "carries": "ISP side beyond the demarc: Verizon edge aggregation, AS701 backbone, Cloudflare target (e12-e14)",
+      "final_spec": "v3.json",
+      "attempts": [
+        {
+          "spec": "attempts/v3-a1.json",
+          "spec_sha256": "917968112e82234fa59f96ec363010a6cb276f5fc0c33e191da3e4ec75ce1348",
+          "note": "auto tb layout: extent 22x32, clean (3/3 labels, no warnings)"
+        },
+        {
+          "spec": "attempts/v3-a2.json",
+          "spec_sha256": "32559d5011d59e852d92f02ecd81f3ae9964393a102ffdf20c6bc134622e3afb",
+          "note": "FINAL: explicit layers [ont]/[vzagg]/[vzbb]/[cf]: extent 19x29, 3/3 labels, 0 on route cells, 0 skipped, no warnings"
+        }
+      ]
+    }
+  ],
+  "rejected_shapes": [
+    {
+      "note": "single 6-layer egress view (bond0,wlp -> rtr -> ont -> vzagg -> vzbb -> cf) at fixed 77x47: extent 33x45. Height 45 of the 46 drawing rows puts the bottom layer under the floating bottom-left control palette, so the chain was split at the demarc into v2 and v3.",
+      "probe": "offline --check with explicit layers (no pane)"
+    },
+    {
+      "note": "lr orientation for the 5+ layer chains: extent 179x11 (v2 set) and 214x19 (7-node egress set), so lr cannot fit 77 columns here; tb was the honest fallback.",
+      "probe": "offline --check (no pane)"
+    },
+    {
+      "note": "trunk for the shared home LAN: capability present and it does render a bus with junction spurs once a spacer layer is given (probe/trunk-probe-*.json, extent 48x27, 'trunks: lan from rtr to bond0, 1 branches'), but every trunk form either reversed bond0->rtr / wlp->rtr or invented a wlp<->bond0 link, and spurs carry no label field, so the failover labels 'default 0.5 ms' and 'metric 600' would be lost. Not used; not faked.",
+      "probe": "probe/trunk-probe-*.json + probe/trunk-probe-output.txt (offline, no pane)"
+    }
+  ]
+}

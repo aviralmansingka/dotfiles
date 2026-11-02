@@ -1,0 +1,335 @@
+{
+  "case_id": "modal-runtime",
+  "round": "05",
+  "round_field_note": "The frozen generator-task template still spells the field as round \"03\"; this sample is round 05, so round is recorded as 05.",
+  "generator": {
+    "identity": "fresh generator worker (isolated subagent session)",
+    "subagent_name": "viz-ds05-7",
+    "surface": "herdr pane w7E:pFN, tab w7E:t63",
+    "provider": "fireworks",
+    "model": "accounts/fireworks/routers/deepseek-flash-latest",
+    "judges_or_reviewers_spawned": false,
+    "note": "No judge and no reviewer subagent was spawned; the captain starts the Sol judge."
+  },
+  "candidate_skill": {
+    "path": "docs/visualize-eval/rounds/05/SKILL.md",
+    "sha256": "ff4a9d3f32ba0bf86e54ee6bfbac02fdea3fac3b95b82a958b3411accef0a949",
+    "verified_with": "shasum -a 256"
+  },
+  "renderer": {
+    "path": "/tmp/visualize-eval/round-05/bin/rataflow-view",
+    "sha256": "b1ab9f2e78af11c2f2b005eea083a999079d184bf550e8d0b6d9c51867f22404",
+    "verified_with": "shasum -a 256",
+    "used_by_absolute_path_only": true,
+    "note": "No other binary was built, installed or substituted."
+  },
+  "views": [
+    {
+      "view": "v1",
+      "title": "seam 1 - modal-worker -> modal-runtime (task+ctrl RPC)",
+      "carries": "node modal-worker, node modal-runtime, edge e1",
+      "spec": "specs/v1-a5.json",
+      "spec_sha256": "729bbd45f3afb18e2eec2970fbc93478999e55b833b6b5a0997a3830d84c9b55",
+      "direction": "lr",
+      "files": {
+        "text": "evidence/v1/v1-text.txt",
+        "ansi": "evidence/v1/v1-ansi.ansi",
+        "selected_ansi": "evidence/v1/v1-selected.ansi",
+        "check": "evidence/v1/check.txt",
+        "frames": "evidence/v1/v1-frames.txt",
+        "frames_ansi": "evidence/v1/v1-frames.ansi",
+        "frames_pinned_77x47": "evidence/v1/v1-frames-77x47.txt",
+        "frames_pinned_77x47_copy": "pinned-77x47/v1-frames.txt",
+        "manifest": "evidence/v1/manifest.json",
+        "bin_sha256": "evidence/v1/bin.sha256"
+      },
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=2 edges=1 flows=0 direction=lr theme=gruvbox",
+        "extent=49x8 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 1/1 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: orchestration(1)",
+        "trunks:",
+        "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 0/0 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "check_warnings": [],
+      "extent_cells": "49x8",
+      "measured_pane": "83x51 @100% (header token in evidence/v1/v1-text.txt row 1; pane rows from herdr scroll viewport)",
+      "pinned_target_dump": "viewport: 77x47 zoom: 1.00 natural, no overflow banner, 5 timestamped frames (evidence/v1/v1-frames-77x47.txt)",
+      "validator": {
+        "output": "validator/v1-validator.txt",
+        "exit": 0,
+        "result": "all checks passed"
+      },
+      "capture_commands": [
+        "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/05/modal-runtime/specs/v1-a5.json --bin /tmp/visualize-eval/round-05/bin/rataflow-view --out docs/visualize-eval/rounds/05/modal-runtime/evidence/v1 --label v1 --frames 5",
+        "COLUMNS=77 LINES=47 /tmp/visualize-eval/round-05/bin/rataflow-view --frames 5 docs/visualize-eval/rounds/05/modal-runtime/specs/v1-a5.json",
+        "uv run --no-project scripts/viz-validate.py docs/visualize-eval/rounds/05/modal-runtime/evidence/v1 --require-select --require-frames --attempts docs/visualize-eval/rounds/05/modal-runtime/attempts.json"
+      ],
+      "cleanup": {
+        "pane_id": "w7E:pGX",
+        "manifest_status": "confirmed_closed",
+        "reprobe": "herdr pane get w7E:pGX -> gone"
+      }
+    },
+    {
+      "view": "v2",
+      "title": "seams 2 and 3 - modal-runtime -> modal-worker (events+mg RPC) and modal-runtime -> modal-daemon (HTTP over UDS)",
+      "carries": "node modal-runtime, node modal-worker, node modal-daemon, edges e2 and e8",
+      "spec": "specs/v2-a4.json",
+      "spec_sha256": "89dc3b3a59735954b66eda8bd6fb38dab6c1490623eddcf03511891f3fa86b5e",
+      "direction": "lr",
+      "files": {
+        "text": "evidence/v2/v2-text.txt",
+        "ansi": "evidence/v2/v2-ansi.ansi",
+        "selected_ansi": "evidence/v2/v2-selected.ansi",
+        "check": "evidence/v2/check.txt",
+        "frames": "evidence/v2/v2-frames.txt",
+        "frames_ansi": "evidence/v2/v2-frames.ansi",
+        "frames_pinned_77x47": "evidence/v2/v2-frames-77x47.txt",
+        "frames_pinned_77x47_copy": "pinned-77x47/v2-frames.txt",
+        "manifest": "evidence/v2/manifest.json",
+        "bin_sha256": "evidence/v2/bin.sha256"
+      },
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=3 edges=2 flows=0 direction=lr theme=gruvbox",
+        "extent=49x19 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 2/2 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: orchestration(1)",
+        "trunks:",
+        "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 0/0 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "check_warnings": [],
+      "extent_cells": "49x19",
+      "measured_pane": "83x51 @100% (header token in evidence/v2/v2-text.txt row 1)",
+      "pinned_target_dump": "viewport: 77x47 zoom: 1.00 natural, no overflow banner, 5 timestamped frames (evidence/v2/v2-frames-77x47.txt)",
+      "validator": {
+        "output": "validator/v2-validator.txt",
+        "exit": 0,
+        "result": "all checks passed"
+      },
+      "capture_commands": [
+        "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/05/modal-runtime/specs/v2-a4.json --bin /tmp/visualize-eval/round-05/bin/rataflow-view --out docs/visualize-eval/rounds/05/modal-runtime/evidence/v2 --label v2 --frames 5",
+        "COLUMNS=77 LINES=47 /tmp/visualize-eval/round-05/bin/rataflow-view --frames 5 docs/visualize-eval/rounds/05/modal-runtime/specs/v2-a4.json",
+        "uv run --no-project scripts/viz-validate.py docs/visualize-eval/rounds/05/modal-runtime/evidence/v2 --require-select --require-frames --attempts docs/visualize-eval/rounds/05/modal-runtime/attempts.json"
+      ],
+      "cleanup": {
+        "pane_id": "w7E:pGY",
+        "manifest_status": "confirmed_closed",
+        "reprobe": "herdr pane get w7E:pGY -> gone"
+      }
+    },
+    {
+      "view": "v3",
+      "title": "runtime internals - dispatch, container execution, storage",
+      "carries": "nodes modal-runtime, Task engine, Container backend, Task container, Filesystem+volumes, Blobnet; edges e3, e4, e5, e6, e7",
+      "spec": "specs/v3-a1.json",
+      "spec_sha256": "2cb9289096cdf5672e4f6e86eac92c9a1074b9211e875002f793f2734c307ccb",
+      "direction": "tb",
+      "files": {
+        "text": "evidence/v3/v3-text.txt",
+        "ansi": "evidence/v3/v3-ansi.ansi",
+        "selected_ansi": "evidence/v3/v3-selected.ansi",
+        "check": "evidence/v3/check.txt",
+        "frames": "evidence/v3/v3-frames.txt",
+        "frames_ansi": "evidence/v3/v3-frames.ansi",
+        "frames_pinned_77x47": "evidence/v3/v3-frames-77x47.txt",
+        "frames_pinned_77x47_copy": "pinned-77x47/v3-frames.txt",
+        "manifest": "evidence/v3/manifest.json",
+        "bin_sha256": "evidence/v3/bin.sha256"
+      },
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=6 edges=5 flows=0 direction=tb theme=gruvbox",
+        "extent=64x32 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 5/5 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: orchestration(2) compute(2) storage(2)",
+        "trunks:",
+        "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 0/0 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "check_warnings": [],
+      "extent_cells": "64x32",
+      "measured_pane": "83x51 @100% (header token in evidence/v3/v3-text.txt row 1)",
+      "pinned_target_dump": "viewport: 77x47 zoom: 1.00 natural, no overflow banner, 5 timestamped frames (evidence/v3/v3-frames-77x47.txt)",
+      "validator": {
+        "output": "validator/v3-validator.txt",
+        "exit": 0,
+        "result": "all checks passed"
+      },
+      "capture_commands": [
+        "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/05/modal-runtime/specs/v3-a1.json --bin /tmp/visualize-eval/round-05/bin/rataflow-view --out docs/visualize-eval/rounds/05/modal-runtime/evidence/v3 --label v3 --frames 5",
+        "COLUMNS=77 LINES=47 /tmp/visualize-eval/round-05/bin/rataflow-view --frames 5 docs/visualize-eval/rounds/05/modal-runtime/specs/v3-a1.json",
+        "uv run --no-project scripts/viz-validate.py docs/visualize-eval/rounds/05/modal-runtime/evidence/v3 --require-select --require-frames --attempts docs/visualize-eval/rounds/05/modal-runtime/attempts.json"
+      ],
+      "cleanup": {
+        "pane_id": "w7E:pGW",
+        "manifest_status": "confirmed_closed",
+        "reprobe": "herdr pane get w7E:pGW -> gone"
+      }
+    }
+  ],
+  "motion": {
+    "dots": 0,
+    "spec_fields_used": "dots: 0 on every edge, no flow, no timing, no duration_ms",
+    "reason": "The historical source never showed motion, so the round-05 rule makes the diagram fully static. No dot was added as flair.",
+    "proof_per_view": "5 timestamped frames at 0/100/200/300/400 ms; the frame bodies are byte-identical for every view (evidence/*/[v]-frames.txt and evidence/*/[v]-frames-77x47.txt)",
+    "routes_line_absent": "Expected: the frozen binary emits no 'routes:' line (route economy is engine-owned in round 05). Not treated as a defect or blocker."
+  },
+  "meaning_ledger": [
+    {"fact": "Node modal-worker", "kind": "identity", "fate": "drawn", "where": "v1, v2"},
+    {"fact": "Node modal-runtime", "kind": "identity", "fate": "drawn", "where": "v1, v2, v3"},
+    {"fact": "Node Task engine", "kind": "identity / role", "fate": "drawn", "where": "v3"},
+    {"fact": "Node Container backend", "kind": "identity", "fate": "drawn", "where": "v3"},
+    {"fact": "Node Task container", "kind": "identity", "fate": "drawn", "where": "v3"},
+    {"fact": "Node Filesystem + volumes", "kind": "identity", "fate": "abbreviated to 'Filesystem+volumes'", "where": "v3"},
+    {"fact": "Node Blobnet", "kind": "identity", "fate": "drawn", "where": "v3"},
+    {"fact": "Node modal-daemon", "kind": "identity", "fate": "drawn", "where": "v2"},
+    {"fact": "worker -> runtime: task input + control RPCs", "kind": "protocol and direction", "fate": "abbreviated to 'task+ctrl RPC'", "where": "v1"},
+    {"fact": "runtime -> worker: events + management RPCs", "kind": "protocol and direction", "fate": "abbreviated to 'events+mg RPC'", "where": "v2"},
+    {"fact": "runtime -> engine: dispatches tasks", "kind": "action verb", "fate": "abbreviated to 'task dispatch'", "where": "v3"},
+    {"fact": "engine -> backend: starts / manages", "kind": "action verb", "fate": "abbreviated to 'starts+manages'", "where": "v3"},
+    {"fact": "backend -> container: runs user process", "kind": "action verb + payload", "fate": "abbreviated to 'user proc' (see defect D2)", "where": "v3"},
+    {"fact": "engine -> filesystem: mounts / snapshots", "kind": "action verb", "fate": "abbreviated to 'mount+snapshot'", "where": "v3"},
+    {"fact": "filesystem -> blobnet: image + volume data", "kind": "payload", "fate": "abbreviated to 'image+vol data'", "where": "v3"},
+    {"fact": "runtime -> daemon: filesystem HTTP over Unix-domain sockets", "kind": "protocol and path", "fate": "abbreviated to 'HTTP over UDS'", "where": "v2"},
+    {"fact": "HTTP over UDS is not the same interface as the worker RPC seams", "kind": "qualifier / distinction", "fate": "drawn: e8 keeps its own label and lives only in v2, separate from e1 (v1) and e2 (v2)", "where": "v1, v2"},
+    {"fact": "The relation facts are historical claims (chat line 55, source studied at lines 27-51)", "kind": "uncertainty / provenance", "fate": "drawn as solid edges because the brief states them as the facts to draw; provenance recorded in source_pointers, not as a dashed edge", "where": "all"},
+    {"fact": "No remote execution is required", "kind": "constraint on the historical run", "fate": "dropped: not a fact about the system, so it has no edge or node to carry", "where": "-"},
+    {"fact": "Process instruction 'launch a research agent first'", "kind": "process instruction", "fate": "dropped: describes how the original answer was produced, not the architecture", "where": "-"},
+    {"fact": "8 components and 8 directed relations preserved", "kind": "fixed constraint", "fate": "drawn: 8 node ids drawn, 8 edges drawn, each edge labelled exactly once", "where": "v1, v2, v3"}
+  ],
+  "relationship_audit": [
+    {"id": "e1", "from": "worker (modal-worker)", "to": "runtime (modal-runtime)", "verb_tech": "task input + control RPCs (gRPC)", "label": "task+ctrl RPC", "label_owner": "e1", "view": "v1"},
+    {"id": "e2", "from": "runtime", "to": "worker", "verb_tech": "events + management RPCs (gRPC)", "label": "events+mg RPC", "label_owner": "e2", "view": "v2"},
+    {"id": "e3", "from": "runtime", "to": "engine (Task engine)", "verb_tech": "dispatches tasks", "label": "task dispatch", "label_owner": "e3", "view": "v3"},
+    {"id": "e4", "from": "engine", "to": "backend (Container backend)", "verb_tech": "starts / manages", "label": "starts+manages", "label_owner": "e4", "view": "v3"},
+    {"id": "e5", "from": "backend", "to": "container (Task container)", "verb_tech": "runs user process", "label": "user proc", "label_owner": "e5", "view": "v3"},
+    {"id": "e6", "from": "engine", "to": "filesystem (Filesystem+volumes)", "verb_tech": "mounts / snapshots", "label": "mount+snapshot", "label_owner": "e6", "view": "v3"},
+    {"id": "e7", "from": "filesystem", "to": "blobnet (Blobnet)", "verb_tech": "image + volume data", "label": "image+vol data", "label_owner": "e7", "view": "v3"},
+    {"id": "e8", "from": "runtime", "to": "daemon (modal-daemon)", "verb_tech": "filesystem HTTP over Unix-domain sockets", "label": "HTTP over UDS", "label_owner": "e8", "view": "v2"}
+  ],
+  "coverage_map": [
+    {"view": "v1", "carries": "e1 with node set {worker, runtime}; the inbound half of the worker seam"},
+    {"view": "v2", "carries": "e2 and e8 with node set {runtime, worker, daemon}; the outbound half of the worker seam plus the daemon interface"},
+    {"view": "v3", "carries": "e3, e4, e5, e6, e7 with node set {runtime, engine, backend, container, filesystem, blobnet}; dispatch and the compute and storage planes"}
+  ],
+  "relationship_mapping": [
+    {"original": "worker -> runtime: task input + control RPCs", "visible": "v1: modal-worker box -> arrow 'task+ctrl RPC' -> modal-runtime box (labelled arrow, rightward)"},
+    {"original": "runtime -> worker: events + management RPCs", "visible": "v2: modal-runtime box -> arrow 'events+mg RPC' -> modal-worker box (labelled arrow, rightward)"},
+    {"original": "runtime -> engine: dispatches tasks", "visible": "v3: modal-runtime box -> arrow 'task dispatch' -> Task engine box (downward)"},
+    {"original": "engine -> backend: starts / manages", "visible": "v3: Task engine box -> arrow 'starts+manages' -> Container backend box (down-left)"},
+    {"original": "backend -> container: runs user process", "visible": "v3: Container backend box -> arrow 'user proc' -> Task container box (down)"},
+    {"original": "engine -> filesystem: mounts / snapshots", "visible": "v3: Task engine box -> arrow 'mount+snapshot' -> Filesystem+volumes box (down-right)"},
+    {"original": "filesystem -> blobnet: image + volume data", "visible": "v3: Filesystem+volumes box -> arrow 'image+vol data' -> Blobnet box (down)"},
+    {"original": "runtime -> daemon: filesystem HTTP over UDS", "visible": "v2: modal-runtime box -> arrow 'HTTP over UDS' -> modal-daemon box (up-right)"}
+  ],
+  "source_pointers": [
+    "case brief docs/visualize-eval/cases/modal-runtime/source.md",
+    "historical chat /Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-modal-learn-runtime-arch--/2026-10-14T20-36-14-065Z_01a13c21-3e70-754d-a101-f5817da3e05a.jsonl",
+    "original graph write: line 55, call call_KfPSNBd2yyDv7opUAXFM86v8|fc_0bc8bde248d91e7d016acfe9bb22b087d0a1ac21927a3569fb",
+    "user request quoted at original lines 5 and 12",
+    "go and Rust runtime source discussed at original lines 27-51 (cited by the brief; not re-read)"
+  ],
+  "abbreviations": [
+    {"from": "Filesystem + volumes", "to": "Filesystem+volumes", "reason": "node label width"},
+    {"from": "task input + control RPCs", "to": "task+ctrl RPC", "reason": "14-cell label budget; the brief's own 'task+ctrl' wording"},
+    {"from": "events + management RPCs", "to": "events+mg RPC", "reason": "14-cell label budget; keeps both directions distinct from 'task+ctrl RPC'"},
+    {"from": "dispatches tasks", "to": "task dispatch", "reason": "14-cell label budget"},
+    {"from": "starts / manages", "to": "starts+manages", "reason": "14-cell label budget"},
+    {"from": "runs user process", "to": "user proc", "reason": "9-cell label: at 14 cells the label centre ties the sibling branch corridor and --check reports an ambiguous owner (defect D2)"},
+    {"from": "mounts / snapshots", "to": "mount+snapshot", "reason": "14-cell label budget"},
+    {"from": "image + volume data", "to": "image+vol data", "reason": "14-cell label budget"},
+    {"from": "filesystem HTTP over Unix-domain sockets", "to": "HTTP over UDS", "reason": "14-cell label budget; keeps HTTP-over-UDS distinct from the worker RPC seams"}
+  ],
+  "deliberate_drops": [
+    {"dropped": "the brief's instruction to launch a research agent before answering", "reason": "process instruction, not an architectural fact"},
+    {"dropped": "the historical run's 'no remote execution required'", "reason": "constraint on the old session, not a property of modal-runtime"},
+    {"dropped": "chat line numbers inside the diagram", "reason": "source provenance belongs in this file; drawn as a label it would be noise"},
+    {"dropped": "trunks", "reason": "the source states no shared bus: every relation is a distinct interface, so no trunk was declared and --check prints an empty 'trunks:' line"},
+    {"dropped": "dashed styles", "reason": "the brief marks no relation as unconfirmed, so no edge is drawn as uncertain"}
+  ],
+  "known_defects": [
+    {
+      "id": "D1",
+      "defect": "The worker seam is split across two views instead of one.",
+      "why": "In one view the two anti-parallel routes (worker->runtime and runtime->worker) share a single corridor, so one of the two seam labels is skipped ('labels: 2/3 placed ... 1 skipped', attempts/v1-a2/check.txt) and the lr alternative reports an ambiguous owner (attempts/v1-a3/check.txt).",
+      "mitigation": "v1 carries e1, v2 carries e2, and the coverage map plus this note state both directions of one physical seam."
+    },
+    {
+      "id": "D2",
+      "defect": "The backend->container label reads 'user proc' instead of 'runs user proc' / 'runs user process'.",
+      "why": "At 14 cells the label is placed beside its own vertical route with its centre 9 cells from that route, while the sibling branch corridor is 7 cells above it, so --check counts an ambiguous owner (attempts/v2-a1, v2-a2 and v2-a3 all report '1 ambiguous owners').",
+      "mitigation": "9-cell label; the arrowhead still carries the verb and the label names the payload."
+    },
+    {
+      "id": "D3",
+      "defect": "Groups are not drawn as bordered blocks with a group title, which the candidate skill promises.",
+      "why": "No enclosing border or group name appears in any capture although --check reports 'groups: orchestration(2) compute(2) storage(2)' (evidence/v3/v3-text.txt rows 12-39 contain only node boxes and routes). Group membership is visible only as border hue families in the ANSI capture.",
+      "mitigation": "Reported as a renderer capability gap; nothing was invented to fake a block."
+    },
+    {
+      "id": "D4",
+      "defect": "Group hue families are not reliably distinct: in v3 the storage group reuses the orchestration group's two border colours.",
+      "why": "Measured in evidence/v3/v3-ansi.ansi: orchestration = modal-runtime (125,160,184) and Task engine (151,184,206); storage = Filesystem+volumes (125,160,184) and Blobnet (151,184,206); compute = Container backend (211,134,155) and Task container (226,156,175).",
+      "mitigation": "Group membership remains readable from the rank layout and the 'groups:' check line; recorded rather than recoloured."
+    },
+    {
+      "id": "D5",
+      "defect": "v1 is a thin two-node, one-edge view.",
+      "why": "A tb chain cannot place a 13-cell label at all (attempts/v1-a4: 'labels: 0/2 placed'), so v1 uses lr with a single route.",
+      "mitigation": "The view is kept small on purpose: it is the one direction of the worker seam that has no companion relation."
+    }
+  ],
+  "blockers": [
+    {
+      "id": "B1",
+      "blocker": "The in-pane evidence measures 83x51, not the 77x47 target.",
+      "why": "The worker tab is 170x53 cells and viz-evidence.sh splits it 50/50, so the app sees 83x51. Pane geometry is not controlled by the worker.",
+      "status": "resolved per the corrected round-05 protocol: a pinned COLUMNS=77 LINES=47 direct dump per view (evidence/*/[v]-frames-77x47.txt, copies in pinned-77x47/) shows 'viewport: 77x47 zoom: 1.00 natural' with the whole graph and no overflow banner.",
+      "no_relabelling": "The measured pane size is still recorded as 83x51 in every view above; it was not rewritten as 77x47."
+    }
+  ],
+  "cleanup": {
+    "panes_created": 3,
+    "panes_closed": 3,
+    "status": "all confirmed_closed in the manifests and re-probed afterwards (w7E:pGX, w7E:pGY, w7E:pGW all gone)",
+    "residue_check": "herdr pane layout for the worker tab shows the worker's own pane only; no capture pane survived",
+    "failures": []
+  },
+  "attempts": {
+    "file": "attempts.json",
+    "final_view_attempts": {"v1": 1, "v2": 1, "v3": 1},
+    "total_check_runs": 10,
+    "superseded_check_runs": 7,
+    "raw_records": "attempts/<spec-id>/check.txt plus attempts/<spec-id>/exit.txt for every run; diagnostics frames kept where a run was investigated",
+    "note": "The 7 superseded runs are compositions that were later split or re-lettered. They are listed in attempts.json under rejected_attempts with their raw --check paths; none was deleted, and none is hidden behind a green line."
+  },
+  "claims": [
+    {"claim": "modal-worker sends task+ctrl RPCs to modal-runtime.", "evidence": "evidence/v1/v1-text.txt: 'modal-worker' box at row 26 cols 21-32, the label 'task+ctrl RPC' at row 25 cols 35-47, and the arrowhead at row 26 col 49 pointing into 'modal-runtime' at row 26 cols 51-63."},
+    {"claim": "modal-runtime sends events+mg RPCs to modal-worker over a separate route.", "evidence": "evidence/v2/v2-text.txt: 'events+mg RPC' at row 29 cols 35-47 beside the runtime->worker route, arrowhead at row 31 col 49 into 'modal-worker' at row 31 cols 51-62."},
+    {"claim": "modal-runtime reaches modal-daemon with HTTP over UDS, drawn as its own interface.", "evidence": "evidence/v2/v2-text.txt: 'HTTP over UDS' at row 25 cols 35-47 beside that route, arrowhead at row 21 col 49 into 'modal-daemon' at row 21 cols 51-62; e1 is in a different view (v1), so the two protocols are never drawn as one label."},
+    {"claim": "modal-runtime dispatches tasks to the Task engine.", "evidence": "evidence/v3/v3-text.txt: 'task dispatch' at row 18 cols 35-47 on the route from 'modal-runtime' (row 14 cols 33-45) to 'Task engine' (row 22 cols 33-43), arrowhead at row 20 col 33."},
+    {"claim": "The Task engine starts and manages the Container backend, which runs the user process in the Task container.", "evidence": "evidence/v3/v3-text.txt: 'starts+manages' at row 26 cols 16-29 with arrowhead at row 28 col 13 into 'Container backend' (row 30 cols 13-29); 'user proc' at row 34 cols 15-23 with arrowhead at row 36 col 13 into 'Task container' (row 38 cols 13-26)."},
+    {"claim": "The Task engine mounts and snapshots Filesystem+volumes, whose image and volume data comes from Blobnet.", "evidence": "evidence/v3/v3-text.txt: 'mount+snapshot' at row 26 cols 37-50 with arrowhead at row 28 col 53 into 'Filesystem+volumes' (row 30 cols 53-70); 'image+vol data' at row 34 cols 55-68 with arrowhead at row 36 col 53 into 'Blobnet' (row 38 cols 53-59)."},
+    {"claim": "The diagram is static: nothing moves between frames.", "evidence": "evidence/v1/v1-frames.txt, evidence/v2/v2-frames.txt, evidence/v3/v3-frames.txt and the pinned 77x47 copies each hold 5 frames timestamped 0/100/200/300/400 ms whose bodies are byte-identical; no dot glyph appears on any route cell."},
+    {"claim": "The bottom-left palette corner is never overwritten.", "evidence": "evidence/v1/v1-text.txt rows 45-50, evidence/v2/v2-text.txt rows 45-50 and evidence/v3/v3-text.txt rows 45-50 show the intact palette box at column 2, clear of every graph cell."},
+    {"claim": "Every node of all three views is selected exactly once in the --select-all capture.", "evidence": "evidence/v1/v1-selected.ansi, evidence/v2/v2-selected.ansi and evidence/v3/v3-selected.ansi (validator check 'select_all_artifact' PASS); in v3 all six borders take the accent colour (216,166,87) at rows 14, 22, 30, 30, 38, 38."},
+    {"claim": "The graphs fit the 77x47 target viewport at natural zoom.", "evidence": "pinned dumps evidence/v1/v1-frames-77x47.txt (extent 49x8), evidence/v2/v2-frames-77x47.txt (49x19) and evidence/v3/v3-frames-77x47.txt (64x32) all print 'viewport: 77x47 zoom: 1.00 natural' with the complete graph and no 'graph overflows' banner."}
+  ],
+  "validator_summary": {
+    "v1": "validator/v1-validator.txt — all checks passed (exit 0)",
+    "v2": "validator/v2-validator.txt — all checks passed (exit 0)",
+    "v3": "validator/v3-validator.txt — all checks passed (exit 0)",
+    "self_assessment": "Not green-marked by the generator: the three bundles pass the offline validator, but defects D1-D5 above remain true and only an independent review can judge readability."
+  }
+}

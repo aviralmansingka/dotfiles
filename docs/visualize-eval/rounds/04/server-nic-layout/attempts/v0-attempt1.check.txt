@@ -1,0 +1,14 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=7 edges=5 flows=0 direction=tb theme=gruvbox
+layers=4 (explicit placement, sugiyama skipped)
+extent=63x32 cells
+crossings: 2 bridges, 1 touching bends
+labels: 5/5 placed, 0 on route cells, 0 skipped, 1 ambiguous owners
+warning: 1 label(s) have an ambiguous owner: another route is as close to the label as its own edge, so a reader cannot tell which edge the label names
+groups: plant(2) facts(1) host(2) pool(1) access(1)
+trunks:
+routes: 5/5 near-minimal, 0 detours, 1 forced, 0 shortened
+note: route e3 (s2 -> gw) runs 64 cells against a 32 cell straight stair; no obstacle-safe route is shorter, so the length is forced, not a detour
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

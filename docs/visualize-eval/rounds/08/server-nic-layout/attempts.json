@@ -1,0 +1,124 @@
+{
+  "case_id": "server-nic-layout",
+  "round": "08",
+  "budget": {
+    "views_max": 4,
+    "spec_attempts_per_view_max": 3,
+    "note": "Every --check run on a distinct spec counts. Re-runs of identical spec bytes do not add an attempt."
+  },
+  "views": [
+    {
+      "view": "v1",
+      "family": "identity-probe-maps",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "specs/v1.json",
+          "spec_sha256": "7800b7c83e22fc8e662f598018cdf94ad614198a7a4f7cb6d179b702e8237817",
+          "raw_check": "attempts/v1-attempt1.txt",
+          "accepted": true,
+          "note": "First and only spec: 3 nodes / 2 edges, one region 'srv1', tb. extent 39x40, 0 warnings, 2/2 labels, 0 ambiguous owners, 0 crossings."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "family": "identity-probe-maps",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "specs/attempts-v2-attempt1.json",
+          "spec_sha256": "705e1451a53497ace81e2f076a5b42522943296489619d08eec06b0018577026",
+          "raw_check": "attempts/v2-attempt1.txt",
+          "raw_check_verify": "attempts/v2-attempt1.recheck.txt",
+          "raw_dump_77x47": "attempts/v2-attempt1-77x47.txt",
+          "accepted": false,
+          "note": "Three sibling regions (srv1, srv2, IPv4 103.19.91.56/29 holding gw + spare). --check was clean (extent 64x26) but the 77x47 dump shows the gateway outside its own region box: a region whose members sit in two ranks is not column-aligned with its own block, because each rank is centred on the widest rank, so the region-disjointness pass pushed that box into a right-hand sliver. Containment defect -> rejected. The saved spec reproduces the original --check output byte-for-byte (spec bytes had been overwritten; verified by identical output)."
+        },
+        {
+          "attempt": 2,
+          "spec": "specs/attempts-v2-attempt2.json",
+          "spec_sha256": "bfc8e6bbfdedc47c769d0f6df7f9dc2f59cd6013d3ff451af6d68abb3730bad5",
+          "raw_check": "attempts/v2-final-check.txt",
+          "accepted": false,
+          "note": "Containment fixed by keeping every region on one rank (srv1, srv2, address pool) and leaving the gateway ungrouped. Clean --check (extent 64x25) and clean capture, but promoted to attempt 3 only to add the source's 'no IPv6' limitation to the gateway label; kept as a raw record."
+        },
+        {
+          "attempt": 3,
+          "spec": "specs/v2.json",
+          "spec_sha256": "d6add6253d241e425076a76b6620f85ad44d701916457dd16d3ba73284a8985b",
+          "raw_check": "attempts/v2-attempt3-check.txt",
+          "accepted": true,
+          "note": "Final: gateway label '103.19.91.57 Arista, no v6' carries the OUI and the IPv4-only limitation. 77x47 probe dump first, then --check: extent 64x25, 0 warnings, 3/3 labels, 0 ambiguous owners, 0 crossings."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "family": "identity-probe-maps",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "specs/attempts-v3-attempt1.json",
+          "spec_sha256": "2dbc19a475d529764a3587294b83e22eb8d71d9993e5582fc4414e51cd932fb9",
+          "raw_check": "attempts/v3-attempt1.txt",
+          "raw_check_verify": "attempts/v3-attempt1.recheck.txt",
+          "accepted": false,
+          "note": "Whole egress chain in one view (gateway + 3 upstream hops, two regions). --check extent 44x49: taller than the 46-row canvas, so the top region border and its title are clipped off-canvas, and the two-rank regions also lost containment. Rejected; the saved spec reproduces the original output byte-for-byte."
+        },
+        {
+          "attempt": 2,
+          "spec": "specs/attempts-v3-attempt2.json",
+          "spec_sha256": "08518d58a75e1d808fbc4da447e089ccaa2fb84c88a9c7a900eb3be8e83178e6",
+          "raw_check": "attempts/v3-attempt2.recheck.txt",
+          "accepted": false,
+          "note": "Same chain with shorter tail labels ('7.1ms', '8.3-8.6ms') to buy rows: extent 44x47, still one row past the 46-row canvas. Rejected. This attempt's raw --check output was overwritten during iteration; it was re-run from the preserved identical spec bytes afterwards and reports the same extent (44x47). Recorded, not hidden."
+        },
+        {
+          "attempt": 3,
+          "spec": "specs/v3.json",
+          "spec_sha256": "e4773830999c05113dbbb6e035cf9e120666e67535ccfc0b40d570c3533a285f",
+          "raw_check": "attempts/v3-attempt3-check.txt",
+          "accepted": true,
+          "note": "Split at the DC boundary: v3 carries the gateway -> first Airtel hop only, one region 'DC edge' holding both nodes, 'L2? no hop' as a dashed parallel edge with minlen 2 so the unproven interior gets its own rank gap. Gateway label carries IP + AS + city. 77x47 probe dump first, then --check: extent 46x19, 0 warnings, 2/2 labels, 0 ambiguous owners, 0 crossings."
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "family": "identity-probe-maps",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "specs/attempts-v4-attempt1.json",
+          "spec_sha256": "13f739807bb0095fe86cd5633bd2394aff4bb540cf3df33760c6f3fc2de33bf8",
+          "raw_check": "attempts/v4-final-check.txt",
+          "accepted": false,
+          "note": "Observed upstream hops, region named 'upstream hops'. Clean --check (extent 41x36) and a clean capture, but the ANSI capture showed that region rendering the same aqua (81,113,106) as v3's 'DC edge' region. Renamed so the case has five distinct region hues."
+        },
+        {
+          "attempt": 2,
+          "spec": "specs/v4.json",
+          "spec_sha256": "376630ba7e72fcea89504499e8b1e3ad732aa7b839a6eb368bc1e286fb175a7f",
+          "raw_check": "attempts/v4-attempt2-check.txt",
+          "accepted": true,
+          "note": "Final: region renamed 'external hops', which the frozen binary paints blue (81,104,120) instead of aqua. extent 41x36, 0 warnings, 2/2 labels, 0 ambiguous owners, 0 crossings."
+        }
+      ]
+    }
+  ],
+  "capability_probes": [
+    {
+      "probe": "capability preflight (region rendering, clones of the source's own idea)",
+      "spec": "specs/probe-hues.json",
+      "raw_check": "evidence/hue-probe/check.txt",
+      "note": "Not a view. Six chained single-node groups proved (a) every region box in a tb chain is pushed outside its member (sliver boxes), which is the containment limit that shaped v2/v3, and (b) opaque name-to-hue mapping."
+    },
+    {
+      "probe": "region hue mapping",
+      "spec": "specs/probe-hues2.json",
+      "raw_check": "evidence/hue-probe2/check.txt",
+      "note": "Not a view. Measured the frozen binary's region border RGB per group name: 'DC edge' 81,113,106; 'wan' 137,87,101; 'carrier' 110,118,66; 'beyond' 110,118,66; 'external hops' 81,104,120; 'upstream hops' 81,113,106. Used to give the case five distinct region hues."
+    }
+  ]
+}

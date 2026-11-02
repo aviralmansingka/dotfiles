@@ -1,0 +1,21 @@
+{
+  "round": 7,
+  "case_id": "datacenter-redundancy",
+  "generator": {"worker_id": "viz-rf07", "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"},
+  "reviewer": {"worker_id": "viz-judge07-sol", "model": "openai/gpt-6.1-sol"},
+  "observed_first": {"path": "docs/visualize-eval/rounds/07/reviews/datacenter-redundancy/observed-first-rf.md", "sha256": "143aab87ac0f1311edd45e70f797f5bd9d6bc956843829b3efcf0875aae7c0fe", "saved_before_expected_reveal": true},
+  "baseline_result": "docs/visualize-eval/rounds/05/reviews/datacenter-redundancy/reviewer-result.json",
+  "reactflow_evidence": {"html": "docs/visualize-eval/rounds/07/datacenter-redundancy/reactflow.html", "html_sha256": "9a58e48140284ba750a9092ef99bcc4af9ce0638db422fed080a87fa0fc0f6e2", "capture": "docs/visualize-eval/rounds/07/datacenter-redundancy/capture.png", "capture_sha256": "4bc41e8ba7c925a614aa4b132064c3652a3e67625ee050b2e152f35495133a23", "notes": "docs/visualize-eval/rounds/07/datacenter-redundancy/notes.md", "commands": "docs/visualize-eval/rounds/07/datacenter-redundancy/commands.txt", "attempts": "docs/visualize-eval/rounds/07/attempts.md"},
+  "categories": {
+    "semantic_fidelity": {"rataflow": {"applicable": true, "status": "fail"}, "reactflow": {"applicable": true, "status": "fail", "reason": "All 18 node identities and 28 HTML relationships are present, but corrected spine-above-both-leaf-classes layout is absent, physical-link arrow convention is not stated on-page, and independent physical links visually merge despite an explicit prohibition."}},
+    "arrow_traceability": {"rataflow": {"applicable": true, "status": "fail"}, "reactflow": {"applicable": true, "status": "fail", "reason": "Redundancy links share source and target ports, coincident counterflow runs and target heads in all three views; v2 solid/dashed paths overlap, so individual connections and label ownership are not reliable. Six separate R bridges become overlapping F corridors."}},
+    "layout_fit": {"rataflow": {"applicable": true, "status": "fail"}, "reactflow": {"applicable": true, "status": "pass", "reason": "Adapted criterion only: every graph's full node/group extent is visible within its captured canvas without pan at the captured zoom. Missing source tier remains a semantic and grouping failure, not hidden."}},
+    "conceptual_grouping_color": {"rataflow": {"applicable": true, "status": "fail"}, "reactflow": {"applicable": true, "status": "fail", "reason": "Boxes/titles and color identify every group, but source-defined spine and leaf elevation is still missing across split views. Matching teal groups are distinguishable by box title; hue reuse alone is not the failure."}},
+    "border_integrity": {"rataflow": {"applicable": true, "status": "pass"}, "reactflow": {"applicable": true, "status": "pass", "reason": "All 22 node occurrences have complete color-continuous borders in the screenshot. Group title cutouts are chrome of their group border; selection disabled."}},
+    "workflow_evidence": {"rataflow": {"applicable": true, "status": "blocked"}, "reactflow": {"applicable": true, "status": "blocked", "reason": "Commands and attempts are preserved and html/capture hashes verify, but equal reload digests are only narrated; raw outputs, per-step status and browser close proof are missing. No nondeterminism is inferred."}},
+    "animation": {"rataflow": {"applicable": true, "status": "pass"}, "reactflow": {"applicable": true, "status": "pass", "reason": "Absolute zero-animation demand: no yellow dots in all three screenshot views and every one of 28 HTML edges is animated:false, so no SMIL dot element is instantiated."}}
+  },
+  "overall": {"reactflow": "fail", "green": false, "reason": "Known semantic, grouping and independent-link traceability failures; workflow evidence also blocked."},
+  "convergence": "docs/visualize-eval/rounds/07/reviews/datacenter-redundancy/convergence.md",
+  "critique": "docs/visualize-eval/rounds/07/reviews/datacenter-redundancy/critique.md"
+}

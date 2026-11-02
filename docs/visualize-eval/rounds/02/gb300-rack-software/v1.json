@@ -1,0 +1,114 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "rms",
+      "label": "nv-rms",
+      "group": "mgmt"
+    },
+    {
+      "id": "oob",
+      "label": "OOB LAN",
+      "group": "oob"
+    },
+    {
+      "id": "bmc_c",
+      "label": "Compute BMC",
+      "group": "oob"
+    },
+    {
+      "id": "bmc_s",
+      "label": "NVSwitch BMC",
+      "group": "oob"
+    },
+    {
+      "id": "pwr",
+      "label": "Power shelf",
+      "group": "oob"
+    },
+    {
+      "id": "nvos",
+      "label": "NVOS",
+      "group": "nvsw"
+    },
+    {
+      "id": "nmxc",
+      "label": "NMX-C/T",
+      "group": "nvsw"
+    }
+  ],
+  "trunks": [
+    {
+      "id": "oob_lan",
+      "label": "1/10/25G Eth",
+      "from": "oob",
+      "to": "pwr",
+      "branches": [
+        "bmc_c",
+        "bmc_s"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "rms",
+      "to": "oob",
+      "label": "client on LAN",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "rms",
+      "to": "bmc_c",
+      "label": "Redfish/HTTPS",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "rms",
+      "to": "pwr",
+      "label": "Redfish/HTTPS",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "rms",
+      "to": "nvos",
+      "label": "NVUE REST/SSH",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "rms",
+      "to": "nmxc",
+      "label": "NMX-C gRPC",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "nvos",
+      "to": "nmxc",
+      "label": "hosts",
+      "dots": 1,
+      "flow": true
+    }
+  ],
+  "layers": [
+    [
+      "rms"
+    ],
+    [
+      "",
+      "oob",
+      "nvos"
+    ],
+    [
+      "",
+      "bmc_c",
+      "bmc_s",
+      "pwr",
+      "nmxc"
+    ]
+  ]
+}

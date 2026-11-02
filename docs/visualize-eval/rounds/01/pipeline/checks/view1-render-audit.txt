@@ -1,0 +1,50 @@
+# Render audit of the final view (frozen binary, pane w7E:p3R, 47x77)
+# command: /tmp/visualize-eval/round-01/bin/rataflow-view --check spec/view1.json && uv run --quiet --no-project python tools/audit_boxes.py <ansi>
+# convention: rows and cols are 0-based grid indices; grid row 0 is the header line
+#
+# 1. unselected: node boxes, border colors, handles, interior background
+boxes found: 6
+box rows6-9 cols35-39 label='CLI' w=5 h=4 border_fgs=[(216, 166, 87)] sides_ok=True border_dots=[] interior_bgs={(40, 40, 40)} interior_dots=[]
+box rows14-17 cols35-47 label='API gateway' w=13 h=4 border_fgs=[(125, 174, 163)] sides_ok=True border_dots=[] interior_bgs={(40, 40, 40)} interior_dots=[]
+box rows22-25 cols22-32 label='Job queue' w=11 h=4 border_fgs=[(211, 134, 155)] sides_ok=True border_dots=[] interior_bgs={(40, 40, 40)} interior_dots=[]
+box rows22-25 cols48-53 label='Auth' w=6 h=4 border_fgs=[(226, 156, 175)] sides_ok=True border_dots=[] interior_bgs={(40, 40, 40)} interior_dots=[]
+box rows30-33 cols22-34 label='Worker pool' w=13 h=4 border_fgs=[(169, 182, 101)] sides_ok=True border_dots=[] interior_bgs={(40, 40, 40)} interior_dots=[]
+box rows38-41 cols35-44 label='Postgres' w=10 h=4 border_fgs=[(125, 160, 184)] sides_ok=True border_dots=[] interior_bgs={(40, 40, 40)} interior_dots=[]
+global bg set: {(40, 40, 40)}
+# NOTE: the 7th 'box' in the selected capture below is a detector false positive -
+#       an edge elbow (row 20 col 23) matched with another edge elbow (row 20 col 49).
+#
+# 2. selected state A: Tab pressed once - API gateway border becomes the accent color
+boxes found: 7
+box rows6-9 cols35-39 label='CLI' w=5 h=4 border_fgs=[(216, 166, 87)] sides_ok=True border_dots=[] interior_bgs={(40, 40, 40)} interior_dots=[]
+box rows14-17 cols35-47 label='API gateway' w=13 h=4 border_fgs=[(216, 166, 87)] sides_ok=True border_dots=[] interior_bgs={(40, 40, 40)} interior_dots=[]
+SKIP (no-fg border cell) rows20-36 cols23-49 border_fgs=[(124, 111, 100), (169, 182, 101), (211, 134, 155), (216, 166, 87), (226, 156, 175), (235, 219, 178), None]
+box rows22-25 cols22-32 label='Job queue' w=11 h=4 border_fgs=[(211, 134, 155)] sides_ok=True border_dots=[] interior_bgs={(40, 40, 40)} interior_dots=[]
+box rows22-25 cols48-53 label='Auth' w=6 h=4 border_fgs=[(226, 156, 175)] sides_ok=True border_dots=[] interior_bgs={(40, 40, 40)} interior_dots=[]
+box rows30-33 cols22-34 label='Worker pool' w=13 h=4 border_fgs=[(169, 182, 101)] sides_ok=True border_dots=[] interior_bgs={(40, 40, 40)} interior_dots=[]
+box rows38-41 cols35-44 label='Postgres' w=10 h=4 border_fgs=[(125, 160, 184)] sides_ok=True border_dots=[] interior_bgs={(40, 40, 40)} interior_dots=[]
+global bg set: {(40, 40, 40)}
+#
+# 3. selected state B: Tab pressed twice - Auth border becomes the accent color
+boxes found: 6
+box rows6-9 cols35-39 label='CLI' w=5 h=4 border_fgs=[(216, 166, 87)] sides_ok=True border_dots=[] interior_bgs={(40, 40, 40)} interior_dots=[]
+box rows14-17 cols35-47 label='API gateway' w=13 h=4 border_fgs=[(125, 174, 163)] sides_ok=True border_dots=[] interior_bgs={(40, 40, 40)} interior_dots=[]
+box rows22-25 cols22-32 label='Job queue' w=11 h=4 border_fgs=[(211, 134, 155)] sides_ok=True border_dots=[] interior_bgs={(40, 40, 40)} interior_dots=[]
+box rows22-25 cols48-53 label='Auth' w=6 h=4 border_fgs=[(216, 166, 87)] sides_ok=True border_dots=[] interior_bgs={(40, 40, 40)} interior_dots=[]
+box rows30-33 cols22-34 label='Worker pool' w=13 h=4 border_fgs=[(169, 182, 101)] sides_ok=True border_dots=[] interior_bgs={(40, 40, 40)} interior_dots=[]
+box rows38-41 cols35-44 label='Postgres' w=10 h=4 border_fgs=[(125, 160, 184)] sides_ok=True border_dots=[] interior_bgs={(40, 40, 40)} interior_dots=[]
+global bg set: {(40, 40, 40)}
+#
+# 4. dot spacing and drift (text captures, 2 s between frames)
+line 13 ['f1 None', 'f2 [36]', 'f3 [36]']
+line 14 ['f1 [36]', 'f2 None', 'f3 [36]']
+line 21 ['f1 [36, 38]', 'f2 None', 'f3 None']
+line 22 ['f1 [23, 30, 44]', 'f2 [26, 33, 41, 48]', 'f3 [29, 36, 38, 45]']
+line 29 ['f1 [49]', 'f2 [23]', 'f3 [23]']
+line 30 ['f1 [23]', 'f2 None', 'f3 [23, 49]']
+line 33 ['f1 None', 'f2 [49]', 'f3 None']
+line 36 ['f1 [49]', 'f2 None', 'f3 None']
+line 37 ['f1 [23]', 'f2 None', 'f3 [49]']
+line 38 ['f1 [29, 36, 44]', 'f2 [26, 33, 40, 47]', 'f3 [23, 30, 43]']
+# dots advance about 3 cells per 2 s frame (flow=0.2 = 2 cells/s nominal);
+# per-edge dot spacing measured 7-14 cells, never <7.

@@ -1,0 +1,101 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "worker",
+      "label": "modal-worker"
+    },
+    {
+      "id": "runtime",
+      "label": "modal-runtime"
+    },
+    {
+      "id": "engine",
+      "label": "Task engine"
+    },
+    {
+      "id": "backend",
+      "label": "Container backend"
+    },
+    {
+      "id": "filesystem",
+      "label": "Filesystem + volumes"
+    },
+    {
+      "id": "daemon",
+      "label": "modal-daemon"
+    },
+    {
+      "id": "container",
+      "label": "Task container"
+    },
+    {
+      "id": "blobnet",
+      "label": "Blobnet"
+    }
+  ],
+  "layers": [
+    [
+      "worker"
+    ],
+    [
+      "runtime"
+    ],
+    [
+      "engine"
+    ],
+    [
+      "backend",
+      "filesystem",
+      "daemon"
+    ],
+    [
+      "",
+      "container",
+      "blobnet"
+    ]
+  ],
+  "edges": [
+    {
+      "from": "runtime",
+      "to": "worker",
+      "label": "events gRPC"
+    },
+    {
+      "from": "worker",
+      "to": "runtime",
+      "label": "control gRPC"
+    },
+    {
+      "from": "runtime",
+      "to": "engine",
+      "label": "task dispatch"
+    },
+    {
+      "from": "engine",
+      "to": "backend",
+      "label": "starts/manages"
+    },
+    {
+      "from": "backend",
+      "to": "container",
+      "label": "runs process"
+    },
+    {
+      "from": "engine",
+      "to": "filesystem",
+      "label": "mount/snapshot"
+    },
+    {
+      "from": "filesystem",
+      "to": "blobnet",
+      "label": "image/vol data"
+    },
+    {
+      "from": "runtime",
+      "to": "daemon",
+      "label": "fs HTTP over UDS"
+    }
+  ]
+}

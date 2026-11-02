@@ -1,0 +1,9 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=6 edges=6 flows=6 direction=lr theme=gruvbox
+extent=119x19 cells
+crossings: 0
+labels: 4/4 placed, 0 on route cells, 0 skipped
+groups: client(1) edge(1) control(2) compute(1) state(1)
+trunks:
+dots: 6 single-dot routes, 0 periodic routes, 0 violations, 6 synchronized at 3000ms
+origins: 6/6 routes start at their arrow origin

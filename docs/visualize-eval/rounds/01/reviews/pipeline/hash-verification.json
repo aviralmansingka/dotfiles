@@ -1,0 +1,417 @@
+{
+  "reviewer": {
+    "worker_id": "viz-judge01-pipeline",
+    "model": "openai/gpt-6-astra"
+  },
+  "frozen_input_checks": [
+    {
+      "path": "docs/visualize-eval/rounds/01/SKILL.md",
+      "expected": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "actual": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/rubric.json",
+      "expected": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "actual": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/cases.json",
+      "expected": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "actual": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "match": true
+    },
+    {
+      "path": "/tmp/visualize-eval/round-01/bin/rataflow-view",
+      "expected": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "actual": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/cases/pipeline/source.md",
+      "expected": "68aa197fdc597c3a22d1b8ca88a3ebee861dcda34684da15ae69b6946b741e58",
+      "actual": "68aa197fdc597c3a22d1b8ca88a3ebee861dcda34684da15ae69b6946b741e58",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/cases/pipeline/expected.json",
+      "expected": "ea177d01af818876ff04bf707b923326b153185fd425f21ea96250486b504ec3",
+      "actual": "ea177d01af818876ff04bf707b923326b153185fd425f21ea96250486b504ec3",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/reviews/pipeline/observed-first.md",
+      "expected": "433079ce2330ef2fbb6a378f60e48378a59aa077ac3ccede3342facf701d3743",
+      "actual": "433079ce2330ef2fbb6a378f60e48378a59aa077ac3ccede3342facf701d3743",
+      "match": true
+    }
+  ],
+  "generator_inventory_checks": [
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/spec/view1.json",
+      "recorded": "d5e59fa46e19f77f6841cf382c0794a45dca2aadf1a2142d6d7d1830d031d4cb",
+      "actual": "d5e59fa46e19f77f6841cf382c0794a45dca2aadf1a2142d6d7d1830d031d4cb",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/attempts/view1-attempt1.json",
+      "recorded": "ab6597b056bc92707da9b81074f6417216db2a9205bc948df587bd4627eb6162",
+      "actual": "ab6597b056bc92707da9b81074f6417216db2a9205bc948df587bd4627eb6162",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/attempts/view1-attempt2.json",
+      "recorded": "38010e16f4ad1fff4ab715e6f5abbd735f104d80ce0e60ec4e3a2cba0a58886e",
+      "actual": "38010e16f4ad1fff4ab715e6f5abbd735f104d80ce0e60ec4e3a2cba0a58886e",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/attempts/view1-attempt3.json",
+      "recorded": "d5e59fa46e19f77f6841cf382c0794a45dca2aadf1a2142d6d7d1830d031d4cb",
+      "actual": "d5e59fa46e19f77f6841cf382c0794a45dca2aadf1a2142d6d7d1830d031d4cb",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "/private/tmp/visualize-eval/round-01/bin/rataflow-view",
+      "recorded": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "actual": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/SKILL.md",
+      "recorded": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "actual": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/checks/view1-attempt1.check.txt",
+      "recorded": "1807d209b29dc27f01ccced046047ae65aadf2780d76192b567ab09dd039a71b",
+      "actual": "1807d209b29dc27f01ccced046047ae65aadf2780d76192b567ab09dd039a71b",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/checks/view1-attempt2.check.txt",
+      "recorded": "5bd5a77feb91c04fdb975b9b2f89ec362b8e62792b7ceb2206aca039a11e017d",
+      "actual": "5bd5a77feb91c04fdb975b9b2f89ec362b8e62792b7ceb2206aca039a11e017d",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/checks/view1-attempt3.check.txt",
+      "recorded": "58db8357cc4dd678dec640de4e50013b116df0fd6923d24294a695e7413773fa",
+      "actual": "58db8357cc4dd678dec640de4e50013b116df0fd6923d24294a695e7413773fa",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/checks/view1-render-audit.txt",
+      "recorded": "b81f454104b704dd394bda01ff59900ae522a670760f0bd5039da7cd62eda474",
+      "actual": "b81f454104b704dd394bda01ff59900ae522a670760f0bd5039da7cd62eda474",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/checks/view1.check.exit",
+      "recorded": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061",
+      "actual": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/checks/view1.check.stderr.txt",
+      "recorded": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "actual": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/checks/view1.check.stdout.txt",
+      "recorded": "0cf943ad60f9abec10eedcfa5b4da2459d2fdd5e069bab73590679399de4e4d5",
+      "actual": "0cf943ad60f9abec10eedcfa5b4da2459d2fdd5e069bab73590679399de4e4d5",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/checks/view1.check.txt",
+      "recorded": "f0a36329f59cb18f53076367055bd6708e4e623e1779fc919ae39150f7f0ae90",
+      "actual": "f0a36329f59cb18f53076367055bd6708e4e623e1779fc919ae39150f7f0ae90",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-ansi-unselected.txt",
+      "recorded": "6564d17d36aba26b6e6eb2c676bb6bc44f8b2d4158c2f1793c6011e7cfecdb40",
+      "actual": "6564d17d36aba26b6e6eb2c676bb6bc44f8b2d4158c2f1793c6011e7cfecdb40",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-attempt1-ansi.txt",
+      "recorded": "4a778b2a7dde49daa0b5476b32d95e0bf32cf0cb02b871f744cb792a908bfe09",
+      "actual": "4a778b2a7dde49daa0b5476b32d95e0bf32cf0cb02b871f744cb792a908bfe09",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-attempt1-visible.txt",
+      "recorded": "af0b1fc09a8ea2ed6cf1d781b2cc2478edff2fecd0c8e74f475c3da5a4f9265c",
+      "actual": "af0b1fc09a8ea2ed6cf1d781b2cc2478edff2fecd0c8e74f475c3da5a4f9265c",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-attempt2-dims.txt",
+      "recorded": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "actual": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-attempt2-visible.txt",
+      "recorded": "660622834e35b16226824e925e351ea2530efe4cb365d4be2b6f780dd5879b5a",
+      "actual": "660622834e35b16226824e925e351ea2530efe4cb365d4be2b6f780dd5879b5a",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-attempt3-dims.txt",
+      "recorded": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "actual": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-attempt3-visible.txt",
+      "recorded": "9219ecb67ef2f1dfbd9d4f28cdaae6d63fddd223babee62b3a47a564c7b6f3c1",
+      "actual": "9219ecb67ef2f1dfbd9d4f28cdaae6d63fddd223babee62b3a47a564c7b6f3c1",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-dims.txt",
+      "recorded": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "actual": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-frame1.txt",
+      "recorded": "f8bdb6c61ab0c03f07cb1cd273be5378fc306099383eed658597f67ca9d033df",
+      "actual": "f8bdb6c61ab0c03f07cb1cd273be5378fc306099383eed658597f67ca9d033df",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-frame2.txt",
+      "recorded": "0bea5db81ab42d6c77d9f35eb00adfcec54d6584626f3ebf593e7e899cf78cd1",
+      "actual": "0bea5db81ab42d6c77d9f35eb00adfcec54d6584626f3ebf593e7e899cf78cd1",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-frame3.txt",
+      "recorded": "a60a4985dccb4d3808f15853980871f9dbdb34e287e36c120c057a4e4e04156b",
+      "actual": "a60a4985dccb4d3808f15853980871f9dbdb34e287e36c120c057a4e4e04156b",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-frame4.txt",
+      "recorded": "567d571e327be4faa7b4d3e6cbd02aeb6be1d7f0edc88cfb4ff511011fa21ad1",
+      "actual": "567d571e327be4faa7b4d3e6cbd02aeb6be1d7f0edc88cfb4ff511011fa21ad1",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-live-frame1.txt",
+      "recorded": "a781c3ce9f6383ec59893aa715b23cc1871a942c0f0e02598ff178a2c498d22f",
+      "actual": "a781c3ce9f6383ec59893aa715b23cc1871a942c0f0e02598ff178a2c498d22f",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-live-frame2.txt",
+      "recorded": "18201fb9bc197b2796dff0e210efe13bc63b2b67ab88ae7c2dec6568fd39806a",
+      "actual": "18201fb9bc197b2796dff0e210efe13bc63b2b67ab88ae7c2dec6568fd39806a",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-live-frame3.txt",
+      "recorded": "f6a6f3dd38db9d35b4b5d382ebfb8b5847ad55f912cff9fc051b03ac6f431ebb",
+      "actual": "f6a6f3dd38db9d35b4b5d382ebfb8b5847ad55f912cff9fc051b03ac6f431ebb",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-selected1-ansi.txt",
+      "recorded": "98a03ef08c944654813147a45bd9ba85d0cbccae686f8a8c4da6b82ae98577b8",
+      "actual": "98a03ef08c944654813147a45bd9ba85d0cbccae686f8a8c4da6b82ae98577b8",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-selected1-visible.txt",
+      "recorded": "cccff7e3802010347fbc63eea7f3d0fc048cbdbae377c31a622cb30406e54baf",
+      "actual": "cccff7e3802010347fbc63eea7f3d0fc048cbdbae377c31a622cb30406e54baf",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-selected2-ansi.txt",
+      "recorded": "5606aabcdcf9624176aa2a1bdce1abf0214819f42ea8e4c591d2593d41f7c4c2",
+      "actual": "5606aabcdcf9624176aa2a1bdce1abf0214819f42ea8e4c591d2593d41f7c4c2",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-selected2-visible.txt",
+      "recorded": "c245117aee0cdd325fdac8c7e396ec2ad10c2d57855c3fc9d87844cdee5bd4e2",
+      "actual": "c245117aee0cdd325fdac8c7e396ec2ad10c2d57855c3fc9d87844cdee5bd4e2",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-timestamps.txt",
+      "recorded": "fba3eddc83ce4aeb91304de0a58bade1ed6b1b3c1d56f9ab86aabb882cc0f237",
+      "actual": "fba3eddc83ce4aeb91304de0a58bade1ed6b1b3c1d56f9ab86aabb882cc0f237",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-visible.txt",
+      "recorded": "d162e1634878b892b3555cfc56617b177ab8b451e5cfa27238f246ae1c5b7ba3",
+      "actual": "d162e1634878b892b3555cfc56617b177ab8b451e5cfa27238f246ae1c5b7ba3",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/commands/commands.md",
+      "recorded": "b17e02dc99df7b3844c267233ec10564ca10cfc81dbf7679d63081d4748e6e9a",
+      "actual": "b17e02dc99df7b3844c267233ec10564ca10cfc81dbf7679d63081d4748e6e9a",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/commands/split-view1-attempt2.json",
+      "recorded": "3fb673578ca567baab3e3135226fcfffaca69893ef44af9c031eb85d76c45a56",
+      "actual": "3fb673578ca567baab3e3135226fcfffaca69893ef44af9c031eb85d76c45a56",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/commands/split-view1-attempt3.json",
+      "recorded": "9c0b3af8fd98d0aa1e17d1fe49090f7d03c472e5f2378f6fcd3e63bae68fd87c",
+      "actual": "9c0b3af8fd98d0aa1e17d1fe49090f7d03c472e5f2378f6fcd3e63bae68fd87c",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/commands/split-view1-final.json",
+      "recorded": "784202122d56337fa1381437dbf5d892f027f90206fd6609d7efbd1ea7e2cbf5",
+      "actual": "784202122d56337fa1381437dbf5d892f027f90206fd6609d7efbd1ea7e2cbf5",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/commands/split-view1.json",
+      "recorded": "a4cef2bc5ed46150376be5a8ea56fec22ffdbb4193b43c141fcd4770c1188b25",
+      "actual": "a4cef2bc5ed46150376be5a8ea56fec22ffdbb4193b43c141fcd4770c1188b25",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/commands/view1-attempt2-launch.txt",
+      "recorded": "8c28ef49376f93678bebab2e65fda613f045f78faa0bb1b4960ff877828d8792",
+      "actual": "8c28ef49376f93678bebab2e65fda613f045f78faa0bb1b4960ff877828d8792",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/commands/view1-attempt3-launch.txt",
+      "recorded": "fe604803ee4d023d3a4b18a9a59924a1d5d06ebea01a1513df88856076617586",
+      "actual": "fe604803ee4d023d3a4b18a9a59924a1d5d06ebea01a1513df88856076617586",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/commands/view1-launch-final.txt",
+      "recorded": "34d493784b16b49c3c1ddab170d1fbc9ab7317e319823877a2f97598bb89bd68",
+      "actual": "34d493784b16b49c3c1ddab170d1fbc9ab7317e319823877a2f97598bb89bd68",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/commands/view1-launch.txt",
+      "recorded": "c8b12475d6a8905ff8da2bf8726b74742a696d4dedec9e2403153af10ce4860e",
+      "actual": "c8b12475d6a8905ff8da2bf8726b74742a696d4dedec9e2403153af10ce4860e",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/tools/ansi_map.py",
+      "recorded": "78b168065c4534877a71c0b24c21953b0537c05455a7e892213b221e3c5b1f6b",
+      "actual": "78b168065c4534877a71c0b24c21953b0537c05455a7e892213b221e3c5b1f6b",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/tools/audit_boxes.py",
+      "recorded": "2e9e0d5b8881f2f6d7b436d734f907a77c2828f5d871088e47bae86f2cd23cab",
+      "actual": "2e9e0d5b8881f2f6d7b436d734f907a77c2828f5d871088e47bae86f2cd23cab",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/tools/cols.py",
+      "recorded": "17fee9ec7509482ca185480fd17ec4fb518e810674beaaec8eec9e765ba01946",
+      "actual": "17fee9ec7509482ca185480fd17ec4fb518e810674beaaec8eec9e765ba01946",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/generation.json",
+      "recorded": "47ae60f4bbdd9961ddfb77bad9630b9bc55e049f2b7ae9c6571f56c5a4ddd79f",
+      "actual": "ab6a7d633ba3f6a8d609a4cd727ea4c76e3b17c67dd5effd1cfb8581c6917e69",
+      "match": false
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/generation.md",
+      "recorded": "3676bbd4982c5b44ea051b0816b33501b7ca0753e3b3e3721a1bf2bb10a857fb",
+      "actual": "3676bbd4982c5b44ea051b0816b33501b7ca0753e3b3e3721a1bf2bb10a857fb",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/report-hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/generation.json",
+      "recorded": "ab6a7d633ba3f6a8d609a4cd727ea4c76e3b17c67dd5effd1cfb8581c6917e69",
+      "actual": "ab6a7d633ba3f6a8d609a4cd727ea4c76e3b17c67dd5effd1cfb8581c6917e69",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/report-hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/generation.md",
+      "recorded": "3676bbd4982c5b44ea051b0816b33501b7ca0753e3b3e3721a1bf2bb10a857fb",
+      "actual": "3676bbd4982c5b44ea051b0816b33501b7ca0753e3b3e3721a1bf2bb10a857fb",
+      "match": true
+    },
+    {
+      "manifest": "docs/visualize-eval/rounds/01/pipeline/checks/report-hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/spec/view1.json",
+      "recorded": "d5e59fa46e19f77f6841cf382c0794a45dca2aadf1a2142d6d7d1830d031d4cb",
+      "actual": "d5e59fa46e19f77f6841cf382c0794a45dca2aadf1a2142d6d7d1830d031d4cb",
+      "match": true
+    }
+  ],
+  "note": "Old hashes.txt generation.json entry is superseded by later report-hashes.txt; the later report hash is checked separately. No live sessions, checks, or rendering executed."
+}

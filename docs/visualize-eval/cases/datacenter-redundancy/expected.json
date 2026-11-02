@@ -1,0 +1,229 @@
+{
+  "case_id": "datacenter-redundancy",
+  "reference_kind": "historical_generated_relations_not_independent_fact_verification",
+  "source_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-rack-bench-feat-network-diagram--/2026-10-13T05-14-42-097Z_01a133af-3231-71ff-87c1-c56889a12a6c.jsonl",
+  "source_spec_line": 151,
+  "source_call_id": "chatcmpl-tool-be19bcbf0f891dc0",
+  "historical_reference": {
+    "nodes": [
+      {
+        "id": "ispA",
+        "label": "ISP A"
+      },
+      {
+        "id": "ispB",
+        "label": "ISP B"
+      },
+      {
+        "id": "ispC",
+        "label": "ISP C"
+      },
+      {
+        "id": "ispD",
+        "label": "ISP D"
+      },
+      {
+        "id": "mux1",
+        "label": "MUX 1"
+      },
+      {
+        "id": "mux2",
+        "label": "MUX 2"
+      },
+      {
+        "id": "core1",
+        "label": "Core 1"
+      },
+      {
+        "id": "core2",
+        "label": "Core 2"
+      },
+      {
+        "id": "fw1",
+        "label": "FW1 active"
+      },
+      {
+        "id": "fw2",
+        "label": "FW2 standby"
+      },
+      {
+        "id": "bl1",
+        "label": "BL 1"
+      },
+      {
+        "id": "bl2",
+        "label": "BL 2"
+      },
+      {
+        "id": "sp1",
+        "label": "Spine 1"
+      },
+      {
+        "id": "sp2",
+        "label": "Spine 2"
+      },
+      {
+        "id": "leaf1",
+        "label": "Leaf 1"
+      },
+      {
+        "id": "leaf2",
+        "label": "Leaf 2"
+      },
+      {
+        "id": "rack1",
+        "label": "Rack 1"
+      },
+      {
+        "id": "rack2",
+        "label": "Rack 2"
+      }
+    ],
+    "edges": [
+      {
+        "from": "ispA",
+        "to": "mux1"
+      },
+      {
+        "from": "ispB",
+        "to": "mux1"
+      },
+      {
+        "from": "ispC",
+        "to": "mux2"
+      },
+      {
+        "from": "ispD",
+        "to": "mux2"
+      },
+      {
+        "from": "mux1",
+        "to": "core1",
+        "label": "x-connect"
+      },
+      {
+        "from": "mux1",
+        "to": "core2",
+        "label": "x-connect"
+      },
+      {
+        "from": "mux2",
+        "to": "core1",
+        "label": "x-connect"
+      },
+      {
+        "from": "mux2",
+        "to": "core2",
+        "label": "x-connect"
+      },
+      {
+        "from": "core1",
+        "to": "fw1",
+        "label": "active"
+      },
+      {
+        "from": "core2",
+        "to": "fw1",
+        "label": "active"
+      },
+      {
+        "from": "core1",
+        "to": "fw2",
+        "label": "standby"
+      },
+      {
+        "from": "core2",
+        "to": "fw2",
+        "label": "standby"
+      },
+      {
+        "from": "fw1",
+        "to": "bl1",
+        "label": "active"
+      },
+      {
+        "from": "fw1",
+        "to": "bl2",
+        "label": "active"
+      },
+      {
+        "from": "fw2",
+        "to": "bl1",
+        "label": "standby"
+      },
+      {
+        "from": "fw2",
+        "to": "bl2",
+        "label": "standby"
+      },
+      {
+        "from": "bl1",
+        "to": "sp1",
+        "label": "ECMP"
+      },
+      {
+        "from": "bl1",
+        "to": "sp2",
+        "label": "ECMP"
+      },
+      {
+        "from": "bl2",
+        "to": "sp1",
+        "label": "ECMP"
+      },
+      {
+        "from": "bl2",
+        "to": "sp2",
+        "label": "ECMP"
+      },
+      {
+        "from": "sp1",
+        "to": "leaf1",
+        "label": "ECMP"
+      },
+      {
+        "from": "sp1",
+        "to": "leaf2",
+        "label": "ECMP"
+      },
+      {
+        "from": "sp2",
+        "to": "leaf1",
+        "label": "ECMP"
+      },
+      {
+        "from": "sp2",
+        "to": "leaf2",
+        "label": "ECMP"
+      },
+      {
+        "from": "leaf1",
+        "to": "rack1",
+        "label": "dual"
+      },
+      {
+        "from": "leaf2",
+        "to": "rack1",
+        "label": "dual"
+      },
+      {
+        "from": "leaf1",
+        "to": "rack2",
+        "label": "dual"
+      },
+      {
+        "from": "leaf2",
+        "to": "rack2",
+        "label": "dual"
+      }
+    ]
+  },
+  "constraints": [
+    "Cross-connect each adjacent redundant tier, preserving all 28 required links from the expanded historical topology.",
+    "Keep border leaves and rack leaves at the same vertical level; put both spines above them in the fabric view.",
+    "Never merge independent redundancy links into a shared bus.",
+    "These are physical connectivity links, not proof of one-way traffic. State arrow convention; do not change endpoint semantics to force layout.",
+    "Four separate ISP identities may be included within MUX labels only with explicit coverage and legible identity."
+  ],
+  "animation": "off"
+}

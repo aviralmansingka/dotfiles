@@ -1,0 +1,32 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "web",
+      "label": "Web tier"
+    },
+    {
+      "id": "cache",
+      "label": "Redis cache"
+    },
+    {
+      "id": "db",
+      "label": "DB tier"
+    }
+  ],
+  "edges": [
+    {
+      "from": "web",
+      "to": "cache",
+      "label": "session",
+      "flow": 0.2
+    },
+    {
+      "from": "cache",
+      "to": "db",
+      "label": "fill",
+      "flow": 0.2
+    }
+  ]
+}

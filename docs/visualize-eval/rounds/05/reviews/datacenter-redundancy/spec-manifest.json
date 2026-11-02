@@ -1,0 +1,14 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/specs/v1-wan-mux-core.json",
+    "sha256": "3adbbf099facfc60bc6ed88c5def5acef81c71d3cb589e476ddbf053ee341a58"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/specs/v2-fw-border-spine.json",
+    "sha256": "89e36227a0ac6e618fc1ca99bac7883df1972f299ffa80cfbf158c81918c7970"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/05/datacenter-redundancy/specs/v3-fabric-leaves-racks.json",
+    "sha256": "fcc12c64f14b41645f5fba4fbe960cb0693c8e756441d9bfd70de63172ffde2b"
+  }
+]

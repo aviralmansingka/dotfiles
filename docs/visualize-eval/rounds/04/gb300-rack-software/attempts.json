@@ -1,0 +1,81 @@
+{
+  "case_id": "gb300-rack-software",
+  "round": "04",
+  "budget_note": "At most three spec candidates per view, counting every --check run on a distinct spec. Every attempt below has its raw --check output preserved under checks/.",
+  "views": [
+    {
+      "view": "v1",
+      "shipped": "specs/v1-oob-rail.json",
+      "attempts": [
+        {
+          "n": 1,
+          "spec": "specs/v1-oob-rail.json",
+          "spec_sha256": "1f909cae469b2d37668fb8dfafe0a69750704d625a9b63a8d8f3e85ab5c67e96",
+          "raw_check": "checks/v1-attempt1.txt",
+          "outcome": "shipped",
+          "note": "tb, 5 nodes, one OOB trunk (oob -> compute BMC) with two branch spurs into NVSwitch BMC and power shelf. One junction glyph. Extent 55x27. Residual defect: 1 bridge where the power-shelf spur crosses the corridor. Kept because the next two candidates were worse."
+        },
+        {
+          "n": 2,
+          "spec": "specs/v1-oob-rail-a2.json",
+          "spec_sha256": "f08d946a54136b10334b6a3419db87fc995ba3bb38965131405bf3fcc4a7f446",
+          "raw_check": "checks/v1-attempt2.txt",
+          "outcome": "rejected",
+          "note": "Same graph with a second empty spacer layer to widen the split zone. Extent grew to 55x34 and the same single bridge remained: the bridge is a property of the trunk's corridor/spur shape, not of the channel height. Rejected for wasted height with no gain."
+        },
+        {
+          "n": 3,
+          "spec": "specs/v1-oob-rail-a3.json",
+          "spec_sha256": "23aecb7eb32f42d35b7b715286b5e04ea68550fee2c8119e1e42e7bda537b0ad",
+          "raw_check": "checks/v1-attempt3.txt",
+          "outcome": "rejected",
+          "note": "lr direction, to get the textbook horizontal corridor with one arm up and one arm down. --check failed: 'no obstacle-safe route for oob -> bmc_s, oob -> pwr; increase node/layer spacing' (the lr layer gap is sized only from spec edges, so the trunk spurs had a 3-column channel). Attempt budget for v1 exhausted; reverted to attempt 1."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "shipped": "specs/v2-mgmt-api-a3.json",
+      "attempts": [
+        {
+          "n": 1,
+          "spec": "specs/v2-mgmt-api.json",
+          "spec_sha256": "ef9dcfb927a6bfdf22eba4d028aad51c48a9abe20771b97e337fe83c669847c1",
+          "raw_check": "checks/v2-attempt1.txt",
+          "outcome": "rejected",
+          "note": "tb fan-out from nv-rms into the four device classes plus the NVOS-hosts-NMX-C/T edge. 0 bridges, 0 detours, origins 4/4, but 1 ambiguous label owner: the compute-BMC route left rms and dropped almost straight down, so its label had no own run and sat between two parallel verticals. Ambiguity is a hard failure, so the layout was re-cut."
+        },
+        {
+          "n": 2,
+          "spec": "specs/v2-mgmt-api-a2.json",
+          "spec_sha256": "efb22e48acd56bdee19c861c37292d7fbdfb8f84af240ec7089594e9a23ee5de",
+          "raw_check": "checks/v2-attempt2.txt",
+          "outcome": "superseded",
+          "note": "lr fan-out: nv-rms on the left, the four device classes stacked as rows, NMX-C/T one column further right under NVOS. Same relations and protocol labels, but every route now has its own horizontal run, so each label owns a run. 0 bridges, 0 detours, 0 ambiguous owners, origins 4/4, extent 66x25. Superseded only to carry the nv-rms availability qualifier in attempt 3; this layout stays the fallback if attempt 3 had failed."
+        },
+        {
+          "n": 3,
+          "spec": "specs/v2-mgmt-api-a3.json",
+          "spec_sha256": "ae706bef201671ef2eb665c51b6116d5afdfb3f9ce7151cb620dc8b69fae4000",
+          "raw_check": "checks/v2-attempt3.txt",
+          "outcome": "shipped",
+          "note": "Attempt 2 unchanged except the controller label: 'nv-rms (mgmt)' -> 'nv-rms (src build)', so the view states that the free source build is meant and does not imply the entitlement-gated prebuilt NGC image is available. 0 bridges, 0 detours, 0 ambiguous owners, origins 4/4, extent 76x25 - it fits the 77-column pane with one column to spare, so the fit is tighter than attempt 2 but still inside the target viewport."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "shipped": "specs/v3-inband-host.json",
+      "attempts": [
+        {
+          "n": 1,
+          "spec": "specs/v3-inband-host.json",
+          "spec_sha256": "c810d8e2762b023c61c2f5410ae3c2e30f4ee7fc34388c6e98400b06363217e0",
+          "raw_check": "checks/v3-attempt1.txt",
+          "outcome": "shipped",
+          "note": "tb, DCGM off its exporter's column so both dcgm out-edges have their own horizontal run; residency carried by node labels (host) and by the 'hosts operator' / 'host DaemonSet' edge labels. 0 bridges, 0 detours, 0 ambiguous owners, origins 2/2, extent 64x37."
+        }
+      ]
+    }
+  ]
+}

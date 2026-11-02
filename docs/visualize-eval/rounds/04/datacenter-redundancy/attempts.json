@@ -1,0 +1,167 @@
+{
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "spec": "specs/v1-a1.json",
+          "spec_sha256": "31e5b63fe36052551e880bc9866c47228d9b3d9844e4596e6613ad67ccc0aa78",
+          "check_output": "attempts/v1-a1-check.txt",
+          "check_sha256": "2ea900f2a2451914e052fc552ca531d78829ba1327336e410a53875fea4a6e6c",
+          "note": "tb, wide slot spacing; four identical x-connect labels in one band; 1 ambiguous owner (leftmost vertical route had no room at the canvas edge, its sibling lane two cells away). Spec bytes were overwritten when the chosen spec took the canonical v1.json name; this preserved copy reproduces the recorded check output byte for byte."
+        },
+        {
+          "spec": "specs/v1-a2.json",
+          "spec_sha256": "74749501ed9b85b11758641333cddeb13ded40eb8dc422da81a5b8bfb574f45e",
+          "check_output": "attempts/v1-a2-check.txt",
+          "check_sha256": "ec25458e405b5aca3de3459962c6f42f97e48a9b3ec4e2ff4453f69ecd60dfac",
+          "note": "tb + reserved spacer layer to widen the mux->core band; still 1 ambiguous owner"
+        },
+        {
+          "spec": "specs/v1-a3.json",
+          "spec_sha256": "f6d20a5ffb5ec6d4452a49df144762a7a102f0c6e284a97b4a4e7ea859818c67",
+          "check_output": "attempts/v1-a3-check.txt",
+          "check_sha256": "0f5008eec89bb305e42c3b6c008914c4a487e4f0ba4ac9c885818b9f0238e906",
+          "note": "lr orientation with a reserved spacer column: each route owns a row for its label, 0 ambiguous owners; CHOSEN (copied to specs/v1.json)"
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "attempts": [
+        {
+          "spec": "specs/v2-a2.json",
+          "spec_sha256": "c1bdadff329962afb5fb094e0dece38b54183a2d4c7092487f2977a434f27e5e",
+          "check_output": "attempts/v2-a2-check.txt",
+          "check_sha256": "cefaa6f4e2a4fc38347c6ec8f006a92d91926d40ce8483e484153ec4a026b198",
+          "note": "lr, one spacer, residency node labels: extent 79 cells (too wide for the pane) and 1 ambiguous owner"
+        },
+        {
+          "spec": "specs/v2-a3.json",
+          "spec_sha256": "31050fecd83fd229ce45507503fa20878de66ca1c37d92590f4d4376f47d4ade",
+          "check_output": "attempts/v2-a3-check.txt",
+          "check_sha256": "19b32777d728a977e49578266ebacbb7770a870fde0c79cad854c29580190753",
+          "note": "lr, one spacer, FW1/FW2 node labels (residency carried by the four active/standby link labels): extent 64, 0 ambiguous; CHOSEN (copied to specs/v2.json)"
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "attempts": [
+        {
+          "spec": "specs/v3-a2.json",
+          "spec_sha256": "9e9d3a869f4689b73db0e13b06a92465db178736ec68a8f62e8863ec6b427114",
+          "check_output": "attempts/v3-a2-check.txt",
+          "check_sha256": "5bafb869efefce69fe86022e8268c5b67705b7a2c097b26919caa1cec277c1f1",
+          "note": "tb, border-leaf->spine in the fabric view, rack links kept there, racks centred: 6 bridges, 1 ambiguous owner, one forced long route"
+        },
+        {
+          "spec": "specs/v3-a3.json",
+          "spec_sha256": "54f52dfc5c2908a8d8315460acfb79ae45709b7858891397e2165a5f3f84fded",
+          "check_output": "attempts/v3-a3-check.txt",
+          "check_sha256": "c296419a984b44671c10ca624b2f278266ac26bbf1ee7b7956a7144915bf813a",
+          "note": "tb, racks pushed under the rack leaves by slot placement: 4 bridges, 1 ambiguous owner"
+        },
+        {
+          "spec": "specs/v3-a4.json",
+          "spec_sha256": "e9333a549c32be67377ed247a4ffb080dd6c30a32c1d3902b6c7d281510ad65b",
+          "check_output": "attempts/v3-a4-check.txt",
+          "check_sha256": "56b1ac1e771eac39da8195aea919a2e1851d144550c8b7e4cc992e0875a4915b",
+          "note": "tb + reserved spacer row in the spine band: 4 bridges, 0 ambiguous, 0 detours; CHOSEN (copied to specs/v3.json)"
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "attempts": [
+        {
+          "spec": "specs/v4-a2.json",
+          "spec_sha256": "27a08bab5ce50d4616dbf6595b58603d196088412b0f44c977be9d916a23522b",
+          "check_output": "attempts/v4-a2-check.txt",
+          "check_sha256": "42e8c22cdace36c230cd2e148cd5ffb87db9b06819a6abf7691087f9fc08457a",
+          "note": "lr without a spacer (spine/leaf ECMP detail): 2 ambiguous owners"
+        },
+        {
+          "spec": "specs/v4-a3.json",
+          "spec_sha256": "ed6792765fc504c72ba9ea215c059d2c0b869a1dc1746568d27e4dee52033c47",
+          "check_output": "attempts/v4-a3-check.txt",
+          "check_sha256": "ea7d4568115fdbe7ffa22dd40e234d96333fc3517a36cf48f9e6a6786560b374",
+          "note": "tb + spacer row, spines above leaves: 2 ambiguous owners"
+        },
+        {
+          "spec": "specs/v4-a4.json",
+          "spec_sha256": "073654cac1f354f54b2841c5474b154aafda8984cab35cea2c2d1131ce169c49",
+          "check_output": "attempts/v4-a4-check.txt",
+          "check_sha256": "b6d833d4126f5947994f5463093dca88c3a6964eec2f08451a5d72540a83e406",
+          "note": "lr + spacer column: 0 ambiguous, 1 bridge; CHOSEN (copied to specs/v4.json)"
+        }
+      ]
+    }
+  ],
+  "frames_only_probes": [
+    {
+      "spec": "specs/v2-a1.json",
+      "spec_sha256": "0ba8ee23617d85a53a6d02689302fc2c93ad55627f4f467ca378b2f755e5bd82",
+      "capture": "probes/v2-a1-frames.txt",
+      "capture_command": "COLUMNS=77 LINES=47 /tmp/visualize-eval/round-04/bin/rataflow-view --frames 1 specs/v2-a1.json",
+      "note": "frames-only orientation probe: lr with spacers in both bands and residency node labels; the dump shows 'graph overflows', so it was replaced before any --check run"
+    },
+    {
+      "spec": "specs/v3-a1.json",
+      "spec_sha256": "1bab930bd5beb653909a6203e2e526bba7d90e7a229c7d94a6b272026d4f5470",
+      "capture": "probes/v3-a1-frames.txt",
+      "capture_command": "COLUMNS=77 LINES=47 /tmp/visualize-eval/round-04/bin/rataflow-view --frames 1 specs/v3-a1.json",
+      "note": "frames-only orientation probe: all eight spine cross-connects plus rack links in one fabric view; labels merged (ECMPECMP) and corridors wrapped outside the row, so it was replaced before any --check run"
+    }
+  ],
+  "budget": {
+    "rule": "at most three spec candidates per view, counting every --check run on a distinct spec",
+    "check_runs_per_view": {
+      "v1": 3,
+      "v2": 2,
+      "v3": 3,
+      "v4": 3
+    },
+    "frames_only_probes": 2,
+    "note": "the two frames-only probes never ran --check; they are listed separately so no candidate is hidden",
+    "check_runs_on_case_views": {
+      "v1": 3,
+      "v2": 2,
+      "v3": 3,
+      "v4": 3
+    },
+    "preflight_check_runs": 5
+  },
+  "candidate_skill": "docs/visualize-eval/rounds/04/SKILL.md",
+  "candidate_skill_sha256": "ac431c6d3035e466e29136f36d9579c551c2e070a354dc5df72999b1bb1beb3c",
+  "renderer": "/tmp/visualize-eval/round-04/bin/rataflow-view",
+  "renderer_sha256": "0da16d8d8ed46e2a25eb773fc71ecad4de9e310cd33e303a4c7fe77231ad95bc",
+  "preflight_probes": [
+    {
+      "spec": "preflight/pf.json",
+      "check_output": "preflight/pf-check.txt",
+      "note": "capability preflight: are `layers`, `dots: 0` and dashed styles accepted, and what does the dots/origins line look like with no animation? 4 nodes, 3 edges"
+    },
+    {
+      "spec": "preflight/pf2.json",
+      "check_output": "preflight/pf2-check.txt",
+      "note": "label-ownership probe: four identical x-connect labels in a tb 2x2 fan (the crux of every tier in this case). 2 ambiguous owners"
+    },
+    {
+      "spec": "preflight/pf3.json",
+      "check_output": "preflight/pf3-check.txt",
+      "note": "does a fully reserved spacer layer buy routing room in tb? Same output as pf2, so no"
+    },
+    {
+      "spec": "preflight/pf5.json",
+      "check_output": "preflight/pf5-check.txt",
+      "note": "same 2x2 fan rendered lr instead of tb: ambiguous owners drop 2 -> 1, which is the hint that made the lr layouts in v1/v2/v4"
+    },
+    {
+      "spec": "preflight/pf6.json",
+      "check_output": "preflight/pf6-check.txt",
+      "note": "does widening the gap between the two source boxes help? 2 -> 1 ambiguous but one label lost its slot"
+    }
+  ],
+  "preflight_note": "The five preflight probes are 4-8 node capability/label experiments, not candidates for any case view, so they are not charged against the three-candidate-per-view budget. Their --check logs are preserved here unchanged so the record is complete."
+}

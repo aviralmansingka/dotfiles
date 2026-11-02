@@ -1,0 +1,54 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "runtime",
+      "label": "modal-runtime"
+    },
+    {
+      "id": "engine",
+      "label": "Task engine"
+    },
+    {
+      "id": "backend",
+      "label": "Container backend"
+    },
+    {
+      "id": "container",
+      "label": "Task container"
+    }
+  ],
+  "edges": [
+    {
+      "from": "runtime",
+      "to": "engine",
+      "label": "dispatch tasks"
+    },
+    {
+      "from": "engine",
+      "to": "backend",
+      "label": "start/manage"
+    },
+    {
+      "from": "backend",
+      "to": "container",
+      "label": "run user proc"
+    }
+  ],
+  "layers": [
+    [
+      "runtime"
+    ],
+    [
+      "engine"
+    ],
+    [
+      "backend"
+    ],
+    [
+      "",
+      "container"
+    ]
+  ]
+}

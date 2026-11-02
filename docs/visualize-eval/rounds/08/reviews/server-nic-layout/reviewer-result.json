@@ -1,0 +1,1420 @@
+{
+  "protocol_version": 1,
+  "round": 8,
+  "case_id": "server-nic-layout",
+  "candidate_sha256": "b1bdb4d3d38336cb7783db34da7f9f19edf80704a890de32285d9e582b4221eb",
+  "renderer_sha256": "ea24593b0f80c1617573eef4766f2bacaaf4315a8133a65d5331e9daec1c1f30",
+  "rubric_sha256": "ef092e343d622654fe3eb6115eafb395b53a5d4f4b47b2f0c4a165256b1d00b3",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "1fb118712ff70d72cc20814b7cea96cbf2df4204162d5ca81fa00cd2cb8462d0",
+  "generator": {
+    "worker_id": "viz-ds08-4",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge08-server-nic-layout",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": false
+  },
+  "live_pane": {
+    "columns": 83,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/08/reviews/server-nic-layout/observed-first.md",
+      "sha256": "01aa90865dcdd0a306d17ee13f68cdf01deaa148d02e7f4394cbd5bc7c00de63",
+      "description": "Blind record saved before expectation reveal",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/08/reviews/server-nic-layout/spec-manifest.json",
+      "sha256": "1fb118712ff70d72cc20814b7cea96cbf2df4204162d5ca81fa00cd2cb8462d0",
+      "description": "Sorted repository-relative final spec paths and hashes",
+      "capture": null
+    },
+    {
+      "id": "spec1",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/specs/v1.json",
+      "sha256": "7800b7c83e22fc8e662f598018cdf94ad614198a7a4f7cb6d179b702e8237817",
+      "description": "Final spec",
+      "capture": null
+    },
+    {
+      "id": "spec2",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/specs/v2.json",
+      "sha256": "d6add6253d241e425076a76b6620f85ad44d701916457dd16d3ba73284a8985b",
+      "description": "Final spec",
+      "capture": null
+    },
+    {
+      "id": "spec3",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/specs/v3.json",
+      "sha256": "e4773830999c05113dbbb6e035cf9e120666e67535ccfc0b40d570c3533a285f",
+      "description": "Final spec",
+      "capture": null
+    },
+    {
+      "id": "spec4",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/specs/v4.json",
+      "sha256": "376630ba7e72fcea89504499e8b1e3ad732aa7b839a6eb368bc1e286fb175a7f",
+      "description": "Final spec",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/server-nic-layout/source.md",
+      "sha256": "235d296fef435710c8a49bcd247455c8c82b844e71726f146c4cedf227d0308b",
+      "description": "source",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/server-nic-layout/expected.json",
+      "sha256": "ada8d8b1b8a3dfda4221b22fd1bb785327d6eeda69834c35ab5ab17b0678afb4",
+      "description": "expected",
+      "capture": null
+    },
+    {
+      "id": "variants",
+      "path": "docs/visualize-eval/cases/server-nic-layout/historical-variants.json",
+      "sha256": "40f060941014aeaf83ee591346e9950f71c02bf9a68c5693804877bfbcbd9eb8",
+      "description": "variants",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "dataset",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/08/metadata.json",
+      "sha256": "83084698e7d2bf4a6e2e0f411ef5b0b5454e5dc37c04f9ce45b8b82ea591ebf0",
+      "description": "metadata",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/08/rubric.json",
+      "sha256": "ef092e343d622654fe3eb6115eafb395b53a5d4f4b47b2f0c4a165256b1d00b3",
+      "description": "rubric",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/08/SKILL.md",
+      "sha256": "b1bdb4d3d38336cb7783db34da7f9f19edf80704a890de32285d9e582b4221eb",
+      "description": "skill",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/generation.json",
+      "sha256": "6fcee663fd7a13c956afc2797e11de495fd138e27b6d073ea9a36945e18b16d8",
+      "description": "generation",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/attempts.json",
+      "sha256": "c2b7b68ea07637e8416f3aebae75925a436997d4b2651ee43761f49cf4e7616b",
+      "description": "attempts",
+      "capture": null
+    },
+    {
+      "id": "v1-manifest",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v1/manifest.json",
+      "sha256": "24e169bf08907c32f5459c4e3bd3c4484bf983e092ac849a9262df2349e42391",
+      "description": "Capture manifest, commands windows, hashes and cleanup",
+      "capture": null
+    },
+    {
+      "id": "v1-check",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v1/check.txt",
+      "sha256": "38bd3af9ba58b1ca3afd56f87a88e47aaa3194f346310e4ef0015873f14bc2b3",
+      "description": "Check stdout and manifest-recorded exit status",
+      "capture": null
+    },
+    {
+      "id": "v1-text",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v1/v1-text.txt",
+      "sha256": "6aa357629eb0bb726c92c734434b181b46d64aa49457186b6ce3486f1ff02e22",
+      "description": "Saved live pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "normal",
+        "timestamp": "2026-11-02T21:01:05Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-ansi",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v1/v1-ansi.ansi",
+      "sha256": "e01229ecddadb4eb51f5ed60d5951f525ec3633fd27ac3fa8dbf0b553c4862b6",
+      "description": "Saved live pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "normal",
+        "timestamp": "2026-11-02T21:01:05Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-selected",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v1/v1-selected.ansi",
+      "sha256": "b7ddf7c18ab51f5adc490ccc569061403536cd0cb47e39919d693e6ceb6b3a22",
+      "description": "Saved live pane select-all",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T21:01:05Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frames",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v1/v1-frames.txt",
+      "sha256": "542c81c6ecc90470f46f1257d51ce2763f29732f7ebdfd23a9e6c2f4a9077544",
+      "description": "Saved live pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0-4 at 0-400ms",
+        "timestamp": "2026-11-02T21:01:05Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-pinned",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/v1-pinned-77x47-frames.txt",
+      "sha256": "4f7ca11025bc15fba11c28a26bda318182bd3deb2aee98446a8684930407fb1b",
+      "description": "COLUMNS/LINES pinned non-live target dump; not a measured target pane",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0-2 at 0-200ms",
+        "timestamp": "unspecified",
+        "state": "pinned dump",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-validator",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v1/validator.txt",
+      "sha256": "869e78c67ce75c747f9edea7456a09a8d2934a0d6c1472b519798a54ef445130",
+      "description": "Validator output, not a substitute for independent review",
+      "capture": null
+    },
+    {
+      "id": "v1-frames-ansi",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v1/v1-frames.ansi",
+      "sha256": "9e23eb452701333dd59c8b17be9b8a9bdd64e1039a72ee56e42188968bb7da20",
+      "description": "Timestamped ANSI frames",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0-4 at 0-400ms",
+        "timestamp": "2026-11-02T21:01:05Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-binary-hash",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v1/bin.sha256",
+      "sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+      "description": "Frozen binary digest recorded by evidence script",
+      "capture": null
+    },
+    {
+      "id": "v2-manifest",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v2/manifest.json",
+      "sha256": "11cc79d88079e4df18fdf0b2b8db2ef2320c54e7ff2c3f5acbb9674bd7b893ce",
+      "description": "Capture manifest, commands windows, hashes and cleanup",
+      "capture": null
+    },
+    {
+      "id": "v2-check",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v2/check.txt",
+      "sha256": "e916b81df0213bb8eb2437194db94668b83ea44de1f9b6300ac3c824d414a702",
+      "description": "Check stdout and manifest-recorded exit status",
+      "capture": null
+    },
+    {
+      "id": "v2-text",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v2/v2-text.txt",
+      "sha256": "0f8b21aabee0b97f45d53ebbfc3922d65b137dfecf3c1e4a61c04b2a266b8119",
+      "description": "Saved live pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "normal",
+        "timestamp": "2026-11-02T21:04:01Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-ansi",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v2/v2-ansi.ansi",
+      "sha256": "89c3275604d112104700ce28518ac8a1dae06087a3d8bcd9f5bdfb45f03108e6",
+      "description": "Saved live pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "normal",
+        "timestamp": "2026-11-02T21:04:01Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-selected",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v2/v2-selected.ansi",
+      "sha256": "cd20aad79586a9989702534376f433b43e1413d02497593de3039c31efad6d9a",
+      "description": "Saved live pane select-all",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T21:04:01Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frames",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v2/v2-frames.txt",
+      "sha256": "26bd49b1806f32f9647e266e3382b5c2beda7ecbe548431edb0d8e223fefd9dd",
+      "description": "Saved live pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "0-4 at 0-400ms",
+        "timestamp": "2026-11-02T21:04:01Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-pinned",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/v2-pinned-77x47-frames.txt",
+      "sha256": "e2b34145a8254cd8741ccb0a911d76109cc44dc0242b8229d506bf78b71999ab",
+      "description": "COLUMNS/LINES pinned non-live target dump; not a measured target pane",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0-2 at 0-200ms",
+        "timestamp": "unspecified",
+        "state": "pinned dump",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-validator",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v2/validator.txt",
+      "sha256": "869e78c67ce75c747f9edea7456a09a8d2934a0d6c1472b519798a54ef445130",
+      "description": "Validator output, not a substitute for independent review",
+      "capture": null
+    },
+    {
+      "id": "v2-frames-ansi",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v2/v2-frames.ansi",
+      "sha256": "fa66a08a7fe94446ce1c075a6bb8d569cca80265015dd0c542bc021ca6c8c0a5",
+      "description": "Timestamped ANSI frames",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "0-4 at 0-400ms",
+        "timestamp": "2026-11-02T21:04:01Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-binary-hash",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v2/bin.sha256",
+      "sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+      "description": "Frozen binary digest recorded by evidence script",
+      "capture": null
+    },
+    {
+      "id": "v3-manifest",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v3/manifest.json",
+      "sha256": "de70889d5aa222dc1f0fba2e3cd48554f79a61130c41e372ac7aed7d8fddc840",
+      "description": "Capture manifest, commands windows, hashes and cleanup",
+      "capture": null
+    },
+    {
+      "id": "v3-check",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v3/check.txt",
+      "sha256": "34bd55aea5cc9f9a683b49fbf464fa378f6f247b75d820a6299462b9033adc7c",
+      "description": "Check stdout and manifest-recorded exit status",
+      "capture": null
+    },
+    {
+      "id": "v3-text",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v3/v3-text.txt",
+      "sha256": "9d8e8cf21629d1677113e5c442e27b59e746ae04a4f73269ff27d57205dda2bd",
+      "description": "Saved live pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "normal",
+        "timestamp": "2026-11-02T21:04:06Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-ansi",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v3/v3-ansi.ansi",
+      "sha256": "f3c81854628ad595698b608193264b0dfe9504c19caf3ae2e91f9cb3e61c22fb",
+      "description": "Saved live pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "normal",
+        "timestamp": "2026-11-02T21:04:06Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-selected",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v3/v3-selected.ansi",
+      "sha256": "179cfdba71b01c54bdf01e74d344fd4baef1d85a6437facb193021e5911babec",
+      "description": "Saved live pane select-all",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T21:04:06Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-frames",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v3/v3-frames.txt",
+      "sha256": "e816bdf048535541382dc31de9a26f0175bb9fb8d715f968027fcf28c845addc",
+      "description": "Saved live pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "0-4 at 0-400ms",
+        "timestamp": "2026-11-02T21:04:06Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-pinned",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/v3-pinned-77x47-frames.txt",
+      "sha256": "b17c6c3b0ca27cdaa735f0046d12c065ca4133966298800853c6afb0aef4c9f5",
+      "description": "COLUMNS/LINES pinned non-live target dump; not a measured target pane",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "0-2 at 0-200ms",
+        "timestamp": "unspecified",
+        "state": "pinned dump",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-validator",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v3/validator.txt",
+      "sha256": "869e78c67ce75c747f9edea7456a09a8d2934a0d6c1472b519798a54ef445130",
+      "description": "Validator output, not a substitute for independent review",
+      "capture": null
+    },
+    {
+      "id": "v3-frames-ansi",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v3/v3-frames.ansi",
+      "sha256": "6b2fa1508b676f41345c57781f82e73e770be8f28be6134bab932bc92f512e06",
+      "description": "Timestamped ANSI frames",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "0-4 at 0-400ms",
+        "timestamp": "2026-11-02T21:04:06Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-binary-hash",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v3/bin.sha256",
+      "sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+      "description": "Frozen binary digest recorded by evidence script",
+      "capture": null
+    },
+    {
+      "id": "v4-manifest",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v4/manifest.json",
+      "sha256": "c64a68e3989f83f340e591491b2d9d3c0f772dbb9d86490d8d001d7c5cc00721",
+      "description": "Capture manifest, commands windows, hashes and cleanup",
+      "capture": null
+    },
+    {
+      "id": "v4-check",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v4/check.txt",
+      "sha256": "8fb794fd6b033731a0aaeb38ef0abc9e4e2e369fdd3cb9c9c464504e498827d5",
+      "description": "Check stdout and manifest-recorded exit status",
+      "capture": null
+    },
+    {
+      "id": "v4-text",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v4/v4-text.txt",
+      "sha256": "924fcb6c0ab79f0bcf03c985dcb4347e9107e06eaab44d06aee548c85b473c2e",
+      "description": "Saved live pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "normal",
+        "timestamp": "2026-11-02T21:03:22Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-ansi",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v4/v4-ansi.ansi",
+      "sha256": "5ce0459e6b73d7f02a6d1bcc193c2fc615a899a83389281040392a2158b00d21",
+      "description": "Saved live pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "normal",
+        "timestamp": "2026-11-02T21:03:22Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-selected",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v4/v4-selected.ansi",
+      "sha256": "e36d53f29ab71783de4e28487f29dc906d7ef31fb82a025175d81b36c05a36e9",
+      "description": "Saved live pane select-all",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T21:03:22Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-frames",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v4/v4-frames.txt",
+      "sha256": "330203d75d9ac9f2bfb6e4e99cc0085712f36a616cd26fe71c61c142a857e7e8",
+      "description": "Saved live pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "0-4 at 0-400ms",
+        "timestamp": "2026-11-02T21:03:22Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-pinned",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/v4-pinned-77x47-frames.txt",
+      "sha256": "28f8b75fc0d18c2df1003216d139efc5206e27d9012bc0c45c6aa4c0e77c6db8",
+      "description": "COLUMNS/LINES pinned non-live target dump; not a measured target pane",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "0-2 at 0-200ms",
+        "timestamp": "unspecified",
+        "state": "pinned dump",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-validator",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v4/validator.txt",
+      "sha256": "869e78c67ce75c747f9edea7456a09a8d2934a0d6c1472b519798a54ef445130",
+      "description": "Validator output, not a substitute for independent review",
+      "capture": null
+    },
+    {
+      "id": "v4-frames-ansi",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v4/v4-frames.ansi",
+      "sha256": "8b0719b4dfa54a3dca30a9b3a3465f35b15a58f92e040420f93a64d4ad6227f0",
+      "description": "Timestamped ANSI frames",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "0-4 at 0-400ms",
+        "timestamp": "2026-11-02T21:03:22Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-binary-hash",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/v4/bin.sha256",
+      "sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+      "description": "Frozen binary digest recorded by evidence script",
+      "capture": null
+    },
+    {
+      "id": "hue-probe-manifest",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/hue-probe/manifest.json",
+      "sha256": "5cc29d4380cac3795cbdc3495da6d64b5c4782f8fac3a0138b1ad99c2e5e9ebb",
+      "description": "Probe manifest and cleanup",
+      "capture": null
+    },
+    {
+      "id": "hue-probe-text",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/hue-probe/hueprobe-text.txt",
+      "sha256": "91a906b8b1e0629d34ff67bece7ecf68fc4234e86ddfc4f46c723e5747588a92",
+      "description": "Probe output showing displaced sibling region members",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "hue-probe",
+        "frame": "normal",
+        "timestamp": "2026-11-02T21:02:28Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "hue-probe-ansi",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/hue-probe/hueprobe-ansi.ansi",
+      "sha256": "8869aab2da6e5e9aef3f0d9bf269e79998701217adc4d20b73caf30ea2e50efd",
+      "description": "Probe hue capture",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "hue-probe",
+        "frame": "normal",
+        "timestamp": "2026-11-02T21:02:28Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "hue-probe-check",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/hue-probe/check.txt",
+      "sha256": "34689f4b610ec86b0dacce2d10b677f011351c8561e0121b006a6e660dbd087f",
+      "description": "Probe check output",
+      "capture": null
+    },
+    {
+      "id": "hue-probe-spec",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/specs/probe-hues.json",
+      "sha256": "2de46b6f1ca0266a51bba3dbdfc43c2ad4b0d3d0ae36dc60b87bbcc38ae27efe",
+      "description": "Probe specification",
+      "capture": null
+    },
+    {
+      "id": "hue-probe-frames",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/hue-probe/hueprobe-frames.txt",
+      "sha256": "6e7bf090503c230797bc4cd09bb98db0e90ea8a256c0422a80292ed2205ffa5f",
+      "description": "Probe frame capture",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "hue-probe",
+        "frame": "timestamped frames",
+        "timestamp": "2026-11-02T21:02:28Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "hue-probe-selected",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/hue-probe/hueprobe-selected.ansi",
+      "sha256": "2187c592a2edc7ee22c4c121b59043c0b7b34869b44465762361e434119d0249",
+      "description": "Probe select-all capture",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "hue-probe",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T21:02:28Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "hue-probe2-manifest",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/hue-probe2/manifest.json",
+      "sha256": "bf1662a4da318932627a8e7b877a106bc9f763d2269d3f830b22ee56a2b12639",
+      "description": "Probe manifest and cleanup",
+      "capture": null
+    },
+    {
+      "id": "hue-probe2-text",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/hue-probe2/hueprobe2-text.txt",
+      "sha256": "580c4eb33d74600aa9a7381fc0a79b24c7d4d1008ab429204d28c1a89fddc7d1",
+      "description": "Probe output showing displaced sibling region members",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "hue-probe2",
+        "frame": "normal",
+        "timestamp": "2026-11-02T21:03:00Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "hue-probe2-ansi",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/hue-probe2/hueprobe2-ansi.ansi",
+      "sha256": "8e24a51dcac58ab6e33d8c71b944a55ecbdff4748bd7ae1f96b87c5af49321d2",
+      "description": "Probe hue capture",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "hue-probe2",
+        "frame": "normal",
+        "timestamp": "2026-11-02T21:03:00Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "hue-probe2-check",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/hue-probe2/check.txt",
+      "sha256": "f03e7155eb8473d0029635e156656ef285e2cf4db98a1e8891254e5e05bdbd25",
+      "description": "Probe check output",
+      "capture": null
+    },
+    {
+      "id": "hue-probe2-spec",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/specs/probe-hues2.json",
+      "sha256": "b41140585af2189f1c95d84072aa1f39c03d928a0b9389926586e6ed6bb63547",
+      "description": "Probe specification",
+      "capture": null
+    },
+    {
+      "id": "hue-probe2-frames",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/hue-probe2/hueprobe2-frames.txt",
+      "sha256": "d608227f82e711421ebcab5deaa57584ec9b283b16bafce6e6ef43bb3d573404",
+      "description": "Probe frame capture",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "hue-probe2",
+        "frame": "timestamped frames",
+        "timestamp": "2026-11-02T21:03:00Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "hue-probe2-selected",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/evidence/hue-probe2/hueprobe2-selected.ansi",
+      "sha256": "2eb5a7fbb0fa91706a6f8c5149389e9af360fd74721bcabd55cf91bb4ec1eceb",
+      "description": "Probe select-all capture",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "hue-probe2",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T21:03:00Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "raw-v1-attempt1.txt",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/attempts/v1-attempt1.txt",
+      "sha256": "38bd3af9ba58b1ca3afd56f87a88e47aaa3194f346310e4ef0015873f14bc2b3",
+      "description": "Saved raw attempt record",
+      "capture": null
+    },
+    {
+      "id": "raw-v2-attempt1-77x47.txt",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/attempts/v2-attempt1-77x47.txt",
+      "sha256": "72d513729c3bb96bf34e0f0f224b70c10f6e03ee97d94f25a4e569efddd2807a",
+      "description": "Saved raw attempt record",
+      "capture": null
+    },
+    {
+      "id": "raw-v2-attempt1.recheck.txt",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/attempts/v2-attempt1.recheck.txt",
+      "sha256": "e1798733e710a624b5e847ed244c363cf27e34535d1fe1e64e6ba08edc038718",
+      "description": "Saved raw attempt record",
+      "capture": null
+    },
+    {
+      "id": "raw-v2-attempt1.txt",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/attempts/v2-attempt1.txt",
+      "sha256": "e1798733e710a624b5e847ed244c363cf27e34535d1fe1e64e6ba08edc038718",
+      "description": "Saved raw attempt record",
+      "capture": null
+    },
+    {
+      "id": "raw-v2-attempt3-check.txt",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/attempts/v2-attempt3-check.txt",
+      "sha256": "e916b81df0213bb8eb2437194db94668b83ea44de1f9b6300ac3c824d414a702",
+      "description": "Saved raw attempt record",
+      "capture": null
+    },
+    {
+      "id": "raw-v2-final-check.txt",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/attempts/v2-final-check.txt",
+      "sha256": "e916b81df0213bb8eb2437194db94668b83ea44de1f9b6300ac3c824d414a702",
+      "description": "Saved raw attempt record",
+      "capture": null
+    },
+    {
+      "id": "raw-v3-attempt1.recheck.txt",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/attempts/v3-attempt1.recheck.txt",
+      "sha256": "97356d3b8a3172fef64a2910d083e590a4e849be9f187d462dfa47df0cef15fe",
+      "description": "Saved raw attempt record",
+      "capture": null
+    },
+    {
+      "id": "raw-v3-attempt1.txt",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/attempts/v3-attempt1.txt",
+      "sha256": "97356d3b8a3172fef64a2910d083e590a4e849be9f187d462dfa47df0cef15fe",
+      "description": "Saved raw attempt record",
+      "capture": null
+    },
+    {
+      "id": "raw-v3-attempt2.recheck.txt",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/attempts/v3-attempt2.recheck.txt",
+      "sha256": "5e6f598a559518dc689c151ca038763c9219237dab4cab36216c82e75c976a81",
+      "description": "Saved raw attempt record",
+      "capture": null
+    },
+    {
+      "id": "raw-v3-attempt3-check.txt",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/attempts/v3-attempt3-check.txt",
+      "sha256": "34bd55aea5cc9f9a683b49fbf464fa378f6f247b75d820a6299462b9033adc7c",
+      "description": "Saved raw attempt record",
+      "capture": null
+    },
+    {
+      "id": "raw-v3-final-check.txt",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/attempts/v3-final-check.txt",
+      "sha256": "72d3d79996e3dff99ad5b5171dba137aaa10c7ed323a06b53bd3ed5cf78b9297",
+      "description": "Saved raw attempt record",
+      "capture": null
+    },
+    {
+      "id": "raw-v4-attempt2-check.txt",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/attempts/v4-attempt2-check.txt",
+      "sha256": "8fb794fd6b033731a0aaeb38ef0abc9e4e2e369fdd3cb9c9c464504e498827d5",
+      "description": "Saved raw attempt record",
+      "capture": null
+    },
+    {
+      "id": "raw-v4-final-check.txt",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/attempts/v4-final-check.txt",
+      "sha256": "15f8088af6c8be5559a135dae3bc55e4c45f8c61d15cccecc9112ce5d791944c",
+      "description": "Saved raw attempt record",
+      "capture": null
+    },
+    {
+      "id": "draft-attempts-v2-attempt1.json",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/specs/attempts-v2-attempt1.json",
+      "sha256": "705e1451a53497ace81e2f076a5b42522943296489619d08eec06b0018577026",
+      "description": "Preserved rejected spec",
+      "capture": null
+    },
+    {
+      "id": "draft-attempts-v2-attempt2.json",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/specs/attempts-v2-attempt2.json",
+      "sha256": "bfc8e6bbfdedc47c769d0f6df7f9dc2f59cd6013d3ff451af6d68abb3730bad5",
+      "description": "Preserved rejected spec",
+      "capture": null
+    },
+    {
+      "id": "draft-attempts-v3-attempt1.json",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/specs/attempts-v3-attempt1.json",
+      "sha256": "2dbc19a475d529764a3587294b83e22eb8d71d9993e5582fc4414e51cd932fb9",
+      "description": "Preserved rejected spec",
+      "capture": null
+    },
+    {
+      "id": "draft-attempts-v3-attempt2.json",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/specs/attempts-v3-attempt2.json",
+      "sha256": "08518d58a75e1d808fbc4da447e089ccaa2fb84c88a9c7a900eb3be8e83178e6",
+      "description": "Preserved rejected spec",
+      "capture": null
+    },
+    {
+      "id": "draft-attempts-v4-attempt1.json",
+      "path": "docs/visualize-eval/rounds/08/server-nic-layout/specs/attempts-v4-attempt1.json",
+      "sha256": "13f739807bb0095fe86cd5633bd2394aff4bb540cf3df33760c6f3fc2de33bf8",
+      "description": "Preserved rejected spec",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Required gateway role is not labeled, Dell and NxtGen identifiers are omitted, and the L2 question does not state that an invisible hop is not evidence of L2; the five specified highlighted values do appear. Relationships are mostly traceable but identity/qualifier coverage is incomplete.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-text",
+        "v2-text",
+        "v3-text",
+        "v4-text",
+        "generation"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Nine independently visible and traceable routes; source-to-target directions preserved, no crossings, branches or loops. The dashed L2 line is an annotation of uncertainty, not a second verified link. No evidence establishes an avoidable detour.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-text",
+        "v2-text",
+        "v3-text",
+        "v4-text"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "The 77x47 natural direct dumps show complete diagrams, but the actual live panes are 83x51; the required actual 77x47 half-pane capture is missing. This is an evidence gap, not a claim of clipping.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-pinned",
+        "v2-pinned",
+        "v3-pinned",
+        "v4-pinned",
+        "v1-manifest",
+        "v2-manifest",
+        "v3-manifest",
+        "v4-manifest"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Source-grounded host, address pool, boundary and observed hop groupings remain legible; v2 title-row hues are distinct. Region corners are renderer defects but do not prevent identifying membership in final views. Renaming upstream hops to external hops is semantically equivalent, not alphabet cycling or a misleading depth group.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v4-ansi",
+        "generation"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "The stated identity-probe-maps family is source-backed and appropriate, but its recipe requires covering every identifier and qualifier: Dell, NxtGen and explicit default-gateway role are not visible; the L2? annotation does not state the source correction that an absent hop proves no L2. The ledger asserts coverage that the captures do not demonstrate."
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 12 node borders and corners are complete and uniform RGB in normal and select-all ANSI; no palette overlaps a node border. Region corners are not node corners under this category.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v4-ansi",
+        "v1-selected",
+        "v2-selected",
+        "v3-selected",
+        "v4-selected"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Identity, frozen hashes, blind record, frames and cleanup are recorded, but v3 attempt 2 original output was overwritten; a later recheck is not the original raw record. Per-attempt raw commands and exit statuses are also absent. The target-sized live pane is not proven.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "generation",
+        "attempts",
+        "raw-v3-attempt2.recheck.txt",
+        "blind",
+        "spec-manifest"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Animation is optional in the source-backed manifest; the candidate chooses static and five captured frames per view show no moving dots. No timing claims are needed for zero routes.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "dataset",
+        "v1-frames",
+        "v2-frames",
+        "v3-frames",
+        "v4-frames"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "7 dark NIC ports -> server1, no cable qualified",
+      "observed": "v1 dashed from dark bottom to server1 down arrow at [30,23], no cable? [36,17]; no crossing or junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            29,
+            8,
+            23,
+            20
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "server1 -> active NIC, only uplink",
+      "observed": "v1 solid from server1 bottom to NIC down arrow [33,41], only uplink [32,34]; no crossing or junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            29,
+            24,
+            23,
+            22
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "server1 NIC -> default gateway .57, 0.1 ms",
+      "observed": "v2 solid stem [12,19] to down arrow [29,34], 0.1 ms no NAT [14,32]; no crossing or junction. Target IP matches but no label explicitly identifies it as default gateway.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            11,
+            15,
+            45,
+            24
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "server2 .59 -> gateway .57, same /29",
+      "observed": "v2 solid stem [36,19] to arrow [31,34], same /29 [38,25], separate from other routes.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            28,
+            15,
+            28,
+            24
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "qualified .60-.62 free -> gateway .57, in /29",
+      "observed": "v2 dashed stem [59,19] to arrow [33,34], in /29 pool [41,32], free? [59,16]; separate from other routes.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            28,
+            15,
+            45,
+            24
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": ".57 -> Airtel 14.143.x, 1.8 ms",
+      "observed": "v3 solid [27,22] to arrow [35,30], 1.8 ms [28,30], separate parallel dashed route; no junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            26,
+            18,
+            33,
+            17
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "unproven intervening fabric; missing hop does not prove L2",
+      "observed": "v3 dashed [29,22] to arrow [37,30], L2? no hop [30,26]; no junction. Qualifies L2 but does not convey that missing hop proves nothing or alternatives.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            26,
+            18,
+            33,
+            17
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "Airtel -> Airtel backbone 14.141.x, 7.1 ms",
+      "observed": "v4 solid from first node to down arrow [34,22], 7.1 ms [37,17]; AirtelBB identifies backbone by shorthand and address.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            33,
+            10,
+            19,
+            17
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e9",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "Airtel backbone -> Cloudflare 1.1.1.1, 8.3/8.6 ms",
+      "observed": "v4 solid from middle node to down arrow [29,39], 8.3-8.6 ms [36,32]. No crossing or junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            28,
+            23,
+            28,
+            21
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e3"
+      ],
+      "severity": "high",
+      "description": "The .57 node carries Arista/no v6 but not gateway/default gateway, while 0.1 ms no NAT on the route does not supply that role. The required endpoint role is not readable.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            28,
+            32,
+            28,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e7"
+      ],
+      "severity": "high",
+      "description": "L2? no hop is a question but does not state that lack of an observed hop does not prove L2, nor indicate tunnel/silent alternatives. The correction remains unrecoverable from the diagram alone.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            29,
+            25,
+            14,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "category": "category_fit",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Identity recipe is incomplete: Dell and NxtGen are absent from all visible labels, and .57 is not named gateway. R7725 and AS132717 do not themselves spell out those source identifiers.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            26,
+            18,
+            33,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "The original v3 attempt 2 check output was overwritten; the preserved recheck cannot serve as the original raw command/status record. Exact per-draft command and exit status evidence is missing.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            25,
+            17,
+            35,
+            19
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "No actual 77x47 live half-pane capture is preserved; pinned environment-sized dumps do not establish actual pane fit.",
+    "Original raw command/status/output for rejected v3 attempt 2 was overwritten; later recheck is not the original."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pKC",
+      "w7E:pK0",
+      "w7E:pM1",
+      "w7E:pKV",
+      "w7E:pKM",
+      "w7E:pKT"
+    ],
+    "closed_pane_ids": [
+      "w7E:pKC",
+      "w7E:pK0",
+      "w7E:pM1",
+      "w7E:pKV",
+      "w7E:pKM",
+      "w7E:pKT"
+    ],
+    "status": "done",
+    "reason": "Six evidence manifests record confirmed_closed; reviewer opened no panes."
+  },
+  "overall": "fail"
+}

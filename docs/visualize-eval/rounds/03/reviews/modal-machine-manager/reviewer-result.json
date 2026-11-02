@@ -1,0 +1,2672 @@
+{
+  "protocol_version": 1,
+  "round": 3,
+  "case_id": "modal-machine-manager",
+  "candidate_sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+  "renderer_sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7",
+  "rubric_sha256": "5519fd84f6b75973dbf7b5f5544c909a8f32a8841a876c8e7af00a1fcb119335",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "b11f05ae40e52b0c0afa7905bc799943d101a066a119d7e7689768dfbc14557b",
+  "generator": {
+    "worker_id": "viz-ds03-6",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge03-machine-manager",
+    "model": "openai/gpt-6.1-sol"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": null,
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/03/reviews/modal-machine-manager/observed-first.md",
+      "sha256": "dbe209aa8828d9352d8713ebe34386932c91263c16eb68c1d42678dc6752f2f1",
+      "description": "Immutable stage-A blind observations; saved before expected reveal; verified original SHA-256.",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/03/reviews/modal-machine-manager/spec-manifest.json",
+      "sha256": "b11f05ae40e52b0c0afa7905bc799943d101a066a119d7e7689768dfbc14557b",
+      "description": "Deterministic sorted repository-relative final-spec path/SHA-256 pairs; this file hash is spec_sha256.",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/03/metadata.json",
+      "sha256": "2b8b65daab2e7c34565fa8ed90f7b83fb4c9475b9e88a029be27168fa6afcb86",
+      "description": "Frozen round-03 input hashes, worker labels, and reviewer-identity correction episode.",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/03/rubric.json",
+      "sha256": "5519fd84f6b75973dbf7b5f5544c909a8f32a8841a876c8e7af00a1fcb119335",
+      "description": "Round-03 revision-4 rubric and embedded result schema; true reviewer model Sol.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen eight-case manifest; only this case and its animation-required entry are evaluated.",
+      "capture": null
+    },
+    {
+      "id": "candidate-skill",
+      "path": "docs/visualize-eval/rounds/03/SKILL.md",
+      "sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+      "description": "Executed candidate skill hash; contains both endpoint-arrival and no-arrowhead-dot wording.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/source.md",
+      "sha256": "a41065d9ceca1ed035bfd6282f0e937abbd0034ad497a33637a76f2d8a9ebab3",
+      "description": "Qualified source excerpts, original relation set, and human dot corrections.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/expected.json",
+      "sha256": "c6d14814bcfa0f41e7401df3b57ea1400e15050b9fb4db3d2e12980d6fde9764",
+      "description": "Required 17 components and 23 relationships, explicitly historical claims not independent fact verification.",
+      "capture": null
+    },
+    {
+      "id": "history",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/historical-variants.json",
+      "sha256": "22f00c085b50f218115610ed1580e89f4c0a94d39f8ecf83c80d6712116a06b2",
+      "description": "Permitted historical variants, including boot.ipxe + S3 args response chain; not independent architectural truth.",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/generation.json",
+      "sha256": "adf0d82eb936539f0b1f5930821632ea82dfe2eefe9e72f37a8dcc0257b0aed1",
+      "description": "Generator identity/model, coverage and meaning ledgers, dimensions, known defects, cleanup attestations.",
+      "capture": null
+    },
+    {
+      "id": "generation-notes",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/generation.md",
+      "sha256": "8afc6c33eee46e0d365426d57137c832c422e94c21f6628c229a32d8800cf374",
+      "description": "Generator narrative, exactness limitations, and claim that disappearance is only legibility.",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/attempts.json",
+      "sha256": "e573a8dc275c98cbf5153e3eb9aafbe81f2349eaed05fedaabe9ebe12b926122",
+      "description": "Saved 2/3/3/2 candidate attempts and admission of unpreserved scratch layout probes.",
+      "capture": null
+    },
+    {
+      "id": "spec-v1-attempt1",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/specs/v1-attempt1.json",
+      "sha256": "93a7db7c910b664f42b48fdaf946b5f2dfa3b3818447b4682b2b90da11418f2d",
+      "description": "Earlier saved attempt for this same case; not final evidence.",
+      "capture": null
+    },
+    {
+      "id": "spec-v1-attempt2",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/specs/v1-attempt2.json",
+      "sha256": "7846cd75b300d13052f30651bc7dc50bc8f5aa17be829ccd99a9bfe650386368",
+      "description": "Final evaluated spec.",
+      "capture": null
+    },
+    {
+      "id": "spec-v2-attempt1",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/specs/v2-attempt1.json",
+      "sha256": "cbd80df353fa462c9472109c1cc7e44b9950b1fc0c22e43b1d8220f9b7ae112d",
+      "description": "Earlier saved attempt for this same case; not final evidence.",
+      "capture": null
+    },
+    {
+      "id": "spec-v2-attempt2",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/specs/v2-attempt2.json",
+      "sha256": "cc9c1d87cab39ae761a4dfb3153c291be087be5f1af26ef9f870efb59dd2be32",
+      "description": "Earlier saved attempt for this same case; not final evidence.",
+      "capture": null
+    },
+    {
+      "id": "spec-v2-attempt3",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/specs/v2-attempt3.json",
+      "sha256": "a35c41b69f31da13aef1256e0c798d9a6c9e432ba3b09ec64bcb2a00b7d2b0f1",
+      "description": "Final evaluated spec.",
+      "capture": null
+    },
+    {
+      "id": "spec-v3-attempt1",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/specs/v3-attempt1.json",
+      "sha256": "9810e9f25c46bcf70f0dcbffc598434aa8356fc69cbb70287bb7a8ba027872ba",
+      "description": "Earlier saved attempt for this same case; not final evidence.",
+      "capture": null
+    },
+    {
+      "id": "spec-v3-attempt2",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/specs/v3-attempt2.json",
+      "sha256": "956738ee33fc33436e672ae7d3f617f7608adb89d9bec929ee36a8c06bb1fd30",
+      "description": "Earlier saved attempt for this same case; not final evidence.",
+      "capture": null
+    },
+    {
+      "id": "spec-v3-attempt3",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/specs/v3-attempt3.json",
+      "sha256": "603a0d518e9c6950b59976a1d9005394ab8e69c0f6e54a1e469256764fc6f46a",
+      "description": "Final evaluated spec.",
+      "capture": null
+    },
+    {
+      "id": "spec-v4-attempt1",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/specs/v4-attempt1.json",
+      "sha256": "4e65405f69898ba358890887edaf7bd3fe787a97ee99f69eee786fcc820f5561",
+      "description": "Earlier saved attempt for this same case; not final evidence.",
+      "capture": null
+    },
+    {
+      "id": "spec-v4-attempt2",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/specs/v4-attempt2.json",
+      "sha256": "25a1971517889b3be13c45cc0e6e65a71d971976895ffbb0aae3f3e3da48f237",
+      "description": "Final evaluated spec.",
+      "capture": null
+    },
+    {
+      "id": "v1-manifest",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v1/manifest.json",
+      "sha256": "ccc7c02608150c933c1df4b3b01e85ca0003536afdd66a570e9c0e49ec09ec6c",
+      "description": "Capture/check windows, recorded cleanup, null live-pane columns/rect, and artifact hashes.",
+      "capture": null
+    },
+    {
+      "id": "v1-bin-hash",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v1/bin.sha256",
+      "sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "description": "Repository-local witness of the frozen external binary SHA-256; binary bytes separately verified against metadata.",
+      "capture": null
+    },
+    {
+      "id": "v1-check",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v1/check.txt",
+      "sha256": "d1ada870200855bdcd7ad55f67fcc38819fa320acb39811d995cd04bff35d4d3",
+      "description": "Check stdout and exit=0 in manifest; origin/synchronization claims contradicted by rendered cells; no separate stderr transcript.",
+      "capture": null
+    },
+    {
+      "id": "v1-validator",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/validator-v1.txt",
+      "sha256": "4e46700d9608600eca0a03dc2e2eb64aadaec8381d2d477bcea5701738b8092a",
+      "description": "Preserved all-checks-passed validator output, not an independent visual judgment.",
+      "capture": null
+    },
+    {
+      "id": "v1-text",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v1/v1-text.txt",
+      "sha256": "41f3a879d400afffb3f98cedd80354d8e9fa53611f607c644deca39c5677da12",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "single still; exact frame index unrecorded",
+        "timestamp": "2026-11-02T11:16:59Z .. 2026-11-02T11:17:03Z (manifest window; exact still instant not recorded)",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-ansi",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v1/v1-ansi.ansi",
+      "sha256": "0618b450cf8386ae0dc4b076b1e6ce8e65316c39d60340e929f658814692a5a3",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "single still; exact frame index unrecorded",
+        "timestamp": "2026-11-02T11:16:59Z .. 2026-11-02T11:17:03Z (manifest window; exact still instant not recorded)",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-selected",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v1/v1-selected.ansi",
+      "sha256": "4bacfc15ecb20c831d0560374c50830b75e7ec82e2447b242ebb5a2389e96bc2",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "single still; exact frame index unrecorded",
+        "timestamp": "2026-11-02T11:16:59Z .. 2026-11-02T11:17:03Z (manifest window; exact still instant not recorded)",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frames",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v1/v1-frames.txt",
+      "sha256": "35d262406fa8990f9f71e38bbdea99410bfe5ee9aaae1d3bdce475fd022e63c9",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frames 1-20, 100-2000ms",
+        "timestamp": "2026-11-02T11:16:59Z .. 2026-11-02T11:17:03Z (manifest window; exact still instant not recorded)",
+        "state": "numbered motion frames 1-20 with truncated untimestamped predecessor",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frames-ansi",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v1/v1-frames.ansi",
+      "sha256": "62ad038f12dd44677e46cb10314ff7afd0795443c4ee78e2c48daf425264b716",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frames 1-20, 100-2000ms",
+        "timestamp": "2026-11-02T11:16:59Z .. 2026-11-02T11:17:03Z (manifest window; exact still instant not recorded)",
+        "state": "numbered motion frames 1-20; renderer body plus trailing shell prompt",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frame1",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v1/v1-frames.txt",
+      "sha256": "35d262406fa8990f9f71e38bbdea99410bfe5ee9aaae1d3bdce475fd022e63c9",
+      "description": "Focus on pane frame 1 at 100ms; coordinates are within that frame, not file-line indices.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frame 1 at 100ms",
+        "timestamp": "100ms relative; capture window 2026-11-02T11:16:59Z .. 2026-11-02T11:17:03Z",
+        "state": "motion",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frame20",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v1/v1-frames.txt",
+      "sha256": "35d262406fa8990f9f71e38bbdea99410bfe5ee9aaae1d3bdce475fd022e63c9",
+      "description": "Focus on pane frame 20 at 2000ms; coordinates are within that frame, not file-line indices.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frame 20 at 2000ms",
+        "timestamp": "2000ms relative; capture window 2026-11-02T11:16:59Z .. 2026-11-02T11:17:03Z",
+        "state": "motion",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-full",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/checks/v1-frames-full.txt",
+      "sha256": "f29761c1444f7635f2272c4b055d7f33adec31b0cd6cd560bc0f0cff451f1999",
+      "description": "Supporting but spatially clipped 80x24 direct-render sequence, all numbered frames 0-20; never target-viewport fit proof.",
+      "capture": {
+        "dimensions": {
+          "columns": 80,
+          "rows": 24
+        },
+        "view": "v1",
+        "frame": "frames 0-20, 0-2000ms",
+        "timestamp": "0-2000ms relative; wall-clock run timestamp not recorded",
+        "state": "motion; clipped/overlaid supplementary viewport",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-full-frame0",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/checks/v1-frames-full.txt",
+      "sha256": "f29761c1444f7635f2272c4b055d7f33adec31b0cd6cd560bc0f0cff451f1999",
+      "description": "Focus on labeled full frame 0. Assess only routes whose cells are visible; no extrapolation to clipped origins.",
+      "capture": {
+        "dimensions": {
+          "columns": 80,
+          "rows": 24
+        },
+        "view": "v1",
+        "frame": "frame 0 at 0ms",
+        "timestamp": "0ms relative; wall-clock run timestamp not recorded",
+        "state": "motion origin; supplementary clipped viewport",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-manifest",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v2/manifest.json",
+      "sha256": "e25fba89585b67016c52fe81d2059b1fe5f1da4f02b4cddb8c8c23059fd89ebd",
+      "description": "Capture/check windows, recorded cleanup, null live-pane columns/rect, and artifact hashes.",
+      "capture": null
+    },
+    {
+      "id": "v2-bin-hash",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v2/bin.sha256",
+      "sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "description": "Repository-local witness of the frozen external binary SHA-256; binary bytes separately verified against metadata.",
+      "capture": null
+    },
+    {
+      "id": "v2-check",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v2/check.txt",
+      "sha256": "117e4c097ac7a5afe15b1bc0ae9354bb49706f06ca923026322ad20ba0c1fda8",
+      "description": "Check stdout and exit=0 in manifest; origin/synchronization claims contradicted by rendered cells; no separate stderr transcript.",
+      "capture": null
+    },
+    {
+      "id": "v2-validator",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/validator-v2.txt",
+      "sha256": "4e46700d9608600eca0a03dc2e2eb64aadaec8381d2d477bcea5701738b8092a",
+      "description": "Preserved all-checks-passed validator output, not an independent visual judgment.",
+      "capture": null
+    },
+    {
+      "id": "v2-text",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v2/v2-text.txt",
+      "sha256": "0c861e738788558361d5ffe65778e1e72d3c5e0477d60faf6ff3f5a7f456bfc4",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "single still; exact frame index unrecorded",
+        "timestamp": "2026-11-02T11:17:12Z .. 2026-11-02T11:17:16Z (manifest window; exact still instant not recorded)",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-ansi",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v2/v2-ansi.ansi",
+      "sha256": "3575daa33fa2e6d645759462a18c819f864919b03b0614d6f195b0828e4ec92c",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "single still; exact frame index unrecorded",
+        "timestamp": "2026-11-02T11:17:12Z .. 2026-11-02T11:17:16Z (manifest window; exact still instant not recorded)",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-selected",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v2/v2-selected.ansi",
+      "sha256": "d4ee1ed9a793ecae61d98afc4967a29c3eed17dadee705f6a74686734dc46fcb",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "single still; exact frame index unrecorded",
+        "timestamp": "2026-11-02T11:17:12Z .. 2026-11-02T11:17:16Z (manifest window; exact still instant not recorded)",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frames",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v2/v2-frames.txt",
+      "sha256": "45552ef514eb198a947b8df9a666e62aa9b7bfbc0059cfab285bb33b4ad6b6ff",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "frames 1-20, 100-2000ms",
+        "timestamp": "2026-11-02T11:17:12Z .. 2026-11-02T11:17:16Z (manifest window; exact still instant not recorded)",
+        "state": "numbered motion frames 1-20 with truncated untimestamped predecessor",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frames-ansi",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v2/v2-frames.ansi",
+      "sha256": "cc5aaf4f86e16826c3cfac3c91b320dceafd067b0618c1a58ccacd505631a8b3",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "frames 1-20, 100-2000ms",
+        "timestamp": "2026-11-02T11:17:12Z .. 2026-11-02T11:17:16Z (manifest window; exact still instant not recorded)",
+        "state": "numbered motion frames 1-20; renderer body plus trailing shell prompt",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frame1",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v2/v2-frames.txt",
+      "sha256": "45552ef514eb198a947b8df9a666e62aa9b7bfbc0059cfab285bb33b4ad6b6ff",
+      "description": "Focus on pane frame 1 at 100ms; coordinates are within that frame, not file-line indices.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "frame 1 at 100ms",
+        "timestamp": "100ms relative; capture window 2026-11-02T11:17:12Z .. 2026-11-02T11:17:16Z",
+        "state": "motion",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frame20",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v2/v2-frames.txt",
+      "sha256": "45552ef514eb198a947b8df9a666e62aa9b7bfbc0059cfab285bb33b4ad6b6ff",
+      "description": "Focus on pane frame 20 at 2000ms; coordinates are within that frame, not file-line indices.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "frame 20 at 2000ms",
+        "timestamp": "2000ms relative; capture window 2026-11-02T11:17:12Z .. 2026-11-02T11:17:16Z",
+        "state": "motion",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-full",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/checks/v2-frames-full.txt",
+      "sha256": "49c2644c4baf80fedbffb7e903078eaf64376184fe3802b9353fab2de8817510",
+      "description": "Supporting but spatially clipped 80x24 direct-render sequence, all numbered frames 0-20; never target-viewport fit proof.",
+      "capture": {
+        "dimensions": {
+          "columns": 80,
+          "rows": 24
+        },
+        "view": "v2",
+        "frame": "frames 0-20, 0-2000ms",
+        "timestamp": "0-2000ms relative; wall-clock run timestamp not recorded",
+        "state": "motion; clipped/overlaid supplementary viewport",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-full-frame0",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/checks/v2-frames-full.txt",
+      "sha256": "49c2644c4baf80fedbffb7e903078eaf64376184fe3802b9353fab2de8817510",
+      "description": "Focus on labeled full frame 0. Assess only routes whose cells are visible; no extrapolation to clipped origins.",
+      "capture": {
+        "dimensions": {
+          "columns": 80,
+          "rows": 24
+        },
+        "view": "v2",
+        "frame": "frame 0 at 0ms",
+        "timestamp": "0ms relative; wall-clock run timestamp not recorded",
+        "state": "motion origin; supplementary clipped viewport",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-manifest",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v3/manifest.json",
+      "sha256": "310d5e4a77905a453c75204d61fba936658b1018d0ad220aed6d44298f9c69f7",
+      "description": "Capture/check windows, recorded cleanup, null live-pane columns/rect, and artifact hashes.",
+      "capture": null
+    },
+    {
+      "id": "v3-bin-hash",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v3/bin.sha256",
+      "sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "description": "Repository-local witness of the frozen external binary SHA-256; binary bytes separately verified against metadata.",
+      "capture": null
+    },
+    {
+      "id": "v3-check",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v3/check.txt",
+      "sha256": "bd5f5d749d0e953bee51caa26395cdd5ba716c02a77fd44cd4157ecb979a44c2",
+      "description": "Check stdout and exit=0 in manifest; origin/synchronization claims contradicted by rendered cells; no separate stderr transcript.",
+      "capture": null
+    },
+    {
+      "id": "v3-validator",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/validator-v3.txt",
+      "sha256": "4e46700d9608600eca0a03dc2e2eb64aadaec8381d2d477bcea5701738b8092a",
+      "description": "Preserved all-checks-passed validator output, not an independent visual judgment.",
+      "capture": null
+    },
+    {
+      "id": "v3-text",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v3/v3-text.txt",
+      "sha256": "da289ecdc6148567354e373c114be681bcb8e433cea769951ce146262828652a",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "single still; exact frame index unrecorded",
+        "timestamp": "2026-11-02T11:17:19Z .. 2026-11-02T11:17:23Z (manifest window; exact still instant not recorded)",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-ansi",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v3/v3-ansi.ansi",
+      "sha256": "57525abe1f16cf6b182a8ff0e5233a03212e76f37decdb44c30527d4630ec9db",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "single still; exact frame index unrecorded",
+        "timestamp": "2026-11-02T11:17:19Z .. 2026-11-02T11:17:23Z (manifest window; exact still instant not recorded)",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-selected",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v3/v3-selected.ansi",
+      "sha256": "850a34eb606f0d02f638e1654e3c79c015e469a535fcab39569958c0a3c0ceb3",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "single still; exact frame index unrecorded",
+        "timestamp": "2026-11-02T11:17:19Z .. 2026-11-02T11:17:23Z (manifest window; exact still instant not recorded)",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-frames",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v3/v3-frames.txt",
+      "sha256": "bbfca9300827b04f4e1abbc903fd7cd7bf39b316f0149c2471e7aee9e7f9cc91",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "frames 1-20, 100-2000ms",
+        "timestamp": "2026-11-02T11:17:19Z .. 2026-11-02T11:17:23Z (manifest window; exact still instant not recorded)",
+        "state": "numbered motion frames 1-20 with truncated untimestamped predecessor",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frames-ansi",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v3/v3-frames.ansi",
+      "sha256": "4654abc9e1eacd206f11cfaf690b784cb7b970bf400b5bde0b8a2263790fb667",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "frames 1-20, 100-2000ms",
+        "timestamp": "2026-11-02T11:17:19Z .. 2026-11-02T11:17:23Z (manifest window; exact still instant not recorded)",
+        "state": "numbered motion frames 1-20; renderer body plus trailing shell prompt",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-frame1",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v3/v3-frames.txt",
+      "sha256": "bbfca9300827b04f4e1abbc903fd7cd7bf39b316f0149c2471e7aee9e7f9cc91",
+      "description": "Focus on pane frame 1 at 100ms; coordinates are within that frame, not file-line indices.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "frame 1 at 100ms",
+        "timestamp": "100ms relative; capture window 2026-11-02T11:17:19Z .. 2026-11-02T11:17:23Z",
+        "state": "motion",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frame20",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v3/v3-frames.txt",
+      "sha256": "bbfca9300827b04f4e1abbc903fd7cd7bf39b316f0149c2471e7aee9e7f9cc91",
+      "description": "Focus on pane frame 20 at 2000ms; coordinates are within that frame, not file-line indices.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "frame 20 at 2000ms",
+        "timestamp": "2000ms relative; capture window 2026-11-02T11:17:19Z .. 2026-11-02T11:17:23Z",
+        "state": "motion",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-full",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/checks/v3-frames-full.txt",
+      "sha256": "7ebe2fcd46d9ed68f26602441fb6927c670396d74d9068e02e06a48deb1d57e5",
+      "description": "Supporting but spatially clipped 80x24 direct-render sequence, all numbered frames 0-20; never target-viewport fit proof.",
+      "capture": {
+        "dimensions": {
+          "columns": 80,
+          "rows": 24
+        },
+        "view": "v3",
+        "frame": "frames 0-20, 0-2000ms",
+        "timestamp": "0-2000ms relative; wall-clock run timestamp not recorded",
+        "state": "motion; clipped/overlaid supplementary viewport",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-full-frame0",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/checks/v3-frames-full.txt",
+      "sha256": "7ebe2fcd46d9ed68f26602441fb6927c670396d74d9068e02e06a48deb1d57e5",
+      "description": "Focus on labeled full frame 0. Assess only routes whose cells are visible; no extrapolation to clipped origins.",
+      "capture": {
+        "dimensions": {
+          "columns": 80,
+          "rows": 24
+        },
+        "view": "v3",
+        "frame": "frame 0 at 0ms",
+        "timestamp": "0ms relative; wall-clock run timestamp not recorded",
+        "state": "motion origin; supplementary clipped viewport",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-manifest",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v4/manifest.json",
+      "sha256": "81c9b140fdb5018daba067ec6a3d4873b6110929b7664b67004c52625baf0c9c",
+      "description": "Capture/check windows, recorded cleanup, null live-pane columns/rect, and artifact hashes.",
+      "capture": null
+    },
+    {
+      "id": "v4-bin-hash",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v4/bin.sha256",
+      "sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "description": "Repository-local witness of the frozen external binary SHA-256; binary bytes separately verified against metadata.",
+      "capture": null
+    },
+    {
+      "id": "v4-check",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v4/check.txt",
+      "sha256": "4714dbf3c18a2a0ddcca140f914fcb13a9b6670c868586b7738f6e3bcd007533",
+      "description": "Check stdout and exit=0 in manifest; origin/synchronization claims contradicted by rendered cells; no separate stderr transcript.",
+      "capture": null
+    },
+    {
+      "id": "v4-validator",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/validator-v4.txt",
+      "sha256": "4e46700d9608600eca0a03dc2e2eb64aadaec8381d2d477bcea5701738b8092a",
+      "description": "Preserved all-checks-passed validator output, not an independent visual judgment.",
+      "capture": null
+    },
+    {
+      "id": "v4-text",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v4/v4-text.txt",
+      "sha256": "ebd630c338be951fd12e322ba26cc2655ff2b303d6c2ee9555ad91c3baa7f2d8",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "single still; exact frame index unrecorded",
+        "timestamp": "2026-11-02T11:17:24Z .. 2026-11-02T11:17:28Z (manifest window; exact still instant not recorded)",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-ansi",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v4/v4-ansi.ansi",
+      "sha256": "c18a2490ef4e84b56b6b947f4b08074d582438ef36a9cc3241e264b190459b10",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "single still; exact frame index unrecorded",
+        "timestamp": "2026-11-02T11:17:24Z .. 2026-11-02T11:17:28Z (manifest window; exact still instant not recorded)",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-selected",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v4/v4-selected.ansi",
+      "sha256": "a43b4eb47f59359912d4922c13d522d42cdbca3053dc850a5d6cf1c20ec58a40",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "single still; exact frame index unrecorded",
+        "timestamp": "2026-11-02T11:17:24Z .. 2026-11-02T11:17:28Z (manifest window; exact still instant not recorded)",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-frames",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v4/v4-frames.txt",
+      "sha256": "d3e415bbbdeac3a0db6af0d0ba4b7bdebf57334103e85c29cc41daec7cfed331",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "frames 1-20, 100-2000ms",
+        "timestamp": "2026-11-02T11:17:24Z .. 2026-11-02T11:17:28Z (manifest window; exact still instant not recorded)",
+        "state": "numbered motion frames 1-20 with truncated untimestamped predecessor",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-frames-ansi",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v4/v4-frames.ansi",
+      "sha256": "7b834cc66e4053602306a39a33ed9c5abe01ac6fb91c2816697b3e9d522a3b48",
+      "description": "Actual 77x47 pane capture; header and ANSI cell dimensions prove rendered viewport, not an independent pane rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "frames 1-20, 100-2000ms",
+        "timestamp": "2026-11-02T11:17:24Z .. 2026-11-02T11:17:28Z (manifest window; exact still instant not recorded)",
+        "state": "numbered motion frames 1-20; renderer body plus trailing shell prompt",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-frame1",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v4/v4-frames.txt",
+      "sha256": "d3e415bbbdeac3a0db6af0d0ba4b7bdebf57334103e85c29cc41daec7cfed331",
+      "description": "Focus on pane frame 1 at 100ms; coordinates are within that frame, not file-line indices.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "frame 1 at 100ms",
+        "timestamp": "100ms relative; capture window 2026-11-02T11:17:24Z .. 2026-11-02T11:17:28Z",
+        "state": "motion",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-frame20",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/evidence/v4/v4-frames.txt",
+      "sha256": "d3e415bbbdeac3a0db6af0d0ba4b7bdebf57334103e85c29cc41daec7cfed331",
+      "description": "Focus on pane frame 20 at 2000ms; coordinates are within that frame, not file-line indices.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "frame 20 at 2000ms",
+        "timestamp": "2000ms relative; capture window 2026-11-02T11:17:24Z .. 2026-11-02T11:17:28Z",
+        "state": "motion",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-full",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/checks/v4-frames-full.txt",
+      "sha256": "89b962d426ccd82bb3d53823dd9acf05427a60bb6f1e776b337b0854cb58d432",
+      "description": "Supporting but spatially clipped 80x24 direct-render sequence, all numbered frames 0-20; never target-viewport fit proof.",
+      "capture": {
+        "dimensions": {
+          "columns": 80,
+          "rows": 24
+        },
+        "view": "v4",
+        "frame": "frames 0-20, 0-2000ms",
+        "timestamp": "0-2000ms relative; wall-clock run timestamp not recorded",
+        "state": "motion; clipped/overlaid supplementary viewport",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-full-frame0",
+      "path": "docs/visualize-eval/rounds/03/modal-machine-manager/checks/v4-frames-full.txt",
+      "sha256": "89b962d426ccd82bb3d53823dd9acf05427a60bb6f1e776b337b0854cb58d432",
+      "description": "Focus on labeled full frame 0. Assess only routes whose cells are visible; no extrapolation to clipped origins.",
+      "capture": {
+        "dimensions": {
+          "columns": 80,
+          "rows": 24
+        },
+        "view": "v4",
+        "frame": "frame 0 at 0ms",
+        "timestamp": "0ms relative; wall-clock run timestamp not recorded",
+        "state": "motion origin; supplementary clipped viewport",
+        "format": "text"
+      }
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 17 components and all 23 directed endpoint pairs occur in readable views; pub->db is repeated, giving 24 occurrences. Both boot directions and the complete boot.ipxe + S3 args response survive. However audit / verify reimage loses reimage, pull boot image loses pull, and diagnose uploads has the wrong visual neighborhood. Required label meaning is not completely preserved (MM-S01, MM-S02, MM-T01).",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/constraints"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "history",
+        "blind",
+        "v1-text",
+        "v2-text",
+        "v3-text",
+        "v4-text"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 24 static strokes have readable stems and unique heads; the single v4 bridge is distinguishable from a connection. Under the explicit round-03 rule, 20 directly observed origin offsets make animated direction unproven, and the diagnose-uploads label has uncertain ownership. Static correctness cannot waive those failures (MM-A02, MM-T01).",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/arrow_traceability"
+      ],
+      "evidence_ids": [
+        "blind",
+        "v1-text",
+        "v2-text",
+        "v3-text",
+        "v4-text",
+        "v1-full-frame0",
+        "v2-full-frame0",
+        "v3-full-frame0",
+        "v4-full-frame0"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "The actual ANSI grids and pane headers verify 77x47 at natural 100%, with zero visible clipped graph items. Crossings are 0/0/0/1. The v4 bridge at (31,21) is rec->prov across q->db, not rec->db as the generator says. It is geometrically avoidable without moving any source group, box, or label: a queue route through the empty right-side column 57 corridor, then left along row 29 to its existing column-17 input, avoids every other route. This is a geometric review witness, not a newly rendered sample or an implemented fix (MM-L02). The separately required live-pane columns/rectangle remain missing for all four panes (MM-L01); that evidence gap does not downgrade the known avoidable-crossing failure to blocked.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/layout_fit"
+      ],
+      "evidence_ids": [
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v4-ansi",
+        "v1-manifest",
+        "v2-manifest",
+        "v3-manifest",
+        "v4-manifest",
+        "attempts"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Declared families match the source roles rather than geometric depth. Captured normal colors support control cp/wapi teal shades in v1, registry/providers blue shades in v1, machine/boot/agent teal shades in v2, q/janitor amber and SSH/machines teal in v3, reconcile/queue amber and private/public gRPC teal in v4. Related occurrences are near their chains; repeated nodes identify cross-view continuity. Per-node hue stability across views is not imposed as an extra gate.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/conceptual_grouping_color",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#original-line-31-assistant"
+      ],
+      "evidence_ids": [
+        "source",
+        "generation",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v4-ansi"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "ANSI proves all four sides and four rounded corners for every one of 26 node occurrences, with a single RGB per normal border and uniformly bold RGB(216,166,87) selected borders. Select-all captures cover 7/7+6/6+7/7+6/6=26/26 occurrences. This proves captured selected borders, not unobserved dragging or arbitrary interactive states.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/border_integrity"
+      ],
+      "evidence_ids": [
+        "blind",
+        "v1-ansi",
+        "v1-selected",
+        "v2-ansi",
+        "v2-selected",
+        "v3-ansi",
+        "v3-selected",
+        "v4-ansi",
+        "v4-selected"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Actual skill, binary, rubric, dataset, source/expected/history, all saved attempts, final specs and all seven manifest artifacts per view match recorded hashes. DeepSeek generator viz-ds03-6 and independent Sol reviewer viz-judge03-machine-manager are correctly identified; the blind file/hash predate reveal. Cleanup is recorded confirmed_closed for all four owned panes. Full workflow proof is nevertheless missing exact expanded execution commands, separate stderr/explicit emptiness, live-pane rectangles/raw probe transcripts, and complete target-size labeled frame 0. All-checks-passed validators do not repair this (MM-W01, MM-W02). The reviewer identity correction is disclosed, not hidden.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/03/metadata.json#/frozen_input_corrections"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "rubric",
+        "candidate-skill",
+        "dataset",
+        "generation",
+        "attempts",
+        "blind",
+        "spec-manifest",
+        "v1-manifest",
+        "v1-check",
+        "v1-validator",
+        "v2-manifest",
+        "v2-check",
+        "v2-validator",
+        "v3-manifest",
+        "v3-check",
+        "v3-validator",
+        "v4-manifest",
+        "v4-check",
+        "v4-validator"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Source/history explicitly require slow sparse motion ending in one live dot per line. Twenty directly observed labeled frame-0 dots start one edge cell late; zero visible dots reach any arrowhead, all 24 vanish by frame 20, and shorter routes vanish earlier. There are 90 missing-dot route-frames among 480 target-pane opportunities. These are known failures despite additional frame-0 evidence gaps; --check origins/sync assertions cannot override actual renders (MM-A01, MM-A02).",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/animation",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#original-line-217-user"
+      ],
+      "evidence_ids": [
+        "source",
+        "history",
+        "blind",
+        "v1-frames",
+        "v1-full",
+        "v1-check",
+        "v2-frames",
+        "v2-full",
+        "v2-check",
+        "v3-frames",
+        "v3-full",
+        "v3-check",
+        "v4-frames",
+        "v4-full",
+        "v4-check"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/0",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "Modal control plane -> private gRPC: create / terminate / repair; independent directed relation, no shared bus.",
+      "observed": "v1.E2: Modal control plane -> private gRPC; label 'create/terminate/repair'; visible first edge cell (10, 11), complete path (10,11) -> (10,14), unique down arrowhead (10, 14) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; untimestamped tail only; origin not fully proven. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            10,
+            11,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            12,
+            12,
+            23,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-frame20",
+          "region": [
+            10,
+            14,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-W02"
+      ]
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/1",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "humans + mmctl -> webapi server: http; independent directed relation, no shared bus.",
+      "observed": "v1.E1: humans + mmctl -> webapi server; label 'http'; visible first edge cell (54, 11), complete path (54,11) -> (54,14), unique down arrowhead (54, 14) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; untimestamped tail only; origin not fully proven. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            54,
+            11,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            56,
+            12,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-frame20",
+          "region": [
+            54,
+            14,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-W02"
+      ]
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/2",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "private gRPC -> River job queue: enqueue job; independent directed relation, no shared bus.",
+      "observed": "v1.E4: private gRPC -> River job queue; label 'enqueue job'; visible first edge cell (10, 19), complete path (10,19) -> (10,21) -> (32,21) -> (32,22), unique down arrowhead (32, 22) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            10,
+            19,
+            23,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            16,
+            20,
+            11,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-frame20",
+          "region": [
+            32,
+            22,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02"
+      ]
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/3",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "webapi server -> River job queue: reinstall / reprovision; independent directed relation, no shared bus.",
+      "observed": "v1.E3: webapi server -> River job queue; label 'reinstall/reprovision'; visible first edge cell (54, 19), complete path (54,19) -> (54,21) -> (34,21) -> (34,22), unique down arrowhead (34, 22) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            34,
+            19,
+            21,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            35,
+            22,
+            21,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-frame20",
+          "region": [
+            34,
+            22,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02"
+      ]
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/4",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "River job queue -> provider registry: provision job; independent directed relation, no shared bus.",
+      "observed": "v1.E5: River job queue -> provider registry; label 'provision job'; visible first edge cell (32, 27), complete path (32,27) -> (32,30), unique down arrowhead (32, 30) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            32,
+            27,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            34,
+            28,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-frame20",
+          "region": [
+            32,
+            30,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02"
+      ]
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/5",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "provider registry -> bare-metal providers: provider API; independent directed relation, no shared bus.",
+      "observed": "v1.E6: provider registry -> bare-metal providers; label 'provider API'; visible first edge cell (32, 35), complete path (32,35) -> (32,38), unique down arrowhead (32, 38) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            32,
+            35,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            34,
+            36,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-frame20",
+          "region": [
+            32,
+            38,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02"
+      ]
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/6",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "bare-metal providers -> bare-metal machines: allocate instance; independent directed relation, no shared bus.",
+      "observed": "v2.E1: bare-metal providers -> bare-metal machines; label 'allocate instance'; visible first edge cell (21, 9), complete path (21,9) -> (21,12) -> (22,12) -> (22,13), unique down arrowhead (22, 13) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; frame-0 position absent. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            21,
+            9,
+            2,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            23,
+            10,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-frame20",
+          "region": [
+            22,
+            13,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-W02"
+      ]
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/7",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "bare-metal machines -> boot server: iPXE request; independent directed relation, no shared bus.",
+      "observed": "v2.E2: bare-metal machines -> boot server; label 'iPXE request'; visible first edge cell (42, 15), complete path (42,15) -> (45,15), unique right arrowhead (45, 15) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            42,
+            15,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            37,
+            13,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-frame20",
+          "region": [
+            45,
+            15,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02"
+      ]
+    },
+    {
+      "edge_id": "e9",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/8",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "boot server -> bare-metal machines: boot.ipxe + S3 args; independent directed relation, no shared bus.",
+      "observed": "v2.E3: boot server -> bare-metal machines; label 'boot.ipxe + S3 args'; visible first edge cell (45, 17), complete path (45,17) -> (42,17), unique left arrowhead (42, 17) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall. Positive coverage check: boot.ipxe + S3 args is visibly present in full at [35,19,19,1]; the response head points left into machines at [42,17,1,1]. No historical verdict is used.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            42,
+            17,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            35,
+            19,
+            19,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-frame20",
+          "region": [
+            42,
+            17,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02"
+      ]
+    },
+    {
+      "edge_id": "e10",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/9",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "bare-metal machines -> machine-agent: runs on host; independent directed relation, no shared bus.",
+      "observed": "v2.E4: bare-metal machines -> machine-agent; label 'runs on host'; visible first edge cell (22, 19), complete path (22,19) -> (22,21) -> (25,21) -> (25,22), unique down arrowhead (25, 22) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            22,
+            19,
+            4,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            24,
+            20,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-frame20",
+          "region": [
+            25,
+            22,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02"
+      ]
+    },
+    {
+      "edge_id": "e11",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/10",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "machine-agent -> public gRPC: register + heartbeat; independent directed relation, no shared bus.",
+      "observed": "v2.E5: machine-agent -> public gRPC; label 'register + heartbeat'; visible first edge cell (25, 27), complete path (25,27) -> (25,30) -> (26,30) -> (26,31), unique down arrowhead (26, 31) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            25,
+            27,
+            2,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            27,
+            28,
+            20,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-frame20",
+          "region": [
+            26,
+            31,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02"
+      ]
+    },
+    {
+      "edge_id": "e12",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/11",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "public gRPC -> Postgres: machine state; independent directed relation, no shared bus.",
+      "observed": "v2.E6: public gRPC -> Postgres; label 'machine state'; visible first edge cell (26, 36), complete path (26,36) -> (26,39) -> (27,39) -> (27,40), unique down arrowhead (27, 40) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; untimestamped tail only; origin not fully proven. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall. v4.E5: public gRPC -> Postgres; label 'machine state'; visible first edge cell (12, 27), complete path (12,27) -> (12,29) -> (15,29) -> (15,31), unique down arrowhead (15, 31) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            26,
+            36,
+            2,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            28,
+            37,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-frame20",
+          "region": [
+            27,
+            40,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            12,
+            27,
+            4,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            14,
+            27,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-frame20",
+          "region": [
+            15,
+            31,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02"
+      ]
+    },
+    {
+      "edge_id": "e13",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/12",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "private gRPC -> Postgres: machine rows; independent directed relation, no shared bus.",
+      "observed": "v4.E3: private gRPC -> Postgres; label 'machine rows'; visible first edge cell (60, 18), complete path (60,18) -> (60,31) -> (23,31) -> (23,30) -> (19,30) -> (19,31), unique down arrowhead (19, 31) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            19,
+            18,
+            42,
+            14
+          ]
+        },
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            36,
+            30,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-frame20",
+          "region": [
+            19,
+            31,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02"
+      ]
+    },
+    {
+      "edge_id": "e14",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/13",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "River job queue -> Postgres: job rows; independent directed relation, no shared bus.",
+      "observed": "v4.E4: River job queue -> Postgres; label 'job rows'; visible first edge cell (37, 18), complete path (37,18) -> (37,20) -> (31,20) -> (31,29) -> (17,29) -> (17,31), unique down arrowhead (17, 31) adjacent to intact target border. Bridge at (31,21) crosses rec->prov without a junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            17,
+            18,
+            21,
+            14
+          ]
+        },
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            20,
+            28,
+            8,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-frame20",
+          "region": [
+            17,
+            31,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02",
+        "MM-L02"
+      ]
+    },
+    {
+      "edge_id": "e15",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/14",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "River job queue -> SSH + BMC ops: audit / verify reimage; independent directed relation, no shared bus.",
+      "observed": "v3.E1: River job queue -> SSH + BMC ops; label 'audit + verify'; visible first edge cell (24, 13), complete path (24,13) -> (24,16) -> (23,16) -> (23,17), unique down arrowhead (23, 17) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            23,
+            13,
+            2,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            25,
+            17,
+            14,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-frame20",
+          "region": [
+            23,
+            17,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02",
+        "MM-S01"
+      ]
+    },
+    {
+      "edge_id": "e16",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/15",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "SSH + BMC ops -> bare-metal machines: run machine-audit; independent directed relation, no shared bus.",
+      "observed": "v3.E2: SSH + BMC ops -> bare-metal machines; label 'run machine-audit'; visible first edge cell (23, 22), complete path (23,22) -> (23,25) -> (20,25) -> (20,26), unique down arrowhead (20, 26) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            20,
+            22,
+            4,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            25,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-frame20",
+          "region": [
+            20,
+            26,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02"
+      ]
+    },
+    {
+      "edge_id": "e17",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/16",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "bare-metal machines -> S3 object store: pull boot image; independent directed relation, no shared bus.",
+      "observed": "v3.E4: bare-metal machines -> S3 object store; label 'boot image'; visible first edge cell (20, 31), complete path (20,31) -> (20,33) -> (24,33) -> (24,35), unique down arrowhead (24, 35) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            20,
+            31,
+            5,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            22,
+            32,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-frame20",
+          "region": [
+            24,
+            35,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02",
+        "MM-S02"
+      ]
+    },
+    {
+      "edge_id": "e18",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/17",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "River job queue -> S3 object store: diagnose uploads; independent directed relation, no shared bus.",
+      "observed": "v3.E3: River job queue -> S3 object store; label 'diagnose uploads'; visible first edge cell (22, 13), complete path (22,13) -> (22,15) -> (17,15) -> (17,34) -> (22,34) -> (22,35), unique down arrowhead (22, 35) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall. The label owner was uncertain before reveal: diagnose uploads appears adjacent to the other S3 input, so source and JSON knowledge cannot make it visually unambiguous.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            17,
+            13,
+            6,
+            23
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            25,
+            34,
+            16,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-frame20",
+          "region": [
+            22,
+            35,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02",
+        "MM-T01"
+      ]
+    },
+    {
+      "edge_id": "e19",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/18",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "River job queue -> janitor app: diagnostic events; independent directed relation, no shared bus.",
+      "observed": "v3.E5: River job queue -> janitor app; label 'diagnostic events'; visible first edge cell (26, 13), complete path (26,13) -> (26,16) -> (46,16) -> (46,17), unique down arrowhead (46, 17) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            26,
+            13,
+            21,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            28,
+            15,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-frame20",
+          "region": [
+            46,
+            17,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02"
+      ]
+    },
+    {
+      "edge_id": "e20",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/19",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "janitor app -> webapi server: proposed actions; independent directed relation, no shared bus.",
+      "observed": "v3.E6: janitor app -> webapi server; label 'proposed actions'; visible first edge cell (46, 22), complete path (46,22) -> (46,25) -> (45,25) -> (45,26), unique down arrowhead (45, 26) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            45,
+            22,
+            2,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            29,
+            24,
+            16,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-frame20",
+          "region": [
+            45,
+            26,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02"
+      ]
+    },
+    {
+      "edge_id": "e21",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/20",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "webapi server -> Slack: confirm + alerts; independent directed relation, no shared bus.",
+      "observed": "v3.E7: webapi server -> Slack; label 'confirm + alerts'; visible first edge cell (45, 31), complete path (45,31) -> (45,34) -> (49,34) -> (49,35), unique down arrowhead (49, 35) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            45,
+            31,
+            5,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            28,
+            33,
+            16,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-frame20",
+          "region": [
+            49,
+            35,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02"
+      ]
+    },
+    {
+      "edge_id": "e22",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/21",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "cluster reconcile loop -> bare-metal providers: gcore sync, 1 min; independent directed relation, no shared bus.",
+      "observed": "v4.E1: cluster reconcile loop -> bare-metal providers; label 'gcore sync, 1 min'; visible first edge cell (8, 18), complete path (8,18) -> (8,21) -> (34,21) -> (34,22), unique down arrowhead (34, 22) adjacent to intact target border. Bridge at (31,21) crosses q->db without a junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            8,
+            18,
+            27,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            13,
+            20,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-frame20",
+          "region": [
+            34,
+            22,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02",
+        "MM-L02"
+      ]
+    },
+    {
+      "edge_id": "e23",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/22",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "expected": "cluster reconcile loop -> Postgres: cluster state; independent directed relation, no shared bus.",
+      "observed": "v4.E2: cluster reconcile loop -> Postgres; label 'cluster state'; visible first edge cell (6, 18), complete path (6,18) -> (6,30) -> (13,30) -> (13,31), unique down arrowhead (13, 31) adjacent to intact target border. No crossing or in-route junction. Static endpoints/direction are readable; direct labeled frame-0 offset by one cell. Frame 20 has no visible dot at the head, so this required animated edge does not pass overall.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            6,
+            18,
+            8,
+            14
+          ]
+        },
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            8,
+            22,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-frame20",
+          "region": [
+            13,
+            31,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-A01",
+        "MM-A02"
+      ]
+    },
+    {
+      "edge_id": "apparent-mch-s3-diagnostics",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/16",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/17"
+      ],
+      "expected": null,
+      "observed": "Potential extra apparent label meaning, not an extra stroke: diagnose uploads at [25,34,16,1] can be read as machines -> S3 diagnostics because it touches the neighborhood of that vertical input. Source requires queue -> S3 diagnostics separately from machine image pull. Marked fail for ambiguous ownership, not asserted as a certain additional architecture relationship.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            17,
+            31,
+            24,
+            5
+          ]
+        }
+      ],
+      "finding_ids": [
+        "MM-T01"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "MM-A01",
+      "category": "animation",
+      "edge_ids": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6",
+        "e7",
+        "e8",
+        "e9",
+        "e10",
+        "e11",
+        "e12",
+        "e13",
+        "e14",
+        "e15",
+        "e16",
+        "e17",
+        "e18",
+        "e19",
+        "e20",
+        "e21",
+        "e22",
+        "e23"
+      ],
+      "severity": "high",
+      "description": "DEFECT: No route has a visible dot at its arrowhead at 2000ms; all 24 occurrences have zero visible dots in pane frame 20. Across frames 1-20, 90/480 route-frames have no dot, and short routes disappear before long routes. This contradicts the requested one-live-dot-per-line visible common arrival and the --check claim of synchronized rendered arrival at 2000ms; it is not merely a waived legibility issue.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/animation",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#original-line-217-user"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-frame20",
+          "region": [
+            1,
+            1,
+            77,
+            47
+          ]
+        },
+        {
+          "evidence_id": "v2-frame20",
+          "region": [
+            1,
+            1,
+            77,
+            47
+          ]
+        },
+        {
+          "evidence_id": "v3-frame20",
+          "region": [
+            1,
+            1,
+            77,
+            47
+          ]
+        },
+        {
+          "evidence_id": "v4-frame20",
+          "region": [
+            1,
+            1,
+            77,
+            47
+          ]
+        }
+      ]
+    },
+    {
+      "id": "MM-A02",
+      "category": "animation",
+      "edge_ids": [
+        "e3",
+        "e4",
+        "e5",
+        "e6",
+        "e8",
+        "e9",
+        "e10",
+        "e11",
+        "e12",
+        "e13",
+        "e14",
+        "e15",
+        "e16",
+        "e17",
+        "e18",
+        "e19",
+        "e20",
+        "e21",
+        "e22",
+        "e23"
+      ],
+      "severity": "high",
+      "description": "DEFECT: On 20 directly observable labeled frame-0 routes, the dot is on the second drawn edge cell, one cell beyond the actual first cell after the source port. Static and timestamped geometry registration establishes this without using the spec as motion proof. Three additional offset positions are only in untimestamped pane tails, and allocation has no frame-0 dot evidence; those are not silently promoted to direct proof. Captures contradict the universal origins claim on the 20 observable routes; they fail to prove the other four.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/animation",
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/arrow_traceability"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-full-frame0",
+          "region": [
+            56,
+            7,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-full-frame0",
+          "region": [
+            12,
+            7,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-full-frame0",
+          "region": [
+            34,
+            15,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-full-frame0",
+          "region": [
+            34,
+            23,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v2-full-frame0",
+          "region": [
+            43,
+            3,
+            2,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-full-frame0",
+          "region": [
+            45,
+            5,
+            2,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-full-frame0",
+          "region": [
+            23,
+            7,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v2-full-frame0",
+          "region": [
+            26,
+            15,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v3-full-frame0",
+          "region": [
+            26,
+            2,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v3-full-frame0",
+          "region": [
+            25,
+            11,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v3-full-frame0",
+          "region": [
+            24,
+            2,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v3-full-frame0",
+          "region": [
+            22,
+            20,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v3-full-frame0",
+          "region": [
+            28,
+            2,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v3-full-frame0",
+          "region": [
+            48,
+            11,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v3-full-frame0",
+          "region": [
+            47,
+            20,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v4-full-frame0",
+          "region": [
+            10,
+            6,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v4-full-frame0",
+          "region": [
+            8,
+            6,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v4-full-frame0",
+          "region": [
+            62,
+            6,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v4-full-frame0",
+          "region": [
+            39,
+            6,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v4-full-frame0",
+          "region": [
+            14,
+            15,
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "MM-T01",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "e18",
+        "apparent-mch-s3-diagnostics"
+      ],
+      "severity": "high",
+      "description": "DEFECT: diagnose uploads at [25,34,16,1] is immediately right of the machine-to-S3 route at column 24, rather than the queue-to-S3 route at columns 17-22. The blind reader could attach the diagnostics payload to machine image retrieval. The two strokes remain geometrically separate, but this required source label lacks a reliable visual owner.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/17",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            17,
+            31,
+            24,
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "id": "MM-S01",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e15"
+      ],
+      "severity": "high",
+      "description": "DEFECT: Required audit / verify reimage is drawn only as audit + verify. The action object reimage is absent from all four views and has no in-view expansion. The external meaning ledger cannot restore missing label meaning.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/14",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            25,
+            17,
+            14,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "MM-S02",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e17"
+      ],
+      "severity": "medium",
+      "description": "DEFECT: Required pull boot image is drawn as boot image, omitting pull. A machines-to-S3 arrow alone does not distinguish a pull/read request from an upload/write of that payload. The generator explicitly relies on direction to carry the missing verb, but that does not preserve the source label meaning.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/16",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            22,
+            32,
+            10,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "MM-L02",
+      "category": "layout_fit",
+      "edge_ids": ["e14", "e22"],
+      "severity": "medium",
+      "description": "DEFECT: The rec->prov / q->db crossing at (31,21) is avoidable in the observed grid without reordering source groups or deleting relations. Geometric witness only: retain all boxes and labels, and route q from its existing (37,18) start via (57,18), (57,29), (17,29), to its existing (17,31) arrowhead. Column 57 lies between the provider box ending at column 54 and the private-gRPC route at column 60; row 29 is clear from column 17 through 57 except for this same queue route being replaced. All other paths and labels can remain unchanged, and the redundant bridge glyph can be straightened. No such alternate sample was executed or installed. The current crossing is readable but still violates the avoidable-crossing gate.",
+      "source_refs": ["docs/visualize-eval/rounds/03/rubric.json#/categories/layout_fit"],
+      "locations": [
+        {"evidence_id": "v4-text", "region": [31,21,1,1]},
+        {"evidence_id": "v4-text", "region": [55,18,5,12]},
+        {"evidence_id": "v4-text", "region": [17,29,41,1]}
+      ]
+    },
+    {
+      "id": "MM-L01",
+      "category": "layout_fit",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "EVIDENCE GAP: The captured application grid is verifiably 77x47 at 100%, with complete graph content, but every manifest has pane_cols=null and pane_rect=null. App headers/cell counts prove the rendered viewport, not the separately required actual live-pane rectangle. live_pane is therefore null; do not borrow the 80x24 supplementary dimensions. This measurement gap blocks complete fit evidence, while the separate known avoidable-crossing defect keeps the category fail rather than blocked; no visible target-viewport clipping is alleged.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/layout_fit"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            1,
+            1,
+            77,
+            47
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            1,
+            1,
+            77,
+            47
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            1,
+            1,
+            77,
+            47
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            1,
+            1,
+            77,
+            47
+          ]
+        }
+      ]
+    },
+    {
+      "id": "MM-W01",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "EVIDENCE GAP: The bundle preserves hashes, capture/check windows, check output with manifest exit=0, and cleanup attestations, but not exact expanded executed capture/check/close commands, separate stderr or an explicit empty-stderr record, actual pane rectangles, or raw cleanup-probe transcripts. The validator command is a template. Scratch layout probes are admitted but not retained. These missing provenance details block full workflow verification; no substitute run was made.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/workflow_evidence"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            1,
+            1,
+            77,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "MM-W02",
+      "category": "workflow_evidence",
+      "edge_ids": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6",
+        "e7",
+        "e8",
+        "e9",
+        "e10",
+        "e11",
+        "e12",
+        "e13",
+        "e14",
+        "e15",
+        "e16",
+        "e17",
+        "e18",
+        "e19",
+        "e20",
+        "e21",
+        "e22",
+        "e23"
+      ],
+      "severity": "high",
+      "description": "EVIDENCE GAP: All target-size pane sequences lose the labeled frame-0 header and upper 11 screen lines. The temporally complete replacements are 80x24 direct dumps, with clipping/overlays and no matching live-pane run. They support origin defects where visible but do not supply a complete target-size cycle or prove every origin. Exactly one route (allocation) has no frame-0 position at all, and three positions occur only in unlabeled tails. Existing motion failures remain fail, not merely blocked.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/animation"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-full-frame0",
+          "region": [
+            1,
+            1,
+            80,
+            24
+          ]
+        },
+        {
+          "evidence_id": "v2-full-frame0",
+          "region": [
+            1,
+            1,
+            80,
+            24
+          ]
+        },
+        {
+          "evidence_id": "v3-full-frame0",
+          "region": [
+            1,
+            1,
+            80,
+            24
+          ]
+        },
+        {
+          "evidence_id": "v4-full-frame0",
+          "region": [
+            1,
+            1,
+            80,
+            24
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "EVIDENCE GAP: All four live pane rectangles/column measurements are absent; app viewport proof is not a separate live-pane measurement (MM-L01).",
+    "EVIDENCE GAP: Exact expanded executed commands, separate stderr/explicit-empty records, and raw cleanup probe transcripts were not preserved (MM-W01).",
+    "EVIDENCE GAP: Complete labeled frame-0 motion at 77x47 is missing; 80x24 full dumps support only visible routes, three origins have untimestamped tails only, allocation frame 0 is entirely unavailable (MM-W02).",
+    "REQUIRED BEHAVIOR NOT WORKING IN EXECUTED EVIDENCE: Origin-starting dots and visible simultaneous arrowhead arrival fail. This is a known renderer/output defect for these specs, not a proven universal unsupported feature or a missing-model substitution; it remains fail even with evidence gaps."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pBG",
+      "w7E:pBH",
+      "w7E:pBK",
+      "w7E:pBM"
+    ],
+    "closed_pane_ids": [
+      "w7E:pBG",
+      "w7E:pBH",
+      "w7E:pBK",
+      "w7E:pBM"
+    ],
+    "status": "done",
+    "reason": "All four per-view manifests and generation.json record confirmed_closed; generation reports pane-get failure after close. Status reflects preserved cleanup attestations, not a new live probe; exact probe transcripts/commands are missing. Reviewer launched no panes."
+  },
+  "overall": "fail"
+}

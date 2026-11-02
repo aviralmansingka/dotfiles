@@ -1,0 +1,19 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "dark", "label": "7 ports dark", "group": "hardware" },
+    { "id": "s1", "label": "server1 R7725", "group": "hardware" },
+    { "id": "nic", "label": "eno16595np0 25G", "group": "hardware" },
+    { "id": "s2", "label": "server2 .59", "group": "hosts" },
+    { "id": "spare", "label": ".60-.62 free", "group": "pool" },
+    { "id": "gw", "label": "Arista .57", "group": "network" }
+  ],
+  "trunks": [
+    { "id": "p29", "label": ".58/29 no NAT", "from": "gw", "to": "nic", "branches": ["s2", "spare"] }
+  ],
+  "edges": [
+    { "from": "dark", "to": "s1", "label": "no cable", "style": "dashed", "dots": 0 },
+    { "from": "s1", "to": "nic", "label": "only uplink", "dots": 0 }
+  ]
+}

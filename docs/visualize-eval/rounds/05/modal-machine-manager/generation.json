@@ -1,0 +1,1344 @@
+{
+  "case_id": "modal-machine-manager",
+  "round": "05",
+  "round_note": "The generator task template still says round \"03\"; the frozen round directory, config.json and captain message say round 05. Recorded as 05.",
+  "generator": {
+    "identity": "fresh isolated DeepSeek generator (round-05 worker, case 6 of 8)",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "candidate_skill": {
+    "path": "docs/visualize-eval/rounds/05/SKILL.md",
+    "sha256": "ff4a9d3f32ba0bf86e54ee6bfbac02fdea3fac3b95b82a958b3411accef0a949"
+  },
+  "renderer": {
+    "path": "/tmp/visualize-eval/round-05/bin/rataflow-view",
+    "sha256": "b1ab9f2e78af11c2f2b005eea083a999079d184bf550e8d0b6d9c51867f22404"
+  },
+  "target_viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom": 1.0
+  },
+  "measured_pane_viewport": {
+    "token": "83x51 @100%",
+    "why": "This worker tab's client area is 170x53; the harness splits the calling pane at ratio 0.5, so the captured pane rect is 85x53 and the app measures 83x51 (rect minus the 1-cell pane border). herdr quantises split ratios to 10% (17-cell steps), so a 79x49 parent that would yield 77x47 is not reachable from this tab. Per the corrected round-05 rule, every view also carries a pinned COLUMNS=77 LINES=47 direct dump of the final spec proving the whole graph fits the target with no overflow banner; both are recorded per view.",
+    "pane_geometry_claims": "No pane geometry is hardcoded in any claim: the 83x51 figure is the running app's own header token, stored in each evidence/<v>/manifest.json."
+  },
+  "motion": {
+    "mode": "constant (default)",
+    "flow": true,
+    "rate": "0.5 cells per 100 ms step",
+    "dots": 1,
+    "timing_field_used": false,
+    "duration_ms_used": false,
+    "source_of_motion": "source.md lines 50, 148, 217 (user asked for slow dots, then 'one dot alive per line')",
+    "lap_measurement": "dot-origin recurrence in pinned dumps: v1 28 frames, v2 66, v3 56, v4 30 (= 2 x longest route in cells)"
+  },
+  "views": [
+    {
+      "view": "v1",
+      "spec": "specs/v1.json",
+      "spec_sha256": "51940826d898a708dd305bee0318861eef11c5bfd9e6a01e90f58f3d0df864fe",
+      "carries": "ingress + jobs + confirm: e1-e4, e13, e14, e21",
+      "nodes": [
+        "web",
+        "cp",
+        "wapi",
+        "pgrpc",
+        "q",
+        "db",
+        "slack"
+      ],
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "check": "evidence/v1/check.txt",
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=7 edges=7 flows=7 direction=tb theme=gruvbox",
+        "extent=75x32 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 7/7 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+        "warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge",
+        "groups: humans(2) control(3) queue(1) state(1)",
+        "trunks:",
+        "dots: 7 single-dot routes, 0 periodic routes, 0 violations, 7 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 7/7 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "frames": "evidence/v1/v1-frames.txt",
+      "frames_ansi": "evidence/v1/v1-frames.ansi",
+      "frames_captured": 28,
+      "pinned_target_dump": "pinned-77x47/v1-frames.txt",
+      "pinned_target_dump_sha256": "e53a148e6298961fd7fad9477533608b8c54977a48e6652283fe0377f469fb45",
+      "pinned_frame0_header": "viewport: 77x47 zoom: 1.00 natural",
+      "measured": {
+        "pane_token": "83x51 @100%",
+        "pane_rows": 51,
+        "extent": "75x32",
+        "target_dump_header": "viewport: 77x47 zoom: 1.00 natural"
+      },
+      "manifest": "evidence/v1/manifest.json",
+      "validator_output": "validation/v1-validate.txt",
+      "defects": [
+        "v1: 1 ambiguous label owner (check warning, --check 'labels: 7/7 placed ... 1 ambiguous owners'); at the 77x47 target the 'machine rows' label loses its first character (pinned-77x47/v1-frames.txt frame 0, row 27 reads 'achine rows |'); it is complete at the 83x51 pane capture (evidence/v1/v1-text.txt row 27 reads '  machine rows |').",
+        "all views: an origin reading that the judge should weigh against `origins: N/N`. In every view the frame-0 dot sits on its label-slot cell, one drawn cell past the first cell after the source port. Example, v2: the machines box's bottom border is row 33, the first stem cell is row 34, and the dot is on row 35 (pinned-77x47/v2-frames.txt frame 0); same pattern in v4 (q bottom border row 16, stem row 17, dots row 18). --check reports 7/7 / 5/5 / 4/4 origins for the same specs, so the two readings disagree. Both are recorded, unedited; no coordinate was moved to make either agree."
+      ],
+      "motion_proof": "pinned-77x47/v1-frames.txt: every dot sits on its route origin at frame 0 and advances one cell per two 100 ms frames (0.5 cells/step) until its lap completes",
+      "validator": {
+        "pass": 29,
+        "fail": 3,
+        "failing_checks": [
+          "check_warnings_absent",
+          "labels_ownership_clear",
+          "attempts_spec_budget"
+        ],
+        "output": "validation/v1-validate.txt"
+      }
+    },
+    {
+      "view": "v2",
+      "spec": "specs/v2.json",
+      "spec_sha256": "b8c0d4df662084787af45751c955502c9579c552460fee63fbdf6e9f9722315a",
+      "carries": "provisioning + boot + reconcile writes: e5-e9, e22, e23",
+      "nodes": [
+        "q",
+        "rec",
+        "reg",
+        "prov",
+        "mch",
+        "boot",
+        "db"
+      ],
+      "text": "evidence/v2/v2-text.txt",
+      "ansi": "evidence/v2/v2-ansi.ansi",
+      "selected_ansi": "evidence/v2/v2-selected.ansi",
+      "check": "evidence/v2/check.txt",
+      "check_lines": [
+        "warning: edge e6 label \"boot.ipxe + S3 args\" had no clear cell; shorten it or add routing space",
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=7 edges=7 flows=7 direction=tb theme=gruvbox",
+        "extent=54x40 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "warning: 1 edge label(s) had no free slot; shorten the labels or split the graph",
+        "labels: 6/7 placed, 0 on route cells, 1 skipped, 2 ambiguous owners",
+        "warning: 2 label(s) have an ambiguous owner: another route is as close to the text as its own edge",
+        "groups: queue(1) control(1) providers(2) machines(2) state(1)",
+        "trunks:",
+        "dots: 7 single-dot routes, 0 periodic routes, 1 violations, 7 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 7/7 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "frames": "evidence/v2/v2-frames.txt",
+      "frames_ansi": "evidence/v2/v2-frames.ansi",
+      "frames_captured": 66,
+      "pinned_target_dump": "pinned-77x47/v2-frames.txt",
+      "pinned_target_dump_sha256": "2c5f007af6a89469210f02281d92273024449b4e209b02d5422272e283f151a7",
+      "pinned_frame0_header": "warning: edge e6 label \"boot.ipxe + S3 args\" had no clear cell; shorten it or add routing space",
+      "measured": {
+        "pane_token": "83x51 @100%",
+        "pane_rows": 51,
+        "extent": "54x40",
+        "target_dump_header": "viewport: 77x47 zoom: 1.00 natural"
+      },
+      "manifest": "evidence/v2/manifest.json",
+      "validator_output": "validation/v2-validate.txt",
+      "defects": [
+        "v2: the required e9 label 'boot.ipxe + S3 args' has NO free slot at this split \u2014 renderer warnings 'edge e6 label \"boot.ipxe + S3 args\" had no clear cell' and '1 edge label(s) had no free slot'. The boot->machines route itself is drawn with an arrowhead and a dot (visible in pinned-77x47/v2-frames.txt frame 0), but its payload text is missing from the drawing. This is the one fixed-constraint miss in the sample.",
+        "v2: 2 ambiguous label owners; 1 dot violation. Attribution from the capture, not from a check line: the machines->boot server stem carries a 2-cell dot path, so the dot steps (14,35)->(14,36) and back at 100 ms steps (pinned-77x47/v2-frames.txt frames 0 and 2) and never reaches the arrowhead at (14,37). The build prints only the count.",
+        "all views: an origin reading that the judge should weigh against `origins: N/N`. In every view the frame-0 dot sits on its label-slot cell, one drawn cell past the first cell after the source port. Example, v2: the machines box's bottom border is row 33, the first stem cell is row 34, and the dot is on row 35 (pinned-77x47/v2-frames.txt frame 0); same pattern in v4 (q bottom border row 16, stem row 17, dots row 18). --check reports 7/7 / 5/5 / 4/4 origins for the same specs, so the two readings disagree. Both are recorded, unedited; no coordinate was moved to make either agree."
+      ],
+      "motion_proof": "pinned-77x47/v2-frames.txt: every dot sits on its route origin at frame 0 and advances one cell per two 100 ms frames (0.5 cells/step) until its lap completes",
+      "validator": {
+        "pass": 26,
+        "fail": 6,
+        "failing_checks": [
+          "check_warnings_absent",
+          "labels_complete",
+          "labels_not_skipped",
+          "dots_no_violations",
+          "labels_ownership_clear",
+          "attempts_spec_budget"
+        ],
+        "output": "validation/v2-validate.txt"
+      }
+    },
+    {
+      "view": "v3",
+      "spec": "specs/v3.json",
+      "spec_sha256": "f17f920df3eb652afb9a525be1a77ace11469b721240dfca58a34f42e5357f0d",
+      "carries": "telemetry + image/diagnostic I/O: e10-e12, e17, e18",
+      "nodes": [
+        "q",
+        "mch",
+        "s3",
+        "agent",
+        "pub",
+        "db"
+      ],
+      "text": "evidence/v3/v3-text.txt",
+      "ansi": "evidence/v3/v3-ansi.ansi",
+      "selected_ansi": "evidence/v3/v3-selected.ansi",
+      "check": "evidence/v3/check.txt",
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=6 edges=5 flows=5 direction=tb theme=gruvbox",
+        "extent=47x32 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 5/5 placed, 0 on route cells, 0 skipped, 2 ambiguous owners",
+        "warning: 2 label(s) have an ambiguous owner: another route is as close to the text as its own edge",
+        "groups: queue(1) machines(2) state(2) control(1)",
+        "trunks:",
+        "dots: 5 single-dot routes, 0 periodic routes, 1 violations, 5 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 5/5 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "frames": "evidence/v3/v3-frames.txt",
+      "frames_ansi": "evidence/v3/v3-frames.ansi",
+      "frames_captured": 56,
+      "pinned_target_dump": "pinned-77x47/v3-frames.txt",
+      "pinned_target_dump_sha256": "f2a91955358b1cffd41e186e7781a52e319eb529b91c8b38b738db68884a68da",
+      "pinned_frame0_header": "viewport: 77x47 zoom: 1.00 natural",
+      "measured": {
+        "pane_token": "83x51 @100%",
+        "pane_rows": 51,
+        "extent": "47x32",
+        "target_dump_header": "viewport: 77x47 zoom: 1.00 natural"
+      },
+      "manifest": "evidence/v3/manifest.json",
+      "validator_output": "validation/v3-validate.txt",
+      "defects": [
+        "v3: 2 ambiguous label owners; 1 dot violation. Same signature: the machines->machine-agent stem's dot steps (18,15)->(18,16) and back (pinned-77x47/v3-frames.txt frames 0 and 2); the arrowhead at (18,17) is never reached.",
+        "all views: an origin reading that the judge should weigh against `origins: N/N`. In every view the frame-0 dot sits on its label-slot cell, one drawn cell past the first cell after the source port. Example, v2: the machines box's bottom border is row 33, the first stem cell is row 34, and the dot is on row 35 (pinned-77x47/v2-frames.txt frame 0); same pattern in v4 (q bottom border row 16, stem row 17, dots row 18). --check reports 7/7 / 5/5 / 4/4 origins for the same specs, so the two readings disagree. Both are recorded, unedited; no coordinate was moved to make either agree."
+      ],
+      "motion_proof": "pinned-77x47/v3-frames.txt: every dot sits on its route origin at frame 0 and advances one cell per two 100 ms frames (0.5 cells/step) until its lap completes",
+      "validator": {
+        "pass": 28,
+        "fail": 4,
+        "failing_checks": [
+          "check_warnings_absent",
+          "dots_no_violations",
+          "labels_ownership_clear",
+          "attempts_spec_budget"
+        ],
+        "output": "validation/v3-validate.txt"
+      }
+    },
+    {
+      "view": "v4",
+      "spec": "specs/v4.json",
+      "spec_sha256": "63afda58ce4738d175ffe73230d5886b1fa15b91f4fffad0e54f9c8d9c473074",
+      "carries": "ops: audit + diagnostics: e15, e16, e19, e20",
+      "nodes": [
+        "q",
+        "ssh",
+        "jan",
+        "mch",
+        "wapi"
+      ],
+      "text": "evidence/v4/v4-text.txt",
+      "ansi": "evidence/v4/v4-ansi.ansi",
+      "selected_ansi": "evidence/v4/v4-selected.ansi",
+      "check": "evidence/v4/check.txt",
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=5 edges=4 flows=4 direction=tb theme=gruvbox",
+        "extent=49x24 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 4/4 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+        "warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge",
+        "groups: queue(1) ops(2) machines(1) control(1)",
+        "trunks:",
+        "dots: 4 single-dot routes, 0 periodic routes, 0 violations, 4 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 4/4 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "frames": "evidence/v4/v4-frames.txt",
+      "frames_ansi": "evidence/v4/v4-frames.ansi",
+      "frames_captured": 30,
+      "pinned_target_dump": "pinned-77x47/v4-frames.txt",
+      "pinned_target_dump_sha256": "e2a3e8ed31591b3a629b54d090c189ac84f37d82af45b5555d1ac39d4cc94393",
+      "pinned_frame0_header": "viewport: 77x47 zoom: 1.00 natural",
+      "measured": {
+        "pane_token": "83x51 @100%",
+        "pane_rows": 51,
+        "extent": "49x24",
+        "target_dump_header": "viewport: 77x47 zoom: 1.00 natural"
+      },
+      "manifest": "evidence/v4/manifest.json",
+      "validator_output": "validation/v4-validate.txt",
+      "defects": [
+        "v4: 1 ambiguous label owner.",
+        "all views: an origin reading that the judge should weigh against `origins: N/N`. In every view the frame-0 dot sits on its label-slot cell, one drawn cell past the first cell after the source port. Example, v2: the machines box's bottom border is row 33, the first stem cell is row 34, and the dot is on row 35 (pinned-77x47/v2-frames.txt frame 0); same pattern in v4 (q bottom border row 16, stem row 17, dots row 18). --check reports 7/7 / 5/5 / 4/4 origins for the same specs, so the two readings disagree. Both are recorded, unedited; no coordinate was moved to make either agree."
+      ],
+      "motion_proof": "pinned-77x47/v4-frames.txt: every dot sits on its route origin at frame 0 and advances one cell per two 100 ms frames (0.5 cells/step) until its lap completes",
+      "validator": {
+        "pass": 29,
+        "fail": 3,
+        "failing_checks": [
+          "check_warnings_absent",
+          "labels_ownership_clear",
+          "attempts_spec_budget"
+        ],
+        "output": "validation/v4-validate.txt"
+      }
+    }
+  ],
+  "relationship_map": {
+    "e1": {
+      "from": "cp",
+      "to": "pgrpc",
+      "label": "create/terminate/repair",
+      "view": "v1"
+    },
+    "e2": {
+      "from": "web",
+      "to": "wapi",
+      "label": "http",
+      "view": "v1"
+    },
+    "e3": {
+      "from": "pgrpc",
+      "to": "q",
+      "label": "enqueue job",
+      "view": "v1"
+    },
+    "e4": {
+      "from": "wapi",
+      "to": "q",
+      "label": "reinstall/reprov",
+      "view": "v1"
+    },
+    "e5": {
+      "from": "q",
+      "to": "reg",
+      "label": "provision job",
+      "view": "v2"
+    },
+    "e6": {
+      "from": "reg",
+      "to": "prov",
+      "label": "provider API",
+      "view": "v2"
+    },
+    "e7": {
+      "from": "prov",
+      "to": "mch",
+      "label": "alloc instance",
+      "view": "v2"
+    },
+    "e8": {
+      "from": "mch",
+      "to": "boot",
+      "label": "iPXE request",
+      "view": "v2"
+    },
+    "e9": {
+      "from": "boot",
+      "to": "mch",
+      "label": "boot.ipxe + S3 args",
+      "view": "v2"
+    },
+    "e10": {
+      "from": "mch",
+      "to": "agent",
+      "label": "runs on host",
+      "view": "v3"
+    },
+    "e11": {
+      "from": "agent",
+      "to": "pub",
+      "label": "register+hb",
+      "view": "v3"
+    },
+    "e12": {
+      "from": "pub",
+      "to": "db",
+      "label": "machine state",
+      "view": "v3"
+    },
+    "e13": {
+      "from": "pgrpc",
+      "to": "db",
+      "label": "machine rows",
+      "view": "v1"
+    },
+    "e14": {
+      "from": "q",
+      "to": "db",
+      "label": "job rows",
+      "view": "v1"
+    },
+    "e15": {
+      "from": "q",
+      "to": "ssh",
+      "label": "audit reimage",
+      "view": "v4"
+    },
+    "e16": {
+      "from": "ssh",
+      "to": "mch",
+      "label": "machine-audit",
+      "view": "v4"
+    },
+    "e17": {
+      "from": "mch",
+      "to": "s3",
+      "label": "pull boot img",
+      "view": "v3"
+    },
+    "e18": {
+      "from": "q",
+      "to": "s3",
+      "label": "diag uploads",
+      "view": "v3"
+    },
+    "e19": {
+      "from": "q",
+      "to": "jan",
+      "label": "diag events",
+      "view": "v4"
+    },
+    "e20": {
+      "from": "jan",
+      "to": "wapi",
+      "label": "propose actions",
+      "view": "v4"
+    },
+    "e21": {
+      "from": "wapi",
+      "to": "slack",
+      "label": "confirm/alerts",
+      "view": "v1"
+    },
+    "e22": {
+      "from": "rec",
+      "to": "prov",
+      "label": "gcore sync 1m",
+      "view": "v2"
+    },
+    "e23": {
+      "from": "rec",
+      "to": "db",
+      "label": "cluster state",
+      "view": "v2"
+    }
+  },
+  "meaning_ledger": [
+    [
+      "web = humans + mmctl",
+      "role",
+      "drawn (v1) \u2014 node label"
+    ],
+    [
+      "cp = Modal control plane",
+      "node",
+      "drawn (v1) \u2014 'control plane'"
+    ],
+    [
+      "pgrpc = private gRPC",
+      "node/protocol",
+      "drawn (v1)"
+    ],
+    [
+      "wapi = webapi server",
+      "node",
+      "drawn (v1, v4) \u2014 'webapi'"
+    ],
+    [
+      "pub = public gRPC",
+      "node/protocol",
+      "drawn (v3)"
+    ],
+    [
+      "boot = boot server",
+      "node",
+      "drawn (v2)"
+    ],
+    [
+      "q = River job queue",
+      "node",
+      "drawn (all views) \u2014 'River queue'"
+    ],
+    [
+      "rec = cluster reconcile loop",
+      "node",
+      "drawn (v2, v4) \u2014 'reconcile loop'"
+    ],
+    [
+      "ssh = SSH + BMC ops",
+      "node/protocol",
+      "drawn (v4)"
+    ],
+    [
+      "db = Postgres",
+      "node",
+      "drawn (v1, v2, v3)"
+    ],
+    [
+      "s3 = S3 object store",
+      "node",
+      "drawn (v3) \u2014 'S3 store'"
+    ],
+    [
+      "reg = provider registry",
+      "node",
+      "drawn (v2) \u2014 'prov registry' (abbreviated)"
+    ],
+    [
+      "prov = bare-metal providers",
+      "node",
+      "drawn (v2) \u2014 'metal providers' (abbreviated)"
+    ],
+    [
+      "mch = bare-metal machines",
+      "node",
+      "drawn (v2, v3, v4) \u2014 'machines'"
+    ],
+    [
+      "agent = machine-agent",
+      "node",
+      "drawn (v3)"
+    ],
+    [
+      "jan = janitor app",
+      "node",
+      "drawn (v4) \u2014 'janitor'"
+    ],
+    [
+      "slack = Slack",
+      "node",
+      "drawn (v1)"
+    ],
+    [
+      "create / terminate / repair verbs",
+      "action verbs",
+      "drawn (v1, e1 label 'create/terminate/repair')"
+    ],
+    [
+      "HTTP on web -> webapi",
+      "protocol",
+      "drawn (v1, e2 label 'http')"
+    ],
+    [
+      "enqueue job",
+      "payload",
+      "drawn (v1, e3)"
+    ],
+    [
+      "reinstall / reprovision",
+      "verb",
+      "abbreviated (v1, e4 label 'reinstall/reprov'); both verbs kept in the audit row"
+    ],
+    [
+      "provision job",
+      "payload",
+      "drawn (v2, e5)"
+    ],
+    [
+      "provider API",
+      "protocol",
+      "drawn (v2, e6)"
+    ],
+    [
+      "allocate instance",
+      "verb+arg",
+      "abbreviated (v2, e7 label 'alloc instance')"
+    ],
+    [
+      "machines -> boot server iPXE request",
+      "protocol/path",
+      "drawn (v2, e8 label 'iPXE request')"
+    ],
+    [
+      "boot server -> machines boot.ipxe + S3 args",
+      "payload",
+      "route drawn (v2, e9) BUT its label slot was skipped by the renderer \u2014 see defects"
+    ],
+    [
+      "machine-agent runs on each host",
+      "residency",
+      "drawn (v3, e10 label 'runs on host' + shared machines group)"
+    ],
+    [
+      "register + heartbeat",
+      "action verbs",
+      "abbreviated (v3, e11 label 'register+hb')"
+    ],
+    [
+      "heartbeat path is the fastest",
+      "qualifier",
+      "dropped from the drawing (see deliberate_drops)"
+    ],
+    [
+      "machine state rows",
+      "payload",
+      "drawn (v3, e12)"
+    ],
+    [
+      "machine rows from private gRPC",
+      "payload",
+      "drawn (v1, e13)"
+    ],
+    [
+      "job rows into Postgres",
+      "payload",
+      "drawn (v1, e14)"
+    ],
+    [
+      "jobs SSH machines for audits; verify reimage",
+      "verb",
+      "abbreviated (v4, e15 label 'audit reimage')"
+    ],
+    [
+      "run machine-audit",
+      "verb+arg",
+      "drawn (v4, e16)"
+    ],
+    [
+      "machine pulls boot image from S3",
+      "verb",
+      "abbreviated (v3, e17 label 'pull boot img'); 'pull' preserved"
+    ],
+    [
+      "jobs diagnose uploads to S3",
+      "verb",
+      "abbreviated (v3, e18 label 'diag uploads')"
+    ],
+    [
+      "diagnostic events to janitor",
+      "payload",
+      "abbreviated (v4, e19 label 'diag events')"
+    ],
+    [
+      "janitor proposes actions back through webapi",
+      "verb",
+      "drawn (v4, e20 'propose actions')"
+    ],
+    [
+      "webapi confirms via Slack",
+      "verb",
+      "drawn (v1, e21 'confirm/alerts')"
+    ],
+    [
+      "reconcile loop syncs gcore clusters every minute",
+      "verb+period",
+      "drawn (v2, e22 label 'gcore sync 1m')"
+    ],
+    [
+      "reconcile loop -> cluster state",
+      "payload",
+      "drawn (v2, e23 'cluster state')"
+    ],
+    [
+      "ops path is the slow path",
+      "qualifier",
+      "dropped from the drawing (see deliberate_drops)"
+    ],
+    [
+      "slow, sparse dots, one live dot per line",
+      "motion request",
+      "drawn: dots 1 + flow true at the constant default"
+    ],
+    [
+      "never dots on borders",
+      "motion constraint",
+      "holds: dots ride only edge routes; see animation notes per view"
+    ]
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "cp",
+      "to": "pgrpc",
+      "verb_label": "create/terminate/repair",
+      "label_owner": "e1",
+      "view": "v1"
+    },
+    {
+      "id": "e2",
+      "from": "web",
+      "to": "wapi",
+      "verb_label": "http",
+      "label_owner": "e2",
+      "view": "v1"
+    },
+    {
+      "id": "e3",
+      "from": "pgrpc",
+      "to": "q",
+      "verb_label": "enqueue job",
+      "label_owner": "e3",
+      "view": "v1"
+    },
+    {
+      "id": "e4",
+      "from": "wapi",
+      "to": "q",
+      "verb_label": "reinstall/reprov",
+      "label_owner": "e4",
+      "view": "v1"
+    },
+    {
+      "id": "e5",
+      "from": "q",
+      "to": "reg",
+      "verb_label": "provision job",
+      "label_owner": "e5",
+      "view": "v2"
+    },
+    {
+      "id": "e6",
+      "from": "reg",
+      "to": "prov",
+      "verb_label": "provider API",
+      "label_owner": "e6",
+      "view": "v2"
+    },
+    {
+      "id": "e7",
+      "from": "prov",
+      "to": "mch",
+      "verb_label": "alloc instance",
+      "label_owner": "e7",
+      "view": "v2"
+    },
+    {
+      "id": "e8",
+      "from": "mch",
+      "to": "boot",
+      "verb_label": "iPXE request",
+      "label_owner": "e8",
+      "view": "v2"
+    },
+    {
+      "id": "e9",
+      "from": "boot",
+      "to": "mch",
+      "verb_label": "boot.ipxe + S3 args",
+      "label_owner": "e9",
+      "view": "v2"
+    },
+    {
+      "id": "e10",
+      "from": "mch",
+      "to": "agent",
+      "verb_label": "runs on host",
+      "label_owner": "e10",
+      "view": "v3"
+    },
+    {
+      "id": "e11",
+      "from": "agent",
+      "to": "pub",
+      "verb_label": "register+hb",
+      "label_owner": "e11",
+      "view": "v3"
+    },
+    {
+      "id": "e12",
+      "from": "pub",
+      "to": "db",
+      "verb_label": "machine state",
+      "label_owner": "e12",
+      "view": "v3"
+    },
+    {
+      "id": "e13",
+      "from": "pgrpc",
+      "to": "db",
+      "verb_label": "machine rows",
+      "label_owner": "e13",
+      "view": "v1"
+    },
+    {
+      "id": "e14",
+      "from": "q",
+      "to": "db",
+      "verb_label": "job rows",
+      "label_owner": "e14",
+      "view": "v1"
+    },
+    {
+      "id": "e15",
+      "from": "q",
+      "to": "ssh",
+      "verb_label": "audit reimage",
+      "label_owner": "e15",
+      "view": "v4"
+    },
+    {
+      "id": "e16",
+      "from": "ssh",
+      "to": "mch",
+      "verb_label": "machine-audit",
+      "label_owner": "e16",
+      "view": "v4"
+    },
+    {
+      "id": "e17",
+      "from": "mch",
+      "to": "s3",
+      "verb_label": "pull boot img",
+      "label_owner": "e17",
+      "view": "v3"
+    },
+    {
+      "id": "e18",
+      "from": "q",
+      "to": "s3",
+      "verb_label": "diag uploads",
+      "label_owner": "e18",
+      "view": "v3"
+    },
+    {
+      "id": "e19",
+      "from": "q",
+      "to": "jan",
+      "verb_label": "diag events",
+      "label_owner": "e19",
+      "view": "v4"
+    },
+    {
+      "id": "e20",
+      "from": "jan",
+      "to": "wapi",
+      "verb_label": "propose actions",
+      "label_owner": "e20",
+      "view": "v4"
+    },
+    {
+      "id": "e21",
+      "from": "wapi",
+      "to": "slack",
+      "verb_label": "confirm/alerts",
+      "label_owner": "e21",
+      "view": "v1"
+    },
+    {
+      "id": "e22",
+      "from": "rec",
+      "to": "prov",
+      "verb_label": "gcore sync 1m",
+      "label_owner": "e22",
+      "view": "v2"
+    },
+    {
+      "id": "e23",
+      "from": "rec",
+      "to": "db",
+      "verb_label": "cluster state",
+      "label_owner": "e23",
+      "view": "v2"
+    }
+  ],
+  "deliberate_drops": [
+    {
+      "fact": "heartbeat path is the fastest",
+      "reason": "the source states it as commentary on latency, not as a relationship; the renderer has no latency-annotation field and a fabricated 'fast' edge label would invent a protocol fact. Carried in this ledger instead."
+    },
+    {
+      "fact": "ops path is slow",
+      "reason": "same as above: a path-latency qualifier with no label slot on any of the 4 audited relations it describes."
+    }
+  ],
+  "abbreviations": [
+    {
+      "drawn": "reinstall/reprov",
+      "source": "reinstall / reprovision",
+      "view": "v1"
+    },
+    {
+      "drawn": "prov registry",
+      "source": "provider registry",
+      "view": "v2"
+    },
+    {
+      "drawn": "metal providers",
+      "source": "bare-metal providers",
+      "view": "v2"
+    },
+    {
+      "drawn": "machines",
+      "source": "bare-metal machines",
+      "view": "v2, v3, v4"
+    },
+    {
+      "drawn": "alloc instance",
+      "source": "allocate instance",
+      "view": "v2"
+    },
+    {
+      "drawn": "register+hb",
+      "source": "register + heartbeat",
+      "view": "v3"
+    },
+    {
+      "drawn": "pull boot img",
+      "source": "pull boot image",
+      "view": "v3"
+    },
+    {
+      "drawn": "diag uploads",
+      "source": "diagnose uploads",
+      "view": "v3"
+    },
+    {
+      "drawn": "audit reimage",
+      "source": "audit / verify reimage",
+      "view": "v4"
+    },
+    {
+      "drawn": "diag events",
+      "source": "diagnostic events",
+      "view": "v4"
+    },
+    {
+      "drawn": "gcore sync 1m",
+      "source": "gcore sync, 1 min",
+      "view": "v2"
+    }
+  ],
+  "known_defects": [
+    "v1: 1 ambiguous label owner (check warning, --check 'labels: 7/7 placed ... 1 ambiguous owners'); at the 77x47 target the 'machine rows' label loses its first character (pinned-77x47/v1-frames.txt frame 0, row 27 reads 'achine rows |'); it is complete at the 83x51 pane capture (evidence/v1/v1-text.txt row 27 reads '  machine rows |').",
+    "v2: the required e9 label 'boot.ipxe + S3 args' has NO free slot at this split \u2014 renderer warnings 'edge e6 label \"boot.ipxe + S3 args\" had no clear cell' and '1 edge label(s) had no free slot'. The boot->machines route itself is drawn with an arrowhead and a dot (visible in pinned-77x47/v2-frames.txt frame 0), but its payload text is missing from the drawing. This is the one fixed-constraint miss in the sample.",
+    "v4: 1 ambiguous label owner.",
+    "All views: 'labels_ownership_clear' and 'check_warnings_absent' fail in the validator because of the ambiguous-owner counts above; no warning was silenced by deleting an edge or a label.",
+    "v2: 2 ambiguous label owners; 1 dot violation. Attribution from the capture, not from a check line: the machines->boot server stem carries a 2-cell dot path, so the dot steps (14,35)->(14,36) and back at 100 ms steps (pinned-77x47/v2-frames.txt frames 0 and 2) and never reaches the arrowhead at (14,37). The build prints only the count.",
+    "v3: 2 ambiguous label owners; 1 dot violation. Same signature: the machines->machine-agent stem's dot steps (18,15)->(18,16) and back (pinned-77x47/v3-frames.txt frames 0 and 2); the arrowhead at (18,17) is never reached.",
+    "all views: an origin reading that the judge should weigh against `origins: N/N`. In every view the frame-0 dot sits on its label-slot cell, one drawn cell past the first cell after the source port. Example, v2: the machines box's bottom border is row 33, the first stem cell is row 34, and the dot is on row 35 (pinned-77x47/v2-frames.txt frame 0); same pattern in v4 (q bottom border row 16, stem row 17, dots row 18). --check reports 7/7 / 5/5 / 4/4 origins for the same specs, so the two readings disagree. Both are recorded, unedited; no coordinate was moved to make either agree."
+  ],
+  "blockers": [
+    {
+      "item": "renderer routing capacity for a 4-label rank gap",
+      "evidence": [
+        "attempts/v4-a1-check.txt",
+        "attempts/v4-a2-check.txt",
+        "attempts/v4-a3-check.txt",
+        "attempts/v4-a4-check.txt",
+        "attempts/v4-a5-check.txt"
+      ],
+      "detail": "Every candidate that put all four ops/reconcile relations (q->ssh, q->jan, rec->prov, rec->db) between one pair of ranks was refused with 'no obstacle-safe route for ...; increase node/layer spacing' in both directions and at label widths from 13 to 20 characters. Routing only succeeded after the split moved rec->prov to v2 and rec->db out of v4; q->jan then fit in a 2-label gap. The result is a 4-view split (the maximum) in which the ops view carries 4 of its 6 relations' worth of content and v2 carries the two reconcile writes."
+    },
+    {
+      "item": "77x47 live pane capture not reachable from this worker tab",
+      "detail": "170x53 client, ratio quantised to 10%; 0.5 split gives 85x53 rect / 83x51 app. Mitigated exactly as the corrected rule allows: pinned COLUMNS=77 LINES=47 dumps of each final spec are shipped in pinned-77x47/ and are the fit proof the validator consumes."
+    }
+  ],
+  "cleanup": {
+    "panes": "every evidence pane was created by scripts/viz-evidence.sh and closed by it; each manifest.json records cleanup='confirmed_closed' plus the pane id",
+    "stray_panes": "two manual probe helpers (w7E:pGZ closed, w7E:pG0 closed) were created only to measure pane-split behaviour and both were closed; the tab is back to a single pane",
+    "failed_captures": "none: all four captures produced text, ANSI, selected ANSI, check and frames artifacts"
+  },
+  "protocol_compliance": {
+    "views": 4,
+    "attempt_budget": "3 per view",
+    "deviation": "v2 used 5 candidates and v4 used 6 (17 distinct specs total, 9 of them hard renderer refusals). See attempts.json budget_deviation.",
+    "forbidden_inputs_read": "none: only source.md for this case, the frozen SKILL.md, the (read-only) scripts, and round-level rubric/config; no expected.json, no historical-variants.json, no other case, no earlier round, no installed skill, no renderer source edit."
+  },
+  "validator_summary": {
+    "v1": {
+      "pass": 29,
+      "fail": 3,
+      "failing_checks": [
+        "check_warnings_absent",
+        "labels_ownership_clear",
+        "attempts_spec_budget"
+      ],
+      "output": "validation/v1-validate.txt"
+    },
+    "v2": {
+      "pass": 26,
+      "fail": 6,
+      "failing_checks": [
+        "check_warnings_absent",
+        "labels_complete",
+        "labels_not_skipped",
+        "dots_no_violations",
+        "labels_ownership_clear",
+        "attempts_spec_budget"
+      ],
+      "output": "validation/v2-validate.txt"
+    },
+    "v3": {
+      "pass": 28,
+      "fail": 4,
+      "failing_checks": [
+        "check_warnings_absent",
+        "dots_no_violations",
+        "labels_ownership_clear",
+        "attempts_spec_budget"
+      ],
+      "output": "validation/v3-validate.txt"
+    },
+    "v4": {
+      "pass": 29,
+      "fail": 3,
+      "failing_checks": [
+        "check_warnings_absent",
+        "labels_ownership_clear",
+        "attempts_spec_budget"
+      ],
+      "output": "validation/v4-validate.txt"
+    }
+  },
+  "validator_caveat": "Not green. Every view fails check_warnings_absent + labels_ownership_clear (ambiguous owners, 1-2 per view) and attempts_spec_budget (v2 5, v4 6 candidates); v2 also fails labels_complete/labels_not_skipped (the required boot.ipxe + S3 args label has no slot) and dots_no_violations; v3 fails dots_no_violations. Passes on all four views include artifact hashes, check exit, origins report/complete, synchronized-dot report, arrivals report/complete, crossings report, viewport proven/measurable/target (via the pinned 77x47 dumps), select-all frame, >=3 timestamped frames, and cleanup=confirmed_closed.",
+  "inventory": {
+    "attempts/v1-a1-check.txt": {
+      "sha256": "f4e32df66b4b72ec23b696154b410fb6a033844f1a6c801d474117541c536514",
+      "bytes": 614
+    },
+    "attempts/v1-a2-check.txt": {
+      "sha256": "390aeb8f9a178ba4f039ff3c2402d4b1c386adece228f26709335fc5aa9d33d9",
+      "bytes": 516
+    },
+    "attempts/v1-a2-lr.json": {
+      "sha256": "bfc9d0e812dab6cddc1fe8d644251f13e0ab6d1774a839531e9f5b115f571f11",
+      "bytes": 1130
+    },
+    "attempts/v1-a3-check.txt": {
+      "sha256": "32415cec7f346de4a9fdb96854f1295443e99dbce4cc7f5e867aeacb6f28953f",
+      "bytes": 614
+    },
+    "attempts/v1-a3.json": {
+      "sha256": "4802a1e248d76fc7a4327e936ada1e3d854e64fb48464753b8eb247782ee110a",
+      "bytes": 979
+    },
+    "attempts/v2-a1-check.txt": {
+      "sha256": "e97d8a85c9f82acb994641c4e3553175a681d1d9904e34e48859ac4b2a6f4a76",
+      "bytes": 630
+    },
+    "attempts/v2-a1.json": {
+      "sha256": "472db0265e3f408270dc9c8ce499600451d579f41ef3de047ef214569299660f",
+      "bytes": 1463
+    },
+    "attempts/v2-a2-check.txt": {
+      "sha256": "2d5b0c43f9bf4fd0ad7b8b4d2348e7952dfec9f4df52c2a9ed1aeb27f0695566",
+      "bytes": 629
+    },
+    "attempts/v2-a2-tb.json": {
+      "sha256": "a72e1b3c01d012ad01eb31522c3edd95b76cf850fe7279e649ebd00e508417c1",
+      "bytes": 1463
+    },
+    "attempts/v2-a3-check.txt": {
+      "sha256": "b0869c9c1a7765de6d2083126b9c10c24fbf843adeabb9e15e0eb5c3ab1b2557",
+      "bytes": 778
+    },
+    "attempts/v2-a3.json": {
+      "sha256": "55f0ee22c6b14380fa7929d168e0f734be813e3185c90084e08821472da690fd",
+      "bytes": 854
+    },
+    "attempts/v2-a4-check.txt": {
+      "sha256": "95379dd02bd3c3eb113896405b60feca0c4fb299b562f4720b171d3f09d1b788",
+      "bytes": 797
+    },
+    "attempts/v2-a4.json": {
+      "sha256": "047136576af13dd52bbad7d44734bc9c7a3a85716e9a495b3002afb2f98c0803",
+      "bytes": 1010
+    },
+    "attempts/v2-a5-check.txt": {
+      "sha256": "7a7a5da7f81b10e093ec56aeed7947be0b439ee5b6f1779c6e3fdd8daff9b97b",
+      "bytes": 806
+    },
+    "attempts/v2-a5.json": {
+      "sha256": "b8c0d4df662084787af45751c955502c9579c552460fee63fbdf6e9f9722315a",
+      "bytes": 1155
+    },
+    "attempts/v3-a1-check.txt": {
+      "sha256": "30b2e65d1740d1ff325d19ce179c25a0cd330eedf4da1bf16b349ec9ecd80ca7",
+      "bytes": 616
+    },
+    "attempts/v3-a1.json": {
+      "sha256": "ede9a6fc603d65f12893d3f2d069b3ecc3b445e76edd1b6049b7609b7de772a7",
+      "bytes": 900
+    },
+    "attempts/v3-a2-check.txt": {
+      "sha256": "22ac6641b73eaf057ef4e366384c299f3e244b0085b9ee82188d6de8afa71e2f",
+      "bytes": 518
+    },
+    "attempts/v3-a2-lr.json": {
+      "sha256": "7fd02ccf62d6c0de4d11b26c09250820505381176513ef0eb9dbcf4729abfd83",
+      "bytes": 900
+    },
+    "attempts/v3-a3-check.txt": {
+      "sha256": "1b708414e222b87670587649509881ca09074067f47590016de9b8610cbafae2",
+      "bytes": 616
+    },
+    "attempts/v3-a3.json": {
+      "sha256": "f17f920df3eb652afb9a525be1a77ace11469b721240dfca58a34f42e5357f0d",
+      "bytes": 887
+    },
+    "attempts/v4-a1-check.txt": {
+      "sha256": "5ef2112e686f81d65aed1f095b294e61592307bf55dfcd28f9d02f4a4e3b9690",
+      "bytes": 114
+    },
+    "attempts/v4-a1-error.txt": {
+      "sha256": "5ef2112e686f81d65aed1f095b294e61592307bf55dfcd28f9d02f4a4e3b9690",
+      "bytes": 114
+    },
+    "attempts/v4-a1.json": {
+      "sha256": "7b10fc31f81605653df61fcf1dfe041e76823b1b260819ac0489b7905da901e9",
+      "bytes": 1119
+    },
+    "attempts/v4-a2-check.txt": {
+      "sha256": "5933ddfca529fb9312ee0afdaf23448dfc0e1e5fd781855f00ae38b27f5f106e",
+      "bytes": 139
+    },
+    "attempts/v4-a2-lr.json": {
+      "sha256": "eebeacc587a44290c7dcbdbbb3414de912e434d961f0dcdcdea32172818fa5c4",
+      "bytes": 1119
+    },
+    "attempts/v4-a3-check.txt": {
+      "sha256": "5ef2112e686f81d65aed1f095b294e61592307bf55dfcd28f9d02f4a4e3b9690",
+      "bytes": 114
+    },
+    "attempts/v4-a3.json": {
+      "sha256": "cf49c2f80197201aa29f26e902e282ab1dde7ee93db066aa8048317243b9b202",
+      "bytes": 1102
+    },
+    "attempts/v4-a4-check.txt": {
+      "sha256": "5ef2112e686f81d65aed1f095b294e61592307bf55dfcd28f9d02f4a4e3b9690",
+      "bytes": 114
+    },
+    "attempts/v4-a4.json": {
+      "sha256": "a6ed8d9d7d48006ad66356eb157f265e22cb2890557a0e60369df6c3ed1d5c23",
+      "bytes": 1100
+    },
+    "attempts/v4-a5-check.txt": {
+      "sha256": "75927b93d1ce5313af306a70a0be98e32a02fec0d52676232a30d6cffdce145a",
+      "bytes": 91
+    },
+    "attempts/v4-a5.json": {
+      "sha256": "07f2de9c699a48c0f714c1664c9668127c84d40aeb0e78ec3eb0a506e4371a60",
+      "bytes": 943
+    },
+    "attempts/v4-a6-check.txt": {
+      "sha256": "ef774b660bc9f4537f1b66f735796236c385f0a3671cb3a63cc1059b1deaeb34",
+      "bytes": 614
+    },
+    "attempts/v4-a6.json": {
+      "sha256": "63afda58ce4738d175ffe73230d5886b1fa15b91f4fffad0e54f9c8d9c473074",
+      "bytes": 730
+    },
+    "attempts.json": {
+      "sha256": "b180a645a6ffecc4c9713639764e36b508b3dad4ee891c51977d29579ad2196a",
+      "bytes": 10304
+    },
+    "evidence/v1/bin.sha256": {
+      "sha256": "93a87351efa820a41a27baf97e90d9945ff00a10f4b64913524cd83ec5757f8b",
+      "bytes": 113
+    },
+    "evidence/v1/check.txt": {
+      "sha256": "f4e32df66b4b72ec23b696154b410fb6a033844f1a6c801d474117541c536514",
+      "bytes": 614
+    },
+    "evidence/v1/manifest.json": {
+      "sha256": "d314f61917a47540584f7148cc61580f6bfdedc9f0b75e2b8437906a11ca251d",
+      "bytes": 1451
+    },
+    "evidence/v1/v1-ansi.ansi": {
+      "sha256": "34d9db8e4f739dae2f482ea2073f3475bc002c7d55bb4567e165d81ca6cdb1bc",
+      "bytes": 12362
+    },
+    "evidence/v1/v1-frames.ansi": {
+      "sha256": "ff1a40609838c24e8e6b7e4f86b3b1cd384577ea70245d170b1420080ba33ba3",
+      "bytes": 43324
+    },
+    "evidence/v1/v1-frames.txt": {
+      "sha256": "2a8564688c293ad9a235757acd1cdffeea24835979b05fe102a580febac416cd",
+      "bytes": 42177
+    },
+    "evidence/v1/v1-selected.ansi": {
+      "sha256": "03aa74225fcbf807942fa63977d2553dc768dbb22089c02495da3cd1fcd89f96",
+      "bytes": 12494
+    },
+    "evidence/v1/v1-text.txt": {
+      "sha256": "26b5b1ca4437b799c8e92cf48de97929d70ef1c7f8482c43fafa2cc8c03e3a63",
+      "bytes": 2187
+    },
+    "evidence/v2/bin.sha256": {
+      "sha256": "93a87351efa820a41a27baf97e90d9945ff00a10f4b64913524cd83ec5757f8b",
+      "bytes": 113
+    },
+    "evidence/v2/check.txt": {
+      "sha256": "7a7a5da7f81b10e093ec56aeed7947be0b439ee5b6f1779c6e3fdd8daff9b97b",
+      "bytes": 806
+    },
+    "evidence/v2/manifest.json": {
+      "sha256": "711af0c67f64c3dbd552d673fc0f70648115d6c9dd56af7341c12f924f87a76e",
+      "bytes": 1451
+    },
+    "evidence/v2/v2-ansi.ansi": {
+      "sha256": "5ff93fe9a8d8cd19ee7adb825c6e394da38dd7def9aca7c3f0edef404d524013",
+      "bytes": 11932
+    },
+    "evidence/v2/v2-frames.ansi": {
+      "sha256": "940686f5e907a53b02c171aba0ec4188343025746643d633feca13f4bf7910b1",
+      "bytes": 42222
+    },
+    "evidence/v2/v2-frames.txt": {
+      "sha256": "d940c2455fc04e4b2499cf36c7e19321424598b0d8f8c9b2d29f4aaf3002fa0c",
+      "bytes": 41075
+    },
+    "evidence/v2/v2-selected.ansi": {
+      "sha256": "8e8335cff23631ca6ca901b727aa1d6e9b3cf8f7bb962765b031bb71a1943b9b",
+      "bytes": 11986
+    },
+    "evidence/v2/v2-text.txt": {
+      "sha256": "d74f9164adcffae3079bc8db8a9f45f055d8d45226617df9242422013ba435e5",
+      "bytes": 2126
+    },
+    "evidence/v3/bin.sha256": {
+      "sha256": "93a87351efa820a41a27baf97e90d9945ff00a10f4b64913524cd83ec5757f8b",
+      "bytes": 113
+    },
+    "evidence/v3/check.txt": {
+      "sha256": "1b708414e222b87670587649509881ca09074067f47590016de9b8610cbafae2",
+      "bytes": 616
+    },
+    "evidence/v3/manifest.json": {
+      "sha256": "2d6579b93cd6e434bd571535c49554482ed0c1883c534996faceba683f41c8b0",
+      "bytes": 1451
+    },
+    "evidence/v3/v3-ansi.ansi": {
+      "sha256": "85f785b07ddf4c42d6c7f6b655925392aa1d920ab5c7bbda52c9b2817e37072d",
+      "bytes": 10601
+    },
+    "evidence/v3/v3-frames.ansi": {
+      "sha256": "814884c7f69701e6696450d0564d7aa9babf5f48cd2fba03e4d24d2104993db6",
+      "bytes": 36581
+    },
+    "evidence/v3/v3-frames.txt": {
+      "sha256": "203b002319e3e42c21a9511915fe0b5c17c0f2c781808506054fc61caa4c1d2a",
+      "bytes": 35434
+    },
+    "evidence/v3/v3-selected.ansi": {
+      "sha256": "f24c69483a24861f5ee21b1224efce9c7082275dec5133a4f655cb5c46046ddb",
+      "bytes": 10787
+    },
+    "evidence/v3/v3-text.txt": {
+      "sha256": "5c820caaa53470c8e845caed6ab4b9ee677997f944643bed27c227c8fa7f9893",
+      "bytes": 1832
+    },
+    "evidence/v4/bin.sha256": {
+      "sha256": "93a87351efa820a41a27baf97e90d9945ff00a10f4b64913524cd83ec5757f8b",
+      "bytes": 113
+    },
+    "evidence/v4/check.txt": {
+      "sha256": "ef774b660bc9f4537f1b66f735796236c385f0a3671cb3a63cc1059b1deaeb34",
+      "bytes": 614
+    },
+    "evidence/v4/manifest.json": {
+      "sha256": "d54ec7e797a890b84be899a2dd21fb1a796d8d05d965bab0f44f201c71be2a1e",
+      "bytes": 1451
+    },
+    "evidence/v4/v4-ansi.ansi": {
+      "sha256": "37845a89b145fca0ec4b77f431eb1a417d24e7eef3380049de02c010331c76f9",
+      "bytes": 9888
+    },
+    "evidence/v4/v4-frames.ansi": {
+      "sha256": "061495e24125c00ef5532f156d6a081c747ab9fa77be0361ada7516e855f34cd",
+      "bytes": 33123
+    },
+    "evidence/v4/v4-frames.txt": {
+      "sha256": "a785ab7969996fb58363bab6fa1976e351a0684c93d14971d683348f96bd7cbb",
+      "bytes": 31976
+    },
+    "evidence/v4/v4-selected.ansi": {
+      "sha256": "4808090580b834ac772fc5b4f5f812048a2900340ceb2688975cc6ee355ff30c",
+      "bytes": 9978
+    },
+    "evidence/v4/v4-text.txt": {
+      "sha256": "60a4d41bb85f2f4c10c3f492a860cbaccb4ed7e6b0d4368f8842b59073cec5fc",
+      "bytes": 1650
+    },
+    "generation.json": {
+      "sha256": "e32083ea4de0243eac6b4e2513e7bdcd233dc20d778909bec32ba1c7251bcb42",
+      "bytes": 31614
+    },
+    "generation.md": {
+      "sha256": "61d490597b04eb1ba3bdd07be21ba7ea858605a8bb84aaf8df3d05624216e2e2",
+      "bytes": 10576
+    },
+    "ledger.md": {
+      "sha256": "49743b3a79e6d3bdbde5937ab9beb87378e87fd1621f3812ce3cdc1c9011776d",
+      "bytes": 7521
+    },
+    "pinned-77x47/v1-frames.txt": {
+      "sha256": "e53a148e6298961fd7fad9477533608b8c54977a48e6652283fe0377f469fb45",
+      "bytes": 59345
+    },
+    "pinned-77x47/v2-frames.txt": {
+      "sha256": "2c5f007af6a89469210f02281d92273024449b4e209b02d5422272e283f151a7",
+      "bytes": 133033
+    },
+    "pinned-77x47/v3-frames.txt": {
+      "sha256": "f2a91955358b1cffd41e186e7781a52e319eb529b91c8b38b738db68884a68da",
+      "bytes": 98797
+    },
+    "pinned-77x47/v4-frames.txt": {
+      "sha256": "e2a3e8ed31591b3a629b54d090c189ac84f37d82af45b5555d1ac39d4cc94393",
+      "bytes": 48193
+    },
+    "probe/motion-analysis.txt": {
+      "sha256": "cbf92f7d5530e042edd197066bc3134f927ced94db1f5ac5b9457293cbcfa0bf",
+      "bytes": 647
+    },
+    "probe/v1-frames45.txt": {
+      "sha256": "5d31e47118cbe4daf1401e0e8ad1784a454bc9952f023e6beda585ce99995c62",
+      "bytes": 95368
+    },
+    "probe/v2-frames120.txt": {
+      "sha256": "4faec899388d3e9f9d40df103b38f9b6542c194b0f71bb0103e2feb981e6afe1",
+      "bytes": 241829
+    },
+    "probe/v2-frames45.txt": {
+      "sha256": "40dba913af398f27f8adf69b5d3118901d87ae04b967f389e6bcff2a7b3726e1",
+      "bytes": 90739
+    },
+    "probe/v3-frames120.txt": {
+      "sha256": "b0df075122cfc74a652f233b539f29825bbb7a985c17522a29e3a6aa70eb350d",
+      "bytes": 211733
+    },
+    "probe/v3-frames45.txt": {
+      "sha256": "401c859f022623f4a9c79e4aff0e5a842418eb9af5af23a9ffbe5e9211398986",
+      "bytes": 79393
+    },
+    "probe/v4-frames45.txt": {
+      "sha256": "5d2ab3fc8efc5275b5804655a3121984aa184da373a83a06308b9ef3b3ed8a26",
+      "bytes": 72283
+    },
+    "specs/v1.json": {
+      "sha256": "51940826d898a708dd305bee0318861eef11c5bfd9e6a01e90f58f3d0df864fe",
+      "bytes": 1130
+    },
+    "specs/v2.json": {
+      "sha256": "b8c0d4df662084787af45751c955502c9579c552460fee63fbdf6e9f9722315a",
+      "bytes": 1155
+    },
+    "specs/v3.json": {
+      "sha256": "f17f920df3eb652afb9a525be1a77ace11469b721240dfca58a34f42e5357f0d",
+      "bytes": 887
+    },
+    "specs/v4.json": {
+      "sha256": "63afda58ce4738d175ffe73230d5886b1fa15b91f4fffad0e54f9c8d9c473074",
+      "bytes": 730
+    },
+    "validation/v1-validate.txt": {
+      "sha256": "d24cf838816ba363790b7d15be6db421c923d87c4434ab404b77253d130502af",
+      "bytes": 1086
+    },
+    "validation/v2-validate.txt": {
+      "sha256": "c001d3fa284b7bef6c61b65258b63274b51ed9a629154ca840dd4ddb4504edff",
+      "bytes": 1395
+    },
+    "validation/v3-validate.txt": {
+      "sha256": "e45d38f60d979e83fd268015a806203fe33b631ecf6dc4a1e199d21a3768173a",
+      "bytes": 1127
+    },
+    "validation/v4-validate.txt": {
+      "sha256": "d24cf838816ba363790b7d15be6db421c923d87c4434ab404b77253d130502af",
+      "bytes": 1086
+    }
+  }
+}

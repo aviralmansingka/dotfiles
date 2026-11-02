@@ -1,0 +1,6 @@
+$ rataflow-view --check specs/v2-a2-rms-api.json
+2026-11-02T08:29:32Z
+ok: nodes=4 edges=3 flows=0 direction=tb theme=gruvbox
+layers=2 (explicit placement, sugiyama skipped)
+extent=41x14 cells
+exit=0

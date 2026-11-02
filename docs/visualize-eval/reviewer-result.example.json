@@ -1,0 +1,77 @@
+{
+  "protocol_version": 1,
+  "round": 0,
+  "case_id": "pipeline",
+  "candidate_sha256": null,
+  "renderer_sha256": null,
+  "rubric_sha256": null,
+  "dataset_sha256": null,
+  "spec_sha256": null,
+  "generator": {"worker_id": null, "model": null},
+  "reviewer": {"worker_id": null, "model": "openai/gpt-6-astra"},
+  "viewport": {"columns": 77, "rows": 47, "zoom_percent": 100, "verified": false},
+  "live_pane": null,
+  "evidence": [],
+  "observed_first": {"evidence_id": null, "saved_before_expected_reveal": false},
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Example only: no historical source or rendered relationship audit supplied.",
+      "source_refs": [],
+      "evidence_ids": []
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Example only: no actual stem-to-arrowhead capture evidence.",
+      "source_refs": [],
+      "evidence_ids": []
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Example only: 77x47 at 100% is the target, not a verified live capture.",
+      "source_refs": [],
+      "evidence_ids": []
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Example only: source groupings and actual color evidence unavailable.",
+      "source_refs": [],
+      "evidence_ids": []
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Example only: no ANSI/buffer evidence of sides, corners, handles or selection.",
+      "source_refs": [],
+      "evidence_ids": []
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Example only: no workers, hashes, --check output, captures or blind-first record exist.",
+      "source_refs": [],
+      "evidence_ids": []
+    },
+    "animation": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Example only: source applicability is unknown; this is not permission to mark animation N/A.",
+      "source_refs": [],
+      "evidence_ids": []
+    }
+  },
+  "edge_audit": [],
+  "findings": [],
+  "blockers": ["Template only, not an executed evaluation. Supply frozen source cases and candidate/renderer identities, then run fresh independent workers and capture actual renders. Empty findings do not mean defect-free."],
+  "cleanup": {
+    "owned_pane_ids": [],
+    "closed_pane_ids": [],
+    "status": "not_started",
+    "reason": "No live apps or agents were launched to create this example."
+  },
+  "overall": "blocked"
+}

@@ -1,0 +1,240 @@
+{
+  "case_id": "network",
+  "round": "04",
+  "round_field_note": "docs/visualize-eval/rounds/04/generator-task.md asks for round: \"03\" in this field; that is a copy-paste leftover from the previous round. This sample is round 04 (assigned output dir docs/visualize-eval/rounds/04/network).",
+  "case_source": "docs/visualize-eval/cases/network/source.md",
+  "generator": {
+    "kind": "fresh diagram generator, round 04",
+    "agent_profile": "worker",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest (PI_MODEL=accounts/fireworks/routers/deepseek-flash-latest, PI_PROVIDER=fireworks)",
+    "judge": "none spawned by design; the captain starts the separate Sol judge"
+  },
+  "frozen_inputs": {
+    "candidate_skill": {
+      "path": "docs/visualize-eval/rounds/04/SKILL.md",
+      "sha256": "ac431c6d3035e466e29136f36d9579c551c2e070a354dc5df72999b1bb1beb3c",
+      "verified": true
+    },
+    "binary": {
+      "path": "/tmp/visualize-eval/round-04/bin/rataflow-view",
+      "sha256": "0da16d8d8ed46e2a25eb773fc71ecad4de9e310cd33e303a4c7fe77231ad95bc",
+      "verified": true,
+      "used_absolute_for_every_check_and_view": true
+    }
+  },
+  "views": [
+    {
+      "view": "v1",
+      "title": "WAN -> firewall -> core, with web, Redis and DB behind it",
+      "spec": "specs/v1-a3.json",
+      "spec_sha256": "3a2a475ace1149a25048717a2c01e6df4971e74002642b38266baeca8f90f2a3",
+      "check": "evidence/v1/check.txt",
+      "check_rejected_attempt": "checks/v1-a2.check.txt",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "frames": "evidence/v1/v1-frames.txt",
+      "frames_pinned": "evidence/v1/v1-frames-77x47.txt",
+      "manifest": "evidence/v1/manifest.json",
+      "motion_verification": "evidence/v1/v1-motion-verify.txt",
+      "layout_verification": "evidence/v1/v1-layout-verify.txt",
+      "color_verification": "evidence/v1/v1-color-verify.txt",
+      "measured": {
+        "check_extent": "42x46 cells",
+        "pane_header_token": "77x47 @100%",
+        "viewport_line_field": null,
+        "viewport_line_note": "--check reports 'viewport: unknown zoom: 1.00 natural' with no terminal; the running app's own header token is the measurement, and the pane is 77x47 with 1 header row, so the drawing area is 77x46.",
+        "horizontal_slack_columns": 35,
+        "vertical_slack_rows": 0,
+        "zoom": "1.00 natural (never panned, never zoomed)"
+      },
+      "viewport_token": "77x47 @100%",
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=6 edges=7 flows=7 direction=tb theme=gruvbox",
+        "layers=6 (explicit placement, sugiyama skipped)",
+        "extent=42x46 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 7/7 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: wan(1) edge(1) core(1) compute(1) data(2)",
+        "trunks:",
+        "routes: 7/7 near-minimal, 0 detours, 1 shortened",
+        "dots: 7 single-dot routes, 0 periodic routes, 0 violations, 7 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 7/7 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "check_warnings": [],
+      "capture_command": "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/04/network/specs/v1-a3.json --bin /tmp/visualize-eval/round-04/bin/rataflow-view --out docs/visualize-eval/rounds/04/network/evidence/v1 --label v1 --frames 21",
+      "motion_command": "COLUMNS=77 LINES=47 /tmp/visualize-eval/round-04/bin/rataflow-view --frames 21 --step-ms 100 docs/visualize-eval/rounds/04/network/specs/v1-a3.json",
+      "motion": {
+        "mode": "constant (round-04 default); same-arrival not requested by this source",
+        "rate": "0.5 cells per 100 ms step for every route (flow: true, dots: 1)",
+        "proof": "evidence/v1/v1-motion-verify.txt: 21 frames (frame 0 included); every one of the 7 dots advances 10 cells over 20 steps on the same frames; frame 0 shows 7/7 dots one cell below their source port, i.e. at the first drawn cell of their own arrow",
+        "frame0_dot_cells": "(19,38) (30,21) (32,13) (32,21) (32,29) (34,5) (34,29)",
+        "source_ports": "(19,37) Redis, (30,20) core, (32,12) firewall, (32,20) core, (32,28) web, (34,4) WAN, (34,28) web"
+      },
+      "crossings_note": "0 bridges in --check and no bridge glyph (U+232C) anywhere in evidence/v1/v1-text.txt; the counts agree."
+    }
+  ],
+  "coverage_map": {
+    "views": 1,
+    "split": "none - 6 nodes and 7 edges fit one 77x47 view at 100%",
+    "edge_to_view": {
+      "e1": "v1",
+      "e2": "v1",
+      "e3": "v1",
+      "e4": "v1",
+      "e5": "v1",
+      "e6": "v1",
+      "e7": "v1"
+    },
+    "identifiers_covered": ["WAN", "Firewall", "Core switch", "Web tier", "Redis", "DB tier"],
+    "speeds_covered": ["1 GbE", "10 GbE", "25 GbE"],
+    "qualifiers_covered": {
+      "separate core->cache and web->cache relations": "two distinct edges e4 and e5, no trunk, no merge",
+      "no motion-as-measurement": "every route animates at the same constant rate; speeds appear only as text"
+    }
+  },
+  "meaning_ledger": [
+    { "fact": "node `wan` = WAN", "kind": "identifier", "fate": "drawn", "where": "v1 node border top-left (col 33, graph row 0)" },
+    { "fact": "node `fw` = Firewall", "kind": "identifier", "fate": "drawn", "where": "v1 (col 31, graph row 8)" },
+    { "fact": "node `core` = Core switch", "kind": "identifier", "fate": "drawn", "where": "v1 (col 29, graph row 16)" },
+    { "fact": "node `web` = Web tier", "kind": "identifier", "fate": "drawn", "where": "v1 (col 31, graph row 24)" },
+    { "fact": "node `cache` = Redis", "kind": "identifier", "fate": "drawn", "where": "v1 (col 18, graph row 33)" },
+    { "fact": "node `db` = DB tier", "kind": "identifier", "fate": "drawn", "where": "v1 (col 50, graph row 41)" },
+    { "fact": "wan -> fw: 1 GbE", "kind": "link speed", "fate": "drawn", "where": "e1 label '1 GbE' at (col 36, graph row 5)" },
+    { "fact": "fw -> core: 10 GbE", "kind": "link speed", "fate": "drawn", "where": "e2 label '10 GbE' at (col 34, graph row 13)" },
+    { "fact": "core -> web: 10 GbE", "kind": "link speed", "fate": "drawn", "where": "e3 label '10 GbE' at (col 34, graph row 21)" },
+    { "fact": "core -> cache: 25 GbE", "kind": "link speed", "fate": "drawn", "where": "e4 label '25 GbE' at (col 22, graph row 21)" },
+    { "fact": "web -> cache: session", "kind": "relation/verb", "fate": "drawn", "where": "e5 label 'session' at (col 24, graph row 30)" },
+    { "fact": "web -> db: queries", "kind": "relation/verb", "fate": "drawn", "where": "e6 label 'queries' at (col 40, graph row 37)" },
+    { "fact": "cache -> db: fill", "kind": "relation/verb", "fate": "drawn", "where": "e7 label 'fill' at (col 33, graph row 40)" },
+    { "fact": "fixed constraint: keep separate core->cache and web->cache relations", "kind": "qualifier", "fate": "drawn", "where": "e4 and e5 are two independent edges with separate ports and separate labels; no trunk, nothing merged" },
+    { "fact": "fixed constraint: speeds visible without implying motion speed is a measurement", "kind": "qualifier", "fate": "drawn", "where": "all 7 routes share one constant rate (check: '7 constant at 0.5c/step'); only the text carries 1/10/25 GbE" },
+    { "fact": "\"use slow, sparse motion\"", "kind": "style request", "fate": "abbreviated", "where": "sparse = one dot per route (dots: 1, 7 dots); slow = the constant default 0.5 cells/100 ms rather than a faster rate. No fractional-rate request was added, because a rate slower than one cell per two steps would leave dots motionless in individual 100 ms frames and weaken the motion proof." },
+    { "fact": "gruvbox colour scheme (original line 5)", "kind": "style request", "fate": "drawn", "where": "theme gruvbox; group hues #d8a657 / #7daea3 / #d3869b / #a9b665 / #7da0b8,#97b8ce (evidence/v1/v1-color-verify.txt)" },
+    { "fact": "\"I don't want the dots in the background\" (original line 5)", "kind": "qualifier", "fate": "abbreviated", "where": "dots exist only on routes (7 dots, one per route); the renderer has no background particle field to suppress, so nothing is drawn off-route" },
+    { "fact": "\"every box same bg and background so borders render nicely\" (original line 5)", "kind": "style request", "fate": "drawn", "where": "every captured cell carries bg #282828 (evidence/v1/v1-color-verify.txt), so node interiors, gaps and the pane share one background and only borders carry hue" },
+    { "fact": "\"dot speed represents any speed I'd like to indicate\" (original line 5)", "kind": "qualifier", "fate": "dropped with reason", "where": "superseded by this case's fixed constraint that motion must not imply a speed measurement; the request is kept in the ledger so the omission is deliberate, not accidental" },
+    { "fact": "\"make sure the visualize pane is an even split\" (original line 48)", "kind": "environment request", "fate": "abbreviated", "where": "a property of the pane, not of the graph: the harness split a half pane and the app measured 77x47 @100%" }
+  ],
+  "relationship_audit": [
+    { "id": "e1", "from": "wan", "to": "fw", "verb_tech": "1 GbE uplink", "label_owner": "e1", "view": "v1", "visible": "arrowhead at (col 32, graph row 7), enters firewall's top border; label at (36,5)" },
+    { "id": "e2", "from": "fw", "to": "core", "verb_tech": "10 GbE", "label_owner": "e2", "view": "v1", "visible": "arrowhead at (col 30, graph row 15); label at (34,13)" },
+    { "id": "e3", "from": "core", "to": "web", "verb_tech": "10 GbE", "label_owner": "e3", "view": "v1", "visible": "arrowhead at (col 32, graph row 23); label at (34,21)" },
+    { "id": "e4", "from": "core", "to": "cache", "verb_tech": "25 GbE", "label_owner": "e4", "view": "v1", "visible": "arrowhead at (col 19, graph row 32), Redis's left top port; label at (22,21)" },
+    { "id": "e5", "from": "web", "to": "cache", "verb_tech": "session", "label_owner": "e5", "view": "v1", "visible": "arrowhead at (col 21, graph row 32), Redis's right top port; label at (24,30)" },
+    { "id": "e6", "from": "web", "to": "db", "verb_tech": "queries", "label_owner": "e6", "view": "v1", "visible": "arrowhead at (col 53, graph row 40), DB's right top port; label at (40,37)" },
+    { "id": "e7", "from": "cache", "to": "db", "verb_tech": "fill", "label_owner": "e7", "view": "v1", "visible": "arrowhead at (col 51, graph row 40), DB's left top port; label at (33,40)" }
+  ],
+  "relationship_mapping": {
+    "note": "each source relationship is one visible edge with its own port pair and its own label; nothing merged, nothing reversed",
+    "wan -> fw : 1 GbE": "e1 wan -> fw, label '1 GbE' (v1)",
+    "fw -> core : 10 GbE": "e2 fw -> core, label '10 GbE' (v1)",
+    "core -> web : 10 GbE": "e3 core -> web, label '10 GbE' (v1)",
+    "core -> cache : 25 GbE": "e4 core -> cache, label '25 GbE' (v1)",
+    "web -> cache : session": "e5 web -> cache, label 'session' (v1)",
+    "web -> db : queries": "e6 web -> db, label 'queries' (v1)",
+    "cache -> db : fill": "e7 cache -> db, label 'fill' (v1)"
+  },
+  "grouping": {
+    "wan": ["wan"],
+    "edge": ["fw"],
+    "core": ["core"],
+    "compute": ["web"],
+    "data": ["cache", "db"],
+    "reason": "conceptual, from the source: the WAN link, the perimeter firewall, the switching core, the application tier, and the two data stores. Redis and the DB share one family because both are data stores; no group was invented for layout."
+  },
+  "trunks": {
+    "declared": [],
+    "reason": "the source states seven separate point-to-point relations with distinct speeds and verbs; no shared bus exists to declare, and a trunk would misrepresent separate links as one corridor."
+  },
+  "abbreviations": [
+    { "short": "1 GbE / 10 GbE / 25 GbE", "full": "link speeds as the source states them (no expansion invented)" },
+    { "short": "session / queries / fill", "full": "the source's own relation verbs, kept verbatim" }
+  ],
+  "deliberate_drops": [
+    { "fact": "dot speed encoding a link speed (original line 5)", "reason": "case fixed constraint forbids motion implying a measurement; recorded in the ledger" },
+    { "fact": "background dots (original line 5)", "reason": "the renderer draws dots only on routes; there is no background layer to disable. Not a dropped fact, an absent capability in the original product" }
+  ],
+  "known_defects": [
+    {
+      "id": "d1",
+      "defect": "the selection accent collides with the wan group colour",
+      "evidence": "evidence/v1/v1-color-verify.txt: WAN's border is #d8a657 both before and after --select-all, while the other five borders switch to #d8a657. The selection is real but invisible on that one node.",
+      "fix_tried": "none - changing the grouping to dodge the accent would alter an honest concept group and cost the last spec attempt; reported instead"
+    },
+    {
+      "id": "d2",
+      "defect": "zero vertical slack",
+      "evidence": "toggle extent 42x46 cells against a 77x46 drawing area (77x47 pane minus the 1-row header). Horizontal slack is 35 columns; vertical slack is 0.",
+      "consequence": "any further vertical element (a longer label, an extra layer) overflows the pane; the label-ownership fix came from moving the graph's own bounding box left, not from spacing, because spacing had no room"
+    },
+    {
+      "id": "d3",
+      "defect": "two edges carry the identical text '10 GbE'",
+      "evidence": "evidence/v1/v1-layout-verify.txt: '10 GbE' occurs twice, at (34,13) and (34,21)",
+      "consequence": "ownership is clear per edge (0 ambiguous owners) but a reader scanning sees the same string on two hops; that is the source's own wording for fw->core and core->web"
+    },
+    {
+      "id": "d4",
+      "defect": "the 25 GbE relation travels around the web tier band",
+      "evidence": "e4 leaves core at (30,20), runs left along graph row 21 and descends at column 19 to Redis's top-left port (19,32)",
+      "consequence": "route economy reports 0 detours, but the long way round reads less direct than a diagonal through the tier band, which the web box blocks"
+    },
+    {
+      "id": "d5",
+      "defect": "no same-arrival proof, by design",
+      "evidence": "'arrivals: 0/0 same-arrival routes' - this source asks for slow sparse motion, not synchronized arrival, so round 04's opt-in same-arrival mode is not used",
+      "consequence": "the motion evidence is a constant-rate cycle, not an arrival frame"
+    },
+    {
+      "id": "d6",
+      "defect": "'1 shortened' in the routes line",
+      "evidence": "evidence/v1/check.txt: 'routes: 7/7 near-minimal, 0 detours, 1 shortened'",
+      "consequence": "the renderer's economy pass shortened one route during planning. Not a defect by the check's own accounting (0 detours), reported so the number is not hidden"
+    }
+  ],
+  "blockers": [],
+  "capability_preflight": {
+    "explicit_layer_placement": "available (spec field `layers`), used",
+    "single_dot_per_route": "available (`dots: 1`), used",
+    "constant_speed_default": "available (`flow: true`), used",
+    "same_arrival": "available (`timing: same-arrival` + `duration_ms`) but deliberately not used: not requested",
+    "dashed_uncertainty": "not needed - the source states no uncertain fact",
+    "trunks": "available, not needed - no shared bus in the source",
+    "missing_capability": "none"
+  },
+  "validator": {
+    "command": "uv run scripts/viz-validate.py docs/visualize-eval/rounds/04/network/evidence/v1 --require-select --require-frames --attempts docs/visualize-eval/rounds/04/network/attempts.json",
+    "output_file": "validator-v1.txt",
+    "verdict": "all checks passed (34 PASS, 0 FAIL)",
+    "failing_checks": []
+  },
+  "attempts_file": "attempts.json",
+  "attempts_summary": {
+    "check_runs": 2,
+    "check_budget": 3,
+    "view_spec_candidates": [
+      "specs/v1-a1.json (rendered probe, never checked, rejected: one bridge)",
+      "specs/v1-a2.json (checked, rejected: 2 ambiguous label owners)",
+      "specs/v1-a3.json (checked, accepted)"
+    ],
+    "rejected_checks_preserved": ["checks/v1-a2.check.txt"],
+    "geometry_probes": "attempts.json -> geometry_probes (rendered at COLUMNS=77 LINES=47, never checked, all recorded in dumps/)"
+  },
+  "cleanup": {
+    "panes_opened": 1,
+    "pane_ids": ["w7E:pDR"],
+    "close_result": "confirmed_closed (evidence/v1/manifest.json -> cleanup)",
+    "probe_panes": "none - layout probes were --frames dumps outside any pane",
+    "captain_pane_touched": false
+  },
+  "view_count": 1,
+  "verification_files": [
+    "evidence/v1/v1-motion-verify.txt",
+    "evidence/v1/v1-layout-verify.txt",
+    "evidence/v1/v1-color-verify.txt",
+    "validator-v1.txt"
+  ]
+}

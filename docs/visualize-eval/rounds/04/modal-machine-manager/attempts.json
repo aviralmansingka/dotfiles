@@ -1,0 +1,107 @@
+{
+  "case_id": "modal-machine-manager",
+  "round": "04",
+  "binary": {
+    "path": "/tmp/visualize-eval/round-04/bin/rataflow-view",
+    "sha256": "0da16d8d8ed46e2a25eb773fc71ecad4de9e310cd33e303a4c7fe77231ad95bc"
+  },
+  "notes": "Three spec candidates per view (cap). Every --check run on a distinct spec is one attempt; the raw check output of each attempt is preserved in attempts/<spec>.check.txt. Re-running --check on an already-counted spec (the evidence harness does this) is not a new candidate.",
+  "views": [
+    {
+      "view": "v1-intake",
+      "final": "specs/v1-intake.json",
+      "attempts": [
+        {
+          "spec": "attempts/v1-a1.json",
+          "spec_sha256": "79c62ad7196ff871b5090c93fce6b7a2ade763bddfd672f0ca8987c21cae6a7a",
+          "check": "attempts/v1-a1.check.txt",
+          "note": "Orientation probe: cp->pgrpc->q and web->wapi->q intake, auto tb layout, full verb labels. Result: extent 52x24, 0 detours, 4/4 labels, 1 ambiguous owner (the two routes into the River queue bend toward each other and their heads land 2 cells apart)."
+        },
+        {
+          "spec": "attempts/v1-a2.json",
+          "spec_sha256": "612d0a849588c22f7d73c11f59e5d16c85ae39f78a5823fd4a338b3d4323c37c2",
+          "check": "attempts/v1-a2.check.txt",
+          "note": "Explicit-layers probe ([web,cp],[wapi,pgrpc],[],[q]) to buy vertical room for the two labels. Result: explicit packing shrank the canvas to 36 cells wide, so the 22-char label had no clear cell (1 skipped) and 1 ambiguous owner remained. Rejected."
+        },
+        {
+          "spec": "attempts/v1-a3.json",
+          "spec_sha256": "e03bce6ff14e8b4f46b7723cfb9ff2fec3683ed300ba15e2f912e04015ac13d3",
+          "check": "attempts/v1-a3.check.txt",
+          "note": "Final: same auto layout, verbs abbreviated (terminate->term, reprovision->reprov) to reduce label span. Result: 4/4 labels, 0 detours, 0 skipped, 1 ambiguous owner (reinstall/reprov, whose left edge sits nearer the sibling route's bend than its own head). Chosen as best of three."
+        }
+      ]
+    },
+    {
+      "view": "v2-provision",
+      "final": "specs/v2-provision.json",
+      "attempts": [
+        {
+          "spec": "attempts/v2-a1.json",
+          "spec_sha256": "c4998f76ba2ce82142472edc2d0caa7014987564d3fefe7c77372811815e39d5",
+          "check": "attempts/v2-a1.check.txt",
+          "note": "Auto tb layout of the provisioning chain plus the mch<->boot pair and mch->s3. Result: extent 65x40, 1 bridge, 2 ambiguous owners (iPXE request and pull boot image both sat beside the two adjacent corridors leaving the machine box). Rejected."
+        },
+        {
+          "spec": "attempts/v2-a2.json",
+          "spec_sha256": "d7ded5086a50635426c3d4ec69e042fb3c19ac311fc3ec2fb50ffaddad8491ee",
+          "check": "attempts/v2-a2.check.txt",
+          "note": "Explicit layers with an empty band between the machine layer and the boot layer to lengthen the pair. Result: extent 44x47, taller than the 46-row drawing area, so the app reported overflow; the 20-char label had no free slot and 1 ambiguous owner remained. Rejected."
+        },
+        {
+          "spec": "attempts/v2-a3.json",
+          "spec_sha256": "eb7a63b3aa220ed7c1f55d2461840532f243d0534fff95e6895b9d3e139429b9",
+          "check": "attempts/v2-a3.check.txt",
+          "note": "Final: single-row last layer with reserved slots ([boot,\"\",s3]) so the boot server is staggered away from the machine box and the machine's two outgoing corridors are no longer adjacent. Result: extent 65x38, 0 crossings, 6/6 labels, 0 detours, 1 shortened route, 1 ambiguous owner (boot.ipxe + S3 args sits between two parallel runs). Chosen."
+        }
+      ]
+    },
+    {
+      "view": "v3-state",
+      "final": "specs/v3-state.json",
+      "attempts": [
+        {
+          "spec": "attempts/v3-a1.json",
+          "spec_sha256": "3f044c2daf04a0e68c6d613a8c685c0c7d740c148fe27a9a3210a0f08653b0d9",
+          "check": "attempts/v3-a1.check.txt",
+          "note": "All four Postgres writers spread in one layer above a tall empty band. Result: 0 ambiguous owners and 7/7 labels, but extent 85x41 exceeds the 77-column pane, so the graph would have to be panned. 6 bridges. Rejected on fit."
+        },
+        {
+          "spec": "attempts/v3-a2.json",
+          "spec_sha256": "9e49f38f84045f233d58700322c485dc79d90b68125b14a2a48cfdf6b9e154f8",
+          "check": "attempts/v3-a2.check.txt",
+          "note": "Reconcile loop lifted to the agent layer to shrink the widest row to three slots. Result: extent 68x42 (fits), 2 bridges, 7/7 labels, 1 ambiguous owner."
+        },
+        {
+          "spec": "attempts/v3-a3.json",
+          "spec_sha256": "ddbedaf644c30f9890ec7d906af63631a038bd6471acd9b1ecee16dbddf29955",
+          "check": "attempts/v3-a3.check.txt",
+          "note": "Final: queue lifted next to the agent, so the writer row carries three slots and the queue route reaches Postgres from a different height. Result: extent 66x41, 1 bridge, 7/7 labels, 0 detours, 1 forced route, 1 ambiguous owner. Chosen (fewer bridges than a2, fits the pane)."
+        }
+      ]
+    },
+    {
+      "view": "v4-ops",
+      "final": "specs/v4-ops.json",
+      "attempts": [
+        {
+          "spec": "attempts/v4-a1.json",
+          "spec_sha256": "e1a91701ed23aa6fa270ad6579f92fa369472cb16c7b9e99a6e068a625b9131a",
+          "check": "attempts/v4-a1.check.txt",
+          "note": "Queue fan above a tall empty band, three targets in one row. Result: extent 62x39, 0 bridges, 6/6 labels, 2 ambiguous owners (two 16-20 char labels landed on the adjacent queue corridors)."
+        },
+        {
+          "spec": "attempts/v4-a2.json",
+          "spec_sha256": "a757fdb3bcbf26e41a96958cd7e0cc6752d94ac4bf2f6db3f579212855f966eb",
+          "check": "attempts/v4-a2.check.txt",
+          "note": "Staircase: each queue target in its own layer so the jogs would land at different heights. Result: extent 41x47, taller than the drawing area (overflow) and 3 ambiguous owners. Rejected."
+        },
+        {
+          "spec": "attempts/v4-a3.json",
+          "spec_sha256": "b11a993ac703201aed3ac04f198ff2cbdab4b3319ecdccde0ce6bc90c30868fb",
+          "check": "attempts/v4-a3.check.txt",
+          "note": "Final: queue centred so its three fan routes leave by three different borders (left, bottom, right); targets staggered across slots. Result: extent 77x39 (fits at 100%), 0 bridges, 6/6 labels, 0 detours, 1 ambiguous owner (diagnose uploads landed on the neighbouring left-border run). Chosen."
+        }
+      ]
+    }
+  ]
+}
