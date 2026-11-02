@@ -273,6 +273,11 @@ const AGAINST_FLOW_COST: i64 = 90;
 /// itself.
 const LANE_DRIFT_COST: i64 = 3;
 
+/// How many rank gaps a back-edge may span and still take the inside hop:
+/// one rank gap. Beyond that the outer rail is the shorter path, and the
+/// inside lane would have to cross the ranks in between.
+const NEAR_RANKS: usize = 1;
+
 /// Which way a layered layout flows. Forward edges leave the far side in
 /// the flow direction regardless of how far apart the boxes sit; only
 /// same-layer and back edges fall back to geometry.
@@ -621,8 +626,9 @@ fn plan_with_slots(
                     continue;
                 }
                 for side in side_order(branch, tap) {
-                    let slot = used.get(&(job.branch, side)).copied().unwrap_or(0);
-                    let port = port_cell(branch, side, slot as i32);
+                    let slots = used.get(&(job.branch, side)).copied().unwrap_or_default();
+                    let slot = slots.used;
+                    let port = port_cell(branch, side, slot as i32, slots.planned as i32);
                     if !valid_port(branch, side, port) {
                         continue;
                     }
@@ -651,7 +657,13 @@ fn plan_with_slots(
                         });
                     match attempt {
                         Some(points) => {
-                            used.insert((job.branch, side), slot + 1);
+                            used.insert(
+                                (job.branch, side),
+                                SlotCount {
+                                    planned: slots.planned,
+                                    used: slot + 1,
+                                },
+                            );
                             grid.claim(&points);
                             grid.reserve_route(&points, spur_base + job.index);
                             routes[job.index] = Some(Planned {
@@ -891,6 +903,8 @@ struct SpurRoute {
     port: (i32, i32),
     side: Side,
     slot: usize,
+    /// Planned ports on that side: the run this spur extends outward.
+    planned: usize,
 }
 
 /// Gives one trunk a single split point: the corridor keeps its own path,
@@ -1069,8 +1083,9 @@ fn route_spur(
     let mut best: Option<SpurRoute> = None;
     for &dir in &dirs {
         for side in side_order(node, *junction) {
-            let slot = used.get(&(branch, side)).copied().unwrap_or(0);
-            let port = port_cell(node, side, slot as i32);
+            let slots = used.get(&(branch, side)).copied().unwrap_or_default();
+            let slot = slots.used;
+            let port = port_cell(node, side, slot as i32, slots.planned as i32);
             if !valid_port(node, side, port) {
                 continue;
             }
@@ -1100,6 +1115,7 @@ fn route_spur(
                     port,
                     side,
                     slot,
+                    planned: slots.planned,
                 });
             }
         }
@@ -1107,7 +1123,13 @@ fn route_spur(
     // Claim the winner and its port: the losers left the grid untouched.
     let best = best?;
     reserve_stem(grid, best.port, best.side, owner);
-    used.insert((branch, best.side), best.slot + 1);
+    used.insert(
+        (branch, best.side),
+        SlotCount {
+            planned: best.planned,
+            used: best.slot + 1,
+        },
+    );
     grid.claim(&best.points);
     Some(best)
 }
@@ -1134,8 +1156,16 @@ fn reserve_label_slot(grid: &mut Grid, owner: usize, slot: &LabelSlot) {
 }
 type PortPair = ((i32, i32), (i32, i32));
 
-/// Slots already used per `(box, side)`, so a spur can append its own port.
-type SlotUse = HashMap<(usize, Side), usize>;
+/// Planned ports per `(box, side)` and how many slots are taken so far, so a
+/// spur can append its own port after the planned run.
+#[derive(Debug, Clone, Copy, Default)]
+struct SlotCount {
+    /// Planned ports, which fix the centred run the side draws.
+    planned: usize,
+    /// Every slot taken, planned ports plus the spurs appended after them.
+    used: usize,
+}
+type SlotUse = HashMap<(usize, Side), SlotCount>;
 
 /// One spur waiting for its A* pass, after its cells were reserved.
 struct SpurJob {
@@ -1512,9 +1542,20 @@ pub(crate) fn sides_for(src: &NodeBox, tgt: &NodeBox, axis: FlowAxis) -> (Side, 
         };
     }
     if tgt.layer < src.layer {
-        // A back-edge is a return path. Send it out of the side that faces
-        // away from the flow, and let it come back in on the same side:
-        // it then runs around the diagram instead of crossing the middle.
+        // A back-edge is a return path. Between nearby ranks the inside hop
+        // is the short one: leave the source's inward side and come back in
+        // on the target's inward side — the pair that faces along the flow,
+        // one rank gap of travel. The outer rail is still the answer for a
+        // return that has to travel further than one rank.
+        if src.layer - tgt.layer <= NEAR_RANKS {
+            return match axis {
+                FlowAxis::TopToBottom => (Side::Top, Side::Bottom),
+                FlowAxis::LeftToRight => (Side::Left, Side::Right),
+            };
+        }
+        // Send it out of the side that faces away from the flow, and let it
+        // come back in on the same side: it then runs around the diagram
+        // instead of crossing the middle.
         let outward = match axis {
             FlowAxis::TopToBottom if tgt.center().0 <= src.center().0 => Side::Left,
             FlowAxis::TopToBottom => Side::Right,
@@ -1540,9 +1581,11 @@ pub(crate) fn sides_for(src: &NodeBox, tgt: &NodeBox, axis: FlowAxis) -> (Side, 
 }
 
 /// Gives every edge its own port on each side it uses. Ports spread along
-/// the border interior, ordered by the position of the far endpoint so
-/// edges from one box fan out without crossing at the port. Node sizing
-/// must provide two cells per port; an undersized box fails routing.
+/// the border interior, ordered by the position of the edge's TARGET (for a
+/// target side, the far end is the source that has to reach it), so a fan
+/// leaves nearest-first and no edge is given a port it must cross another
+/// port's stem to reach. Node sizing must provide two cells per port; an
+/// undersized box fails routing.
 ///
 /// Returns the ports plus how many slots each `(box, side)` already uses,
 /// so a trunk spur can append its own port after the planned ones.
@@ -1567,6 +1610,10 @@ fn assign_ports(nodes: &[NodeBox], edges: &[EdgeSpec], axis: FlowAxis) -> (Vec<P
     let mut ports: Vec<PortPair> = vec![((0, 0), (0, 0)); edges.len()];
     for ((node_index, side), mut group) in groups {
         let node = &nodes[node_index];
+        // Nearest-port alignment: the port sits where the edge's far end
+        // wants it. A long forward edge used to be pushed to the outside of
+        // the side, which handed it a port its neighbour had to cross to
+        // reach a target further out — the network view's forced bridge.
         group.sort_by_key(|&(index, source)| {
             let edge = &edges[index];
             let other = if source {
@@ -1575,50 +1622,71 @@ fn assign_ports(nodes: &[NodeBox], edges: &[EdgeSpec], axis: FlowAxis) -> (Vec<P
                 &nodes[edge.from]
             };
             let (cx, cy) = other.center();
-            let across = if side.horizontal() { cx } else { cy };
-            let own = if side.horizontal() {
-                node.center().0
-            } else {
-                node.center().1
-            };
-            // Long forward edges use outside ports, not ports trapped
-            // between the short fan-out stems they must pass on the way out.
-            if source && other.layer > node.layer + 1 {
-                if across <= own { i32::MIN } else { i32::MAX }
-            } else {
-                across
-            }
+            if side.horizontal() { cx } else { cy }
         });
+        let planned = group.len();
         for (slot, &(index, source)) in group.iter().enumerate() {
-            let cell = port_cell(node, side, slot as i32);
+            let cell = port_cell(node, side, slot as i32, planned as i32);
             if source {
                 ports[index].0 = cell;
             } else {
                 ports[index].1 = cell;
             }
         }
-        used.insert((node_index, side), group.len());
+        used.insert(
+            (node_index, side),
+            SlotCount {
+                planned,
+                used: planned,
+            },
+        );
     }
     (ports, used)
 }
 
 /// Ports skip corners and leave a blank cell between adjacent stems.
 /// The caller sizes boxes for this capacity; never invent detached ports.
-fn port_cell(node: &NodeBox, side: Side, slot: i32) -> (i32, i32) {
+/// `count` is how many planned ports the side carries (see [`port_along`]).
+fn port_cell(node: &NodeBox, side: Side, slot: i32, count: i32) -> (i32, i32) {
     if side.horizontal() {
-        let along = 1 + 2 * slot;
+        let along = port_along(node.w, slot, count);
         let y = match side {
             Side::Top => node.y - 1,
             _ => node.y + node.h,
         };
         (node.x + along, y)
     } else {
-        let along = 1 + 2 * slot;
+        let along = port_along(node.h, slot, count);
         let x = match side {
             Side::Left => node.x - 1,
             _ => node.x + node.w,
         };
         (x, node.y + along)
+    }
+}
+
+/// Offset of a port slot from the node's start corner, centred on the side.
+///
+/// An arrow should join the middle of the side it arrives on, not a cell
+/// beside a corner: a lone port sits on the middle cell, and a fan spreads
+/// symmetrically about it with one blank cell between neighbours (`count`
+/// planned ports, slots `0..count`). A slot past the planned run is a trunk
+/// spur appended after routing; the drawn ports cannot move any more, so it
+/// continues the same run outward instead of re-centring the side.
+///
+/// On an even-length side there is no single middle cell: the run centres on
+/// the left of the two middle cells. A side too short for a centred run (an
+/// undersized box) keeps the old corner-to-corner run, so a bad port is
+/// still reported rather than silently invented.
+fn port_along(len: i32, slot: i32, count: i32) -> i32 {
+    let middle = (len - 1) / 2;
+    let span = count.max(1);
+    // A centred run of `span` ports, one blank cell apart, spans
+    // `2 * span - 1` interior cells and needs one corner cell on each side.
+    if 2 * span < len {
+        middle - (span - 1) + 2 * slot
+    } else {
+        1 + 2 * slot
     }
 }
 
