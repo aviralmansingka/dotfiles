@@ -267,6 +267,12 @@ const HUG_COST: i64 = 6;
 /// mirror image. Priced above a turn, below a crossing.
 const AGAINST_FLOW_COST: i64 = 90;
 
+/// Cost per cell of a sideways run one lane away from the lane the fan gave
+/// this edge. Small enough that a blocked or longer lane still wins when it
+/// has to, large enough to end the A* tie that used to let a fan bridge
+/// itself.
+const LANE_DRIFT_COST: i64 = 3;
+
 /// Which way a layered layout flows. Forward edges leave the far side in
 /// the flow direction regardless of how far apart the boxes sit; only
 /// same-layer and back edges fall back to geometry.
@@ -277,12 +283,126 @@ pub enum FlowAxis {
 }
 
 /// Routes every edge, in a deterministic order, then places labels.
+///
+/// A `label_slot` gutter band is a reservation, not a wall: when a band
+/// would dead-end a port, a fan, or another route's only lane, the planner
+/// drops that band and re-plans, so the label falls back to the in-gap
+/// placement instead of costing a route. Only when no band is left to drop
+/// is an edge reported unrouted.
 pub fn plan(nodes: &[NodeBox], edges: &[EdgeSpec], axis: FlowAxis) -> Plan {
+    let mut active: HashSet<usize> = edges
+        .iter()
+        .enumerate()
+        .filter(|(_, edge)| edge.label_slot.is_some())
+        .map(|(index, _)| index)
+        .collect();
+    let mut plan = best_pass(nodes, edges, axis, &active);
+    while !plan.unrouted.is_empty() && !active.is_empty() {
+        // Give back the bands that stand in the way of a route that failed:
+        // the ones whose cells fall inside the area that edge had to cross.
+        let blocked = obstructing_slots(nodes, edges, &plan.unrouted, &active);
+        if blocked.is_empty() {
+            break;
+        }
+        for index in blocked {
+            active.remove(&index);
+        }
+        plan = best_pass(nodes, edges, axis, &active);
+    }
+    plan
+}
+
+/// The better of two routing passes: the plain order, and the one that gives
+/// every fan member its own lane in the gap below its source. A fan claims
+/// lanes in the wrong order under the plain order and can bridge against
+/// itself; the laned pass usually mends it, but on a graph where the fan is
+/// not the trouble it can cost a bridge instead. Neither pass is assumed to
+/// win: the plan with fewer unrouted edges, then fewer bridges, is kept.
+fn best_pass(
+    nodes: &[NodeBox],
+    edges: &[EdgeSpec],
+    axis: FlowAxis,
+    active: &HashSet<usize>,
+) -> Plan {
+    let plain = plan_with_slots(nodes, edges, axis, active, false);
+    if plain.unrouted.is_empty() && plain.crossings == 0 {
+        return plain;
+    }
+    let laned = plan_with_slots(nodes, edges, axis, active, true);
+    if (laned.unrouted.len(), laned.crossings) < (plain.unrouted.len(), plain.crossings) {
+        laned
+    } else {
+        plain
+    }
+}
+
+/// The `label_slot` bands that sit inside the travel area of an unrouted
+/// edge: from its source box to its target box, one cell out, which is the
+/// box a route between those two ranks cannot leave.
+fn obstructing_slots(
+    nodes: &[NodeBox],
+    edges: &[EdgeSpec],
+    unrouted: &[usize],
+    active: &HashSet<usize>,
+) -> Vec<usize> {
+    let mut drop: Vec<usize> = Vec::new();
+    for &index in unrouted {
+        let (from, to) = (&nodes[edges[index].from], &nodes[edges[index].to]);
+        let lo_x = from.x.min(to.x) - 1;
+        let hi_x = (from.x + from.w).max(to.x + to.w) + 1;
+        let lo_y = from.y.min(to.y) - 1;
+        let hi_y = (from.y + from.h).max(to.y + to.h) + 1;
+        for &owner in active {
+            // The edge's own band is the last thing to give up.
+            if owner == index {
+                continue;
+            }
+            let Some(slot) = edges[owner].label_slot.as_ref() else {
+                continue;
+            };
+            let inside = slot
+                .cells()
+                .iter()
+                .any(|&(x, y)| x >= lo_x && x <= hi_x && y >= lo_y && y <= hi_y);
+            if inside && !drop.contains(&owner) {
+                drop.push(owner);
+            }
+        }
+    }
+    if drop.is_empty() {
+        // Nothing else stood in the way: the failing edge's own band may be
+        // the one that boxed it in.
+        for &index in unrouted {
+            if active.contains(&index) && !drop.contains(&index) {
+                drop.push(index);
+            }
+        }
+    }
+    drop
+}
+
+/// One routing pass with exactly the `active` label bands reserved.
+fn plan_with_slots(
+    nodes: &[NodeBox],
+    edges: &[EdgeSpec],
+    axis: FlowAxis,
+    active: &HashSet<usize>,
+    give_lanes: bool,
+) -> Plan {
     if nodes.is_empty() {
         return Plan::default();
     }
     let mut grid = Grid::new(nodes, edges.len() as i32 + 3);
     let (ports, mut used) = assign_ports(nodes, edges, axis);
+    // Fans are the one shape where spec order stacks its lanes in the wrong
+    // order; the laned pass gives each member its own.
+    let fans = fan_groups(nodes, edges, axis);
+    let lanes = if give_lanes {
+        fan_lanes(nodes, edges, &ports, axis, &fans)
+    } else {
+        HashMap::new()
+    };
+
     // Reserve every endpoint and its outward stem BEFORE routing any edge.
     // Otherwise an early route can steal a later edge's departure or head.
     for (index, edge) in edges.iter().enumerate() {
@@ -297,7 +417,7 @@ pub fn plan(nodes: &[NodeBox], edges: &[EdgeSpec], axis: FlowAxis) -> Plan {
     // A label slot the layout reserved is off limits to every other route:
     // the label's own route may come up to it, nothing may cross it.
     for (index, edge) in edges.iter().enumerate() {
-        if let Some(slot) = edge.label_slot.as_ref() {
+        if let Some(slot) = edge.label_slot.as_ref().filter(|_| active.contains(&index)) {
             reserve_label_slot(&mut grid, index, slot);
         }
     }
@@ -326,7 +446,15 @@ pub fn plan(nodes: &[NodeBox], edges: &[EdgeSpec], axis: FlowAxis) -> Plan {
     for index in corridors {
         let edge = &edges[index];
         let (src, tgt) = sides_for(&nodes[edge.from], &nodes[edge.to], axis);
-        match route_edge(&mut grid, nodes, edges, ports[index], index, axis) {
+        match route_edge(
+            &mut grid,
+            nodes,
+            edges,
+            ports[index],
+            index,
+            axis,
+            lanes.get(&index).copied(),
+        ) {
             Some(points) => {
                 grid.claim(&points);
                 if let Role::Corridor { trunk } = edge.role {
@@ -436,11 +564,33 @@ pub fn plan(nodes: &[NodeBox], edges: &[EdgeSpec], axis: FlowAxis) -> Plan {
     order.sort_by_key(|&index| {
         let edge = &edges[index];
         let (s, t) = (&nodes[edge.from], &nodes[edge.to]);
-        (s.layer, t.layer, s.x, t.x, index)
+        // In the laned pass a fan member runs when its lane runs: widest
+        // spread first, so the outermost run owns the lane nearest the source.
+        let tie = match lanes.get(&index) {
+            Some(_) => {
+                let from = ports[index].0;
+                let to = ports[index].1;
+                let span = match axis {
+                    FlowAxis::TopToBottom => (to.0 - from.0).abs(),
+                    FlowAxis::LeftToRight => (to.1 - from.1).abs(),
+                };
+                -span
+            }
+            None => t.x,
+        };
+        (s.layer, t.layer, s.x, tie, index)
     });
     for index in order {
         let (src, tgt) = sides_for(&nodes[edges[index].from], &nodes[edges[index].to], axis);
-        match route_edge(&mut grid, nodes, edges, ports[index], index, axis) {
+        match route_edge(
+            &mut grid,
+            nodes,
+            edges,
+            ports[index],
+            index,
+            axis,
+            lanes.get(&index).copied(),
+        ) {
             Some(points) => {
                 grid.claim(&points);
                 routes[index] = Some(Planned {
@@ -481,6 +631,8 @@ pub fn plan(nodes: &[NodeBox], edges: &[EdgeSpec], axis: FlowAxis) -> Plan {
                     let search = Search {
                         against: None,
                         straight_stem: true,
+                        lane: None,
+                        vertical: false,
                     };
                     let attempt = grid
                         .route(tap, dir, port, arrive, search, job.index)
@@ -625,7 +777,10 @@ pub fn plan(nodes: &[NodeBox], edges: &[EdgeSpec], axis: FlowAxis) -> Plan {
         // A reserved slot is the label's own space: the layout sized it, no
         // other route may enter it, and the owner's route runs beside it, so
         // ownership is structural rather than guessed.
-        if let Some(slot) = edges[index].label_slot.as_ref()
+        if let Some(slot) = edges[index]
+            .label_slot
+            .as_ref()
+            .filter(|_| active.contains(&index))
             && clear(
                 nodes,
                 &drawn,
@@ -1025,6 +1180,7 @@ fn route_edge(
     ports: PortPair,
     index: usize,
     axis: FlowAxis,
+    lane: Option<LanePlan>,
 ) -> Option<Vec<(i32, i32)>> {
     let edge = &edges[index];
     let (src, tgt) = sides_for(&nodes[edge.from], &nodes[edge.to], axis);
@@ -1059,6 +1215,8 @@ fn route_edge(
     let search = Search {
         against,
         straight_stem: true,
+        lane,
+        vertical: matches!(axis, FlowAxis::TopToBottom),
     };
     grid.route(start, src.dir(), (tx, ty), arrive, search, index)
         .or_else(|| {
@@ -1077,6 +1235,126 @@ fn route_edge(
 }
 
 /// The side a direction index points at.
+/// The key of the fan an edge belongs to: one node side, one target rank.
+/// `None` for a spur or a trunk corridor, which are not plain edges.
+fn fan_key(
+    nodes: &[NodeBox],
+    edges: &[EdgeSpec],
+    index: usize,
+    axis: FlowAxis,
+) -> Option<(usize, u8, usize)> {
+    let edge = &edges[index];
+    if !matches!(edge.role, Role::Edge) {
+        return None;
+    }
+    let (src, _) = sides_for(&nodes[edge.from], &nodes[edge.to], axis);
+    Some((edge.from, src.dir() as u8, nodes[edge.to].layer))
+}
+
+/// Node sides that fan out to one rank with three or more plain edges, with
+/// the member count. Two edges are not a fan: the router's default choice
+/// reads better for them.
+fn fan_groups(
+    nodes: &[NodeBox],
+    edges: &[EdgeSpec],
+    axis: FlowAxis,
+) -> HashMap<(usize, u8, usize), usize> {
+    let mut counts: HashMap<(usize, u8, usize), usize> = HashMap::new();
+    for index in 0..edges.len() {
+        if let Some(key) = fan_key(nodes, edges, index, axis) {
+            *counts.entry(key).or_insert(0) += 1;
+        }
+    }
+    counts.retain(|_, count| *count >= FAN_MIN);
+    counts
+}
+
+/// Gives every member of a fan its own lane in the first rank gap, widest
+/// spread first: the edge that travels furthest sideways takes the lane
+/// nearest the source, the next one the lane after it, and a fan with more
+/// members than the gap has lanes puts the shortest ones together on the last
+/// lane — they are the ones whose runs do not overlap. A member that needs no
+/// sideways run at all gets no lane and keeps the plain shortest path.
+fn fan_lanes(
+    nodes: &[NodeBox],
+    edges: &[EdgeSpec],
+    ports: &[PortPair],
+    axis: FlowAxis,
+    fans: &HashMap<(usize, u8, usize), usize>,
+) -> HashMap<usize, LanePlan> {
+    let mut members: HashMap<(usize, u8, usize), Vec<usize>> = HashMap::new();
+    for index in 0..edges.len() {
+        if let Some(key) = fan_key(nodes, edges, index, axis).filter(|key| fans.contains_key(key)) {
+            members.entry(key).or_default().push(index);
+        }
+    }
+    let vertical = matches!(axis, FlowAxis::TopToBottom);
+    let mut lanes: HashMap<usize, LanePlan> = HashMap::new();
+    for group in members.values() {
+        // Only a fan that leaves toward the flow's far side stacks lanes in
+        // the gap below (right of) its own box; a sideways or backward fan
+        // keeps the plain route.
+        let mut runs: Vec<(usize, i32)> = group
+            .iter()
+            .filter_map(|&index| {
+                let (from, to) = (ports[index].0, ports[index].1);
+                let span = if vertical {
+                    to.0 - from.0
+                } else {
+                    to.1 - from.1
+                };
+                (span.abs() >= FAN_LANE_MIN).then_some((index, span.abs()))
+            })
+            .collect();
+        if runs.is_empty() {
+            continue;
+        }
+        runs.sort_unstable_by_key(|&(index, span)| (Reverse(span), index));
+        let first = runs[0].0;
+        let (from, to) = (ports[first].0, ports[first].1);
+        let (lo, hi) = if vertical {
+            (from.1, to.1)
+        } else {
+            (from.0, to.0)
+        };
+        let capacity = (hi - lo - 1).max(1);
+        // Leftward and rightward runs can share a lane: their cells only meet
+        // where they are disjoint, and each direction nests on its own.
+        for sign in [1, -1] {
+            let mut side: Vec<(usize, i32)> = runs
+                .iter()
+                .copied()
+                .filter(|&(index, _)| {
+                    let (from, to) = (ports[index].0, ports[index].1);
+                    let span = if vertical {
+                        to.0 - from.0
+                    } else {
+                        to.1 - from.1
+                    };
+                    span.signum() == sign
+                })
+                .collect();
+            side.sort_unstable_by_key(|&(index, span)| (Reverse(span), index));
+            for (ordinal, &(index, _)) in side.iter().enumerate() {
+                let slot = (ordinal as i32).min(capacity - 1);
+                lanes.insert(index, (lo + 1 + slot, lo, hi));
+            }
+        }
+    }
+    lanes
+}
+
+/// How many edges leaving one side of one node for one rank make a fan.
+const FAN_MIN: usize = 3;
+/// A fan member asks for a lane of its own only when it has to travel this
+/// far sideways: a shorter one reads better straight down its own column.
+const FAN_LANE_MIN: i32 = 3;
+
+/// The lane a fan member should run on: the cell of its own lane, and the
+/// band of the rank gap that lane lives in. Outside the band the hint costs
+/// nothing, so a route that must detour deeper still can.
+type LanePlan = (i32, i32, i32);
+
 fn side_of(dir: usize) -> Side {
     match dir {
         0 => Side::Top,
@@ -1590,6 +1868,13 @@ struct Search {
     /// True when the departure must stay straight for two cells, so the cell
     /// the dot starts on is a stem and not a corner.
     straight_stem: bool,
+    /// The lane this route was given, or `None` outside a fan. Inside the band
+    /// a sideways run on that lane is cheapest, so the fan stacks the way its
+    /// far ends are ordered instead of crossing itself; a run deeper in the
+    /// drawing is untouched.
+    lane: Option<LanePlan>,
+    /// True for a top-to-bottom flow, whose lanes are rows.
+    vertical: bool,
 }
 
 /// The character grid, with the occupancy and direction state the router
@@ -1736,7 +2021,7 @@ impl Grid {
                     } else {
                         0
                     }
-                    + self.cell_penalty(next_cell, next_dir);
+                    + self.cell_penalty(next_cell, next_dir, &search);
                 let next_state = next_cell * 4 + next_dir;
                 let next_cost = cost + step;
                 if next_cost < dist[next_state] {
@@ -1754,10 +2039,23 @@ impl Grid {
         None
     }
 
-    fn cell_penalty(&self, cell: usize, dir: usize) -> i64 {
+    fn cell_penalty(&self, cell: usize, dir: usize, search: &Search) -> i64 {
         let x = self.min.0 + (cell as i32 % self.w);
         let y = self.min.1 + (cell as i32 / self.w);
         let mut penalty = 0;
+        // A fan member's sideways run stays on the lane it was given: the
+        // route takes its own row instead of crossing a neighbour's.
+        if let Some((anchor, lo, hi)) = search.lane {
+            let sideways = if search.vertical {
+                !dir.is_multiple_of(2)
+            } else {
+                dir.is_multiple_of(2)
+            };
+            let across = if search.vertical { y } else { x };
+            if sideways && across >= lo && across <= hi {
+                penalty += LANE_DRIFT_COST * (across - anchor).unsigned_abs() as i64;
+            }
+        }
         if self.count[cell] > 0 {
             penalty += CROSSING_COST;
         }

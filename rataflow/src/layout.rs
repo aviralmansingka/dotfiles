@@ -203,7 +203,6 @@ struct Slot {
 /// The graph the passes work on.
 struct Engine<'a> {
     nodes: &'a [LayoutNode],
-    edges: &'a [LayoutEdge],
     /// Successors, deduplicated, in the cycle-broken direction.
     down: Vec<Vec<usize>>,
     up: Vec<Vec<usize>>,
@@ -246,7 +245,7 @@ pub fn layout_with(
 }
 
 impl<'a> Engine<'a> {
-    fn new(nodes: &'a [LayoutNode], edges: &'a [LayoutEdge], index: &HashMap<&str, usize>) -> Self {
+    fn new(nodes: &'a [LayoutNode], edges: &[LayoutEdge], index: &HashMap<&str, usize>) -> Self {
         let n = nodes.len();
         let mut down: Vec<Vec<usize>> = vec![Vec::new(); n];
         let mut raw: Vec<Vec<usize>> = vec![Vec::new(); n];
@@ -327,7 +326,6 @@ impl<'a> Engine<'a> {
         }
         Engine {
             nodes,
-            edges,
             down,
             up,
             span,
@@ -745,62 +743,9 @@ impl<'a> Engine<'a> {
         let layers = best;
         let crossings_after = self.crossings(&layers, &up_slots, &down_slots);
 
-        // Coordinates.
-        let along_gap = |rank_index: usize| -> i32 {
-            let crossings = self
-                .edges
-                .iter()
-                .filter(|edge| {
-                    let (Some(u), Some(v)) = (
-                        nodes.iter().position(|node| node.id == edge.from),
-                        nodes.iter().position(|node| node.id == edge.to),
-                    ) else {
-                        return false;
-                    };
-                    let (low, high) = (rank[u].min(rank[v]), rank[u].max(rank[v]));
-                    low <= rank_index && rank_index < high
-                })
-                .count();
-            let label_room = edges
-                .iter()
-                .filter_map(|edge| {
-                    let (u, v) = (
-                        nodes.iter().position(|node| node.id == edge.from)?,
-                        nodes.iter().position(|node| node.id == edge.to)?,
-                    );
-                    let span = rank[u].max(rank[v]) - rank[u].min(rank[v]);
-                    (span == 1
-                        && rank[u] == rank_index
-                        && edge.label_width.is_some()
-                        && !edge.label_gutter)
-                        .then(|| edge.label_width.unwrap_or(0) as i32 + 3)
-                })
-                .max()
-                .unwrap_or(0);
-            (ALONG_GAP_MIN + (crossings as i32 + 1) / 2 * ALONG_GAP_PER_EDGE).max(label_room)
-        };
-
-        // Rank size along the flow: the widest slot, or a label's own room.
-        let mut rank_along = vec![0i32; rank_count];
-        for (rank_index, layer) in layers.iter().enumerate() {
-            for &id in layer {
-                let slot = &slots[id];
-                let own = match (&slot.kind, axis) {
-                    (SlotKind::Node, Direction::TopToBottom) => nodes[slot.node.unwrap()].h as i32,
-                    (SlotKind::Node, Direction::LeftToRight) => nodes[slot.node.unwrap()].w as i32,
-                    _ => 0,
-                };
-                rank_along[rank_index] = rank_along[rank_index].max(own).max(slot.along_pad);
-            }
-            rank_along[rank_index] = rank_along[rank_index].max(1);
-        }
-        let mut along = vec![0i32; rank_count];
-        for rank_index in 1..rank_count {
-            along[rank_index] =
-                along[rank_index - 1] + rank_along[rank_index - 1] + along_gap(rank_index - 1);
-        }
-
         // Across positions per rank, then centre every rank on one axis.
+        // This happens before the along positions because a rank gap is
+        // sized from the real across distance each crossing edge travels.
         let across_gap = match axis {
             Direction::TopToBottom => ACROSS_GAP_TB,
             Direction::LeftToRight => ACROSS_GAP_LR,
@@ -824,6 +769,59 @@ impl<'a> Engine<'a> {
             for &id in layer {
                 across[id] = offset + across_pos[rank_index][&id];
             }
+        }
+
+        // Coordinates.
+        let along_gap = |rank_index: usize| -> i32 {
+            let crossings = edges
+                .iter()
+                .filter(|edge| {
+                    let Some((u, v)) = edge_ends(nodes, edge) else {
+                        return false;
+                    };
+                    let (low, high) = (rank[u].min(rank[v]), rank[u].max(rank[v]));
+                    low <= rank_index && rank_index < high
+                })
+                .count() as i32;
+            let label_room = edges
+                .iter()
+                .filter_map(|edge| {
+                    let (u, v) = (
+                        nodes.iter().position(|node| node.id == edge.from)?,
+                        nodes.iter().position(|node| node.id == edge.to)?,
+                    );
+                    let span = rank[u].max(rank[v]) - rank[u].min(rank[v]);
+                    (span == 1
+                        && rank[u] == rank_index
+                        && edge.label_width.is_some()
+                        && !edge.label_gutter)
+                        .then(|| edge.label_width.unwrap_or(0) as i32 + 3)
+                })
+                .max()
+                .unwrap_or(0);
+            gap_lanes(nodes, edges, &rank, &across, &slots, rank_index)
+                .max(ALONG_GAP_MIN + (crossings + 1) / 2 * ALONG_GAP_PER_EDGE)
+                .max(label_room)
+        };
+
+        // Rank size along the flow: the widest slot, or a label's own room.
+        let mut rank_along = vec![0i32; rank_count];
+        for (rank_index, layer) in layers.iter().enumerate() {
+            for &id in layer {
+                let slot = &slots[id];
+                let own = match (&slot.kind, axis) {
+                    (SlotKind::Node, Direction::TopToBottom) => nodes[slot.node.unwrap()].h as i32,
+                    (SlotKind::Node, Direction::LeftToRight) => nodes[slot.node.unwrap()].w as i32,
+                    _ => 0,
+                };
+                rank_along[rank_index] = rank_along[rank_index].max(own).max(slot.along_pad);
+            }
+            rank_along[rank_index] = rank_along[rank_index].max(1);
+        }
+        let mut along = vec![0i32; rank_count];
+        for rank_index in 1..rank_count {
+            along[rank_index] =
+                along[rank_index - 1] + rank_along[rank_index - 1] + along_gap(rank_index - 1);
         }
 
         // Real nodes take their own top-left cell.
@@ -1182,6 +1180,55 @@ fn edge_ends(nodes: &[LayoutNode], edge: &LayoutEdge) -> Option<(usize, usize)> 
     let u = nodes.iter().position(|node| node.id == edge.from)?;
     let v = nodes.iter().position(|node| node.id == edge.to)?;
     Some((u, v))
+}
+
+/// How wide a rank gap must be to carry every parallel relation that crosses
+/// it: two free rows for the ports plus one lane per overlapping across span.
+///
+/// An edge that only runs straight through a gap needs no lane. An edge that
+/// moves sideways needs one row for that run, and two edges whose sideways
+/// runs overlap on the across axis cannot share a row without one of them
+/// bridging the other: the number of lanes is the deepest overlap of those
+/// runs (interval-graph colouring), and an unused gap stays at
+/// [`ALONG_GAP_MIN`].
+fn gap_lanes(
+    nodes: &[LayoutNode],
+    edges: &[LayoutEdge],
+    rank: &[usize],
+    across: &[f64],
+    slots: &[Slot],
+    gap: usize,
+) -> i32 {
+    let far_end = |node: usize| (across[node], across[node] + slots[node].across);
+    // One sideways run per edge: from the with-flow end it leaves to the one
+    // it enters, on the across axis.
+    let mut runs: Vec<(f64, f64)> = Vec::new();
+    for edge in edges {
+        let Some((u, v)) = edge_ends(nodes, edge) else {
+            continue;
+        };
+        let (low, high) = (rank[u].min(rank[v]), rank[u].max(rank[v]));
+        if gap < low || gap >= high {
+            continue;
+        }
+        let ((u_lo, u_hi), (v_lo, v_hi)) = (far_end(u), far_end(v));
+        let (lo, hi) = (u_lo.min(v_lo), u_hi.max(v_hi));
+        if hi - lo >= 1.0 {
+            runs.push((lo, hi));
+        }
+    }
+    // Depth of the deepest overlap: a half-open span that ends where another
+    // begins still needs its own row, because the far edge's lane cell there
+    // is that edge's own port column.
+    let mut deepest = 0usize;
+    for &(lo, _) in &runs {
+        let depth = runs
+            .iter()
+            .filter(|&&(other_lo, other_hi)| other_lo <= lo && lo < other_hi)
+            .count();
+        deepest = deepest.max(depth);
+    }
+    (2 + deepest as i32).max(ALONG_GAP_MIN)
 }
 
 /// Chooses the cell one edge label owns, or `None` when no clear cell exists.
