@@ -1841,7 +1841,7 @@ fn check_prints_crossings_both_motion_modes_and_the_origin_proof() {
 // Round 08: structural merge — groups, rank pins, minlen gaps
 // ---------------------------------------------------------------------------
 
-use rataflow_view::group_color;
+use rataflow_view::{group_families, group_family_color};
 
 /// Two weakly-connected worlds (off-rack vs in-band) in one spec. `group` is
 /// a logical tag: it still orders the sibling blocks side by side in one view
@@ -1926,10 +1926,12 @@ fn two_planes_group_side_by_side_and_draw_no_box_or_title() {
     }
 
     // Hue per group NAME, not per declaration index: the surviving grouping
-    // signal. Node corners carry their group's family color.
+    // signal. Node corners carry their group's family color, resolved by the
+    // same collision-free pass the painting uses.
+    let families = group_families(["off-rack", "in-band"]);
     assert_ne!(
-        group_color("off-rack", 0),
-        group_color("in-band", 0),
+        group_family_color(families["off-rack"], 0),
+        group_family_color(families["in-band"], 0),
         "sibling groups must not share one hue"
     );
     let corners: Vec<Color> = render(TWO_PLANES_SPEC, 0)
@@ -1939,7 +1941,7 @@ fn two_planes_group_side_by_side_and_draw_no_box_or_title() {
         .collect();
     for group in ["off-rack", "in-band"] {
         assert!(
-            corners.contains(&group_color(group, 0)),
+            corners.contains(&group_family_color(families[group], 0)),
             "no node corner carries the {group} hue family: {corners:?}"
         );
     }

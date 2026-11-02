@@ -583,7 +583,8 @@ pub fn gruvbox_theme() -> Theme {
 /// block. Adjacent layers never share a family, so depth stays legible.
 ///
 /// These are gruvbox-material tones: desaturated, so a dense graph stays
-/// calm and the muted edges still recede.
+/// calm and the muted edges still recede. Node GROUPS do not use this table:
+/// their hues come from the collision-free wheel below.
 const FAMILIES: [[Color; 4]; 6] = [
     // yellow — entry side of the flow
     [
@@ -654,29 +655,154 @@ pub fn node_border() -> Color {
     Color::Rgb(146, 131, 116)
 }
 
-/// The border color for the `member`-th node of group `group`. Nodes in one
-/// group share a color family and differ by shade; different groups take
-/// different families, so a shared role reads at a glance.
-///
-/// The family comes from a stable hash of the group NAME, never from the
-/// order the spec happens to declare groups in: the same group keeps the
-/// same hue across specs, and adding a group cannot recolor the others.
-pub fn group_color(group: &str, member: usize) -> Color {
-    let family = FAMILIES[group_family(group)];
-    let mut color = family[member % family.len()];
-    for _ in 0..(member / family.len()) {
-        color = darken(color, 0.18);
-    }
-    color
+// ---------------------------------------------------------------------------
+// Group hue families
+// ---------------------------------------------------------------------------
+//
+// A group is a logical tag: it orders sibling blocks and picks a hue family
+// for its members' borders, and nothing is drawn around them. A pure
+// name-derived bucket (round 09) did not hold up: `compute` and `control`
+// shared one RGB, `fabric` and `app` shared another, `orchestration` and
+// `storage` were indistinguishable, and machine-manager's four tags read as
+// three families. So the family is now chosen per spec, over a fixed wheel of
+// evenly spaced hues, and no two groups of one spec share a family.
+
+/// How many hue families the group wheel offers: eight hues, 45 degrees
+/// apart, all at one saturation and lightness so only the hue tells them
+/// apart. A spec that declares more groups than this repeats a family, the
+/// repeat taken as far from the others as the wheel allows.
+pub const GROUP_FAMILIES: usize = 8;
+
+/// The wheel starts in the warm mid-tones: it keeps the palette's yellow on
+/// the first family and stays off the theme's error red.
+const GROUP_HUE_START: f64 = 30.0;
+const GROUP_SATURATION: f64 = 0.48;
+const GROUP_LIGHTNESS: f64 = 0.63;
+
+/// Lightness offsets that give a group's members their shades. Members keep
+/// the family hue and differ by lightness, so siblings read as related
+/// without merging into one block.
+const GROUP_SHADES: [f64; 4] = [0.0, 0.10, -0.10, 0.19];
+
+/// The hue, in degrees, of group family `family`.
+pub fn group_family_hue(family: usize) -> f64 {
+    let step = 360.0 / GROUP_FAMILIES as f64;
+    (GROUP_HUE_START + step * (family % GROUP_FAMILIES) as f64).rem_euclid(360.0)
 }
 
-/// The family index for a group name: FNV-1a over the bytes, finalized so
-/// neighbouring names (and near-identical suffixes) still spread out.
+/// The shorter arc between two hue angles, in degrees (0..=180).
+fn hue_gap(a: f64, b: f64) -> f64 {
+    let difference = (a - b).abs() % 360.0;
+    difference.min(360.0 - difference)
+}
+
+/// HSL to the RGB the terminal paints: `hue` in degrees, `saturation` and
+/// `lightness` in `0..=1`.
+fn hsl_to_rgb(hue: f64, saturation: f64, lightness: f64) -> Color {
+    let sector = hue.rem_euclid(360.0) / 60.0;
+    let chroma = (1.0 - (2.0 * lightness - 1.0).abs()) * saturation;
+    let second = chroma * (1.0 - (sector % 2.0 - 1.0).abs());
+    let (red, green, blue) = match sector as u8 {
+        0 => (chroma, second, 0.0),
+        1 => (second, chroma, 0.0),
+        2 => (0.0, chroma, second),
+        3 => (0.0, second, chroma),
+        4 => (second, 0.0, chroma),
+        _ => (chroma, 0.0, second),
+    };
+    let floor = lightness - chroma / 2.0;
+    let channel = |value: f64| ((value + floor) * 255.0).round().clamp(0.0, 255.0) as u8;
+    Color::Rgb(channel(red), channel(green), channel(blue))
+}
+
+/// The border color for the `member`-th node of a group that took `family`.
+pub fn group_family_color(family: usize, member: usize) -> Color {
+    let wrap = member / GROUP_SHADES.len();
+    let offset = GROUP_SHADES[member % GROUP_SHADES.len()];
+    // Past the declared shades a member drifts darker per wrap, so a large
+    // group still separates node from node.
+    let lightness = (GROUP_LIGHTNESS + offset - 0.07 * wrap as f64).clamp(0.30, 0.90);
+    hsl_to_rgb(group_family_hue(family), GROUP_SATURATION, lightness)
+}
+
+/// One hue family per declared group, with no two groups sharing a family.
+///
+/// The answer depends only on the SET of names, never on the order a spec
+/// declares them in: names are visited in sorted order, and each keeps its
+/// name-derived family ([`group_family`]) unless an earlier name already took
+/// it — then it takes the free family farthest in hue from the ones taken,
+/// breaking ties toward its own family and then the lower index. So the same
+/// names always resolve to the same families, across runs and across the
+/// views of one case, and a group keeps its color when unrelated groups come
+/// and go.
+pub fn group_families<I, S>(groups: I) -> BTreeMap<String, usize>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    let mut names: Vec<String> = groups
+        .into_iter()
+        .map(|name| name.as_ref().to_string())
+        .collect();
+    names.sort_unstable();
+    names.dedup();
+    let mut taken: Vec<usize> = Vec::new();
+    let mut resolved: BTreeMap<String, usize> = BTreeMap::new();
+    for name in names {
+        let family = assign_family(group_family(&name), &taken);
+        taken.push(family);
+        resolved.insert(name, family);
+    }
+    resolved
+}
+
+/// The family for a group whose name points at `preferred`: that one when it
+/// is still free, else the free family farthest in hue from every taken one.
+fn assign_family(preferred: usize, taken: &[usize]) -> usize {
+    if !taken.contains(&preferred) {
+        return preferred;
+    }
+    let mut best: Option<(usize, f64)> = None;
+    for family in 0..GROUP_FAMILIES {
+        if taken.contains(&family) {
+            continue;
+        }
+        let spread = taken
+            .iter()
+            .map(|taken| hue_gap(group_family_hue(family), group_family_hue(*taken)))
+            .fold(360.0, f64::min);
+        let better = match best {
+            None => true,
+            Some((current, current_spread)) => {
+                let closer = |candidate: usize| {
+                    hue_gap(group_family_hue(candidate), group_family_hue(preferred))
+                };
+                match spread.total_cmp(&current_spread) {
+                    std::cmp::Ordering::Greater => true,
+                    std::cmp::Ordering::Less => false,
+                    std::cmp::Ordering::Equal => match closer(family).total_cmp(&closer(current)) {
+                        std::cmp::Ordering::Less => true,
+                        std::cmp::Ordering::Greater => false,
+                        std::cmp::Ordering::Equal => family < current,
+                    },
+                }
+            }
+        };
+        if better {
+            best = Some((family, spread));
+        }
+    }
+    // Every family is taken: the name's own keeps the choice deterministic.
+    best.map_or(preferred, |(family, _)| family)
+}
+
+/// The family index a group NAME points at, before the per-spec pass in
+/// [`group_families`] spreads the declared names apart.
 pub fn group_family(group: &str) -> usize {
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
     for byte in group.bytes() {
         hash ^= u64::from(byte);
-        hash = hash.wrapping_mul(0x1000_0000_01b3);
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3); // the FNV-1a 64 prime
     }
     // SplitMix64 finalizer: without it, names that differ in one late byte
     // land in neighbouring buckets.
@@ -686,7 +812,15 @@ pub fn group_family(group: &str) -> usize {
     mixed ^= mixed >> 27;
     mixed = mixed.wrapping_mul(0x94d0_49bb_1331_11eb);
     mixed ^= mixed >> 31;
-    (mixed % FAMILIES.len() as u64) as usize
+    (mixed % GROUP_FAMILIES as u64) as usize
+}
+
+/// The border color for the `member`-th node of group `group`, on its own:
+/// the name-derived family, before any spec's collision pass. Painting uses
+/// [`group_families`] with [`group_family_color`], so one spec never gives
+/// two groups the same family.
+pub fn group_color(group: &str, member: usize) -> Color {
+    group_family_color(group_family(group), member)
 }
 
 /// Paints every node by its layer. Layers are read from the layout itself:
@@ -716,8 +850,10 @@ fn paint_nodes(flow: &mut Graph, spec: &Spec) -> Result<()> {
         }
     }
 
-    // Grouped nodes: family from the group NAME's hash, shade by the node's
-    // place inside that group.
+    // Grouped nodes: one family per declared group, collision-free for this
+    // spec, then a shade per member. The family comes from the group NAME,
+    // so it does not move when the spec declares groups in another order.
+    let families = group_families(spec.nodes.iter().filter_map(|node| node.group.as_deref()));
     let mut members: HashMap<&str, usize> = HashMap::new();
     let mut grouped: HashMap<&str, (&str, usize)> = HashMap::new();
     for node in &spec.nodes {
@@ -729,7 +865,11 @@ fn paint_nodes(flow: &mut Graph, spec: &Spec) -> Result<()> {
         *member += 1;
     }
     for (id, (group, member)) in grouped {
-        colors.insert(id.to_string(), group_color(group, member));
+        let family = families
+            .get(group)
+            .copied()
+            .unwrap_or_else(|| group_family(group));
+        colors.insert(id.to_string(), group_family_color(family, member));
     }
 
     let mut nodes: Vec<Node<TextContent>> = flow.nodes().cloned().collect();
