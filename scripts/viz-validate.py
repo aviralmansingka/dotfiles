@@ -167,6 +167,50 @@ def _pinned_target_dump_proves_fit(bundle: Path, attempts_path: str) -> bool:
     return False
 
 
+def _verify_records_log(path: Path) -> tuple[bool, list[str]]:
+    """Strictly verify a viz-evidence record JSONL: every line carries a
+    command, an integer exit_status, and raw stdout/stderr whose sha256s
+    match the bytes on disk. Raw paths resolve absolute first, then
+    relative to the log's own directory (committed evidence)."""
+    problems: list[str] = []
+    count = 0
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError as error:
+        return False, [f"unreadable: {error}"]
+    for i, line in enumerate(lines, 1):
+        if not line.strip():
+            continue
+        count += 1
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError as error:
+            problems.append(f"line {i}: not JSON: {error}")
+            continue
+        if not isinstance(rec, dict):
+            problems.append(f"line {i}: not a JSON object (one compact record per line)")
+            continue
+        where = f"line {i} ({rec.get('label', '?')})"
+        if not rec.get("command"):
+            problems.append(f"{where}: no command")
+        if not isinstance(rec.get("exit_status"), int):
+            problems.append(f"{where}: no integer exit_status")
+        for key in ("stdout", "stderr"):
+            raw, want = rec.get(f"{key}_path"), rec.get(f"{key}_sha256")
+            if not raw or not want:
+                problems.append(f"{where}: missing {key} path/sha256")
+                continue
+            cand = Path(str(raw))
+            if not cand.is_file():
+                cand = path.parent / cand.name
+            try:
+                if sha256(str(cand)) != want:
+                    problems.append(f"{where}: {key} hash mismatch")
+            except OSError:
+                problems.append(f"{where}: {key} raw bytes missing ({raw})")
+    return count > 0 and not problems, problems or ["log is empty"]
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("bundle")
@@ -174,6 +218,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--require-select", action="store_true")
     parser.add_argument("--require-frames", action="store_true")
     parser.add_argument("--attempts")
+    parser.add_argument("--require-records", action="store_true")
     args = parser.parse_args(argv)
 
     out = Checker()
@@ -389,6 +434,17 @@ def main(argv: list[str]) -> int:
                 if len(view.get("attempts") or []) > 3
             ]
             out.check("attempts_spec_budget", not over, "; ".join(over))
+        records_path = Path(args.attempts).resolve().parent / "attempts-log.jsonl"
+        if records_path.is_file():
+            ok, problems = _verify_records_log(records_path)
+            out.check("attempts_records_complete", ok, "; ".join(problems[:4]))
+        elif args.require_records:
+            out.check(
+                "attempts_records_complete",
+                False,
+                f"no attempts-log.jsonl beside {args.attempts}; wrap every probe "
+                "and rejected draft with: viz-evidence.sh record",
+            )
 
     return out.summary()
 

@@ -14,10 +14,57 @@
 #   LABEL-frames.txt           timestamped animation frames (with --frames)
 #   manifest.json              hashes, pane ids, measured size, cleanup proof
 #
-# The pane is split from the calling pane, never focused, and always closed.
+# record mode wraps any rataflow-view invocation (probe, rejected draft,
+# calibration) and appends a reproducible record to a JSONL log:
+#   scripts/viz-evidence.sh record --to LOG.jsonl --label probe-3 -- BIN ARGS
+# Each record: command, exit status, window, binary sha256, raw stdout and
+# stderr paths + sha256s. The log is what viz-validate.py checks for
+# attempts completeness, so wrap every probe and rejected candidate.
 set -euo pipefail
 
 die() { printf 'viz-evidence: %s\n' "$*" >&2; exit 1; }
+
+# --- record mode: wrap one command, capture a reproducibility record ---
+if [ "${1:-}" = "record" ]; then
+  shift
+  rto='' rlabel='probe' rdir=''
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --to) rto=${2:?}; shift 2 ;;
+      --label) rlabel=${2:?}; shift 2 ;;
+      --raw-dir) rdir=${2:?}; shift 2 ;;
+      --) shift; break ;;
+      *) die "record: unknown argument: $1" ;;
+    esac
+  done
+  [ -n "$rto" ] || die "record: --to LOG.jsonl is required"
+  [ $# -gt 0 ] || die "record: a command is required after --"
+  case "$1" in /*) [ -x "$1" ] || die "record: command not executable: $1" ;; esac
+  rto_dir=$(dirname "$rto"); mkdir -p "$rto_dir"
+  rto_abs=$(cd "$rto_dir" && pwd)/$(basename "$rto")
+  rdir=${rdir:-"$rto_dir/recorded"}; mkdir -p "$rdir"
+  r0=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  set +e
+  "$@" > "$rdir/$rlabel.stdout" 2> "$rdir/$rlabel.stderr"
+  rstatus=$?
+  set -e
+  r1=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  rbin_h=$(shasum -a 256 "$1" 2>/dev/null | awk '{print $1}' || true)
+  rout_h=$(shasum -a 256 "$rdir/$rlabel.stdout" | awk '{print $1}')
+  rerr_h=$(shasum -a 256 "$rdir/$rlabel.stderr" | awk '{print $1}')
+  jq -nc \
+    --arg label "$rlabel" --arg cmd "$*" --argjson status "$rstatus" \
+    --arg t0 "$r0" --arg t1 "$r1" \
+    --arg out_p "$rdir/$rlabel.stdout" --arg out_h "$rout_h" \
+    --arg err_p "$rdir/$rlabel.stderr" --arg err_h "$rerr_h" \
+    --arg bin "$1" --arg bin_h "$rbin_h" \
+    '{label:$label, command:$cmd, exit_status:$status, window:[$t0,$t1],
+      binary_path:$bin, binary_sha256:(if $bin_h == "" then null else $bin_h end),
+      stdout_path:$out_p, stdout_sha256:$out_h,
+      stderr_path:$err_p, stderr_sha256:$err_h}' >> "$rto_abs"
+  printf 'viz-evidence record: %s exit %s -> %s\n' "$rlabel" "$rstatus" "$rto_abs"
+  exit "$rstatus"
+fi
 
 spec='' bin='' out='' label='v1' frames='' step_ms='100' select=1
 while [ $# -gt 0 ]; do

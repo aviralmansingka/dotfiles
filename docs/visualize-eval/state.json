@@ -1700,12 +1700,28 @@
   "pilot_coverage": "round-07 pilot (mm, datacenter, gb300) covers lifecycle-machines, redundant-fabrics, placement-planes; chains, meshes, identity-maps unrepresented"
  },
  "round_09": {
-  "status": "planned",
-  "driver": "user directive 2026-11-02: add a round for the diagram categorization",
-  "focus": "category-aware generation",
-  "skill": "generators classify the source diagram into a family FIRST (the six-family taxonomy above); each family carries a layout recipe: chains -> corridor widths; meshes -> fan port ordering + anti-parallel co-view; fabrics -> rank pins for tiers + parallel-link lanes; lifecycles -> phase-ordered ranks; planes -> subgraph regions + single-split bus; identity-maps -> qualifier/identifier coverage rows",
-  "rubric": "new category-fit criterion: the chosen family must match the source's structure, and the recipe must be applied; judged from captures",
-  "sequencing": "r06 off-by-one -> r07 React Flow pilot -> r08 structural merge -> r09 category-aware generation (can be pulled earlier if the user prefers; the taxonomy already informs r07 pilot reading and r08 design)"
+  "status": "in flight",
+  "renderer_worktrees": {
+   "feat/region-removal": "strip region borders/titles/paint passes; keep group tag -> hue + block order; worker 'region-removal' (died once to parent restart, resumed)",
+   "feat/dots-labels": "single-dot origin fix, label_slot wiring, guard-rail fixtures (pins, trunk); worker 'dots-labels' (died once to parent restart, resumed)"
+  },
+  "base_commit": "377c38ce",
+  "harness_done": [
+   "viz-evidence.sh record mode: every probe/rejected draft wrapped into attempts-log.jsonl (command, exit, raw bytes, sha256s) - verified end to end",
+   "viz-validate.py --require-records: attempts_records_complete strict check; backward compatible without the flag - verified",
+   "viz-review-panes.sh: tabs now bind with --workspace to the checkout's own workspace (focus-drift bug fixed)",
+   "rubric.json revision 9: regionless grouping, recipe yields, pinned fit-proof ruling, records requirement, stale astra wording fixed; judges frozen at terra:high",
+   "proposal 08 SKILL.md (candidate for round 09): sha256 8ea91637f5c651249376607ef6aa59d527f0928d755d708000c833cffae43eb0",
+   "rounds/08/human-review/feedback.md: directives recorded verbatim"
+  ],
+  "pending": [
+   "merge worktrees (3-way vs /tmp/visualize-eval/round-08/renderer-source snapshot, digest 838162a5879bf64e...)",
+   "full gates",
+   "freeze round-09 binaries + skill proposal 08 + rubric rev 9",
+   "write round-09 generator/judge task files",
+   "generation + terra judging",
+   "aggregate + review tabs"
+  ]
  },
  "rounds_parallel_status": {
   "round_06_off_by_one": "DONE + captain-verified (branch feat/off-by-one)",

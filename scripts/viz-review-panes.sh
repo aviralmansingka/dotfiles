@@ -114,7 +114,17 @@ for case_id in $cases; do
   before_spec=$(view_of "$view" "$before_dir" || true)
   [ -n "$after_spec" ] || { printf 'skip %s (no view %s after)\n' "$case_id" "$view" >&2; continue; }
 
-  created=$(herdr tab create --label "r$round $case_id v$view" --cwd "$repo" --no-focus)
+  # Bind the tab to the workspace that owns this checkout. Without an
+  # explicit --workspace, herdr attaches new tabs to the *focused*
+  # workspace, which can be a different worktree than the one running
+  # the review (seen in round 08: tabs landed in feat-learning-skills).
+  repo_root=$(git -C "$repo" rev-parse --show-toplevel 2>/dev/null || printf '%s' "$repo")
+  repo_ws=$(herdr workspace list 2>/dev/null | jq -r \
+    --arg root "$repo_root" \
+    '.result.workspaces[]? | select(.worktree.checkout_path == $root) | .workspace_id' | head -1)
+  ws_args=()
+  [ -n "$repo_ws" ] && ws_args=(--workspace "$repo_ws")
+  created=$(herdr tab create --label "r$round $case_id v$view" --cwd "$repo" --no-focus "${ws_args[@]}")
   tab=$(jq -r '.result.tab.tab_id // empty' <<<"$created")
   root=$(jq -r '.result.root_pane.pane_id // empty' <<<"$created")
   [ -n "$tab" ] && [ -n "$root" ] || die "could not create a tab for $case_id: $created"
