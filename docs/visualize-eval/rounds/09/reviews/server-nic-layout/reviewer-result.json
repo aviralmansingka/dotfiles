@@ -1,0 +1,1229 @@
+{
+  "protocol_version": 1,
+  "round": 9,
+  "case_id": "server-nic-layout",
+  "candidate_sha256": "ba2878c5194cd6fc4bc1af5299a156064130de9be1b0ccf4c6eeb0236d431381",
+  "renderer_sha256": "405a61a674a7cc6271ae1276794eb270c9425dfc38585f4cbb1c48e9b6db495b",
+  "rubric_sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "82e8c8bf737439856f0ba1a1ff4225d36e560d9384e98c21155c924de50757be",
+  "generator": {
+    "worker_id": "viz-ds09-4",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge09-server-nic-layout",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 82,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/09/reviews/server-nic-layout/observed-first.md",
+      "sha256": "fdfc011762e9ba79e36ee9cdf4fb4fc433b32a33f0390b88680b7931ee914a49",
+      "description": "blind",
+      "capture": null
+    },
+    {
+      "id": "spec_manifest",
+      "path": "docs/visualize-eval/rounds/09/reviews/server-nic-layout/spec-manifest.json",
+      "sha256": "82e8c8bf737439856f0ba1a1ff4225d36e560d9384e98c21155c924de50757be",
+      "description": "spec manifest",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/09/SKILL.md",
+      "sha256": "ba2878c5194cd6fc4bc1af5299a156064130de9be1b0ccf4c6eeb0236d431381",
+      "description": "skill",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/09/rubric.json",
+      "sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+      "description": "rubric",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/09/metadata.json",
+      "sha256": "abc75dda9ee0149980533966ab7d640689a4caf961900938cff810a2d9750ddd",
+      "description": "metadata",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "dataset",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/server-nic-layout/source.md",
+      "sha256": "235d296fef435710c8a49bcd247455c8c82b844e71726f146c4cedf227d0308b",
+      "description": "source",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/server-nic-layout/expected.json",
+      "sha256": "ada8d8b1b8a3dfda4221b22fd1bb785327d6eeda69834c35ab5ab17b0678afb4",
+      "description": "expected",
+      "capture": null
+    },
+    {
+      "id": "variants",
+      "path": "docs/visualize-eval/cases/server-nic-layout/historical-variants.json",
+      "sha256": "40f060941014aeaf83ee591346e9950f71c02bf9a68c5693804877bfbcbd9eb8",
+      "description": "variants",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/generation.json",
+      "sha256": "a4aee573340e7d0324913a24249d042cb909da71b9711a5e6d03dfd8e61c20d5",
+      "description": "generation",
+      "capture": null
+    },
+    {
+      "id": "generation_md",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/generation.md",
+      "sha256": "53aaa513862e26ba33d886a0fd79a87b5c084681b524cf2ea10b24c3f2809447",
+      "description": "generation md",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/attempts.json",
+      "sha256": "84be9f217802b26b03ab8a24aef912ae7fb47578ecce5e53e875d807b5eb2fcf",
+      "description": "attempts",
+      "capture": null
+    },
+    {
+      "id": "attempts_log",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/attempts-log.jsonl",
+      "sha256": "3dd8a8eda4ab262cc5c43deab54337f4c0cbadfb9a5aad043781ec390fcd8782",
+      "description": "attempts log",
+      "capture": null
+    },
+    {
+      "id": "spec_v1",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/specs/v1-a3.json",
+      "sha256": "f96c220692514e89f75df57bdbceb0f4df62c5f19f0887d3eb6e231618762597",
+      "description": "final spec",
+      "capture": null
+    },
+    {
+      "id": "v1_text",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v1/v1-text.txt",
+      "sha256": "4681ce1ddae7b61247939de928e753bbb629473fc099354a951c153ccf8bd85b",
+      "description": "v1 text",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1_ansi",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v1/v1-ansi.ansi",
+      "sha256": "77c3da6b0346a604dea8843538282dc1bc5fdddc8f28ff6f8fbdd8d1ca9a572a",
+      "description": "v1 ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1_selected",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v1/v1-selected.ansi",
+      "sha256": "2029cf7ec79a21cbf3df04c858f082c37cb487b664cbb9d9c32bb7f2480e3235",
+      "description": "v1 selected",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "capture window in manifest",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1_frames",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v1/v1-frames.txt",
+      "sha256": "9c6e78dcb1bcf150c8f229ac2d18ebd818d0173589800af9bdbab4ad96ec1742",
+      "description": "v1 frames",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0–4",
+        "timestamp": "0–400ms in 100ms steps",
+        "state": "frames 0–4",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1_frames_ansi",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v1/v1-frames.ansi",
+      "sha256": "e2b2a19d9d339862d7d0c831edeb7812b7e5caaad4d2b5ba989848eeeed780ef",
+      "description": "v1 frames_ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0–4",
+        "timestamp": "0–400ms in 100ms steps",
+        "state": "frames 0–4",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1_check",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v1/check.txt",
+      "sha256": "e1011d53b7fc35163f96157405de94be63fc8c0d372ff6e1c457f2acd4a9296f",
+      "description": "checker stdout",
+      "capture": null
+    },
+    {
+      "id": "v1_manifest",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v1/manifest.json",
+      "sha256": "40e5795dda6d0ab11057c3feccdec789ba00fb14ba761898ab5b862d8deab195",
+      "description": "capture manifest and cleanup",
+      "capture": null
+    },
+    {
+      "id": "v1_pinned",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/pinned/v1-77x47.txt",
+      "sha256": "f5ad9db726eb4c57597d515185c291f69cae70565333a5644b8a059b9b48a40a",
+      "description": "pinned final-spec natural fit and static frames",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0–4",
+        "timestamp": "0–400ms in 100ms steps",
+        "state": "frames 0–4",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1_validator",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/checks/validator-v1.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "validator output",
+      "capture": null
+    },
+    {
+      "id": "spec_v2",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/specs/v2-a2.json",
+      "sha256": "66bbf524432bfb9080c517b70a825dab2579823800abb7894ce18196843d080f",
+      "description": "final spec",
+      "capture": null
+    },
+    {
+      "id": "v2_text",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v2/v2-text.txt",
+      "sha256": "05621e4d686406537c3320b44f288421d3fe1002f0d8575f0b0d589496db07db",
+      "description": "v2 text",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "single",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2_ansi",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v2/v2-ansi.ansi",
+      "sha256": "de5c56e161823389935bcc8866e626f98a1b53831db12fa0c7fe2031e2107b31",
+      "description": "v2 ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "single",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2_selected",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v2/v2-selected.ansi",
+      "sha256": "2462a0c4d17e7d1ff5257d077dd83014e12c1323cb9035f50d767cf8cca60a4b",
+      "description": "v2 selected",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "single",
+        "timestamp": "capture window in manifest",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2_frames",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v2/v2-frames.txt",
+      "sha256": "e5e1d049ec6e5affedf7346c7ed4f6373138be0cc0775fcf7b4a00ed68cd2b68",
+      "description": "v2 frames",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "0–4",
+        "timestamp": "0–400ms in 100ms steps",
+        "state": "frames 0–4",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2_frames_ansi",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v2/v2-frames.ansi",
+      "sha256": "3954f4e0f8fa8d41d02b7f9fc25bdd32a21cd0dfb5d8accacd262895f57c1db6",
+      "description": "v2 frames_ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "0–4",
+        "timestamp": "0–400ms in 100ms steps",
+        "state": "frames 0–4",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2_check",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v2/check.txt",
+      "sha256": "127ef05172d574af60d5a06002e820e265d2a01b56050b5e54e848fa4a785b1a",
+      "description": "checker stdout",
+      "capture": null
+    },
+    {
+      "id": "v2_manifest",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v2/manifest.json",
+      "sha256": "51576fd04f4011e65db7a48eabd55e54c8cc064b6089963862899245cc79cd05",
+      "description": "capture manifest and cleanup",
+      "capture": null
+    },
+    {
+      "id": "v2_pinned",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/pinned/v2-77x47.txt",
+      "sha256": "ceb55d91da860bf37249c16fe65b03c224b1542a8d13e49bf1b1ce20ceec1888",
+      "description": "pinned final-spec natural fit and static frames",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0–4",
+        "timestamp": "0–400ms in 100ms steps",
+        "state": "frames 0–4",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2_validator",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/checks/validator-v2.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "validator output",
+      "capture": null
+    },
+    {
+      "id": "spec_v3",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/specs/v3-a3.json",
+      "sha256": "ec9c98518985f57a1aa92e189e7dee54ae6fa578e54b4458bcc5acb3283ba62f",
+      "description": "final spec",
+      "capture": null
+    },
+    {
+      "id": "v3_text",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v3/v3-text.txt",
+      "sha256": "e4f96a39bf6e43ae591bea70cc67df1a0d381811b594edacc3c13202d3f4893d",
+      "description": "v3 text",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "single",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3_ansi",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v3/v3-ansi.ansi",
+      "sha256": "701efd5d818d99a2a0044418fb08d2b9b05d5bb359121460ef81099b96762c5c",
+      "description": "v3 ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "single",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3_selected",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v3/v3-selected.ansi",
+      "sha256": "1a2729dbf474ac59041a07d166c5f12f72239befc450d46f0be2be5d41a2a6f1",
+      "description": "v3 selected",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "single",
+        "timestamp": "capture window in manifest",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3_frames",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v3/v3-frames.txt",
+      "sha256": "24f05820df0d529a4340b22fa912a37c246b020a250c8997f096fbc96bf6cda9",
+      "description": "v3 frames",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "0–4",
+        "timestamp": "0–400ms in 100ms steps",
+        "state": "frames 0–4",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3_frames_ansi",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v3/v3-frames.ansi",
+      "sha256": "eb916df6bd53ce518d1dda6d4833f349f40ab6b3c010ed5ec1751e8a89bc13f5",
+      "description": "v3 frames_ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "0–4",
+        "timestamp": "0–400ms in 100ms steps",
+        "state": "frames 0–4",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3_check",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v3/check.txt",
+      "sha256": "003d82c608b8c8905bf6691dd68df64d9a7f3704a2e4c0a466ef9dff254eb134",
+      "description": "checker stdout",
+      "capture": null
+    },
+    {
+      "id": "v3_manifest",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v3/manifest.json",
+      "sha256": "767650e47b9d4499d786ec3e95eb8cc413b64ec0e69cecf3b8161d8ba7c08529",
+      "description": "capture manifest and cleanup",
+      "capture": null
+    },
+    {
+      "id": "v3_pinned",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/pinned/v3-77x47.txt",
+      "sha256": "31168bfe6303bf9bf409e985f3603cc115702f19197198f7328cf30d082ff8cf",
+      "description": "pinned final-spec natural fit and static frames",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "0–4",
+        "timestamp": "0–400ms in 100ms steps",
+        "state": "frames 0–4",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3_validator",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/checks/validator-v3.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "validator output",
+      "capture": null
+    },
+    {
+      "id": "raw_v1-a1_stderr",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/recorded/v1-a1.stderr",
+      "sha256": "daff998055c2236abbed86600a6f5e7eeb6473ca4a0321608186b312d281c8b6",
+      "description": "recorded check stdout or stderr",
+      "capture": null
+    },
+    {
+      "id": "raw_v1-a1_stdout",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/recorded/v1-a1.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded check stdout or stderr",
+      "capture": null
+    },
+    {
+      "id": "raw_v1-a2_stderr",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/recorded/v1-a2.stderr",
+      "sha256": "31bd29c3cb03b622c23e91577612887b334add3e182adcfb907c6d5ceb39da10",
+      "description": "recorded check stdout or stderr",
+      "capture": null
+    },
+    {
+      "id": "raw_v1-a2_stdout",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/recorded/v1-a2.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded check stdout or stderr",
+      "capture": null
+    },
+    {
+      "id": "raw_v1-a3_stderr",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/recorded/v1-a3.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded check stdout or stderr",
+      "capture": null
+    },
+    {
+      "id": "raw_v1-a3_stdout",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/recorded/v1-a3.stdout",
+      "sha256": "e1011d53b7fc35163f96157405de94be63fc8c0d372ff6e1c457f2acd4a9296f",
+      "description": "recorded check stdout or stderr",
+      "capture": null
+    },
+    {
+      "id": "raw_v2-a1_stderr",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/recorded/v2-a1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded check stdout or stderr",
+      "capture": null
+    },
+    {
+      "id": "raw_v2-a1_stdout",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/recorded/v2-a1.stdout",
+      "sha256": "b949bea4979f9c7b2aa2637eddce7391d3c4222c026888b0949aca72b67ddcd5",
+      "description": "recorded check stdout or stderr",
+      "capture": null
+    },
+    {
+      "id": "raw_v2-a2_stderr",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/recorded/v2-a2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded check stdout or stderr",
+      "capture": null
+    },
+    {
+      "id": "raw_v2-a2_stdout",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/recorded/v2-a2.stdout",
+      "sha256": "127ef05172d574af60d5a06002e820e265d2a01b56050b5e54e848fa4a785b1a",
+      "description": "recorded check stdout or stderr",
+      "capture": null
+    },
+    {
+      "id": "raw_v3-a1_stderr",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/recorded/v3-a1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded check stdout or stderr",
+      "capture": null
+    },
+    {
+      "id": "raw_v3-a1_stdout",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/recorded/v3-a1.stdout",
+      "sha256": "f9ddedcd5f5721f62dcf5188cf281a367424c4d94296ede02b2e90fbe833a218",
+      "description": "recorded check stdout or stderr",
+      "capture": null
+    },
+    {
+      "id": "raw_v3-a2_stderr",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/recorded/v3-a2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded check stdout or stderr",
+      "capture": null
+    },
+    {
+      "id": "raw_v3-a2_stdout",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/recorded/v3-a2.stdout",
+      "sha256": "3e08042cfc07971a577c10acb3f1420fab9487df4bf430bd863d5bf8cba02894",
+      "description": "recorded check stdout or stderr",
+      "capture": null
+    },
+    {
+      "id": "raw_v3-a3_stderr",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/recorded/v3-a3.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded check stdout or stderr",
+      "capture": null
+    },
+    {
+      "id": "raw_v3-a3_stdout",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/recorded/v3-a3.stdout",
+      "sha256": "003d82c608b8c8905bf6691dd68df64d9a7f3704a2e4c0a466ef9dff254eb134",
+      "description": "recorded check stdout or stderr",
+      "capture": null
+    },
+    {
+      "id": "v3-draft-a1_text",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v3-draft-a1/v3-text.txt",
+      "sha256": "f90034ce747cd0b0c21bcb055e2b6252d7607d41cb5fd5067f4b7a07fbc242bf",
+      "description": "rejected draft live capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3-draft-a1",
+        "frame": "single",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-draft-a1_manifest",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v3-draft-a1/manifest.json",
+      "sha256": "c07cb5142d6fd0cc7dd1ab7b135a34551264aba6d0918f17f3c80c39a31d5e8e",
+      "description": "rejected draft capture and cleanup",
+      "capture": null
+    },
+    {
+      "id": "v3-draft-a2_text",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v3-draft-a2/v3-text.txt",
+      "sha256": "1b160e0701074bc1ab7b001654e8c534c4953d683967a2194044fc2e72b1972d",
+      "description": "rejected draft live capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3-draft-a2",
+        "frame": "single",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-draft-a2_manifest",
+      "path": "docs/visualize-eval/rounds/09/server-nic-layout/evidence/v3-draft-a2/manifest.json",
+      "sha256": "0325abc643340cc0900c7741e5cc0c5cfd7b0b057afb8f6f8f27d76df38a6bc6",
+      "description": "rejected draft capture and cleanup",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Missing explicit gateway role and full gateway context, Dell and NxtGen identifiers, and missing-hop/L2 caveat; cross-view /29 join is not explicitly keyed. Cloudflare 8.6ms is sourced but 8.3ms conflicting historical value is not conveyed in the diagram. r4 label ownership is ambiguous.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "v1_text",
+        "v2_text",
+        "v3_text",
+        "generation"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Routes and heads are individually traceable with no crossing, but r4 same /29 label is closer to r5 than r4 and no recorded impossibility excuse is offered.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "v1_text",
+        "v2_text",
+        "v3_text",
+        "v3_check",
+        "attempts"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Each final spec fits pinned 77x47 natural, but the category also requires complete source coverage across split views, which fails. Live panes measured 82x51.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "v1_pinned",
+        "v2_pinned",
+        "v3_pinned",
+        "v1_text",
+        "v2_text",
+        "v3_text"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Logical source-backed group tags use consistent hue families and stable order, no painted group boundaries; gateway and first transit node share exact hue but transit members retain a related family.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "v1_ansi",
+        "v2_ansi",
+        "v3_ansi",
+        "spec_v1",
+        "spec_v2",
+        "spec_v3"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Normal and selected ANSI show complete, continuous per-node borders; select-all covers 11/11 occurrences simultaneously.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "v1_ansi",
+        "v2_ansi",
+        "v3_ansi",
+        "v1_selected",
+        "v2_selected",
+        "v3_selected"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Frozen hashes and separate identities verified; raw attempts and checks retained, all three validators report 33/33 including records; measured 82x51, frame/ANSI/selected evidence and cleanup records available.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "skill",
+        "rubric",
+        "metadata",
+        "dataset",
+        "spec_manifest",
+        "blind",
+        "generation",
+        "attempts",
+        "attempts_log",
+        "v1_manifest",
+        "v2_manifest",
+        "v3_manifest",
+        "v1_validator",
+        "v2_validator",
+        "v3_validator"
+      ]
+    },
+    "animation": {
+      "applicable": false,
+      "status": null,
+      "reason": "Source is a static NIC/probe snapshot and the frozen case manifest marks animation optional; no animation is requested. All five frames per view show no dots.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases.json"
+      ],
+      "evidence_ids": [
+        "dataset",
+        "v1_frames",
+        "v2_frames",
+        "v3_frames",
+        "v1_pinned",
+        "v2_pinned",
+        "v3_pinned"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Correct identity-probe-maps classification with source-backed line, but the ledger-first recipe is not fully rendered: gateway role, Dell/NxtGen identities, missing-hop caveat, and full cross-view address key are absent; the ledger drops several of these and r4 ownership is ambiguous.",
+      "judged_family": "identity-probe-maps",
+      "generator_family": "identity-probe-maps",
+      "evidence_line": "eight relations over nine boxes whose content is identifiers and qualifiers, not phases: eno16595np0, 25GbE, 103.19.91.58/29, .57/.59/.60-.62, AS132717, AS13335, 14.143.x/14.141.x, plus measured hop latencies 0.1/1.8/7.1/8.6 ms and qualified states (7 ports dark, 'free?', OUI-derived vendor, 'no probe reply'). E = N, so omission is the only real failure mode.",
+      "recipe_facts_verified": "Identifiers and qualifiers are mapped in generation.json meaning_ledger and many visible in v1/v2/v3; ledger omits the gateway role, Dell and NxtGen strings, missing-hop caveat and explicit complete cross-view key. The stated E=N is numerically wrong: 8 edges, 9 nodes.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "generation",
+        "v1_text",
+        "v2_text",
+        "v3_text"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "r1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "dark → server1, inactive not uncabled",
+      "observed": "dashed x36→33 arrow (33,20); no link seen; no crossing",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            33,
+            17,
+            23,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "r2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "server1 → eno16595np0, only active 25GbE uplink",
+      "observed": "solid x33, arrow (33,28); only uplink 25GbE; no crossing",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            33,
+            25,
+            27,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "r3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "NIC → default gateway .57 0.1ms; public /29, no NAT/v6",
+      "observed": "solid x33→29 arrow (29,36); .58/29 no NAT/v6 0.1ms; gateway role not stated",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            29,
+            33,
+            36,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "r4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "server2 .59 → gateway, same /29",
+      "observed": "solid x15→29 arrow (29,28); same /29 at x30–37 row 25 is closer to dashed x46 than solid x15; no crossing",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3_text",
+          "region": [
+            15,
+            25,
+            32,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "r5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": ".60–.62 → gateway, free? with no probe reply",
+      "observed": "dashed x46→31 arrow (31,28); free? and no probe reply visible; no crossing",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3_text",
+          "region": [
+            31,
+            25,
+            42,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "r6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "gateway → Airtel 14.143.x 1.8ms; unseen fabric hop is not proof of L2",
+      "observed": "solid x30→35 arrow (35,20); transit 1.8ms; missing-hop/L2 caveat not drawn",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2_text",
+          "region": [
+            30,
+            17,
+            27,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "r7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "Airtel → Airtel backbone 14.141.x, 7.1ms",
+      "observed": "solid x35→30 arrow (30,28), 7.1 ms; no crossing",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2_text",
+          "region": [
+            30,
+            25,
+            20,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "r8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "Airtel backbone → Cloudflare 1.1.1.1 AS13335, source 8.6ms, historical edge 8.3ms",
+      "observed": "solid x30→29 arrow (29,36), 8.6 ms; alternative 8.3 is recorded outside capture; no crossing",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2_text",
+          "region": [
+            29,
+            33,
+            21,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F4"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "r3"
+      ],
+      "severity": "critical",
+      "description": "Gateway .57 role is omitted in all gateway labels. OUI qualifies vendor inference, but does not justify removing the source-identified gateway role. .57 is a bare suffix, and neither Dell nor NxtGen appears in rendered boxes despite R7725 and AS132717.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            28,
+            37,
+            27,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2_text",
+          "region": [
+            29,
+            13,
+            27,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3_text",
+          "region": [
+            28,
+            29,
+            27,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "r4"
+      ],
+      "severity": "high",
+      "description": "Label ownership fails rule: same /29 spans x30–37 row 25, solid source stem is x15 and dashed competing stem is x46. It is closer to the other route and checker reports zero ambiguous. No recorded proof that an unambiguous placement is impossible.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3_text",
+          "region": [
+            15,
+            25,
+            32,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "r6"
+      ],
+      "severity": "critical",
+      "description": "Transit hop lacks visible qualification that missing traceroute hops do not establish L2 and invisible NxtGen fabric may bridge, tunnel or stay silent. Do not invent a spine node; state the uncertainty/caveat.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2_text",
+          "region": [
+            30,
+            17,
+            27,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "r8"
+      ],
+      "severity": "medium",
+      "description": "8.6 ms is supported by primary source; 8.3 ms is in the historical relation list. Generator honestly discloses conflict but capture does not expose uncertainty or the 8.3–8.6 ms range.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2_text",
+          "region": [
+            44,
+            33,
+            6,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F5",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "r3",
+        "r4",
+        "r5"
+      ],
+      "severity": "high",
+      "description": "Full 103.19.91.0/29 key is absent from captures; abbreviated .58/29 and .57 must be joined to the full octets of v3 by inference. Generator key is in generation.json, not the views. Server1 full address is not directly visible.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            43,
+            33,
+            22,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3_text",
+          "region": [
+            15,
+            22,
+            53,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F6",
+      "category": "category_fit",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Identity-map recipe requires every identifier and qualifier as a covered ledger fact proved in capture. Dell, NxtGen and role are not rendered, and the ledger treats omitted text and some source qualifications as drops; classification is right but recipe fails.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1_text",
+          "region": [
+            33,
+            22,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2_text",
+          "region": [
+            30,
+            14,
+            25,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3_text",
+          "region": [
+            15,
+            22,
+            26,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pNQ",
+      "w7E:pNR",
+      "w7E:pP1",
+      "w7E:pNS",
+      "w7E:pNY"
+    ],
+    "closed_pane_ids": [
+      "w7E:pNQ",
+      "w7E:pNR",
+      "w7E:pP1",
+      "w7E:pNS",
+      "w7E:pNY"
+    ],
+    "status": "done",
+    "reason": "Generator and capture manifests report all five case-created panes confirmed closed; reviewer opened no panes."
+  },
+  "overall": "fail"
+}

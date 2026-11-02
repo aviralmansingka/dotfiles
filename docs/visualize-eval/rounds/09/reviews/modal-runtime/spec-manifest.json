@@ -1,0 +1,14 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v3-seam-pair.json",
+    "sha256": "f2484f0a664a4a9081b9ed624518bbb775006fe4c62e6318ffbc387a28a84f72"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v4-core-fan.json",
+    "sha256": "93c8066a4ccfb77a141084f1d13d3a45cde000ffbbae71597c4367a835f0449d"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v5-engine-tree.json",
+    "sha256": "f1ae35dd1dbd819a07e931c72ee7962353f36bb7d1ee56258d060d44b738855d"
+  }
+]

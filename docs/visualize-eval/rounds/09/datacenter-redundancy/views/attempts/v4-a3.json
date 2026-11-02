@@ -1,0 +1,94 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "sp1",
+      "label": "Spine 1",
+      "group": "spine"
+    },
+    {
+      "id": "sp2",
+      "label": "Spine 2",
+      "group": "spine"
+    },
+    {
+      "id": "leaf1",
+      "label": "Leaf 1",
+      "group": "rack-leaf"
+    },
+    {
+      "id": "leaf2",
+      "label": "Leaf 2",
+      "group": "rack-leaf"
+    },
+    {
+      "id": "rack1",
+      "label": "Rack 1",
+      "group": "rack"
+    },
+    {
+      "id": "rack2",
+      "label": "Rack 2",
+      "group": "rack"
+    }
+  ],
+  "edges": [
+    {
+      "from": "sp1",
+      "to": "leaf1",
+      "label": "ECMP",
+      "dots": 0,
+      "minlen": 3
+    },
+    {
+      "from": "sp1",
+      "to": "leaf2",
+      "label": "ECMP",
+      "dots": 0,
+      "minlen": 3
+    },
+    {
+      "from": "sp2",
+      "to": "leaf1",
+      "label": "ECMP",
+      "dots": 0,
+      "minlen": 3
+    },
+    {
+      "from": "sp2",
+      "to": "leaf2",
+      "label": "ECMP",
+      "dots": 0,
+      "minlen": 3
+    },
+    {
+      "from": "leaf1",
+      "to": "rack1",
+      "label": "dual",
+      "dots": 0,
+      "minlen": 2
+    },
+    {
+      "from": "leaf2",
+      "to": "rack1",
+      "label": "dual",
+      "dots": 0,
+      "minlen": 2
+    },
+    {
+      "from": "leaf1",
+      "to": "rack2",
+      "label": "dual",
+      "dots": 0,
+      "minlen": 2
+    },
+    {
+      "from": "leaf2",
+      "to": "rack2",
+      "label": "dual",
+      "dots": 0,
+      "minlen": 2
+    }
+  ]
+}

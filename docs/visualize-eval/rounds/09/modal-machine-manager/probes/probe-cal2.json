@@ -1,0 +1,11 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "a", "label": "boot server" },
+    { "id": "b", "label": "Postgres" }
+  ],
+  "edges": [
+    { "from": "a", "to": "b", "label": "boot.ipxe + S3 args", "label_slot": true }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "case_id": "homelab-nic-trace",
+  "round": "09",
+  "note": "One attempt = one --check run on a distinct spec. Every attempt below has its raw --check bytes in attempts-log.jsonl (record wrapper). Final specs are marked final: true.",
+  "views": [
+    {
+      "view": "v1",
+      "cluster": "host-local: local virtual nets + overlay ingress into the host",
+      "attempts": [
+        {
+          "spec_sha256": "667701614d58c7f92e70537ca01ec481f9a0cb114237ed358e2342cd1622aaf8",
+          "spec": "specs/v1-host-tb.json",
+          "log_label": "v1-attempt1-host-tb",
+          "note": "First draft: all 8 host-side relations in ONE view (tb). --check extent=66x62, so it cannot fit 47 rows: each rank gap is as tall as the widest label crossing it. Rejected on measured height, not on taste."
+        },
+        {
+          "spec_sha256": "6c94bcdad8c2395f358130e2df118c91172011662b754622c0b790bb7ab708af",
+          "spec": "specs/v1-host-tb2.json",
+          "log_label": "v1-attempt2-host-tb-labslot",
+          "note": "Same 8 relations, label_slot:true on all 8 edges to remove the tall rank gaps. --check exited 1: 'no obstacle-safe route for vm -> virbr, virbr -> box, ts -> box, ts -> bond0, box -> wlp, box -> bond0'. Gutters on every edge of a 4-rank converged view leave no corridor. Rejected."
+        },
+        {
+          "spec_sha256": "7399db149bfc1042b25e586c5c8c2fdae5dbde9e652bb592cfccb9c5c2034357",
+          "spec": "specs/v1-host-local.json",
+          "log_label": "v1-attempt3-host-local",
+          "final": true,
+          "note": "Split the cluster to 3 ranks (e6/e7/e8 moved to v2). --check extent=55x44, crossings 0 bridges 0 touching bends, labels 5/5 placed, 0 ambiguous owners. Chosen."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "cluster": "physical uplink ports of the host (wired primary vs wifi backup)",
+      "attempts": [
+        {
+          "spec_sha256": "a1c68a7fa19bc3018cc9a44d90b02eadcc22bb926dcd8576069067b1efc7b568",
+          "spec": "specs/v2-uplink.json",
+          "log_label": "v2-attempt1-uplink",
+          "final": true,
+          "note": "First and only attempt. --check extent=54x22, crossings 0/0, labels 3/3 placed, 0 ambiguous owners. Fits with room to spare."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "cluster": "egress: uplink sources -> gateway -> WAN path",
+      "attempts": [
+        {
+          "spec_sha256": "c4dcb8cd3911f4bc85476688ed7f9974ce584a2fc208f262a207117af0e55ba5",
+          "spec": "specs/v2-egress-lr.json",
+          "log_label": "v2-attempt1-egress-lr",
+          "note": "Identity-map recipe demand first (deep lr chain). --check extent=189x9: 189 columns against a 77-column target, so lr is measured impossible for six address-labelled ranks. Rejected on measurement. (Label reads v2 because the egress cluster was still view 2 under the first two-view plan; it ships as v3.)"
+        },
+        {
+          "spec_sha256": "b0abc2f24a8667015326ca0b3a9db34d8354d348ce2d8c707cd21a9095c44637",
+          "spec": "specs/v3-egress.json",
+          "log_label": "v2-attempt2-egress-tb-labslot",
+          "final": true,
+          "note": "tb with label_slot:true on all six edges, so a long label costs gutter width instead of a rank row. --check extent=54x44, crossings 0 bridges 0 touching bends, labels 6/6 placed, 0 ambiguous owners. Chosen. Byte-identical to specs/v2-egress-tb.json (same sha256)."
+        }
+      ]
+    }
+  ]
+}

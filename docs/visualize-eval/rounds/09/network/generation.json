@@ -1,0 +1,224 @@
+{
+  "case_id": "network",
+  "round": "09",
+  "generator": {
+    "name": "viz-ds09-2",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "isolated_worktree": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill",
+    "judges_spawned": false,
+    "subagents_spawned": false
+  },
+  "frozen_inputs": {
+    "renderer": {
+      "path": "/tmp/visualize-eval/round-09/bin/rataflow-view",
+      "sha256": "405a61a674a7cc6271ae1276794eb270c9425dfc38585f4cbb1c48e9b6db495b"
+    },
+    "candidate_skill": {
+      "path": "docs/visualize-eval/rounds/09/SKILL.md",
+      "sha256": "ba2878c5194cd6fc4bc1af5299a156064130de9be1b0ccf4c6eeb0236d431381"
+    },
+    "source_read": "docs/visualize-eval/cases/network/source.md only; expected.json and historical-variants.json were not opened"
+  },
+  "step0_classification": {
+    "family": "service-meshes",
+    "evidence": "core switch fans 2 edges to neighbours (core->web 10 GbE, core->cache 25 GbE) and two separate relations converge on the cache tier (core->cache 25 GbE, web->cache session) and on the DB tier (web->db queries, cache->db fill), which the source's fixed constraint requires kept separate.",
+    "secondary_recipe_applied": "none. The spine wan->fw->core->web keeps one stage per hop, which is the flow-chain corridor habit, but no flow-chain lever (short single-stage ranks) was needed beyond the source's own order.",
+    "tie_breakers_considered": [
+      "density (E=7 > N=6) rules out flow-chains: the relation count exceeds the node count, so the graph is not one-relation-per-node.",
+      "no disconnected worlds and no source-named bus between them, so placement-planes does not apply.",
+      "no addresses, ports, AS numbers or uncertainty qualifiers, so identity-probe-maps does not apply.",
+      "no double-arrowhead targets, no dots-forbidden statement, and the source explicitly asks for live dots (line 5), so redundant-fabrics does not apply.",
+      "no wide fan out of one state and no phase ordering, so lifecycle-machines does not apply.",
+      "the skill's own family table names `network` as a service-mesh case; the source confirms it with a 2-edge fan around the core switch."
+    ],
+    "paired_relation_note": "This source has no true anti-parallel pair (no request/response between the same two boxes). What it has is a paired inbound relation: cache receives core->cache (25 GbE) and web->cache (session); db receives web->db (queries) and cache->db (fill). Both pairs are drawn as two distinct edges with distinct labels and distinct ports in the SAME view; nothing was merged into one bidirectional arrow."
+  },
+  "recipe_per_view": [
+    {
+      "view": "v1",
+      "recipe": "service-meshes: core's fan gets a stable port order (left port to web at (21,33), right port to cache at (21,35)), and each paired inbound relation is drawn as two edges with distinct labels and distinct ports in this one view.",
+      "proving_capture": {
+        "frames": "pinned/v1-77x47.txt (frames 0-20, COLUMNS=77 LINES=47), pane frames evidence/v1/v1-frames.txt",
+        "coordinates": [
+          "core fan ports: dots leave Core switch at (21,33) and (21,35); labels '10 GbE' (row 21) and '25 GbE' (row 22) sit in separate gutters - pinned/v1-77x47.txt frame 0.",
+          "fan separation visible: core->web arrowhead at (24,32) on Web tier's top border, core->cache runs right to col 46 rows 24-31 and lands at (33,40) on Redis's top border - same frame.",
+          "cache pair, two arrowheads on Redis top border: (33,38) from web and (33,40) from core - same frame.",
+          "db pair, two arrowheads on DB tier top border: (41,35) from web and (41,37) from Redis - same frame.",
+          "no bidirectional arrow anywhere: every edge glyph is a single-direction route with one arrowhead (rows 8, 16, 24, 33, 41 in pinned/v1-77x47.txt frame 0)."
+        ]
+      }
+    }
+  ],
+  "views": [
+    {
+      "view": "v1",
+      "title": "WAN -> firewall -> core switch with web, Redis and DB tiers",
+      "spec": "specs/v1.json",
+      "attempts_specs": [
+        "specs/v1-attempt1-lr.json",
+        "specs/v1-attempt2-tb.json",
+        "specs/v1.json"
+      ],
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": 6,
+      "edges": 7,
+      "check": "evidence/v1/check.txt",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "frames": "evidence/v1/v1-frames.txt",
+      "frames_ansi": "evidence/v1/v1-frames.ansi",
+      "pinned_target_dump": "pinned/v1-77x47.txt",
+      "manifest": "evidence/v1/manifest.json",
+      "bin_sha256_file": "evidence/v1/bin.sha256",
+      "frame_count": 21,
+      "frame_step_ms": 100,
+      "measured_dimensions": {
+        "pane_token": "82x51 @100% (evidence/v1/v1-text.txt row 0)",
+        "pane_ids": "w7E:pNM, closed (cleanup confirmed_closed in evidence/v1/manifest.json)",
+        "pinned_target_dump": "viewport: 77x47 zoom: 1.00 natural (pinned/v1-77x47.txt line 1), no overflow banner"
+      },
+      "viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+      "check_summary": "extent=27x45 cells; crossings: 1 bridges, 0 touching bends; labels: 7/7 placed, 0 on route cells, 0 skipped, 0 ambiguous owners; groups: edge(2) fabric(1) app(1) data(2); dots: 7 single-dot routes, 0 periodic, 0 violations, 7 constant at 0.5c/step, 0 same-arrival; origins: 7/7; arrivals: 0/0; no warnings."
+    }
+  ],
+  "structural_levers": {
+    "groups": {
+      "declared": {
+        "edge": ["wan", "fw"],
+        "fabric": ["core"],
+        "app": ["web"],
+        "data": ["cache", "db"]
+      },
+      "source_fact": "the source names the roles/tiers itself: WAN, Firewall, Core switch, web tier, Redis, DB tier; groups are logical tags only (hue + sibling order) and nothing is drawn around members, which is what the capture shows.",
+      "measured_colors": "edge -> blue (125;160;184 WAN, 151;184;206 Firewall); fabric -> teal 125;174;163 (Core switch, evidence/v1/v1-ansi.ansi row 19); app -> teal 125;174;163 (Web tier, row 27); data -> pink (211;134;155 Redis row 36, 226;156;175 DB tier row 44). fabric and app collide on one teal family - recorded as a defect below."
+    },
+    "rank_pins_layers": {
+      "used": false,
+      "reason": "the source's own order is already the engine's longest-path rank order (wan, fw, core, web, cache, db), so pinning would add no information; the skill prefers omitting `layers`."
+    },
+    "minlen": {
+      "used": false,
+      "reason": "no source fact describes a corridor that needs extra rank gap; minlen would only inflate the extent past 47 rows."
+    },
+    "trunks": {
+      "used": false,
+      "reason": "the source states independent physical links with their own speeds (1 GbE, 10 GbE, 10 GbE, 25 GbE) and application relations, not one shared bus; a trunk would fake a shared corridor and merge locally independent links. No source-stated bus exists, so 'check.txt' prints an empty `trunks:` line."
+    },
+    "label_slot": {
+      "used_on": ["wan->fw", "fw->core", "core->web", "core->cache", "web->cache", "web->db", "cache->db"],
+      "source_fact": "the labels are the source's link speeds and application relations (1 GbE, 10 GbE, 10 GbE, 25 GbE, session, queries, fill) and must stay beside their own route; with rank-gap slots alone the same spec measured extent 29x67 (attempts-log label v1-attempt2-tb), over the 47-row target. label_slot moves each label into a side gutter: extent 27x45, 7/7 placed, 0 ambiguous owners.",
+      "measured": "labels at rows 5, 13, 21, 22, 29, 30, 38 in pinned/v1-77x47.txt frame 0, each within two columns of its own route and clear of the neighbouring lane (e.g. 'session' ends col 44 while the core->cache lane runs at col 46)."
+    }
+  },
+  "motion": {
+    "source_fact": "source line 5: live dots flowing along the lines, dot direction = traffic flow; the Task asks for slow, sparse motion.",
+    "applied": "flow: true on all 7 edges (constant default 0.5 cells per 100 ms step - the slowest mode the renderer offers), dots: 1 on each edge (one dot per route = sparse). No numeric flow rate, no same-arrival timing: the source gives no rate and the fixed constraint forbids implying that motion speed measures the link speed.",
+    "speed_labels": "1 GbE / 10 GbE / 25 GbE stay text labels in gutters; every route animates at the same rate, so no route is faster than another and motion encodes nothing about speed.",
+    "proof": {
+      "origins": "check.txt: origins: 7/7 routes start at their arrow origin. Frame 0 of pinned/v1-77x47.txt shows each dot on the first drawn cell after its source port: (5,37) wan->fw, (13,34) fw->core, (21,33) core->web, (21,35) core->cache, (29,32) web->cache, (29,34) web->db, (38,38) cache->db.",
+      "constant_speed": "pinned/v1-77x47.txt frames 0 -> 2 -> 4: every dot advances exactly one cell per two 100 ms steps (0.5 cells/step), e.g. wan->fw (5,37) -> (6,37) -> (7,36) and cache->db (38,38) -> (39,38) -> (38,38) after its 2-cell route wraps. No route arrives early; long routes take longer, which is the round-09 default.",
+      "pane_frames": "evidence/v1/v1-frames.txt frames 2..20 show the same uniform advance (e.g. frame 2 dots at (9,39),(15,37),(23,36),(25,39),(33,35),(33,37),(40,41); frame 10 one column further along each route)."
+    }
+  },
+  "meaning_ledger": [
+    { "fact": "Node `wan` = WAN", "kind": "role", "fate": "drawn", "view": "v1", "where": "box rows 1-4 cols 36-40" },
+    { "fact": "Node `fw` = Firewall", "kind": "role", "fate": "drawn", "view": "v1", "where": "box rows 9-12 cols 33-42" },
+    { "fact": "Node `core` = Core switch", "kind": "role", "fate": "drawn", "view": "v1", "where": "box rows 17-20 cols 32-44" },
+    { "fact": "Node `web` = Web tier", "kind": "role/tier", "fate": "drawn", "view": "v1", "where": "box rows 25-28 cols 31-40" },
+    { "fact": "Node `cache` = Redis (cache tier)", "kind": "role/residency", "fate": "drawn (label kept as 'Redis')", "view": "v1", "where": "box rows 34-37 cols 37-43" },
+    { "fact": "Node `db` = DB tier", "kind": "role/tier", "fate": "drawn", "view": "v1", "where": "box rows 42-45 cols 34-42" },
+    { "fact": "wan -> fw: 1 GbE", "kind": "speed/tech", "fate": "drawn", "view": "v1", "where": "label row 5 cols 40-44, arrowhead (8,34)" },
+    { "fact": "fw -> core: 10 GbE", "kind": "speed/tech", "fate": "drawn", "view": "v1", "where": "label row 13 cols 40-45, arrowhead (16,33)" },
+    { "fact": "core -> web: 10 GbE", "kind": "speed/tech", "fate": "drawn", "view": "v1", "where": "label row 21 cols 40-45, arrowhead (24,32)" },
+    { "fact": "core -> cache: 25 GbE", "kind": "speed/tech", "fate": "drawn", "view": "v1", "where": "label row 22 cols 40-45, lane col 46 rows 24-31, arrowhead (33,40)" },
+    { "fact": "web -> cache: session", "kind": "application relation", "fate": "drawn", "view": "v1", "where": "label row 29 cols 38-44, arrowhead (33,38)" },
+    { "fact": "web -> db: queries", "kind": "application relation", "fate": "drawn", "view": "v1", "where": "label row 30 cols 38-44, arrowhead (41,35)" },
+    { "fact": "cache -> db: fill", "kind": "application relation", "fate": "drawn", "view": "v1", "where": "label row 38 cols 42-45, arrowhead (41,37)" },
+    { "fact": "live dots flowing along the lines, direction = traffic flow", "kind": "motion", "fate": "drawn", "view": "v1", "where": "7 constant-flow dots, dots: 1 each" },
+    { "fact": "speed represented by dot speed (line 5 wish)", "kind": "qualifier", "fate": "drawn as a qualified subset", "view": "v1", "where": "all routes share the one constant 0.5 c/step rate; the fixed constraint 'do not imply motion speed is a measurement' wins, so speed stays in the labels" },
+    { "fact": "every box same background so borders read cleanly; no dots in the background", "kind": "style", "fate": "drawn", "view": "v1", "where": "gruvbox theme: every box shares bg 48;2;40;40;40 (evidence/v1/v1-ansi.ansi rows 3-45); no background dot field" },
+    { "fact": "gruvbox colour scheme", "kind": "style", "fate": "drawn", "view": "v1", "where": "theme: gruvbox; palette corner at rows 40-45 cols 1-9" },
+    { "fact": "visualize pane should be an even split", "kind": "pane setting", "fate": "dropped", "reason": "not a graph fact - it is a viewer/pane request; the capture harness splits at --ratio 0.5 anyway (evidence/v1/manifest.json)" },
+    { "fact": "preserve separate core->cache and web->cache relations", "kind": "constraint", "fate": "drawn", "view": "v1", "where": "two edges e4/e5 with two arrowheads on Redis's top border, (33,40) and (33,38)" },
+    { "fact": "keep 1 GbE, 10 GbE, 25 GbE visible without implying motion speed is a measurement", "kind": "constraint", "fate": "drawn", "view": "v1", "where": "three distinct speed labels in gutters; one shared constant dot rate" }
+  ],
+  "relationship_audit": [
+    { "id": "e1", "from": "wan", "to": "fw", "verb_tech": "1 GbE link", "label_owner": "e1", "label": "1 GbE", "view": "v1", "visible": "origin (5,37), arrowhead (8,34)" },
+    { "id": "e2", "from": "fw", "to": "core", "verb_tech": "10 GbE link", "label_owner": "e2", "label": "10 GbE", "view": "v1", "visible": "origin (13,34), arrowhead (16,33)" },
+    { "id": "e3", "from": "core", "to": "web", "verb_tech": "10 GbE link", "label_owner": "e3", "label": "10 GbE", "view": "v1", "visible": "origin (21,33), arrowhead (24,32)" },
+    { "id": "e4", "from": "core", "to": "cache", "verb_tech": "25 GbE link", "label_owner": "e4", "label": "25 GbE", "view": "v1", "visible": "origin (21,35), lane col 46 rows 24-31, arrowhead (33,40)" },
+    { "id": "e5", "from": "web", "to": "cache", "verb_tech": "session relation", "label_owner": "e5", "label": "session", "view": "v1", "visible": "origin (29,32), arrowhead (33,38)" },
+    { "id": "e6", "from": "web", "to": "db", "verb_tech": "queries relation", "label_owner": "e6", "label": "queries", "view": "v1", "visible": "origin (29,34), column 34 rows 30-39, arrowhead (41,35)" },
+    { "id": "e7", "from": "cache", "to": "db", "verb_tech": "fill relation", "label_owner": "e7", "label": "fill", "view": "v1", "visible": "origin (38,38), arrowhead (41,37)" }
+  ],
+  "coverage_map": [
+    { "view": "v1", "carries": "all 6 nodes, all 7 edges, all 7 labels, all three speed classes (1/10/25 GbE), both paired inbound relations (cache, db), motion on every route" }
+  ],
+  "relationship_to_view_mapping": {
+    "source_relationships": 7,
+    "drawn_in_v1": 7,
+    "unmapped": [],
+    "note": "label ownership is 1:1 (7 edges, 7 labels, 0 ambiguous owners in evidence/v1/check.txt); e2 and e3 legitimately share the text '10 GbE' because the source states both links at 10 GbE, and each label sits in its own gutter row 13 and row 21."
+  },
+  "recipe_yield": {
+    "demand": "service-meshes requires the paired relations in ONE view, never split and never one bidirectional arrow.",
+    "measured_attempts": "no yield was needed: the single view v1 holds every paired relation with two distinct arrowheads on Redis's top border and two on DB tier's top border (pinned/v1-77x47.txt frame 0 rows 33 and 41). The only yield-shaped work was fit: attempt 1 (lr, extent 110x8) and attempt 2 (tb, extent 29x67) both breach the 77x47 target, so the shipped attempt 3 adds label_slot and measures 27x45 - the fan and both pairs still sit in that one view."
+  },
+  "abbreviations": [
+    { "text": "Redis", "meaning": "cache node id `cache`, source name kept verbatim; no abbreviation applied" }
+  ],
+  "deliberate_drops": [
+    { "fact": "even-split pane request (line 48)", "reason": "pane geometry is the harness's job, not a graph fact; harness splits at ratio 0.5" }
+  ],
+  "known_defects": [
+    {
+      "id": "d1",
+      "type": "crossing bridge",
+      "detail": "crossings: 1 bridges, 0 touching bends (evidence/v1/check.txt). The bridge glyph sits at (32,34) in pinned/v1-77x47.txt frame 0 (pane copy: evidence/v1/v1-text.txt row 34, glyph '<backtick>⌒' between e5 and e6). Both routes leave Web tier's bottom edge, so the session route jogging right to Redis's top port crosses the queries route continuing down beside Redis.",
+      "why_kept": "0 touching bends and 0 ambiguous owners; traceability is intact (distinct arrowheads at (33,38) and (33,40)). Every candidate at this graph depth measured 1 bridge (lr and tb alike); removing it would need a port-order change or relation reordering, and reordering/merging/dropping source relations is forbidden by the round-09 contract, while the 3-candidate budget for this view is spent."
+    },
+    {
+      "id": "d2",
+      "type": "group hue collision",
+      "detail": "groups `fabric` (Core switch) and `app` (Web tier) both render with fg 38;2;125;174;163 in evidence/v1/v1-ansi.ansi (rows 19-20 and 27-28), although `edge` renders blue (125;160;184 / 151;184;206) and `data` renders pink (211;134;155 / 226;156;175). Four declared groups, three hue families.",
+      "why_kept": "the hue is derived by the engine from the group name; no spec-level lever re-assigns it, and the view's 3-candidate budget is spent. Tier identity stays readable because every tier name is in the node label ('Core switch', 'Web tier', 'Redis', 'DB tier'), not only in colour."
+    },
+    {
+      "id": "d3",
+      "type": "capture coverage",
+      "detail": "the pane frames capture evidence/v1/v1-frames.txt begins at frame 2 (200 ms): the pane's scrollback trimmed frames 0-1 (19 of 21 timestamped frames retained).",
+      "mitigation": "pinned/v1-77x47.txt holds all 21 frames (0..20) of the same final spec at the exact target size, and frame 0 is cited there for origin proof."
+    },
+    {
+      "id": "d4",
+      "type": "measured size vs target",
+      "detail": "the live pane measured 82x51 @100% (evidence/v1/v1-text.txt row 0), not the 77x47 target; my tab's width is not controlled by the generator.",
+      "mitigation": "pinned direct dump of THIS view's FINAL spec at COLUMNS=77 LINES=47: viewport: 77x47 zoom: 1.00 natural, no overflow banner (pinned/v1-77x47.txt), accepted by the pinned ruling."
+    }
+  ],
+  "blockers": [],
+  "renderer_notes": [
+    "the round-09 binary emits no `routes:` line - expected, not chased, not reported as a blocker.",
+    "`--check` prints `viewport: unknown` because there is no terminal; the size proof comes from the pane header token and the pinned dump.",
+    "groups draw nothing around members (no box, border, title) - their absence in every capture is correct."
+  ],
+  "commands": [
+    "scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/09/network/attempts-log.jsonl --label v1-attempt1-lr -- /tmp/visualize-eval/round-09/bin/rataflow-view --check $PWD/docs/visualize-eval/rounds/09/network/specs/v1-attempt1-lr.json",
+    "scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/09/network/attempts-log.jsonl --label v1-attempt2-tb -- /tmp/visualize-eval/round-09/bin/rataflow-view --check $PWD/docs/visualize-eval/rounds/09/network/specs/v1-attempt2-tb.json",
+    "scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/09/network/attempts-log.jsonl --label v1-attempt3-tb-labelslot -- /tmp/visualize-eval/round-09/bin/rataflow-view --check $PWD/docs/visualize-eval/rounds/09/network/specs/v1-attempt3-tb-labelslot.json",
+    "COLUMNS=77 LINES=47 scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/09/network/attempts-log.jsonl --label v1-pinned-77x47 -- /tmp/visualize-eval/round-09/bin/rataflow-view --frames 21 $PWD/docs/visualize-eval/rounds/09/network/specs/v1.json",
+    "cp docs/visualize-eval/rounds/09/network/recorded/v1-pinned-77x47.stdout docs/visualize-eval/rounds/09/network/pinned/v1-77x47.txt",
+    "scripts/viz-evidence.sh --spec $PWD/docs/visualize-eval/rounds/09/network/specs/v1.json --bin /tmp/visualize-eval/round-09/bin/rataflow-view --out $PWD/docs/visualize-eval/rounds/09/network/evidence/v1 --label v1 --frames 21",
+    "scripts/viz-validate.py docs/visualize-eval/rounds/09/network/evidence/v1 --require-select --require-frames --require-records --attempts docs/visualize-eval/rounds/09/network/attempts.json"
+  ],
+  "validator_output": {
+    "v1": "validator-v1.txt"
+  },
+  "cleanup": {
+    "panes_opened": ["w7E:pNM"],
+    "closed": "w7E:pNM confirmed_closed (evidence/v1/manifest.json cleanup field, herdr pane get fails after close)",
+    "cleanup_failures": []
+  }
+}

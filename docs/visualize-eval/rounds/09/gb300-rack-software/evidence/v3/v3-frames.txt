@@ -1,0 +1,288 @@
+/tmp/visualize-eval/round-09/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/09/gb300-rack-software/v3-inba
+nd-compute-plane.json
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+❯ /tmp/visualize-eval/round-09/bin/rataflow-view /Users/aviral/.herdr/worktrees/do
+tfiles/fix-visualize-skill/docs/visualize-eval/rounds/09/gb300-rack-software/v3-in
+band-compute-plane.json
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+❯ /tmp/visualize-eval/round-09/bin/rataflow-view /Users/aviral/.herdr/worktrees/do
+tfiles/fix-visualize-skill/docs/visualize-eval/rounds/09/gb300-rack-software/v3-in
+band-compute-plane.json --select-all
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+❯ /tmp/visualize-eval/round-09/bin/rataflow-view /Users/aviral/.herdr/worktrees/do
+tfiles/fix-visualize-skill/docs/visualize-eval/rounds/09/gb300-rack-software/v3-in
+band-compute-plane.json --frames 5 --step-ms 100
+viewport: 82x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 82x51 @100% · v3-inband-compute-plane.json · 6 nodes · 5 edges ·
+
+
+
+                                   ╭──────────╮
+                                   │Kubernetes│
+                                   │          │
+                                   ╰──────────╯
+                                    │      operator
+                                    │
+                                   ╭╯
+                                   ▼
+                                  ╭────────────╮
+                                  │GPU Operator│
+                                  │            │
+                                  ╰────────────╯
+                                   │       DaemonSet
+                                   │
+                                   ╰───╮
+                                       ▼
+                                      ╭────╮
+                                      │DCGM│
+                                      │    │
+                                      ╰────╯
+                                       │ │
+                                       │ │
+                                       │ │
+                                       │ │
+                                       │ │
+                                       │ │ NVML read
+                                       │ │
+                                       │ │
+                                       │ │
+                              metrics  │ │
+                          ╭────────────╯ ╰──╮
+                          ▼                 ▼
+                         ╭─────────────╮   ╭───────────╮
+                         │dcgm-exporter│   │Driver+CUDA│
+                         │             │   │           │
+                         ╰─────────────╯   ╰───────────╯
+                                            │      same host
+                                            │
+                                    ╭───────╯
+                                    ▼
+ ┌───────┐                         ╭──────────╮
+ │ + [+] │                         │Fabric Mgr│
+ │ − [-] │                         │          │
+ │ ⊡ [f] │                         ╰──────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 82x51 @100% · v3-inband-compute-plane.json · 6 nodes · 5 edges ·
+
+
+
+                                   ╭──────────╮
+                                   │Kubernetes│
+                                   │          │
+                                   ╰──────────╯
+                                    │      operator
+                                    │
+                                   ╭╯
+                                   ▼
+                                  ╭────────────╮
+                                  │GPU Operator│
+                                  │            │
+                                  ╰────────────╯
+                                   │       DaemonSet
+                                   │
+                                   ╰───╮
+                                       ▼
+                                      ╭────╮
+                                      │DCGM│
+                                      │    │
+                                      ╰────╯
+                                       │ │
+                                       │ │
+                                       │ │
+                                       │ │
+                                       │ │
+                                       │ │ NVML read
+                                       │ │
+                                       │ │
+                                       │ │
+                              metrics  │ │
+                          ╭────────────╯ ╰──╮
+                          ▼                 ▼
+                         ╭─────────────╮   ╭───────────╮
+                         │dcgm-exporter│   │Driver+CUDA│
+                         │             │   │           │
+                         ╰─────────────╯   ╰───────────╯
+                                            │      same host
+                                            │
+                                    ╭───────╯
+                                    ▼
+ ┌───────┐                         ╭──────────╮
+ │ + [+] │                         │Fabric Mgr│
+ │ − [-] │                         │          │
+ │ ⊡ [f] │                         ╰──────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 82x51 @100% · v3-inband-compute-plane.json · 6 nodes · 5 edges ·
+
+
+
+                                   ╭──────────╮
+                                   │Kubernetes│
+                                   │          │
+                                   ╰──────────╯
+                                    │      operator
+                                    │
+                                   ╭╯
+                                   ▼
+                                  ╭────────────╮
+                                  │GPU Operator│
+                                  │            │
+                                  ╰────────────╯
+                                   │       DaemonSet
+                                   │
+                                   ╰───╮
+                                       ▼
+                                      ╭────╮
+                                      │DCGM│
+                                      │    │
+                                      ╰────╯
+                                       │ │
+                                       │ │
+                                       │ │
+                                       │ │
+                                       │ │
+                                       │ │ NVML read
+                                       │ │
+                                       │ │
+                                       │ │
+                              metrics  │ │
+                          ╭────────────╯ ╰──╮
+                          ▼                 ▼
+                         ╭─────────────╮   ╭───────────╮
+                         │dcgm-exporter│   │Driver+CUDA│
+                         │             │   │           │
+                         ╰─────────────╯   ╰───────────╯
+                                            │      same host
+                                            │
+                                    ╭───────╯
+                                    ▼
+ ┌───────┐                         ╭──────────╮
+ │ + [+] │                         │Fabric Mgr│
+ │ − [-] │                         │          │
+ │ ⊡ [f] │                         ╰──────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 82x51 @100% · v3-inband-compute-plane.json · 6 nodes · 5 edges ·
+
+
+
+                                   ╭──────────╮
+                                   │Kubernetes│
+                                   │          │
+                                   ╰──────────╯
+                                    │      operator
+                                    │
+                                   ╭╯
+                                   ▼
+                                  ╭────────────╮
+                                  │GPU Operator│
+                                  │            │
+                                  ╰────────────╯
+                                   │       DaemonSet
+                                   │
+                                   ╰───╮
+                                       ▼
+                                      ╭────╮
+                                      │DCGM│
+                                      │    │
+                                      ╰────╯
+                                       │ │
+                                       │ │
+                                       │ │
+                                       │ │
+                                       │ │
+                                       │ │ NVML read
+                                       │ │
+                                       │ │
+                                       │ │
+                              metrics  │ │
+                          ╭────────────╯ ╰──╮
+                          ▼                 ▼
+                         ╭─────────────╮   ╭───────────╮
+                         │dcgm-exporter│   │Driver+CUDA│
+                         │             │   │           │
+                         ╰─────────────╯   ╰───────────╯
+                                            │      same host
+                                            │
+                                    ╭───────╯
+                                    ▼
+ ┌───────┐                         ╭──────────╮
+ │ + [+] │                         │Fabric Mgr│
+ │ − [-] │                         │          │
+ │ ⊡ [f] │                         ╰──────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 82x51 @100% · v3-inband-compute-plane.json · 6 nodes · 5 edges ·
+
+
+
+                                   ╭──────────╮
+                                   │Kubernetes│
+                                   │          │
+                                   ╰──────────╯
+                                    │      operator
+                                    │
+                                   ╭╯
+                                   ▼
+                                  ╭────────────╮
+                                  │GPU Operator│
+                                  │            │
+                                  ╰────────────╯
+                                   │       DaemonSet
+                                   │
+                                   ╰───╮
+                                       ▼
+                                      ╭────╮
+                                      │DCGM│
+                                      │    │
+                                      ╰────╯
+                                       │ │
+                                       │ │
+                                       │ │
+                                       │ │
+                                       │ │
+                                       │ │ NVML read
+                                       │ │
+                                       │ │
+                                       │ │
+                              metrics  │ │
+                          ╭────────────╯ ╰──╮
+                          ▼                 ▼
+                         ╭─────────────╮   ╭───────────╮
+                         │dcgm-exporter│   │Driver+CUDA│
+                         │             │   │           │
+                         ╰─────────────╯   ╰───────────╯
+                                            │      same host
+                                            │
+                                    ╭───────╯
+                                    ▼
+ ┌───────┐                         ╭──────────╮
+ │ + [+] │                         │Fabric Mgr│
+ │ − [-] │                         │          │
+ │ ⊡ [f] │                         ╰──────────╯
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+❯

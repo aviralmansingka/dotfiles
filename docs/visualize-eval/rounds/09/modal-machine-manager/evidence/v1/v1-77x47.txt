@@ -1,0 +1,145 @@
+viewport: 77x47 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 77x47 @100% · v1.json · 6 nodes · 5 edges · q quit
+
+                               ╭─────────────╮
+                               │control plane│
+                               │             │
+                               ╰─────────────╯
+                                ●       create/terminate/repair
+                                │
+                                │
+                                ▼
+                               ╭────────────╮
+                               │private gRPC│
+                               │            │
+                               ╰────────────╯
+                                ●       enqueue job
+                                │
+                               ╭╯
+                               ▼
+                              ╭───────────────╮
+                              │River job queue│
+                              │               │
+                              ╰───────────────╯
+                               ●        provision job
+                               │
+                              ╭╯
+                              ▼
+                             ╭─────────────────╮
+                             │provider registry│
+                             │                 │
+                             ╰─────────────────╯
+                              ●         provider API
+                              │
+                            ╭─╯
+                            ▼
+                           ╭────────────────────╮
+                           │bare-metal providers│
+                           │                    │
+                           ╰────────────────────╯
+                            ●           allocate instance
+                            │
+ ┌───────┐                  ╰╮
+ │ + [+] │                   ▼
+ │ − [-] │                  ╭───────────────────╮
+ │ ⊡ [f] │                  │bare-metal machines│
+ │ □ [i] │                  │                   │
+ └───────┘                  ╰───────────────────╯
+
+frame 1 at 100ms
+ rataflow-view · 77x47 @100% · v1.json · 6 nodes · 5 edges · q quit
+
+                               ╭─────────────╮
+                               │control plane│
+                               │             │
+                               ╰─────────────╯
+                                ●       create/terminate/repair
+                                │
+                                │
+                                ▼
+                               ╭────────────╮
+                               │private gRPC│
+                               │            │
+                               ╰────────────╯
+                                ●       enqueue job
+                                │
+                               ╭╯
+                               ▼
+                              ╭───────────────╮
+                              │River job queue│
+                              │               │
+                              ╰───────────────╯
+                               ●        provision job
+                               │
+                              ╭╯
+                              ▼
+                             ╭─────────────────╮
+                             │provider registry│
+                             │                 │
+                             ╰─────────────────╯
+                              ●         provider API
+                              │
+                            ╭─╯
+                            ▼
+                           ╭────────────────────╮
+                           │bare-metal providers│
+                           │                    │
+                           ╰────────────────────╯
+                            ●           allocate instance
+                            │
+ ┌───────┐                  ╰╮
+ │ + [+] │                   ▼
+ │ − [-] │                  ╭───────────────────╮
+ │ ⊡ [f] │                  │bare-metal machines│
+ │ □ [i] │                  │                   │
+ └───────┘                  ╰───────────────────╯
+
+frame 2 at 200ms
+ rataflow-view · 77x47 @100% · v1.json · 6 nodes · 5 edges · q quit
+
+                               ╭─────────────╮
+                               │control plane│
+                               │             │
+                               ╰─────────────╯
+                                │       create/terminate/repair
+                                ●
+                                │
+                                ▼
+                               ╭────────────╮
+                               │private gRPC│
+                               │            │
+                               ╰────────────╯
+                                │       enqueue job
+                                ●
+                               ╭╯
+                               ▼
+                              ╭───────────────╮
+                              │River job queue│
+                              │               │
+                              ╰───────────────╯
+                               │        provision job
+                               ●
+                              ╭╯
+                              ▼
+                             ╭─────────────────╮
+                             │provider registry│
+                             │                 │
+                             ╰─────────────────╯
+                              │         provider API
+                              ●
+                            ╭─╯
+                            ▼
+                           ╭────────────────────╮
+                           │bare-metal providers│
+                           │                    │
+                           ╰────────────────────╯
+                            │           allocate instance
+                            ●
+ ┌───────┐                  ╰╮
+ │ + [+] │                   ▼
+ │ − [-] │                  ╭───────────────────╮
+ │ ⊡ [f] │                  │bare-metal machines│
+ │ □ [i] │                  │                   │
+ └───────┘                  ╰───────────────────╯
+

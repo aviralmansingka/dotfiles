@@ -1,0 +1,96 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "vm",
+      "label": "VM vnet0",
+      "group": "virtual"
+    },
+    {
+      "id": "ctr",
+      "label": "container veth",
+      "group": "virtual"
+    },
+    {
+      "id": "ts",
+      "label": "ts0 100.113.153.49",
+      "group": "overlay"
+    },
+    {
+      "id": "virbr",
+      "label": "virbr0 NAT",
+      "group": "virtual"
+    },
+    {
+      "id": "dkbr",
+      "label": "dkbr 172.18.2.1",
+      "group": "virtual"
+    },
+    {
+      "id": "box",
+      "label": "homelab rack-bench",
+      "group": "physical"
+    },
+    {
+      "id": "bond0",
+      "label": "bond0 192.168.1.197",
+      "group": "physical"
+    },
+    {
+      "id": "wlp",
+      "label": "wlp8s0 .213",
+      "group": "physical"
+    }
+  ],
+  "edges": [
+    {
+      "from": "vm",
+      "to": "virbr",
+      "label": "192.168.122.x",
+      "label_slot": true
+    },
+    {
+      "from": "ctr",
+      "to": "dkbr",
+      "label": "172.18.2.x",
+      "label_slot": true
+    },
+    {
+      "from": "virbr",
+      "to": "box",
+      "label": "NAT bridge",
+      "label_slot": true
+    },
+    {
+      "from": "dkbr",
+      "to": "box",
+      "label": "docker bridge",
+      "label_slot": true
+    },
+    {
+      "from": "ts",
+      "to": "box",
+      "label": "overlay",
+      "label_slot": true
+    },
+    {
+      "from": "ts",
+      "to": "bond0",
+      "label": "UDP encap",
+      "label_slot": true
+    },
+    {
+      "from": "box",
+      "to": "bond0",
+      "label": "eno1 2.5GbE",
+      "label_slot": true
+    },
+    {
+      "from": "box",
+      "to": "wlp",
+      "label": "backup path",
+      "label_slot": true
+    }
+  ]
+}

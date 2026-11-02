@@ -1,0 +1,23 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "rms", "label": "nv-rms", "group": "off-rack mgmt" },
+    { "id": "oob", "label": "OOB LAN", "group": "OOB hardware" },
+    { "id": "bmc_c", "label": "Compute BMC x18", "group": "OOB hardware" },
+    { "id": "bmc_s", "label": "NVSwitch BMC", "group": "OOB hardware" },
+    { "id": "pwr", "label": "Power shelf", "group": "OOB hardware" },
+    { "id": "nvos", "label": "NVOS", "group": "NVSwitch sw" },
+    { "id": "nmxc", "label": "NMX-C/T", "group": "NVSwitch sw" }
+  ],
+  "trunks": [
+    { "id": "oob_bus", "from": "oob", "to": "bmc_c", "branches": ["bmc_s", "pwr"] }
+  ],
+  "edges": [
+    { "from": "rms", "to": "oob", "dots": 0 },
+    { "from": "rms", "to": "bmc_c", "dots": 0 },
+    { "from": "rms", "to": "nvos", "dots": 0 },
+    { "from": "rms", "to": "nmxc", "dots": 0 },
+    { "from": "nvos", "to": "nmxc", "dots": 0 }
+  ]
+}

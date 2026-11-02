@@ -1,0 +1,67 @@
+{
+  "case_id": "server-nic-layout",
+  "round": "09",
+  "binary": "/tmp/visualize-eval/round-09/bin/rataflow-view",
+  "binary_sha256": "405a61a674a7cc6271ae1276794eb270c9425dfc38585f4cbb1c48e9b6db495b",
+  "note": "Every --check run below is also present as a raw record in attempts-log.jsonl (viz-evidence.sh record), with command, exit status and stdout/stderr hashes.",
+  "views": [
+    {
+      "view": "v1",
+      "shipped_spec": "specs/v1-a3.json",
+      "attempts": [
+        {
+          "spec": "specs/v1-a1.json",
+          "spec_sha256": "9aa6fee075fe20724bc70a4cb93d0cae953e226b368fb78a9c9bb7fca0af6543",
+          "note": "Pre-split combined draft (tb): server1 box + whole /29 fan + ToR in one view, label_slot on the long nic->gw handoff label. --check exit 1: 'no obstacle-safe route for s2 -> gw; increase node/layer spacing'. The gutter band reserved for the handoff label sits across the /29 fan's corridors, so the two clusters cannot share one tb view. Recorded as evidence for the view split."
+        },
+        {
+          "spec": "specs/v1-a2.json",
+          "spec_sha256": "ab91b23fe1aa1fdc1cefb042abf150460e842a1b95bc465ed1d5195449bf84e6",
+          "note": "Same combined content in lr, every edge label_slot. --check exit 1: 'no obstacle-safe route for spare -> gw'. Without gutter labels the lr width would be 15+14+15 label rooms plus 69 cells of boxes = 109 columns, far past 77. Both orientations of the combined view are structurally impossible, so the case splits."
+        },
+        {
+          "spec": "specs/v1-a3.json",
+          "spec_sha256": "f96c220692514e89f75df57bdbceb0f4df62c5f19f0887d3eb6e231618762597",
+          "note": "SHIPPED v1 (ports + the one uplink): tb, 4 ranks, groups server1/nxtgen, label_slot on all three edges, dashed on the inactive-port edge. --check: extent=49x28, crossings: 0 bridges, labels 3/3 placed 0 skipped 0 ambiguous. Chosen because it carries every physical-port fact with zero warnings."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "shipped_spec": "specs/v2-a2.json",
+      "attempts": [
+        {
+          "spec": "specs/v2-a1.json",
+          "spec_sha256": "b4c72b07741b5012a20da0af0a8a7313c5fe2c4112e73923a684dab583919c62",
+          "note": "Egress chain gw -> airtel -> airtelbb -> cf, tb, label_slot on all three latency labels. --check clean: extent=39x28, 0 crossings, labels 3/3. Rejected only because the gateway label did not yet carry the OUI provenance of the 'Arista' claim."
+        },
+        {
+          "spec": "specs/v2-a2.json",
+          "spec_sha256": "66bbf524432bfb9080c517b70a825dab2579823800abb7894ce18196843d080f",
+          "note": "SHIPPED v2: same chain with gateway label '.57 Arista (OUI) AS132717' so the vendor claim is marked as OUI-derived (the source says an OUI does not prove a ToR role). --check: extent=41x28, crossings 0, labels 3/3, 0 skipped, 0 ambiguous."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "shipped_spec": "specs/v3-a3.json",
+      "attempts": [
+        {
+          "spec": "specs/v3-a1.json",
+          "spec_sha256": "bd3f2371e243f1e0ed7c93817b08e98f07a1ed9012ade1483f0ddcfe2fcda045",
+          "note": "/29 membership fan (server2 .59, .60-.62 spare) into the ToR with plain labels. --check clean: extent=48x25, 0 crossings, labels 2/2, but the rank gap is a tall text-width slot and both labels floated mid-gap far from their own runs (capture kept in evidence/v3-draft-a1)."
+        },
+        {
+          "spec": "specs/v3-a2.json",
+          "spec_sha256": "e97ecf3f97c24641f3c5ee6c423fce2672c62579b9592c1b70fe5d15230935d1",
+          "note": "Same fan with label_slot on both edges: extent 57x12, labels 2/2 read directly beside their own runs. Better readability; kept in evidence/v3-draft-a2 until the address-coverage pass replaced it."
+        },
+        {
+          "spec": "specs/v3-a3.json",
+          "spec_sha256": "ec9c98518985f57a1aa92e189e7dee54ae6fa578e54b4458bcc5acb3283ba62f",
+          "note": "SHIPPED v3: full-form addresses on the two /29 members ('server2 103.19.91.59 R7725', '103.19.91.60-.62 free?') so the network octets the excerpt states appear on-capture, keeping label_slot on both edges. --check: extent=60x12, crossings 0, labels 2/2, 0 skipped, 0 ambiguous."
+        }
+      ]
+    }
+  ]
+}

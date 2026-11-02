@@ -1,0 +1,49 @@
+{
+  "case_id": "datacenter-redundancy",
+  "round": "09",
+  "binary_sha256": "405a61a674a7cc6271ae1276794eb270c9425dfc38585f4cbb1c48e9b6db495b",
+  "skill_sha256": "ba2878c5194cd6fc4bc1af5299a156064130de9be1b0ccf4c6eeb0236d431381",
+  "views": [
+    {
+      "view": "v1",
+      "final_spec": "views/v1.json",
+      "attempts": [
+        { "spec_sha256": "40afea1b611c1b5c384b1f8ead2f3c1e41cd349f7ba77a691d0c05aca7153139", "spec": "views/attempts/v1-a1.json", "note": "tb, 3 ranks: shipped shape rejected — 1 bridge and 2 ambiguous 'x-connect' owners because the four mux->core corridors run 1 cell apart so their labels sit equidistant between routes" },
+        { "spec_sha256": "cb26884b267268d57897a462a6f91ea16f2d15774ec2e24627daf2b20ea92726", "spec": "views/attempts/v1-a2.json", "note": "lr instead of tb: crossings unchanged at 1 bridge, ambiguity unchanged at 2 (default rank gap keeps the 2x2 cross-connect corridors adjacent)" },
+        { "spec_sha256": "01e46b4746373afc71f2717b4079f75de67259c1f4398c4a785d17c309ddcc6a", "spec": "views/attempts/v1-a3.json", "note": "lr + minlen 3 on the four labeled mux->core lanes (source: independent arrows, never merged): labels get their own corridor cells, ambiguous owners 2 -> 0, extent 65x19; kept as final" }
+      ]
+    },
+    {
+      "view": "v2",
+      "final_spec": "views/v2.json",
+      "attempts": [
+        { "spec_sha256": "67f632848b0bde023acc7263cc5c1ca7c7c311bd481460ce92442f0f1ef0dd37", "spec": "views/attempts/v2-a1.json", "note": "lr, two stacked 2x2 fans (core->fw, fw->bl), minlen 2: extent 76x11 leaves no margin at 77 columns and 1 ambiguous owner" },
+        { "spec_sha256": "df2505bc739009f5fa803fae9b1afafaa96583f9388f0c8467ddfe07e693eb9f", "spec": "views/attempts/v2-a2.json", "note": "same edges, tb: ambiguous owners 1 -> 0, extent 32x34, both 2x2 fans readable; kept as final" }
+      ]
+    },
+    {
+      "view": "v3",
+      "final_spec": "views/v3.json",
+      "attempts": [
+        { "spec_sha256": "dea4251254951061d5ef74dc58f6db2b3558fb8a2ec2d77d1c858071a071ae", "spec": "views/attempts/v3-a1.json", "note": "tb + layers (spines above bl/leaf tier, racks below) + minlen 3/2: 8 pins-conflict lines because minlen cannot exceed a pinned rank gap; 15 bridges, 3 ambiguous owners" },
+        { "spec_sha256": "ca3c86a14350ceca0c47d02d7a90cd6db5da4a49d61f78d930c1cf3999691bc1", "spec": "views/attempts/v3-a2.json", "note": "same pins, minlen removed: 0 pin conflicts, still 15 bridges and 3 ambiguous owners — the bl->spine links are backward across the pinned rank, so the router walks them round the outer rails; kept as final (complete fabric, all 12 fabric links in one capture)" },
+        { "spec_sha256": "fd530f6e9051c586830bcda69a4a17e6b28e80971093515faf26197e1f31a732", "spec": "views/attempts/v3-a3.json", "note": "racks dropped from the fabric view to free corridor room: 14 bridges, 2 ambiguous owners — not a proportional gain, and it forces a fifth view for leaf->rack, so not kept" }
+      ]
+    },
+    {
+      "view": "v4",
+      "final_spec": "views/v4.json",
+      "attempts": [
+        { "spec_sha256": "80f41f55ba05d543c4b54887be432873987dda1d546cc80f2c947e4eb04a4c67", "spec": "views/attempts/v4-a1.json", "note": "tb + layers with minlen 3/2: 8 pins-conflict lines (minlen vs pinned gap), 2 bridges, 2 ambiguous owners" },
+        { "spec_sha256": "9626759b34fbeeed43c277c293d035dad39ae106e71474006915ea76ca61d080", "spec": "views/attempts/v4-a2.json", "note": "tb, layers dropped (natural longest-path ranks already give spine->leaf->rack): 0 pin conflicts, 2 bridges, still 2 ambiguous owners; adjacent one-cell corridors leave 'ECMP' equidistant" },
+        { "spec_sha256": "49425ffad45a72995fb412a22c0d049a6e0328a87db32394c0b968490a7da006", "spec": "views/attempts/v4-a3.json", "note": "lr, minlen 3/2: ambiguous owners 2 -> 1, 2 bridges, extent 74x11; kept as final — the readable spine/leaf/rack detail view" }
+      ]
+    }
+  ],
+  "probes": [
+    { "label": "probe-capability", "spec": "probes/probe-capability.json", "note": "capability preflight: layers and label_slot parse on the frozen binary; label_slot gutters on a 2-node fan failed routing (no obstacle-safe route), so label_slot is not used in any view" },
+    { "label": "probe-noslot", "spec": "probes/probe-noslot.json", "note": "same 3 nodes without label_slot: routes cleanly, confirming the label_slot gutter caused the routing failure" },
+    { "label": "probe-minlen-slot", "spec": "probes/probe-minlen.json", "note": "minlen parses; label_slot + minlen on a tight 2x2 gave 1 skipped label and 2 bridges — label_slot rejected as a lever for these fans" },
+    { "label": "probe-k22", "spec": "probes/probe-k22.json", "note": "isolated mux->core 2x2 with minlen 5: still 1 bridge and 1 ambiguous owner, proving a 0-bridge K2,2 is unavailable from this router and that splitting v1 would not clear its crossing" }
+  ]
+}

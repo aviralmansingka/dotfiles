@@ -1,0 +1,20 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "agent", "label": "machine-agent", "group": "hosts" },
+    { "id": "q", "label": "River job queue", "group": "control" },
+    { "id": "rec", "label": "reconcile loop", "group": "ops" },
+    { "id": "pub", "label": "public gRPC", "group": "control" },
+    { "id": "db", "label": "Postgres", "group": "state" },
+    { "id": "ssh", "label": "SSH + BMC ops", "group": "ops" },
+    { "id": "prov", "label": "bare-metal providers", "group": "provision" }
+  ],
+  "edges": [
+    { "from": "agent", "to": "pub", "label": "register + heartbeat", "dots": 1, "flow": true },
+    { "from": "q", "to": "db", "label": "job rows", "dots": 1, "flow": true },
+    { "from": "q", "to": "ssh", "label": "audit / reimage", "dots": 1, "flow": true },
+    { "from": "rec", "to": "db", "label": "cluster state", "dots": 1, "flow": true },
+    { "from": "rec", "to": "prov", "label": "gcore sync, 1 min", "dots": 1, "flow": true }
+  ]
+}

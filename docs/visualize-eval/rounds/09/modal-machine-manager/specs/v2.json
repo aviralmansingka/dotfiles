@@ -1,0 +1,18 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "mch", "label": "bare-metal machines", "group": "hosts" },
+    { "id": "q", "label": "River job queue", "group": "control" },
+    { "id": "boot", "label": "boot server", "group": "provision" },
+    { "id": "s3", "label": "S3 object store", "group": "state" },
+    { "id": "agent", "label": "machine-agent", "group": "hosts" }
+  ],
+  "edges": [
+    { "from": "mch", "to": "boot", "label": "iPXE request", "dots": 1, "flow": true },
+    { "from": "boot", "to": "mch", "label": "boot.ipxe + S3 args", "dots": 1, "flow": true },
+    { "from": "mch", "to": "s3", "label": "pull boot image", "dots": 1, "flow": true },
+    { "from": "mch", "to": "agent", "label": "runs on host", "dots": 1, "flow": true },
+    { "from": "q", "to": "s3", "label": "diagnose uploads", "dots": 1, "flow": true }
+  ]
+}

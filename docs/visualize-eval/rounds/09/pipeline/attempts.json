@@ -1,0 +1,29 @@
+{
+  "case_id": "pipeline",
+  "round": "09",
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "spec_sha256": "2623986f89d0bc134eef5e0b58ef7b40a818012d48ac793f7eb9bce0aabb9357",
+          "spec": "specs/pipeline-v1-a1.json",
+          "record_label": "v1-a1",
+          "note": "tb overview, four logical group tags (ingress, control, compute, storage), one dot and flow:true on all six routes, no label_slot. extent 31x46, crossings 0, labels 4/4 placed 0 on-route 0 skipped 0 ambiguous, dots 6 single / 0 violations, origins 6/6, arrivals 0/0. Chosen as the shipped spec: every label sits in a rank gap with clear ownership (read on its own row left of the auth corridor, write right of the worker corridor), and the pinned 77x47 dump of this exact spec renders the whole graph with no overflow banner."
+        },
+        {
+          "spec_sha256": "222a042be54841a5856591cfe0c712ace6feca9f1531131c749e5f052df2102c",
+          "spec": "specs/pipeline-v1-a2.json",
+          "record_label": "v1-a2",
+          "note": "rejected by the renderer: label_slot true on all four labelled edges. exit 1, stderr 'no obstacle-safe route for api -> auth, api -> queue; increase node/layer spacing'. Capability limit recorded: the two parallel fan edges api->auth and api->queue cannot both hold a side gutter."
+        },
+        {
+          "spec_sha256": "c9424f91064629d04f684117f2a7795492eaafefe835326c6df6e50704600d28",
+          "spec": "specs/pipeline-v1-a3.json",
+          "record_label": "v1-a3",
+          "note": "label_slot true on read and write only. extent 31x42 (4 rows shorter than a1), crossings 0, labels 4/4 placed 0 ambiguous, origins 6/6. Rejected in favour of a1 because the read label lands in a side gutter between the auth dot and the queue dot on one row, so its owner is closer to the queue route visually than a1's rank-gap placement."
+        }
+      ]
+    }
+  ]
+}

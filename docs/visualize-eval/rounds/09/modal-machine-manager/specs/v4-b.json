@@ -1,0 +1,25 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "layers": [
+    ["wapi"],
+    ["q"],
+    ["jan", "ssh"],
+    ["mch", "slack"]
+  ],
+  "nodes": [
+    { "id": "wapi", "label": "webapi server", "group": "control" },
+    { "id": "q", "label": "River job queue", "group": "control" },
+    { "id": "jan", "label": "janitor app", "group": "ops" },
+    { "id": "ssh", "label": "SSH + BMC ops", "group": "ops" },
+    { "id": "mch", "label": "bare-metal machines", "group": "hosts" },
+    { "id": "slack", "label": "Slack", "group": "humans" }
+  ],
+  "edges": [
+    { "from": "wapi", "to": "q", "label": "reinstall/reprovision", "label_slot": true, "dots": 1, "flow": true },
+    { "from": "q", "to": "jan", "label": "diagnostic events", "label_slot": true, "dots": 1, "flow": true },
+    { "from": "jan", "to": "wapi", "label": "proposed actions", "dots": 1, "flow": true },
+    { "from": "wapi", "to": "slack", "label": "confirm + alerts", "dots": 1, "flow": true },
+    { "from": "ssh", "to": "mch", "label": "machine-audit", "dots": 1, "flow": true }
+  ]
+}

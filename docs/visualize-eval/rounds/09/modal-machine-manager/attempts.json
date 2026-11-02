@@ -1,0 +1,126 @@
+{
+  "case_id": "modal-machine-manager",
+  "attempts_note": "Every --check run on a distinct spec is listed here, in the order it ran. Raw command, exit status and stdout/stderr for each are in attempts-log.jsonl (recorded/, beside this file).",
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "spec": "specs/v1-a.json",
+          "spec_sha256": "ad5baed66294a5e536745e9a28705516d77f3165100c7b4082322c97e1b263af",
+          "record_label": "v1-a",
+          "exit": 1,
+          "note": "9-node request+provision draft; gutter bands cp->pgrpc(23 chars)/wapi->q(21) reserved cells on the rank-0 port row and killed two routes: 'no obstacle-safe route for web -> wapi'."
+        },
+        {
+          "spec": "specs/v1-b.json",
+          "spec_sha256": "3f589bb894895eb9683681dfd0ceef0926b7684eec36bade747b8f8acaff7457",
+          "record_label": "v1-b",
+          "exit": 1,
+          "note": "7-node version with 5 label_slot edges; 'no obstacle-safe route for web -> wapi, wapi -> q, q -> db, q -> reg'. Two bands per rank gap is the failure."
+        },
+        {
+          "spec": "specs/v1-c.json",
+          "spec_sha256": "d8a1e3cdf9f77e399520ed50ffe052b7b9fad2deb235a463db8827d1e7f1346c",
+          "record_label": "v1-c",
+          "exit": 0,
+          "note": "FINAL: 6-rank provisioning spine, one banded edge per gap, every source alone in its rank. extent 48x44, crossings 0, labels 5/5, origins 5/5."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "attempts": [
+        {
+          "spec": "specs/v2-a.json",
+          "spec_sha256": "283710103a79715ee4cc1eb5728df23ee0b9d59016d7a86e014d97f4a0a0596a",
+          "record_label": "v2-a",
+          "exit": 0,
+          "note": "6-node boot+heartbeat draft (mch/boot/s3/agent/pub/db), 2 gutter labels, 4 in-gap labels; extent 39x59 — 12 rows past the 47-row target."
+        },
+        {
+          "spec": "specs/v2-b.json",
+          "spec_sha256": "04694e3ab1ce4e5802d7b3e097cce12eb759163bc302dc8f9c54c78413015a4a",
+          "record_label": "v2-b",
+          "exit": 1,
+          "note": "8-node draft with label_slot on all 8 edges; 3 bands from mch in one rank gap (plus boot->mch's band): 'no obstacle-safe route for boot -> mch, mch -> agent, mch -> s3'."
+        },
+        {
+          "spec": "specs/v2-c.json",
+          "spec_sha256": "897bcf4ba297df20f16f212ad7570ed763f5cd9939f6ef8f0cfde613b617c584",
+          "record_label": "v2-c",
+          "exit": 0,
+          "note": "FINAL (best available): 5 edges, no gutter bands, single 23-row rank gap for the boot fan. Routes cleanly (crossings 0, labels 5/5, origins 5/5) but extent 52x53 — still 6 rows past the target. Fit defect recorded."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "attempts": [
+        {
+          "spec": "specs/v3-b.json",
+          "spec_sha256": "5ba83281a1cb47fecacd50724ac605c890dd5e4f67000d30f7fdbd00947fedec",
+          "record_label": "v3-b",
+          "exit": 1,
+          "note": "lr two-area fan (10 nodes, 8 edges) with rank pins; 'no obstacle-safe route for wapi -> q' — the inter-area label rows cut the only return corridor."
+        },
+        {
+          "spec": "specs/v3-c.json",
+          "spec_sha256": "10872b74954870fb0d105955438bf8d32f689eefddffaa51dbf0b2f6cbbed031",
+          "record_label": "v3-c",
+          "exit": 1,
+          "note": "lr fan with every return edge removed (11 nodes, 8 edges); still 'no obstacle-safe route for agent -> pub' — 8 in-gap labels in one lr channel leave no horizontal lane."
+        },
+        {
+          "spec": "specs/v3-d.json",
+          "spec_sha256": "6a1999c597baa91296eb704b9972fb80ce789baae0375e6adb1f067503eab9d0",
+          "record_label": "v3-d",
+          "exit": 0,
+          "note": "FINAL (best available): tb 2-rank state/heartbeat fan, 5 edges, no bands. extent 80x31 — 3 columns past the target — and 1 label skipped ('register + heartbeat'). Both defects recorded."
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "attempts": [
+        {
+          "spec": "specs/v4-a.json",
+          "spec_sha256": "14d717bffbe5407557e222f6a96ccd4395a54b547a91e5a21fc5e7bbc045d389",
+          "record_label": "v4-a",
+          "exit": 1,
+          "note": "lr two-area diagnostics+audit fan (9 nodes, 6 edges); 'no obstacle-safe route for jan -> wapi' (return edge through the label channel)."
+        },
+        {
+          "spec": "specs/v4-b.json",
+          "spec_sha256": "e60fb2db477c2c6baa2863723a58ed9336c9c7110b526cd2633b0d7014746833",
+          "record_label": "v4-b",
+          "exit": 0,
+          "note": "FINAL: tb, 4 pinned phase ranks, 5 edges (2 banded gaps, 1 in-gap gap, 1 long edge, 1 return edge). extent 54x42, crossings 0, labels 5/5, origins 5/5."
+        },
+        {
+          "spec": "specs/v4-c.json",
+          "spec_sha256": "a1d8d73a04b5b445d9a8d751a5b006443856e1e4286da11185297850e1abdf5a",
+          "record_label": "v4-c",
+          "exit": 0,
+          "note": "wider 7-edge variant that would also carry web->wapi and pgrpc->db; extent 69x52 (over the target) with 2 bridges and 1 ambiguous label owner, so v4-b was shipped instead."
+        }
+      ]
+    }
+  ],
+  "capability_preflight_probes": [
+    {
+      "spec": "probes/probe-cal.json",
+      "spec_sha256": "7cafcab3312e3f677d3f14c0eaad6b7ec2e04c80937cae3e90730ceddf4d149e",
+      "record_label": "probe-cal",
+      "exit": 0,
+      "note": "Not a view candidate: measures an in-gap label in tb (2 nodes, 1 edge, 20-char label, no label_slot). Result: extent 24x30 and the label skipped — a tall rank gap does not guarantee a free cell."
+    },
+    {
+      "spec": "probes/probe-cal2.json",
+      "spec_sha256": "ab9b129c8bb7c6dded58202b339c6205a0a6990f7beed450f752d4205585c621",
+      "record_label": "probe-cal2",
+      "exit": 0,
+      "note": "Not a view candidate: same pair with label_slot -> extent 39x12, label placed. Confirms label_slot turns a 23-row gap into a 3-row gap plus a horizontal band."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "layers": [["a", "b"], ["c"]],
+  "nodes": [
+    { "id": "a", "label": "A", "group": "wan" },
+    { "id": "b", "label": "B", "group": "wan" },
+    { "id": "c", "label": "C", "group": "core" }
+  ],
+  "edges": [
+    { "from": "a", "to": "c", "label": "x-connect", "label_slot": true, "dots": 0 },
+    { "from": "b", "to": "c", "label": "ECMP", "label_slot": true, "dots": 0 }
+  ]
+}

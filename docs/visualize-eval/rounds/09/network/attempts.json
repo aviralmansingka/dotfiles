@@ -1,0 +1,37 @@
+{
+  "attempts_note": "Every spec candidate below was run through scripts/viz-evidence.sh record --to attempts-log.jsonl (labels match the log). A candidate is counted once per distinct spec bytes; the final spec's bytes (sha 3c5d4fc3...) were checked three times (recorded probe, harness check, pinned dump) and count as ONE candidate.",
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "spec": "specs/v1-attempt1-lr.json",
+          "spec_sha256": "cb6c418c4a7d86d5674b3e0b33cc453688d78eac627138bed7256e42fa365a1c",
+          "record_label": "v1-attempt1-lr",
+          "check_extent": "110x8",
+          "crossings": 1,
+          "labels_ambiguous": 1,
+          "note": "orientation probe, lr: 6 rank columns overflow the 77-column target (extent 110x8 > 77x47) and the shared rank gaps give 1 ambiguous label owner. Rejected on fit; --frames/--check only."
+        },
+        {
+          "spec": "specs/v1-attempt2-tb.json",
+          "spec_sha256": "54267d2e86ade3f929425f60eed910c7440775faf3e446cc857e32a7128572a4",
+          "record_label": "v1-attempt2-tb",
+          "check_extent": "29x67",
+          "crossings": 1,
+          "labels_ambiguous": 0,
+          "note": "tb fixes the width (29 cols) and label ownership (0 ambiguous) but the rank-gap label slots blow the height to 67 rows, over the 47-row target. Rejected on fit."
+        },
+        {
+          "spec": "specs/v1.json",
+          "spec_sha256": "3c5d4fc340a20dd4f727c3931dbb434a6e71e1fef7594ca718b6b818f75e6958",
+          "record_label": "v1-attempt3-tb-labelslot",
+          "check_extent": "27x45",
+          "crossings": 1,
+          "labels_ambiguous": 0,
+          "note": "FINAL. Same tb structure plus label_slot: true on all 7 labeled edges: labels move into side gutters instead of rank gaps, so extent drops 29x67 -> 27x45 and fits 77x47 at 100%. 7/7 labels placed, 0 on route cells, 0 skipped, 0 ambiguous owners, origins 7/7, 0 dot violations, 1 bridge (kept: both routes leave Web tier's bottom edge; no forbidden lever - reorder/merge/drop - was used to hide it)."
+        }
+      ]
+    }
+  ]
+}

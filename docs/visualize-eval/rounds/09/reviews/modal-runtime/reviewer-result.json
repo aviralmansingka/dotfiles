@@ -1,0 +1,1497 @@
+{
+  "protocol_version": 1,
+  "round": 9,
+  "case_id": "modal-runtime",
+  "candidate_sha256": "ba2878c5194cd6fc4bc1af5299a156064130de9be1b0ccf4c6eeb0236d431381",
+  "renderer_sha256": "405a61a674a7cc6271ae1276794eb270c9425dfc38585f4cbb1c48e9b6db495b",
+  "rubric_sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "a76ddc3cd3d26dc7d999e647ead79996de20149da56500b630750d1aa6be7a14",
+  "generator": {
+    "worker_id": "viz-ds09-7",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge09-modal-runtime",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 82,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/09/reviews/modal-runtime/observed-first.md",
+      "sha256": "308d4ac836cb98b9ac8b198cbdfc780b540be20b67af740ed48ff9a88d75f0a1",
+      "description": "Stage A blind record saved before expected reveal",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/09/reviews/modal-runtime/spec-manifest.json",
+      "sha256": "a76ddc3cd3d26dc7d999e647ead79996de20149da56500b630750d1aa6be7a14",
+      "description": "Sorted final spec paths and actual hashes",
+      "capture": null
+    },
+    {
+      "id": "v3-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v3-seam-pair.json",
+      "sha256": "f2484f0a664a4a9081b9ed624518bbb775006fe4c62e6318ffbc387a28a84f72",
+      "description": "Final specification",
+      "capture": null
+    },
+    {
+      "id": "v3-text",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v3/v3-text.txt",
+      "sha256": "0f14431339f14e8f2b7a2664ac54ee4c632e0cd2df6224e1d01f5d4651585cbc",
+      "description": "normal capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "captured",
+        "timestamp": "2026-11-02T22:00:04Z / 2026-11-02T22:00:08Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-ansi",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v3/v3-ansi.ansi",
+      "sha256": "218275d6493ebe6a389166328b9376f9962b5854add5c454108b4f716b4530ae",
+      "description": "normal capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "captured",
+        "timestamp": "2026-11-02T22:00:04Z / 2026-11-02T22:00:08Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-selected",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v3/v3-selected.ansi",
+      "sha256": "fe20591ba03ea799e2a19fe609fb166a9fa35a7804dced4efb3bb4d39933d2a2",
+      "description": "all selected capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "captured",
+        "timestamp": "2026-11-02T22:00:04Z / 2026-11-02T22:00:08Z",
+        "state": "all selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-frames",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v3/v3-frames.txt",
+      "sha256": "d9297790a6c583a3ce16cba97d624209fa681dcaecdf65ce5b6a14e627f19f87",
+      "description": "normal capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "0..4 at 100ms",
+        "timestamp": "2026-11-02T22:00:04Z / 2026-11-02T22:00:08Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frames-ansi",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v3/v3-frames.ansi",
+      "sha256": "e16c76675fadb3add1d248a8244fee930fc2774f2aa719e59154ad81385dc55c",
+      "description": "normal capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "0..4 at 100ms",
+        "timestamp": "2026-11-02T22:00:04Z / 2026-11-02T22:00:08Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-pinned",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/pinned/v3-77x47-frames.txt",
+      "sha256": "2bb8a057b6d24f82a30130ea9e150d10f89300153a9e5f2302c7cde54aaac4dd",
+      "description": "Final spec pinned direct dump at 77x47 natural",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "0..4 at 100ms",
+        "timestamp": "2026-11-02T22:00:04Z / 2026-11-02T22:00:08Z",
+        "state": "normal pinned",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-check",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v3/check.txt",
+      "sha256": "2062fe04c348e3df2b9e1c7a9865742c6d9cc1ab1b84fc17a03c1a623c316418",
+      "description": "check record",
+      "capture": null
+    },
+    {
+      "id": "v3-manifest",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v3/manifest.json",
+      "sha256": "e6bb2b84f43bf77cd11e2921d060992f8b241e6311373aa5031e9a57007c1f6e",
+      "description": "manifest record",
+      "capture": null
+    },
+    {
+      "id": "v3-validation",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/validation/v3.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "Recorded validator output",
+      "capture": null
+    },
+    {
+      "id": "v4-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v4-core-fan.json",
+      "sha256": "93c8066a4ccfb77a141084f1d13d3a45cde000ffbbae71597c4367a835f0449d",
+      "description": "Final specification",
+      "capture": null
+    },
+    {
+      "id": "v4-text",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v4/v4-text.txt",
+      "sha256": "eaa915dd775716b4f48e6864e57eef52d547571c349a6e7b9802e92525caad28",
+      "description": "normal capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "captured",
+        "timestamp": "2026-11-02T22:00:14Z / 2026-11-02T22:00:18Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-ansi",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v4/v4-ansi.ansi",
+      "sha256": "bb4839cd37d27b8d658b3b5306e075445ec9b1d13654d2cb056370b1d4030e88",
+      "description": "normal capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "captured",
+        "timestamp": "2026-11-02T22:00:14Z / 2026-11-02T22:00:18Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-selected",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v4/v4-selected.ansi",
+      "sha256": "09bda38e81876a9bf798bedbb1f924eb4eae2faf5fc1db51724cd4b40887715c",
+      "description": "all selected capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "captured",
+        "timestamp": "2026-11-02T22:00:14Z / 2026-11-02T22:00:18Z",
+        "state": "all selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-frames",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v4/v4-frames.txt",
+      "sha256": "e678e4488b8d85e9e96f22a7818f8e9d2c95c41c9202bf4f849a0e70947315b1",
+      "description": "normal capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "0..4 at 100ms",
+        "timestamp": "2026-11-02T22:00:14Z / 2026-11-02T22:00:18Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-frames-ansi",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v4/v4-frames.ansi",
+      "sha256": "7e31e43aa7e7eb2fcf42480df3ef2f994f47c6a30ed32d673e6a3c10089d87f3",
+      "description": "normal capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "0..4 at 100ms",
+        "timestamp": "2026-11-02T22:00:14Z / 2026-11-02T22:00:18Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-pinned",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/pinned/v4-77x47-frames.txt",
+      "sha256": "75ef207977f2eb8b67158832acc10424e3f9f6895e2f41a48061608e422f9440",
+      "description": "Final spec pinned direct dump at 77x47 natural",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "0..4 at 100ms",
+        "timestamp": "2026-11-02T22:00:14Z / 2026-11-02T22:00:18Z",
+        "state": "normal pinned",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-check",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v4/check.txt",
+      "sha256": "452b6758b72c6e17066245215582fa20c6ed80d43a39f540a238b8a872ba71c1",
+      "description": "check record",
+      "capture": null
+    },
+    {
+      "id": "v4-manifest",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v4/manifest.json",
+      "sha256": "e720217e8d62c176a269b3b6519c695d0d5158b72eb56b7e3cb7adb807aef254",
+      "description": "manifest record",
+      "capture": null
+    },
+    {
+      "id": "v4-validation",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/validation/v4.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "Recorded validator output",
+      "capture": null
+    },
+    {
+      "id": "v5-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v5-engine-tree.json",
+      "sha256": "f1ae35dd1dbd819a07e931c72ee7962353f36bb7d1ee56258d060d44b738855d",
+      "description": "Final specification",
+      "capture": null
+    },
+    {
+      "id": "v5-text",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v5/v5-text.txt",
+      "sha256": "3648ef9ed5de8bf9b05b491b69a5bbca2f380338250509796603404663e98a4a",
+      "description": "normal capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v5",
+        "frame": "captured",
+        "timestamp": "2026-11-02T22:00:19Z / 2026-11-02T22:00:23Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v5-ansi",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v5/v5-ansi.ansi",
+      "sha256": "e4adb7df8b94533d7013317d69e70c2fd084455f10edccf1c69d80d9171dc998",
+      "description": "normal capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v5",
+        "frame": "captured",
+        "timestamp": "2026-11-02T22:00:19Z / 2026-11-02T22:00:23Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v5-selected",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v5/v5-selected.ansi",
+      "sha256": "4aaff29951f26efce93ae8c6b51d487e2dcbb68dcbe7063dfb88b3ae2b0c8428",
+      "description": "all selected capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v5",
+        "frame": "captured",
+        "timestamp": "2026-11-02T22:00:19Z / 2026-11-02T22:00:23Z",
+        "state": "all selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v5-frames",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v5/v5-frames.txt",
+      "sha256": "3633d0c717698ce788b89a355d3774da3501fb6466c2fec525304b92a85620f3",
+      "description": "normal capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v5",
+        "frame": "0..4 at 100ms",
+        "timestamp": "2026-11-02T22:00:19Z / 2026-11-02T22:00:23Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v5-frames-ansi",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v5/v5-frames.ansi",
+      "sha256": "bbd54b613fbe51bae41c0d6c1c632a85fa7a717c7b756453a6d9402110d27445",
+      "description": "normal capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v5",
+        "frame": "0..4 at 100ms",
+        "timestamp": "2026-11-02T22:00:19Z / 2026-11-02T22:00:23Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v5-pinned",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/pinned/v5-77x47-frames.txt",
+      "sha256": "3f22f84da59865dbb3d5dce69a2457a342d2bab3beb02563d087ba4b8b6acd85",
+      "description": "Final spec pinned direct dump at 77x47 natural",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v5",
+        "frame": "0..4 at 100ms",
+        "timestamp": "2026-11-02T22:00:19Z / 2026-11-02T22:00:23Z",
+        "state": "normal pinned",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v5-check",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v5/check.txt",
+      "sha256": "5578bd71fa5f4ed9d462af2d3b8f6814235d0ee0884c172a14395472e33266ae",
+      "description": "check record",
+      "capture": null
+    },
+    {
+      "id": "v5-manifest",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/evidence/v5/manifest.json",
+      "sha256": "897b4c381ea4e0c6ab7f884f12f785b0b8fa0874bcc8ab04b33a0250b74ddf50",
+      "description": "manifest record",
+      "capture": null
+    },
+    {
+      "id": "v5-validation",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/validation/v5.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "Recorded validator output",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/generation.json",
+      "sha256": "b6a97c4d1485c6ca672589b1e7cf95cbe2dd18afda0fda410d48ed8fa4e9b836",
+      "description": "generation frozen or recorded evidence",
+      "capture": null
+    },
+    {
+      "id": "generation-md",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/generation.md",
+      "sha256": "a151af5a75a712e95ac1b78b1d555c9d10642715ba7f1d51e43afb4a6b97171e",
+      "description": "generation-md frozen or recorded evidence",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/attempts.json",
+      "sha256": "9226a001a3da67758577c991c5927ed5da06a4f295a5799506d72ea68e4ee09b",
+      "description": "attempts frozen or recorded evidence",
+      "capture": null
+    },
+    {
+      "id": "attempt-log",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/attempts-log.jsonl",
+      "sha256": "619abdcfe3fffe7e2bf519cd05daec2c4c7e1c88094b7bb8ef795d50ada3ff82",
+      "description": "attempt-log frozen or recorded evidence",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/09/metadata.json",
+      "sha256": "abc75dda9ee0149980533966ab7d640689a4caf961900938cff810a2d9750ddd",
+      "description": "metadata frozen or recorded evidence",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/09/rubric.json",
+      "sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+      "description": "rubric frozen or recorded evidence",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "dataset frozen or recorded evidence",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/09/SKILL.md",
+      "sha256": "ba2878c5194cd6fc4bc1af5299a156064130de9be1b0ccf4c6eeb0236d431381",
+      "description": "skill frozen or recorded evidence",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/modal-runtime/source.md",
+      "sha256": "c6e4552d5842347bc9472e53a2351897c3624c92b5a14541aaa3c28216dc4a0d",
+      "description": "source frozen or recorded evidence",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/modal-runtime/expected.json",
+      "sha256": "fd3963e207e9c433b7e5825c8a1691766bb13d5df7322ac97a05e379d2cbba99",
+      "description": "expected frozen or recorded evidence",
+      "capture": null
+    },
+    {
+      "id": "variants",
+      "path": "docs/visualize-eval/cases/modal-runtime/historical-variants.json",
+      "sha256": "1e5a6add0f9d62670f8c884a2f4df679112e233df8539b3983d80c122bdcf8e7",
+      "description": "variants frozen or recorded evidence",
+      "capture": null
+    },
+    {
+      "id": "record-01-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v1-a1-tb.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v1-a1-tb raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-01-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v1-a1-tb.stderr",
+      "sha256": "7f52104bdfa956cc76bbf7deadef58c78c9d11638dd3e7fa0f72422f93355961",
+      "description": "v1-a1-tb raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-01-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v1-a1.json",
+      "sha256": "4d09c531aa87b15040813e4a53e503ad92376811d691c2b11a490b681c25bc13",
+      "description": "v1-a1-tb recorded draft spec",
+      "capture": null
+    },
+    {
+      "id": "record-02-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v1-a2-lr.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v1-a2-lr raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-02-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v1-a2-lr.stderr",
+      "sha256": "0cdeaf0daf53865f6fbe728227bfe060432703f3f6dc7d0811c42c678ef1167e",
+      "description": "v1-a2-lr raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-02-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v1-a2.json",
+      "sha256": "f451f5969fde7d1c090e832096dfa50600914a0efea16f5f38d4c5a4f944f66f",
+      "description": "v1-a2-lr recorded draft spec",
+      "capture": null
+    },
+    {
+      "id": "record-03-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v1-a3-tb-minlen2.stdout",
+      "sha256": "2b50f14a6482d5c1cabfd710eb766b9fdbae4f0e2589825e1701f1ee51fe19d5",
+      "description": "v1-a3-tb-minlen2 raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-03-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v1-a3-tb-minlen2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v1-a3-tb-minlen2 raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-03-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v1-a3.json",
+      "sha256": "174f1eb23ed8a94e02b33073f768de300e71533f7a8874bb18111300cecd8426",
+      "description": "v1-a3-tb-minlen2 recorded draft spec",
+      "capture": null
+    },
+    {
+      "id": "record-04-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v2-a1-lr-labslot.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v2-a1-lr-labslot raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-04-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v2-a1-lr-labslot.stderr",
+      "sha256": "0cdeaf0daf53865f6fbe728227bfe060432703f3f6dc7d0811c42c678ef1167e",
+      "description": "v2-a1-lr-labslot raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-04-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v2-a1.json",
+      "sha256": "3063ea6a5522d99a59dc51bcf90a55db2d65338849c6f47bbf54cc9ee42aeb96",
+      "description": "v2-a1-lr-labslot recorded draft spec",
+      "capture": null
+    },
+    {
+      "id": "record-05-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v2-a2-lr-pair-minlen2.stdout",
+      "sha256": "36c975c273a1e0cbc7e8282e10bc655d003c6952a76ea88ec57fb9cad4a31509",
+      "description": "v2-a2-lr-pair-minlen2 raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-05-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v2-a2-lr-pair-minlen2.stderr",
+      "sha256": "90926d1155d6298aa20cb70dc82eab1de771a1b44ab816fb6dfe3361ec956626",
+      "description": "v2-a2-lr-pair-minlen2 raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-05-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v2-a2.json",
+      "sha256": "9a8ce23f7216c2051f3caf94a63f9795d41f58a50311d845dc2b22c9b0b5bdde",
+      "description": "v2-a2-lr-pair-minlen2 recorded draft spec",
+      "capture": null
+    },
+    {
+      "id": "record-06-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v2-a3-lr-minlen2-all.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v2-a3-lr-minlen2-all raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-06-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v2-a3-lr-minlen2-all.stderr",
+      "sha256": "c36c9ba88481c9aca226ab1aca375fb7bb65e26827be2cdf055f9c623140a737",
+      "description": "v2-a3-lr-minlen2-all raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-06-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v2-a3.json",
+      "sha256": "5e9e9b6920b8ad16571d4c0003a1fbff02f1e71dc52da8c74bef760a13e794d4",
+      "description": "v2-a3-lr-minlen2-all recorded draft spec",
+      "capture": null
+    },
+    {
+      "id": "record-07-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v3-a1-lr-short-labslot.stdout",
+      "sha256": "50cead8ac27749d4905c51904bf6c9a98690068c31b3655fcf4c090ddbb5e5f2",
+      "description": "v3-a1-lr-short-labslot raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-07-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v3-a1-lr-short-labslot.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v3-a1-lr-short-labslot raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-07-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v3-a1.json",
+      "sha256": "3ec3856ebd570c0e0a44f797bb7243d7913ab8643abb1a054ff770455728f508",
+      "description": "v3-a1-lr-short-labslot recorded draft spec",
+      "capture": null
+    },
+    {
+      "id": "record-08-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v3-a2-tb-plain-labels.stdout",
+      "sha256": "f4b7637b588298a4ad1900865be0ed31a1adc7057d0330f3a02a6df4defb7a1c",
+      "description": "v3-a2-tb-plain-labels raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-08-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v3-a2-tb-plain-labels.stderr",
+      "sha256": "77ce688b1944f6e8ecad3631319f0777ee21972fa0ff9c0fdb531b5fd0dd2f94",
+      "description": "v3-a2-tb-plain-labels raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-08-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v3-a2.json",
+      "sha256": "581b4b98edba177a6b5d8a49c570c632f216dfb40a304ff68beb64276de7af16",
+      "description": "v3-a2-tb-plain-labels recorded draft spec",
+      "capture": null
+    },
+    {
+      "id": "record-09-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v3-a3-lr-pair-minlen3.stdout",
+      "sha256": "5bdc9599da076977eee1d02d9e4994d8065cdce588ced2f5346de5d9e191f9e4",
+      "description": "v3-a3-lr-pair-minlen3 raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-09-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v3-a3-lr-pair-minlen3.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v3-a3-lr-pair-minlen3 raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-09-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v3-a3.json",
+      "sha256": "59ee3f267f328561dcbefaca200895a144fafc8261f9a649a338f5cb3fe50113",
+      "description": "v3-a3-lr-pair-minlen3 recorded draft spec",
+      "capture": null
+    },
+    {
+      "id": "record-10-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v4-a1-tb-labslot-all.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v4-a1-tb-labslot-all raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-10-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v4-a1-tb-labslot-all.stderr",
+      "sha256": "591509d93565875c329559a4c71e9c3a75af93d6cb01eacc711114305cbb782a",
+      "description": "v4-a1-tb-labslot-all raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-10-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v4-a1.json",
+      "sha256": "7fef29d42431858b8b29e341655f3168506ce985af732475d793e7771b3bebfc",
+      "description": "v4-a1-tb-labslot-all recorded draft spec",
+      "capture": null
+    },
+    {
+      "id": "record-11-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v3-final-a1-3node-seam.stdout",
+      "sha256": "eac98919c5eb40e668831a937e4d49335171a7d8f5d2c2964b1a904c40e686f1",
+      "description": "v3-final-a1-3node-seam raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-11-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v3-final-a1-3node-seam.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v3-final-a1-3node-seam raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-11-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v3-final.json",
+      "sha256": "83b4256fbb26d58d00e1340201c5f1e6eb7c88eace55fe4faf96cc1bf352138f",
+      "description": "v3-final-a1-3node-seam recorded draft spec",
+      "capture": null
+    },
+    {
+      "id": "record-12-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v3-final-a2-tb-3node-seam.stdout",
+      "sha256": "24c633a2c08ad864c8d34f86ffc4b8d8d50e5edd60c848571cbe5da264ece48e",
+      "description": "v3-final-a2-tb-3node-seam raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-12-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v3-final-a2-tb-3node-seam.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v3-final-a2-tb-3node-seam raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-12-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v3-final-a2.json",
+      "sha256": "63a0594432e7ed6e183994554597d5211b94a7a36cd6a46d24f3e291556e9eb6",
+      "description": "v3-final-a2-tb-3node-seam recorded draft spec",
+      "capture": null
+    },
+    {
+      "id": "record-13-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v3-final-a3-pair-only.stdout",
+      "sha256": "2062fe04c348e3df2b9e1c7a9865742c6d9cc1ab1b84fc17a03c1a623c316418",
+      "description": "v3-final-a3-pair-only raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-13-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v3-final-a3-pair-only.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v3-final-a3-pair-only raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-13-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v3-pair.json",
+      "sha256": "f2484f0a664a4a9081b9ed624518bbb775006fe4c62e6318ffbc387a28a84f72",
+      "description": "v3-final-a3-pair-only recorded draft spec",
+      "capture": null
+    },
+    {
+      "id": "record-14-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v4-a2-paths-tb.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v4-a2-paths-tb raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-14-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v4-a2-paths-tb.stderr",
+      "sha256": "1090fd3b2b317997d2c80a67e78fb2eacd1bdbbdba3309e04b6c3b2d1b28b1ed",
+      "description": "v4-a2-paths-tb raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-14-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v4-paths.json",
+      "sha256": "afc7975ab027fc96b317cb8b24c9ee51a0a1c81e56c6b803667fbc0e6753fdee",
+      "description": "v4-a2-paths-tb recorded draft spec",
+      "capture": null
+    },
+    {
+      "id": "record-15-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v4-a3-paths-tb-shortlabels.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v4-a3-paths-tb-shortlabels raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-15-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v4-a3-paths-tb-shortlabels.stderr",
+      "sha256": "1090fd3b2b317997d2c80a67e78fb2eacd1bdbbdba3309e04b6c3b2d1b28b1ed",
+      "description": "v4-a3-paths-tb-shortlabels raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-15-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v4-paths-b.json",
+      "sha256": "6e1950f57e359b074f09c18e8f2b83f41a26abd057b0639e7c75380158a98e48",
+      "description": "v4-a3-paths-tb-shortlabels recorded draft spec",
+      "capture": null
+    },
+    {
+      "id": "record-16-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v4-a4-paths-mixed-slots.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v4-a4-paths-mixed-slots raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-16-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v4-a4-paths-mixed-slots.stderr",
+      "sha256": "d310ffd06bfcdf2cf7a638f040bb7d8007aeeb59e5d76f0179d94a61751ad776",
+      "description": "v4-a4-paths-mixed-slots raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-16-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v4-paths-c.json",
+      "sha256": "e48cf041ed7a47b8a669382b501f9df0f1eae3a8672403b98115d9022944b96d",
+      "description": "v4-a4-paths-mixed-slots recorded draft spec",
+      "capture": null
+    },
+    {
+      "id": "record-17-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v4-a5-paths-2slots.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v4-a5-paths-2slots raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-17-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v4-a5-paths-2slots.stderr",
+      "sha256": "7f52104bdfa956cc76bbf7deadef58c78c9d11638dd3e7fa0f72422f93355961",
+      "description": "v4-a5-paths-2slots raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-17-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v4-paths-d.json",
+      "sha256": "b5ea672eed5444694c7b811db5d38bcfcfd71603e842ba8f9ce25ab43dcbe3d0",
+      "description": "v4-a5-paths-2slots recorded draft spec",
+      "capture": null
+    },
+    {
+      "id": "record-18-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v4-a6-fan-tb.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v4-a6-fan-tb raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-18-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v4-a6-fan-tb.stderr",
+      "sha256": "7f52104bdfa956cc76bbf7deadef58c78c9d11638dd3e7fa0f72422f93355961",
+      "description": "v4-a6-fan-tb raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-18-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v4-fan.json",
+      "sha256": "f078e03355edcafc02af32003c36cf4de4a64020f10f21cdb5aac3ded8b89ce2",
+      "description": "v4-a6-fan-tb recorded draft spec",
+      "capture": null
+    },
+    {
+      "id": "record-19-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v4-a7-fan-tb-plain.stdout",
+      "sha256": "452b6758b72c6e17066245215582fa20c6ed80d43a39f540a238b8a872ba71c1",
+      "description": "v4-a7-fan-tb-plain raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-19-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v4-a7-fan-tb-plain.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v4-a7-fan-tb-plain raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-19-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v4-fan-b.json",
+      "sha256": "93c8066a4ccfb77a141084f1d13d3a45cde000ffbbae71597c4367a835f0449d",
+      "description": "v4-a7-fan-tb-plain recorded draft spec",
+      "capture": null
+    },
+    {
+      "id": "record-20-stdout",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v5-a1-tree-tb-plain.stdout",
+      "sha256": "5578bd71fa5f4ed9d462af2d3b8f6814235d0ee0884c172a14395472e33266ae",
+      "description": "v5-a1-tree-tb-plain raw stdout",
+      "capture": null
+    },
+    {
+      "id": "record-20-stderr",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/recorded/v5-a1-tree-tb-plain.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v5-a1-tree-tb-plain raw stderr",
+      "capture": null
+    },
+    {
+      "id": "record-20-spec",
+      "path": "docs/visualize-eval/rounds/09/modal-runtime/specs/v5-tree.json",
+      "sha256": "f1ae35dd1dbd819a07e931c72ee7962353f36bb7d1ee56258d060d44b738855d",
+      "description": "v5-a1-tree-tb-plain recorded draft spec",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Two detached labels have uncertain direction; daemon interface filesystem purpose and explicit worker task input are missing from drawn labels.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "evidence_ids": [
+        "v3-text",
+        "v4-text",
+        "v5-text",
+        "blind"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All route strokes and heads trace separately, but the pair cannot be traced as individually labelled relations without guessing.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "evidence_ids": [
+        "v3-text",
+        "v3-check",
+        "blind"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Pinned final specs fit at natural 77x47; no graph clipping. Required cross-view semantic coverage nevertheless fails, and v5 header clips it from q quit.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "evidence_ids": [
+        "v3-pinned",
+        "v4-pinned",
+        "v5-pinned",
+        "v3-text",
+        "v4-text"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Compute is pink; orchestration and storage share identical blue hues without a tier-name label, making named tiers indistinguishable.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "evidence_ids": [
+        "v3-ansi",
+        "v4-ansi",
+        "v5-ansi"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All ten node borders are complete and continuous in normal and all-selected ANSI; palette does not overwrite them. Pinned header truncation is not a node border defect.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "evidence_ids": [
+        "v3-ansi",
+        "v4-ansi",
+        "v5-ansi",
+        "v3-selected",
+        "v4-selected",
+        "v5-selected",
+        "v5-pinned"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Logs, hash checks, captures, blind record, identities and cleanup are present; shortened v5 labels lack a recorded label_slot attempt on the actual five-node tree.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "evidence_ids": [
+        "generation",
+        "attempts",
+        "attempt-log",
+        "v5-spec",
+        "v3-validation",
+        "v4-validation",
+        "v5-validation",
+        "blind"
+      ]
+    },
+    "animation": {
+      "applicable": false,
+      "status": null,
+      "reason": "The source does not request animation; frozen manifest and expected data mark it optional. Zero dots and identical five-frame pinned dumps are consistent with a static view.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json",
+        "docs/visualize-eval/cases.json"
+      ],
+      "evidence_ids": [
+        "v3-pinned",
+        "v4-pinned",
+        "v5-pinned"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Correct service-meshes family and source-backed classification, but co-viewed pair labels cannot be assigned unambiguously, and v4 puts daemon before engine contrary to source listing. No recipe yield is claimed.",
+      "judged_family": "service-meshes",
+      "generator_family": "service-meshes",
+      "evidence_line": "modal-runtime is the core with a fan of three seams (worker gRPC: task input + control RPCs and events + management RPCs; task dispatch to the engine; filesystem HTTP over UDS to modal-daemon), and worker -> runtime / runtime -> worker is an anti-parallel pair of RPC relations between the same two boxes.",
+      "recipe_facts": "Pair co-viewed, two separate ports and directions; ownership of both labels uncertain. In v4 two distinct fan stems and heads are visible, but daemon precedes engine despite source order; third outgoing edge in v3.",
+      "evidence_ids": [
+        "generation",
+        "v3-text",
+        "v4-text",
+        "blind"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "r1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "expected": "worker → runtime: task input + control RPCs, worker gRPC",
+      "observed": "Worker left port [35,32] via col 32 to ▶ [33,19]; no crossing. task+ctrl gRPC is detached and cannot confidently be assigned; explicit input is omitted.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            32,
+            19,
+            4,
+            14
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            44,
+            22,
+            14,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1",
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "r2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "expected": "runtime → worker: events + management RPCs, worker gRPC",
+      "observed": "Runtime bottom [35,21] via col 35 to ▼ [36,30]; no crossing. events+mgmt gRPC is detached and cannot confidently be assigned.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            35,
+            21,
+            2,
+            10
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            43,
+            23,
+            16,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "r3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "expected": "runtime → engine: dispatches tasks",
+      "observed": "v4 col 38 down, bend right at row 34, ▼ [45,35]; adjacent dispatches tasks; no crossing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            38,
+            17,
+            19,
+            19
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "r4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "expected": "engine → backend: starts / manages",
+      "observed": "v5 col 37 to left bend row 23 and ▼ [21,24]; start/manage beside route; no crossing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v5-text",
+          "region": [
+            21,
+            8,
+            17,
+            17
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "r5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "expected": "backend → container: runs user process",
+      "observed": "v5 col 21 to right bend row 44 and ▼ [29,45]; runs user proc beside route; no crossing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v5-text",
+          "region": [
+            21,
+            29,
+            16,
+            17
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "r6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "expected": "engine → filesystem: mounts / snapshots",
+      "observed": "v5 col 39 to right bend row 23 and ▼ [43,24]; mount/snapshot beside route; no crossing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v5-text",
+          "region": [
+            39,
+            8,
+            16,
+            17
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "r7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "expected": "filesystem → Blobnet: image + volume data",
+      "observed": "v5 col 43 to right bend row 44 and ▼ [48,45]; image/vol data beside route; no crossing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v5-text",
+          "region": [
+            43,
+            29,
+            16,
+            17
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "r8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "expected": "runtime → daemon: filesystem HTTP over Unix-domain sockets",
+      "observed": "v4 col 36 down to left bend row 34 and ▼ [28,35]; HTTP over UDS is adjacent, but no visible label says filesystem.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            23,
+            17,
+            14,
+            19
+          ]
+        },
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            28,
+            37,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "r1",
+        "r2"
+      ],
+      "severity": "high",
+      "description": "Both v3 pair labels are detached from parallel corridors, so their separate direction-specific owners are visually uncertain despite the zero-ambiguity check.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            32,
+            19,
+            27,
+            14
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "r1"
+      ],
+      "severity": "medium",
+      "description": "task+ctrl omits explicit input from task input + control RPCs.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            44,
+            22,
+            14,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "r8"
+      ],
+      "severity": "medium",
+      "description": "HTTP over UDS omits the filesystem role; modal-daemon name does not supply it.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            23,
+            25,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            28,
+            37,
+            12,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "category": "conceptual_grouping_color",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Orchestration and storage share blue RGB hues without an alternative visible tier label.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            27,
+            13,
+            30,
+            27
+          ]
+        },
+        {
+          "evidence_id": "v5-ansi",
+          "region": [
+            36,
+            4,
+            28,
+            25
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F5",
+      "category": "category_fit",
+      "edge_ids": [
+        "r1",
+        "r2",
+        "r3",
+        "r8"
+      ],
+      "severity": "medium",
+      "description": "Pair is co-viewed but not unambiguously labelled; v4 daemon fan port precedes engine despite source listing.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            32,
+            19,
+            27,
+            14
+          ]
+        },
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            28,
+            34,
+            18,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F6",
+      "category": "workflow_evidence",
+      "edge_ids": [
+        "r5",
+        "r7"
+      ],
+      "severity": "medium",
+      "description": "The five-node v5 tree shortens process and volume without an actual-tree label_slot attempt in the recorded log.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v5-text",
+          "region": [
+            23,
+            36,
+            36,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F7",
+      "category": "layout_fit",
+      "edge_ids": [],
+      "severity": "low",
+      "description": "At pinned 77x47 v5 header q quit is clipped to q qu; graph content and node borders remain intact.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v5-pinned",
+          "region": [
+            74,
+            1,
+            4,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pPC",
+      "w7E:pPD",
+      "w7E:pPE"
+    ],
+    "closed_pane_ids": [
+      "w7E:pPC",
+      "w7E:pPD",
+      "w7E:pPE"
+    ],
+    "status": "done",
+    "reason": "All three generator capture manifests report confirmed_closed; reviewer launched no panes."
+  },
+  "overall": "fail"
+}

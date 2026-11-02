@@ -1,0 +1,19 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "dark", "label": "7 dark ports", "group": "server1" },
+    { "id": "s1", "label": "server1 .58", "group": "server1" },
+    { "id": "nic", "label": "eno16595np0", "group": "server1" },
+    { "id": "s2", "label": "server2 .59", "group": "prefix" },
+    { "id": "spare", "label": ".60-.62 free?", "group": "prefix" },
+    { "id": "gw", "label": ".57 Arista AS132717", "group": "nxtgen" }
+  ],
+  "edges": [
+    { "from": "dark", "to": "s1", "label": "no link seen", "style": "dashed", "label_slot": true, "dots": 0 },
+    { "from": "s1", "to": "nic", "label": "only uplink 25GbE", "label_slot": true, "dots": 0 },
+    { "from": "nic", "to": "gw", "label": ".58/29 no NAT/v6 0.1ms", "label_slot": true, "dots": 0 },
+    { "from": "s2", "to": "gw", "label": "same /29", "label_slot": true, "dots": 0 },
+    { "from": "spare", "to": "gw", "label": "no probe reply", "style": "dashed", "label_slot": true, "dots": 0 }
+  ]
+}

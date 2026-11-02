@@ -1,0 +1,80 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "cli",
+      "label": "CLI",
+      "group": "ingress"
+    },
+    {
+      "id": "api",
+      "label": "API gateway",
+      "group": "ingress"
+    },
+    {
+      "id": "auth",
+      "label": "Auth",
+      "group": "control"
+    },
+    {
+      "id": "queue",
+      "label": "Job queue",
+      "group": "control"
+    },
+    {
+      "id": "worker",
+      "label": "Worker pool",
+      "group": "compute"
+    },
+    {
+      "id": "db",
+      "label": "Postgres",
+      "group": "storage"
+    }
+  ],
+  "edges": [
+    {
+      "from": "cli",
+      "to": "api",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "api",
+      "to": "auth",
+      "label": "verify",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "api",
+      "to": "queue",
+      "label": "enqueue",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "queue",
+      "to": "worker",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "worker",
+      "to": "db",
+      "label": "write",
+      "dots": 1,
+      "flow": true,
+      "label_slot": true
+    },
+    {
+      "from": "auth",
+      "to": "db",
+      "label": "read",
+      "dots": 1,
+      "flow": true,
+      "label_slot": true
+    }
+  ]
+}

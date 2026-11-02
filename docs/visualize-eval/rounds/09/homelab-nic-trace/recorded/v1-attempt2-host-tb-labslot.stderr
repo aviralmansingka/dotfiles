@@ -1,0 +1,1 @@
+rataflow-view: no obstacle-safe route for vm -> virbr, virbr -> box, ts -> box, ts -> bond0, box -> wlp, box -> bond0; increase node/layer spacing

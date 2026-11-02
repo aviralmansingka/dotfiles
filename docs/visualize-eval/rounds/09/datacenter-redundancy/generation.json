@@ -1,0 +1,809 @@
+{
+  "case_id": "datacenter-redundancy",
+  "round": "09",
+  "generator": {
+    "identity": "viz-ds09-5",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "candidate_skill": "docs/visualize-eval/rounds/09/SKILL.md",
+    "candidate_skill_sha256": "ba2878c5194cd6fc4bc1af5299a156064130de9be1b0ccf4c6eeb0236d431381",
+    "renderer_binary": "/tmp/visualize-eval/round-09/bin/rataflow-view",
+    "renderer_sha256": "405a61a674a7cc6271ae1276794eb270c9425dfc38585f4cbb1c48e9b6db495b",
+    "target_viewport": "77x47 at natural 100% zoom"
+  },
+  "step0_classification": {
+    "family": "redundant-fabrics",
+    "evidence": "all 28 links over 18 devices are tier-to-tier cross-connects where every lower target carries a double arrowhead (2 ISPs per MUX, 2 MUXes x 2 cores, 2 cores x 2 firewalls, 2 firewalls x 2 border leaves, 2 border leaves x 2 spines, 2 spines x 2 rack leaves, 2 rack leaves x 2 racks) and the source says 'remove the dots flowing for now' \u2014 densest family, double-arrowhead targets, dots forbidden.",
+    "tie_breakers_considered": [
+      "flow-chains: rejected \u2014 E=28 far exceeds N=18 (density beats depth), and no hop is animated.",
+      "service-meshes: rejected as the family \u2014 there is no anti-parallel pair (request/response); the repeated pairs are independent parallel links in the SAME direction across a redundant tier. The mesh principle 'never one bidirectional arrow' is still applied as a secondary rule for the parallel lanes.",
+      "placement-planes: rejected \u2014 no weakly-connected worlds and no source-named bus; the source forbids merging links into a bus, so no trunk is drawn.",
+      "lifecycle-machines: rejected \u2014 nothing is phase-ordered or state-transitioned.",
+      "identity-probe-maps: rejected \u2014 the identifiers are 18 device names with only active/standby role qualifiers, no addresses, ports or uncertainty markers."
+    ],
+    "secondary_recipe_applied": "service-meshes' anti-parallel rule, read in its honest form for this source: parallel redundant links between the same two tiers stay separate lanes with separate ports and are never drawn as one bidirectional or bundled arrow (source line 270)."
+  },
+  "views": [
+    {
+      "view": "v1",
+      "spec": "views/v1.json",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "check": "evidence/v1/check.txt",
+      "frames": "evidence/v1/v1-frames.txt",
+      "frames_ansi": "evidence/v1/v1-frames.ansi",
+      "manifest": "evidence/v1/manifest.json",
+      "pinned_target_dump": "evidence/v1/v1-pinned-77x47.txt",
+      "validator_output": "evidence/v1/validator.txt",
+      "measured_pane": {
+        "viewport_token": "82x51 @100%",
+        "source": "the app's own header token in the pane capture (pane rect 168x53 split to half, minus the 1-cell pane border)"
+      },
+      "pinned_dump_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+      "extent_cells": "65x19",
+      "crossings": "1 bridges, 1 touching bends",
+      "labels_line": "4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+      "ambiguous_owners": 0,
+      "frames_captured": 5,
+      "capture_proof": "evidence/v1/v1-pinned-77x47.txt, frame 0, rows 15-33: the four mux->core lanes are separate horizontal routes (rows 20, 22, 26, 28) with four separate arrowheads into Core 1 (cols 58-65, rows 19-23) and Core 2 (cols 58-65, rows 25-29); each lane owns its own 'x-connect' label at rows 19/23/25/29 (cols 35-48). Static in all 5 frames of evidence/v1/v1-frames.txt.",
+      "viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+      "measured_dimensions": {
+        "pane_header_token": "82x51 @100%",
+        "pinned_target_dump": "77x47",
+        "graph_extent_cells": "65x19",
+        "zoom": "1.00 natural"
+      },
+      "static_motion_proof": "evidence/v1/v1-frames.txt: 5 timestamped frames, the graph cells are byte-identical across frames (only the shell prompt below the alternate screen differs); no dot glyph anywhere."
+    },
+    {
+      "view": "v2",
+      "spec": "views/v2.json",
+      "text": "evidence/v2/v2-text.txt",
+      "ansi": "evidence/v2/v2-ansi.ansi",
+      "selected_ansi": "evidence/v2/v2-selected.ansi",
+      "check": "evidence/v2/check.txt",
+      "frames": "evidence/v2/v2-frames.txt",
+      "frames_ansi": "evidence/v2/v2-frames.ansi",
+      "manifest": "evidence/v2/manifest.json",
+      "pinned_target_dump": "evidence/v2/v2-pinned-77x47.txt",
+      "validator_output": "evidence/v2/validator.txt",
+      "measured_pane": {
+        "viewport_token": "82x51 @100%",
+        "source": "the app's own header token in the pane capture (pane rect 168x53 split to half, minus the 1-cell pane border)"
+      },
+      "pinned_dump_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+      "extent_cells": "32x34",
+      "crossings": "2 bridges, 1 touching bends",
+      "labels_line": "8/8 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+      "ambiguous_owners": 0,
+      "frames_captured": 5,
+      "capture_proof": "evidence/v2/v2-pinned-77x47.txt, frame 0: FW1 (rows 23-26, cols 25-34) and FW2 (rows 23-26, cols 40-49) each take two separate arrowheads from Core 1/Core 2 (two '\u25bc' pairs at row 22, cols 26/28 and 35/37); BL 1 (rows 38-41) and BL 2 (rows 38-41) each take two separate arrowheads from the firewall row (row 37, cols 26/28 and 35/37). Eight lanes, eight labels, no merged arrow.",
+      "viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+      "measured_dimensions": {
+        "pane_header_token": "82x51 @100%",
+        "pinned_target_dump": "77x47",
+        "graph_extent_cells": "32x34",
+        "zoom": "1.00 natural"
+      },
+      "static_motion_proof": "evidence/v2/v2-frames.txt: 5 timestamped frames, the graph cells are byte-identical across frames (only the shell prompt below the alternate screen differs); no dot glyph anywhere."
+    },
+    {
+      "view": "v3",
+      "spec": "views/v3.json",
+      "text": "evidence/v3/v3-text.txt",
+      "ansi": "evidence/v3/v3-ansi.ansi",
+      "selected_ansi": "evidence/v3/v3-selected.ansi",
+      "check": "evidence/v3/check.txt",
+      "frames": "evidence/v3/v3-frames.txt",
+      "frames_ansi": "evidence/v3/v3-frames.ansi",
+      "manifest": "evidence/v3/manifest.json",
+      "pinned_target_dump": "evidence/v3/v3-pinned-77x47.txt",
+      "validator_output": "evidence/v3/validator.txt",
+      "measured_pane": {
+        "viewport_token": "82x51 @100%",
+        "source": "the app's own header token in the pane capture (pane rect 168x53 split to half, minus the 1-cell pane border)"
+      },
+      "pinned_dump_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+      "extent_cells": "52x32",
+      "crossings": "15 bridges, 5 touching bends",
+      "labels_line": "12/12 placed, 0 on route cells, 0 skipped, 3 ambiguous owners",
+      "ambiguous_owners": 3,
+      "frames_captured": 5,
+      "capture_proof": "evidence/v3/v3-pinned-77x47.txt, frame 0: Spine 1 (rows 11-15, cols 28-35) and Spine 2 (rows 11-15, cols 39-46) sit on the upper rank; Leaf 1 (cols 20-27), Leaf 2 (cols 31-38), BL 1 (cols 41-46) and BL 2 (cols 50-55) all occupy the SAME rows 24-27 \u2014 the pinned co-level row; Rack 1/Rack 2 occupy rows 35-38. Each leaf-level device takes two separate ECMP arrowheads (row 23).",
+      "viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+      "measured_dimensions": {
+        "pane_header_token": "82x51 @100%",
+        "pinned_target_dump": "77x47",
+        "graph_extent_cells": "52x32",
+        "zoom": "1.00 natural"
+      },
+      "static_motion_proof": "evidence/v3/v3-frames.txt: 5 timestamped frames, the graph cells are byte-identical across frames (only the shell prompt below the alternate screen differs); no dot glyph anywhere."
+    },
+    {
+      "view": "v4",
+      "spec": "views/v4.json",
+      "text": "evidence/v4/v4-text.txt",
+      "ansi": "evidence/v4/v4-ansi.ansi",
+      "selected_ansi": "evidence/v4/v4-selected.ansi",
+      "check": "evidence/v4/check.txt",
+      "frames": "evidence/v4/v4-frames.txt",
+      "frames_ansi": "evidence/v4/v4-frames.ansi",
+      "manifest": "evidence/v4/manifest.json",
+      "pinned_target_dump": "evidence/v4/v4-pinned-77x47.txt",
+      "validator_output": "evidence/v4/validator.txt",
+      "measured_pane": {
+        "viewport_token": "82x51 @100%",
+        "source": "the app's own header token in the pane capture (pane rect 168x53 split to half, minus the 1-cell pane border)"
+      },
+      "pinned_dump_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+      "extent_cells": "74x11",
+      "crossings": "2 bridges, 2 touching bends",
+      "labels_line": "8/8 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+      "ambiguous_owners": 1,
+      "frames_captured": 5,
+      "capture_proof": "evidence/v4/v4-pinned-77x47.txt, frame 0: Spine 1/Spine 2 at cols 8-16 (rows 19-23 and 25-29), Leaf 1/Leaf 2 in the middle column (cols 39-46), Rack 1/Rack 2 at cols 63-70. Each leaf takes two independent 'ECMP' arrowheads and each rack two independent 'dual' arrowheads; rows 20/22/26/28 are four distinct lanes.",
+      "viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+      "measured_dimensions": {
+        "pane_header_token": "82x51 @100%",
+        "pinned_target_dump": "77x47",
+        "graph_extent_cells": "74x11",
+        "zoom": "1.00 natural"
+      },
+      "static_motion_proof": "evidence/v4/v4-frames.txt: 5 timestamped frames, the graph cells are byte-identical across frames (only the shell prompt below the alternate screen differs); no dot glyph anywhere."
+    }
+  ],
+  "split_coverage_map": [
+    {
+      "view": "v1 uplink",
+      "carries": "4 ISPs, 2 MUXes, 2 cores; e1-e8 (ISP->MUX links unlabeled, 4 x-connect lanes)"
+    },
+    {
+      "view": "v2 edge + firewall",
+      "carries": "2 cores, FW1 active / FW2 standby, 2 border leaves; e9-e16 (active/standby pairs)"
+    },
+    {
+      "view": "v3 fabric tiers",
+      "carries": "2 spines pinned above the co-level border-leaf/rack-leaf row, racks below; e17-e28 (ECMP uplinks, dual rack links) \u2014 the source's own demanded geometry"
+    },
+    {
+      "view": "v4 fabric detail",
+      "carries": "2 spines above 2 rack leaves above 2 racks; e21-e28 again as the readable detail view"
+    }
+  ],
+  "family_recipe_per_view": [
+    {
+      "view": "v1",
+      "recipe_demand": "rank pins for the source's tiers, independent parallel lanes, never bundled/trunked, no dots",
+      "levers_used": "direction lr (3 tiers deep); groups isp/mux/core for hue + stable sibling order; minlen 3 on the four labeled mux->core lanes; no trunks; dots:0 on every edge; no layers (natural longest-path ranks already equal the source's tier order)",
+      "capture_proof": "evidence/v1/v1-pinned-77x47.txt, frame 0, rows 15-33: the four mux->core lanes are separate horizontal routes (rows 20, 22, 26, 28) with four separate arrowheads into Core 1 (cols 58-65, rows 19-23) and Core 2 (cols 58-65, rows 25-29); each lane owns its own 'x-connect' label at rows 19/23/25/29 (cols 35-48). Static in all 5 frames of evidence/v1/v1-frames.txt."
+    },
+    {
+      "view": "v2",
+      "recipe_demand": "double-arrowhead targets from two separate routes at two separate ports; no bundling",
+      "levers_used": "direction tb (3 tiers); groups core/firewall/border-leaf; minlen 2 on all 8 labeled edges (repeated 'active'/'standby' strings need their own corridor cells); dots:0; no trunks; no layers",
+      "capture_proof": "evidence/v2/v2-pinned-77x47.txt, frame 0: FW1 (rows 23-26, cols 25-34) and FW2 (rows 23-26, cols 40-49) each take two separate arrowheads from Core 1/Core 2 (two '\u25bc' pairs at row 22, cols 26/28 and 35/37); BL 1 (rows 38-41) and BL 2 (rows 38-41) each take two separate arrowheads from the firewall row (row 37, cols 26/28 and 35/37). Eight lanes, eight labels, no merged arrow."
+    },
+    {
+      "view": "v3",
+      "recipe_demand": "rank pins for the source's tiers (spines above, border leaves and rack leaves at the same level), independent lanes",
+      "levers_used": "layers [[sp1,sp2],[bl1,bl2,leaf1,leaf2],[rack1,rack2]] (8 pinned, 0 conflicts); direction tb; groups spine/border-leaf/rack-leaf/rack; no minlen (a pin gap cannot hold minlen>1 \u2014 see pins-conflict attempts); no trunks; dots:0",
+      "capture_proof": "evidence/v3/v3-pinned-77x47.txt, frame 0: Spine 1 (rows 11-15, cols 28-35) and Spine 2 (rows 11-15, cols 39-46) sit on the upper rank; Leaf 1 (cols 20-27), Leaf 2 (cols 31-38), BL 1 (cols 41-46) and BL 2 (cols 50-55) all occupy the SAME rows 24-27 \u2014 the pinned co-level row; Rack 1/Rack 2 occupy rows 35-38. Each leaf-level device takes two separate ECMP arrowheads (row 23)."
+    },
+    {
+      "view": "v4",
+      "recipe_demand": "the same fabric slice, readable: spines above, leaves below, never merged",
+      "levers_used": "direction lr; groups spine/rack-leaf/rack; minlen 3 (ECMP lanes) and minlen 2 (dual rack lanes); dots:0; no trunks; no layers (the pure downward DAG ranks itself spine->leaf->rack, and pins would block the minlen corridor reservation)",
+      "capture_proof": "evidence/v4/v4-pinned-77x47.txt, frame 0: Spine 1/Spine 2 at cols 8-16 (rows 19-23 and 25-29), Leaf 1/Leaf 2 in the middle column (cols 39-46), Rack 1/Rack 2 at cols 63-70. Each leaf takes two independent 'ECMP' arrowheads and each rack two independent 'dual' arrowheads; rows 20/22/26/28 are four distinct lanes."
+    }
+  ],
+  "meaning_ledger": [
+    {
+      "fact": "ISP A / ISP B / ISP C / ISP D (node ispA..ispD)",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "four separate nodes, not folded into the MUX labels \u2014 v1 rows 17-32"
+    },
+    {
+      "fact": "MUX 1 / MUX 2",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "v1"
+    },
+    {
+      "fact": "Core 1 / Core 2",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "v1, v2"
+    },
+    {
+      "fact": "FW1 active / FW2 standby",
+      "kind": "role qualifier",
+      "fate": "drawn",
+      "where": "v2 node labels are the source's own names; the same words also label the core->fw and fw->bl lanes"
+    },
+    {
+      "fact": "BL 1 / BL 2 (border leaves)",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "v2, v3"
+    },
+    {
+      "fact": "Spine 1 / Spine 2",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "v3, v4"
+    },
+    {
+      "fact": "Leaf 1 / Leaf 2 (rack leaves)",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "v3, v4"
+    },
+    {
+      "fact": "Rack 1 / Rack 2",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "v3, v4"
+    },
+    {
+      "fact": "4 ISP -> MUX links",
+      "kind": "link, unlabeled",
+      "fate": "drawn unlabeled",
+      "where": "v1 \u2014 the source states no protocol and the brief forbids inventing one"
+    },
+    {
+      "fact": "4 MUX -> core cross-connects",
+      "kind": "link, 'x-connect'",
+      "fate": "drawn",
+      "where": "v1 (x-connect = cross-connect, the source's own shorthand)"
+    },
+    {
+      "fact": "4 core -> firewall links, active (to FW1) / standby (to FW2)",
+      "kind": "link + qualifier",
+      "fate": "drawn",
+      "where": "v2"
+    },
+    {
+      "fact": "4 firewall -> border-leaf links, active / standby",
+      "kind": "link + qualifier",
+      "fate": "drawn",
+      "where": "v2"
+    },
+    {
+      "fact": "4 border-leaf -> spine ECMP links",
+      "kind": "link + protocol",
+      "fate": "drawn",
+      "where": "v3"
+    },
+    {
+      "fact": "4 spine -> rack-leaf ECMP links",
+      "kind": "link + protocol",
+      "fate": "drawn",
+      "where": "v3, v4"
+    },
+    {
+      "fact": "4 rack-leaf -> rack dual links",
+      "kind": "link + qualifier",
+      "fate": "drawn",
+      "where": "v3, v4"
+    },
+    {
+      "fact": "'remove the dots flowing' (source line 134)",
+      "kind": "user constraint",
+      "fate": "drawn as absence \u2014 dots:0 on all 28 edges, no flow anywhere; 5 static frames per view prove nothing moves"
+    },
+    {
+      "fact": "'do not merge core 1/core 2 or mux 1/mux 2 arrows; independent to represent redundancy' (line 270)",
+      "kind": "user constraint",
+      "fate": "drawn \u2014 no trunk anywhere, no bidirectional arrow, every parallel link is its own route with its own arrowhead"
+    },
+    {
+      "fact": "'border leaf and leaf at the same height; spine above the leaf' (line 248)",
+      "kind": "user constraint",
+      "fate": "drawn",
+      "where": "v3 layers pin"
+    },
+    {
+      "fact": "'2 ISPs each' into each MUX",
+      "kind": "counting fact",
+      "fate": "drawn",
+      "where": "two arrowheads per MUX in v1"
+    },
+    {
+      "fact": "'compact / readable at default zoom' (lines 150, 158, 166)",
+      "kind": "user constraint",
+      "fate": "drawn \u2014 each view fits 77x47 at 100% (extents 65x19, 32x34, 52x32, 74x11)"
+    },
+    {
+      "fact": "historical chat commands and any credentials/host-access discussion in the source log",
+      "kind": "out of scope",
+      "fate": "dropped with reason \u2014 the brief restricts this case to the excerpts above and forbids replaying them"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "ispA",
+      "to": "mux1",
+      "verb_tech": "unlabeled in source (no protocol stated; do not invent)",
+      "label_owner": "none \u2014 no label drawn",
+      "view": "v1"
+    },
+    {
+      "id": "e2",
+      "from": "ispB",
+      "to": "mux1",
+      "verb_tech": "unlabeled in source (no protocol stated; do not invent)",
+      "label_owner": "none \u2014 no label drawn",
+      "view": "v1"
+    },
+    {
+      "id": "e3",
+      "from": "ispC",
+      "to": "mux2",
+      "verb_tech": "unlabeled in source (no protocol stated; do not invent)",
+      "label_owner": "none \u2014 no label drawn",
+      "view": "v1"
+    },
+    {
+      "id": "e4",
+      "from": "ispD",
+      "to": "mux2",
+      "verb_tech": "unlabeled in source (no protocol stated; do not invent)",
+      "label_owner": "none \u2014 no label drawn",
+      "view": "v1"
+    },
+    {
+      "id": "e5",
+      "from": "mux1",
+      "to": "core1",
+      "verb_tech": "x-connect",
+      "label_owner": "e5",
+      "view": "v1"
+    },
+    {
+      "id": "e6",
+      "from": "mux1",
+      "to": "core2",
+      "verb_tech": "x-connect",
+      "label_owner": "e6",
+      "view": "v1"
+    },
+    {
+      "id": "e7",
+      "from": "mux2",
+      "to": "core1",
+      "verb_tech": "x-connect",
+      "label_owner": "e7",
+      "view": "v1"
+    },
+    {
+      "id": "e8",
+      "from": "mux2",
+      "to": "core2",
+      "verb_tech": "x-connect",
+      "label_owner": "e8",
+      "view": "v1"
+    },
+    {
+      "id": "e9",
+      "from": "core1",
+      "to": "fw1",
+      "verb_tech": "active",
+      "label_owner": "e9",
+      "view": "v2"
+    },
+    {
+      "id": "e10",
+      "from": "core2",
+      "to": "fw1",
+      "verb_tech": "active",
+      "label_owner": "e10",
+      "view": "v2"
+    },
+    {
+      "id": "e11",
+      "from": "core1",
+      "to": "fw2",
+      "verb_tech": "standby",
+      "label_owner": "e11",
+      "view": "v2"
+    },
+    {
+      "id": "e12",
+      "from": "core2",
+      "to": "fw2",
+      "verb_tech": "standby",
+      "label_owner": "e12",
+      "view": "v2"
+    },
+    {
+      "id": "e13",
+      "from": "fw1",
+      "to": "bl1",
+      "verb_tech": "active",
+      "label_owner": "e13",
+      "view": "v2"
+    },
+    {
+      "id": "e14",
+      "from": "fw1",
+      "to": "bl2",
+      "verb_tech": "active",
+      "label_owner": "e14",
+      "view": "v2"
+    },
+    {
+      "id": "e15",
+      "from": "fw2",
+      "to": "bl1",
+      "verb_tech": "standby",
+      "label_owner": "e15",
+      "view": "v2"
+    },
+    {
+      "id": "e16",
+      "from": "fw2",
+      "to": "bl2",
+      "verb_tech": "standby",
+      "label_owner": "e16",
+      "view": "v2"
+    },
+    {
+      "id": "e17",
+      "from": "bl1",
+      "to": "sp1",
+      "verb_tech": "ECMP",
+      "label_owner": "e17",
+      "view": "v3"
+    },
+    {
+      "id": "e18",
+      "from": "bl1",
+      "to": "sp2",
+      "verb_tech": "ECMP",
+      "label_owner": "e18",
+      "view": "v3"
+    },
+    {
+      "id": "e19",
+      "from": "bl2",
+      "to": "sp1",
+      "verb_tech": "ECMP",
+      "label_owner": "e19",
+      "view": "v3"
+    },
+    {
+      "id": "e20",
+      "from": "bl2",
+      "to": "sp2",
+      "verb_tech": "ECMP",
+      "label_owner": "e20",
+      "view": "v3"
+    },
+    {
+      "id": "e21",
+      "from": "sp1",
+      "to": "leaf1",
+      "verb_tech": "ECMP",
+      "label_owner": "e21",
+      "view": "v3 + v4"
+    },
+    {
+      "id": "e22",
+      "from": "sp1",
+      "to": "leaf2",
+      "verb_tech": "ECMP",
+      "label_owner": "e22",
+      "view": "v3 + v4"
+    },
+    {
+      "id": "e23",
+      "from": "sp2",
+      "to": "leaf1",
+      "verb_tech": "ECMP",
+      "label_owner": "e23",
+      "view": "v3 + v4"
+    },
+    {
+      "id": "e24",
+      "from": "sp2",
+      "to": "leaf2",
+      "verb_tech": "ECMP",
+      "label_owner": "e24",
+      "view": "v3 + v4"
+    },
+    {
+      "id": "e25",
+      "from": "leaf1",
+      "to": "rack1",
+      "verb_tech": "dual",
+      "label_owner": "e25",
+      "view": "v3 + v4"
+    },
+    {
+      "id": "e26",
+      "from": "leaf2",
+      "to": "rack1",
+      "verb_tech": "dual",
+      "label_owner": "e26",
+      "view": "v3 + v4"
+    },
+    {
+      "id": "e27",
+      "from": "leaf1",
+      "to": "rack2",
+      "verb_tech": "dual",
+      "label_owner": "e27",
+      "view": "v3 + v4"
+    },
+    {
+      "id": "e28",
+      "from": "leaf2",
+      "to": "rack2",
+      "verb_tech": "dual",
+      "label_owner": "e28",
+      "view": "v3 + v4"
+    }
+  ],
+  "relationship_mapping": [
+    {
+      "original": "ispA..ispD -> mux1/mux2",
+      "visible_as": "v1: four separate routes, unlabeled, two arrowheads per MUX"
+    },
+    {
+      "original": "mux1/mux2 -> core1/core2 (cross-connect)",
+      "visible_as": "v1: four separate 'x-connect' lanes, one crossing bridge between the two diagonal lanes (see defects)"
+    },
+    {
+      "original": "core1/core2 -> fw1(fw2) active(standby)",
+      "visible_as": "v2: four labeled lanes, two arrowheads into each firewall"
+    },
+    {
+      "original": "fw1/fw2 -> bl1/bl2 active(standby)",
+      "visible_as": "v2: four labeled lanes, two arrowheads into each border leaf"
+    },
+    {
+      "original": "bl1/bl2 -> sp1/sp2 ECMP",
+      "visible_as": "v3: four labeled lanes drawn upward into the pinned spine rank"
+    },
+    {
+      "original": "sp1/sp2 -> leaf1/leaf2 ECMP",
+      "visible_as": "v3 and v4: four labeled lanes, two arrowheads into each rack leaf"
+    },
+    {
+      "original": "leaf1/leaf2 -> rack1/rack2 dual",
+      "visible_as": "v3 and v4: four labeled lanes, two arrowheads into each rack"
+    }
+  ],
+  "structural_levers": [
+    {
+      "view": "v1",
+      "lever": "groups",
+      "value": "isp(4), mux(2), core(2)",
+      "source_fact": "the source names the tiers (ISPs, MUX appliances, core routers) and tier membership must stay readable as hue + stable order; nothing is drawn around a group"
+    },
+    {
+      "view": "v1",
+      "lever": "minlen",
+      "value": "3 on the four labeled mux->core edges",
+      "source_fact": "line 270: 'I don't want arrows to overlap and be merged, I want them to be independent' \u2014 the cross-connect corridor is widened so each label owns its lane"
+    },
+    {
+      "view": "v1",
+      "lever": "direction",
+      "value": "lr (3 tiers)",
+      "source_fact": "three tiers deep reads left-to-right; lr also keeps the 4-ISP rank vertical instead of a 4-wide top row"
+    },
+    {
+      "view": "v2",
+      "lever": "groups",
+      "value": "core(2), firewall(2), border-leaf(2)",
+      "source_fact": "source names core routers, active/passive firewall appliances and border leaves as distinct tiers"
+    },
+    {
+      "view": "v2",
+      "lever": "minlen",
+      "value": "2 on all eight labeled edges",
+      "source_fact": "repeated 'active'/'standby' labels must each own their corridor; without the gap the engine reported ambiguous owners"
+    },
+    {
+      "view": "v3",
+      "lever": "layers",
+      "value": "[[sp1,sp2],[bl1,bl2,leaf1,leaf2],[rack1,rack2]] \u2014 8 pinned, 0 conflicts",
+      "source_fact": "line 248 plus the fixed constraint: 'I want the border leaf and leaf to be at the same height. I want the spine to be above the leaf'"
+    },
+    {
+      "view": "v3",
+      "lever": "trunks",
+      "value": "none (deliberate)",
+      "source_fact": "line 270 forbids merging independent redundancy links; a trunk would be a bus"
+    },
+    {
+      "view": "v3",
+      "lever": "dots",
+      "value": "dots:0 on all 12 edges",
+      "source_fact": "line 134 'remove the dots flowing for now' \u2014 the request wins everywhere in the case"
+    },
+    {
+      "view": "v4",
+      "lever": "minlen",
+      "value": "3 (ECMP) / 2 (dual)",
+      "source_fact": "parallel lanes stay independent and each label owns its cell"
+    },
+    {
+      "view": "v4",
+      "lever": "groups",
+      "value": "spine(2), rack-leaf(2), rack(2)",
+      "source_fact": "source tier names; same hue families as v3 so the two views read as one case"
+    }
+  ],
+  "recipe_yield": [
+    {
+      "demand": "zero-bridge drawing of a 2x2 redundant cross-connect",
+      "measured_attempts": [
+        {
+          "probe": "probe-k22",
+          "spec_sha256": "see attempts-log.jsonl",
+          "numbers": "isolated mux1/mux2 -> core1/core2 with minlen 5: 1 bridge, 1 ambiguous owner, extent 65x11"
+        },
+        {
+          "view": "v1",
+          "numbers": "attempts v1-a1 (tb) 1 bridge / 2 ambiguous; v1-a2 (lr) 1 bridge / 2 ambiguous; v1-a3 (lr + minlen 3) 1 bridge / 0 ambiguous"
+        },
+        {
+          "view": "v2",
+          "numbers": "v2-a1 (lr) 2 bridges / 1 ambiguous; v2-a2 (tb) 2 bridges / 0 ambiguous"
+        }
+      ],
+      "shipped": "the bridge stays: 1 in v1, 2 in v2, 2 in v4 \u2014 one per 2x2 fan, which is the router's structural minimum. Splitting views cannot remove it (probe-k22 isolates the fan and still reports 1). No relation, label or qualifier was dropped to hide it."
+    },
+    {
+      "demand": "spines above, border leaves and rack leaves on the same level (the source's own correction), with clean arrows",
+      "measured_attempts": [
+        {
+          "view": "v3",
+          "numbers": "v3-a1 (layers + minlen) 8 pins-conflict lines, 15 bridges, 3 ambiguous; v3-a2 (layers, no minlen) 0 pin conflicts, 15 bridges, 3 ambiguous; v3-a3 (racks dropped) 14 bridges, 2 ambiguous"
+        }
+      ],
+      "shipped": "v3-a2 keeps all 12 fabric links with the pinned tiers and costs 15 bridges; the residual cost is the renderer routing the backward bl->spine links around the outer rails. v4 is the readable detail view of the same leaf/spine/rack links (2 bridges). An evidenced yield, not an unrecorded one."
+    },
+    {
+      "demand": "zero ambiguous label owners in the fabric views",
+      "measured_attempts": [
+        {
+          "view": "v3",
+          "numbers": "3 ambiguous owners in all three attempts (12 labels, 8 of them identical 'ECMP' in one band)"
+        },
+        {
+          "view": "v4",
+          "numbers": "v4-a1 2 ambiguous (+8 pins-conflict), v4-a2 2 ambiguous, v4-a3 1 ambiguous"
+        }
+      ],
+      "shipped": "v3 ships 3 ambiguous owners and v4 ships 1; both are reported as defects. The 2x2 fan puts one-cell corridors side by side, so a label can be equidistant from two of them; minlen cannot grow under a pinned rank."
+    }
+  ],
+  "source_pointers": [
+    "docs/visualize-eval/cases/datacenter-redundancy/source.md lines 126-134, 142-166, 248, 270 (user corrections and the 28-link relationship list)"
+  ],
+  "abbreviations": [
+    {
+      "text": "MUX 1 / MUX 2",
+      "source": "MUX appliance 1 / 2"
+    },
+    {
+      "text": "BL 1 / BL 2",
+      "source": "border leaf 1 / border leaf 2 (the source's own node names)"
+    },
+    {
+      "text": "x-connect",
+      "source": "cross-connect (the source's own relation name)"
+    },
+    {
+      "text": "FW1 active / FW2 standby",
+      "source": "firewall appliance 1 (active) / 2 (passive=standby) \u2014 the source's own node names"
+    },
+    {
+      "text": "ECMP / dual / active / standby",
+      "source": "the relation names given in the relationship facts, unchanged"
+    }
+  ],
+  "deliberate_drops": [
+    {
+      "dropped": "'2 is for redundancy' / 'active-passive' commentary",
+      "reason": "commentary, not a relation; the redundancy is drawn as the parallel lanes themselves"
+    },
+    {
+      "dropped": "dots / flow animation",
+      "reason": "the source explicitly removed them (line 134); dots:0 on every edge in all four views"
+    },
+    {
+      "dropped": "trunks",
+      "reason": "no shared bus exists in the source, and line 270 forbids merging redundancy links"
+    },
+    {
+      "dropped": "protocols on the four ISP -> MUX links",
+      "reason": "the source states none; inventing one is forbidden"
+    }
+  ],
+  "known_defects": [
+    {
+      "view": "v1",
+      "defect": "1 bridge: the two diagonal mux->core lanes cross once at frame row 23, col 55 (the '\u2312' cell in evidence/v1/v1-pinned-77x47.txt). Inherent to a 2x2 fan \u2014 probe-k22 shows an isolated fan still reports 1 bridge."
+    },
+    {
+      "view": "v2",
+      "defect": "2 bridges, one per 2x2 fan: row 19 col 32 (core->fw) and row 34 col 34 (fw->bl) in evidence/v2/v2-pinned-77x47.txt."
+    },
+    {
+      "view": "v3",
+      "defect": "15 bridges and 3 ambiguous label owners. The backward bl->spine links are walked around the outer rails (left rail col 22-24, rows 12-34; right rail col 56-58, rows 17-34) and cross the forward spine->leaf lanes (bridges at rows 9,14,18-23,29,31,33). check.txt carries 'warning: 3 label(s) have an ambiguous owner'; the passing labels sit at rows 16/17/20/21/22, cols 26-52."
+    },
+    {
+      "view": "v3",
+      "defect": "the engine orders nodes inside a pinned rank itself, so Leaf 1/Leaf 2 render left of BL 1/BL 2 instead of the border leaves staying next to the firewall pair they come from. Rank membership \u2014 the constraint that matters \u2014 is honoured."
+    },
+    {
+      "view": "v4",
+      "defect": "1 ambiguous label owner (warning line in check.txt); 2 bridges at row 23 col 36 and row 25 col 60; extent 74x11 leaves only 3 free columns at 77 wide."
+    }
+  ],
+  "blockers": [
+    "No backward-edge lane in a pinned rank: with the source's own tier pin (spines above the co-level border-leaf/rack-leaf row) the bl->spine links are backward edges and the A* router walks them around the outside of the graph (15 bridges in v3). This is a renderer limitation, not a spec error \u2014 v3-a1/a2/a3 all show it.",
+    "minlen cannot exceed a pinned rank gap: combining layers with minlen emits 'pins-conflict' lines (8 in v3-a1 and 4-a1), so label-room reservation and tier pins are mutually exclusive on the same hop.",
+    "label_slot is unusable on these fans: on a 2-node fan it broke routing ('no obstacle-safe route for b -> c', probe-capability), and under minlen it skipped a label (probe-minlen-slot). Not used in any shipped view.",
+    "A zero-bridge 2x2 cross-connect is not reachable (probe-k22)."
+  ],
+  "cleanup": {
+    "panes_opened": 4,
+    "result": "all four evidence panes confirmed_closed in their manifests (evidence/v1..v4/manifest.json field cleanup=confirmed_closed); `herdr pane layout` afterwards shows only this session's own pane (w7G:p1 168x53), no orphans",
+    "failures": "none"
+  },
+  "signature_convention": "Arrows keep the source's stated orientation (from = the tier nearer the ISP side, to = the nearer the rack side) because the brief says these are physical connectivity links, not one-way traffic; a link is not reversed to make the layout easier.",
+  "attempts_file": "attempts.json",
+  "attempts_log": "attempts-log.jsonl",
+  "validator_outputs": {
+    "v1": {
+      "command": "scripts/viz-validate.py docs/visualize-eval/rounds/09/datacenter-redundancy/evidence/v1 --require-select --require-frames --require-records --attempts docs/visualize-eval/rounds/09/datacenter-redundancy/attempts.json",
+      "exit_status": 0,
+      "failing_checks": [],
+      "output": "PASS manifest_readable\nPASS binary_path_absolute\nPASS binary_hash_recorded\nPASS artifact_hashes\nPASS check_output_present\nPASS check_exit_zero\nPASS check_warnings_absent\nPASS labels_parsed\nPASS labels_complete\nPASS labels_off_routes\nPASS labels_not_skipped\nPASS dots_parsed\nPASS dots_no_violations\nPASS origins_reported\nPASS origins_complete\nPASS dots_sync_reported\nPASS arrivals_reported\nPASS arrivals_complete\nPASS labels_ownership_reported\nPASS labels_ownership_clear\nPASS crossings_reported\nPASS viewport_proven\nPASS viewport_proven_measurable\nPASS viewport_matches_target\nPASS cleanup_confirmed\nPASS select_all_frame\nPASS select_all_artifact\nPASS frames_artifact\nPASS frames_timestamped\nPASS attempts_readable\nPASS attempts_view_budget\nPASS attempts_spec_budget\nPASS attempts_records_complete\n\nall checks passed\n"
+    },
+    "v2": {
+      "command": "scripts/viz-validate.py docs/visualize-eval/rounds/09/datacenter-redundancy/evidence/v2 --require-select --require-frames --require-records --attempts docs/visualize-eval/rounds/09/datacenter-redundancy/attempts.json",
+      "exit_status": 0,
+      "failing_checks": [],
+      "output": "PASS manifest_readable\nPASS binary_path_absolute\nPASS binary_hash_recorded\nPASS artifact_hashes\nPASS check_output_present\nPASS check_exit_zero\nPASS check_warnings_absent\nPASS labels_parsed\nPASS labels_complete\nPASS labels_off_routes\nPASS labels_not_skipped\nPASS dots_parsed\nPASS dots_no_violations\nPASS origins_reported\nPASS origins_complete\nPASS dots_sync_reported\nPASS arrivals_reported\nPASS arrivals_complete\nPASS labels_ownership_reported\nPASS labels_ownership_clear\nPASS crossings_reported\nPASS viewport_proven\nPASS viewport_proven_measurable\nPASS viewport_matches_target\nPASS cleanup_confirmed\nPASS select_all_frame\nPASS select_all_artifact\nPASS frames_artifact\nPASS frames_timestamped\nPASS attempts_readable\nPASS attempts_view_budget\nPASS attempts_spec_budget\nPASS attempts_records_complete\n\nall checks passed\n"
+    },
+    "v3": {
+      "command": "scripts/viz-validate.py docs/visualize-eval/rounds/09/datacenter-redundancy/evidence/v3 --require-select --require-frames --require-records --attempts docs/visualize-eval/rounds/09/datacenter-redundancy/attempts.json",
+      "exit_status": 1,
+      "failing_checks": [
+        "check_warnings_absent",
+        "labels_ownership_clear"
+      ],
+      "output": "PASS manifest_readable\nPASS binary_path_absolute\nPASS binary_hash_recorded\nPASS artifact_hashes\nPASS check_output_present\nPASS check_exit_zero\nFAIL check_warnings_absent \u2014 warning: 3 label(s) have an ambiguous owner: another route is as close to the text as its own edge\nPASS labels_parsed\nPASS labels_complete\nPASS labels_off_routes\nPASS labels_not_skipped\nPASS dots_parsed\nPASS dots_no_violations\nPASS origins_reported\nPASS origins_complete\nPASS dots_sync_reported\nPASS arrivals_reported\nPASS arrivals_complete\nPASS labels_ownership_reported\nFAIL labels_ownership_clear \u2014 3 label(s) sit as close to another route as to their own edge; a reader cannot pair them\nPASS crossings_reported\nPASS viewport_proven\nPASS viewport_proven_measurable\nPASS viewport_matches_target\nPASS cleanup_confirmed\nPASS select_all_frame\nPASS select_all_artifact\nPASS frames_artifact\nPASS frames_timestamped\nPASS attempts_readable\nPASS attempts_view_budget\nPASS attempts_spec_budget\nPASS attempts_records_complete\n\n2 check(s) failed: check_warnings_absent, labels_ownership_clear\n"
+    },
+    "v4": {
+      "command": "scripts/viz-validate.py docs/visualize-eval/rounds/09/datacenter-redundancy/evidence/v4 --require-select --require-frames --require-records --attempts docs/visualize-eval/rounds/09/datacenter-redundancy/attempts.json",
+      "exit_status": 1,
+      "failing_checks": [
+        "check_warnings_absent",
+        "labels_ownership_clear"
+      ],
+      "output": "PASS manifest_readable\nPASS binary_path_absolute\nPASS binary_hash_recorded\nPASS artifact_hashes\nPASS check_output_present\nPASS check_exit_zero\nFAIL check_warnings_absent \u2014 warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge\nPASS labels_parsed\nPASS labels_complete\nPASS labels_off_routes\nPASS labels_not_skipped\nPASS dots_parsed\nPASS dots_no_violations\nPASS origins_reported\nPASS origins_complete\nPASS dots_sync_reported\nPASS arrivals_reported\nPASS arrivals_complete\nPASS labels_ownership_reported\nFAIL labels_ownership_clear \u2014 1 label(s) sit as close to another route as to their own edge; a reader cannot pair them\nPASS crossings_reported\nPASS viewport_proven\nPASS viewport_proven_measurable\nPASS viewport_matches_target\nPASS cleanup_confirmed\nPASS select_all_frame\nPASS select_all_artifact\nPASS frames_artifact\nPASS frames_timestamped\nPASS attempts_readable\nPASS attempts_view_budget\nPASS attempts_spec_budget\nPASS attempts_records_complete\n\n2 check(s) failed: check_warnings_absent, labels_ownership_clear\n"
+    }
+  },
+  "generator_notes": [
+    "Every --check run, probe included, is wrapped by scripts/viz-evidence.sh record into attempts-log.jsonl; four capability probes precede the view attempts (probe-capability, probe-noslot, probe-minlen-slot, probe-k22).",
+    "No judges, subagents, renderer/skill/rubric edits, commits or installs were made; cargo was not run.",
+    "The pane measures 82x51 in this worktree's tab (the tab pane is 168x53), so each view also carries a pinned COLUMNS=77 LINES=47 dump of its FINAL spec with 'viewport: 77x47 zoom: 1.00 natural' and no overflow banner."
+  ],
+  "verification": {
+    "v1": "validator exit 0, all 33 checks passed",
+    "v2": "validator exit 0, all 33 checks passed",
+    "v3": "validator exit 1 \u2014 the only failures are check_warnings_absent and labels_ownership_clear (3 ambiguous label owners); every other check passes",
+    "v4": "validator exit 1 \u2014 the only failures are check_warnings_absent and labels_ownership_clear (1 ambiguous label owner); every other check passes",
+    "not_green": "This output is not claimed as a pass. v3 and v4 carry a real, unfixed ambiguity defect; the validator output above is kept verbatim."
+  }
+}

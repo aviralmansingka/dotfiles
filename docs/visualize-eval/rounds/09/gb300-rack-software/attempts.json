@@ -1,0 +1,92 @@
+{
+  "case_id": "gb300-rack-software",
+  "round": "09",
+  "views": [
+    {
+      "view": "v1",
+      "spec": "v1-oob-plane.json",
+      "attempts": [
+        {
+          "spec_path": "attempts/v1-a1.json",
+          "spec_sha256": "a9eda3c4fe5d98484ea8b6bc3e7cc4fcc9f0745997433c2cde5fda5880b7af40",
+          "note": "7-node three-world view, lr, rms southbound fan to six targets, all labels in gutters. --check exit 1: no obstacle-safe route for rms -> bmc_c, rms -> nmxc. Recorded as v1-a1-check."
+        },
+        {
+          "spec_path": "attempts/v1-a2.json",
+          "spec_sha256": "f1cc9de8735b980c7282b336be1c03f01d266a95425e3a8a2a19c05bdfbb5f40",
+          "note": "same seven nodes, tb, rms fan of four. --check exit 1: no obstacle-safe route for rms -> oob, rms -> nvos, rms -> bmc_c, rms -> nmxc (a leaf box cannot carry four out-ports past the bus). Recorded as v1-a2-check."
+        },
+        {
+          "spec_path": "v1-oob-plane.json",
+          "spec_sha256": "5b95958275d1241b5fcd693eaf4d90c6a3f53b9bf4808a776fbef564b6947aee",
+          "note": "shipped: OOB plane, five nodes, rms -> OOB LAN client edge plus the one-split trunk (oob -> compute BMC, branches NVSwitch BMC, power shelf). --check exit 0, extent 49x14, crossings 0, labels 2/2, 1 shared junction cell. Recorded as v1-final-check."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "spec": "v2-nvswitch-plane.json",
+      "attempts": [
+        {
+          "spec_path": "v2-nvswitch-plane.json",
+          "spec_sha256": "6b75ed623d4b6e38c22443109dc769a0f7d64cb4c8cfaaabe81e7002b2397a25",
+          "note": "shipped first try: NVSwitch software plane, three nodes, controller API edges NVUE/SSH/SFTP and gRPC plus NVOS hosts NMX-C/T. --check exit 0, extent 32x22, crossings 0, labels 3/3, no warnings. Recorded as v2-a1-check."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "spec": "v3-inband-compute-plane.json",
+      "attempts": [
+        {
+          "spec_path": "attempts/v3-a1-tb-all-gutters.json",
+          "spec_sha256": "defac98170f26e9030cb79b452d760be9cc1fea3b23f2d929595cf8bf03c3242",
+          "note": "tb with label_slot on all five edges. --check exit 1: no obstacle-safe route for dcgm -> dcgmx (two gutter labels leaving the same fan block each other). Recorded as v3-a1-check. The checked bytes were overwritten in place during iteration; this archive is the exact heredoc reconstruction, and the raw check output of the original run is preserved under label v3-a1-check in attempts-log.jsonl."
+        },
+        {
+          "spec_path": "attempts/v3-a2-lr.json",
+          "spec_sha256": "ad5a24732b51723850a783e92e6b423c9b9cda29e26df029925ef4046c5ae59f",
+          "note": "lr. Routes clean (crossings 0, labels 5/5) but extent 86x11 overflows the 77-column target, so it was rejected on fit. Recorded as v3-a2-lr-check."
+        },
+        {
+          "spec_path": "v3-inband-compute-plane.json",
+          "spec_sha256": "bf459786a799941c86e4b07a708b38bcbe22add714bb880ce5b80c5d8595c130",
+          "note": "shipped: tb with gutter labels everywhere except the dcgm fan, whose two labels take the rank gap. --check exit 0, extent 36x44, crossings 0, labels 5/5, 0 ambiguous owners. Recorded as v3-a3-check."
+        }
+      ]
+    }
+  ],
+  "probes": [
+    {
+      "label": "probe-p1-tb-nolabels",
+      "spec_path": "probes/p1-tb-nolabels.json",
+      "purpose": "capability preflight: does the seven-node three-world topology route without labels? It does (extent 73x23, 1 trunk junction, 4 bridges, 1 shared run), which proved the routing failures in v1-a2 came from label placement, not from the trunk shape."
+    },
+    {
+      "label": "v1-a3-check",
+      "spec_path": "probes/p2-v1-api-edge-bmc.json",
+      "spec_sha256": "88b40f0ebe7422805d2fc7d6f45b05175a14bc23832aa046195271861390cdc0",
+      "purpose": "measured yield evidence: the five-node OOB view with the rank-spanning controller edge rms -> Compute BMC ('Redfish/HTTPS'). --check exit 1: 'no obstacle-safe route for rms -> bmc_c'; with the target moved to the power shelf (label probe-p3-lr-api-to-pwr) it fails again. Two targets, two failures, so the off-rack controller edge cannot cross the OOB bus in this view and its API semantics moved to v2. The spec file is restored after being overwritten in place during iteration; its --check output is the recorded stdout/stderr under this label."
+    },
+    {
+      "label": "probe-p3-lr-api-to-pwr",
+      "spec_path": "probes/p3-lr-api-to-pwr.json",
+      "purpose": "second target for the same yield test; --check exit 1, no obstacle-safe route for rms -> pwr."
+    },
+    {
+      "label": "probe-p4-hub-minimal",
+      "spec_path": "probes/p4-hub-minimal.json",
+      "purpose": "capability preflight for the one-split trunk: a five-node minimal spec with one trunk, two branches, one label-free graph. --check exit 0 but 'warning: two edges share 2 cell(s), including ports': the hub's junction cell is shared by construction, so a single-split trunk can never clear the shared-run warning with this binary."
+    },
+    {
+      "label": "probe-p5-v3-tb-nolabels",
+      "spec_path": "probes/p5-v3-tb-nolabels.json",
+      "purpose": "capability preflight for the compute chain: the same six nodes and five edges with no labels route in tb (extent 31x36, crossings 0), so only the label gutters blocked the fan."
+    },
+    {
+      "label": "probe-v1-draw1",
+      "spec_path": "v1-oob-plane.json",
+      "purpose": "diagnostic single frame at the pinned target size, used to confirm the shipped v1 drawing and to locate the shared junction cell."
+    }
+  ]
+}

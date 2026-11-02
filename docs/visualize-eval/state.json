@@ -1700,7 +1700,7 @@
   "pilot_coverage": "round-07 pilot (mm, datacenter, gb300) covers lifecycle-machines, redundant-fabrics, placement-planes; chains, meshes, identity-maps unrepresented"
  },
  "round_09": {
-  "status": "in flight",
+  "status": "COMPLETE: 0/8 green; 20P/33F/7B of 60 (up from 17P/40F/5B of 62); matrix.json + decision.md written; 8 review tabs open; awaiting human feedback",
   "renderer_worktrees": {
    "feat/region-removal": "strip region borders/titles/paint passes; keep group tag -> hue + block order; worker 'region-removal' (died once to parent restart, resumed)",
    "feat/dots-labels": "single-dot origin fix, label_slot wiring, guard-rail fixtures (pins, trunk); worker 'dots-labels' (died once to parent restart, resumed)"
@@ -1721,7 +1721,281 @@
    "write round-09 generator/judge task files",
    "generation + terra judging",
    "aggregate + review tabs"
-  ]
+  ],
+  "arrivals": {
+   "network": {
+    "worker": "viz-ds09-2",
+    "family": "service-meshes",
+    "views": 1,
+    "captain_validation": "all checks passed incl. attempts_records_complete (4 records)",
+    "highlights": "label_slot delivered 0 ambiguous owners in-field; origins 7/7; fit via pinned dump; 1 bridge at (32,34) disclosed; fabric/app teal hue collision disclosed (engine-owned)",
+    "judge": "viz-judge09-network (stage A, terra)"
+   },
+   "pipeline": {
+    "worker": "viz-ds09-1",
+    "family": "flow-chains",
+    "views": 1,
+    "captain_validation": "33/33 PASS incl. attempts_records_complete",
+    "highlights": "0 crossings, labels 4/4, 0 ambiguous, origins 6/6, motion +1 cell/frame verified across 21 frames",
+    "defects": [
+     "compute/control tier hue collision (RGB 211;134;155 both) - fix needs 4th candidate, over cap",
+     "blocker: chains recipe prefers lr at 5 ranks but no lr --check run (cap spent); only derived unmeasured width bound offered"
+    ],
+    "judge": "spawn next"
+   },
+   "homelab-nic-trace": {
+    "worker": "viz-ds09-3",
+    "family": "identity-probe-maps",
+    "views": 3,
+    "captain_validation": "all views pass incl. attempts_records_complete (9 records)",
+    "highlights": "25-row ledger BEFORE any spec; 0 crossings/ambiguous/owners everywhere; label_slot on v3 (6/6); measured+recorded recipe yields (lr 189x9, 8-node 62 rows, label_slot rejection); pinned fit proofs",
+    "defects": [
+     "v3 staircase spine, v2 sparse (by design)",
+     "drops disclosed: Fios pool IP, datacenter analogy, 'no committed rate'"
+    ],
+    "judge": "spawn next"
+   },
+   "datacenter-redundancy": {
+    "worker": "viz-ds09-5",
+    "family": "redundant-fabrics",
+    "views": 4,
+    "captain_validation": "v1/v2 all-pass; v3/v4 exit 1 on ambiguous-owner checks (honest)",
+    "highlights": "pins honored (8 pinned 0 conflicts, BL/leaf co-level row 24-27, spines 11-15); dots:0 all 28 edges (third round holding); records 15 in log",
+    "defects": [
+     "v3 15 bridges + 3 ambiguous (backward bl->spine around outer rails)",
+     "v4 1 ambiguous + 2 bridges",
+     "v1 1 bridge, v2 2 bridges"
+    ],
+    "blockers": [
+     "no backward-edge lane inside a pinned rank",
+     "minlen cannot exceed a pinned rank gap",
+     "label_slot broke routing on a fan (3rd such report: pipeline a2, homelab probe, datacenter probe) - ROUND-10 ITEM: label_slot obstacle-safety on fans",
+     "zero-bridge 2x2 cross-connect unavailable even isolated"
+    ],
+    "judge": "spawn next"
+   },
+   "server-nic-layout": {
+    "worker": "viz-ds09-4",
+    "family": "identity-probe-maps",
+    "views": 3,
+    "captain_validation": "33/33 x3, all checks passed incl. attempts_records_complete",
+    "highlights": "label_slot decisive (plain gaps needed 76/50/17 rows vs 47); 0 crossings/ambiguous everywhere; all qualifiers carried (7 dark ports, free?, no probe reply, dashed r1/r5); 2-view drafts measured-unroutable -> 3 views recorded",
+    "defects": [
+     "8.6ms (excerpt) vs 8.3ms (fact list) conflict recorded, drew 8.6",
+     "/29 stated only across views (cross-view key documented)",
+     "renderer Z-jog per hop"
+    ],
+    "judge": "spawn next"
+   },
+   "modal-runtime": {
+    "worker": "viz-ds09-7",
+    "family": "service-meshes",
+    "views": 3,
+    "captain_validation": "all 33 checks pass x3",
+    "highlights": "MILESTONE: anti-parallel pair co-viewed in ONE view (v3, 17 rows) via label_slot + minlen 2 - the round-08 recipe-vs-capability conflict RESOLVED, no yield claimed; 0 crossings/ambiguous everywhere; 40 record files, all 20 checks wrapped",
+    "defects": [
+     "v3 pair labels as right-hand stack (rows 22-23)",
+     "v4 plain labels (label_slot breaks on adjacent same-rank targets - 4th report)",
+     "v5 one row slack, two abbreviated labels"
+    ],
+    "budget_note": "20 --check runs total (14 on abandoned shapes) - disclosed, judge to weigh vs the per-view cap",
+    "judge": "spawn next"
+   },
+   "gb300-rack-software": {
+    "worker": "viz-ds09-8",
+    "family": "placement-planes",
+    "views": 3,
+    "captain_validation": "v1 31/2, v2 32/1, v3 32/1 (all disclosed failures)",
+    "highlights": "ONE trunk splits at a single junction (row 25 col 45) - the human-demanded bus shape preserved; 0 crossings everywhere; air gap drawn as absence (never OOB->DCGM); yields measured (bus+API fan cannot co-view: 4 routed-failures + 1 routable probe)",
+    "defects": [
+     "D1: one-split hub always shares its junction cell -> warning; clearing it would delete the bus shape - ROUND-10 CHECKER: exempt trunk junction cells from shared-cell warnings",
+     "D2: gRPC long detour (router prefers detours to bridges)",
+     "D3 HARNESS FLAW: record-mode label reuse OVERWROTE raw files (log line 8 unverifiable) - ROUND-10 HARNESS: unique raw filenames per record"
+    ],
+    "judge": "spawn next"
+   },
+   "modal-machine-manager": {
+    "worker": "viz-ds09-6",
+    "family": "lifecycle-machines",
+    "views": 4,
+    "captain_validation": "v1/v4 all-pass; v2 fails fit (52x53); v3 fails fit+warnings+labels (80x31, 4/5 placed) - matches disclosure",
+    "highlights": "all edges dots:1 constant flow, origins N/N, 0 violations, 0 crossings; boot handshake co-viewed as two routes (v2, secondary mesh recipe); 14 records wrapped",
+    "defects": [
+     "v2/v3 do not fit 77x47 (extent 52x53, 80x31 - overflow banners)",
+     "v3 register+heartbeat label skipped",
+     "coverage 16/17 components 20/23 relations: missing web, web->wapi, pgrpc->db, pub->db (4th repeated-omission case)"
+    ],
+    "blockers": [
+     "label_slot: >=2 bands from one source dead-end ports; lr fans with in-area labels kill return edges; wide in-gap labels cost label+3 rows"
+    ],
+    "judge": "spawn next"
+   }
+  },
+  "judges": {
+   "network": {
+    "stage": "complete",
+    "verdict": "fail",
+    "categories": {
+     "semantic": "fail",
+     "arrows": "pass",
+     "fit": "pass",
+     "groups": "fail",
+     "category_fit": "pass",
+     "borders": "pass",
+     "workflow": "blocked",
+     "animation": "blocked"
+    },
+    "movement_vs_08": "fit F->P (pinned ruling worked), category_fit F->P, arrows F->P, animation F->B (evidence gap, not defect)",
+    "key_findings": [
+     "VERDICT-LEVEL: checker-vs-reader ownership upheld - gutter labels (10/25 GbE at [41,22] and [41,23]; session/queries at [39,30]/[39,31]) sit nearer the WRONG parallel lane, no leaders - label_slot moved ambiguity into shared-gutter form. ROUND-10: per-route gutter association or leader ticks + stricter checker metric",
+     "fabric/app teal hue collision (engine-owned name-hash) - ROUND-10: hue collision pass",
+     "animation+workflow blocked on one gap: pinned dump covers only 2000ms; longest route (core->Redis, target (41,34)) needs a full-lap capture - task-file guidance said 21 frames cover a cycle, true for same-arrival only; CONSTANT mode needs ceil(len/0.5) frames - fix round-09 guidance for future rounds",
+     "records/validator/cleanup all verified complete - the record wrapper worked at verdict level"
+    ]
+   },
+   "pipeline": {
+    "stage": "complete",
+    "verdict": "fail",
+    "categories": {
+     "semantic": "pass",
+     "arrows": "pass",
+     "fit": "pass",
+     "groups": "fail",
+     "category_fit": "pass",
+     "borders": "pass",
+     "workflow": "blocked",
+     "animation": "blocked"
+    },
+    "movement_vs_08": "arrows F->P (origin fix), fit B->P, semantic P held, category_fit P held",
+    "key_findings": [
+     "MILESTONE: every remaining failure maps to a queued round-10 item, none to a skill gap - hue collision (engine name-hash: control/compute both 211;134;155) and full-lap frames (harness guidance) - with both fixed this case is green",
+     "all six required edges pass the audit; lr orientation gap recorded as gap, not category failure",
+     "animation+workflow blocked on the same 21-frame/2000ms full-lap gap as network (constant mode needs ceil(len/0.5) frames)"
+    ]
+   },
+   "homelab-nic-trace": {
+    "stage": "complete",
+    "verdict": "fail",
+    "categories": {
+     "semantic": "fail",
+     "arrows": "fail",
+     "fit": "fail",
+     "groups": "fail",
+     "category_fit": "fail",
+     "borders": "pass",
+     "workflow": "pass",
+     "animation": "n/a"
+    },
+    "movement_vs_08": "workflow F->P (record wrapper's first category-level win); arrows P->F (gutter ownership); groups F->F (new cause: physical sibling order REVERSES between views); same three semantic omissions as round 08 repeated",
+    "key_findings": [
+     "REPEATED semantic fails: router border/collapsed-fabric role, shared Fios pool IP, bench answer 'no committed rate' - all disclosed as drops but judged unjustified; ROUND-10 SKILL RULE: source-stated facts are never droppable for layout reasons (only analogy/context)",
+     "arrows FAIL on the v3 gw 0.5ms label closer to the wifi route - the checker-vs-eye ownership split now costs a category (3rd case)",
+     "groups FAIL: physical sibling order reverses between views - cross-view block-order instability; ROUND-10: case-global sibling order",
+     "fit FAIL on incomplete split coverage (geometric fit proven); category_fit FAIL on incomplete coverage-first recipe"
+    ]
+   },
+   "server-nic-layout": {
+    "stage": "complete",
+    "verdict": "fail",
+    "categories": {
+     "semantic": "fail",
+     "arrows": "fail",
+     "fit": "fail",
+     "groups": "pass",
+     "category_fit": "fail",
+     "borders": "pass",
+     "workflow": "pass",
+     "animation": "n/a"
+    },
+    "movement_vs_08": "workflow F->P (records win again); groups F->P (4 distinct families); arrows P->F (gutter ownership); semantic F->F - SAME gateway role + Dell/NxtGen omissions as round 08 (2nd repeated-omission case)",
+    "key_findings": [
+     "REPEATED from round 08: missing gateway role + Dell/NxtGen names - 2nd case where generators drop the same source facts across rounds; the ledger does not force role/context qualifier coverage",
+     "arrows FAIL on same-/29 label closer to the dashed route (checker-vs-eye ownership, 2nd category-level failure)",
+     "fit FAIL on incomplete cross-view coverage: /29 key incomplete; missing-hop caveat absent; 8.6-vs-8.3ms conflict disclosed and judged",
+     "16 recorded hashes matched; schema passed; grouping PASSES on distinct hue families"
+    ]
+   },
+   "datacenter-redundancy": {
+    "stage": "complete",
+    "verdict": "fail",
+    "categories": {
+     "semantic": "fail",
+     "arrows": "fail",
+     "fit": "fail",
+     "groups": "pass",
+     "category_fit": "fail",
+     "borders": "pass",
+     "workflow": "blocked",
+     "animation": "pass"
+    },
+    "movement_vs_08": "groups F->P (fabric hue families worked); animation P held (zero dots); arrows F->F (same root: reverse-edge traceability around pinned ranks); workflow B->B (NEW cause: spec-binding gap)",
+    "key_findings": [
+     "VERDICT-LEVEL HARNESS GAP: record wrapper hashes stdout/stderr + binary but NOT the spec argument bytes - the executed spec is not cryptographically bound to its saved snapshot; ROUND-10 HARNESS: hash file arguments in viz-evidence.sh record",
+     "BL->spine reverse-edge traceability fails arrows+semantic+category_fit for the 2nd round running - the engine needs a backward-edge lane (recorded blockers: no backward lane inside pinned rank, minlen capped by pins, label_slot fan routing fails, 2x2 fan still 1 bridge)",
+     "v4 repeats only the spine->leaf->rack slice, does not resolve the 4 BL->spine routes - the judge says attempts don't establish ALL alternatives fail",
+     "animation PASSES (zero dots, 3rd round); grouping PASSES (distinct families)"
+    ]
+   },
+   "modal-runtime": {
+    "stage": "complete",
+    "verdict": "fail",
+    "categories": {
+     "semantic": "fail",
+     "arrows": "fail",
+     "fit": "fail",
+     "groups": "fail",
+     "category_fit": "fail",
+     "borders": "pass",
+     "workflow": "fail",
+     "animation": "n/a"
+    },
+    "movement_vs_08": "pairs co-viewed (geometry fixed) but label-stack ownership fails arrows; semantic F again on a lost qualifier (filesystem/daemon seam - 3rd repeated-omission case); groups F on orchestration/storage hue collision (3rd collision case)",
+    "key_findings": [
+     "checker-vs-eye ownership now the DOMINANT defect: the co-viewed pair's right-hand label stack defeats owner assignment (2 uncertain, checker says 0) - 4th case observing it, 3rd failing a category",
+     "missing filesystem qualifier on the daemon seam (semantic) - generators keep losing qualifiers across rounds",
+     "orchestration/storage hue families indistinguishable (3rd hue-collision case: pipeline, network, runtime)",
+     "v5 UI header clips last 2 chars of 'q quit' - counted under fit",
+     "judge correction: my reveal over-asserted controller API paths not in the frozen source - correctly ignored",
+     "all 40 raw attempt hashes verified; budget overrun (20 runs, 14 abandoned) weighed under workflow"
+    ]
+   },
+   "gb300-rack-software": {
+    "stage": "complete",
+    "verdict": "fail",
+    "categories": {
+     "semantic": "fail",
+     "arrows": "pass",
+     "fit": "fail",
+     "groups": "fail",
+     "category_fit": "fail",
+     "borders": "pass",
+     "workflow": "fail",
+     "animation": "n/a"
+    },
+    "movement_vs_08": "arrows F->P (bus traceable, single junction ruled intended); semantic F->F - SAME missing RMS-to-device API relationships repeated; workflow F on the overwritten line-8 records (harness flaw cost a category)",
+    "key_findings": [
+     "REPEATED from round 08: direct nv-rms API paths to compute BMC / NVSwitch BMC / power shelf absent - the OOB client edge + physical bus do not substitute (2nd round losing the same relationships)",
+     "arrows PASS: single-split bus visible and traceable; v1 shared-cell warning ruled the intended junction, not a crossing; gRPC detour traceable, optimality unresolved",
+     "bus+API co-view attempts failed routing but don't prove ALL alternatives impossible - yield judged insufficient for the secondary coverage recipe",
+     "workflow FAIL solely on the overwritten line-8 raw records - the harness overwrite flaw directly cost a category"
+    ]
+   },
+   "modal-machine-manager": {
+    "stage": "complete",
+    "verdict": "fail",
+    "categories": {
+     "semantic": "fail",
+     "arrows": "fail",
+     "fit": "fail",
+     "groups": "fail",
+     "borders": "fail",
+     "workflow": "fail",
+     "animation": "fail",
+     "category_fit": "fail"
+    },
+    "note": "workflow+animation BLOCKED on full-lap gap (same as network/pipeline); only all-8-fail case; missing humans/mmctl + 3 relations; v2/v3 overflow"
+   }
+  }
  },
  "rounds_parallel_status": {
   "round_06_off_by_one": "DONE + captain-verified (branch feat/off-by-one)",
@@ -2030,5 +2304,6 @@
  "round_09_user_directives": [
   "ITEM 0 (user, 2026-11-02): REMOVE region borders/titles/subgraph boxes from render + check - user wants logical grouping only (tag conventions + hue families), almost never drawn borders; this removes the top verdict-cost root cause (region geometry, 5 cases' grouping fails) and cuts renderer complexity; group: stays in spec for layout hints (global block order, hue), painting pass (GROUP_SPAN_CHARGE, disjointness, corner glyphs, title rows) goes; skill recipes stop requiring titled regions",
   "source-semantic shades become non-boxed tier annotation (one label line, no box)"
- ]
+ ],
+ "phases_ran": []
 }

@@ -1,0 +1,79 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "bond0",
+      "label": "bond0 192.168.1.197",
+      "group": "physical"
+    },
+    {
+      "id": "wlp",
+      "label": "wlp8s0 .213",
+      "group": "physical"
+    },
+    {
+      "id": "rtr",
+      "label": "rtr 192.168.1.1 claimed, no v6",
+      "group": "egress"
+    },
+    {
+      "id": "ont",
+      "label": "ONT 169.254.3.1 claimed",
+      "group": "egress"
+    },
+    {
+      "id": "vzagg",
+      "label": "VZ agg 100.41.x",
+      "group": "egress"
+    },
+    {
+      "id": "vzbb",
+      "label": "VZ bb AS701",
+      "group": "egress"
+    },
+    {
+      "id": "cf",
+      "label": "cf 1.1.1.1 AS13335",
+      "group": "egress"
+    }
+  ],
+  "edges": [
+    {
+      "from": "bond0",
+      "to": "rtr",
+      "label": "gw 0.5 ms",
+      "label_slot": true
+    },
+    {
+      "from": "wlp",
+      "to": "rtr",
+      "label": "metric 600",
+      "label_slot": true
+    },
+    {
+      "from": "rtr",
+      "to": "ont",
+      "label": "NAT out",
+      "label_slot": true
+    },
+    {
+      "from": "ont",
+      "to": "vzagg",
+      "label": "4.5 ms",
+      "label_slot": true
+    },
+    {
+      "from": "vzagg",
+      "to": "vzbb",
+      "label": "6.6 ms",
+      "label_slot": true
+    },
+    {
+      "from": "vzbb",
+      "to": "cf",
+      "label": "6-9 ms",
+      "label_slot": true
+    }
+  ]
+}

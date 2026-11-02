@@ -1,0 +1,14 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/specs/v1-host-local.json",
+    "sha256": "7399db149bfc1042b25e586c5c8c2fdae5dbde9e652bb592cfccb9c5c2034357"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/specs/v2-uplink.json",
+    "sha256": "a1c68a7fa19bc3018cc9a44d90b02eadcc22bb926dcd8576069067b1efc7b568"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/specs/v3-egress.json",
+    "sha256": "b0abc2f24a8667015326ca0b3a9db34d8354d348ce2d8c707cd21a9095c44637"
+  }
+]

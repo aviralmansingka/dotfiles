@@ -1,0 +1,17 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "mgmt", "label": "mgmt" },
+    { "id": "bus", "label": "Bus" },
+    { "id": "a", "label": "A" },
+    { "id": "b", "label": "B" },
+    { "id": "c", "label": "C" }
+  ],
+  "trunks": [
+    { "id": "t", "from": "bus", "to": "a", "branches": ["b", "c"] }
+  ],
+  "edges": [
+    { "from": "mgmt", "to": "bus", "label": "client", "label_slot": true, "dots": 0 }
+  ]
+}

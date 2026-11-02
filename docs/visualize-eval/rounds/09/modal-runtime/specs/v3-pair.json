@@ -1,0 +1,12 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "worker", "label": "modal-worker", "group": "compute" },
+    { "id": "runtime", "label": "modal-runtime", "group": "orchestration" }
+  ],
+  "edges": [
+    { "from": "worker", "to": "runtime", "label": "task+ctrl gRPC", "label_slot": true, "minlen": 2, "dots": 0 },
+    { "from": "runtime", "to": "worker", "label": "events+mgmt gRPC", "label_slot": true, "minlen": 2, "dots": 0 }
+  ]
+}

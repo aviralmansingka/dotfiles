@@ -1,0 +1,31 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "layers": [
+    ["web", "q", "agent", "rec", "pgrpc", "pub"],
+    ["wapi", "ssh", "prov", "db", "s3"]
+  ],
+  "nodes": [
+    { "id": "web", "label": "humans + mmctl", "group": "humans" },
+    { "id": "q", "label": "River job queue", "group": "control" },
+    { "id": "agent", "label": "machine-agent", "group": "hosts" },
+    { "id": "pgrpc", "label": "private gRPC", "group": "control" },
+    { "id": "pub", "label": "public gRPC", "group": "control" },
+    { "id": "rec", "label": "reconcile loop", "group": "ops" },
+    { "id": "wapi", "label": "webapi server", "group": "control" },
+    { "id": "ssh", "label": "SSH + BMC ops", "group": "ops" },
+    { "id": "prov", "label": "bare-metal providers", "group": "provision" },
+    { "id": "db", "label": "Postgres", "group": "state" },
+    { "id": "s3", "label": "S3 object store", "group": "state" }
+  ],
+  "edges": [
+    { "from": "web", "to": "wapi", "label": "http", "dots": 1, "flow": true },
+    { "from": "q", "to": "ssh", "label": "audit / verify reimage", "dots": 1, "flow": true },
+    { "from": "q", "to": "db", "label": "job rows", "dots": 1, "flow": true },
+    { "from": "rec", "to": "prov", "label": "gcore sync, 1 min", "dots": 1, "flow": true },
+    { "from": "rec", "to": "db", "label": "cluster state", "dots": 1, "flow": true },
+    { "from": "pgrpc", "to": "db", "label": "machine rows", "dots": 1, "flow": true },
+    { "from": "pub", "to": "db", "label": "machine state", "dots": 1, "flow": true },
+    { "from": "agent", "to": "pub", "label": "register + heartbeat", "dots": 1, "flow": true }
+  ]
+}

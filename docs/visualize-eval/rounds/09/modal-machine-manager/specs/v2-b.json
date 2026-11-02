@@ -1,0 +1,24 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "reg", "label": "provider registry", "group": "provision" },
+    { "id": "prov", "label": "bare-metal providers", "group": "provision" },
+    { "id": "mch", "label": "bare-metal machines", "group": "hosts" },
+    { "id": "boot", "label": "boot server", "group": "provision" },
+    { "id": "s3", "label": "S3 object store", "group": "state" },
+    { "id": "agent", "label": "machine-agent", "group": "hosts" },
+    { "id": "pub", "label": "public gRPC", "group": "control" },
+    { "id": "db", "label": "Postgres", "group": "state" }
+  ],
+  "edges": [
+    { "from": "reg", "to": "prov", "label": "provider API", "label_slot": true, "dots": 1, "flow": true },
+    { "from": "prov", "to": "mch", "label": "allocate instance", "label_slot": true, "dots": 1, "flow": true },
+    { "from": "mch", "to": "boot", "label": "iPXE request", "label_slot": true, "dots": 1, "flow": true },
+    { "from": "boot", "to": "mch", "label": "boot.ipxe + S3 args", "label_slot": true, "dots": 1, "flow": true },
+    { "from": "mch", "to": "s3", "label": "pull boot image", "label_slot": true, "dots": 1, "flow": true },
+    { "from": "mch", "to": "agent", "label": "runs on host", "label_slot": true, "dots": 1, "flow": true },
+    { "from": "agent", "to": "pub", "label": "register + heartbeat", "label_slot": true, "dots": 1, "flow": true },
+    { "from": "pub", "to": "db", "label": "machine state", "label_slot": true, "dots": 1, "flow": true }
+  ]
+}

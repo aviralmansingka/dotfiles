@@ -1,0 +1,43 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "ts",
+      "label": "ts0 100.113.153.49",
+      "group": "overlay"
+    },
+    {
+      "id": "box",
+      "label": "homelab rack-bench",
+      "group": "physical"
+    },
+    {
+      "id": "bond0",
+      "label": "bond0 192.168.1.197",
+      "group": "physical"
+    },
+    {
+      "id": "wlp",
+      "label": "wlp8s0 .213",
+      "group": "physical"
+    }
+  ],
+  "edges": [
+    {
+      "from": "ts",
+      "to": "bond0",
+      "label": "UDP encap"
+    },
+    {
+      "from": "box",
+      "to": "bond0",
+      "label": "eno1 2.5GbE"
+    },
+    {
+      "from": "box",
+      "to": "wlp",
+      "label": "backup path"
+    }
+  ]
+}
