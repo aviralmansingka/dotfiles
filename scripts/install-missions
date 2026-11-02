@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Build the CLI only. The Pi extension and skill use the existing pi/agents stow packages.
+set -euo pipefail
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+destination=${MISSION_BIN_DIR:-"$HOME/.local/bin"}
+mkdir -p "$destination"
+build_dir=$(mktemp -d "$destination/.mission-build.XXXXXX")
+trap 'rm -rf "$build_dir"' EXIT
+cd "$repo_root/scripts/mission-cli"
+go build -trimpath -o "$build_dir/mission" .
+chmod 755 "$build_dir/mission"
+mv -f "$build_dir/mission" "$destination/mission"
+echo "Installed $destination/mission"
