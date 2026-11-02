@@ -196,10 +196,14 @@ func dispatch(cmd string, a args, s *Store) (any, error) {
 		return s.list()
 	case "show":
 		return cmdShow(a, s)
+	case "checks":
+		return cmdChecks(a, s)
 	case "steps":
 		return cmdSteps(a, s)
 	case "step":
 		return cmdStep(a, s)
+	case "verify":
+		return cmdVerify(a, s)
 	case "next", "ready":
 		return s.ready(a.get("repo"))
 	case "claim":
