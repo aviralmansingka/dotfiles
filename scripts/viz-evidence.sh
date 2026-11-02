@@ -43,23 +43,42 @@ if [ "${1:-}" = "record" ]; then
   rto_dir=$(dirname "$rto"); mkdir -p "$rto_dir"
   rto_abs=$(cd "$rto_dir" && pwd)/$(basename "$rto")
   rdir=${rdir:-"$rto_dir/recorded"}; mkdir -p "$rdir"
+  # Unique raw filenames: a re-run label must never overwrite an earlier
+  # record's bytes (round-09 gb300 lost a record to exactly that).
+  rbase=$rlabel; n=1
+  while [ -e "$rdir/$rbase.stdout" ] || [ -e "$rdir/$rbase.stderr" ]; do
+    rbase="$rlabel-$n"; n=$((n+1))
+  done
+  # Cryptographic binding of the executed command to the spec it ran on:
+  # hash the first .json argument that exists on disk (round-09 datacenter
+  # was blocked because the executed spec was not bound to its snapshot).
+  rspec=''
+  for a in "$@"; do
+    case "$a" in
+      *.json) [ -f "$a" ] && { rspec=$(cd "$(dirname "$a")" && pwd)/$(basename "$a"); break; } ;;
+    esac
+  done
+  rspec_h=$(shasum -a 256 "$rspec" 2>/dev/null | awk '{print $1}' || true)
   r0=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   set +e
-  "$@" > "$rdir/$rlabel.stdout" 2> "$rdir/$rlabel.stderr"
+  "$@" > "$rdir/$rbase.stdout" 2> "$rdir/$rbase.stderr"
   rstatus=$?
   set -e
   r1=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   rbin_h=$(shasum -a 256 "$1" 2>/dev/null | awk '{print $1}' || true)
-  rout_h=$(shasum -a 256 "$rdir/$rlabel.stdout" | awk '{print $1}')
-  rerr_h=$(shasum -a 256 "$rdir/$rlabel.stderr" | awk '{print $1}')
+  rout_h=$(shasum -a 256 "$rdir/$rbase.stdout" | awk '{print $1}')
+  rerr_h=$(shasum -a 256 "$rdir/$rbase.stderr" | awk '{print $1}')
   jq -nc \
     --arg label "$rlabel" --arg cmd "$*" --argjson status "$rstatus" \
     --arg t0 "$r0" --arg t1 "$r1" \
-    --arg out_p "$rdir/$rlabel.stdout" --arg out_h "$rout_h" \
-    --arg err_p "$rdir/$rlabel.stderr" --arg err_h "$rerr_h" \
+    --arg out_p "$rdir/$rbase.stdout" --arg out_h "$rout_h" \
+    --arg err_p "$rdir/$rbase.stderr" --arg err_h "$rerr_h" \
     --arg bin "$1" --arg bin_h "$rbin_h" \
+    --arg spec "$rspec" --arg spec_h "$rspec_h" \
     '{label:$label, command:$cmd, exit_status:$status, window:[$t0,$t1],
       binary_path:$bin, binary_sha256:(if $bin_h == "" then null else $bin_h end),
+      spec_path:(if $spec == "" then null else $spec end),
+      spec_sha256:(if $spec_h == "" then null else $spec_h end),
       stdout_path:$out_p, stdout_sha256:$out_h,
       stderr_path:$err_p, stderr_sha256:$err_h}' >> "$rto_abs"
   printf 'viz-evidence record: %s exit %s -> %s\n' "$rlabel" "$rstatus" "$rto_abs"
