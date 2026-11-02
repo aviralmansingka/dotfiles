@@ -54,3 +54,16 @@ Best SHIPPED: r05 3P/8 (pipeline, network, server). Terra era: r08 2P > r09
 across all seven rounds (never passed semantic). Judges differ per round
 (Astra r01, sol r02-07, terra r08-09) so cross-era counts are indicative
 only.
+
+4. (owner, follow-up on machine-manager) "why is linearity the recipe. The
+   primary goal is to express the connections and visualize the actual
+   components and their relations, not give a very watered down version."
+   — Captain's ruling: the user is right. Linearity is a MEANS (the phase
+   axis makes the lifecycle order readable), never the goal. The goal is full
+   component + relation coverage. ROUND-10 SKILL CHANGE: reword the
+   lifecycle-machines recipe — the phase axis organizes the view, but every
+   source relation must appear somewhere; side relations (web, wapi, db
+   writes) are first-class content, expected in the same view when they fit
+   and in a named split view when they do not. Dropping relations is never
+   authorized. Paired ROUND-10 ENGINE CHANGE: multi-lane rank gaps so
+   cross-rank side relations can be drawn beside the spine without bridges.
