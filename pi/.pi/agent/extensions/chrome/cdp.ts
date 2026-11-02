@@ -92,8 +92,9 @@ export async function evaluate(expression: string, index = 0, port = DEFAULT_POR
 	return r.value !== undefined ? r.value : r.description;
 }
 
-/** Which Chrome binary exists on this host. */
+/** Which Chrome binary exists on this host. CHROME_BIN overrides the search. */
 export function binary(): string | null {
+	if (process.env.CHROME_BIN) return process.env.CHROME_BIN;
 	const candidates =
 		process.platform === "darwin"
 			? [
@@ -141,6 +142,8 @@ export async function launch(o: LaunchOptions = {}) {
 		`--user-data-dir=${profile}`,
 		"--no-first-run",
 		"--no-default-browser-check",
+		// Chrome refuses to start its sandbox as root, which is common in containers.
+		...(process.getuid?.() === 0 ? ["--no-sandbox"] : []),
 		...(headless ? ["--headless=new", "--disable-gpu"] : []),
 		...(o.url ? [o.url] : []),
 	];
