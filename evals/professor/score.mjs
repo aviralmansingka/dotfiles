@@ -57,8 +57,16 @@ const approved = calls.some((c) => c.t === "ask_user_question" && /approve/i.tes
 const contractFirst = firstAsk !== -1 && (firstQuestion === -1 || firstAsk < firstQuestion);
 const probeFirst = firstQuestion !== -1 && (firstLesson === -1 || firstQuestion < firstLesson);
 const taught = Boolean(state.taught) || flipAt !== -1;
-const verifiedAfter = flipAt !== -1 && calls.slice(flipAt + 1)
-	.some((c) => isQuestion(c) && c.right && (c.question ? onTarget(c) : true));
+const known = scenario.mode === "already-known";
+// An already-known target needs no teaching: the check is that the learner
+// holds it, and that it was verified on the target at some point.
+const targetHeld = known
+	? (state.unlocked ?? []).includes(scenario.target)
+	: taught;
+const verifiedAfter = known
+	? calls.some((c) => isQuestion(c) && c.right && onTarget(c))
+	: flipAt !== -1 && calls.slice(flipAt + 1)
+		.some((c) => isQuestion(c) && c.right && (c.question ? onTarget(c) : true));
 
 let run = 0;
 let maxRun = 0;
@@ -78,13 +86,22 @@ const expectedOk = questions.filter((c) => c.t === "explain").every((c) => c.has
 const unneededTeaching =
 	scenario.mode === "already-known" && calls.some((c) => c.t === "lesson" && c.targetTaught);
 
-const checks = {
-	contractBeforeProbe: contractFirst,
-	probeBeforeTeach: probeFirst,
-	taughtCorrection: taught,
-	verifiedAfterTeach: verifiedAfter,
-	questionRunOk: maxRun <= 2,
-};
+const checks = known
+	? {
+		contractBeforeProbe: contractFirst,
+		probeBeforeTeach: probeFirst,
+		targetHeld,
+		verifiedOnTarget: verifiedAfter,
+		questionRunOk: maxRun <= 2,
+		noUnneededTeaching: !unneededTeaching,
+	}
+	: {
+		contractBeforeProbe: contractFirst,
+		probeBeforeTeach: probeFirst,
+		taughtCorrection: taught,
+		verifiedAfterTeach: verifiedAfter,
+		questionRunOk: maxRun <= 2,
+	};
 if (scenario.mode === "already-known") checks.noUnneededTeaching = !unneededTeaching;
 
 const score = Object.values(checks).filter(Boolean).length;

@@ -65,6 +65,9 @@ const state: LearnerState = {
 	state: "misconception",
 };
 
+// A learner who already holds the target starts in the correct state.
+if (target?.known) state.state = "correct";
+
 function persist(): void {
 	writeFileSync(statePath, JSON.stringify({ scenario: scenario.id, ...state }, null, 2));
 }
