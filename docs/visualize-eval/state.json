@@ -2307,7 +2307,7 @@
  ],
  "phases_ran": [],
  "round_10": {
-  "status": "in flight",
+  "status": "routing DONE; hue DONE; ports keeper finishing last two test adjustments; then merge -> gates -> freeze -> round-10 eval",
   "skill": {
    "proposal": "09",
    "sha256": "9c1256791069e27207db2e5138527e45587e7096955f5ed4f86c79d46f77e56d",
@@ -2328,7 +2328,7 @@
   "engine_worktrees": {
    "feat/r10-ports": "port centering - lone edges mid-side, fans symmetric about middle (user directive, top priority)",
    "feat/r10-routing": "multi-lane rank gaps, backward-edge lanes in pinned ranks, label_slot obstacle safety",
-   "feat/r10-hue": "collision-free group hue assignment, deterministic, cross-view stable"
+   "feat/r10-hue": "DONE: commit c5b3ea08; 100 tests (95+5); adversarial set: 6 groups 3 RGBs -> 6 distinct families min 45deg gap; FNV-1a constant bug fixed; tests/colors.rs added"
   },
   "pending": [
    "merge 3 engine worktrees -> full gates -> freeze round 10",

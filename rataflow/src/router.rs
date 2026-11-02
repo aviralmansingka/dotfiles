@@ -408,7 +408,16 @@ fn plan_with_slots(
         HashMap::new()
     };
 
-    // Reserve every endpoint and its outward stem BEFORE routing any edge.
+    // A label slot the layout reserved is off limits to every route,
+    // INCLUDING the stems reserved below: reserving slots first means a
+    // port stem can never squat the label's own row (the round-10 lifecycle
+    // fixture lost two labels to exactly that).
+    for (index, edge) in edges.iter().enumerate() {
+        if let Some(slot) = edge.label_slot.as_ref().filter(|_| active.contains(&index)) {
+            reserve_label_slot(&mut grid, index, slot);
+        }
+    }
+    // Reserve every endpoint and its outward stem AFTER the label slots.
     // Otherwise an early route can steal a later edge's departure or head.
     for (index, edge) in edges.iter().enumerate() {
         if edge.role.is_spur() {
@@ -417,13 +426,6 @@ fn plan_with_slots(
         let (src, tgt) = sides_for(&nodes[edge.from], &nodes[edge.to], axis);
         for (port, side) in [(ports[index].0, src), (ports[index].1, tgt)] {
             reserve_stem(&mut grid, port, side, index);
-        }
-    }
-    // A label slot the layout reserved is off limits to every other route:
-    // the label's own route may come up to it, nothing may cross it.
-    for (index, edge) in edges.iter().enumerate() {
-        if let Some(slot) = edge.label_slot.as_ref().filter(|_| active.contains(&index)) {
-            reserve_label_slot(&mut grid, index, slot);
         }
     }
 
@@ -1854,8 +1856,11 @@ fn place_label(
     // sides of the line, then outward along that run. Every drawn cell of
     // every route is an obstacle, so a label only ever sits beside the line:
     // first touching it, and only after that with one blank cell between.
+    // The wider gaps (up to 6) matter when the layout reserved a tall label
+    // room the near candidates cannot reach — `clear` rejects any occupied
+    // cell, so probing further only adds chances, never overlaps.
     let mut anchors: Vec<(i32, i32)> = Vec::new();
-    for gap in [1, 2, 3] {
+    for gap in [1, 2, 3, 4, 5, 6] {
         for &(from, to, seg_len) in &segments {
             if seg_len < 1 {
                 continue;
