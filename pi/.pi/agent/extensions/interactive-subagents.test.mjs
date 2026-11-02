@@ -2748,7 +2748,14 @@ esac
 		HERDR_PANE_ID: process.env.HERDR_PANE_ID,
 		TMUX: process.env.TMUX,
 		TERM: process.env.TERM,
+		PATH: process.env.PATH,
 	};
+	// Selection also requires `rex` on PATH, so stub it here: this suite must
+	// not depend on the host having Rex installed.
+	const rexSelectionRoot = mkdtempSync(join(tmpdir(), "rex-surface-test-"));
+	const rexSelectionBin = join(rexSelectionRoot, "bin");
+	mkdirSync(rexSelectionBin, { recursive: true });
+	writeFileSync(join(rexSelectionBin, "rex"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
 	const loadSurface = () =>
 		createJiti(import.meta.url, { moduleCache: false })(
 			"./interactive-subagents/pi-extension/subagents/surface.ts",
@@ -2761,6 +2768,7 @@ esac
 		process.env.TERM = "xterm-rex";
 		process.env.REX_SESSION = "session:test";
 		process.env.REX_BLOCK = "block:test";
+		process.env.PATH = `${rexSelectionBin}:${savedRexSelectionEnv.PATH ?? ""}`;
 		const rexSelection = loadSurface();
 		assert.equal(rexSelection.activeSurface, "rex");
 		assert.equal(rexSelection.isMuxAvailable(), true);
