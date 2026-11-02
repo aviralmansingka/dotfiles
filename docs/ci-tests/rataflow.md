@@ -46,7 +46,7 @@ requests to it by default and builds single-file HTML for everything else.
   name, and the upstream provenance line. A plain re-vendor from upstream
   drops these; the check catches the drift.
 - Cargo tests (opt-in). `RATAFLOW_BUILD=1` runs `cargo test --offline` in
-  `rataflow/`: 89 tests — 43 spec/schema/theme/flow/layout/routing unit
+  `rataflow/`: 95 tests — 44 spec/schema/theme/flow/layout/routing unit
   tests, 41 headless `TestBackend` render proofs (labels, plain canvas, node
   fills, gruvbox accent cycle, group hues with no drawn box, flow-dot
   motion), and 5 CLI tests exercising `--check` and `--help` through the
@@ -72,7 +72,7 @@ takes minutes and needs the network). The suite writes nothing outside
 
 All offline checks pass on macOS python 3.9 (TOML checks SKIP) and on CI
 python 3.12. `RATAFLOW_BUILD=1` passes with cargo 1.94 and a warm
-registry cache: 43 lib + 41 render + 5 CLI tests, 0 failures.
+registry cache: 44 lib + 44 render + 5 CLI + 2 guard tests, 0 failures.
 
 ## Known gaps
 
