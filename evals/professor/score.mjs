@@ -45,7 +45,10 @@ const tokens = (t) =>
 		.filter((w) => w.length > 3 && !STOP.has(w));
 const target = (task.facts ?? []).find((f) => f.id === task.target) ?? { keywords: [] };
 const targetKeys = new Set((target.keywords ?? []).map((k) => k.toLowerCase()));
-const onTarget = (c) => tokens(c.question).some((t) => targetKeys.has(t));
+const onTarget = (c) =>
+	(target.keywords ?? []).some(
+		(k) => k.length >= 3 && (c.question ?? "").toLowerCase().includes(k.toLowerCase()),
+	);
 
 const isQuestion = (c) => c.t === "quiz" || c.t === "explain";
 const firstAsk = calls.findIndex((c) => c.t === "ask_user_question");

@@ -109,8 +109,14 @@ function tokens(text: string): string[] {
 }
 
 function hits(text: string, keywords: string[]): number {
-	const set = new Set(tokens(text));
-	return keywords.reduce((n, k) => n + (set.has(k.toLowerCase()) ? 1 : 0), 0);
+	// Substring match, not token match: short keywords such as MTU, BGP, and
+	// NPV are exactly the words these tasks turn on, and the tokenizer drops
+	// anything three letters or shorter.
+	const hay = text.toLowerCase();
+	return keywords.reduce(
+		(n, k) => n + (k.length >= 3 && hay.includes(k.toLowerCase()) ? 1 : 0),
+		0,
+	);
 }
 
 function bestOption(
