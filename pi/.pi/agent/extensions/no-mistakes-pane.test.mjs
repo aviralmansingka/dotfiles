@@ -2068,4 +2068,103 @@ esac
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Quote-aware args parsing, end to end: the agent hands the tool ONE `args`
+// string, and parseArgs + buildBackgroundScript must deliver exactly the argv
+// the agent wrote to the daemon. Mangled quotes silently corrupt --intent and
+// --instructions before the run starts, and no block above asserts the
+// daemon-side argv — every stub so far ignored its arguments. This one
+// records them.
+// ---------------------------------------------------------------------------
+{
+	const handlers = new Map();
+	const messages = [];
+	let tool;
+	let tick;
+	const stubDir = mkdtempSync(join(tmpdir(), "pi-nm-args-"));
+	const argvFile = join(stubDir, "daemon-argv.txt");
+	const savedSetInterval = globalThis.setInterval;
+	const savedClearInterval = globalThis.clearInterval;
+	const savedPath = process.env.PATH;
+	const sleepReal = (ms) => new Promise((done) => setTimeout(done, ms));
+	try {
+		globalThis.setInterval = (callback) => {
+			tick = callback;
+			return { unref() {} };
+		};
+		globalThis.clearInterval = () => {};
+		// The preflight status call exits 0 (healthy daemon); the real call
+		// records its full argv (one arg per line) then ends the run.
+		writeFileSync(join(stubDir, "no-mistakes"), [
+			"#!/bin/sh",
+			'if [ "$1" = "axi" ] && [ "$2" = "status" ]; then exit 0; fi',
+			`: > '${argvFile}'`,
+			`for a in "$@"; do printf '%s\\n' "$a" >> '${argvFile}'; done`,
+			"printf '%s\\n' 'outcome: checks-passed'",
+			"",
+		].join("\n"));
+		chmodSync(join(stubDir, "no-mistakes"), 0o755);
+		process.env.PATH = `${stubDir}:${savedPath}`;
+
+		noMistakesPane({
+			on(name, handler) { handlers.set(name, handler); },
+			registerTool(value) { tool = value; },
+			registerCommand() {},
+			registerMessageRenderer() {},
+			events: {
+				emit() {},
+				on() { return () => {}; },
+			},
+			exec() { return Promise.resolve({ code: 0, stdout: "current_branch: feat/x" }); },
+			sendMessage(message, options) { messages.push({ message, options }); },
+		});
+
+		const pollUntil = async (condition, timeoutMs = 4000) => {
+			const deadline = Date.now() + timeoutMs;
+			while (!condition() && Date.now() < deadline) {
+				await tick();
+				await sleepReal(25);
+			}
+			assert.ok(condition(), "poll condition not reached in time");
+		};
+
+		// The agent's single `args` string, with the two quote shapes the skill
+		// tells it to use: double quotes with \"-escapes around an intent, and
+		// the '\'' idiom for an apostrophe inside single-quoted instructions.
+		const agentArgs = `run --intent "ship the \\"quoted\\" pane" --instructions 'don'\\''t touch the pane'`;
+		const ack = await tool.execute(
+			"args-1",
+			{ args: agentArgs, timeoutMs: 30 },
+			undefined,
+			undefined,
+			{ cwd: stubDir, hasUI: false },
+		);
+		assert.equal(ack.details.status, "started");
+		await pollUntil(() => messages.length >= 1);
+
+		const expected = [
+			"axi",
+			"run",
+			"--intent",
+			`ship the "quoted" pane`,
+			"--instructions",
+			"don't touch the pane",
+			"",
+		].join("\n");
+		assert.equal(
+			readFileSync(argvFile, "utf-8"),
+			expected,
+			"the daemon receives exactly the argv the agent wrote — quote groups and apostrophes survive parseArgs + the background wrapper",
+		);
+
+		handlers.get("session_shutdown")();
+	} finally {
+		globalThis.setInterval = savedSetInterval;
+		globalThis.clearInterval = savedClearInterval;
+		process.env.PATH = savedPath;
+		rmSync(stubDir, { recursive: true, force: true });
+		globalThis[Symbol.for("pi-no-mistakes/watch-state")] = undefined;
+	}
+}
+
 console.log("no-mistakes-pane capture tests passed");
