@@ -1838,13 +1838,15 @@ fn check_prints_crossings_both_motion_modes_and_the_origin_proof() {
 }
 
 // ---------------------------------------------------------------------------
-// Round 08: structural merge — regions, rank pins, minlen gaps
+// Round 08: structural merge — groups, rank pins, minlen gaps
 // ---------------------------------------------------------------------------
 
-use rataflow_view::group_region_color;
+use rataflow_view::group_color;
 
-/// Two weakly-connected worlds (off-rack vs in-band) in one spec: each group
-/// is one bordered, titled region, side by side in one view.
+/// Two weakly-connected worlds (off-rack vs in-band) in one spec. `group` is
+/// a logical tag: it still orders the sibling blocks side by side in one view
+/// and still picks one name-derived hue family per group, but the drawing
+/// carries no box, no border, and no title for a group.
 const TWO_PLANES_SPEC: &str = r#"{
   "direction": "tb",
   "nodes": [
@@ -1859,40 +1861,88 @@ const TWO_PLANES_SPEC: &str = r#"{
   ]
 }"#;
 
+/// The same graph with every `group` tag removed: the control that proves a
+/// group costs no cells and draws no cell of its own.
+const TWO_PLANES_UNTAGGED: &str = r#"{
+  "direction": "tb",
+  "nodes": [
+    {"id":"oob-switch","label":"oob-switch"},
+    {"id":"oob-bmc","label":"oob-bmc"},
+    {"id":"band-leaf","label":"band-leaf"},
+    {"id":"band-core","label":"band-core"}
+  ],
+  "edges": [
+    {"from":"oob-switch","to":"oob-bmc"},
+    {"from":"band-leaf","to":"band-core"}
+  ]
+}"#;
+
 #[test]
-fn two_planes_render_as_two_titled_regions_side_by_side_in_one_view() {
+fn two_planes_group_side_by_side_and_draw_no_box_or_title() {
     let spec = Spec::from_json(TWO_PLANES_SPEC).expect("spec");
-    let (_flow, report) = build_flow_with_report(&spec).expect("flow");
-    assert_eq!(report.regions.len(), 2, "{:?}", report.regions);
-    let names: Vec<&str> = report.regions.iter().map(|r| r.name.as_str()).collect();
-    assert_eq!(names, ["off-rack", "in-band"], "declaration order");
+    let (flow, report) = build_flow_with_report(&spec).expect("flow");
+    assert_eq!(
+        report.groups,
+        vec![("off-rack".to_string(), 2), ("in-band".to_string(), 2)],
+        "the tag is still reported as a logical group"
+    );
 
-    let (first, second) = (&report.regions[0], &report.regions[1]);
-    // Regions sit beside each other, not stacked across the picture.
-    let disjoint = first.x + first.w <= second.x || second.x + second.w <= first.x;
-    assert!(disjoint, "{first:?} and {second:?} overlap: {report:?}");
-    // One drawing: both start on the same top band.
-    assert_eq!(first.y, second.y, "sibling regions share one view");
+    // Sibling blocks share one view: the left group's column band ends before
+    // the right group's band starts, so the two worlds read as two blocks.
+    let band = |group: &str| -> (f64, f64) {
+        let members = spec
+            .nodes
+            .iter()
+            .filter(|node| node.group.as_deref() == Some(group))
+            .map(|node| flow.node(&node.id).expect(&node.id));
+        members.fold((f64::MAX, f64::MIN), |acc, node| {
+            let left = node.position.x;
+            let right = node.position.x + node.width;
+            (acc.0.min(left), acc.1.max(right))
+        })
+    };
+    let (off_x0, off_x1) = band("off-rack");
+    let (band_x0, band_x1) = band("in-band");
+    assert!(
+        off_x1 <= band_x0 || band_x1 <= off_x0,
+        "sibling blocks share the view without overlapping: \
+         off-rack {off_x0}..{off_x1}, in-band {band_x0}..{band_x1}"
+    );
 
-    let text = rendered_text(&render(TWO_PLANES_SPEC, 0));
-    for region in &report.regions {
+    // No box, no title: the tagged drawing is the untagged drawing, cell for
+    // cell. A group that reserved a border column or stamped a title would
+    // differ here.
+    let tagged = rendered_text(&render(TWO_PLANES_SPEC, 0));
+    let untagged = rendered_text(&render(TWO_PLANES_UNTAGGED, 0));
+    assert_eq!(
+        tagged, untagged,
+        "a group must paint nothing: its tag is logical only"
+    );
+    for name in ["off-rack", "in-band"] {
         assert!(
-            text.contains(&region.name),
-            "region title {:?} missing from the drawing",
-            region.name
+            !tagged.contains(name),
+            "no group title {name:?} may be drawn"
         );
     }
-    assert!(text.contains('╭') && text.contains('╯'), "bordered regions");
-    // Hue per region NAME, not per declaration index.
+
+    // Hue per group NAME, not per declaration index: the surviving grouping
+    // signal. Node corners carry their group's family color.
     assert_ne!(
-        group_region_color("off-rack"),
-        group_region_color("in-band"),
-        "sibling regions must not share one hue"
+        group_color("off-rack", 0),
+        group_color("in-band", 0),
+        "sibling groups must not share one hue"
     );
-    assert_eq!(
-        group_region_color("off-rack"),
-        group_region_color("off-rack")
-    );
+    let corners: Vec<Color> = render(TWO_PLANES_SPEC, 0)
+        .iter()
+        .filter(|cell| cell.symbol() == "╭")
+        .map(|cell| cell.fg)
+        .collect();
+    for group in ["off-rack", "in-band"] {
+        assert!(
+            corners.contains(&group_color(group, 0)),
+            "no node corner carries the {group} hue family: {corners:?}"
+        );
+    }
 }
 
 /// A datacenter tier: two spines pinned above a shared leaf rank. The leaves
@@ -1993,7 +2043,7 @@ fn minlen_opens_the_declared_rank_gaps_and_clears_the_label_slot() {
 }
 
 #[test]
-fn a_group_member_stays_inside_its_region_next_to_a_distant_consumer() {
+fn a_group_stays_one_block_next_to_a_distant_consumer() {
     let spec = Spec::from_json(
         r#"{"direction":"tb",
             "nodes":[
@@ -2006,32 +2056,65 @@ fn a_group_member_stays_inside_its_region_next_to_a_distant_consumer() {
               {"from":"z2","to":"z3"},{"from":"z3","to":"z4"}]}"#,
     )
     .expect("spec");
-    let (flow, report) = build_flow_with_report(&spec).expect("flow");
-    let region = report
-        .regions
-        .iter()
-        .find(|region| region.name == "rack")
-        .expect("rack region");
-    // The distant consumer is far below; the region must not stretch to it.
-    let far = flow.node("z4").expect("z4").position.y as i32;
-    assert!(
-        (region.y + region.h) < far,
-        "region bottom {:?} must stay above the far consumer {far}",
-        region.y + region.h
-    );
-    // Every member is inside the region box.
+    let (flow, _report) = build_flow_with_report(&spec).expect("flow");
+    // Nothing is stretched down to the distant consumer: a group draws no box,
+    // so the chain below it owns its own ranks.
+    let far = flow.node("z4").expect("z4").position.y;
     for member in ["r1", "r2", "r3"] {
-        let node = flow.node(member).expect(member);
-        let (x, y) = (node.position.x as i32, node.position.y as i32);
+        let bottom = flow.node(member).expect(member).position.y + 4.0;
         assert!(
-            x >= region.x && x + node.width as i32 <= region.x + region.w,
-            "{member} x escapes the region"
-        );
-        assert!(
-            y >= region.y && y + node.height as i32 <= region.y + region.h,
-            "{member} y escapes the region"
+            bottom < far,
+            "{member} must stay above the far consumer {far}"
         );
     }
+    // The members of one group are one block: inside a rank, no ungrouped node
+    // sits between two `rack` members.
+    let mut rows: std::collections::BTreeMap<i64, Vec<(i64, bool)>> =
+        std::collections::BTreeMap::new();
+    for node in flow.nodes() {
+        let rack = node.id.starts_with('r');
+        rows.entry(node.position.y.round() as i64)
+            .or_default()
+            .push((node.position.x.round() as i64, rack));
+    }
+    let mut blocks = 0;
+    for (_row, mut slots) in rows {
+        slots.sort_unstable();
+        let mut seen_rack = false;
+        let mut closed = false;
+        for &(_x, rack) in &slots {
+            if rack && seen_rack && closed {
+                blocks += 1; // a second rack run in the same rank
+            }
+            if rack {
+                seen_rack = true;
+            } else if seen_rack {
+                closed = true;
+            }
+        }
+    }
+    assert_eq!(
+        blocks,
+        0,
+        "each rank holds the group as one run: {:?}",
+        flow.nodes()
+            .map(|n| (n.id.clone(), n.position))
+            .collect::<Vec<_>>()
+    );
+    // And no title is stamped for the tag.
+    let text = rendered_text(&render(
+        r#"{"direction":"tb",
+            "nodes":[
+              {"id":"r1","group":"rack"},{"id":"r2","group":"rack"},
+              {"id":"r3","group":"rack"},
+              {"id":"z1"},{"id":"z2"},{"id":"z3"},{"id":"z4"}],
+            "edges":[
+              {"from":"r1","to":"r2"},{"from":"r2","to":"r3"},
+              {"from":"r1","to":"z1"},{"from":"z1","to":"z2"},
+              {"from":"z2","to":"z3"},{"from":"z3","to":"z4"}]}"#,
+        0,
+    ));
+    assert!(!text.contains("rack"), "no group title may be drawn");
 }
 
 /// A `tb` graph whose back edge leaves a left-side port with its routing
