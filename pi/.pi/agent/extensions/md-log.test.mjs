@@ -447,8 +447,8 @@ assert.equal(typeof commands.get("extract").handler, "function");
 		"the prompt names the propositions directory",
 	);
 	assert.ok(
-		prompt.includes(join(homedir(), ".agents", "skills", "professor", "SKILL.md")),
-		"the prompt names the professor skill",
+		prompt.includes(join(homedir(), ".agents", "skills", "professor", "artifacts.md")),
+		"the prompt names the professor skill file that holds the contract",
 	);
 	assert.ok(prompt.includes("Knowledge extraction"), "the prompt names the contract section");
 	assert.match(prompt, /Read the journal fully/i);

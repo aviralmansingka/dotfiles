@@ -671,11 +671,12 @@ export function resolveVaultDir(): string {
  * The self-contained /extract prompt. Every path it needs is spelled out, so a
  * fresh agent can run the extraction without the conversation that started it:
  * the journal to read, the propositions directory to link or create in, and the
- * Knowledge extraction contract that owns the note format and the procedure.
+ * Knowledge extraction contract in the professor skill's artifacts.md, which
+ * owns the note format and the procedure.
  */
 export function buildExtractionPrompt(journalPath: string, vaultDir: string): string {
 	const propositions = join(vaultDir, "2_knowledge", "propositions");
-	const skill = join(homedir(), ".agents", "skills", "professor", "SKILL.md");
+	const skill = join(homedir(), ".agents", "skills", "professor", "artifacts.md");
 	return [
 		"Turn this session's teaching journal into proposition notes in the vault.",
 		"",
