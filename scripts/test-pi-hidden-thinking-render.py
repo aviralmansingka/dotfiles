@@ -12,13 +12,11 @@ title, blank. This catches deployment drift (extension not stowed, settings
 not synced, hideThinkingBlock back on) that state checks alone can miss.
 
 Hidden phase (isolated agent dir with hideThinkingBlock on): the same
-fixture must show no extra row and no doubled blank lines. The hidden row
-depends on the pi version:
-- pi 1.5.0 and newer: the extension hands pi an empty label, and pi renders
-  such a run as nothing, spacers included. No "✺ thinking" row may appear.
-- pi 1.4.0: an empty label leaves its structural spacers behind
-  (#thinking-space), so the extension keeps the visible "✺ thinking" label.
-  Exactly one label row per hidden run, with single blank lines around it.
+fixture must show no extra row and no doubled blank lines. This extension
+requires pi 1.5.0 or newer: it hands pi an empty label, and pi renders such
+a run as nothing, spacers included. No "✺ thinking" row may appear. An
+older pi keeps its structural spacers (#thinking-space), so this phase
+skips with a printed reason there.
 
 This phase names the branch's own extension file, so it tests the code
 under change instead of the deployed copy. It also renders a message whose
@@ -265,12 +263,11 @@ def check_visible_rows(session: str) -> None:
     print("visible phase passed: title rows render, gap is blank/title/blank, no spinner frames")
 
 
-# pi 1.5.0 renders a hidden run with an empty label as no row and no
-# spacer. Pi 1.4.0 keeps the spacers, so the extension keeps a visible
-# label there. Keep this mirror in step with hiddenRowLabel in
-# pi/.pi/agent/extensions/thinking-title.ts.
+# The extension requires pi 1.5.0: an empty hidden label makes pi render the
+# run as no row and no spacer. The visible label from older releases must not
+# come back, so the hidden phase treats a "✺ thinking" row as a failure.
 EMPTY_LABEL_FROM = (1, 5, 0)
-LEGACY_HIDDEN_LABEL = "✺ thinking"
+STRAY_HIDDEN_LABEL = "✺ thinking"
 
 
 def pi_version() -> tuple[int, ...]:
@@ -283,13 +280,6 @@ def pi_version() -> tuple[int, ...]:
         return tuple(int(part.split("-")[0]) for part in parts)
     except ValueError:
         return ()
-
-
-def expected_hidden_label(version: tuple[int, ...]) -> str:
-    """Mirror of the extension's hiddenRowLabel gate."""
-    if not version:
-        return LEGACY_HIDDEN_LABEL
-    return "" if version >= EMPTY_LABEL_FROM else LEGACY_HIDDEN_LABEL
 
 
 def max_blank_run(rows: list[str]) -> int:
@@ -320,8 +310,11 @@ def check_hidden_rows(tmp: str, session: str) -> None:
         return
 
     version = pi_version()
-    label = expected_hidden_label(version)
     shown = ".".join(str(part) for part in version) or "unknown"
+
+    if version and version < EMPTY_LABEL_FROM:
+        print(f"SKIP hidden phase: pi {shown} keeps hidden-run spacers; the extension requires 1.5.0")
+        return
 
     hidden_dir = os.path.join(tmp, "hidden-agent")
     os.makedirs(hidden_dir, exist_ok=True)
@@ -343,33 +336,25 @@ def check_hidden_rows(tmp: str, session: str) -> None:
     if SHORT_TITLE in body:
         fail("a title row rendered while thinking rows were hidden", rows, user_row, final_row)
 
-    label_rows = [row for row in transcript if LEGACY_HIDDEN_LABEL in row]
-    if not label:
-        if label_rows:
-            fail(f"pi {shown} drops a hidden run with an empty label, but a"
-                 f" '{LEGACY_HIDDEN_LABEL}' row rendered (the extra bullet row the user reported)",
-                 rows, user_row, final_row)
-    else:
-        if len(label_rows) != 2:
-            fail(f"pi {shown} keeps a visible hidden label: expected one"
-                 f" '{LEGACY_HIDDEN_LABEL}' row per hidden run, got {len(label_rows)}",
-                 rows, user_row, final_row)
+    label_rows = [row for row in transcript if STRAY_HIDDEN_LABEL in row]
+    if label_rows:
+        fail(f"pi {shown} drops a hidden run with an empty label, but a"
+             f" '{STRAY_HIDDEN_LABEL}' row rendered (the extra bullet row the user reported)",
+             rows, user_row, final_row)
 
     stray = [row for row in transcript
-             if "thinking" in row.lower() and LEGACY_HIDDEN_LABEL not in row]
+             if "thinking" in row.lower() and STRAY_HIDDEN_LABEL not in row]
     if stray:
         fail("a hidden thinking run rendered stray text: " + stray[0].strip(), rows, user_row, final_row)
 
     # Doubled blank lines are the #thinking-space failure: an empty label on a
     # release that keeps its structural spacers leaves five blank rows behind.
-    # The label path itself pads two blank rows around the label, so allow that.
-    allowed = 2 if label else 3
-    if max_blank_run(transcript) > allowed:
+    # On pi 1.5.0 the run disappears entirely, so three blank rows is the cap.
+    if max_blank_run(transcript) > 3:
         fail(f"the hidden transcript gained extra blank rows (max {max_blank_run(transcript)},"
-             f" allowed {allowed})", rows, user_row, final_row)
+             f" allowed 3)", rows, user_row, final_row)
 
-    contract = "no row" if not label else f"one '{label}' row per hidden run"
-    print(f"hidden phase passed (pi {shown}): hidden runs render {contract},"
+    print(f"hidden phase passed (pi {shown}): hidden runs render no row,"
           f" no doubled blank lines")
 
 
@@ -409,7 +394,7 @@ def check_thinking_off_rows(tmp: str, session: str) -> None:
                      f" {row.strip()}", rows, user_row, final_row)
 
         # Three blank rows is pi's own spacing from the user row to the first
-        # tool row (measured on 1.4.0 and 1.5.0). A fourth one is a stray row.
+        # tool row (measured on 1.5.0). A fourth one is a stray row.
         if max_blank_run(transcript) > 3:
             fail(f"thinking off with {mode} rows added blank lines"
                  f" (max {max_blank_run(transcript)}, allowed 3)", rows, user_row, final_row)
@@ -431,9 +416,7 @@ def main() -> None:
 
     version = pi_version()
     shown = ".".join(str(part) for part in version) or "unknown"
-    label = expected_hidden_label(version)
-    print(f"pi {shown}: hidden thinking runs render "
-          + ("no row (empty label)" if not label else f"one '{label}' row per run"))
+    print(f"pi {shown}: hidden thinking runs render no row (empty label)")
 
     with tempfile.TemporaryDirectory(prefix="pi-hidden-thinking-render-") as tmp:
         session = os.path.join(tmp, "fixture.jsonl")

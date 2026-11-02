@@ -34,8 +34,6 @@ const {
 	cleanModelTitle,
 	escapeTitle,
 	hashText,
-	atLeastVersion,
-	hiddenRowLabel,
 } = mod;
 
 // ── pure helpers ─────────────────────────────────────────────────────────────
@@ -63,22 +61,6 @@ assert.equal(cleanModelTitle(""), "");
 assert.equal(escapeTitle("a * b _ c [d] ~ # e ` f \\ g"), "a \\* b \\_ c \\[d\\] \\~ \\# e \\` f \\\\ g");
 assert.notEqual(hashText("alpha"), hashText("beta"));
 assert.equal(hashText("alpha"), hashText(" alpha\n\n"));
-
-// ── hidden label per pi version ─────────────────────────────────────────────
-// Pi 1.5.0 renders a hidden run with an empty label as no row and no spacer.
-// Pi 1.4.0 keeps the structural spacers, so an empty label there leaves blank
-// lines behind (#thinking-space) and it keeps the visible label.
-assert.equal(atLeastVersion("1.5.0", "1.5.0"), true);
-assert.equal(atLeastVersion("1.4.0", "1.5.0"), false);
-assert.equal(atLeastVersion("1.6.0", "1.5.0"), true);
-assert.equal(atLeastVersion("2.0.0-beta.1", "1.5.0"), true);
-assert.equal(atLeastVersion("1.10.0", "1.5.0"), true);
-assert.equal(atLeastVersion("1.4.9", "1.5.0"), false);
-assert.equal(atLeastVersion(undefined, "1.5.0"), false);
-assert.equal(hiddenRowLabel("1.5.0"), "", "pi 1.5.0 drops a hidden run with an empty label");
-assert.equal(hiddenRowLabel("1.4.0"), "✺ thinking", "pi 1.4.0 keeps a visible label");
-assert.equal(hiddenRowLabel("1.6.2"), "");
-assert.equal(hiddenRowLabel(undefined), "✺ thinking", "unknown version keeps the visible label");
 
 // ── transformer rules ────────────────────────────────────────────────────────
 
@@ -250,15 +232,14 @@ assert.equal(
 );
 
 // ── hidden runs leave no row ───────────────────────────────────────────────
-// On pi 1.5.0 (the stubbed VERSION) the extension hands pi an empty label, so
-// a hidden run renders no row and no spacer. A visible label would show a bare
-// bullet row that says "thinking" and carries no thinking text: the extra row
-// the user reported.
+// The extension requires pi 1.5.0, which renders a hidden run with an empty
+// label as no row and no spacer. A visible label would show a bare bullet row
+// that says "thinking" and carries no thinking text: the extra row the user
+// reported.
 registrations.handlers.get("session_start")({}, extCtx());
 assert.ok(hiddenLabels.length >= 2, "session_start and /titles set the hidden label");
 for (const label of hiddenLabels) {
 	assert.equal(label, "", "every hidden label must render no text");
-	assert.equal(hiddenRowLabel("1.5.0"), label, "labels come from the version gate");
 }
 
 rmSync(tempRoot, { recursive: true, force: true });

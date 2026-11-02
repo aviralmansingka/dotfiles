@@ -27,16 +27,16 @@
  * built-in `/thinking` command controls the thinking level, so this one
  * keeps a distinct name).
  *
- * Hidden runs (Ctrl+T, or a click on a title row) render HIDDEN_ROW_LABEL.
+ * Hidden runs (Ctrl+T, or a click on a title row) set an empty label.
  * Pi 1.5.0 renders a run with an empty label as nothing at all, its
- * spacers included, so the row disappears. Pi 1.4.0 keeps the spacers and
- * leaves blank lines behind (#thinking-space), so it keeps a visible label.
- * `hiddenRowLabel` picks per running pi version. A visible label on 1.5.0
- * shows a bare "✺ thinking" row for every hidden run — an extra bullet row
- * with no thinking text after it. Ctrl+T brings the title rows back.
+ * spacers included, so the row disappears. This extension requires pi
+ * 1.5.0 or newer: an older release keeps the spacers and leaves blank
+ * rows behind (#thinking-space). A visible label on 1.5.0 shows a bare
+ * "✺ thinking" row for every hidden run — an extra bullet row with no
+ * thinking text after it. Ctrl+T brings the title rows back.
  */
 
-import { VERSION, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 /** Pinned title model: cheap, fast, summarization-capable. */
 const TITLE_MODEL = { provider: "fireworks", id: "deepseek-v4-flash-0731" };
@@ -46,12 +46,10 @@ const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", 
 const SPINNER_LABEL = "thinking";
 const SPINNER_FRAME_MS = 100;
 /**
- * First pi release that renders a hidden run with an empty label as no row
- * and no spacer. Pi 1.4.0 keeps its structural spacers.
+ * Empty on purpose: pi 1.5.0 and newer render such a run as no row and no
+ * spacer. A visible label leaves a bare bullet row on every hidden run.
  */
-const EMPTY_LABEL_PI_VERSION = "1.5.0";
-/** Visible label for pi peers that cannot skip an empty hidden run. */
-const LEGACY_HIDDEN_ROW_LABEL = "✺ thinking";
+const HIDDEN_ROW_LABEL = "";
 const GENERIC_TITLE = "reasoning through the request";
 const TITLE_TIMEOUT_MS = 8000;
 const MAX_TITLE_INPUT_CHARS = 4000;
@@ -117,29 +115,6 @@ export function hashText(text: string): string {
 	return hash.toString(16) + ":" + collapsed.length;
 }
 
-/** Loose semver compare: numeric parts only, prerelease builds compare equal. */
-export function atLeastVersion(version: string | undefined, minimum: string): boolean {
-	const parse = (value: string) =>
-		value.split("-")[0].split(".").map((part) => Number.parseInt(part, 10) || 0);
-	const left = parse(version ?? "");
-	const right = parse(minimum);
-	for (let index = 0; index < Math.max(left.length, right.length); index++) {
-		const a = left[index] ?? 0;
-		const b = right[index] ?? 0;
-		if (a !== b) return a > b;
-	}
-	return true;
-}
-
-/**
- * Label of a hidden thinking run for the running pi version. Empty where pi
- * skips an empty-label run (no row, no spacer); a visible label elsewhere,
- * because an empty label there leaves blank rows behind.
- */
-export function hiddenRowLabel(version: string | undefined): string {
-	return atLeastVersion(version, EMPTY_LABEL_PI_VERSION) ? "" : LEGACY_HIDDEN_ROW_LABEL;
-}
-
 function spinnerLine(): string {
 	const frame = SPINNER_FRAMES[
 		Math.floor(Date.now() / SPINNER_FRAME_MS) % SPINNER_FRAMES.length
@@ -148,7 +123,7 @@ function spinnerLine(): string {
 }
 
 export default function (pi: ExtensionAPI) {
-	const hiddenLabel = hiddenRowLabel(VERSION);
+	const hiddenLabel = HIDDEN_ROW_LABEL;
 	/** content hash -> title. Survives branch switches: same text, same title. */
 	const titles = new Map<string, string>();
 	const inFlight = new Set<string>();
