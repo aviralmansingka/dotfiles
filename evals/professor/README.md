@@ -16,7 +16,7 @@ keywords, so the simulator can answer about any node it holds.
 | Term | Meaning | Here |
 |---|---|---|
 | **Trajectory** | one complete run: user turns, agent turns, tool calls, results | `calls.jsonl`, `sessions/*.jsonl` |
-| **Task instance** | the specification the rollout starts from | `scenarios/<id>.json` (directory name kept) |
+| **Task** (task instance) | the specification the rollout starts from | `tasks/<id>.json` |
 | **User simulator** | the scripted party that answers the professor | `stubs.ts` |
 | **Environment** | what the agent can touch besides the tools | workspace, private vault |
 | **Failure case** | one real moment from a past trajectory, worth reproducing | `EXAMPLES.md` |
@@ -25,7 +25,7 @@ keywords, so the simulator can answer about any node it holds.
 ## Run
 
 ```bash
-evals/professor/run.sh <task-instance> <skill-dir> [model]
+evals/professor/run.sh <task> <skill-dir> [model]
 ```
 
 ```bash
@@ -42,7 +42,7 @@ Each rollout writes `evals/professor/runs/<stamp>-<instance>-<tag>/`:
 | File | Holds |
 |---|---|
 | `professor/` | the exact skill variant under test |
-| `scenario.json` | the task instance |
+| `task.json` | the task definition |
 | `calls.jsonl` | the step log, one row per instrument call |
 | `state.json` | the user simulator's final state |
 | `meta.json` | model, skill hash, git commit, date |
@@ -66,7 +66,7 @@ Cost: one model rollout per invocation, about 5–10 minutes.
 5. **questionRunOk** — no more than two non-probe questions in a row without a
    lesson.
 
-The `already-known` task instance adds **noUnneededTeaching**: the professor
+The `already-known` task adds **noUnneededTeaching**: the professor
 must not teach a fact the simulator already holds. It replaces
 `taughtCorrection` with `targetHeld` and `verifiedAfterTeach` with
 `verifiedOnTarget`, because nothing has to be taught.
@@ -80,9 +80,9 @@ must not teach a fact the simulator already holds. It replaces
 Metadata does not enter the policy score. It moves too much between rollouts to
 mix with the loop checks.
 
-## Add a task instance
+## Add a task
 
-Copy `scenarios/cuda-event-timing.json` and edit:
+Copy `tasks/cuda-event-timing.json` and edit:
 
 - `facts` — claims, keywords that identify a question about them, and `known`
   for facts the simulator holds at the start.
@@ -98,7 +98,7 @@ Copy `scenarios/cuda-event-timing.json` and edit:
 Same model on both arms (`fireworks/glm-5p3-fast`), 2026-11-02, one rollout per
 cell. Before is commit `f67576e5^`; after is this harness.
 
-| Task instance | Before | After |
+| Task | Before | After |
 |---|---|---|
 | mtu-blackhole | 5/5 | 5/5 |
 | cuda-event-timing | 2/5, cut at the 900 s cap | 4/5 |

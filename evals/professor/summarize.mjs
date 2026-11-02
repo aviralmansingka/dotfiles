@@ -20,17 +20,18 @@ for (const dir of dirs) {
 	rows.push(r);
 }
 
-const byScenario = new Map();
+const byTask = new Map();
 for (const r of rows) {
-	const list = byScenario.get(r.scenario) ?? [];
+	const key = r.task ?? r.scenario;
+	const list = byTask.get(key) ?? [];
 	list.push(r);
-	byScenario.set(r.scenario, list);
+	byTask.set(key, list);
 }
 
-for (const [scenario, list] of byScenario) {
+for (const [task, list] of byTask) {
 	const scores = list.map((r) => Number(r.score.split("/")[0]));
 	const max = list[0].score.split("/")[1];
-	console.log(`\n${scenario}  n=${list.length}  scores=${scores.join(",")}  best=${Math.max(...scores)}/${max}`);
+	console.log(`\n${task}  n=${list.length}  scores=${scores.join(",")}  best=${Math.max(...scores)}/${max}`);
 	for (const key of Object.keys(list[0].checks)) {
 		const pass = list.filter((r) => r.checks[key]).length;
 		console.log(`  ${key.padEnd(22)} ${pass}/${list.length}`);

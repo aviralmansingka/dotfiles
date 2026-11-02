@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // evals/professor/score.mjs — score one professor eval run.
 //
-// Reads <dir>/calls.jsonl (the step log), <dir>/state.json (simulator state), <dir>/scenario.json, and
+// Reads <dir>/calls.jsonl (the step log), <dir>/state.json (simulator state), <dir>/task.json, and
 // <dir>/meta.json, then prints two scorecards:
 //
 //   policy    five checks on the teaching loop (comparable across runs)
@@ -32,7 +32,7 @@ const readJsonl = (name) => {
 
 const calls = readJsonl("calls.jsonl");
 const state = readJson("state.json", {});
-const scenario = readJson("scenario.json", { facts: [], target: "" });
+const task = readJson("task.json", readJson("scenario.json", { facts: [], target: "" }));
 const meta = readJson("meta.json", {});
 
 const STOP = new Set(
@@ -43,7 +43,7 @@ const STOP = new Set(
 const tokens = (t) =>
 	(t ?? "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/)
 		.filter((w) => w.length > 3 && !STOP.has(w));
-const target = (scenario.facts ?? []).find((f) => f.id === scenario.target) ?? { keywords: [] };
+const target = (task.facts ?? []).find((f) => f.id === task.target) ?? { keywords: [] };
 const targetKeys = new Set((target.keywords ?? []).map((k) => k.toLowerCase()));
 const onTarget = (c) => tokens(c.question).some((t) => targetKeys.has(t));
 
@@ -57,11 +57,11 @@ const approved = calls.some((c) => c.t === "ask_user_question" && /approve/i.tes
 const contractFirst = firstAsk !== -1 && (firstQuestion === -1 || firstAsk < firstQuestion);
 const probeFirst = firstQuestion !== -1 && (firstLesson === -1 || firstQuestion < firstLesson);
 const taught = Boolean(state.taught) || flipAt !== -1;
-const known = scenario.mode === "already-known";
+const known = task.mode === "already-known";
 // An already-known target needs no teaching: the check is that the learner
 // holds it, and that it was verified on the target at some point.
 const targetHeld = known
-	? (state.unlocked ?? []).includes(scenario.target)
+	? (state.unlocked ?? []).includes(task.target)
 	: taught;
 const verifiedAfter = known
 	? calls.some((c) => isQuestion(c) && c.right && onTarget(c))
@@ -84,7 +84,7 @@ const titlesOk = questions.every((c) => c.title);
 const contextOk = quizzes.length === 0 || quizzes.every((c) => c.hasContext);
 const expectedOk = questions.filter((c) => c.t === "explain").every((c) => c.hasExpected);
 const unneededTeaching =
-	scenario.mode === "already-known" && calls.some((c) => c.t === "lesson" && c.targetTaught);
+	task.mode === "already-known" && calls.some((c) => c.t === "lesson" && c.targetTaught);
 
 const checks = known
 	? {
@@ -102,12 +102,12 @@ const checks = known
 		verifiedAfterTeach: verifiedAfter,
 		questionRunOk: maxRun <= 2,
 	};
-if (scenario.mode === "already-known") checks.noUnneededTeaching = !unneededTeaching;
+if (task.mode === "already-known") checks.noUnneededTeaching = !unneededTeaching;
 
 const score = Object.values(checks).filter(Boolean).length;
 const report = {
 	run: dir,
-	scenario: state.scenario ?? scenario.id ?? null,
+	task: state.task ?? state.scenario ?? task.id ?? null,
 	model: meta.model ?? null,
 	skillHash: meta.skillHash ?? null,
 	gitSha: meta.gitSha ?? null,

@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# evals/professor/run.sh — run one professor eval scenario headless.
+# evals/professor/run.sh — run one professor eval task headless.
 #
-# Usage: evals/professor/run.sh <scenario> <skill-dir> [model]
+# Usage: evals/professor/run.sh <task> <skill-dir> [model]
 #
-#   scenario   name under evals/professor/scenarios/ (no .json)
+#   task   name under evals/professor/tasks/ (no .json)
 #   skill-dir  professor skill directory to load (a variant)
 #   model      pi model pattern (default: fireworks glm-5p3-fast)
 #
-# Writes every artifact under evals/professor/runs/<stamp>-<scenario>-<tag>/:
+# Writes every artifact under evals/professor/runs/<stamp>-<task>-<tag>/:
 #   professor/     the skill variant that ran, copied verbatim
-#   scenario.json  the task instance
+#   task.json      the task definition
 #   calls.jsonl    one row per instrument call (stubs.ts)
-#   state.json     the learner's final state
-#   stdout.txt     the professor's visible transcript
+#   state.json     the user simulator's final state
+#   stdout.txt     the professor's visible text
 #   sessions/      the pi session file
 #   meta.json      model, skill hash, git commit, date
 #
@@ -23,16 +23,16 @@
 
 set -uo pipefail
 
-scenario=${1:?usage: run.sh <scenario> <skill-dir> [model]}
-skill_dir=${2:?usage: run.sh <scenario> <skill-dir> [model]}
+task=${1:?usage: run.sh <task> <skill-dir> [model]}
+skill_dir=${2:?usage: run.sh <task> <skill-dir> [model]}
 model=${3:-anthropic/claude-sonnet-4-5}
 
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 repo=$(cd "$here/../.." && pwd)
 
-scenario_file="$here/scenarios/$scenario.json"
-if [ ! -f "$scenario_file" ]; then
-	echo "no scenario: $scenario_file" >&2
+task_file="$here/tasks/$task.json"
+if [ ! -f "$task_file" ]; then
+	echo "no task: $task_file" >&2
 	exit 1
 fi
 if [ ! -f "$skill_dir/SKILL.md" ]; then
@@ -42,10 +42,10 @@ fi
 
 tag=$(basename "$skill_dir")
 stamp=$(date +%Y%m%d-%H%M%S)-$(printf %04x $RANDOM)
-out="$here/runs/$stamp-$scenario-$tag"
+out="$here/runs/$stamp-$task-$tag"
 mkdir -p "$out/workspace" "$out/vault/2_knowledge/propositions"
 cp -R "$skill_dir" "$out/professor"
-cp "$scenario_file" "$out/scenario.json"
+cp "$task_file" "$out/task.json"
 
 # The skill names the installed path (~/.agents/skills/professor/). Point the
 # copy at itself, so the harness tests this variant and never the installed one.
@@ -63,14 +63,14 @@ PY
 # be compared with a later run.
 skill_hash=$(cat "$out/professor"/*.md | shasum -a 256 | cut -d' ' -f1)
 git_sha=$(git -C "$repo" rev-parse --short HEAD 2>/dev/null || echo none)
-python3 - "$out/meta.json" "$model" "$skill_hash" "$git_sha" "$scenario" <<'META'
+python3 - "$out/meta.json" "$model" "$skill_hash" "$git_sha" "$task" <<'META'
 import json, sys, datetime
-path, model, skill_hash, git_sha, scenario = sys.argv[1:]
+path, model, skill_hash, git_sha, task = sys.argv[1:]
 json.dump({
     "model": model,
     "skillHash": skill_hash,
     "gitSha": git_sha,
-    "scenario": scenario,
+    "task": task,
     "date": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
 }, open(path, "w"), indent=2)
 META
@@ -79,7 +79,7 @@ META
 # the real vault and its open arcs cannot leak into the run.
 mkdir -p "$out/workspace/professor-lessons"
 
-topic=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["topic"])' "$scenario_file")
+topic=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["topic"])' "$task_file")
 
 prompt=$(cat <<EOF
 $(cat "$out/professor/SKILL.md")
@@ -98,7 +98,7 @@ EOF
 
 echo "run: $out"
 cd "$out/workspace" || exit 1
-EVAL_SCENARIO="$out/scenario.json" \
+EVAL_TASK="$out/task.json" \
 EVAL_LOG="$out/calls.jsonl" \
 EVAL_STATE="$out/state.json" \
 EVAL_MAX_CALLS="${EVAL_MAX_CALLS:-80}" \

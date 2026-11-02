@@ -6,7 +6,7 @@
 #   evals/professor/variant.sh HEAD /tmp/prof-new
 #
 # Copies agents/.agents/skills/professor at <git-ref> into <dest-dir>, so two
-# skill versions can run against the same scenario.
+# skill versions can run against the same task.
 
 set -euo pipefail
 

@@ -21,7 +21,7 @@ interface Fact {
 	teachGroups?: string[][];
 }
 
-interface Scenario {
+interface Task {
 	id: string;
 	topic: string;
 	goal: string;
@@ -31,13 +31,13 @@ interface Scenario {
 	commandOutput?: string;
 }
 
-const scenarioPath = process.env.EVAL_SCENARIO ?? "";
+const taskPath = process.env.EVAL_TASK ?? "";
 const logPath = process.env.EVAL_LOG ?? "/tmp/professor-eval.jsonl";
 const statePath = process.env.EVAL_STATE ?? "/tmp/professor-eval-state.json";
 const maxCalls = Number(process.env.EVAL_MAX_CALLS ?? 80);
 
-const scenario: Scenario = JSON.parse(readFileSync(scenarioPath, "utf8"));
-const target = scenario.facts.find((f) => f.id === scenario.target);
+const task: Task = JSON.parse(readFileSync(taskPath, "utf8"));
+const target = task.facts.find((f) => f.id === task.target);
 
 interface LearnerState {
 	taught: boolean;
@@ -61,7 +61,7 @@ const state: LearnerState = {
 	unrecognised: 0,
 	afterFlip: 0,
 	calls: 0,
-	unlocked: scenario.facts.filter((f) => f.known).map((f) => f.id),
+	unlocked: task.facts.filter((f) => f.known).map((f) => f.id),
 	state: "misconception",
 };
 
@@ -69,11 +69,11 @@ const state: LearnerState = {
 if (target?.known) state.state = "correct";
 
 function persist(): void {
-	writeFileSync(statePath, JSON.stringify({ scenario: scenario.id, ...state }, null, 2));
+	writeFileSync(statePath, JSON.stringify({ task: task.id, ...state }, null, 2));
 }
 
 function log(row: Record<string, unknown>): void {
-	appendFileSync(logPath, `${JSON.stringify({ scenario: scenario.id, ...row })}\n`);
+	appendFileSync(logPath, `${JSON.stringify({ task: task.id, ...row })}\n`);
 }
 
 const STOP = new Set(
@@ -121,7 +121,7 @@ function answer(text: string): { claim: string; why: string } {
 	let bestFact: Fact | undefined;
 	let bestScore = 0;
 	let bestUnlocked = false;
-	for (const f of scenario.facts) {
+	for (const f of task.facts) {
 		const score = hits(text, f.keywords);
 		if (score === 0) continue;
 		const unlocked = state.unlocked.includes(f.id);
@@ -155,7 +155,7 @@ function answer(text: string): { claim: string; why: string } {
 function learnFromLesson(body: string): string[] {
 	const text = body.toLowerCase();
 	const unlocked: string[] = [];
-	for (const f of scenario.facts) {
+	for (const f of task.facts) {
 		if (state.unlocked.includes(f.id)) continue;
 		if (!f.teachGroups?.length) continue;
 		const matched = f.teachGroups.every((g) =>
@@ -308,7 +308,7 @@ export default function stubs(pi: ExtensionAPI) {
 				title: params.title ?? null,
 				bodyLen: body.length,
 				unlocked,
-				flipped: unlocked.includes(scenario.target),
+				flipped: unlocked.includes(task.target),
 				targetTaught,
 			});
 			persist();
@@ -338,7 +338,7 @@ export default function stubs(pi: ExtensionAPI) {
 				? "Approve"
 				: state.taught
 					? "I have to stop now. Give me the summary."
-					: scenario.grill.shift() ?? "Go ahead.";
+					: task.grill.shift() ?? "Go ahead.";
 			log({ t: "ask_user_question", seq: state.grill, question: q.slice(0, 200), reply });
 			persist();
 			return {
@@ -351,7 +351,7 @@ export default function stubs(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "run-command",
 		label: "run-command",
-		description: "Hands-on command check. Returns the scenario's canned output. Used by the professor eval harness.",
+		description: "Hands-on command check. Returns the task's canned output. Used by the professor eval harness.",
 		parameters: Type.Object({
 			command: Type.String(),
 			prediction: Type.Optional(Type.String()),
@@ -359,7 +359,7 @@ export default function stubs(pi: ExtensionAPI) {
 		}),
 		async execute(_id: string, params: any) {
 			state.calls += 1;
-			const out = scenario.commandOutput ?? "(no output)";
+			const out = task.commandOutput ?? "(no output)";
 			log({ t: "run-command", command: String(params.command).slice(0, 160), hasPrediction: Boolean(params.prediction) });
 			return {
 				content: [{ type: "text" as const, text: `Command: ${params.command}\nOutput: ${out}` }],
