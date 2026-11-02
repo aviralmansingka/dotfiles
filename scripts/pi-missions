@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Preview this checkout's complete Pi integration without restowing or merging it.
+set -euo pipefail
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+binary=${MISSION_BIN:-"$repo_root/scripts/mission-cli/bin/mission"}
+if [ ! -x "$binary" ]; then
+  echo 'Build the preview CLI: (cd scripts/mission-cli && go build -o bin/mission .)' >&2
+  exit 1
+fi
+export MISSION_BIN="$binary"
+# Pi writes auth and session files into its agent directory. Keep them outside
+# the Git checkout and leave the user's normal credentials/configuration alone.
+preview_key=$(node -e 'process.stdout.write(require("node:crypto").createHash("sha256").update(process.argv[1]).digest("hex").slice(0,16))' "$repo_root")
+preview_dir=${MISSION_PREVIEW_DIR:-"${XDG_STATE_HOME:-$HOME/.local/state}/pi-missions-preview/$preview_key"}
+umask 077
+mkdir -p "$preview_dir"
+for resource in extensions themes APPEND_SYSTEM.md keybindings.json; do
+  target="$preview_dir/$resource"
+  if [ -e "$target" ] && [ ! -L "$target" ]; then
+    echo "Preview resource already exists as a regular file/directory: $target" >&2
+    exit 1
+  fi
+  ln -sfn "$repo_root/pi/.pi/agent/$resource" "$target"
+done
+if [ ! -e "$preview_dir/settings.json" ]; then
+  cp "$repo_root/pi/.pi/agent/settings.json" "$preview_dir/settings.json"
+fi
+export PI_CODING_AGENT_DIR="$preview_dir"
+echo "Mission preview config: $preview_dir (use /login or an environment API key)" >&2
+exec pi --skill "$repo_root/agents/.agents/skills/missions/SKILL.md" "$@"
