@@ -870,6 +870,35 @@ try {
 	}
 	assertRpcRoundTrip(pidRun.exprs);
 
+	// Uppercase `R` is an additive alias for `r` (the captain's requested
+	// shortcut): pressing it must take the same Neovim `:term dm` auto-capture
+	// path and auto-submit the result, with no paste step. A panel that only
+	// honored lowercase `r` would leave this run waiting for manual input.
+	const upperRun = await driveAuto({
+		keys: ["R"],
+		command: "printf 'upper ok\\n'; exit 5",
+		setup: ({ nvimDir }) => {
+			const xdg = join(nvimDir, "xdg");
+			mkdirSync(xdg);
+			const sock = join(xdg, "nvim.4343.0");
+			writeFileSync(sock, "");
+			return {
+				sock,
+				env: { XDG_RUNTIME_DIR: xdg },
+				scenario: {
+					current: { result: { pane: { tab_id: "T1" } } },
+					list: { result: { panes: [pane("P1", "T1", true)] } },
+					info: { P1: procInfo("nvim", 4343, ["nvim", "-n"]) },
+				},
+			};
+		},
+	});
+	assert.equal(upperRun.result.details.status, "answered");
+	assert.equal(upperRun.result.details.autoRun, true, "R takes the Neovim auto-capture path");
+	assert.equal(upperRun.result.details.exitCode, 5);
+	assert.equal(upperRun.result.details.output, "upper ok");
+	assert.match(upperRun.renders[0], /R — run in Neovim/, "the panel advertises the R shortcut");
+
 	// Esc while the auto-run is in flight cancels the panel; the run aborts
 	// without surfacing an error result.
 	const cancelledRun = await driveAuto({
