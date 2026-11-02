@@ -190,10 +190,16 @@ func dispatch(cmd string, a args, s *Store) (any, error) {
 	switch cmd {
 	case "repo":
 		return cmdRepo(a, s)
+	case "new":
+		return cmdNew(a, s)
 	case "list":
 		return s.list()
 	case "show":
 		return cmdShow(a, s)
+	case "steps":
+		return cmdSteps(a, s)
+	case "step":
+		return cmdStep(a, s)
 	}
 	return nil, problem("usage", "unknown command %q; run mission help", cmd)
 }
