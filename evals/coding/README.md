@@ -152,6 +152,30 @@ $2 in / $10 out / $0.10 cached per million). **Treat both as estimates**; a subs
 marginal per-token cost at all. `lib/backfill.py` upgrades an older `results.csv` (no token columns) so
 `costs.py` can compare old and new runs.
 
+#### Harnesses that need provider wiring
+
+`codex` and `claude` only reach Fireworks models through `fireconnect`, and both read global config, so each model
+gets its own isolated config directory instead of mutating `~/.codex/config.toml` or `~/.claude`:
+
+```sh
+# codex: one config file per model, selected with CODEX_HOME
+fireconnect codex on --api-key "$FIREWORKS_KEY" \
+  --config-path /tmp/fc-glm/config.toml --model glm-fast-latest
+CODEX_HOME=/tmp/fc-glm MODEL_CODEX=glm-fast-latest \
+  bash evals/coding/rollout.sh matrix --agents codex
+
+# claude: one HOME per model (fireconnect writes .claude/settings.json there)
+fireconnect claude on --api-key "$FIREWORKS_KEY" --model glm-fast-latest --home /tmp/fc-claude-glm
+CLAUDE_HOME=/tmp/fc-claude-glm MODEL_CLAUDE=glm-fast-latest \
+  bash evals/coding/rollout.sh matrix --agents claude
+```
+
+Two details that cost time to find: codex 0.166 accepts only `wire_api = "responses"` for a custom provider, so the
+Fireworks endpoint must serve `/responses`; and Claude Code needs `ANTHROPIC_AUTH_TOKEN` set even though
+fireconnect writes the key into `ANTHROPIC_CUSTOM_HEADERS` (the runner passes it from
+`$CLAUDE_HOME/.fireconnect/.api-key`). Fireconnect's stored key can be stale — it returned 401 until it was
+re-pointed at the working key with `--api-key`.
+
 Committed comparison runs live in `results/` (`2026-11-03-pi-codex.csv` plus override CSVs for post-hoc
 re-grades).
 

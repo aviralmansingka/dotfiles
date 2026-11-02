@@ -26,9 +26,14 @@ PY=(uv run --offline --python 3.14 --no-project python)
 ROLL=${EVAL_ROLL_DIR:-$(mktemp -d "${TMPDIR:-/tmp}/eval-rollout-XXXXXX")}
 MODEL_CODEX=${MODEL_CODEX:-gpt-6.1-sol}
 MODEL_PI=${MODEL_PI:-}
+MODEL_CLAUDE=${MODEL_CLAUDE:-}
 TIMEOUT=${ROLLOUT_TIMEOUT:-3600}
 POOL=${POOL:-8}
-export EVAL_ROLL_DIR=$ROLL MODEL_CODEX MODEL_PI ROLLOUT_TIMEOUT=$TIMEOUT
+export EVAL_ROLL_DIR=$ROLL MODEL_CODEX MODEL_PI MODEL_CLAUDE ROLLOUT_TIMEOUT=$TIMEOUT
+[ -n "${CODEX_HOME:-}" ] && export CODEX_HOME
+[ -n "${CLAUDE_HOME:-}" ] && export CLAUDE_HOME
+CLAUDE_KEY_FILE=${CLAUDE_KEY_FILE:-${CLAUDE_HOME:-}/.fireconnect/.api-key}
+export CLAUDE_KEY_FILE
 
 field() { "${PY[@]}" - "$1" "$2" "$manifest" <<'PYEOF'
 import json, sys
@@ -82,6 +87,13 @@ run_one() {
         ${MODEL_PI:+--model "$MODEL_PI"} \
         --session-dir "$ROLL/sessions/pi-$task" --name "$task-pi" \
         "$(cat "$here/tasks/$task/prompt.md")" ) >>"$log" 2>&1
+  elif [ "$agent" = claude ]; then
+    [ -n "${CLAUDE_HOME:-}" ] || { echo "claude agent needs CLAUDE_HOME" >&2; return 2; }
+    [ -r "$CLAUDE_KEY_FILE" ] || { echo "claude agent needs a Fireworks key at $CLAUDE_KEY_FILE" >&2; return 2; }
+    ( cd "$wt" && HOME="$CLAUDE_HOME" ANTHROPIC_AUTH_TOKEN="$(cat "$CLAUDE_KEY_FILE")" \
+        timeout "$TIMEOUT" claude -p --dangerously-skip-permissions \
+        ${MODEL_CLAUDE:+--model "$MODEL_CLAUDE"} \
+        "$(cat "$here/tasks/$task/prompt.md")" ) >>"$log" 2>&1
   else
     ( cd "$wt" && timeout "$TIMEOUT" codex exec \
         -C "$wt" -m "$MODEL_CODEX" \
@@ -100,11 +112,11 @@ run_one() {
   grade_seconds=$(( $(date +%s) - gstarted ))
 
   local usage_json tokens_in tokens_out tokens_cached cost commits diff
-  if [ "$agent" = pi ]; then
-    usage_json=$("${PY[@]}" "$usage" pi "$ROLL/sessions/pi-$task" 2>/dev/null)
-  else
-    usage_json=$("${PY[@]}" "$usage" codex "$wt" --run-dir "$ROLL" --model "$MODEL_CODEX" 2>/dev/null)
-  fi
+  case "$agent" in
+    pi) usage_json=$("${PY[@]}" "$usage" pi "$ROLL/sessions/pi-$task" 2>/dev/null) ;;
+    claude) usage_json=$("${PY[@]}" "$usage" claude "$CLAUDE_HOME/.claude" --model "${MODEL_CLAUDE:-}" 2>/dev/null) ;;
+    *) usage_json=$("${PY[@]}" "$usage" codex "$wt" --run-dir "$ROLL" --model "$MODEL_CODEX" 2>/dev/null) ;;
+  esac
   [ -n "${usage_json:-}" ] || usage_json='{"tokens_in":0,"tokens_out":0,"tokens_cached":0,"cost_usd":0}'
   tokens_in=$(printf '%s' "$usage_json" | "${PY[@]}" -c 'import json,sys; print(json.load(sys.stdin)["tokens_in"])')
   tokens_out=$(printf '%s' "$usage_json" | "${PY[@]}" -c 'import json,sys; print(json.load(sys.stdin)["tokens_out"])')
@@ -149,7 +161,8 @@ case "${1:-}" in
       | xargs -P "$POOL" -I{} bash -c '
           IFS=, read -r a t <<< "{}"
           EVAL_ROLL_DIR="$EVAL_ROLL_DIR" MODEL_CODEX="$MODEL_CODEX" MODEL_PI="$MODEL_PI" \
-            ROLLOUT_TIMEOUT="$ROLLOUT_TIMEOUT" "$0" one "$t" "$a"' "$0"
+            MODEL_CLAUDE="$MODEL_CLAUDE" CODEX_HOME="${CODEX_HOME:-}" CLAUDE_HOME="${CLAUDE_HOME:-}" \
+            CLAUDE_KEY_FILE="$CLAUDE_KEY_FILE" ROLLOUT_TIMEOUT="$ROLLOUT_TIMEOUT" "$0" one "$t" "$a"' "$0"
     ;;
   *) sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2; exit 2 ;;
 esac
