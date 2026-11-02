@@ -1,7 +1,7 @@
 # Coding eval set
 
-A curated, reproducible set of 21 coding tasks (10 dotfiles, 11 rack-bench) taken from the captain's own agent
-sessions, built so that two models can be compared fairly: **same repo, same base commit, same prompt, same
+A curated, reproducible set of 23 coding tasks (10 dotfiles, 11 rack-bench, 2 kimi-endpoint) taken from the
+captain's own agent sessions, built so that two models can be compared fairly: **same repo, same base commit, same prompt, same
 verification command**.
 
 Every task has a known-good final commit (the one the original session landed), a base commit equal to that
@@ -37,7 +37,7 @@ A session became a task only if **all** of these hold:
 6. **Human effort roughly 20–120 minutes.** Diff size is recorded for every task; the target spread was
    ~4 small (≤150 changed lines), ~6 medium (150–450), ~4 large (450+), with at least 4 bug fixes.
 
-The realised spread is **6 small / 9 medium / 6 large** (fourteen features, three refactors, three bugfixes, one
+The realised spread is **6 small / 10 medium / 7 large** (fourteen features, three refactors, three bugfixes, one
 removal). The bugfix count is still below the target of four: of the bugfix-shaped sessions, two have landed
 commits and are in the set (`dotfiles-mermaid-minimal-trim`, `dotfiles-thinking-hidden-row`), while the rest
 are one-line complaints, need a live PTY, or never landed a commit. See REPORT.md for the full reject list.
@@ -67,6 +67,8 @@ are one-line complaints, need a live PTY, or never landed a commit. See REPORT.m
 | `rack-bench-keepalive-pooling` | rack-bench | 454 / large | feature | Per-thread keep-alive pooling with three traps: stale-socket reconnect, "zero bytes is setup, never a retry", and fresh connections for latency probes. Graded by counting TCP accepts. |
 | `rack-bench-quick-object-size` | rack-bench | 35 / small | feature | Profile workload shape: quick uploads 32 MiB objects so download windows can verify them, plus an `--object-size` override. Graded on the CLI surface with base tests restored. |
 | `rack-bench-cloud-lab-runbook` | rack-bench | 409 / medium | feature | Docs deliverable with a stated shape: practice runbook (matrix, loop, read-and-fix table, five experiments, SKIP triage, limits) plus the `--config` schema draft. Graded structurally. |
+| `kimi-bench-agentic-harness` | kimi-endpoint | 745 / large | feature | Largest single-file task: five agentic traffic patterns, dry-run payload generation and bench_serving-style metrics. Graded on `--list-patterns`, per-pattern `--dry-run`, and the documented knobs, with no server. |
+| `kimi-trace-profiler` | kimi-endpoint | 516 / large | feature | Debug-and-extend a buggy draft analyzer so it reads three trace formats into workload parameters. Graded hermetically: a private HOME with one synthetic trace and known token totals. |
 
 `size` in the table is changed lines (added + removed); `manifest.jsonl` also carries `files_changed`,
 `lines_added` and `lines_removed`.

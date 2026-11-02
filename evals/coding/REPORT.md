@@ -114,6 +114,21 @@ not grade a design choice it never stated:
 
 The runbook task produced real documents (pi 511 + 335 lines, codex 365 + 279 lines), not heading stubs.
 
+## Sweep of the Codex side, and a third repo
+
+The set was mined from pi sessions. Codex keeps its own rollouts under `~/.codex/sessions`, so both were swept.
+
+**Codex: 168 sessions (90 live + 78 archived), 155 with a real first ask — zero usable tasks.** The traffic breaks
+down as: ChatGPT-app scratch conversations under `~/Documents/Codex/<date>/<slug>` (no repo, no commit), vault-hunter
+/ wayfinder verifier-steward briefs (orchestration, forbidden by the rubric), `codex-auto-review` approval-judge
+transcripts (not a task), and `external_codex_apps_open_page` stubs. The only two codex sessions inside a real repo
+are the same chat ("what speed can I get from ultrafast") in `dotfiles` and the visualize worktree; neither produced
+a commit. So the Codex history contributes candidates but no verifiable tasks.
+
+**Third repo: `kimi-endpoint`.** Its pi sessions did produce landed code with offline verification, so two tasks
+were added (see the table above). Both are stdlib Python, both already have a behaviour-only grader, and both were
+validated red at `base_commit` and green at `final_commit`.
+
 ## Rejected candidates
 
 | session / commit | reason |
