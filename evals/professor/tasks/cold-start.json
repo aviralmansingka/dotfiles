@@ -1,0 +1,36 @@
+{
+  "id": "cold-start",
+  "topic": "Write tcpdump filters without looking them up.",
+  "goal": "The learner can write a BPF filter for a host-and-port case.",
+  "mode": "cold-start",
+  "target": "G1",
+  "grill": [
+    "I want to write tcpdump filters without looking them up.",
+    "I will run them on the homelab bridge.",
+    "I keep guessing which qualifiers combine."
+  ],
+  "facts": [
+    {
+      "id": "K1",
+      "claim": "A BPF filter names a protocol, a direction, a host, and a port.",
+      "keywords": ["bpf", "filter", "protocol", "direction", "host", "port"],
+      "known": true
+    },
+    {
+      "id": "K2",
+      "claim": "tcpdump -i any port 443 captures traffic on port 443.",
+      "keywords": ["tcpdump", "port", "443", "capture"],
+      "known": true
+    },
+    {
+      "id": "G1",
+      "claim": "Terms inside one filter are ANDed, so host A and port 443 matches only that pair.",
+      "wrong": "Terms inside one filter are ORed, so the filter matches either one.",
+      "keywords": ["host", "port", "and", "filter", "expression"],
+      "teachGroups": [
+        ["and", "both", "all conditions", "conjunction"],
+        ["or", "either", "any"]
+      ]
+    }
+  ]
+}

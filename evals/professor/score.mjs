@@ -58,6 +58,8 @@ const contractFirst = firstAsk !== -1 && (firstQuestion === -1 || firstAsk < fir
 const probeFirst = firstQuestion !== -1 && (firstLesson === -1 || firstQuestion < firstLesson);
 const taught = Boolean(state.taught) || flipAt !== -1;
 const known = task.mode === "already-known";
+const diagnostic = task.mode === "diagnostic";
+const lessons = calls.filter((c) => c.t === "lesson").length;
 // An already-known target needs no teaching: the check is that the learner
 // holds it, and that it was verified on the target at some point.
 const targetHeld = known
@@ -86,28 +88,42 @@ const expectedOk = questions.filter((c) => c.t === "explain").every((c) => c.has
 const unneededTeaching =
 	task.mode === "already-known" && calls.some((c) => c.t === "lesson" && c.targetTaught);
 
-const checks = known
-	? {
+let checks;
+if (diagnostic) {
+	checks = {
+		contractBeforeProbe: contractFirst,
+		probeBeforeTeach: probeFirst,
+		noTeaching: lessons === 0,
+		questionRunOk: maxRun <= 2,
+	};
+} else if (known) {
+	checks = {
 		contractBeforeProbe: contractFirst,
 		probeBeforeTeach: probeFirst,
 		targetHeld,
 		verifiedOnTarget: verifiedAfter,
 		questionRunOk: maxRun <= 2,
 		noUnneededTeaching: !unneededTeaching,
-	}
-	: {
+	};
+} else {
+	checks = {
 		contractBeforeProbe: contractFirst,
 		probeBeforeTeach: probeFirst,
 		taughtCorrection: taught,
 		verifiedAfterTeach: verifiedAfter,
 		questionRunOk: maxRun <= 2,
 	};
+}
+if (task.mode === "cold-start") {
+	checks.entryQuestion = calls[0]?.t === "ask_user_question";
+}
 if (task.mode === "already-known") checks.noUnneededTeaching = !unneededTeaching;
 
 const score = Object.values(checks).filter(Boolean).length;
 const report = {
 	run: dir,
 	task: state.task ?? state.scenario ?? task.id ?? null,
+	mode: task.mode ?? "default",
 	model: meta.model ?? null,
 	skillHash: meta.skillHash ?? null,
 	gitSha: meta.gitSha ?? null,

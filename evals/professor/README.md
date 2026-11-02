@@ -66,10 +66,15 @@ Cost: one model rollout per invocation, about 5–10 minutes.
 5. **questionRunOk** — no more than two non-probe questions in a row without a
    lesson.
 
-The `already-known` task adds **noUnneededTeaching**: the professor
-must not teach a fact the simulator already holds. It replaces
-`taughtCorrection` with `targetHeld` and `verifiedAfterTeach` with
-`verifiedOnTarget`, because nothing has to be taught.
+Task modes change the check set:
+
+- **default** — the five checks above.
+- **already-known** — `targetHeld` and `verifiedOnTarget` replace the teach and
+  verify checks, and `noUnneededTeaching` is added.
+- **diagnostic** — `noTeaching` (zero lessons) replaces the teach and verify
+  checks. The session is a survey, not a lesson.
+- **cold-start** — the learner's first message is `hi`, and `entryQuestion`
+  checks that the first instrument call is `ask_user_question`.
 
 **Metadata** — instrument hygiene, reported beside the policy score:
 
@@ -79,6 +84,20 @@ must not teach a fact the simulator already holds. It replaces
 
 Metadata does not enter the policy score. It moves too much between rollouts to
 mix with the loop checks.
+
+## Tasks
+
+| Task | Mode | Failure case |
+|---|---|---|
+| `cuda-event-timing` | default | timing boundary, E10 lab |
+| `mtu-blackhole` | default | small packets pass, large packets drop |
+| `bgp-route-selection` | default | local preference beats AS path |
+| `fenwick-prefix-sums` | default | lowbit steps, O(log n) both ways |
+| `transpose-bandwidth` | default | strided writes cost sectors |
+| `blank-slate` | default | teach a new concept, no misconception |
+| `already-known` | already-known | E9, no re-teach |
+| `ncp-diagnostic` | diagnostic | E8, survey without lessons |
+| `cold-start` | cold-start | E1, begin on the first turn |
 
 ## Add a task
 

@@ -312,20 +312,24 @@ that check.
 
 ## Coverage map
 
-| Eval | Failure class | Check type | Runs as |
+| Eval | Failure class | Check type | Task |
 |---|---|---|---|
-| E1 | entry | first tool call | task instance |
-| E2 | repair | question run + text | instance + interjection |
-| E3 | goal drift | goal vocabulary | instance + interjection |
-| E4 | assertion | lesson body groups | instance + body assertion |
-| E5 | channel | text versus lesson | instance + text check |
-| E6 | resume | first instrument | prefix-conditioned rollout |
-| E7 | pacing | question run | task instance |
-| E8 | diagnosis | lesson count + shape | instance + warm vault |
-| E9 | warm start | lesson keywords | instance + warm vault |
-| E10 | lab | prediction present | task instance |
-| E11 | replanning | plan diff | instance + file check |
-| E12 | artifacts | file exists | instance + file check |
+| E1 | entry | first instrument | `cold-start` |
+| E2 | repair | question run + text | none yet |
+| E3 | goal drift | goal vocabulary | none yet |
+| E4 | assertion | lesson body groups | none yet |
+| E5 | channel | text versus lesson | none yet |
+| E6 | resume | first instrument | none yet |
+| E7 | pacing | question run | every default task |
+| E8 | diagnosis | lesson count | `ncp-diagnostic` |
+| E9 | warm start | lesson keywords | `already-known` |
+| E10 | lab | prediction present | `cuda-event-timing`, `transpose-bandwidth` |
+| E11 | replanning | plan diff | none yet |
+| E12 | artifacts | file exists | none yet |
+
+Six failure cases now have a task. The remaining six need the harness features
+named in their section: scripted interjections, body assertions, a text check,
+a resume fixture, a plan diff, and a file assertion.
 
 ## What this suite is good for
 

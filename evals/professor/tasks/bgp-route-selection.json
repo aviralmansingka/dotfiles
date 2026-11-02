@@ -1,0 +1,36 @@
+{
+  "id": "bgp-route-selection",
+  "topic": "Why a shorter AS path can lose to a higher local preference.",
+  "goal": "State the BGP best-path order and explain why local preference beats AS path length.",
+  "target": "G1",
+  "grill": [
+    "I need to explain why traffic leaves through the longer AS path.",
+    "Two upstreams, one has a shorter path.",
+    "I think AS path length decides everything."
+  ],
+  "facts": [
+    {
+      "id": "K1",
+      "claim": "BGP compares weight, then local preference, then origin, then AS path length, then MED.",
+      "keywords": ["weight", "local", "preference", "as", "path", "med", "order"],
+      "known": true
+    },
+    {
+      "id": "K2",
+      "claim": "A route that arrives by eBGP has AS path length from the received path.",
+      "keywords": ["ebgp", "as", "path", "length", "received"],
+      "known": true
+    },
+    {
+      "id": "G1",
+      "claim": "Local preference is compared before AS path length, so a longer path with a higher local preference wins.",
+      "wrong": "BGP always picks the route with the shortest AS path.",
+      "keywords": ["shorter", "shortest", "as", "path", "longer", "local", "preference"],
+      "teachGroups": [
+        ["local preference", "local-pref", "weight"],
+        ["before", "earlier", "prior", "beats", "outranks", "first"]
+      ]
+    }
+  ],
+  "commandOutput": "show bgp: path 65001 65002 local-pref 200 best; path 65003 local-pref 100 not best"
+}

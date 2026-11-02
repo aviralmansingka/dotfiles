@@ -1,0 +1,36 @@
+{
+  "id": "fenwick-prefix-sums",
+  "topic": "Range sums with point updates: why a Fenwick tree costs O(log n) for both.",
+  "goal": "Explain the lowbit step that makes Fenwick update and query logarithmic.",
+  "target": "G1",
+  "grill": [
+    "I want range sums with point updates in one structure.",
+    "I know prefix-sum arrays and I have seen the name Fenwick.",
+    "I think a Fenwick tree is a prefix-sum array with a different name."
+  ],
+  "facts": [
+    {
+      "id": "K1",
+      "claim": "A prefix-sum array answers a range sum in O(1) but an update costs O(n).",
+      "keywords": ["prefix", "array", "update", "linear", "o"],
+      "known": true
+    },
+    {
+      "id": "K2",
+      "claim": "The lowbit of an index i is i & -i.",
+      "keywords": ["lowbit", "index", "minus", "and"],
+      "known": true
+    },
+    {
+      "id": "G1",
+      "claim": "A Fenwick tree stores partial sums at lowbit steps, so an update and a query each touch O(log n) nodes.",
+      "wrong": "A Fenwick tree is a prefix-sum array, so an update still costs O(n).",
+      "keywords": ["fenwick", "update", "query", "log", "prefix", "cost", "o"],
+      "teachGroups": [
+        ["lowbit", "low bit", "least significant"],
+        ["log", "o(log", "halves", "steps"]
+      ]
+    }
+  ],
+  "commandOutput": "n=8 update(5) touches 5,6,8; query(7) touches 7,6,4"
+}

@@ -1,0 +1,36 @@
+{
+  "id": "transpose-bandwidth",
+  "topic": "Why a naive transpose runs at a third of copy bandwidth.",
+  "goal": "Explain the cache-line cost of a strided write and why tiling fixes it.",
+  "target": "G1",
+  "grill": [
+    "My naive transpose runs at 73 GB/s while a copy kernel gets 242 GB/s.",
+    "I want the reason, not a tiled kernel to paste.",
+    "I think the naive kernel is slow because it does too much arithmetic."
+  ],
+  "facts": [
+    {
+      "id": "K1",
+      "claim": "A copy kernel is fast because each warp reads and writes contiguous addresses.",
+      "keywords": ["copy", "warp", "contiguous", "coalesced"],
+      "known": true
+    },
+    {
+      "id": "K2",
+      "claim": "A transpose swaps the row and column indices of every element.",
+      "keywords": ["transpose", "swap", "row", "column"],
+      "known": true
+    },
+    {
+      "id": "G1",
+      "claim": "A naive transpose writes a column per warp, so each write touches a separate cache line; the kernel is limited by memory sectors, not arithmetic.",
+      "wrong": "The naive transpose is slow because it does too many arithmetic operations.",
+      "keywords": ["transpose", "slow", "bandwidth", "cache", "line", "stride", "arithmetic"],
+      "teachGroups": [
+        ["cache line", "sector", "stride"],
+        ["coalesced", "contiguous", "memory", "transaction"]
+      ]
+    }
+  ],
+  "commandOutput": "naive 1.821 ms 73.7 GB/s; copy 0.554 ms 242.2 GB/s"
+}

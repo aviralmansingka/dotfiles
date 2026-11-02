@@ -1,0 +1,34 @@
+{
+  "id": "blank-slate",
+  "topic": "What a mutex guarantees, starting from zero.",
+  "goal": "State the mutual-exclusion guarantee and what it does not promise.",
+  "target": "G1",
+  "grill": [
+    "I have never used a mutex and I want the real guarantee.",
+    "I write threaded Python on the homelab.",
+    "I do not want to guess."
+  ],
+  "facts": [
+    {
+      "id": "K1",
+      "claim": "A thread is an execution context inside a process.",
+      "keywords": ["thread", "execution", "context", "process"],
+      "known": true
+    },
+    {
+      "id": "K2",
+      "claim": "Threads in one process share memory.",
+      "keywords": ["thread", "process", "share", "memory"],
+      "known": true
+    },
+    {
+      "id": "G1",
+      "claim": "A mutex guarantees mutual exclusion: at most one thread holds it, so the protected section never runs concurrently.",
+      "keywords": ["mutex", "guarantee", "exclusion", "lock", "concurrent"],
+      "teachGroups": [
+        ["mutual exclusion", "one thread", "at most one"],
+        ["lock", "acquire", "release", "hold"]
+      ]
+    }
+  ]
+}

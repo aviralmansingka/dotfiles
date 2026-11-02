@@ -80,6 +80,13 @@ META
 mkdir -p "$out/workspace/professor-lessons"
 
 topic=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["topic"])' "$task_file")
+mode=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("mode",""))' "$task_file")
+
+if [ "$mode" = "cold-start" ]; then
+	topic_block="The learner just opened the pane and wrote: hi"
+else
+	topic_block="Topic: $topic"
+fi
 
 prompt=$(cat <<EOF
 $(cat "$out/professor/SKILL.md")
@@ -92,7 +99,7 @@ The learner is a real person. Ask one question at a time with the tools. Start w
 
 The learner answers only through the quiz, explain, ask_user_question, and run-command tools. They cannot edit files or run commands by hand. Never ask them to. Work inside this directory only.
 
-Topic: $topic
+$topic_block
 EOF
 )
 
