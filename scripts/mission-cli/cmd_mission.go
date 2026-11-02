@@ -6,7 +6,10 @@ import "os"
 // builder arrives with the interactive UI.
 func cmdNew(a args, s *Store) (any, error) {
 	if a.at(1) == "" {
-		return nil, problem("usage", "noninteractive creation needs REPO/SLUG and --title/--goal/--step, or --from")
+		if a.has("json") || !terminal() {
+			return nil, problem("usage", "noninteractive creation needs REPO/SLUG and --title/--goal/--step, or --from")
+		}
+		return nil, runUIBuilder(s)
 	}
 	m, e := missionFromArgs(a)
 	if e != nil {

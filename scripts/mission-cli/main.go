@@ -181,6 +181,13 @@ func execute(argv []string) int {
 	if e != nil {
 		return emit(nil, e)
 	}
+	// ui and render own their stdout, so they return an exit code directly.
+	switch cmd {
+	case "ui":
+		return cmdUI(a, s)
+	case "render":
+		return cmdRender(a, s)
+	}
 	v, e := dispatch(cmd, a, s)
 	return emit(v, e)
 }
@@ -232,6 +239,8 @@ func dispatch(cmd string, a args, s *Store) (any, error) {
 		return cmdRepair(a, s)
 	case "run":
 		return cmdRun(a, s)
+	case "demo":
+		return seedDemo(s)
 	}
 	return nil, problem("usage", "unknown command %q; run mission help", cmd)
 }
