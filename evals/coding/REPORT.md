@@ -72,6 +72,24 @@ What the relaxed rule still cannot rescue:
 | `plannotator-tui` sessions (syntax highlighting, `tui-markdown` research) | The brief points at "as user requested" outside the session; the repo builds Rust and its PR flow is external. |
 | `firstmate` `.treehouse/*` crewmate briefs | Orchestration briefs for another repo and worktree layout, not captain-authored task prompts. |
 
+## rack-bench expansion
+
+The rack-bench tasks are the strongest material in the corpus, so the set was extended from seven to eleven of
+them. Four landed commits had no session brief in the archive (the work predates it), so their prompts are
+**authored from the commit message and diff** and the manifest says so (`prompt_source: authored-from-commit`).
+They are otherwise held to the same bar: a known base and final commit, offline verification, red-before and
+green-after.
+
+| id | size | kind | verification | why it is worth having |
+| --- | --- | --- | --- | --- |
+| `rack-bench-checksum-signing` | 29 / small | bugfix | authored loopback check: inspects wire headers | Two real provider bugs (double checksum, signed `content-length`) that loopback tests missed; a model must read code and reason about SigV4, not just run tests. |
+| `rack-bench-keepalive-pooling` | 454 / large | feature | authored loopback check counts TCP accepts | Connection lifecycle under threads, with the "zero bytes is setup, never a hidden retry" invariant; the accept count is a direct behavioural measure. |
+| `rack-bench-quick-object-size` | 35 / small | feature | CLI probe + restored base suite | Small but real: profile workload shape, an override flag, and docs that must agree with the code. |
+| `rack-bench-cloud-lab-runbook` | 409 / medium | feature | structural doc check | The only docs-only task in the set; it tests whether a model can produce a complete, honest runbook instead of headings. |
+
+Both loopback checks share `lib/s3_loopback.py` (a 120-line S3-ish server that counts accepts and records
+headers), so a future rack-bench task can reuse it instead of pinning internals.
+
 ## Rejected candidates
 
 | session / commit | reason |

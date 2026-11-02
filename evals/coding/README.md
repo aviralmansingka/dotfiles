@@ -1,7 +1,8 @@
 # Coding eval set
 
-A curated, reproducible set of 17 coding tasks taken from the captain's own agent sessions, built so that two
-models can be compared fairly: **same repo, same base commit, same prompt, same verification command**.
+A curated, reproducible set of 21 coding tasks (10 dotfiles, 11 rack-bench) taken from the captain's own agent
+sessions, built so that two models can be compared fairly: **same repo, same base commit, same prompt, same
+verification command**.
 
 Every task has a known-good final commit (the one the original session landed), a base commit equal to that
 commit's parent, the original prompt, and a `verify.sh` that runs offline.
@@ -36,7 +37,7 @@ A session became a task only if **all** of these hold:
 6. **Human effort roughly 20–120 minutes.** Diff size is recorded for every task; the target spread was
    ~4 small (≤150 changed lines), ~6 medium (150–450), ~4 large (450+), with at least 4 bug fixes.
 
-The realised spread is **4 small / 8 medium / 5 large** (eleven features, three refactors, two bugfixes, one
+The realised spread is **6 small / 9 medium / 6 large** (fourteen features, three refactors, three bugfixes, one
 removal). The bugfix count is still below the target of four: of the bugfix-shaped sessions, two have landed
 commits and are in the set (`dotfiles-mermaid-minimal-trim`, `dotfiles-thinking-hidden-row`), while the rest
 are one-line complaints, need a live PTY, or never landed a commit. See REPORT.md for the full reject list.
@@ -62,6 +63,10 @@ are one-line complaints, need a live PTY, or never landed a commit. See REPORT.m
 | `dotfiles-hunk-gruvbox-theme` | dotfiles | 68 / small | feature | One-line brief, authored property check: a complete, valid hunk theme on the stow path, dark background, light text, 25 roles + 10 syntax scopes, any gruvbox-consistent palette. |
 | `dotfiles-ghdash-hunk-shortcut` | dotfiles | 32 / small | feature | Two-sentence wiring brief (a `ghd` entry point plus an `H` binding that pipes the PR diff into hunk); the repo's own config-guard script is the gold test. |
 | `dotfiles-opengateway-provider` | dotfiles | 158 / medium | feature | Register a third-party provider: one extension that owns endpoint/model facts plus the `settings.json` wiring; gold test pins the facts. |
+| `rack-bench-checksum-signing` | rack-bench | 29 / small | bugfix | Two signing bugs that only show against S3/R2: two checksums on one PUT, and a signed `content-length` that breaks zero-length reads. Graded by inspecting what the client puts on the wire. |
+| `rack-bench-keepalive-pooling` | rack-bench | 454 / large | feature | Per-thread keep-alive pooling with three traps: stale-socket reconnect, "zero bytes is setup, never a retry", and fresh connections for latency probes. Graded by counting TCP accepts. |
+| `rack-bench-quick-object-size` | rack-bench | 35 / small | feature | Profile workload shape: quick uploads 32 MiB objects so download windows can verify them, plus an `--object-size` override. Graded on the CLI surface with base tests restored. |
+| `rack-bench-cloud-lab-runbook` | rack-bench | 409 / medium | feature | Docs deliverable with a stated shape: practice runbook (matrix, loop, read-and-fix table, five experiments, SKIP triage, limits) plus the `--config` schema draft. Graded structurally. |
 
 `size` in the table is changed lines (added + removed); `manifest.jsonl` also carries `files_changed`,
 `lines_added` and `lines_removed`.
@@ -76,6 +81,7 @@ One JSON object per line:
 | `repo` | absolute path of the source repository |
 | `base_commit`, `final_commit` | full SHAs; `final_commit` is the merged task commit |
 | `prompt_file` | path to the prompt, relative to `evals/coding/` |
+| `prompt_source` | `session-first-user-message` (verbatim brief) or `authored-from-commit` (no session existed; written from the landed commit message and diff) |
 | `verify` | the exact shell commands, in order; the first entry (when present) checks gold test files out of `final_commit` |
 | `verify_kind` | `gold-tests` (reference tests), `authored-check` (greps/structural), `behaviour-check` (drives the public surface), or a combination |
 | `difficulty` | `small` (≤150 changed lines), `medium` (151–450), `large` (>450) |
@@ -132,6 +138,10 @@ command, hook, CLI flag, config file — and never import a helper from the refe
 | `dotfiles-ghdash-hunk-shortcut` | read the `H` binding from the gh-dash config, substitute the placeholders, run it with stub `gh`/`hunk` on PATH, require the PR diff to reach hunk; `ghd` must exist |
 | `dotfiles-opengateway-provider` | accept either an extension that registers a gateway provider on load or a JSON model-config fragment with a gateway block (https base URL, ≥1 model) |
 | `rack-bench-part-size` | public CLI: `--part-size` listed, 0/4/513/-1 rejected with a message that names the flag, 64 accepted, base test files restored from `HEAD` and the suite green |
+| `rack-bench-checksum-signing` | drive the client against a loopback S3 server: CRC32-only uploads, `content-length` sent but never in `SignedHeaders` |
+| `rack-bench-keepalive-pooling` | loopback server counts TCP accepts: 1 for 3 sequential requests, 1 per thread, a fresh one after `close()` |
+| `rack-bench-quick-object-size` | `--object-size` in the CLI, 32 MiB quick default stated in `--help`, input validation, base tests restored |
+| `rack-bench-cloud-lab-runbook` | both docs exist, ≥5 of the 6 named sections, `--config` covered, runnable commands quoted, no credential-shaped strings |
 | `rack-bench-multi-bucket` | kept gold-graded: a parse-level probe cannot separate real sharding from the base parser's silent last-wins, so the CLI-grammar pin stays |
 
 `verify-strict.sh` is kept next to each relaxed task: it is the old gold-test grader, useful for spotting a
