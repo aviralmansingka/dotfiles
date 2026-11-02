@@ -1700,7 +1700,7 @@
   "pilot_coverage": "round-07 pilot (mm, datacenter, gb300) covers lifecycle-machines, redundant-fabrics, placement-planes; chains, meshes, identity-maps unrepresented"
  },
  "round_09": {
-  "status": "COMPLETE: 0/8 green; 20P/33F/7B of 60 (up from 17P/40F/5B of 62); matrix.json + decision.md written; 8 review tabs open; awaiting human feedback",
+  "status": "COMPLETE: 0/8 green; 20P/33F/7B of 60 (up from 17P/40F/5B of 62); matrix.json + decision.md written; 8 review tabs open; awaiting human feedback; round-10 planning recorded, engine worktrees launched",
   "renderer_worktrees": {
    "feat/region-removal": "strip region borders/titles/paint passes; keep group tag -> hue + block order; worker 'region-removal' (died once to parent restart, resumed)",
    "feat/dots-labels": "single-dot origin fix, label_slot wiring, guard-rail fixtures (pins, trunk); worker 'dots-labels' (died once to parent restart, resumed)"
@@ -2305,5 +2305,35 @@
   "ITEM 0 (user, 2026-11-02): REMOVE region borders/titles/subgraph boxes from render + check - user wants logical grouping only (tag conventions + hue families), almost never drawn borders; this removes the top verdict-cost root cause (region geometry, 5 cases' grouping fails) and cuts renderer complexity; group: stays in spec for layout hints (global block order, hue), painting pass (GROUP_SPAN_CHARGE, disjointness, corner glyphs, title rows) goes; skill recipes stop requiring titled regions",
   "source-semantic shades become non-boxed tier annotation (one label line, no box)"
  ],
- "phases_ran": []
+ "phases_ran": [],
+ "round_10": {
+  "status": "in flight",
+  "skill": {
+   "proposal": "09",
+   "sha256": "9c1256791069e27207db2e5138527e45587e7096955f5ed4f86c79d46f77e56d",
+   "changes": [
+    "lifecycle recipe: phase axis organizes, coverage is the goal, side relations first-class, re-split before drop",
+    "never-drop rule for source-stated facts",
+    "cross-view sibling order stability",
+    "port-centering noted as engine guarantee",
+    "full-lap frame formula ceil(len/0.5)",
+    "abandoned-shapes must be recorded, not hidden"
+   ]
+  },
+  "harness": [
+   "record wrapper: spec-argument sha256 binding (datacenter block closed)",
+   "record wrapper: unique raw filenames on label reuse (gb300 overwrite closed)",
+   "both smoke-tested; validator passes attempts_records_complete"
+  ],
+  "engine_worktrees": {
+   "feat/r10-ports": "port centering - lone edges mid-side, fans symmetric about middle (user directive, top priority)",
+   "feat/r10-routing": "multi-lane rank gaps, backward-edge lanes in pinned ranks, label_slot obstacle safety",
+   "feat/r10-hue": "collision-free group hue assignment, deterministic, cross-view stable"
+  },
+  "pending": [
+   "merge 3 engine worktrees -> full gates -> freeze round 10",
+   "round-10 task files (generator + judge) with full-lap formula + new skill digest",
+   "generation + terra judging + aggregate + review tabs"
+  ]
+ }
 }
