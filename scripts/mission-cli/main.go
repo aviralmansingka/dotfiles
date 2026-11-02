@@ -200,6 +200,18 @@ func dispatch(cmd string, a args, s *Store) (any, error) {
 		return cmdSteps(a, s)
 	case "step":
 		return cmdStep(a, s)
+	case "next", "ready":
+		return s.ready(a.get("repo"))
+	case "claim":
+		return cmdClaim(a, s)
+	case "pickup":
+		return cmdPickup(a, s)
+	case "workspace":
+		return cmdWorkspace(a, s)
+	case "attach":
+		return cmdAttach(a, s)
+	case "launch":
+		return cmdLaunch(a, s)
 	}
 	return nil, problem("usage", "unknown command %q; run mission help", cmd)
 }
