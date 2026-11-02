@@ -2392,3 +2392,149 @@ fn a_label_slot_rides_a_gutter_band_and_fits_the_77x47_target() {
     );
     assert_eq!(plain.labels_skipped, 1, "{plain:?}");
 }
+
+// ---------------------------------------------------------------------------
+// Round 10: multi-lane rank gaps, and `label_slot` bands that never wall in a
+// route
+// ---------------------------------------------------------------------------
+
+/// A fan of `leaves` links from one hub into one target rank: the round-10
+/// shape where several parallel relations cross ONE rank gap, and the only
+/// way across is a lane per relation.
+fn hub_fan(leaves: &[(&str, &str)]) -> String {
+    let nodes: Vec<String> =
+        std::iter::once(r#"{"id":"hub","label":"Hub","group":"core"}"#.to_string())
+            .chain(
+                leaves.iter().map(|(id, label)| {
+                    format!(r#"{{"id":"{id}","label":"{label}","group":"leaf"}}"#)
+                }),
+            )
+            .collect();
+    let edges: Vec<String> = leaves
+        .iter()
+        .map(|(id, _)| format!(r#"{{"from":"hub","to":"{id}"}}"#))
+        .collect();
+    let rank1: Vec<String> = leaves.iter().map(|(id, _)| format!("\"{id}\"")).collect();
+    format!(
+        r#"{{"direction":"tb",
+            "layers":[["hub"],[{}]],
+            "nodes":[{}],
+            "edges":[{}]}}"#,
+        rank1.join(","),
+        nodes.join(","),
+        edges.join(",")
+    )
+}
+
+#[test]
+fn a_fan_across_one_rank_gap_never_bridges_itself() {
+    // Four parallel relations through the hub -> leaf gap. The gap is wide
+    // enough for one lane per relation, and the widest spread claims its lane
+    // first, so the fan crosses nothing.
+    let spec = hub_fan(&[
+        ("t1", "Alpha"),
+        ("t2", "Beta"),
+        ("t3", "Gamma"),
+        ("t4", "Delta"),
+    ]);
+    let (flow, report) = build(&spec);
+    assert_eq!(
+        report.crossings, 0,
+        "a fan must not bridge itself: {report:?}"
+    );
+    assert_eq!(report.shared_run, 0, "no shared run: {report:?}");
+
+    // One lane per relation: each of the four routes owns its own horizontal
+    // run inside the single rank gap between hub and leaves.
+    let lanes: HashSet<i32> = flow
+        .edges()
+        .iter()
+        .filter_map(|edge| edge.content.planned())
+        .flat_map(|route| {
+            route
+                .points
+                .windows(2)
+                .filter(|w| (w[0].1 - w[1].1).abs() < 0.5)
+                .map(|w| w[0].1.round() as i32)
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    assert!(
+        lanes.len() >= 2,
+        "the gap must carry several lanes, got {lanes:?}"
+    );
+    // Every link crosses the gap as one straight lane run: port, own row, own
+    // column, port. A bridged or joggled fan needs more bends than that.
+    for edge in flow.edges() {
+        let route = edge.content.planned().expect("every route planned");
+        assert!(
+            route.points.len() <= 4,
+            "each fan link is one lane run: {:?}",
+            route.points
+        );
+        assert!(
+            lanes.iter().all(|&row| row > 5 && row < 9),
+            "a lane row stays inside the one rank gap, got {lanes:?}"
+        );
+    }
+    // The drawing stays compact: no lane row is invented beyond the gap.
+    assert!(
+        report.extent.1 <= 18,
+        "the fan must not balloon the gap: {report:?}"
+    );
+}
+
+#[test]
+fn a_gap_with_one_relation_keeps_the_minimum_channel() {
+    // Two ranks, one link: the gap stays at the minimum channel instead of
+    // widening with an unused lane.
+    let spec = r#"{"direction":"tb",
+        "layers":[["a"],["b"]],
+        "nodes":[{"id":"a","group":"one"},{"id":"b","group":"two"}],
+        "edges":[{"from":"a","to":"b"}]}"#;
+    let (_, report) = build(spec);
+    // One 4-row box, a bare gap, and the second box: nothing like a lane band.
+    assert!(
+        report.extent.1 <= 12,
+        "a single link must keep a slim gap: {report:?}"
+    );
+}
+
+#[test]
+fn label_slot_bands_give_way_instead_of_walling_in_a_fan() {
+    // The round-09 pipeline reproduction: gutter bands for a fan crowded the
+    // one lane its rank gap had, and routing failed outright with
+    // "no obstacle-safe route". A band is a reservation, not a wall.
+    let spec = r#"{"direction":"tb",
+        "theme":"gruvbox",
+        "nodes":[
+          {"id":"api","label":"API","group":"ingress"},
+          {"id":"auth","label":"Auth","group":"ingress"},
+          {"id":"queue","label":"Queue","group":"control"},
+          {"id":"worker","label":"Worker","group":"compute"},
+          {"id":"store","label":"Store","group":"storage"},
+          {"id":"ledger","label":"Ledger","group":"storage"}],
+        "edges":[
+          {"from":"api","to":"auth","label":"verify","label_slot":true},
+          {"from":"api","to":"queue","label":"enqueue","label_slot":true},
+          {"from":"auth","to":"worker","label":"session","label_slot":true},
+          {"from":"queue","to":"worker","label":"claim","label_slot":true},
+          {"from":"worker","to":"store","label":"write","label_slot":true},
+          {"from":"worker","to":"ledger","label":"audit","label_slot":true}]}"#;
+    let (_, report) = build(spec);
+    assert_eq!(
+        report.edges, 6,
+        "every edge of the fan graph must route: {report:?}"
+    );
+    assert_eq!(report.shared_run, 0, "no shared run: {report:?}");
+    assert_eq!(report.labels_on_route, 0, "no label on a route cell");
+    // No label is silently dropped either.
+    assert_eq!(report.labels_skipped, 0, "{report:?}");
+
+    let (cells, _) = render_full(spec, 0);
+    let text = rendered_text(&cells);
+    assert!(
+        text.contains("verify") || text.contains("session"),
+        "the gutter labels must still render\n{text}"
+    );
+}
