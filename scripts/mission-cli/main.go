@@ -216,6 +216,22 @@ func dispatch(cmd string, a args, s *Store) (any, error) {
 		return cmdAttach(a, s)
 	case "launch":
 		return cmdLaunch(a, s)
+	case "progress":
+		return cmdProgress(a, s)
+	case "settle":
+		return cmdSettle(a, s)
+	case "hook":
+		return cmdHook(a, s)
+	case "finish", "fail":
+		return cmdFinish(cmd, a, s)
+	case "checkpoint":
+		return cmdCheckpoint(a, s)
+	case "retry":
+		return cmdRetry(a, s)
+	case "repair":
+		return cmdRepair(a, s)
+	case "run":
+		return cmdRun(a, s)
 	}
 	return nil, problem("usage", "unknown command %q; run mission help", cmd)
 }
