@@ -4,11 +4,24 @@
 // suite pins those rules, the copy-not-mutate contract, the Fireworks Fast
 // sibling mapping, and the `/fast` command's session override (which beats the
 // PI_FAST_MODE default at load).
+//
+// State is process-wide (globalThis slot, see fast-mode-slot.mjs) because the
+// extension loader builds jiti with moduleCache: false: every copy of
+// fast-mode.ts has its own closure, so the payload hook, the command, and the
+// prompt bubble must read one shared value. The slot cases below cover that
+// default, the idempotent double-load, and the command writing through it.
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+	FAST_MODE_SLOT,
+	fastModeEnabled as slotEnabled,
+	notifyFastModeChange,
+	onFastModeChange,
+	setFastModeEnabled,
+} from "./fast-mode-slot.mjs";
 import { resolveJiti } from "./test-lib/jiti.mjs";
 
 const require = createRequire(import.meta.url);
@@ -26,8 +39,13 @@ const jiti = createJiti(import.meta.url, {
 const savedFastMode = process.env.PI_FAST_MODE;
 delete process.env.PI_FAST_MODE;
 
-// Fireworks chat catalogue: two ids with a Fast sibling, one without.
+// Fireworks chat catalogue: two ids with a Fast sibling, the rest without.
 const fireworksIds = ["glm-latest", "glm-fast-latest", "kimi-k3", "kimi-k3-fast", "deepseek-v3", "auto"];
+
+/** Drop the shared slot so the next read re-resolves the startup default. */
+function resetSlot() {
+	delete globalThis[FAST_MODE_SLOT];
+}
 
 function fakePi() {
 	const commands = new Map();
@@ -75,14 +93,14 @@ try {
 	const gptModel = { provider: "openai", id: "gpt-5.5" };
 	const base = { model: "gpt-5.5", input: [{ role: "user", content: "hi" }] };
 
-	const fast = applyFastMode(base, gptModel);
+	const fast = applyFastMode(base, gptModel, true);
 	assert.deepEqual(fast, { ...base, service_tier: "priority" }, "openai gpt model gets priority");
 	assert.equal(base.service_tier, undefined, "incoming payload is never mutated");
 	assert.notEqual(fast, base, "a copy is returned, not the input");
 	assert.equal(applyFastMode(base, gptModel, false), undefined, "state off leaves the payload alone");
 
 	assert.deepEqual(
-		applyFastMode({ model: "gpt-5.1-codex" }, { provider: "openai-codex", id: "gpt-5.1-codex" }),
+		applyFastMode({ model: "gpt-5.1-codex" }, { provider: "openai-codex", id: "gpt-5.1-codex" }, true),
 		{ model: "gpt-5.1-codex", service_tier: "priority" },
 		"openai-codex gpt model gets priority",
 	);
@@ -90,25 +108,25 @@ try {
 	// --- untouched cases -------------------------------------------------------
 
 	assert.equal(
-		applyFastMode({ model: "o3" }, { provider: "openai", id: "o3" }),
+		applyFastMode({ model: "o3" }, { provider: "openai", id: "o3" }, true),
 		undefined,
 		"non-gpt model id is untouched",
 	);
 	assert.equal(
-		applyFastMode({ model: "gpt-5.5" }, { provider: "fireworks", id: "gpt-5.5" }),
+		applyFastMode({ model: "gpt-5.5" }, { provider: "fireworks", id: "gpt-5.5" }, true),
 		undefined,
 		"other providers are untouched",
 	);
 	assert.equal(
-		applyFastMode({ model: "glm-latest" }, { provider: "fireworks", id: "glm-latest" }),
+		applyFastMode({ model: "glm-latest" }, { provider: "fireworks", id: "glm-latest" }, true),
 		undefined,
 		"fireworks speed is a model swap, never a service tier",
 	);
-	assert.equal(applyFastMode({ model: "gpt-5.5" }, undefined), undefined, "no model is untouched");
-	assert.equal(applyFastMode(null, gptModel), undefined, "null payload is untouched");
+	assert.equal(applyFastMode({ model: "gpt-5.5" }, undefined, true), undefined, "no model is untouched");
+	assert.equal(applyFastMode(null, gptModel, true), undefined, "null payload is untouched");
 
 	const flex = { model: "gpt-5.5", service_tier: "flex" };
-	assert.equal(applyFastMode(flex, gptModel), undefined, "an explicit tier wins");
+	assert.equal(applyFastMode(flex, gptModel, true), undefined, "an explicit tier wins");
 	assert.equal(flex.service_tier, "flex", "an explicit tier is preserved");
 
 	// --- PI_FAST_MODE default --------------------------------------------------
@@ -119,11 +137,6 @@ try {
 	}
 	assert.equal(fastModeEnabled({ PI_FAST_MODE: "1" }), true, "any other value keeps fast mode on");
 	assert.equal(fastModeEnabled({}), true, "unset keeps fast mode on");
-	assert.deepEqual(applyFastMode(base, gptModel, fastModeEnabled({})), { ...base, service_tier: "priority" });
-
-	process.env.PI_FAST_MODE = "off";
-	assert.equal(applyFastMode(base, gptModel), undefined, "process.env kill switch is honored");
-	delete process.env.PI_FAST_MODE;
 
 	// --- Fireworks sibling mapping --------------------------------------------
 
@@ -136,10 +149,14 @@ try {
 	assert.equal(baseIdFor("auto"), undefined, "a non-fast id is not a fast variant");
 
 	assert.equal(
-		siblingModel({ provider: "fireworks", id: "glm-latest" }, [
+		siblingModel(
 			{ provider: "fireworks", id: "glm-latest" },
-			{ provider: "fireworks", id: "glm-fast-latest" },
-		], "fast")?.id,
+			[
+				{ provider: "fireworks", id: "glm-latest" },
+				{ provider: "fireworks", id: "glm-fast-latest" },
+			],
+			"fast",
+		)?.id,
 		"glm-fast-latest",
 		"a catalogue sibling is found",
 	);
@@ -151,9 +168,40 @@ try {
 		);
 	}
 
+	// --- shared slot ----------------------------------------------------------
+
+	resetSlot();
+	assert.equal(slotEnabled(), true, "the slot defaults to on");
+	assert.deepEqual(applyFastMode(base, gptModel), { ...base, service_tier: "priority" }, "default state rewrites");
+
+	resetSlot();
+	process.env.PI_FAST_MODE = "off";
+	assert.equal(slotEnabled(), false, "the slot's startup default honors PI_FAST_MODE=off");
+	delete process.env.PI_FAST_MODE;
+	assert.equal(setFastModeEnabled(true), true, "setEnabled returns the new value");
+	assert.equal(slotEnabled(), true, "setEnabled writes the shared value");
+
+	// A second copy of the module (extension reload, another jiti instance) must
+	// adopt the existing holder — never reset `enabled` to the env default.
+	process.env.PI_FAST_MODE = "off";
+	const secondCopy = await import(`${new URL("./fast-mode-slot.mjs", import.meta.url).href}?second`);
+	delete process.env.PI_FAST_MODE;
+	assert.equal(secondCopy.FAST_MODE_SLOT, FAST_MODE_SLOT, "every copy shares one well-known key");
+	assert.equal(secondCopy.fastModeEnabled(), true, "a second copy never resets an existing value");
+
+	const seen = [];
+	const stop = onFastModeChange((value) => seen.push(value));
+	secondCopy.setFastModeEnabled(false);
+	secondCopy.notifyFastModeChange();
+	assert.deepEqual(seen, [false], "a write through another copy reaches this copy's listener");
+	stop();
+	notifyFastModeChange();
+	assert.deepEqual(seen, [false], "unsubscribe stops delivery");
+
 	// --- hook registration -----------------------------------------------------
 
 	assert.equal(typeof fastMode, "function", "default export must be a factory");
+	resetSlot();
 	const session = fakePi();
 	fastMode(session.pi);
 	const command = session.commands.get("fast");
@@ -171,14 +219,17 @@ try {
 	const { ctx: openaiCtx, notes: openaiNotes } = fakeCtx(gptModel);
 
 	await command.handler("off", openaiCtx);
+	assert.equal(slotEnabled(), false, "/fast off writes the shared slot");
 	assert.equal(hook({ payload: base }, { model: gptModel }), undefined, "/fast off stops the rewrite");
 	assert.match(openaiNotes.at(-1).message, /Fast mode OFF/, "off is reported");
 
 	await command.handler("on", openaiCtx);
+	assert.equal(slotEnabled(), true, "/fast on writes the shared slot");
 	assert.equal(hook({ payload: base }, { model: gptModel }).service_tier, "priority", "/fast on re-enables");
 
 	await command.handler("toggle", openaiCtx);
-	assert.equal(hook({ payload: base }, { model: gptModel }), undefined, "toggle flips it off");
+	assert.equal(slotEnabled(), false, "toggle flips the shared slot off");
+	assert.equal(hook({ payload: base }, { model: gptModel }), undefined, "toggle stops the rewrite");
 	await command.handler("toggle", openaiCtx);
 	assert.equal(hook({ payload: base }, { model: gptModel }).service_tier, "priority", "toggle flips it back on");
 
@@ -189,6 +240,7 @@ try {
 	assert.match(openaiNotes.at(-1).message, /Usage: \/fast \[on \| off \| toggle\]/, "unknown argument prints usage");
 
 	// PI_FAST_MODE=off only sets the load-time default; /fast on beats it.
+	resetSlot();
 	process.env.PI_FAST_MODE = "off";
 	const envOff = fakePi();
 	fastMode(envOff.pi);
@@ -205,6 +257,7 @@ try {
 
 	// --- /fast model swaps (Fireworks only) ------------------------------------
 
+	resetSlot();
 	const swapOn = fakePi();
 	fastMode(swapOn.pi);
 	const swapOnCmd = swapOn.commands.get("fast");

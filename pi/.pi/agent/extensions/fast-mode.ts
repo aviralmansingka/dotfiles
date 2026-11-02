@@ -1,42 +1,44 @@
 /**
  * Fast mode — OpenAI priority tier, Fireworks fast router models.
  *
- * OpenAI (`openai`, `openai-codex`) requests for a `gpt-*` model carry
- * `service_tier: "priority"` unless the payload already sets a tier. That is a
- * reliability path billed at 2x (2.5x for gpt-5.5), not a speed path, and the
- * installed codex catalog ships no fast variants — so it is a payload rewrite.
- * Fireworks never gets `service_tier`: its speed comes from Fast router model
- * ids, so `/fast on` swaps `glm-latest` -> `glm-fast-latest` instead. Models
- * with no Fast sibling (deepseek, minimax, auto, firerouter, gpt-oss) are left
- * alone.
+ * OpenAI (`openai`, `openai-codex`) `gpt-*` requests carry `service_tier:
+ * "priority"` unless the payload sets a tier already. That is a reliability
+ * path billed at 2x (2.5x for gpt-5.5), not a speed path, and the installed
+ * codex catalog ships no fast variants — so it is a payload rewrite. Fireworks
+ * never gets a tier: its speed comes from Fast router ids, so `/fast on` swaps
+ * `glm-latest` -> `glm-fast-latest`. Ids with no Fast sibling (deepseek,
+ * minimax, auto, firerouter, gpt-oss) never swap.
  *
- * Session state defaults to on and `/fast on|off` overrides it. PI_FAST_MODE in
- * {0, off, false, no} (any case, trimmed) sets that default to off.
+ * State lives in one globalThis slot (fast-mode-slot.mjs): the loader builds
+ * jiti with moduleCache: false, so every copy of this module gets its own
+ * closure, and the payload hook, /fast, and the prompt bubble must read the
+ * shared value. PI_FAST_MODE in {0, off, false, no} sets the startup default;
+ * `/fast on|off` overrides it for the session.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { fastModeSlot, notifyFastModeChange, resolveFastModeDefault, setFastModeEnabled } from "./fast-mode-slot.mjs";
 
 const FAST_PROVIDERS = new Set(["openai", "openai-codex"]);
-const OFF_VALUES = new Set(["0", "off", "false", "no"]);
 const FIREWORKS = "fireworks";
 
 type Env = Record<string, string | undefined>;
 type ModelLike = { provider?: string; id?: string };
-type NotifyLevel = "info" | "warning" | "error";
 type AnyModel = Parameters<ExtensionAPI["setModel"]>[0];
 type Context = {
 	model?: ModelLike;
 	modelRegistry: { getModelsOfType(type: "chat", provider: string): readonly ModelLike[] };
-	ui: { notify(message: string, level?: NotifyLevel): void };
+	ui: { notify(message: string, level?: "info" | "warning" | "error"): void };
 };
 
+/** PI_FAST_MODE parse — the startup default only; the live value is the slot. */
 export function fastModeEnabled(env: Env = process.env): boolean {
-	return !OFF_VALUES.has((env.PI_FAST_MODE ?? "").trim().toLowerCase());
+	return resolveFastModeDefault(env);
 }
 
 export function applyFastMode(
 	payload: unknown,
 	model: ModelLike | undefined,
-	enabled: boolean = fastModeEnabled(),
+	enabled: boolean = fastModeSlot().getEnabled(),
 ): object | undefined {
 	if (!enabled || !model) return undefined;
 	if (!FAST_PROVIDERS.has(model.provider ?? "")) return undefined;
@@ -80,7 +82,7 @@ function describe(model: ModelLike | undefined, models: readonly ModelLike[]): s
 }
 
 export default function fastMode(pi: ExtensionAPI): void {
-	let enabled = fastModeEnabled();
+	const slot = fastModeSlot();
 
 	const fireworks = (ctx: Context): readonly ModelLike[] =>
 		ctx?.model?.provider === FIREWORKS ? ctx.modelRegistry.getModelsOfType("chat", FIREWORKS) : [];
@@ -91,7 +93,8 @@ export default function fastMode(pi: ExtensionAPI): void {
 	};
 
 	const setEnabled = async (ctx: Context, next: boolean): Promise<void> => {
-		enabled = next;
+		setFastModeEnabled(next);
+		notifyFastModeChange();
 		const label = next ? "ON" : "OFF";
 		const model = ctx?.model;
 		const models = fireworks(ctx);
@@ -115,15 +118,15 @@ export default function fastMode(pi: ExtensionAPI): void {
 			const arg = (args ?? "").trim().toLowerCase();
 			const c = ctx as unknown as Context;
 			if (!arg) {
-				ctx.ui.notify(`Fast mode ${enabled ? "ON" : "OFF"} — ${current(c)}`, "info");
+				ctx.ui.notify(`Fast mode ${slot.getEnabled() ? "ON" : "OFF"} — ${current(c)}`, "info");
 				return;
 			}
 			if (arg === "on") return setEnabled(c, true);
 			if (arg === "off") return setEnabled(c, false);
-			if (arg === "toggle") return setEnabled(c, !enabled);
+			if (arg === "toggle") return setEnabled(c, !slot.getEnabled());
 			ctx.ui.notify("Usage: /fast [on | off | toggle]", "warning");
 		},
 	});
 
-	pi.on("before_provider_request", (event, ctx) => applyFastMode(event.payload, ctx?.model, enabled));
+	pi.on("before_provider_request", (event, ctx) => applyFastMode(event.payload, ctx?.model, slot.getEnabled()));
 }
