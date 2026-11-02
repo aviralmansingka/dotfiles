@@ -1427,36 +1427,51 @@ function component(draw: (width?: number) => string[]): Component {
 // path needs it to backfill titles but renders carry only a RenderContext.
 let extensionCtx: ExtensionContext | undefined;
 
+async function completeToolText(
+  ctx: ExtensionContext, systemPrompt: string, source: string, signal: AbortSignal | undefined,
+): Promise<string> {
+  const model = ctx.model;
+  if (!model) return "";
+  const response = await ctx.modelRegistry.complete(model, {
+    systemPrompt,
+    messages: [{ role: "user" as const, content: [{ type: "text" as const, text: source }], timestamp: Date.now() }],
+  }, { signal });
+  return clean(asRecord(response).content instanceof Array
+    ? (asRecord(response).content as RecordValue[]).filter((block) => asString(asRecord(block).type) === "text")
+      .map((block) => asString(asRecord(block).text)).join(" ")
+    : "").replace(/^["'`]+|["'`]+$/g, "");
+}
+
 // Backfill: ask the session model for a one-line intent title only when a
 // LIVE row renders without one — the comment title from the original tool
 // message always wins, restored rows keep their dim preview, and streaming
 // rows wait for argsComplete. Fire-and-forget: the row keeps its dim preview
 // until the answer lands, then invalidates and redraws titled.
-function requestTitle(toolCallId: string, tool: string, source: string): void {
+function requestTitle(
+  toolCallId: string, tool: string, source: string,
+  telegram?: { signal: AbortSignal; onTitle: (title: string) => void },
+): Promise<void> | undefined {
   if (!source.trim() || generatedTitles.has(toolCallId) || pendingTitles.has(toolCallId)) return;
   const ctx = extensionCtx;
   if (!ctx?.model) return;
   pendingTitles.add(toolCallId);
   const clipped = source.length > 4000 ? `${source.slice(0, 4000)}\n…` : source;
-  void (async () => {
+  return (async () => {
     try {
-      const model = ctx.model;
-      const response = await ctx.modelRegistry.complete(
-        model,
-        {
-          systemPrompt:
-            "You write one-line intent titles for developer tool calls. Reply with ONLY the title: verb-first, 10-15 words, states the intent of the call, no trailing period, no quotes, no backticks, no markup.",
-          messages: [{ role: "user" as const, content: [{ type: "text" as const, text: `${tool} call:\n${clipped}` }], timestamp: Date.now() }],
-        },
-        { signal: ctx.signal },
+      const title = await completeToolText(
+        ctx,
+        telegram
+          ? "Write a short intent title for a developer tool call. Use 3 to 6 words, with a verb first. Do not include tool names, MCP names, arguments, code, output, or secrets. Reply only with the title."
+          : "You write one-line intent titles for developer tool calls. Reply with ONLY the title: verb-first, 10-15 words, states the intent of the call, no trailing period, no quotes, no backticks, no markup.",
+        `${tool} call:\n${clipped}`,
+        telegram ? AbortSignal.any([telegram.signal, AbortSignal.timeout(10000), ...(ctx.signal ? [ctx.signal] : [])])
+          : ctx.signal,
       );
-      const title = clean(asRecord(response).content instanceof Array
-        ? (asRecord(response).content as RecordValue[]).filter((block) => asString(asRecord(block).type) === "text")
-          .map((block) => asString(asRecord(block).text)).join(" ")
-        : "").replace(/^["'`]+|["'`]+$/g, "");
-      if (title) {
-        generatedTitles.set(toolCallId, capTitle(title));
+      if (title && !telegram?.signal.aborted) {
+        const capped = capTitle(title);
+        generatedTitles.set(toolCallId, capped);
         rows.get(toolCallId)?.invalidate?.();
+        telegram?.onTitle(capped);
       }
     } catch {
       // No title beats a broken render; the dim preview row stays.
@@ -1466,9 +1481,59 @@ function requestTitle(toolCallId: string, tool: string, source: string): void {
   })();
 }
 
+// Telegram only shows intent titles. A script comment supplies one without
+// another model call; all other top-level calls need the shared generator.
+function telegramTitleSource(tool: string, args: unknown): string | undefined {
+  const record = asRecord(args);
+  const script = ({
+    bash: { field: "command", marker: "#" },
+    powershell: { field: "command", marker: "#" },
+    python: { field: "code", marker: "#" },
+    mcpScript: { field: "code", marker: "//" },
+    codemode: { field: "code", marker: "//" },
+  } as Record<string, { field: string; marker: string }>)[tool];
+  if (script) {
+    const source = asString(record[script.field]);
+    if (source && liftLeadingComment(source, script.marker,
+      (text) => text.startsWith("!") || text.startsWith("@options"))) return undefined;
+    if (source) return source;
+  }
+  return JSON.stringify(record);
+}
+
 export default function (pi: ExtensionAPI) {
   let sessionId: string | undefined;
+  let telegramActive = false;
+  let telegramRun = 0;
+  let telegramAbort = new AbortController();
+  // ponytail: four request lanes bound model concurrency; use a shared queue if latency matters.
+  let telegramLanes = Array.from({ length: 4 }, () => Promise.resolve());
+  let telegramNextLane = 0;
+  let telegramHasResult = false;
+  // ponytail: 25 UTF-16 units plus the Telegram tree prefix fit the 28-unit budget.
+  const telegramSummaryMax = 25;
+  const telegramCalls = new Map<string, string>();
+  function resetTelegramRun(): void {
+    telegramActive = false;
+    telegramRun++;
+    telegramAbort.abort();
+    telegramAbort = new AbortController();
+    telegramLanes = Array.from({ length: 4 }, () => Promise.resolve());
+    telegramNextLane = 0;
+    telegramHasResult = false;
+    telegramCalls.clear();
+  }
+  function queueTelegram(work: (run: number) => Promise<void>): void {
+    const run = telegramRun;
+    const lane = telegramNextLane++ % telegramLanes.length;
+    const next = telegramLanes[lane].then(async () => {
+      if (!telegramActive || telegramRun !== run) return;
+      try { await work(run); } catch { /* Never let a summary affect the tool or later requests. */ }
+    });
+    telegramLanes[lane] = next;
+  }
   pi.on("session_start", (_event, ctx) => {
+    resetTelegramRun();
     const nextId = ctx.sessionManager.getSessionId();
     if (sessionId === nextId) {
       extensionCtx = ctx;
@@ -1493,15 +1558,44 @@ export default function (pi: ExtensionAPI) {
     if (!title || asString(asRecord(event.details).intentTitle)) return;
     return { details: { ...asRecord(event.details), intentTitle: title } };
   });
-  pi.on("tool_execution_start", (event) => {
+  pi.on("agent_start", () => { telegramActive = true; });
+  pi.on("agent_settled", async (event) => {
+    if (telegramHasResult && !event?.aborted) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      await Promise.race([
+        Promise.all(telegramLanes),
+        new Promise<void>((resolve) => { timer = setTimeout(resolve, 2000); }),
+      ]);
+      if (timer) clearTimeout(timer);
+    }
+    resetTelegramRun();
+  });
+  pi.on("tool_execution_start", (event, ctx) => {
     const row = rows.get(event.toolCallId) ?? {};
     row.startedAt ??= Date.now();
     row.settled = false;
     row.leafResult = false;
     rows.set(event.toolCallId, row);
     arm(row);
+    if (process.env.PI_TELEGRAM_TOOL_TITLES !== "1" || ctx?.mode !== "rpc" ||
+        !telegramActive || event.parentToolCallId) return;
+    const args = JSON.stringify(asRecord(event.args));
+    telegramCalls.set(event.toolCallId, args.length > 1500 ? `${args.slice(0, 1500)}\n…` : args);
+    const source = telegramTitleSource(event.toolName, event.args);
+    if (!source) return;
+    const clipped = source.length > 4000 ? `${source.slice(0, 4000)}\n…` : source;
+    queueTelegram(async (run) => {
+      await requestTitle(event.toolCallId, event.toolName, clipped, {
+        signal: telegramAbort.signal,
+        onTitle: (title) => {
+          if (telegramActive && telegramRun === run) {
+            ctx.ui.setStatus(`pi-telegram:title:${event.toolCallId}`, title);
+          }
+        },
+      });
+    });
   });
-  pi.on("tool_execution_end", (event) => {
+  pi.on("tool_execution_end", (event, ctx) => {
     const row = rows.get(event.toolCallId);
     if (!row) return;
     row.settled = true;
@@ -1509,6 +1603,38 @@ export default function (pi: ExtensionAPI) {
     row.completedAt = Date.now();
     stop(row);
     row.invalidate?.();
+    if (process.env.PI_TELEGRAM_TOOL_TITLES !== "1" || ctx?.mode !== "rpc" ||
+        !telegramActive || event.parentToolCallId) return;
+    const args = telegramCalls.get(event.toolCallId);
+    telegramCalls.delete(event.toolCallId);
+    if (args === undefined) return;
+    telegramHasResult = true;
+    const result = asRecord(event.result);
+    const content = Array.isArray(result.content) ? result.content.map(asRecord) : [];
+    const output = content.filter((block) => block.type === "text").map((block) => asString(block.text)).join("\n").trim();
+    if (!output) {
+      ctx.ui.setStatus(`pi-telegram:result:${event.toolCallId}`,
+        event.isError ? "Tool failed" : content.some((block) => block.type === "image") ? "Returned an image" : "No text output");
+      return;
+    }
+    const clipped = output.length > 4000 ? `${output.slice(0, 4000)}\n[truncated]` : output;
+    queueTelegram(async (run) => {
+      const modelCtx = extensionCtx;
+      if (!modelCtx?.model) return;
+      const signal = AbortSignal.any([telegramAbort.signal, AbortSignal.timeout(10000),
+        ...(modelCtx.signal ? [modelCtx.signal] : [])]);
+      const summary = await completeToolText(modelCtx,
+        "Write a result label of 1 to 4 words and at most 25 characters. " +
+        "For searches, prefer an observed count and item type, or a zero-result label: 3 emails; 5 matches; No messages. " +
+        "Add a short non-sensitive search topic only if it fits: 3 emails about XYZ; messages about ABC. Never copy the full query. " +
+        "For reads, changes, and status use labels like 12 rows read; File updated; Message sent; Service running; 5 tools found. " +
+        "For failures, name the error category: Not found; Permission denied; Connection failed. Do not describe a failed call as successful. " +
+        "Do not invent counts or infer totals from request limits or truncated results. Do not quote raw output, code, paths, private messages, or secrets, or name the tool. Reply only with the label.",
+        `${event.toolName} call:\n${args}\n${event.isError ? "Failed" : "Succeeded"} result:\n${clipped}`, signal);
+      if (summary && summary.length <= telegramSummaryMax && !signal.aborted && telegramActive && telegramRun === run) {
+        ctx.ui.setStatus(`pi-telegram:result:${event.toolCallId}`, summary);
+      }
+    });
   });
   const unsubscribe = pi.events.on("subagent:background-update", (payload: unknown) => {
     const event = asRecord(payload);
@@ -1558,6 +1684,7 @@ export default function (pi: ExtensionAPI) {
     for (const row of rows.values()) row.invalidate?.();
   });
   pi.on("session_shutdown", () => {
+    resetTelegramRun();
     disposeState();
     unsubscribe();
     unsubscribeNoMistakes();

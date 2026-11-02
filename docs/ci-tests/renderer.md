@@ -20,7 +20,12 @@ shapes that broke, by behavior only.
   live row with complete args backfills one model request per tool call id.
   Bash, powershell, python, and mcpScript backfill. mcpScript skips
   `@options` lines. `tool_result` stores the title as `intentTitle`; a
-  reload reseeds it and never requests.
+  reload reseeds it and never requests. Untitled Telegram calls use the same
+  generator in RPC mode. The session model also makes short result labels.
+  A label over 25 UTF-16 units is omitted. The prompt covers search counts,
+  zero results, changes, status, and failures. An empty failed result shows
+  `Tool failed`. The tests check the prompt, the limit, nonblocking requests,
+  the queue, and the two-second summary wait. Aborted turns skip the wait.
 - R3 Ownership. Connected, file, output, inspection, pedagogy, receipt, and
   MCP tools never delegate. Other tools keep our shell and collapsed row and
   pass only the expanded body downstream.

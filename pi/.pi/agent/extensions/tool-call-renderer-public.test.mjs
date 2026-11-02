@@ -1081,6 +1081,192 @@ branch_sync:
   const restoredRow = render(bash.renderCall({ command: "du -sh ." }, theme, genRestoredCtx));
   assert.match(restoredRow, /— measure the working tree size/, "a stored intentTitle restores the title on reload without a request");
   assert.equal(titleRequests.length, 1, "restoring never fires a new request");
+
+  // Telegram uses the same generator without waiting for it or changing TUI rows.
+  const oldTelegramTitles = process.env.PI_TELEGRAM_TOOL_TITLES;
+  try {
+    process.env.PI_TELEGRAM_TOOL_TITLES = "1";
+    const requests = [];
+    const statuses = [];
+    const telegramCtx = {
+      mode: "rpc", model: { id: "telegram-session-model" }, signal: undefined,
+      ui: { setStatus: (key, text) => statuses.push({ key, text }) },
+      modelRegistry: { complete: (model, request, options) => new Promise((resolve, reject) => {
+        requests.push({ model, request, options, resolve, reject });
+      }) },
+    };
+    sessionWith("telegram-session", [], telegramCtx);
+    handlers.get("agent_start")();
+    const start = handlers.get("tool_execution_start");
+    start({ toolCallId: "comment", toolName: "mcpScript", args: { code: "// @options: {}\n// Find calendar events\nrun()" } }, telegramCtx);
+    start({ toolCallId: "bash-comment", toolName: "bash", args: { command: "# Inspect the project state\nls" } }, telegramCtx);
+    start({ toolCallId: "nested", toolName: "mcp__calendar", args: {}, parentToolCallId: "parent" }, telegramCtx);
+    assert.equal(requests.length, 0, "titled and nested calls need no Telegram request");
+
+    const returned = start({ toolCallId: "mcp-one", toolName: "mcp__calendar", args: { tool: "list_events" } }, telegramCtx);
+    assert.equal(returned, undefined, "the title request never blocks tool execution");
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].model.id, "telegram-session-model", "use the session model and its provider");
+    assert.match(requests[0].request.systemPrompt, /Do not include tool names, MCP names, arguments/);
+    assert.match(requests[0].request.messages[0].content[0].text, /list_events/);
+    requests[0].resolve({ content: [{ type: "text", text: "Find calendar events" }] });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(statuses, [{ key: "pi-telegram:title:mcp-one", text: "Find calendar events" }]);
+    assert.deepEqual(resultHandler({ toolCallId: "mcp-one", details: {} }), { details: { intentTitle: "Find calendar events" } });
+
+    start({ toolCallId: "file", toolName: "read", args: { path: "secret" } }, telegramCtx);
+    start({ toolCallId: "shebang", toolName: "bash", args: { command: "#!/bin/bash\nls" } }, telegramCtx);
+    for (let i = 0; i < 5; i++) {
+      start({ toolCallId: `pending-${i}`, toolName: "mcpScript", args: { code: "x".repeat(5000) } }, telegramCtx);
+    }
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(requests.length, 5, "four title requests run at once and the rest wait");
+    assert.match(requests[1].request.messages[0].content[0].text, /^read call:/, "untitled file calls request summaries");
+    assert.match(requests[2].request.messages[0].content[0].text, /^bash call:/, "a shebang is not a title");
+    assert.ok(requests[3].request.messages[0].content[0].text.length < 4100, "clip source before model completion");
+    requests[1].resolve({ content: [{ type: "text", text: "Inspect project files" }] });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(requests.length, 6, "a queued title starts when its lane is free");
+    assert.deepEqual(statuses[1], { key: "pi-telegram:title:file", text: "Inspect project files" });
+    handlers.get("agent_settled")();
+    assert.ok(requests.slice(2).every((request) => request.options.signal.aborted), "settling cancels pending titles");
+    for (const request of requests.slice(2)) request.resolve({ content: [{ type: "text", text: "Late title" }] });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(statuses.length, 2, "late completions never reach a later turn");
+    assert.equal(requests.length, 6, "queued requests never start after the turn");
+    assert.equal(resultHandler({ toolCallId: "pending-0", details: {} }), undefined, "late titles are not persisted");
+
+    handlers.get("agent_start")();
+    start({ toolCallId: "tui", toolName: "mcp__calendar", args: {} }, { ...telegramCtx, mode: "tui" });
+    process.env.PI_TELEGRAM_TOOL_TITLES = "0";
+    start({ toolCallId: "disabled", toolName: "mcp__calendar", args: {} }, telegramCtx);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(requests.length, 6, "TUI and disabled Telegram sessions never request Telegram titles");
+
+    process.env.PI_TELEGRAM_TOOL_TITLES = "1";
+    const end = handlers.get("tool_execution_end");
+    start({ toolCallId: "result-ok", toolName: "bash", args: { command: "# Check upcoming events\nrun" } }, telegramCtx);
+    const endReturn = end({ toolCallId: "result-ok", toolName: "bash", isError: false,
+      result: { content: [{ type: "text", text: "private result data" }] } }, telegramCtx);
+    assert.equal(endReturn, undefined, "result summaries never block the tool");
+    await new Promise((resolve) => setImmediate(resolve));
+    const resultRequest = requests.at(-1);
+    assert.match(resultRequest.request.systemPrompt, /1 to 4 words and at most 25 characters/);
+    assert.match(resultRequest.request.systemPrompt, /3 emails; 5 matches; No messages/);
+    assert.match(resultRequest.request.systemPrompt, /3 emails about XYZ/);
+    assert.match(resultRequest.request.systemPrompt, /12 rows read; File updated; Message sent; Service running/);
+    assert.match(resultRequest.request.systemPrompt, /Not found; Permission denied; Connection failed/);
+    assert.match(resultRequest.request.systemPrompt, /Do not invent counts or infer totals from request limits or truncated results/);
+    assert.match(resultRequest.request.systemPrompt, /Do not quote raw output, code, paths, private messages, or secrets/);
+    assert.match(resultRequest.request.messages[0].content[0].text, /Succeeded result:\nprivate result data/);
+    let settled = false;
+    const settling = handlers.get("agent_settled")().then(() => { settled = true; });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(settled, false, "agent settlement waits for the result summary");
+    resultRequest.resolve({ content: [{ type: "text", text: "3 events" }] });
+    await settling;
+    assert.deepEqual(statuses.at(-1), { key: "pi-telegram:result:result-ok", text: "3 events" });
+
+    handlers.get("agent_start")();
+    start({ toolCallId: "zero-result", toolName: "mcpScript", args: { code: "// Search email\nrun()" } }, telegramCtx);
+    end({ toolCallId: "zero-result", toolName: "mcpScript", isError: false,
+      result: { content: [{ type: "text", text: "No messages found" }] } }, telegramCtx);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.match(requests.at(-1).request.messages[0].content[0].text, /Succeeded result:\nNo messages found/);
+    requests.at(-1).resolve({ content: [{ type: "text", text: "No messages" }] });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(statuses.at(-1), { key: "pi-telegram:result:zero-result", text: "No messages" });
+    start({ toolCallId: "error-result", toolName: "bash", args: { command: "# Check access\nrun" } }, telegramCtx);
+    end({ toolCallId: "error-result", toolName: "bash", isError: true,
+      result: { content: [{ type: "text", text: "private failure output" }] } }, telegramCtx);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.match(requests.at(-1).request.messages[0].content[0].text, /Failed result:\nprivate failure output/);
+    requests.at(-1).resolve({ content: [{ type: "text", text: "Permission denied" }] });
+    await handlers.get("agent_settled")();
+    assert.deepEqual(statuses.at(-1), { key: "pi-telegram:result:error-result", text: "Permission denied" });
+
+    handlers.get("agent_start")();
+    start({ toolCallId: "long-result", toolName: "mcpScript", args: { code: "// Search email\nrun()" } }, telegramCtx);
+    end({ toolCallId: "long-result", toolName: "mcpScript", isError: false,
+      result: { content: [{ type: "text", text: "private search results" }] } }, telegramCtx);
+    await new Promise((resolve) => setImmediate(resolve));
+    requests.at(-1).resolve({ content: [{ type: "text", text: "3 emails matching a long search query" }] });
+    await handlers.get("agent_settled")();
+    assert.notEqual(statuses.at(-1)?.key, "pi-telegram:result:long-result", "long labels are omitted, not truncated");
+
+    handlers.get("agent_start")();
+    start({ toolCallId: "empty-result", toolName: "bash", args: { command: "# Check the service\nrun" } }, telegramCtx);
+    end({ toolCallId: "empty-result", toolName: "bash", isError: true, result: { content: [] } }, telegramCtx);
+    assert.deepEqual(statuses.at(-1), { key: "pi-telegram:result:empty-result", text: "Tool failed" });
+    start({ toolCallId: "empty-success", toolName: "bash", args: { command: "# Check the service\nrun" } }, telegramCtx);
+    end({ toolCallId: "empty-success", toolName: "bash", isError: false, result: { content: [] } }, telegramCtx);
+    assert.deepEqual(statuses.at(-1), { key: "pi-telegram:result:empty-success", text: "No text output" });
+    start({ toolCallId: "image-result", toolName: "read", args: { path: "image" } }, telegramCtx);
+    end({ toolCallId: "image-result", toolName: "read", isError: false,
+      result: { content: [{ type: "image", data: "ignored" }] } }, telegramCtx);
+    assert.deepEqual(statuses.at(-1), { key: "pi-telegram:result:image-result", text: "Returned an image" });
+    const statusCount = statuses.length;
+    start({ toolCallId: "nested-result", toolName: "mcp__calendar", args: {}, parentToolCallId: "parent" }, telegramCtx);
+    end({ toolCallId: "nested-result", toolName: "mcp__calendar", isError: false,
+      parentToolCallId: "parent", result: { content: [] } }, telegramCtx);
+    assert.equal(statuses.length, statusCount, "nested calls never add summary rows");
+    await new Promise((resolve) => setImmediate(resolve));
+    requests.at(-1).resolve({ content: [{ type: "text", text: "Inspect the image" }] });
+    await handlers.get("agent_settled")();
+
+    handlers.get("agent_start")();
+    start({ toolCallId: "slow-result", toolName: "bash", args: { command: "# Check the service\nrun" } }, telegramCtx);
+    end({ toolCallId: "slow-result", toolName: "bash", isError: true,
+      result: { content: [{ type: "text", text: "private error body" }] } }, telegramCtx);
+    await new Promise((resolve) => setImmediate(resolve));
+    const slowRequest = requests.at(-1);
+    assert.match(slowRequest.request.messages[0].content[0].text, /Failed result:/);
+    const realSetTimeout = globalThis.setTimeout;
+    let fireDeadline;
+    try {
+      globalThis.setTimeout = (callback, ms, ...args) => {
+        if (ms === 2000) { fireDeadline = () => callback(...args); return 0; }
+        return realSetTimeout(callback, ms, ...args);
+      };
+      const deadline = handlers.get("agent_settled")();
+      assert.equal(typeof fireDeadline, "function", "the summary wait has a two-second deadline");
+      fireDeadline();
+      await deadline;
+      assert.equal(slowRequest.options.signal.aborted, true, "the deadline cancels a late summary");
+      const beforeLate = statuses.length;
+      slowRequest.resolve({ content: [{ type: "text", text: "Late summary" }] });
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.equal(statuses.length, beforeLate, "a late summary never appears in another turn");
+    } finally {
+      globalThis.setTimeout = realSetTimeout;
+    }
+
+    handlers.get("agent_start")();
+    start({ toolCallId: "aborted-result", toolName: "bash", args: { command: "# Check the service\nrun" } }, telegramCtx);
+    end({ toolCallId: "aborted-result", toolName: "bash", isError: true,
+      result: { content: [{ type: "text", text: "cancelled output" }] } }, telegramCtx);
+    await new Promise((resolve) => setImmediate(resolve));
+    const abortedRequest = requests.at(-1);
+    await handlers.get("agent_settled")({ aborted: true });
+    assert.equal(abortedRequest.options.signal.aborted, true, "an aborted run skips the summary wait");
+    abortedRequest.resolve({ content: [{ type: "text", text: "Late aborted summary" }] });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.notEqual(statuses.at(-1)?.key, "pi-telegram:result:aborted-result");
+
+    handlers.get("agent_start")();
+    start({ toolCallId: "failed-summary", toolName: "bash", args: { command: "# Check the service\nrun" } }, telegramCtx);
+    end({ toolCallId: "failed-summary", toolName: "bash", isError: false,
+      result: { content: [{ type: "text", text: "private raw output" }] } }, telegramCtx);
+    await new Promise((resolve) => setImmediate(resolve));
+    requests.at(-1).reject(new Error("model unavailable"));
+    await handlers.get("agent_settled")();
+    assert.notEqual(statuses.at(-1)?.key, "pi-telegram:result:failed-summary", "no raw output is used as a fallback");
+  } finally {
+    if (oldTelegramTitles === undefined) delete process.env.PI_TELEGRAM_TOOL_TITLES;
+    else process.env.PI_TELEGRAM_TOOL_TITLES = oldTelegramTitles;
+  }
+
   // --- R7: muted states keep failure rows error-colored while hidden.
   const fhOut = render(bash.renderResult(result("boom\nmore detail", { exitCode: 2 }), options, colorTheme, context("fh", {}, quiet)));
   assert.match(fhOut, /└─<\/borderMuted> <error>boom<\/error>/, "a hidden failure row keeps its whole summary in error color");
