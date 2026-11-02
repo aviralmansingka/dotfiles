@@ -67,3 +67,9 @@ only.
    and in a named split view when they do not. Dropping relations is never
    authorized. Paired ROUND-10 ENGINE CHANGE: multi-lane rank gaps so
    cross-rank side relations can be drawn beside the spine without bridges.
+
+5. (owner, round-10 planning) "make sure the arrows also favor from the
+   middle of the edge they originate from and join into." — ROUND-10
+   ENGINE ITEM (top priority alongside coverage): lone edges attach at the
+   MIDDLE of their side; multi-edge fans spread symmetrically around the
+   middle, never hugging corners. Recorded for the r10-routing worktree.
