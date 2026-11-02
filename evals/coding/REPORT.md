@@ -13,8 +13,10 @@
 4. Rewrote only absolute worktree paths (and, in three cases, stripped a credential-bearing appendix), copied
    the prompts verbatim, and wrote a `verify.sh` per task that checks the task's gold tests out of
    `final_commit` before running them.
-5. Validated all 13 tasks in throwaway worktrees at `base_commit` (must be red, for a substantive reason) and at
+5. Validated every task in throwaway worktrees at `base_commit` (must be red, for a substantive reason) and at
    `final_commit` (must be green). Every run finished well under the 120 s cap.
+6. Re-swept with the relaxed rule (authored verification allowed) and added four tasks, two of them bugfixes
+   whose work had landed after the first pass. See "Second pass" below.
 
 ## Selected tasks
 
@@ -35,6 +37,40 @@
 | `rack-bench-putobject-upload` | rack-bench | +290/−34 | refactor | Request-shape change with a size-boundary rule, preserved deadline semantics and record compatibility; the loopback server asserts the request count. |
 
 Sort order in `manifest.jsonl` matches this table. Sizes are `git diff --shortstat <base> <final>`.
+
+## Second pass — tasks found once verification could be written
+
+The first edition required the repo to already contain the test command. That excluded every task whose brief
+named an artifact but shipped no test. The second pass re-swept the whole history with a relaxed rule: the check
+may be **authored** for the eval, as long as it is deterministic, offline and derived from the brief (not from
+the reference diff). Four tasks were added; two more bugfixes came in because their work had landed in the
+meantime.
+
+| id | repo | changed | kind | verification | why it was not in the first edition |
+| --- | --- | --- | --- | --- | --- |
+| `dotfiles-thinking-hidden-row` | dotfiles | +342/−73 | bugfix | gold test (`thinking-title.test.mjs`) | The branch was still in progress during the first pass; it merged to `main` afterwards (`964fcdc1`, `74e94844`, `ce398d1d`). |
+| `dotfiles-hunk-gruvbox-theme` | dotfiles | +68/−0 | feature | authored `check.py` (tomllib) | No test exists for a TOML theme; the brief is one line. |
+| `dotfiles-ghdash-hunk-shortcut` | dotfiles | +23/−9 | feature | gold config script + authored `ghd` gate | The repo script covered only the `O` binding before this commit; verification was already in the tree but I had rejected the task as "config only". |
+| `dotfiles-opengateway-provider` | dotfiles | +156/−2 | feature | gold test + `settings.json` gate | The brief is conversational; the commit ships `opengateway.test.mjs`. |
+
+Authored checks are written to measure *properties*, not the reference file. Demonstrated for the gruvbox task:
+
+- reference theme → `CHECK PASS: theme 'gruvbox-material', 33 roles, 27 scopes, 21 distinct colours`;
+- same file with a different gruvbox background/foreground (`#1d2021` / `#ebdbb2`) → still passes, so an
+  alternative palette is accepted;
+- a two-key stub theme → `CHECK FAIL: only 2 colour roles, need at least 25`, so a placeholder cannot pass.
+
+What the relaxed rule still cannot rescue:
+
+| candidate | reason |
+| --- | --- |
+| `rataflow` rounds (off-by-one, struct-merge, all `fix-visualize-skill` rounds) | Their base state is the `/tmp/visualize-eval/round-05/renderer-source` snapshot. That directory no longer exists, so neither the base state nor a faithful check can be rebuilt; `main`'s `rataflow/` is an older engine. |
+| `fix-mermaid-stuck` / stdin-reattach (`366391b7`, `f52dfbe1`) | The defect is a Herdr pane tty sever; reproducing it needs a real PTY and a multiplexer, which the rubric forbids. |
+| `fix-nm`, `fix-pending-notification`, `fix-run-command-paste`, `fix-send-context` | The briefs are one-liners or artref references ("read the conversations"), so an autonomous agent has nothing to work from — no amount of authored verification fixes a missing instruction. |
+| `fix/ask-question-nav`, `fix/lavish-open-session`, `fix-subagent-new-tab`, `fix-agent-pane-size`, … | Branch never merged: no known-good final commit. |
+| `kimi-endpoint` sessions (serve.py argv bug, benchmark harness) | Full-spec briefs in a third repo, but `serve.py` imports `modal` and the checks would need GPU/Modal credentials; no offline test surface exists. |
+| `plannotator-tui` sessions (syntax highlighting, `tui-markdown` research) | The brief points at "as user requested" outside the session; the repo builds Rust and its PR flow is external. |
+| `firstmate` `.treehouse/*` crewmate briefs | Orchestration briefs for another repo and worktree layout, not captain-authored task prompts. |
 
 ## Rejected candidates
 
@@ -77,8 +113,12 @@ status at `base_commit` with the gold tests checked out; `final_rc` at `final_co
 | `rack-bench-gcs-provider` | 1 | `ValueError: GCS interoperability not implemented`; `unexpected keyword argument 'provider'` | 0 | 5.1 s |
 | `rack-bench-blob-profiling` | 1 | `cannot import name 'steadiness'`; `KeyError: 'limits'`; `no attribute 'limit_ticks'` | 0 | 5.6 s |
 | `rack-bench-putobject-upload` | 1 | `unrecognized arguments: --upload-mode multipart`; `KeyError: 'upload_mode'` | 0 | 6.7 s |
+| `dotfiles-thinking-hidden-row` | 1 | gold assertion `every hidden label must render no text` | 0 | 1.0 s |
+| `dotfiles-hunk-gruvbox-theme` | 1 | `CHECK FAIL: hunk/.config/hunk/config.toml does not exist` | 0 | 0.9 s |
+| `dotfiles-ghdash-hunk-shortcut` | 1 | gold script: `unexpected H binding: nil` | 0 | 3.0 s |
+| `dotfiles-opengateway-provider` | 1 | `Cannot find module './opengateway.ts'` | 0 | 0.7 s |
 
-13/13 discriminate: red at base for a substantive reason, green at final. Reproduce any row with:
+17/17 discriminate: red at base for a substantive reason, green at final. Reproduce any row with:
 
 ```sh
 bash evals/coding/run-task.sh <id>            # expect "VERIFY PASS" absent, exit 1
@@ -141,11 +181,15 @@ Total runtime for the whole matrix is under two minutes; each worktree is create
    verbatim.
 4. **`gcs-provider` expects world knowledge.** The brief asks the agent to confirm GCS interop facts on the web;
    offline, the model must already know the endpoint/scope conventions that the gold tests assert.
-5. **The bugfix gap is real.** Only one bugfix survived the filter. The requirement of "at least 4 bug fixes" is
-   not met by this corpus; bugfix-shaped sessions either have one-line briefs or never landed a commit.
+5. **The bugfix gap is narrowed, not closed.** Two bugfixes are in the set (`mermaid-minimal-trim`,
+   `thinking-hidden-row`) against a target of four. The remaining bugfix sessions are one-line complaints, need a
+   live PTY, or never landed a commit — the shortfall is a property of the corpus.
+6. **Authored checks are a contract.** Four tasks grade on checks written for this eval. They are property-based
+   and were probed for both false positives (stub theme rejected) and false negatives (alternative palette
+   accepted), but they still decide what "done" means; the task `notes` say exactly what each one asserts.
 6. **Skill/doc prose is ungraded.** Four tasks ask for SKILL.md, agent-profile, README-table or `docs/` edits
    that no test covers, so a model can score 1 while leaving the prose wrong.
-7. **Environment coupling.** dotfiles tests resolve `jiti` from the pi managed install and rack-bench needs a
+8. **Environment coupling.** dotfiles tests resolve `jiti` from the pi managed install and rack-bench needs a
    CPython ≥3.14 interpreter (`/opt/homebrew/bin/python3.14` here, reached through
    `uv run --offline --python 3.14`). Both are present here; a different host may need `JITI_PATH`/`NODE_PATH`
    or a newer interpreter.

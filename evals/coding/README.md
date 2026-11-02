@@ -1,6 +1,6 @@
 # Coding eval set
 
-A curated, reproducible set of 13 coding tasks taken from the captain's own agent sessions, built so that two
+A curated, reproducible set of 17 coding tasks taken from the captain's own agent sessions, built so that two
 models can be compared fairly: **same repo, same base commit, same prompt, same verification command**.
 
 Every task has a known-good final commit (the one the original session landed), a base commit equal to that
@@ -26,19 +26,20 @@ A session became a task only if **all** of these hold:
 2. **Self-contained prompt.** The first user message of the session is a complete brief: files, behaviour,
    constraints, and how to know it is done. Briefs that lean on "the conversation above", on a `/tmp` handoff
    file, on vault content, or on the captain's prior context were rejected.
-3. **Deterministic, offline verification.** An existing test command in the repo covers the change and runs with
-   no network, no credentials, no GPU, no TUI, no live pi session, no nvim/tmux/herdr, and no vault access.
-   Runtime is capped at ~120 s (every task here finishes in under 7 s).
+3. **Deterministic, offline verification.** Either an existing test in the repo covers the change, or the check
+   is authored for this eval (`verify_kind` records which). Both run with no network, no credentials, no GPU, no
+   TUI, no live pi session, no nvim/tmux/herdr, and no vault access. Runtime is capped at ~120 s (every task
+   here finishes in under 8 s).
 4. **Known-good final state.** The final commit is green under the same command.
 5. **No secrets, no live hosts.** Prompts that carried passwords, R2/AWS credentials, or required SSH to a lab
    host were either trimmed (documented per task) or rejected.
 6. **Human effort roughly 20–120 minutes.** Diff size is recorded for every task; the target spread was
    ~4 small (≤150 changed lines), ~6 medium (150–450), ~4 large (450+), with at least 4 bug fixes.
 
-The realised spread is **2 small / 6 medium / 5 large** (one bugfix, one removal, three refactors, eight
-features). The two source repos only contain one bugfix session with a landed commit and a self-contained
-brief (`dotfiles-mermaid-minimal-trim`); the other bugfix sessions are one-line complaints or depend on state
-that was never committed. This gap is a property of the data, not of the filter — see REPORT.md.
+The realised spread is **4 small / 8 medium / 5 large** (eleven features, three refactors, two bugfixes, one
+removal). The bugfix count is still below the target of four: of the bugfix-shaped sessions, two have landed
+commits and are in the set (`dotfiles-mermaid-minimal-trim`, `dotfiles-thinking-hidden-row`), while the rest
+are one-line complaints, need a live PTY, or never landed a commit. See REPORT.md for the full reject list.
 
 ## Tasks
 
@@ -57,6 +58,10 @@ that was never committed. This gap is a property of the data, not of the filter 
 | `rack-bench-gcs-provider` | rack-bench | 423 / medium | feature | Third provider via the S3-interop endpoint: credentials, SKIP-with-reason, signing scope, per-provider bounds, RTT band. |
 | `rack-bench-blob-profiling` | rack-bench | 597 / large | feature | Percentile/steadiness math, defensive `ss` parsing across kernel formats, and a pure verdict function — all additive. |
 | `rack-bench-putobject-upload` | rack-bench | 324 / medium | refactor | Protocol-shape change with a size-boundary rule and deadline semantics; loopback asserts the request count. |
+| `dotfiles-thinking-hidden-row` | dotfiles | 415 / medium | bugfix | Full diagnostic brief for a UI defect: symptom, suspected paths, renderer contract, and a required regression test. Spans fix + tests + version pin. |
+| `dotfiles-hunk-gruvbox-theme` | dotfiles | 68 / small | feature | One-line brief, authored property check: a complete, valid hunk theme on the stow path, dark background, light text, 25 roles + 10 syntax scopes, any gruvbox-consistent palette. |
+| `dotfiles-ghdash-hunk-shortcut` | dotfiles | 32 / small | feature | Two-sentence wiring brief (a `ghd` entry point plus an `H` binding that pipes the PR diff into hunk); the repo's own config-guard script is the gold test. |
+| `dotfiles-opengateway-provider` | dotfiles | 158 / medium | feature | Register a third-party provider: one extension that owns endpoint/model facts plus the `settings.json` wiring; gold test pins the facts. |
 
 `size` in the table is changed lines (added + removed); `manifest.jsonl` also carries `files_changed`,
 `lines_added` and `lines_removed`.
@@ -72,6 +77,7 @@ One JSON object per line:
 | `base_commit`, `final_commit` | full SHAs; `final_commit` is the merged task commit |
 | `prompt_file` | path to the prompt, relative to `evals/coding/` |
 | `verify` | the exact shell commands, in order; the first entry (when present) checks gold test files out of `final_commit` |
+| `verify_kind` | `gold-tests`, `authored-check`, or both (`gold-tests+authored-check`) |
 | `difficulty` | `small` (≤150 changed lines), `medium` (151–450), `large` (>450) |
 | `kind` | `feature`, `bugfix`, `refactor`, `removal` |
 | `files_changed`, `lines_added`, `lines_removed` | `git diff --shortstat base final` |
@@ -112,8 +118,12 @@ the graded contract:
 - at `final_commit` they pass — the "green after" state;
 - a solution is accepted when `verify.sh` exits 0.
 
-For the removal task there are no gold tests; verification is the brief's own grep/JSON/loader gates, which is
-how the original run proved the wiring was gone.
+Some tasks have no test to borrow. There the check is **authored for this eval** and lives next to the task
+(`check.py`, or inline gates in `verify.sh`). Authored checks assert the properties the brief states, and prefer
+properties over reference values: `dotfiles-hunk-gruvbox-theme` parses the theme with `tomllib` and requires
+dark/light luminance bounds, 25 colour roles, 10 syntax scopes and 12 distinct colours — it accepts any
+gruvbox-consistent palette and rejects a stub. `dotfiles-remove-fix-code-remote` uses the brief's own
+grep/JSON/loader gates. `manifest.jsonl` records which kind each task uses.
 
 ## How to score
 
@@ -140,7 +150,13 @@ how the original run proved the wiring was gone.
   (`tests/test_bench_internet_transfer.py`) fails roughly 1 run in 6 at *every* rack-bench commit
   (an `at_seconds` vs `elapsed_seconds` race). `verify.sh` retries the suite once before calling it red.
 - **Text deliverables are not graded.** Skill files, agent profiles, README tables and `docs/` prose that the
-  briefs require are not test-verifiable; only code behaviour scores.
+  briefs require are not test-verifiable; only code behaviour (or an authored structural check) scores.
+- **Authored checks encode a contract too.** Property-based checks are deliberately loose (palette, structure,
+  luminance), but they still define what "done" means; read the task's `notes` before scoring a diff that fails.
+- **Two repo tests are excluded on purpose.** `scripts/test-pi-hidden-thinking.mjs` asserts against the live
+  `~/.pi/agent` settings file, which no worktree controls, and its pyte sibling needs a PTY fixture; the
+  thinking-row task therefore grades on the extension unit suite only. The same rule removed
+  `scripts/nm-test.sh` from dotfiles grading (pre-existing reds plus a ~4-minute runtime).
 - **Network and PR steps are not graded.** Some briefs end with "open a PR with `gh`" (rack-bench) or ask the
   agent to verify facts on the web (`rack-bench-gcs-provider`). Run the tasks offline; those steps are out of
   scope and do not affect the score.
