@@ -209,10 +209,11 @@ confirmed one. Report the gap in the reply.
 - `edges[].dots`: `1` = exactly one live dot on that route, `0` = none.
 - `edges[].style`: `"solid"` (default) or `"dashed"` for an uncertain
   link. Keep the uncertainty in the label text too.
-- `edges[].label_slot`: optional integer — reserves a horizontal gutter
-  band that many cells wide beside the route for this edge's label, so
-  a long label no longer costs rank-row height. Omit it and the engine
-  places labels as before. Needs the round-09 binary.
+- `edges[].label_slot`: optional `true` (validated only when the edge has
+  a `label`) — reserves a horizontal gutter band beside the route for
+  this edge's label, so a long label no longer costs rank-row height.
+  Omit it and the engine places labels as before. Needs the round-09
+  binary.
 - `flow`: `true` animates the route at the **constant default speed** of
   0.5 cells per 100 ms step. A positive number animates at that constant
   rate instead. Do not set a rate unless the source itself gives one.

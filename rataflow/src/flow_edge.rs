@@ -51,35 +51,6 @@ pub const DEFAULT_FLOW_RATE: f64 = 0.5;
 /// milliseconds, whatever its length.
 pub const DEFAULT_DURATION_MS: u64 = 2000;
 
-/// A region: the bordered, titled box a group draws around its members.
-/// Coordinates are graph cells at zoom 1, and the rectangle covers the
-/// border cells (so `w` counts the two side borders).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Region {
-    /// The group name: the region's title and the source of its hue.
-    pub name: String,
-    pub x: i32,
-    pub y: i32,
-    pub w: i32,
-    pub h: i32,
-}
-
-impl Region {
-    /// A region box around the given member bounds (inclusive cells).
-    pub fn around(name: impl Into<String>, left: i32, top: i32, right: i32, bottom: i32) -> Self {
-        // One border cell on each side, kept inside the canvas.
-        let x = (left - 1).max(0);
-        let y = (top - 1).max(0);
-        Self {
-            name: name.into(),
-            x,
-            y,
-            w: right + 2 - x,
-            h: bottom + 2 - y,
-        }
-    }
-}
-
 /// The router's plan for one edge, in world coordinates (one world unit is
 /// one terminal cell at zoom 1).
 #[derive(Debug, Clone)]
@@ -295,9 +266,6 @@ pub struct FlowEdge {
     route: Option<Route>,
     dots: DotMode,
     dashed: bool,
-    /// The group regions this drawing carries, shared by every edge so the
-    /// frame can draw the boxes behind the nodes without a second channel.
-    regions: Option<std::sync::Arc<Vec<Region>>>,
 }
 
 impl FlowEdge {
@@ -372,23 +340,6 @@ impl FlowEdge {
     pub fn with_route(mut self, route: Route) -> Self {
         self.route = Some(route);
         self
-    }
-
-    /// Attaches the drawing's region boxes; every edge carries the same
-    /// shared list, so the frame can draw them without another channel.
-    pub fn with_regions(mut self, regions: std::sync::Arc<Vec<Region>>) -> Self {
-        self.regions = Some(regions);
-        self
-    }
-
-    /// The region boxes this drawing carries, when the spec declares groups.
-    pub fn regions(&self) -> Option<&[Region]> {
-        self.regions.as_deref().map(Vec::as_slice)
-    }
-
-    /// Replaces the region boxes in place.
-    pub fn set_regions(&mut self, regions: std::sync::Arc<Vec<Region>>) {
-        self.regions = Some(regions);
     }
 
     /// Replaces the attached plan in place.
