@@ -108,7 +108,11 @@ The renderer owns the character grid, so the rules are predictable:
   without a legend.
 - **Labels use free space** after routing. A label with no free slot is
   omitted; `--check` reports the count. An omitted relationship label is
-  a defect to fix, not proof that the diagram is simpler.
+  a defect to fix, not proof that the diagram is simpler. In a `tb` view a
+  labelled rank gap costs the label's length in rows; set
+  `"label_slot": true` on that edge to give the label a horizontal gutter
+  band beside its own run instead, which keeps tall labelled views short.
+  Never shorten the words to buy rows.
 - **Boxes are at least 4x4 cells.** The library places connection handles
   at the box centre; a 3-cell box puts that handle on a corner.
 

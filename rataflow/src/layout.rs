@@ -90,6 +90,9 @@ pub struct LayoutEdge {
     pub to: String,
     /// Width of the edge label in cells, when it has one.
     pub label_width: Option<usize>,
+    /// True when the label asks for a horizontal gutter band beside its own
+    /// run (`label_slot`) instead of a rank gap as tall as the text is wide.
+    pub label_gutter: bool,
     /// Rank gaps this edge needs at least: 1 (the default) means the ends
     /// sit in consecutive ranks, 2 leaves one empty rank between them.
     pub minlen: usize,
@@ -102,6 +105,7 @@ impl LayoutEdge {
             from: from.into(),
             to: to.into(),
             label_width: None,
+            label_gutter: false,
             minlen: 1,
         }
     }
@@ -553,7 +557,7 @@ impl<'a> Engine<'a> {
             let mut chain = vec![u];
             if rank[v] > rank[u] + 1 {
                 let span = rank[v] - rank[u];
-                let label_rank = if edge.label_width.is_some() && span >= 2 {
+                let label_rank = if edge.label_width.is_some() && span >= 2 && !edge.label_gutter {
                     Some(rank[u] + span / 2)
                 } else {
                     None
@@ -788,7 +792,10 @@ impl<'a> Engine<'a> {
                         nodes.iter().position(|node| node.id == edge.to)?,
                     );
                     let span = rank[u].max(rank[v]) - rank[u].min(rank[v]);
-                    (span == 1 && rank[u] == rank_index && edge.label_width.is_some())
+                    (span == 1
+                        && rank[u] == rank_index
+                        && edge.label_width.is_some()
+                        && !edge.label_gutter)
                         .then(|| edge.label_width.unwrap_or(0) as i32 + 3)
                 })
                 .max()
@@ -1323,6 +1330,7 @@ mod tests {
             from: from.into(),
             to: to.into(),
             label_width: None,
+            label_gutter: false,
             minlen: 1,
         }
     }

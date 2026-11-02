@@ -46,7 +46,7 @@ except ImportError:  # python 3.9/3.10 (local macs)
 # and the skill's documented block against drift).
 ALLOWED_TOP = {"direction", "theme", "nodes", "edges", "layers", "trunks"}
 ALLOWED_NODE = {"id", "label", "group"}
-ALLOWED_EDGE = {"from", "to", "label", "flow", "dots", "style", "duration_ms", "timing"}
+ALLOWED_EDGE = {"from", "to", "label", "flow", "dots", "style", "duration_ms", "timing", "label_slot"}
 ALLOWED_TRUNK = {"id", "label", "from", "to", "branches"}
 DIRECTIONS = {"tb", "lr"}
 THEMES = {"gruvbox", "dark", "light"}
