@@ -118,6 +118,43 @@ bash evals/coding/run-task.sh <id> --final   # worktree at final_commit -> expec
 bash evals/coding/run-task.sh --list         # all ids
 ```
 
+### Running a model, with cost and time capture
+
+```sh
+# one task, one harness
+EVAL_ROLL_DIR=/tmp/run-1 bash evals/coding/rollout.sh one dotfiles-fast-command pi
+
+# every task x both harnesses, seven at a time
+EVAL_ROLL_DIR=/tmp/run-2 bash evals/coding/rollout.sh matrix --pool 7 --agents pi,codex
+
+# a different pi model (fireworks ids work; codex ignores MODEL_PI)
+EVAL_ROLL_DIR=/tmp/run-3 MODEL_PI=fireworks/accounts/fireworks/routers/glm-fast-latest \
+  bash evals/coding/rollout.sh matrix --agents pi
+
+# summarise passes, minutes, tokens and dollars
+uv run python evals/coding/costs.py /tmp/run-2/results.csv --per-task
+```
+
+Each run appends one row to `results.csv`:
+
+| column | meaning |
+| --- | --- |
+| `agent`, `task` | harness and task id |
+| `agent_rc`, `verify_rc` | model process exit status, then `verify.sh` exit status (0 = pass) |
+| `agent_seconds`, `grade_seconds` | wall time of the model run, then of grading |
+| `tokens_in`, `tokens_out`, `tokens_cached`, `cost_usd` | usage for that run |
+| `commits`, `diff` | what the model left behind, against `base_commit` |
+| `worktree` | where the result lives, so a human can read the diff |
+
+Token and cost capture lives in `lib/usage.py`. pi reports its own per-message cost, which the runner reads.
+Codex stores no prices, so its cost is computed from the rate table in `lib/usage.py` (`gpt-6.1-sol`:
+$2 in / $10 out / $0.10 cached per million). **Treat both as estimates**; a subscription-billed harness has no
+marginal per-token cost at all. `lib/backfill.py` upgrades an older `results.csv` (no token columns) so
+`costs.py` can compare old and new runs.
+
+Committed comparison runs live in `results/` (`2026-11-03-pi-codex.csv` plus override CSVs for post-hoc
+re-grades).
+
 ### The gold-test convention
 
 Feature tasks in this corpus ship their tests *with* the change, so at `base_commit` the tests that describe

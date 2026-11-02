@@ -1,0 +1,9 @@
+agent,task,verify_rc
+pi,rack-bench-keepalive-pooling,0
+codex,rack-bench-keepalive-pooling,0
+pi,rack-bench-checksum-signing,0
+codex,rack-bench-checksum-signing,0
+pi,rack-bench-cloud-lab-runbook,0
+codex,rack-bench-cloud-lab-runbook,0
+pi,rack-bench-quick-object-size,0
+codex,rack-bench-quick-object-size,0
