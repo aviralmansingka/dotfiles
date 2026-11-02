@@ -29,7 +29,8 @@ check and viewer command. Do not use the global installed binary. Do not build
 or install another binary. Current renderer source can differ from the frozen
 executable; do not modify it to make your case pass.
 
-Round 09 adds one first step to the skill and one category to the rubric:
+Round 09 changes the renderer contract and the evidence contract; the
+families and `category_fit` carry over from round 08:
 
 - **Classify the source family FIRST, before the ledger and any spec.** The
   six families are flow-chains (`E ≈ N`, shallow, animated), service-meshes
@@ -50,9 +51,13 @@ Round 09 adds one first step to the skill and one category to the rubric:
   (`layers`), independent redundant links as parallel lanes, never bundled
   and never trunked, no dots unless the source animates the fabric.
   Lifecycles: ranks by source phase, boot sequence readable in one direction,
-  exactly one dot per live transition, none on historical ones. Planes: one
-  region per weakly-connected world side by side, cross-plane long edges
-  allowed to be long, the bus splitting once. Identity-maps: every identifier
+  exactly one dot per live transition, none on historical ones. Planes: each
+  weakly-connected world in its own side-by-side area (spatial only,
+  nothing drawn around members), cross-plane long edges allowed to be
+  long, the bus splitting once. Meshes: if measured attempts prove the
+  anti-parallel pair cannot fit one view, record the attempts and numbers
+  in `generation.json`, split the pair across views, keep both directions
+  traceable, and state the yield — an evidenced yield is honest. Identity-maps: every identifier
   and qualifier is a ledger coverage row with a named view before any spec is
   written.
 - **`category_fit` is a rubric gate now.** A wrong family, an unsupported or
@@ -61,14 +66,19 @@ Round 09 adds one first step to the skill and one category to the rubric:
   pick a family to match the layout you already wanted; pick it from the
   source.
 
-Standing renderer rules are unchanged from round 08:
+Standing renderer rules, updated for the round-09 binary:
 
 - **Structure is declared; geometry is derived.** You declare nodes, edges,
   groups, trunks and — only where the source states it — rank pins. Never
-  write coordinates, never hand-place nodes to fix a crossing. Groups render
-  as bordered titled regions that participate in ranking; `layers` is an
+  write coordinates, never hand-place nodes to fix a crossing. Groups are
+  logical tags: a `group` drives a name-derived hue family and one stable
+  sibling order, and NOTHING is drawn around members — no box, border, or
+  title (their absence is correct, never a defect). `layers` is an
   engine-honored rank constraint, not a drawing; `minlen` reserves rank gaps
-  for a corridor the source describes.
+  for a corridor the source describes. `edges[].label_slot: true` reserves
+  a horizontal gutter band beside the route for that edge's label, so a
+  long label no longer costs rank-row height — prefer it over shortening
+  words; it needs a `label` on the edge.
 - **Constant speed is the default.** `flow: true` animates at 0.5 cells per
   100 ms step; long routes simply take longer. Same-arrival (all dots reaching
   their arrowheads at the same instant) is opt-in only: `flow: true` +
@@ -105,7 +115,8 @@ If the renderer lacks a required feature, record a blocker rather than invent it
 Follow the candidate skill, including its Step 0 family classification, meaning
 ledger, relationship audit, group declarations, split coverage map, and
 capability preflight. For every view write down the family recipe it implements
-and the structural lever used for it (regions, rank pins, `minlen`, trunks),
+and the structural lever used for it (group tags, rank pins, `minlen`, trunks,
+`label_slot`),
 each with the source fact that justifies it.
 
 **Budget: at most three spec candidates per view, counting every `--check`
@@ -121,7 +132,11 @@ not proof; name the frame file and coordinates that show it. For direct
 `--frames` dumps outside a pane, pin the terminal size:
 `COLUMNS=77 LINES=47 "$BIN" --frames 21 ...` — a dump at another size proves
 nothing. Never hardcode a pane geometry number; the live app's own header
-token is the accepted measurement.
+token is the accepted measurement. PINNED RULING: when the live pane
+measures larger than the target, a pinned direct dump of THIS view's
+FINAL spec at exactly `COLUMNS=77 LINES=47` natural zoom with no
+overflow banner is accepted fit proof; a dump of a rejected draft or
+another view is not.
 
 ## Capture actual output through the harness
 
@@ -130,8 +145,8 @@ Use the repository scripts; do not hand-roll captures.
 ```sh
 scripts/viz-evidence.sh --spec <spec.json> --bin <frozen-bin> \
     --out <case-dir>/evidence/<view> --label <view> [--frames 5]
-scripts/viz-validate.py <case-dir>/evidence/<view> --require-select [--require-frames] \
-    --attempts <case-dir>/attempts.json
+scripts/viz-validate.py <case-dir>/evidence/<view> --require-select --require-frames \
+    --require-records --attempts <case-dir>/attempts.json
 ```
 
 - `viz-evidence.sh` splits a no-focus half pane in YOUR OWN Herdr tab, records
@@ -146,14 +161,19 @@ scripts/viz-validate.py <case-dir>/evidence/<view> --require-select [--require-f
   same instant in same-arrival mode.
 - Recipe proof: an anti-parallel pair must be readable as two edges in one
   capture; a fabric's parallel lanes must be countable; a lifecycle's phase
-  order must read in one direction; a plane boundary must be visible as two
-  regions; an identity map's coverage must be checkable row by row against the
+  order must read in one direction; a plane boundary must read as two
+  side-by-side areas; an identity map's coverage must be checkable row by row against the
   capture. Point each recipe claim at its frame and coordinates.
 - Layout work: read `crossings:` after each attempt, keep the layout that lowers
   it without losing meaning, and record the count you chose and why.
 - Record attempts in `attempts.json` before you capture:
   `{"views": [{"view": "v1", "attempts": [{"spec_sha256": "...", "note": "reason"}]}]}`.
   Four views maximum, three spec attempts per view maximum.
+- **Every probe and rejected draft must run through the record wrapper**:
+  `scripts/viz-evidence.sh record --to <case-dir>/attempts-log.jsonl
+  --label <name> -- "$BIN" --check <spec>` — the log keeps the command,
+  exit status, and raw stdout/stderr with sha256s. Hand-kept or missing
+  probe records are an evidence gap the validator fails.
 - Run the validator and keep its full output. A failing check is a defect you
   must fix or report; never edit the validator, the manifest, or a capture.
 - The `viewport:` line is the authority on measured size and zoom. Target is
@@ -182,15 +202,17 @@ Write `generation.json` and `generation.md`.
 - The family recipe applied per view, with the capture that shows it.
 - The meaning ledger and the relationship audit from the skill.
 - Mapping from each original relationship to its visible view relationship.
-- The structural levers used per view: declared regions, rank pins, `minlen`
-  values, trunks — each with the source fact that justifies it.
+- The structural levers used per view: declared groups, rank pins, `minlen`
+  values, trunks, `label_slot` — each with the source fact that justifies it.
+- Any recipe yield: the demand, the measured attempts that proved it
+  impossible, and how close the shipped view comes.
 - Source pointers, abbreviations, deliberate drops with reasons, known defects,
   blockers, and cleanup status.
 - Validator output per view, including any failing check.
 
 Do not mark your output green or claim independent approval.
 Do not spawn a reviewer despite the candidate skill's review section: the captain
-will start a separate Sol judge after your result arrives.
+will start a separate terra judge after your result arrives.
 Return a compact report with output paths, family chosen, view counts, warnings,
 and unmet needs.
 Use title comments for shell/Python calls. Use uv for Python.

@@ -1,4 +1,4 @@
-# Sol review — stage A (blind), round 09
+# Terra review — stage A (blind), round 09
 
 You are an independent diagram judge. You are not the generator. You are the
 only kind of worker allowed to judge: `openai/gpt-6.1-terra:high`.
@@ -20,9 +20,11 @@ Read only the captures and the spec files. Record what a reader actually sees:
   whether the whole route is traceable without guessing.
 - Every crossing, touching bend, bridge glyph, junction, and apparent branch.
 - Every label whose owner is uncertain.
-- Every group region: its title, its full border, and whether every member sits
-  inside it. Record any region that is drawn but untitled, untitled-but-claimed,
-  or whose member escaped the box.
+- Every declared group: the hue family its members share (ANSI evidence),
+  whether the members keep one stable sibling order, and whether anything is
+  drawn around members (a box, border, or title would be a renderer defect
+  this round — the engine paints nothing for groups). Record tier markings:
+  any label line or hue band that marks source-named tiers.
 - Every declared rank pin: which nodes the `generation.json` says are pinned,
   and which rank the capture actually shows them in.
 - The structural shape the capture itself shows, in neutral terms: number of
@@ -57,8 +59,8 @@ that it is missing; do not infer it from the spec.
 - `observed-first.md` — the blind record.
 - Its SHA-256, printed in your reply.
 - A tool-usable blind scorecard: counts of visible nodes, edges, labels, group
-  regions, pinned ranks, crossings, uncertain label owners, clipped items,
-  selected-state coverage, and dot violations.
+  hue families, pinned ranks, crossings, uncertain label owners, clipped
+  items, selected-state coverage, and dot violations.
 - The structural observation summary listed above, in neutral terms.
 - Any evidence you could not read at all (unsupported format, missing file).
 
