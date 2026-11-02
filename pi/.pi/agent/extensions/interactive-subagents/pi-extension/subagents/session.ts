@@ -113,6 +113,9 @@ export interface SubagentLoadout {
   cwd: string | null;
   /** PI_CODING_AGENT_DIR the subagent resolved config/extensions from, or null. */
   agentDir: string | null;
+
+  /** Non-secret mission transport paths. Claims stay in the local credential cache. */
+  missionEnv?: { MISSION_VAULT: string; MISSION_BIN: string; MISSION_STATE_DIR: string };
 }
 
 /** Path of the loadout sidecar written next to a subagent session file. */
