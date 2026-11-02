@@ -155,10 +155,12 @@ scripts/viz-validate.py <case-dir>/evidence/<view> --require-select --require-fr
   timestamped animation frames when you pass `--frames`, closes the pane, and
   proves the close in `manifest.json`.
 - **A frames capture is required for EVERY view, static ones included** — at
-  least 3 timestamped frames. For any animated view pass `--frames 21` so the
-  capture covers a whole 2000 ms cycle: frame 0 proves every dot starts at its
-  arrow origin, the final frame proves every dot reaches its arrowhead at the
-  same instant in same-arrival mode.
+  least 3 timestamped frames. For any animated view pass `--frames N`
+  where N is at least `ceil(longest_route_cells / 0.5)` so the LONGEST
+  route's dot completes a full lap at the target size — for constant mode
+  two well-spaced frames must also show every dot advanced by the same
+  number of cells; for same-arrival mode frame 0 must show origins and
+  the final frame simultaneous arrival at the arrowheads.
 - Recipe proof: an anti-parallel pair must be readable as two edges in one
   capture; a fabric's parallel lanes must be countable; a lifecycle's phase
   order must read in one direction; a plane boundary must read as two
