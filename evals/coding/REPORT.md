@@ -100,10 +100,14 @@ graded automatically. The first grading pass exposed a grader defect: several go
 behaves correctly but uses different helper names or a different command text. Six tasks were re-graded
 behaviour-only (five now, one reverted — see the README table) and every rollout was re-scored.
 
-| agent | first pass | after relaxing |
+| agent | first pass (graded then) | after relaxing (all 17) |
 | --- | --- | --- |
-| pi / deepseek | 9 pass / 14 graded | **12 pass / 15** |
-| codex / gpt-6.1-sol | 2 pass / 12 graded | **7 pass / 15** |
+| pi / deepseek | 9 pass / 14 | **11 pass / 17** |
+| codex / gpt-6.1-sol | 2 pass / 12 | **8 pass / 17** |
+
+Every one of the 34 rollouts finished (agent exit 0), was graded automatically, and was re-scored from the
+worktree, so the two columns are the same work judged by two graders. Mean run time: pi ~6 min, codex ~7 min,
+with a 60-minute cap; the slowest run was 14 min.
 
 Flips: codex `fast-command`, codex `fast-mode-openai`, codex `ghdash`, pi+codex `ghdash`, codex `opengateway`,
 pi+codex `rack-bench-part-size` — each was a naming or command-text pin, not a behaviour miss. Every relaxed
