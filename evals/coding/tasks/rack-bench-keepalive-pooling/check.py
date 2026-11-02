@@ -44,8 +44,14 @@ with Loopback() as loop:
         fail(f"3 connections expected after two more threads (1 shared + 1 per thread), saw {total}")
 
     client.close()
-    client.put_object("obj/after-close", s3.SeededPayload("seed", 2048))
-    if loop.accepts != 4:
-        fail(f"a request after close() did not open a fresh connection (accepts={loop.accepts})")
+    after = loop.accepts
+    try:
+        client.put_object("obj/after-close", s3.SeededPayload("seed", 2048))
+    except Exception as exc:  # a closed client may refuse; that is a valid choice
+        if "closed" not in str(exc).lower():
+            fail(f"a request after close() failed unexpectedly: {type(exc).__name__}: {exc}")
+    else:
+        if loop.accepts != after + 1:
+            fail(f"a request after close() reused a closed socket (accepts={loop.accepts})")
 
-print(f"CHECK PASS: 1 connection for 3 sequential requests, 1 per thread, fresh connection after close ({total} -> {loop.accepts})")
+print(f"CHECK PASS: 1 connection for 3 sequential requests, 1 per thread, no reuse of a closed socket ({total} accepts)")

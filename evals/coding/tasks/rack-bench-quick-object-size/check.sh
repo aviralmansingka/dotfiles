@@ -4,7 +4,16 @@ set -uo pipefail
 root=$(git rev-parse --show-toplevel) || exit 1
 cd "$root" || exit 1
 fail() { echo "CHECK FAIL: $*"; exit 1; }
-git checkout HEAD -- tests/ 2>/dev/null || true
+# Restore the base tests, except the files this task legitimately has to update
+# (the base suite hardcodes the old 1 GiB quick object size).
+here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+if [ -f "$here/tests-updatable.txt" ]; then
+  keep=$(grep -vxF -f "$here/tests-updatable.txt" < <(git ls-files tests/) || true)
+  # shellcheck disable=SC2086
+  [ -n "$keep" ] && git checkout HEAD -- $keep 2>/dev/null || true
+else
+  git checkout HEAD -- tests/ 2>/dev/null || true
+fi
 PY=(uv run --offline --python 3.14 --no-project python -c 'import sys;from rack_bench.cli import main;sys.exit(main())')
 
 help=$("${PY[@]}" bench internet --help 2>&1) || fail "bench internet --help failed"

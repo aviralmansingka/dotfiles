@@ -90,6 +90,30 @@ green-after.
 Both loopback checks share `lib/s3_loopback.py` (a 120-line S3-ish server that counts accepts and records
 headers), so a future rack-bench task can reuse it instead of pinning internals.
 
+### rack-bench expansion rollout (8 runs)
+
+The four new tasks were run against both harnesses in throwaway worktrees:
+
+| task | pi / deepseek | codex / gpt-6.1-sol |
+| --- | --- | --- |
+| `rack-bench-checksum-signing` | pass | pass |
+| `rack-bench-keepalive-pooling` | pass | pass |
+| `rack-bench-quick-object-size` | pass | pass |
+| `rack-bench-cloud-lab-runbook` | pass | pass |
+
+Both models solved all four. Two grader defects surfaced during this pass and were fixed, because a check must
+not grade a design choice it never stated:
+
+- `rack-bench-keepalive-pooling` asserted that a request after `close()` opens a fresh connection. Codex instead
+  raises `TransportError("S3 client is closed")`, which the brief allows ("close the pool cleanly"). The check now
+  accepts either a fresh connection or a typed refusal, and still rejects reuse of a closed socket.
+- `rack-bench-quick-object-size` restored every base test, but this task legitimately has to update
+  `tests/test_bench_internet_transfer.py` (the base suite hardcodes the old 1 GiB quick object size), so a correct
+  change graded red. The task now carries `tests-updatable.txt`; every other base test is still restored. Both
+  rollouts were re-run after the fix and pass.
+
+The runbook task produced real documents (pi 511 + 335 lines, codex 365 + 279 lines), not heading stubs.
+
 ## Rejected candidates
 
 | session / commit | reason |
