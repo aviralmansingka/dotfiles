@@ -6,11 +6,12 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=%h/vault
-# Explicit interpreter: the venv carries the daemon's only third-party
-# dependency (Telethon). Ubuntu's system python is PEP 668-managed, so the
-# dependency stays out of it. Create the venv with the uv commands in the
-# README before enabling this unit; a missing venv fails this line.
-ExecStart=%h/.local/share/pi-telegram/.venv/bin/python %h/bin/pi-telegram-daemon.py
+# Explicit interpreter: avoids the 203/EXEC failure class when the exec bit
+# is absent on the host. The launcher resolves the venv that carries the
+# daemon's only third-party dependency (Telethon), because Ubuntu's system
+# python is PEP 668-managed. Create the venv with the uv commands in the
+# README; a missing venv fails the launcher with that hint.
+ExecStart=/bin/bash %h/bin/pi-telegram-run
 Restart=always
 RestartSec=5
 TimeoutStopSec=10

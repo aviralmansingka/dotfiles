@@ -284,8 +284,11 @@ systemctl --user enable --now pi-telegram.service
 
 Voice notes from the iPhone Action Button shortcut arrive through a Telethon
 user session: a bot cannot write a voice note as you, and it cannot read Saved
-Messages. The unit runs the daemon from `~/.local/share/pi-telegram/.venv`; the
-venv carries Telethon and keeps it out of Ubuntu's PEP 668-managed system python.
+Messages. The unit runs the daemon through `~/bin/pi-telegram-run` (stowed from
+`pi/bin/pi-telegram-run`), which execs the venv python at
+`~/.local/share/pi-telegram/.venv`; the venv carries Telethon and keeps it out of
+Ubuntu's PEP 668-managed system python. The launcher fails early with a hint when
+the venv is missing, so the unit stays verifiable on a clean machine.
 Create an app at my.telegram.org, then provision the venv on the host:
 
 ```sh
@@ -301,6 +304,8 @@ the session file once from a terminal:
 ~/.local/share/pi-telegram/.venv/bin/python ~/bin/pi-telegram-daemon.py --telethon-login
 systemctl --user restart pi-telegram.service
 ```
+
+`~/bin/pi-telegram-run --telethon-login` runs the same helper through the venv.
 
 The shortcut keeps posting to the local endpoint (`/shortcut-audio`, port 8766 on
 Tailscale), and that endpoint stays the phone intake. When the Telethon session is
