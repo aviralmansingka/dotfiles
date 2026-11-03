@@ -1,0 +1,235 @@
+{
+ "round": 12,
+ "rubric_sha256": "5e09b9be9078ab5b46a82d0faf7bc986bf3d38a2d4cbb2f6745dd3fb9f0f54d7",
+ "metrics": {
+  "green_cases": 2,
+  "total_cases": 8,
+  "passed_applicable_categories": 43,
+  "failed_applicable_categories": 13,
+  "blocked_applicable_categories": 4,
+  "applicable_categories": 60,
+  "finding_severities": {
+   "critical": 7,
+   "high": 12,
+   "medium": 6,
+   "low": 3
+  }
+ },
+ "green_cases": [
+  "pipeline",
+  "network"
+ ],
+ "cases": {
+  "pipeline": {
+   "categories": {
+    "semantic_fidelity": "pass",
+    "arrow_traceability": "pass",
+    "layout_fit": "pass",
+    "conceptual_grouping_color": "pass",
+    "category_fit": "pass",
+    "border_integrity": "pass",
+    "workflow_evidence": "pass",
+    "animation": "pass"
+   },
+   "overall": "pass",
+   "findings": 0,
+   "severities": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0
+   },
+   "edges_total": 6,
+   "edges_pass": 6,
+   "blockers": 0,
+   "report": "docs/visualize-eval/rounds/12/reviews/pipeline/reviewer-result.json",
+   "report_sha256": "5a888e2d2365d1b970c95b5cc50b2e6123dde3804bf35e2915ec09819e9a2e78",
+   "blind_observation_sha256": null
+  },
+  "network": {
+   "categories": {
+    "semantic_fidelity": "pass",
+    "arrow_traceability": "pass",
+    "layout_fit": "pass",
+    "conceptual_grouping_color": "pass",
+    "category_fit": "pass",
+    "border_integrity": "pass",
+    "workflow_evidence": "pass",
+    "animation": "pass"
+   },
+   "overall": "pass",
+   "findings": 1,
+   "severities": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 1
+   },
+   "edges_total": 0,
+   "edges_pass": 0,
+   "blockers": 0,
+   "report": "docs/visualize-eval/rounds/12/reviews/network/reviewer-result.json",
+   "report_sha256": "a3ba923427907f9533e84a2ff275c17f3a39f89e0947bbc98d39aeed2d74d5d2",
+   "blind_observation_sha256": null
+  },
+  "homelab-nic-trace": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "pass",
+    "layout_fit": "fail",
+    "conceptual_grouping_color": "pass",
+    "category_fit": "pass",
+    "border_integrity": "pass",
+    "workflow_evidence": "blocked",
+    "animation": "na"
+   },
+   "overall": "fail",
+   "findings": 4,
+   "severities": {
+    "critical": 1,
+    "high": 2,
+    "medium": 1,
+    "low": 0
+   },
+   "edges_total": 14,
+   "edges_pass": 13,
+   "blockers": 2,
+   "report": "docs/visualize-eval/rounds/12/reviews/homelab-nic-trace/reviewer-result.json",
+   "report_sha256": "27a5950c5d50fc2a5405fe8a7a2118ea9da16cb80d9c7420bb5e214f411d210b",
+   "blind_observation_sha256": null
+  },
+  "server-nic-layout": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "pass",
+    "layout_fit": "pass",
+    "conceptual_grouping_color": "pass",
+    "category_fit": "pass",
+    "border_integrity": "pass",
+    "workflow_evidence": "blocked",
+    "animation": "na"
+   },
+   "overall": "fail",
+   "findings": 7,
+   "severities": {
+    "critical": 4,
+    "high": 2,
+    "medium": 0,
+    "low": 1
+   },
+   "edges_total": 8,
+   "edges_pass": 5,
+   "blockers": 2,
+   "report": "docs/visualize-eval/rounds/12/reviews/server-nic-layout/reviewer-result.json",
+   "report_sha256": "8a5fc51cf7104736afcac509b7a08a0fcc17b81adac9c309544b73e7136d561e",
+   "blind_observation_sha256": null
+  },
+  "datacenter-redundancy": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "pass",
+    "layout_fit": "pass",
+    "conceptual_grouping_color": "pass",
+    "category_fit": "pass",
+    "border_integrity": "pass",
+    "workflow_evidence": "fail",
+    "animation": "pass"
+   },
+   "overall": "fail",
+   "findings": 2,
+   "severities": {
+    "critical": 1,
+    "high": 1,
+    "medium": 0,
+    "low": 0
+   },
+   "edges_total": 28,
+   "edges_pass": 22,
+   "blockers": 1,
+   "report": "docs/visualize-eval/rounds/12/reviews/datacenter-redundancy/reviewer-result.json",
+   "report_sha256": "6ff679dca826ac0260560bc0e8da0aa7f417c9d5a901d4c26add9a0ea4b3c423",
+   "blind_observation_sha256": null
+  },
+  "modal-machine-manager": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "pass",
+    "layout_fit": "pass",
+    "conceptual_grouping_color": "pass",
+    "category_fit": "pass",
+    "border_integrity": "pass",
+    "workflow_evidence": "fail",
+    "animation": "blocked"
+   },
+   "overall": "fail",
+   "findings": 4,
+   "severities": {
+    "critical": 0,
+    "high": 2,
+    "medium": 2,
+    "low": 0
+   },
+   "edges_total": 23,
+   "edges_pass": 19,
+   "blockers": 2,
+   "report": "docs/visualize-eval/rounds/12/reviews/modal-machine-manager/reviewer-result.json",
+   "report_sha256": "cbc1e2da849f9f398d90077bf93065d99e7d227b6c595826cfb6d76b720292bf",
+   "blind_observation_sha256": null
+  },
+  "modal-runtime": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "pass",
+    "layout_fit": "pass",
+    "conceptual_grouping_color": "fail",
+    "category_fit": "fail",
+    "border_integrity": "pass",
+    "workflow_evidence": "pass",
+    "animation": "na"
+   },
+   "overall": "fail",
+   "findings": 3,
+   "severities": {
+    "critical": 0,
+    "high": 1,
+    "medium": 2,
+    "low": 0
+   },
+   "edges_total": 8,
+   "edges_pass": 6,
+   "blockers": 0,
+   "report": "docs/visualize-eval/rounds/12/reviews/modal-runtime/reviewer-result.json",
+   "report_sha256": "be6f0bdc3a862ce8d412d88ec76b76e01c2e3cfb8684155100a39e43fe726797",
+   "blind_observation_sha256": null
+  },
+  "gb300-rack-software": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "fail",
+    "layout_fit": "fail",
+    "conceptual_grouping_color": "pass",
+    "category_fit": "pass",
+    "border_integrity": "pass",
+    "workflow_evidence": "blocked",
+    "animation": "na"
+   },
+   "overall": "fail",
+   "findings": 7,
+   "severities": {
+    "critical": 1,
+    "high": 4,
+    "medium": 1,
+    "low": 1
+   },
+   "edges_total": 21,
+   "edges_pass": 16,
+   "blockers": 2,
+   "report": "docs/visualize-eval/rounds/12/reviews/gb300-rack-software/reviewer-result.json",
+   "report_sha256": "1073cf044f4ae356b803d9960e59d4a38cc588218a41eef0fa65ebf0668081c2",
+   "blind_observation_sha256": null
+  }
+ },
+ "problems": [
+  "network: reviewer model 'claude-opus-4.5 (captain)' is not the frozen model"
+ ]
+}
