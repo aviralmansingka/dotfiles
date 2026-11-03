@@ -752,10 +752,14 @@ process.env.PATH = `${binDir}:${process.env.PATH}`;
 process.env.TUICR_SKILL_DIR = skillDir;
 process.env.TUICR_FAKE_DIR = stateDir;
 process.env.HERDR_ENV = "1"; // selects the (fake) herdr wrapper
-// ms-scale timers so the watcher loop is deterministic and fast
+// ms-scale timers so the watcher loop is deterministic and fast. The launch
+// wait must still cover one fake-CLI process spawn (node startup measured at
+// ~64 ms on macOS): at 90 ms a loaded host missed the wrapper's launch marker
+// and the launch result came back with no slug. 400 ms keeps two polls of
+// headroom without approaching the suite's 5 s budget.
 process.env.TUICR_BG_POLL_MS = "20";
 process.env.TUICR_BG_COALESCE_MS = "40";
-process.env.TUICR_BG_LAUNCH_WAIT_MS = "90";
+process.env.TUICR_BG_LAUNCH_WAIT_MS = "400";
 
 function restoreEnv() {
 	for (const key of Object.keys(process.env)) {
@@ -818,7 +822,12 @@ try {
 		}
 	};
 
-	async function until(predicate, label, timeoutMs = 3000) {
+	// Generous default: every watched transition costs at least one fake-CLI
+	// process spawn, and the CLI-failure path needs 20 failed ticks in a row.
+	// At 3 s that was ~40% of the budget on a quiet host and over it on a
+	// loaded one (the gate flaked here); the predicate resolves immediately
+	// on success, so a larger deadline costs nothing when the watcher works.
+	async function until(predicate, label, timeoutMs = 15000) {
 		const deadline = Date.now() + timeoutMs;
 		while (!predicate()) {
 			if (Date.now() > deadline) throw new Error(`timed out waiting for: ${label}`);

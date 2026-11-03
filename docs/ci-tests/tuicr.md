@@ -55,11 +55,16 @@ cd pi/.pi/agent/extensions && node tuicr.test.mjs
 The suite stays offline and deterministic. Fake `tuicr`, `git`, and `gh`
 binaries go on `PATH` before the import; a fake wrapper logs argv and
 opens no pane. The fakes serve the staged branch and open-PR list. Env
-restores in `finally`; no sleep exceeds 100 ms.
+restores in `finally`. Timers stay compressed (20 ms poll, 40 ms coalesce),
+but the launch window is 400 ms — one fake-CLI `node` spawn measured ~64 ms,
+so a tighter window missed the wrapper's launch marker on a loaded host.
+Poll deadlines default to 15 s for the same reason: the CLI-failure path
+needs 20 failed ticks in a row, and predicates resolve immediately on
+success, so the larger deadline costs nothing.
 
 ## Runtime and SLA
 
-The suite runs in about 1.9 s; the budget is 5 s. The watcher polls at 20 ms.
+The suite runs in about 3 s; the budget is 5 s. The watcher polls at 20 ms.
 
 ## Coverage result
 
