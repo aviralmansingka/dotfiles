@@ -35,14 +35,22 @@ Reviewer: the owner. Tabs (round 11 left vs round 12 right):
    have the dots have either the color of their src or dest, depending
    on whichever one leads to the least conflicts."
 
-   ROUND-13 ENGINE FEATURE (dot coloring): a route's dots inherit the
-   hue of their source OR destination node - chosen per graph by which
-   end yields fewer hue conflicts (fan-out from one source -> color by
-   destination; convergence into one destination -> color by source).
-   Purpose: a moving dot visibly bound to its endpoint disambiguates
-   which relation a path belongs to, in dense fans where arrows alone
-   read ambiguously. Applies wherever dots already run; static views
-   with dense ambiguous fans may opt into dots for this purpose.
+   OWNER REFINEMENT (same day): "wait there seems to be a better
+   learning which is to make sure that arrows don't overlap in a way
+   that introduces ambiguity."
+
+   PRIMARY ROUND-13 ENGINE RULE (ambiguity-free routing): routes must
+   not pass near, hug, or overlap nodes that are neither their source
+   nor their destination, and must not share corridors in a way that
+   suggests false relations. The gb300 a3 artifact (nvos->nmxc and
+   in-band routes hugging OOB LAN until it reads as connected) is the
+   named defect. Engine lever: proximity penalty in the A* corridor
+   planner for cells near unrelated nodes; checker gains a
+   passes-near-unrelated-node violation so the defect class becomes
+   measurable.
+   DOT COLORING (secondary complement, kept): where fans are dense but
+   legitimately parallel, dots colored by src-or-dst hue (least-conflict
+   end) still help readers bind motion to relations.
 
 3. (owner question, answered in chat) gb300 a3: the OOB LAN's rail (one
    drop to every BMC - compute trays, NVSwitch tray BMCs, power shelf
