@@ -30,7 +30,28 @@ Reviewer: the owner. Tabs (round 11 left vs round 12 right):
    single-full-screen-all-relations (fit proof: fullscreen pinned dump +
    all-relations coverage claim).
 
-2. (captain proposal, pending owner) engine-first round: label-ownership
+2. (owner, 2026-11-03, on gb300 a3 ambiguity) "in cases where the arrows
+   can have so many ambiguous paths, it would be good to use dots and
+   have the dots have either the color of their src or dest, depending
+   on whichever one leads to the least conflicts."
+
+   ROUND-13 ENGINE FEATURE (dot coloring): a route's dots inherit the
+   hue of their source OR destination node - chosen per graph by which
+   end yields fewer hue conflicts (fan-out from one source -> color by
+   destination; convergence into one destination -> color by source).
+   Purpose: a moving dot visibly bound to its endpoint disambiguates
+   which relation a path belongs to, in dense fans where arrows alone
+   read ambiguously. Applies wherever dots already run; static views
+   with dense ambiguous fans may opt into dots for this purpose.
+
+3. (owner question, answered in chat) gb300 a3: the OOB LAN's rail (one
+   drop to every BMC - compute trays, NVSwitch tray BMCs, power shelf
+   controllers, CDU, PDUs) is NOT drawn in any r11 view; only rms->oob
+   rides it. The arrows near OOB in a3 are other relations' routes
+   passing close (routing artifact, the same class the source flags for
+   DCGM). The BMC fan coverage gap is the standing CDU/PDU round-13 item.
+
+4. (captain proposal, pending owner) engine-first round: label-ownership
    lever + reader-calibrated checker metric; case-wide hue-family
    assignment (cross-view consistency); bundle every probe input;
    frame-step helper for the animation audit.
