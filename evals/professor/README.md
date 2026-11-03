@@ -135,20 +135,29 @@ unless its mode or fields add more.
 
 ## Current results
 
-Latest sweep, 2026-11-03, `fireworks/glm-5p3-fast`, one rollout per task,
-re-scored after the question-run rule was removed.
+Full sweep, 2026-11-03, `fireworks/glm-5p3-fast`, one rollout per task after the
+survey, held-goal, and complaint fixes: **16 of 16 tasks at full score.**
 
-| Result | Tasks |
-|---|---|
-| full score | bgp, blank-slate, cold-start, cuda, derivation-gap, fenwick, handout, lesson-channel, mtu, resume-cancel, scope-change, transpose |
-| 4/5 | already-known (taught a held fact) |
-| 4/5 | goal-drift (did not re-anchor) |
-| 3/5 | framing-complaint (cut at the 900 s cap) |
-| 2/3 | ncp-diagnostic (taught during a survey) |
+| Task | Check set | Score |
+|---|---|---|
+| already-known | 5 | 5/5 |
+| ncp-diagnostic | 3 | 3/3 |
+| goal-drift, framing-complaint, lesson-channel, scope-change, derivation-gap, handout-missing, cold-start | 5 | 5/5 |
+| cuda, mtu, bgp, fenwick, transpose, blank-slate, resume-cancel | 4 | 4/4 |
 
-Three real failures remain: the survey branch, the already-known stop, and the
-goal re-anchor. Everything else holds, including the resume rule and the
-artifact, plan, and channel checks.
+What moved the score:
+
+- Putting the survey and held-goal stops in `SKILL.md` and the professor agent
+  prompt, not in a phase file. Diagnostic 2/3 to 3/3, already-known 4/5 to 5/5.
+- The complaint rule. Goal-drift 4/5 to 5/5.
+- The plan check now reads any `session.md` the rollout writes, and
+  `EVAL_TIMEOUT` lets a long task finish. Scope-change 2/5 to 5/5.
+- Six `continue` follow-ups, so a parked professor can finish. Lesson-channel
+  3/5 to 5/5.
+
+Metadata is still reported, not scored. Titles and `contextFiles` vary by
+model; the schema now requires them, so a real run rejects a bare call and
+retries, but the stub scenario accepts it.
 
 ## Honest limits
 
