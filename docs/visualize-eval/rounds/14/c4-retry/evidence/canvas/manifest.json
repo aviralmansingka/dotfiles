@@ -1,6 +1,6 @@
 {
   "spec_path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/14/c4-retry/specs/c4-canvas.json",
-  "spec_sha256": "82bc764164e1be2604a01fbc3c1f02b2f4bfa3d6d15f949cd117e1176478b8d5",
+  "spec_sha256": "187b43785109521872263f267d7f956d620a762f3c1eed4676b7e3a1e0ca3991",
   "spec_form": "canvas",
   "diagrams": [
     {
@@ -20,8 +20,8 @@
     }
   ],
   "binary_path": "/tmp/visualize-eval/round-14/bin/rataflow-view",
-  "binary_sha256": "b0282d3bad98f42ffae5c8b76ec58a21c24d86412a3be218fa68238b6ae44146",
-  "pane_id": "w7E:p124",
+  "binary_sha256": "9b3baf0496bb2b5d9a8e708ceea2830ec88bbd00fce52b28a4bd9aeb0cafee31",
+  "pane_id": "w7E:p129",
   "pane_rect": null,
   "pane_cols": null,
   "pane_rows": 44,
@@ -29,12 +29,12 @@
   "viewport_token": "68x44 @100%",
   "check_exit": 0,
   "check_window": [
-    "2026-11-03T17:21:40Z",
-    "2026-11-03T17:21:40Z"
+    "2026-11-03T17:27:38Z",
+    "2026-11-03T17:27:38Z"
   ],
   "capture_window": [
-    "2026-11-03T17:21:40Z",
-    "2026-11-03T17:21:45Z"
+    "2026-11-03T17:27:38Z",
+    "2026-11-03T17:27:43Z"
   ],
   "cleanup": "confirmed_closed",
   "select_all_frame": true,
@@ -45,14 +45,14 @@
     "viewport_line": "viewport: 260x90 zoom: 1.00 natural"
   },
   "artifacts": {
-    "bin.sha256": "73026f39b2aa9849d5f934a0abde67883b72c8024a153da65bd132fb17d6ecff",
-    "canvas-260x90-frames.txt": "66e93e792e64ef3f654d115a1bce01f5620e9c63c02093ba13ef9c4d2b7aee8e",
-    "canvas-ansi.ansi": "7dbe763f23231153b9dda6981970a33d324b943157e8f0ce853bd1f48577e492",
-    "canvas-frames.ansi": "b56db96fe873eddaffab7a1df8c960b1c6408839aed17b4caad6dfdab54e0cec",
-    "canvas-frames.txt": "470235f0ef59047e55a96cd62e637a0b7582b3ee414f818ab99c7a4f6d9651ef",
+    "bin.sha256": "b890178d6a3c5060b6962ec02388b00e24f5a5e5f04b71868e72c1c8f31f0889",
+    "canvas-260x90-frames.txt": "a72d2a6ed6cf01eeea990103122b7dfb448295b1dfe565e1f66e937eaa153577",
+    "canvas-ansi.ansi": "4537c2eec6cb6fa5ed449d9973e91b0ab3da37de8f8588799ce745e3bb805fc8",
+    "canvas-frames.ansi": "4a1f74d055da5b96d0055fb5bf41be8ad80223e42023e078bbdd1dc698ba8130",
+    "canvas-frames.txt": "4f8208b9ad6140c4556b9de8e33de1dba765b24ffaba64f695520291433ec95e",
     "canvas-pinned.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "canvas-selected.ansi": "320ecf53733824a743a26747f77bd923a27181c06a52854dcf042ee68899c935",
-    "canvas-text.txt": "cdb780110b8709464af01e0f1fc61b7ea6eaca94c66a699bd297765c8fe81bc5",
-    "check.txt": "a57790e3f7c31d7d0b668922a3836910a3d359888873859cded73fd6267eb55c"
+    "canvas-selected.ansi": "2a32044bcdf238dae900d96d4577f847cd869694d85ba4e42f8315811add42b4",
+    "canvas-text.txt": "10a5f997cd50d896336fbd5e42be2697e78b97a0273a5d4362439e5beb71e052",
+    "check.txt": "065edd241b992ee733095cc74222f28de636ceb0dc265a74011268191aa9974a"
   }
 }

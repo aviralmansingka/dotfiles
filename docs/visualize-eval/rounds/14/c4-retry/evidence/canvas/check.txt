@@ -1,5 +1,5 @@
 viewport: unknown zoom: 1.00 natural
-ok: nodes=28 edges=30 flows=9 direction=lr theme=gruvbox
+ok: nodes=28 edges=30 flows=12 direction=lr theme=gruvbox
 canvas: 3 diagrams on one canvas, drawn whole at 100%
 diagram l1 "L1 · System context — the machine manager" at 0,5: extent=112x21 nodes=6 edges=7 routes=7
   description: One double-bordered manager box; providers (BM = bare metal) and machines stay outside it, S3 and Slack beyond. Two arrows run between manager and machines, one each way.
@@ -7,10 +7,11 @@ diagram l1 "L1 · System context — the machine manager" at 0,5: extent=112x21 
 diagram l2a "L2 · Containers — request, provisioning and boot" at 0,31: extent=253x20 nodes=12 edges=14 routes=14
   description: Dotted box = the manager's own containers; the caller, providers (BM) and machines stay outside it. Actions become a River job, a provider allocation, then a boot.
   enclosed: dotted box=131x16 at 23,31 (contents of a zoomed-in component)
+  enclosed: dotted box=15x7 at 237,36 (contents of a zoomed-in component)
 diagram l2b "L2 · Containers — heartbeat, audits and diagnostics" at 0,56: extent=189x18 nodes=10 edges=9 routes=9
   description: Dotted box = the manager's own containers; machines (BM), S3 and Slack stay outside it. Agent heartbeat, audit and diagnose jobs, janitor proposals and Slack alerts.
   enclosed: dotted box=140x14 at 22,56 (contents of a zoomed-in component)
-enclosure-entrances: 5 route(s) enter or leave a dotted enclosure
+enclosure-entrances: 7 route(s) enter or leave a dotted enclosure
 pins: 28 pinned, 0 conflict(s)
 extent=253x74 cells (whole canvas)
 crossings: 4 bridges, 0 touching bends
@@ -19,7 +20,7 @@ passes-near-unrelated-node: 0
 labels: 30/30 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners
 groups: humans(2) external(10) control(5) async(4) hostops(3) state(2) ops(1)
 trunks:
-dots: 9 single-dot routes, 0 periodic routes, 0 violations, 9 constant at 0.5c/step, 0 same-arrival at 2000ms
-dot hues: 8 by source, 1 by destination, 0 shared-hue pair(s) (source-only 1, destination-only 2)
-origins: 9/9 routes start at their arrow origin
+dots: 12 single-dot routes, 0 periodic routes, 0 violations, 12 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 11 by source, 1 by destination, 0 shared-hue pair(s) (source-only 1, destination-only 2)
+origins: 12/12 routes start at their arrow origin
 arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

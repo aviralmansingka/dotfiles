@@ -46,6 +46,7 @@ usage:
 options:
   --step-ms <ms>   milliseconds between rendered frames (default 100)
   --select-all     mark every node selected before drawing
+  --frames-ansi    print the frames WITH colour escapes (whole-canvas colour proof)
 
 spec fields: direction (tb|lr), theme (gruvbox|dark|light),
 nodes (id, label?, group?), edges (from, to, label?, flow?, timing?, duration_ms?, dots?, style?, label_slot?),
@@ -94,6 +95,9 @@ struct Cli {
     check: bool,
     select_all: bool,
     frames: Option<usize>,
+    /// Print the frames with SGR colour escapes: a whole-canvas colour
+    /// capture for a bundle whose live pane is smaller than the drawing.
+    frames_ansi: bool,
     step_ms: u64,
     path: String,
 }
@@ -137,6 +141,7 @@ fn run() -> Result<()> {
             frames,
             cli.step_ms,
             cli.select_all,
+            cli.frames_ansi,
         );
     }
 
@@ -162,6 +167,7 @@ fn parse_args(args: &[String]) -> Result<Cli> {
         check: false,
         select_all: false,
         frames: None,
+        frames_ansi: false,
         step_ms: ANIMATION_STEP_MS,
         path: String::new(),
     };
@@ -171,6 +177,7 @@ fn parse_args(args: &[String]) -> Result<Cli> {
         match arg.as_str() {
             "--check" => cli.check = true,
             "--select-all" => cli.select_all = true,
+            "--frames-ansi" => cli.frames_ansi = true,
             "--frames" => {
                 let value = iter
                     .next()
@@ -530,6 +537,43 @@ fn arrival_line(stats: &DotStats) -> String {
 }
 
 /// `--frames`: successive frames as plain text, no pane and no terminal.
+/// One SGR sequence for a foreground/background colour pair. Truecolor when
+/// the palette is RGB, indexed otherwise; the default colour emits nothing.
+fn sgr(fg: ratatui::style::Color, bg: ratatui::style::Color) -> String {
+    use ratatui::style::Color;
+    fn one(code: &str, color: Color) -> Option<String> {
+        match color {
+            Color::Rgb(r, g, b) => Some(format!("\x1b[{code};2;{r};{g};{b}m")),
+            Color::Indexed(n) => Some(format!("\x1b[{code};5;{n}m")),
+            Color::Reset => None,
+            Color::Black => Some(format!("\x1b[{code};5;0m")),
+            Color::Red => Some(format!("\x1b[{code};5;1m")),
+            Color::Green => Some(format!("\x1b[{code};5;2m")),
+            Color::Yellow => Some(format!("\x1b[{code};5;3m")),
+            Color::Blue => Some(format!("\x1b[{code};5;4m")),
+            Color::Magenta => Some(format!("\x1b[{code};5;5m")),
+            Color::Cyan => Some(format!("\x1b[{code};5;6m")),
+            Color::Gray => Some(format!("\x1b[{code};5;7m")),
+            Color::DarkGray => Some(format!("\x1b[{code};5;8m")),
+            Color::LightRed => Some(format!("\x1b[{code};5;9m")),
+            Color::LightGreen => Some(format!("\x1b[{code};5;10m")),
+            Color::LightYellow => Some(format!("\x1b[{code};5;11m")),
+            Color::LightBlue => Some(format!("\x1b[{code};5;12m")),
+            Color::LightMagenta => Some(format!("\x1b[{code};5;13m")),
+            Color::LightCyan => Some(format!("\x1b[{code};5;14m")),
+            Color::White => Some(format!("\x1b[{code};5;15m")),
+        }
+    }
+    let mut out = String::new();
+    if let Some(f) = one("38", fg) {
+        out.push_str(&f);
+    }
+    if let Some(b) = one("48", bg) {
+        out.push_str(&b);
+    }
+    out
+}
+
 fn write_frames(
     flow: &mut Graph,
     spec: &Spec,
@@ -538,6 +582,7 @@ fn write_frames(
     frames: usize,
     step_ms: u64,
     select_all: bool,
+    ansi: bool,
 ) -> Result<()> {
     fit_natural(flow);
     let (cols, area_rows) = measured_area();
@@ -583,6 +628,23 @@ fn write_frames(
         println!("frame {frame_index} at {}ms", frame_index as u64 * step_ms);
         let width = buffer.area.width as usize;
         for row in buffer.content.chunks(width) {
+            if ansi {
+                // The colour proof: every cell carries its own SGR pair, so a
+                // reader can verify group hues and dot binding off-canvas.
+                let mut line = String::new();
+                let mut last: Option<(ratatui::style::Color, ratatui::style::Color)> = None;
+                for cell in row {
+                    let pair = (cell.fg, cell.bg);
+                    if Some(pair) != last {
+                        line.push_str(&sgr(pair.0, pair.1));
+                        last = Some(pair);
+                    }
+                    line.push_str(cell.symbol());
+                }
+                line.push_str("\x1b[0m");
+                println!("{}", line.trim_end());
+                continue;
+            }
             let line: String = row.iter().map(|cell| cell.symbol()).collect();
             println!("{}", line.trim_end());
         }

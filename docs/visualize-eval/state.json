@@ -2875,6 +2875,7 @@
    "check": "30/30 labels 0 ambiguous; near-misses 0; frame audit PASS; 4 bridges",
    "defects": "renderer paints enclosure over flow, occluding crossing dots -> 3 crossing routes shipped static; boot server outside l2a box (measured compromise); whole-canvas ANSI not capturable",
    "judge": "spawning"
-  }
+  },
+  "harness_fix": "viz-pinned-dump.py --keep-ansi + rataflow-view --frames-ansi: whole-canvas SGR colour dump (1472 sequences, 32 distinct hues) since every live pane is smaller than a large canvas. Closes the 3-round 'whole-canvas colour evidence missing' blocker for conceptual_grouping_color and animation."
  }
 }

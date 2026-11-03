@@ -23,6 +23,7 @@ import fcntl
 import os
 import pty
 import struct
+import re
 import sys
 import termios
 
@@ -64,17 +65,32 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--frames", type=int, default=12)
     parser.add_argument("--step-ms", type=int, default=100)
     parser.add_argument("--select-all", action="store_true")
+    parser.add_argument(
+        "--keep-ansi",
+        action="store_true",
+        help="keep the SGR escapes: a whole-canvas colour capture for a bundle "
+        "whose pane is smaller than the drawing (the text dump scrubs them)",
+    )
     args = parser.parse_args(argv)
 
     app_argv = ["--frames", str(args.frames), "--step-ms", str(args.step_ms)]
     if args.select_all:
         app_argv.append("--select-all")
+    if args.keep_ansi:
+        # The app only emits SGR in this mode; without it the capture is text.
+        app_argv.append("--frames-ansi")
     app_argv.append(args.spec)
     status, data = run(args.bin, app_argv, args.cols, args.rows)
     # A pty hands back CRLF; the dump is a plain-text file and the recorded
     # `viewport:` line has to match the validator's anchored pattern exactly.
     text = data.decode("utf-8", errors="replace").replace("\r\n", "\n")
-    text = text.replace("\r", "").replace("\x1b", "")
+    text = text.replace("\r", "")
+    if args.keep_ansi:
+        # The colour proof needs the escapes; only drop full-screen clears so
+        # the file stays a readable capture.
+        text = text.replace("\x1b[2J", "").replace("\x1b[H", "")
+    else:
+        text = text.replace("\x1b", "")
     if not text.strip():
         print("viz-pinned-dump: the app printed nothing; no dump written", file=sys.stderr)
         return 1
@@ -82,7 +98,8 @@ def main(argv: list[str]) -> int:
     # A dump whose own header is not the requested size cannot prove anything,
     # so say so loudly instead of letting it look like a pin.
     wanted = f"viewport: {args.cols}x{args.rows} zoom: "
-    if wanted not in text:
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", text)
+    if wanted not in plain:
         print(
             f"viz-pinned-dump: warning: the dump does not report {wanted!r}; "
             "the pty size did not reach the app",

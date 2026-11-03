@@ -104,15 +104,6 @@
       "id": "l2a",
       "title": "L2 · Containers — request, provisioning and boot",
       "description": "Dotted box = the manager's own containers; the caller, providers (BM) and machines stay outside it. Actions become a River job, a provider allocation, then a boot.",
-      "enclosure": [
-        "cp",
-        "wapi",
-        "pgrpc",
-        "q",
-        "rec",
-        "reg",
-        "db"
-      ],
       "nodes": [
         {
           "id": "web",
@@ -210,7 +201,8 @@
           "from": "web",
           "to": "wapi",
           "label": "http",
-          "dots": 0
+          "dots": 1,
+          "flow": true
         },
         {
           "from": "cp",
@@ -238,7 +230,8 @@
           "from": "reg",
           "to": "prov",
           "label": "provider API",
-          "dots": 0
+          "dots": 1,
+          "flow": true
         },
         {
           "from": "prov",
@@ -286,6 +279,20 @@
           "to": "db",
           "label": "cluster state"
         }
+      ],
+      "enclosures": [
+        [
+          "cp",
+          "wapi",
+          "pgrpc",
+          "q",
+          "rec",
+          "reg",
+          "db"
+        ],
+        [
+          "boot"
+        ]
       ]
     },
     {
@@ -421,7 +428,8 @@
           "from": "wapi",
           "to": "slack",
           "label": "confirm + alerts",
-          "dots": 0
+          "dots": 1,
+          "flow": true
         },
         {
           "from": "q",
