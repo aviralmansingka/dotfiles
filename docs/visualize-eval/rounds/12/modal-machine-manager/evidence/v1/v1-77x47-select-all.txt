@@ -1,0 +1,50 @@
+viewport: 77x47 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 77x47 @100% · spec-v1-final.json · 11 nodes · 12 edges · q q
+
+
+                ╭───────────────────╮   ╭──────────────╮
+                │Modal control plane│   │humans + mmctl│
+                │                   │   │              │
+                ╰───────────────────╯   ╰──────────────╯
+                          ● create/term/repair ●  http
+                          │                    │
+                          │                 ╭──╯
+                          ▼                 ▼
+                    ╭────────────╮   ╭─────────────╮
+                    │private gRPC│   │webapi server│
+                    │            │   │             │
+                    ╰────────────╯   ╰─────────────╯
+                         ● ● enqueue job    ● reinstall/reprovision
+                         │ │                │
+                   ╭─────╯ ╰──╮             │
+                   │ ╭────────⌒─────────────╯
+                   ▼ ▼        │
+            ╭───────────────╮ │ ╭───────────╮   ╭──────────────╮
+            │River job queue│ │ │public gRPC│   │reconcile loop│
+            │               │ │ │           │   │              │
+            ╰───────────────╯ │ ╰───────────╯   ╰──────────────╯
+                  ● ● ●       │       ●  machine state● ● gcore sync, 1 min
+                  │ │ │       │       │job rows       │ │
+                  │ │ ╰───────⌒───────⌒──────╮        │ │
+                  │ │         │       ╰──────⌒───╮    │ │ cluster state
+                  │ ╰───────╮ │machine rows  │   │    │ │
+                  │         │ ╰──────────────⌒─╮ │    ╰╮│
+                  ╰─────╮   ╰─────────╮      │ │ │ ╭───⌒╯
+           provision job▼ diag uploads▼      ▼ ▼ ▼ ▼   │
+               ╭─────────────────╮   ╭──╮   ╭────────╮ │
+               │provider registry│   │S3│   │Postgres│ │
+               │                 │   │  │   │        │ │
+               ╰─────────────────╯   ╰──╯   ╰────────╯ │
+                        ●                              │
+                        │                              │
+                        ╰─────────╮ ╭──────────────────╯
+                      provider API▼ ▼
+ ┌───────┐               ╭────────────────────╮
+ │ + [+] │               │bare-metal providers│
+ │ − [-] │               │                    │
+ │ ⊡ [f] │               ╰────────────────────╯
+ │ □ [i] │
+ └───────┘
+
+selected: 11 nodes

@@ -1,0 +1,50 @@
+viewport: 77x47 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 77x47 @100% · spec-v2-final.json · 11 nodes · 11 edges · q q
+
+
+                    ╭───────────╮   ╭───────────────╮
+        ╭──────────▶│boot server│   │River job queue│
+        │           │           │   │               │
+        │           ╰───────────╯   ╰───────────────╯
+        │                 ●                ● ●
+        │                 │                │ │
+        │diagnostic events│                │ │
+        │       ╭─────────⌒────────────────╯ │
+        │       │       ╭─╯      ╭───────────╯
+        │       ▼       │        ▼audit/verify reimage
+        │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+        │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+        │ │           │ │ │             │   │                    │
+        │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+        │       ●       │        ●                    ●
+        │       │       │        │run machine-audit   │
+        │       │       │        ╰───────────╮        │
+        │       │       ╰──────────────────╮ │        │
+        │       ╰───────╮boot.ipxe+S3 args │ │ ╭──────╯
+        │      proposals▼                  ▼ ▼ ▼allocate inst
+        │        ╭─────────────╮   ╭───────────────────╮
+        │        │webapi server│ ╭●│bare-metal machines│
+        │        │             │ │ │                   │
+        │        ╰─────────────╯ │ ╰───────────────────╯
+        │               ●        │          ● ●
+        │   iPXE request│        │          │ │
+        ╰───────────────⌒────────╯          │ │ pull boot image
+                       ╭╯            ╭──────╯ ╰──╮
+                       ▼             ▼           ▼
+                    ╭─────╮   ╭─────────────╮   ╭──╮
+                    │Slack│   │machine-agent│   │S3│
+                    │     │   │             │   │  │
+                    ╰─────╯   ╰─────────────╯   ╰──╯
+                confirm + alerts     ●runs on host
+                                     │
+                                    ╭╯reg + heartbeat
+                                    ▼
+ ┌───────┐                    ╭───────────╮
+ │ + [+] │                    │public gRPC│
+ │ − [-] │                    │           │
+ │ ⊡ [f] │                    ╰───────────╯
+ │ □ [i] │
+ └───────┘
+
+selected: 11 nodes

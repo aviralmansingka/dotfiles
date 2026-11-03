@@ -1,0 +1,10 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=11 edges=11 flows=11 direction=tb theme=gruvbox
+extent=65x41 cells
+crossings: 2 bridges, 2 touching bends
+labels: 11/11 placed, 0 on route cells, 0 skipped, 0 ambiguous owners
+groups: ops(3) fleet(3) control(2) state(2) humans(1)
+trunks:
+dots: 11 single-dot routes, 0 periodic routes, 0 violations, 11 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 11/11 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

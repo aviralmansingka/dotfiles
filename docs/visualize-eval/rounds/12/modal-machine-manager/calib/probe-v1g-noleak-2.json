@@ -1,0 +1,157 @@
+{
+ "direction": "tb",
+ "theme": "gruvbox",
+ "nodes": [
+  {
+   "id": "cp",
+   "label": "Modal control plane",
+   "group": "control"
+  },
+  {
+   "id": "web",
+   "label": "humans + mmctl",
+   "group": "humans"
+  },
+  {
+   "id": "pgrpc",
+   "label": "private gRPC",
+   "group": "control"
+  },
+  {
+   "id": "wapi",
+   "label": "webapi server",
+   "group": "control"
+  },
+  {
+   "id": "q",
+   "label": "River job queue",
+   "group": "ops"
+  },
+  {
+   "id": "rec",
+   "label": "reconcile loop",
+   "group": "ops"
+  },
+  {
+   "id": "reg",
+   "label": "provider registry",
+   "group": "fleet"
+  },
+  {
+   "id": "prov",
+   "label": "bare-metal providers",
+   "group": "fleet"
+  },
+  {
+   "id": "db",
+   "label": "Postgres",
+   "group": "state"
+  },
+  {
+   "id": "s3",
+   "label": "S3",
+   "group": "state"
+  },
+  {
+   "id": "pub",
+   "label": "public gRPC",
+   "group": "control"
+  }
+ ],
+ "edges": [
+  {
+   "from": "cp",
+   "to": "pgrpc",
+   "label": "create/term/repair",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "web",
+   "to": "wapi",
+   "label": "http",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "pgrpc",
+   "to": "q",
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "wapi",
+   "to": "q",
+   "label": "reinstall/reprovision",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "q",
+   "to": "reg",
+   "label": "provision job",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "reg",
+   "to": "prov",
+   "label": "provider API",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "pgrpc",
+   "to": "db",
+   "label": "machine rows",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "q",
+   "to": "db",
+   "label": "job rows",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "q",
+   "to": "s3",
+   "label": "diagnose uploads",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "rec",
+   "to": "prov",
+   "label": "gcore sync, 1 min",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "rec",
+   "to": "db",
+   "label": "cluster state",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "pub",
+   "to": "db",
+   "label": "machine state",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  }
+ ]
+}

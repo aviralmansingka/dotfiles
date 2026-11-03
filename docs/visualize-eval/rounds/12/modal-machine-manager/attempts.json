@@ -1,0 +1,122 @@
+{
+ "case_id": "modal-machine-manager",
+ "round": "12",
+ "worker_label": "viz-ds12-6",
+ "generator_identity": "viz-ds12-6 (fresh generator, replacement spawn for the crashed viz-ds12-6); DeepSeek fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+ "note": "Every entry below has a raw record in attempts-log.jsonl (command, exit status, stdout/stderr + sha256). Mechanical label sweeps are grouped with their record-label prefix; nothing is hidden or trimmed.",
+ "views": [
+  {
+   "view": "v1",
+   "shipped_spec": "spec-v1-final.json",
+   "shipped_sha256": "5d0f361759d4b9fb016303f431e79294070c73a1c64c79bfef513e629a3c3064",
+   "evidence_record": "final-check-v1",
+   "attempts": [
+    {
+     "spec": "spec-v1.json",
+     "spec_sha256": "c13bb0d2ef186b595e3c68114b75f0d08d0e7bbad6febba20bb9de3159de764a",
+     "record_label": "attempt-v1-1",
+     "note": "6-rank provisioning+boot view; extent 52x48 (1 row over), 1 skipped + 2 ambiguous labels"
+    },
+    {
+     "spec": "spec-v1a.json",
+     "spec_sha256": "33537235a20c1ca5d7aab08651b896b48bdb95470633e10d1abe4b1483f52a73",
+     "record_label": "attempt-v1a-1",
+     "note": "5-rank control/provision/state split; 68x41, 1 skipped + 1 ambiguous label -> calibrated into the final"
+    },
+    {
+     "spec": "spec-v1-final.json",
+     "spec_sha256": "5d0f361759d4b9fb016303f431e79294070c73a1c64c79bfef513e629a3c3064",
+     "record_label": "final-check-v1",
+     "note": "shipped: 11n/12e, 12/12 labels, 0 ambiguous, 0 skipped, 68x41"
+    }
+   ]
+  },
+  {
+   "view": "v2",
+   "shipped_spec": "spec-v2-final.json",
+   "shipped_sha256": "ec5e3a206a5e9c26f549cfb02624360693b88750a530a0b0cf515dec9b91ed18",
+   "evidence_record": "final-check-v2",
+   "attempts": [
+    {
+     "spec": "spec-v2.json",
+     "spec_sha256": "52e7195b270043589fd58caaf8bbcfa6c3c67374964d4f78150be0f2167c1b86",
+     "record_label": "attempt-v2-1",
+     "note": "6-rank machine/boot/heartbeat/ops view; 62x48, 2 skipped + 3 ambiguous labels"
+    },
+    {
+     "spec": "spec-v2a.json",
+     "spec_sha256": "9e202d149c612a57d1d75b26cc86afdb7c7de14cbed5f7b65882536dd9042ac5",
+     "record_label": "attempt-v2a-1",
+     "note": "5-rank variant; 81x39 (over the 77-column target), 2 skipped + 2 ambiguous labels"
+    },
+    {
+     "spec": "spec-v2-final.json",
+     "spec_sha256": "ec5e3a206a5e9c26f549cfb02624360693b88750a530a0b0cf515dec9b91ed18",
+     "record_label": "final-check-v2",
+     "note": "shipped: 11n/11e, 11/11 labels, 0 ambiguous, 0 skipped, 65x41, boot pair held in one view with the measured 2-rank corridor"
+    }
+   ]
+  }
+ ],
+ "abandoned_shapes": [
+  {
+   "shape": "whole graph, one dense view",
+   "spec": "spec-dense-1.json",
+   "record_label": "probe-whole-graph-tb",
+   "measured": "extent=101x136, 35 bridges, 6 ambiguous labels, 1 budget warning",
+   "why": "17 nodes / 23 edges exceed a 77x47 natural-zoom canvas by 59 rows; coverage kept by splitting, nothing dropped"
+  },
+  {
+   "shape": "6-rank provisioning+boot (mch at rank 5)",
+   "spec": "spec-v1.json",
+   "record_label": "attempt-v1-1",
+   "measured": "extent=52x48 (1 row over 47), 1 skipped + 2 ambiguous labels",
+   "why": "one rank too tall at any node count >= 8 (measured: 6-rank chain baseline is 44 rows, this fan adds 4)"
+  },
+  {
+   "shape": "11-node machine view incl. janitor chain",
+   "spec": "spec-v2a.json",
+   "record_label": "attempt-v2a-1",
+   "measured": "extent=81x39, 2 skipped + 2 ambiguous labels; later variants with the boot pair given a corridor measured 3 ambiguous labels",
+   "why": "the anti-parallel boot pair's two labels are ambiguous whenever both routes run in adjacent lanes of a crowded gap; resolved by the 2-rank corridor plus label widths, or by dropping a relation (never done)"
+  },
+  {
+   "shape": "third diagnostics-only view",
+   "spec": "calib/abandoned-v3-diagnostics.json",
+   "record_label": "probe-v3b",
+   "measured": "5n/4e, extent=38x28, clean only after 'diagnostic events'->'diagnostics'",
+   "why": "rejected: a 4-edge view is exactly the sparse over-split round 11 was faulted for; the 11-node two-view split measures clean with the corridor instead"
+  },
+  {
+   "shape": "label-length sweeps on the final specs",
+   "record_label_prefixes": [
+    "calib-v1a-len*",
+    "calib-v1a-*",
+    "calib-v1b..v1i",
+    "calib-v2b..v2k",
+    "calib-v2f-*",
+    "calib-v2K*",
+    "calib-v2U*",
+    "calib-v2lean*",
+    "calib-v3*",
+    "calib-chain*",
+    "calib-len*",
+    "calib-lab-*",
+    "calib-q1..q4"
+   ],
+   "measured": "about 220 recorded probes: extent / labels / crossings after each change",
+   "why": "used to locate the cleanest label set and to prove the boot-pair ambiguity is structural (1-char labels still ambiguous when the two routes run in adjacent lanes)"
+  },
+  {
+   "shape": "rank pins (layers) and minlen on the whole graph",
+   "record_label_prefixes": [
+    "calib-v1a-L1",
+    "calib-v1a-L2",
+    "calib-v2f-L1..L3",
+    "calib-v2f-A..C"
+   ],
+   "measured": "pins: 9/12 labels placed (worse); minlen 2 on the wrong edge: 3 ambiguous",
+   "why": "layers were rejected as a layout lever; minlen kept only for the boot round trip"
+  }
+ ]
+}

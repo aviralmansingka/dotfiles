@@ -1,0 +1,11 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=12 edges=13 flows=13 direction=tb theme=gruvbox
+extent=78x41 cells
+crossings: 7 bridges, 3 touching bends
+labels: 13/13 placed, 0 on route cells, 0 skipped, 2 ambiguous owners
+warning: 2 label(s) have an ambiguous owner: another route is as close to the text as its own edge
+groups: control(4) humans(2) ops(2) fleet(2) state(2)
+trunks:
+dots: 13 single-dot routes, 0 periodic routes, 0 violations, 13 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 13/13 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

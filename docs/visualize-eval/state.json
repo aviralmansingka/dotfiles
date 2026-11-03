@@ -2767,7 +2767,7 @@
   }
  },
  "round_12": {
-  "status": "frozen 1a53adaf; 1 of 2 rerun cases landed (modal-runtime COMPLETE, validated by captain); modal-machine-manager generating (viz-ds12-6c in flight)",
+  "status": "GENERATION COMPLETE: 2/2 rerun cases landed (mm resumed after 429; runtime clean); judges next",
   "skill": "proposal 11 44935981\u2026 (budget as hint; coverage overrides)",
   "engine": "db70722b\u2026 (unchanged r10 binary)",
   "rubric": "rev 10 5e09b9be\u2026",
@@ -2779,6 +2779,14 @@
     "validation": "captain rerun: 33 PASS / 0 FAIL both views (worker reported same)",
     "highlights": "v2 holds 5 edges (r10 reference held 4; r11 shipped 2-edge views); 8/8 relations+nodes; 0 ambiguous/bridges; one-view merge measured 11x, every variant ambiguous-or-overflow -> recorded recipe_yield; abbreviations disclosed; no blockers",
     "judge": "spawn after mm lands"
+   },
+   "modal-machine-manager": {
+    "worker": "viz-ds12-6c (died at 429 16m37s mid-noleak-campaign; resumed cleanly, finished 7m14s)",
+    "family": "lifecycle-machines (phase-transition fans + anti-parallel iPXE pair + verb/payload ledger)",
+    "views": "2: v1 11n/12e control/provision/state 68x41; v2 11n/11e machines/boot/heartbeat/ops 65x41; all 23 relations once each",
+    "validation": "captain rerun: all checks passed both views; v2 ambiguous 2->0 via minlen:2 mch->boot corridor",
+    "highlights": "1.8x hint density per view; third clean view rejected as 4-edge over-split (density rule working); bridges 6+2 kept with measured reason; 225 records incl. captain's 2 probes",
+    "judge": "spawn next"
    }
   }
  }

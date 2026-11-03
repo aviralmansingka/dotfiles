@@ -1,0 +1,624 @@
+{
+ "case_id": "modal-machine-manager",
+ "round": "12",
+ "generator": {
+  "worker_label": "viz-ds12-6",
+  "identity": "viz-ds12-6, fresh generator (replacement spawn)",
+  "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+ },
+ "candidate_skill": {
+  "path": "docs/visualize-eval/rounds/12/SKILL.md",
+  "sha256": "44935981b942e49ef475f7e7203fcb2035db88339977e0f072cb806463dd2a9b"
+ },
+ "renderer": {
+  "path": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+  "sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8"
+ },
+ "step0_classification": {
+  "family": "lifecycle-machines",
+  "evidence": "one machine node (bare-metal machines / machine-agent) and one work queue each fan to 5 phase transitions (agent register+heartbeat, iPXE request, pull boot image, runs on host, run machine-audit / q enqueue, reinstall, audit, diagnose, diagnostic events), and the source marks every transition live ('add slow dots flowing through it'), so one dot per line.",
+  "tie_breakers_considered": [
+   "Density: E=23 vs N=17, E clearly exceeds N, which pulls toward service-mesh/redundant-fabric.",
+   "Dots forbidden? No - the human asked for slow dots and then 'keep on dot alive per line', so it is not a fabric.",
+   "Phase order: the source narrates stages (request -> enqueue -> registry -> providers -> machines -> boot -> heartbeat) in one direction, which is the lifecycle-machines signature; the SKILL's own family table already names modal-machine-manager as a lifecycle-machines case.",
+   "Identifier/qualifier density is low (no addresses, no uncertainty markers), so identity-probe-maps does not apply."
+  ],
+  "secondary_recipes": [
+   "service-mesh habit: the anti-parallel boot pair (mch->boot request, boot->mch response) is drawn in ONE view with two labels and two ports - no bidirectional arrow, no split across views.",
+   "identity-probe habit: every verb, payload and qualifier ('1 min', 'boot.ipxe + S3 args', 'verify reimage') is a ledger row with a named view before any spec existed."
+  ]
+ },
+ "views": [
+  {
+   "view": "v1",
+   "spec": "spec-v1-final.json",
+   "spec_sha256": "5d0f361759d4b9fb016303f431e79294070c73a1c64c79bfef513e629a3c3064",
+   "nodes": 11,
+   "edges": 12,
+   "extent": "68x41",
+   "bundle": "evidence/v1",
+   "check": "evidence/v1/check.txt",
+   "text": "evidence/v1/v1-text.txt",
+   "ansi": "evidence/v1/v1-ansi.ansi",
+   "selected_ansi": "evidence/v1/v1-selected.ansi",
+   "frames": "evidence/v1/v1-frames.txt",
+   "pinned_fit_dump": "evidence/v1/v1-77x47-frames.txt",
+   "pinned_full_lap": "evidence/v1/v1-77x47-lap.txt",
+   "pinned_select_all": "evidence/v1/v1-77x47-select-all.txt",
+   "viewport_line_pinned": "viewport: 77x47 zoom: 1.00 natural",
+   "measured_pane_header": "83x51 @100%",
+   "validator": "validator-v1.txt",
+   "validator_result": "all checks passed"
+  },
+  {
+   "view": "v2",
+   "spec": "spec-v2-final.json",
+   "spec_sha256": "ec5e3a206a5e9c26f549cfb02624360693b88750a530a0b0cf515dec9b91ed18",
+   "nodes": 11,
+   "edges": 11,
+   "extent": "65x41",
+   "bundle": "evidence/v2",
+   "check": "evidence/v2/check.txt",
+   "text": "evidence/v2/v2-text.txt",
+   "ansi": "evidence/v2/v2-ansi.ansi",
+   "selected_ansi": "evidence/v2/v2-selected.ansi",
+   "frames": "evidence/v2/v2-frames.txt",
+   "pinned_fit_dump": "evidence/v2/v2-77x47-frames.txt",
+   "pinned_full_lap": "evidence/v2/v2-77x47-lap.txt",
+   "pinned_select_all": "evidence/v2/v2-77x47-select-all.txt",
+   "viewport_line_pinned": "viewport: 77x47 zoom: 1.00 natural",
+   "measured_pane_header": "83x51 @100%",
+   "validator": "validator-v2.txt",
+   "validator_result": "all checks passed"
+  }
+ ],
+ "coverage_map": {
+  "v1": "control plane + humans -> private gRPC -> River queue -> provider registry -> bare-metal providers; the four Postgres writers (machine rows, job rows, machine state, cluster state); S3 diagnostics uploads; reconcile gcore sync",
+  "v2": "machines: provider allocate, iPXE request + boot.ipxe response pair, boot-image pull, machine-agent heartbeat to public gRPC, SSH/BMC audit of machines, janitor diagnostics -> webapi proposals -> Slack confirmation",
+  "edge_homes": {
+   "v1": [
+    "e1",
+    "e2",
+    "e3",
+    "e4",
+    "e5",
+    "e6",
+    "e12",
+    "e13",
+    "e14",
+    "e18",
+    "e22",
+    "e23"
+   ],
+   "v2": [
+    "e7",
+    "e8",
+    "e9",
+    "e10",
+    "e11",
+    "e15",
+    "e16",
+    "e17",
+    "e19",
+    "e20",
+    "e21"
+   ]
+  },
+  "node_homes": {
+   "v1": [
+    "cp",
+    "web",
+    "pub",
+    "pgrpc",
+    "wapi",
+    "q",
+    "rec",
+    "reg",
+    "db",
+    "s3",
+    "prov"
+   ],
+   "v2": [
+    "q",
+    "prov",
+    "ssh",
+    "jan",
+    "mch",
+    "wapi",
+    "boot",
+    "s3",
+    "agent",
+    "slack",
+    "pub"
+   ]
+  },
+  "union_check": "17 components, 23 directed relations, each relation in exactly one view"
+ },
+ "habits_borrowed_per_view": {
+  "v1": "lifecycle phase axis (request -> queue -> registry -> provider) with side relations (state writes, reconcile) drawn beside the spine; nothing dropped",
+  "v2": "lifecycle phase axis (allocate -> boot -> host -> heartbeat) plus the ops fan; anti-parallel boot pair in one view; one dot per live transition"
+ },
+ "deviations": [
+  {
+   "deviation": "two views instead of the single dense view the round-12 hint pushes for",
+   "reason": "measured: 17n/23e in one tb view is extent=101x136 at natural zoom (record probe-whole-graph-tb), i.e. 89 rows over the 47-row canvas; a 6-rank cut measured 52x48 and 48 rows, still over",
+   "capture": "evidence/v1/v1-77x47-frames.txt, evidence/v2/v2-77x47-frames.txt (both fit, no overflow banner)"
+  },
+  {
+   "deviation": "minlen 2 on the mch -> boot request, giving the round trip a two-rank corridor",
+   "reason": "with the pair in adjacent lanes both labels are ambiguous (measured 2 ambiguous owners at every node count; 1-character labels are still ambiguous, so it is structural, not a wording problem). The 2-rank corridor separates the two runs and measures 0 ambiguous",
+   "capture": "evidence/v2/v2-77x47-lap.txt rows 8-20 (two distinct vertical runs, request left, response right, each label beside its own run), calib probes v2lean-Le/Lf"
+  },
+  {
+   "deviation": "pub appears in both views (e12 machine state in v1, e11 heartbeat in v2)",
+   "reason": "the four Postgres writers belong together in v1; the heartbeat's destination is the same node from the other side. Duplicating the node keeps one home per relation without dropping a writer",
+   "capture": "evidence/v1/v1-77x47-frames.txt (machine state beside pub -> Postgres), evidence/v2/v2-77x47-frames.txt (reg + heartbeat into public gRPC)"
+  },
+  {
+   "deviation": "label abbreviations create/term/repair, diag uploads, allocate inst, boot.ipxe+S3 args, reg + heartbeat, proposals",
+   "reason": "a gutter band wider than ~17 cells has no clear home in a 77-column tb view with two nodes per rank (measured: 16-cell labels place, 18-cell labels are skipped). All three verbs and object nouns survive each abbreviation",
+   "capture": "evidence/v1/check.txt (labels 12/12 placed, 0 skipped), evidence/v2/check.txt (11/11 placed, 0 skipped)"
+  },
+  {
+   "deviation": "no trunks, no layers/rank pins",
+   "reason": "the source names no shared bus and no tiers; using layers measured worse (9/12 labels placed) and would hand-place nodes",
+   "capture": "attempts-log.jsonl records calib-v1a-L1/L2, calib-v2f-L1..L3"
+  }
+ ],
+ "recipe_yield": {
+  "demand": "hold the whole machine-manager graph in as few views as possible, with the boot pair together and every label unambiguous",
+  "measured_attempts": [
+   "one view, 17n/23e: extent 101x136, 35 bridges, 6 ambiguous labels (probe-whole-graph-tb)",
+   "6-rank two-view cut: 52x48 and 62x48 - 1 row over the canvas, 1-2 skipped labels",
+   "5-rank 11-node views: 68x41 clean, but the machine view measured 2 ambiguous owners (76-81 columns wide) until the pair got its corridor",
+   "11-node machine view with corridor: 3 ambiguous owners; shortening labels one at a time moved the count only between 1 and 3",
+   "adjacent-lane pair with 1-character labels: still ambiguous - the engine's neighbour test, not the text, decides"
+  ],
+  "yield": "the boot pair stays in one view and the two-view split holds all 23 relations, at the cost of two abbreviations on the pair's own labels and the minlen corridor; a third view was measured clean but rejected as a 4-edge, sparse over-split"
+ },
+ "structural_levers": [
+  {
+   "lever": "group tags (control, humans, ops, fleet, state)",
+   "source_fact": "the source names the control plane, humans+mmctl, the job/ops loops, the provider fleet and the state stores",
+   "result": "groups: control(4) humans(1) ops(2) fleet(2) state(2) in v1; ops(3) fleet(3) control(2) state(2) humans(1) in v2"
+  },
+  {
+   "lever": "label_slot: true on every edge",
+   "source_fact": "14-20 character verb phrases describe each hop; without a gutter each costs a 14-23 row rank gap",
+   "result": "all 23 labels placed, 0 on route cells"
+  },
+  {
+   "lever": "minlen: 2 on mch -> boot",
+   "source_fact": "the source pairs the iPXE request with the boot.ipxe response as a round trip",
+   "result": "0 ambiguous owners on the pair"
+  },
+  {
+   "lever": "dots: 1 + flow: true on every edge",
+   "source_fact": "'add slow dots flowing through it' + 'keep on dot alive per line'",
+   "result": "dots: 12/12 and 11/11 single-dot routes, 0 violations, constant 0.5 c/step"
+  },
+  {
+   "lever": "no trunks, no layers",
+   "source_fact": "no shared bus and no declared tiers in the source",
+   "result": "crossings: 6 bridges (v1), 2 bridges (v2)"
+  }
+ ],
+ "meaning_ledger": [
+  [
+   "case_id",
+   "value"
+  ],
+  [
+   "cp Modal control plane",
+   "component",
+   "drawn (v1)"
+  ],
+  [
+   "web humans + mmctl",
+   "component",
+   "drawn (v1)"
+  ],
+  [
+   "pgrpc private gRPC",
+   "component",
+   "drawn (v1)"
+  ],
+  [
+   "wapi webapi server",
+   "component",
+   "drawn (v1, v2)"
+  ],
+  [
+   "pub public gRPC",
+   "component",
+   "drawn (v1, v2)"
+  ],
+  [
+   "q River job queue",
+   "component",
+   "drawn (v1, v2)"
+  ],
+  [
+   "rec reconcile loop",
+   "component",
+   "drawn (v1)"
+  ],
+  [
+   "ssh SSH + BMC ops",
+   "component",
+   "drawn (v2)"
+  ],
+  [
+   "jan janitor app",
+   "component",
+   "drawn (v2)"
+  ],
+  [
+   "reg provider registry",
+   "component",
+   "drawn (v1)"
+  ],
+  [
+   "prov bare-metal providers",
+   "component",
+   "drawn (v1, v2)"
+  ],
+  [
+   "mch bare-metal machines",
+   "component",
+   "drawn (v2)"
+  ],
+  [
+   "agent machine-agent",
+   "component",
+   "drawn (v2)"
+  ],
+  [
+   "db Postgres",
+   "component",
+   "drawn (v1)"
+  ],
+  [
+   "s3 S3 object store",
+   "component",
+   "drawn (v1, v2)"
+  ],
+  [
+   "boot boot server",
+   "component",
+   "drawn (v2)"
+  ],
+  [
+   "slack Slack",
+   "component",
+   "drawn (v2)"
+  ],
+  [
+   "create / terminate / repair",
+   "verbs",
+   "abbreviated to create/term/repair (gutter width at 77 cols; a 22-char gutter band does not place beside a shared rank-0 route - measured: 18-char label also skipped, 16 places)"
+  ],
+  [
+   "reinstall / reprovision",
+   "verbs",
+   "drawn (reinstall/reprovision)"
+  ],
+  [
+   "provision job",
+   "verb+payload",
+   "drawn"
+  ],
+  [
+   "audit / verify reimage",
+   "verbs",
+   "drawn (audit/verify reimage)"
+  ],
+  [
+   "run machine-audit",
+   "verb+tool",
+   "drawn"
+  ],
+  [
+   "diagnose uploads",
+   "verb+object",
+   "abbreviated to diag uploads"
+  ],
+  [
+   "gcore sync, 1 min",
+   "verb+interval",
+   "drawn (gcore sync, 1 min)"
+  ],
+  [
+   "allocate instance",
+   "verb+object",
+   "abbreviated to allocate inst"
+  ],
+  [
+   "boot.ipxe + S3 args",
+   "payload",
+   "drawn as boot.ipxe+S3 args in v2"
+  ],
+  [
+   "register + heartbeat",
+   "verbs",
+   "abbreviated to reg + heartbeat in v2"
+  ],
+  [
+   "diagnostic events",
+   "payload",
+   "drawn in v2"
+  ],
+  [
+   "proposed actions",
+   "payload",
+   "abbreviated to proposals in v2"
+  ],
+  [
+   "confirm + alerts",
+   "verbs",
+   "drawn in v2"
+  ],
+  [
+   "pull boot image",
+   "verb+object",
+   "drawn in v2"
+  ],
+  [
+   "machine rows / job rows / machine state / cluster state",
+   "payloads",
+   "drawn in v1 (four Postgres writers)"
+  ],
+  [
+   "iPXE request / boot.ipxe response",
+   "protocol pair",
+   "both drawn in v2, one view, distinct labels and ports"
+  ],
+  [
+   "http",
+   "protocol",
+   "drawn"
+  ],
+  [
+   "provider API",
+   "protocol",
+   "drawn"
+  ],
+  [
+   "private gRPC / public gRPC",
+   "protocols",
+   "drawn as node labels"
+  ],
+  [
+   "River job queue",
+   "role",
+   "drawn"
+  ],
+  [
+   "janitor proposes actions back through webapi",
+   "qualified path",
+   "drawn v2 (proposals)"
+  ],
+  [
+   "reconcile syncs gcore clusters every minute",
+   "qualified loop",
+   "drawn v1 (gcore sync, 1 min)"
+  ],
+  [
+   "humans + mmctl",
+   "role",
+   "drawn (web node)"
+  ],
+  [
+   "drops",
+   "none",
+   "no source component or relation dropped; 0 deliberate drops"
+  ]
+ ],
+ "relationship_audit": [
+  [
+   "e1",
+   "cp -> pgrpc",
+   "create/terminate/repair",
+   "e1",
+   "v1"
+  ],
+  [
+   "e2",
+   "web -> wapi",
+   "http",
+   "e2",
+   "v1"
+  ],
+  [
+   "e3",
+   "pgrpc -> q",
+   "enqueue job",
+   "e3",
+   "v1"
+  ],
+  [
+   "e4",
+   "wapi -> q",
+   "reinstall/reprovision",
+   "e4",
+   "v1"
+  ],
+  [
+   "e5",
+   "q -> reg",
+   "provision job",
+   "e5",
+   "v1"
+  ],
+  [
+   "e6",
+   "reg -> prov",
+   "provider API",
+   "e6",
+   "v1"
+  ],
+  [
+   "e7",
+   "prov -> mch",
+   "allocate instance",
+   "e7",
+   "v2"
+  ],
+  [
+   "e8",
+   "mch -> boot",
+   "iPXE request",
+   "e8",
+   "v2"
+  ],
+  [
+   "e9",
+   "boot -> mch",
+   "boot.ipxe + S3 args",
+   "e9",
+   "v2"
+  ],
+  [
+   "e10",
+   "mch -> agent",
+   "runs on host",
+   "e10",
+   "v2"
+  ],
+  [
+   "e11",
+   "agent -> pub",
+   "register + heartbeat",
+   "e11",
+   "v2"
+  ],
+  [
+   "e12",
+   "pub -> db",
+   "machine state",
+   "e12",
+   "v1"
+  ],
+  [
+   "e13",
+   "pgrpc -> db",
+   "machine rows",
+   "e13",
+   "v1"
+  ],
+  [
+   "e14",
+   "q -> db",
+   "job rows",
+   "e14",
+   "v1"
+  ],
+  [
+   "e15",
+   "q -> ssh",
+   "audit/verify reimage",
+   "e15",
+   "v2"
+  ],
+  [
+   "e16",
+   "ssh -> mch",
+   "run machine-audit",
+   "e16",
+   "v2"
+  ],
+  [
+   "e17",
+   "mch -> s3",
+   "pull boot image",
+   "e17",
+   "v2"
+  ],
+  [
+   "e18",
+   "q -> s3",
+   "diagnose uploads",
+   "e18",
+   "v1"
+  ],
+  [
+   "e19",
+   "q -> jan",
+   "diagnostic events",
+   "e19",
+   "v2"
+  ],
+  [
+   "e20",
+   "jan -> wapi",
+   "proposed actions",
+   "e20",
+   "v2"
+  ],
+  [
+   "e21",
+   "wapi -> slack",
+   "confirm + alerts",
+   "e21",
+   "v2"
+  ],
+  [
+   "e22",
+   "rec -> prov",
+   "gcore sync, 1 min",
+   "e22",
+   "v1"
+  ],
+  [
+   "e23",
+   "rec -> db",
+   "cluster state",
+   "e23",
+   "v1"
+  ]
+ ],
+ "abbreviations": [
+  "create/term/repair = create / terminate / repair",
+  "diag uploads = diagnose uploads",
+  "allocate inst = allocate instance",
+  "boot.ipxe+S3 args = boot.ipxe + S3 args",
+  "reg + heartbeat = register + heartbeat",
+  "proposals = proposed actions"
+ ],
+ "deliberate_drops": [],
+ "known_defects": [
+  {
+   "defect": "v1 keeps 6 bridges / 4 touching bends among the four Postgres writers and the long state edges",
+   "capture": "evidence/v1/v1-77x47-frames.txt rows 20-33",
+   "note": "no relation, label or qualifier is lost; changing the split to remove them would break the 12/12 label placement measured here"
+  },
+  {
+   "defect": "v2 keeps 2 bridges / 2 touching bends at the machine fan",
+   "capture": "evidence/v2/v2-77x47-frames.txt rows 18-26"
+  },
+  {
+   "defect": "the 2-rank corridor lifts `boot server` to rank 0, so the iPXE request runs upward along the left edge of v2 while the boot.ipxe response runs downward in the middle",
+   "capture": "evidence/v2/v2-77x47-lap.txt rows 2-19 (labelled runs: 'iPXE request' beside the left run, 'boot.ipxe+S3 args' beside the middle run)",
+   "note": "both directions stay separate, labelled and unambiguous; the alternative (adjacent lanes) measured 2 ambiguous owners and cannot be read"
+  },
+  {
+   "defect": "the live pane measured 83x51 in this tab, not the 77x47 target",
+   "capture": "evidence/v1/manifest.json viewport_token",
+   "note": "fit is proven by the pinned COLUMNS=77 LINES=47 dumps of the final specs: viewport: 77x47 zoom: 1.00 natural, no overflow banner"
+  }
+ ],
+ "blockers": [],
+ "cleanup": "every pane closed and verified by the harness (manifest cleanup=confirmed_closed for both views); no pane of the captain's was used",
+ "dependencies": {
+  "attempts": "attempts.json",
+  "attempts_log": "attempts-log.jsonl",
+  "validators": [
+   "validator-v1.txt",
+   "validator-v2.txt"
+  ]
+ },
+ "validator_summary": {
+  "v1": "all checks passed",
+  "v2": "all checks passed"
+ }
+}

@@ -1,0 +1,10 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=8 edges=8 flows=8 direction=tb theme=gruvbox
+extent=53x39 cells
+crossings: 1 bridges, 1 touching bends
+labels: 8/8 placed, 0 on route cells, 0 skipped, 0 ambiguous owners
+groups: ops(2) fleet(3) state(2) control(1)
+trunks:
+dots: 8 single-dot routes, 0 periodic routes, 0 violations, 8 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 8/8 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

@@ -1,0 +1,12 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=10 edges=10 flows=10 direction=tb theme=gruvbox
+extent=81x40 cells
+crossings: 8 bridges, 5 touching bends
+warning: 3 edge label(s) had no free slot; shorten the labels or split the graph
+labels: 7/10 placed, 0 on route cells, 3 skipped, 1 ambiguous owners
+warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge
+groups: ops(3) fleet(3) control(2) state(2)
+trunks:
+dots: 10 single-dot routes, 0 periodic routes, 0 violations, 10 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 10/10 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step
