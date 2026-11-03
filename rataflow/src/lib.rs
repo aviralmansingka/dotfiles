@@ -274,6 +274,22 @@ pub struct Spec {
 /// One named diagram of a multi-diagram canvas: a title, a one-line
 /// description, and the graph it draws. The graph is a full single-graph
 /// spec, so `layers`, `trunks`, and a per-diagram `direction` all work.
+/// One container box: a double-bordered rectangle around `members`, with its
+/// label set into the top edge.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RawContainer {
+    pub label: String,
+    pub members: Vec<String>,
+}
+
+/// A resolved container box.
+#[derive(Debug, Clone)]
+pub struct SpecContainer {
+    pub label: String,
+    pub members: Vec<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct SpecDiagram {
     /// Stable id, unique in the canvas. Also the section's handle in
@@ -302,6 +318,8 @@ pub struct SpecDiagram {
     /// painted box drifts away from the cells it names. The membership,
     /// entrance counts and run-along counts are reported either way.
     pub enclosure_outline: bool,
+    /// Container boxes drawn around their members.
+    pub containers: Vec<SpecContainer>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -357,6 +375,11 @@ struct RawDiagram {
     /// Paint the dotted boundary (see `SpecDiagram::enclosure_outline`).
     #[serde(default)]
     enclosure_outline: bool,
+    /// Container boxes: a labelled, double-bordered rectangle that physically
+    /// holds the nodes it names. This replaces a drawn "group region": the
+    /// zoom parent's box grows to contain what the next view expands.
+    #[serde(default)]
+    containers: Vec<RawContainer>,
 }
 
 /// The single-graph fields, gathered so the validator runs on either the top
@@ -766,7 +789,12 @@ impl Spec {
                 enclosed: raw.enclosed,
                 enclosure: raw.enclosure.unwrap_or_default(),
                 enclosures: raw.enclosures,
-                enclosure_outline: false,
+                enclosure_outline: raw.enclosure_outline,
+                containers: raw
+                    .containers
+                    .into_iter()
+                    .map(|c| SpecContainer { label: c.label, members: c.members })
+                    .collect(),
             });
         }
 
@@ -1505,6 +1533,8 @@ pub struct SectionReport {
     pub enclosures: Vec<Vec<String>>,
     /// Whether the boundary is painted for this section.
     pub enclosure_outline: bool,
+    /// Container boxes for this section: label plus the namespaced member ids.
+    pub containers: Vec<(String, Vec<String>)>,
     /// World ids of nodes drawn with a double border (the zoom parents).
     pub focus: Vec<String>,
     pub nodes: usize,
@@ -2168,6 +2198,16 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
             frames: frames.clone(),
             enclosures,
             enclosure_outline: diagram.enclosure_outline,
+            containers: diagram
+                .containers
+                .iter()
+                .map(|c| {
+                    (
+                        c.label.clone(),
+                        c.members.iter().map(|id| format!("{}:{}", diagram.id, id)).collect(),
+                    )
+                })
+                .collect(),
             focus,
             nodes: report.nodes,
             edges: report.edges,
@@ -3158,10 +3198,8 @@ fn draw_enclosures(frame: &mut Frame, flow: &Graph, canvas: Rect, sections: &[Se
         // The boundary is painted only on request: its mapping does not yet
         // track the library's node transform, so the default is to report the
         // membership without drawing a box that could drift.
-        if section.enclosure_outline {
-            for (fx, fy, fw, fh) in enclosure_rects(flow, &section.enclosures) {
-                draw_dotted_frame(frame, flow, canvas, fx, fy, fw, fh, palette.subtle);
-            }
+        for (label, members) in &section.containers {
+            draw_container(frame, flow, canvas, label, members, palette.text);
         }
     }
 }
@@ -3222,6 +3260,75 @@ fn put_world_text_if_blank(
         return;
     }
     put_world_text(frame, flow, canvas, x, y, &glyph.to_string(), style);
+}
+
+/// Draws one container box: a double-bordered rectangle around the named
+/// members, with its label set into the top edge. The box physically holds the
+/// members, so a reader sees the containment instead of inferring it from a
+/// tag; an edge crossing the boundary keeps its cells, and the gap reads as a
+/// relation passing through.
+fn draw_container(
+    frame: &mut Frame,
+    flow: &Graph,
+    canvas: Rect,
+    label: &str,
+    members: &[String],
+    color: Color,
+) {
+    let ids: Vec<&str> = members.iter().map(String::as_str).collect();
+    let mut rect: Option<(i32, i32, i32, i32)> = None;
+    for node in flow.nodes() {
+        if !ids.contains(&node.id.as_str()) {
+            continue;
+        }
+        let (x, y, w, h) = node_rect(node);
+        let (x1, y1) = (x + w - 1, y + h - 1);
+        rect = Some(match rect {
+            None => (x, y, x1, y1),
+            Some((ax, ay, bx, by)) => (ax.min(x), ay.min(y), bx.max(x1), by.max(y1)),
+        });
+    }
+    let Some((x0, y0, x1, y1)) = rect else {
+        return;
+    };
+    // One cell of clearance on every side keeps the border off the members.
+    let (bx0, by0) = (x0 - 1, y0 - 1);
+    let (bx1, by1) = (x1 + 1, y1 + 1);
+    if bx1 - bx0 < 4 || by1 - by0 < 3 {
+        return;
+    }
+    let style = Style::default().bg(flow.theme.palette().canvas_bg).fg(color);
+    let top_char = |cx: i32| -> char {
+        if cx == bx0 {
+            '\u{2554}'
+        } else if cx == bx1 {
+            '\u{2557}'
+        } else {
+            '\u{2550}'
+        }
+    };
+    for cx in bx0..=bx1 {
+        put_world_text_if_blank(frame, flow, canvas, cx, by0, top_char(cx), style);
+        let bottom = if cx == bx0 {
+            '\u{255a}'
+        } else if cx == bx1 {
+            '\u{255d}'
+        } else {
+            '\u{2550}'
+        };
+        put_world_text_if_blank(frame, flow, canvas, cx, by1, bottom, style);
+    }
+    for cy in (by0 + 1)..by1 {
+        put_world_text_if_blank(frame, flow, canvas, bx0, cy, '\u{2551}', style);
+        put_world_text_if_blank(frame, flow, canvas, bx1, cy, '\u{2551}', style);
+    }
+    // The label rides the top edge, two cells in, and wins over the rule.
+    if label.chars().count() as i32 + 4 < (bx1 - bx0) {
+        for (offset, ch) in label.chars().enumerate() {
+            let cx = bx0 + 2 + offset as i32;
+            put_world_text(frame, flow, canvas, cx, by0, &ch.to_string(), style);
+        }
+    }
 }
 
 /// Repaints a zoom parent's border with double-line glyphs: the box a

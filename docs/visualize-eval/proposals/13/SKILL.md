@@ -318,23 +318,23 @@ draw the zoom chain instead of repeating the same box everywhere:
 - **The zoom parent wears a double border:** set `"focus": true` on the
   node the next diagram expands. Its border renders as a second ring, so
   a reader sees exactly which box the next section opens.
-- **The expanded contents sit in a dotted box:** set
-  `"enclosure": ["id", ...]` on the diagram, listing exactly the nested
-  cells. The dotted frame wraps only those nodes, so actors and external
-  systems stay OUTSIDE the boundary — a box that also contains externals
-  misreads as the wrong ownership boundary. (`"enclosed": true` still
-  wraps the whole band; use it only when everything in the section
-  really is inside the component.)
-- **Non-contiguous members get their own box.** When a nested service
-  sits between two externals, one rectangle cannot hold it without
-  swallowing them. Use `"enclosures": [[...], [...]]` - one dotted box per
-  contiguous group - instead of leaving that service outside the
-  boundary. A service of the component always reads as inside SOME box.
-- **Relations may enter the box, never travel along its edge.** The
-  engine keeps one cell of clearance and reports
-  `enclosure-entrances:` (normal: a relation joins an outside element to
-  a nested cell) and `enclosure-crossings:` (a route RUNNING ALONG the
-  dotted line) — crossings must read 0.
+- **The zoom parent's box GROWS to contain what it expands.** Name the
+  nested cells in a `containers` entry on the diagram that holds them:
+  `"containers": [{"label": "Machine manager", "members": ["api", "q",
+  "rec", "db"]}]`. The box is drawn as a real double-bordered rectangle
+  around those nodes, with its label set into the top edge, and the
+  members render inside it. Containment is then literal: a reader sees
+  the contents sitting in the box instead of inferring it from a tag.
+- **Keep the members contiguous.** A container is a rectangle, so it
+  encloses everything inside its bounding box: put the nested cells in
+  one band (a rank or a short chain), or the box will swallow the
+  external actors that happen to sit between them. If a service must be
+  separated from the rest, give it its own container entry - several
+  boxes are allowed.
+- **Relations cross the boundary, they never run along it.** An edge
+  leaving or entering the box keeps its own cells, so the border shows a
+  gap where the relation passes: that reads as a connection, not as a
+  break.
 - **Keep one reading direction across the canvas.** If every diagram is
   `lr`, keep them all `lr`; mixed directions make a reader re-orient on
   every section. Deviate only with a measured reason.
