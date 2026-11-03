@@ -1,0 +1,57 @@
+{
+ "round": "11",
+ "phase": "frozen-before-generation",
+ "skill_path": "docs/visualize-eval/rounds/11/SKILL.md",
+ "skill_sha256": "fb975dbe337bee801dc098f58695e0068cb1b2d7d79f34c0e473e24a1626cd4e",
+ "renderer_path": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+ "renderer_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+ "renderer_source_sha256": "0efb3117939b5f1dbce6228a74c4c115a35681d1ace97cc81942febfb6a40ada",
+ "renderer_source_git_commit": "c065af91fba7c3cc8a1904b749f5b6aa6962431f",
+ "rubric_revision": 10,
+ "rubric_sha256": "7d9906be07332637e3149457abfda458cc250bc89d2b6d5e857885c92d2b16c6",
+ "cases_sha256": "e69179e59a3d36985cd7e8672b319b566701f88caef385c9cbde76d060c92d05",
+ "case_hashes": {
+  "pipeline": {
+   "source_sha256": "68aa197fdc597c3a22d1b8ca88a3ebee861dcda34684da15ae69b6946b741e58",
+   "expected_sha256": "ea177d01af818876ff04bf707b923326b153185fd425f21ea96250486b504ec3",
+   "variants_sha256": "5d351c45f055d2ca115036d10ab4bd50fb1d22ccd87f31e018f01c3039b48659"
+  },
+  "network": {
+   "source_sha256": "9d23a7b50d1d26a69f95523a9586bab96ec588afb9628ae274c896992b147947",
+   "expected_sha256": "8cb86d269c21176d775e79f8592f09067049031a0e581df38d66705e73a8caa9",
+   "variants_sha256": "6af06039e172f0ef75d83c87703f85541b24e61d8706c64d8bba31ce742c2cbe"
+  },
+  "homelab-nic-trace": {
+   "source_sha256": "abe8b376eccd7d0027f2985aab55ed656603b2094c275ee66ed223a57421b4c4",
+   "expected_sha256": "91ef88d09af71cd4583cfd0f1141e10f2fc2efdd3a779f9389f1d67759cd09c7",
+   "variants_sha256": "d70fd9d33cc1966bc015b6bc4d84176984979cac15b9cb7d1d89165e1bc7fc1f"
+  },
+  "server-nic-layout": {
+   "source_sha256": "235d296fef435710c8a49bcd247455c8c82b844e71726f146c4cedf227d0308b",
+   "expected_sha256": "ada8d8b1b8a3dfda4221b22fd1bb785327d6eeda69834c35ab5ab17b0678afb4",
+   "variants_sha256": "40f060941014aeaf83ee591346e9950f71c02bf9a68c5693804877bfbcbd9eb8"
+  },
+  "datacenter-redundancy": {
+   "source_sha256": "a3051af3eeeec31aee53558dafbbea5d061dc74253618fd6940eba5c39b5bb98",
+   "expected_sha256": "926e866fbdbb3eaac5b7a21360905d1f621a7a6386139afab303e8ba7e62ed47",
+   "variants_sha256": "a5753817a621b846abcb4105d028dbd0d0152214495f5b225044b3882f4f34b9"
+  },
+  "modal-machine-manager": {
+   "source_sha256": "a41065d9ceca1ed035bfd6282f0e937abbd0034ad497a33637a76f2d8a9ebab3",
+   "expected_sha256": "c6d14814bcfa0f41e7401df3b57ea1400e15050b9fb4db3d2e12980d6fde9764",
+   "variants_sha256": "22f00c085b50f218115610ed1580e89f4c0a94d39f8ecf83c80d6712116a06b2"
+  },
+  "modal-runtime": {
+   "source_sha256": "c6e4552d5842347bc9472e53a2351897c3624c92b5a14541aaa3c28216dc4a0d",
+   "expected_sha256": "fd3963e207e9c433b7e5825c8a1691766bb13d5df7322ac97a05e379d2cbba99",
+   "variants_sha256": "1e5a6add0f9d62670f8c884a2f4df679112e233df8539b3983d80c122bdcf8e7"
+  },
+  "gb300-rack-software": {
+   "source_sha256": "10d440af0be8d3730c448e710a48d4dfbd527a966f532084e7f98fd2d4b83fda",
+   "expected_sha256": "9a947233493973c247544ae6e9c175b940feb9d87fc850d4693565c90042c0ab",
+   "variants_sha256": "fd9892244406ec1b2b09ee2cc7adb2af5534ebb52ede5036664f238b776eff31"
+  }
+ },
+ "dataset_verification": "inherited verified from round-10 (24/24 per-file hashes identical since round 09)",
+ "scope": "SKILL-ONLY change: 6 recipe-impacted cases rerun (network, homelab, server, runtime, machine-manager, gb300); pipeline + datacenter verdicts carried"
+}

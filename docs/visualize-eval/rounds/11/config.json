@@ -1,0 +1,41 @@
+{
+ "round": 11,
+ "status": "frozen",
+ "skill_sha256": "fb975dbe337bee801dc098f58695e0068cb1b2d7d79f34c0e473e24a1626cd4e",
+ "binary_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+ "binary_path": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+ "rubric_sha256": "7d9906be07332637e3149457abfda458cc250bc89d2b6d5e857885c92d2b16c6",
+ "dataset_sha256": "e69179e59a3d36985cd7e8672b319b566701f88caef385c9cbde76d060c92d05",
+ "renderer_source_sha256": "0efb3117939b5f1dbce6228a74c4c115a35681d1ace97cc81942febfb6a40ada",
+ "generator_model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+ "reviewer_model": "openai/gpt-6.1-terra:high",
+ "target": {
+  "columns": 77,
+  "rows": 47,
+  "zoom": 1.0
+ },
+ "worker_labels": {
+  "network": "viz-ds11-1",
+  "homelab-nic-trace": "viz-ds11-2",
+  "server-nic-layout": "viz-ds11-3",
+  "modal-machine-manager": "viz-ds11-4",
+  "modal-runtime": "viz-ds11-5",
+  "gb300-rack-software": "viz-ds11-6"
+ },
+ "animation_default": "constant 0.5 cells/step; full-lap capture at ceil(cells/0.5) frames",
+ "layout": "engine-owned (unchanged r10 binary): logical group tags, mid-side attachment, target-aligned ports, lane-aware gaps, inside-hop back edges, label_slot gutters",
+ "evidence": "viz-evidence.sh record (spec-bound, unique names); viz-validate.py --require-records; pinned 77x47 final-spec dumps as fit proof",
+ "skill_change": "family classification demoted to hint (proposal 10); rubric rev 10 softens category_fit accordingly",
+ "cases": [
+  "network",
+  "homelab-nic-trace",
+  "server-nic-layout",
+  "modal-machine-manager",
+  "modal-runtime",
+  "gb300-rack-software"
+ ],
+ "carried_verdicts": {
+  "pipeline": "pass (unchanged)",
+  "datacenter-redundancy": "fail (unchanged; failed on non-recipe grounds)"
+ }
+}
