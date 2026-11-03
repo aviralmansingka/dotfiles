@@ -35,25 +35,16 @@ export function isInputBoxMode(mode: InputMode): boolean {
 	return mode !== "answer";
 }
 
-// Delivery mode for pi.sendUserMessage when Enter fires in the given mode, or
-// undefined when Enter does not send a live message: note stays local and
-// follow-up ends the quiz through the tool result instead.
-export function inputModeDeliverAs(mode: InputMode): "steer" | undefined {
-	return mode === "steering" ? "steer" : undefined;
-}
-
-// In-panel confirmation after a steer is sent. The send never closes the
-// quiz, and the confirmation says so. Only steering sends live.
-export function inputModeSentConfirmation(mode: InputMode): string | undefined {
-	return mode === "steering" ? "Steer sent — the quiz stays open" : undefined;
-}
-
 // Per-mode hint row for the bottom of the panel, so the active mode and what
-// Enter/Esc/Tab do in it are always visible before the captain types.
-export function inputModeHint(mode: InputMode): string {
+// Enter/Esc/Tab do in it are always visible before the captain types. The
+// steering hint only advertises `o` when the quiz actually has context files
+// to open.
+export function inputModeHint(mode: InputMode, hasContextFiles = false): string {
 	switch (mode) {
 		case "steering":
-			return "type a steer • Enter send, quiz stays open • o open files • Tab note • Esc answer";
+			return hasContextFiles
+				? "type a steer • Enter send, quiz stays open • o open files • Tab note • Esc answer"
+				: "type a steer • Enter send, quiz stays open • Tab note • Esc answer";
 		case "note":
 			return "type a note — sent with your answer • Enter keep + back to answers • Tab follow-up • Esc answer";
 		case "follow-up":

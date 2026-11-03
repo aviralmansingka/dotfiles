@@ -15,10 +15,9 @@ import { openJournalInEditor, openNodeView } from "./md-log";
 import { contextFileHint, lessonFileHint, normalizeContextFiles } from "./user-input/context-files";
 import {
 	type InputMode,
-	inputModeDeliverAs,
 	inputModeHint,
 	inputModeLabel,
-	inputModeSentConfirmation,
+	isInputBoxMode,
 	nextInputMode,
 } from "./user-input/input-modes";
 import {
@@ -91,7 +90,7 @@ interface QuizResultDetails {
 	options?: DisplayedOption[]; // full option list in display order, for the transcript
 	correct?: boolean;
 	dontKnow?: boolean; // user selected the ungraded Other option instead of guessing
-	note?: string; // retained when rendering results from older sessions
+	note?: string; // free text typed in note mode; rides with the answer or with a follow-up/too-hard result
 	followUp?: string; // set when the captain sent a follow-up instead of answering
 	thinking?: string; // the learner's optional reasoning, verbatim
 	explanation?: string;
@@ -342,9 +341,11 @@ function tooHardResult(
 	correctIndices: number[],
 	context?: string,
 	title?: string,
+	note?: string,
 ) {
-	const message =
+	let message =
 		"User passed with Ctrl+P because the question was too hard. Explain the prerequisite more simply, then ask an easier quiz question. Do not grade this as wrong or reveal the original answer.";
+	if (note) message += `\nUser's note: ${note}`;
 	return {
 		content: [{ type: "text" as const, text: message }],
 		details: buildStructuredResult({
@@ -355,6 +356,7 @@ function tooHardResult(
 			mode,
 			answers: [],
 			correctIndices,
+			note,
 			message,
 		}),
 	};
@@ -369,8 +371,10 @@ function followUpResult(
 	correctIndices: number[],
 	context?: string,
 	title?: string,
+	note?: string,
 ) {
-	const message = `User steered instead of answering: ${followUp}`;
+	let message = `User sent a follow-up instead of answering: ${followUp}`;
+	if (note) message += `\nUser's note: ${note}`;
 	return {
 		content: [{ type: "text" as const, text: message }],
 		details: buildStructuredResult({
@@ -382,6 +386,7 @@ function followUpResult(
 			answers: [],
 			correctIndices,
 			followUp,
+			note,
 			message,
 		}),
 	};
@@ -704,8 +709,8 @@ async function askSingleChoice(
 					return;
 				}
 				try {
-					pi.sendUserMessage(text, { deliverAs: inputModeDeliverAs("steering") });
-					sentConfirmation = inputModeSentConfirmation("steering");
+					pi.sendUserMessage(text, { deliverAs: "steer" });
+					sentConfirmation = "Steer sent — the quiz stays open";
 					steeringEditor.setText("");
 				} catch (error) {
 					sentConfirmation = undefined;
@@ -762,7 +767,8 @@ async function askSingleChoice(
 				sentConfirmation = undefined;
 
 				if (matchesKey(data, Key.ctrl("p"))) {
-					done({ dontKnow: false, tooHard: true, answers: [] });
+					const note = noteText();
+					done({ dontKnow: false, tooHard: true, answers: [], ...(note ? { note } : {}) });
 					return;
 				}
 				// Tab cycles answer → steering → note → follow-up. Only follow-up
@@ -772,7 +778,7 @@ async function askSingleChoice(
 					return;
 				}
 
-				if (mode !== "answer") {
+				if (isInputBoxMode(mode)) {
 					// Esc returns to answer mode, keeping whatever was typed.
 					if (matchesKey(data, Key.escape)) {
 						setMode("answer");
@@ -812,7 +818,8 @@ async function askSingleChoice(
 					if (matchesKey(data, Key.enter)) {
 						const text = followUpEditor.getText().trim();
 						if (text) {
-							done({ dontKnow: false, answers: [], followUp: text });
+							const note = noteText();
+							done({ dontKnow: false, answers: [], followUp: text, ...(note ? { note } : {}) });
 						} else {
 							setMode("answer");
 						}
@@ -937,7 +944,7 @@ async function askSingleChoice(
 						top,
 						theme.fg("dim", mode === "answer"
 							? joinHints(modeIndicator(theme, mode), "Ctrl+P pause", NAVIGATION_HINT, numberShortcutHint(allOptions.length, "select"), "Enter feedback", `Tab ${inputModeLabel(nextInputMode(mode)).toLowerCase()}`, contextFileHint(contextFiles), lessonFileHint(), "Esc cancel")
-							: joinHints(modeIndicator(theme, mode), inputModeHint(mode))),
+							: joinHints(modeIndicator(theme, mode), inputModeHint(mode, contextFiles.length > 0))),
 						tw,
 						" ",
 					);
@@ -1053,8 +1060,8 @@ async function askMultiChoice(
 					return;
 				}
 				try {
-					pi.sendUserMessage(text, { deliverAs: inputModeDeliverAs("steering") });
-					sentConfirmation = inputModeSentConfirmation("steering");
+					pi.sendUserMessage(text, { deliverAs: "steer" });
+					sentConfirmation = "Steer sent — the quiz stays open";
 					steeringEditor.setText("");
 				} catch (error) {
 					sentConfirmation = undefined;
@@ -1141,7 +1148,8 @@ async function askMultiChoice(
 				sentConfirmation = undefined;
 
 				if (matchesKey(data, Key.ctrl("p"))) {
-					done({ dontKnow: false, tooHard: true, answers: [] });
+					const note = noteText();
+					done({ dontKnow: false, tooHard: true, answers: [], ...(note ? { note } : {}) });
 					return;
 				}
 				// Tab cycles answer → steering → note → follow-up. Only follow-up
@@ -1151,7 +1159,7 @@ async function askMultiChoice(
 					return;
 				}
 
-				if (mode !== "answer") {
+				if (isInputBoxMode(mode)) {
 					// Esc returns to answer mode, keeping whatever was typed.
 					if (matchesKey(data, Key.escape)) {
 						setMode("answer");
@@ -1191,7 +1199,8 @@ async function askMultiChoice(
 					if (matchesKey(data, Key.enter)) {
 						const text = followUpEditor.getText().trim();
 						if (text) {
-							done({ dontKnow: false, answers: [], followUp: text });
+							const note = noteText();
+							done({ dontKnow: false, answers: [], followUp: text, ...(note ? { note } : {}) });
 						} else {
 							setMode("answer");
 						}
@@ -1320,7 +1329,7 @@ async function askMultiChoice(
 						top,
 						theme.fg("dim", mode === "answer"
 							? joinHints(modeIndicator(theme, mode), "Ctrl+P pause", NAVIGATION_HINT, numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter feedback", `Tab ${inputModeLabel(nextInputMode(mode)).toLowerCase()}`, contextFileHint(contextFiles), lessonFileHint(), "Esc cancel")
-							: joinHints(modeIndicator(theme, mode), inputModeHint(mode))),
+							: joinHints(modeIndicator(theme, mode), inputModeHint(mode, contextFiles.length > 0))),
 						tw,
 						" ",
 					);
@@ -1409,7 +1418,7 @@ export default function quiz(pi: ExtensionAPI) {
 			"The tool adds an ungraded Other choice at the bottom. Supply only the real, gradable options. A dontKnow result means the user did not guess. Treat it as a genuine knowledge gap.",
 			"A `too-hard` status means the user pressed Ctrl+P. The question was above their level. Do not grade it. Do not reveal the original answer. Teach the prerequisite in simpler words, then ask an easier question.",
 			"A result with `followUp` set means the captain ended the quiz from follow-up mode. Answer that guidance directly. Do not grade it.",
-			"An answer may carry a `note` field: free text the user typed in note mode and attached to the answer, including Other. It shows what they were thinking or unsure about. Read it and let it steer your follow-up.",
+			"An answer may carry a `note` field: free text the user typed in note mode and attached to the answer, including Other. A `followUp` or `too-hard` result may carry one too. It shows what they were thinking or unsure about. Read it and let it steer your follow-up.",
 			"While a quiz is open, the user can send you a steer from steering mode. It arrives as an ordinary user message and does not close the quiz. If one arrives while a quiz is pending, the quiz is still awaiting its answer.",
 			"Treat each distractor as a diagnostic probe, not filler. Make it a specific mistake the user might hold: a common misconception, or an easily confused concept. The distractor the user picks tells you which gap to teach next. It also tells you what the explanation must address.",
 			"Guardrail: each distractor must be clearly wrong on the intended reading. Make it tempting, but a real error. Do not write a defensible alternative. Do not write a trick question.",
@@ -1491,10 +1500,10 @@ export default function quiz(pi: ExtensionAPI) {
 					return cancelledResult(params.question, mode, correctIndices, context, title);
 				}
 				if (response.followUp) {
-					return followUpResult(params.question, mode, response.followUp, correctIndices, context, title);
+					return followUpResult(params.question, mode, response.followUp, correctIndices, context, title, response.note);
 				}
 				if (response.tooHard) {
-					return tooHardResult(params.question, mode, correctIndices, context, title);
+					return tooHardResult(params.question, mode, correctIndices, context, title, response.note);
 				}
 				return buildResult(params.question, context, mode, options, response, correctIndices, explanation, title);
 			});
@@ -1542,11 +1551,15 @@ export default function quiz(pi: ExtensionAPI) {
 				return new Text(theme.fg("warning", details.message || "quiz unavailable"), 0, 0);
 			}
 			if (details.status === "follow-up") {
-				const body = details.followUp ? `Steering: ${details.followUp}` : (details.message || "Steering");
-				return new Text(theme.fg("accent", body), 0, 0);
+				const body = details.followUp ? `Follow-up: ${details.followUp}` : (details.message || "Follow-up");
+				const lines = [theme.fg("accent", body)];
+				if (details.note) lines.push(theme.fg("muted", `Note: ${details.note}`));
+				return new Text(lines.join("\n"), 0, 0);
 			}
 			if (details.status === "too-hard") {
-				return new Text(theme.fg("warning", "Passed — question was too hard; simplifying next"), 0, 0);
+				const lines = [theme.fg("warning", "Passed — question was too hard; simplifying next")];
+				if (details.note) lines.push(theme.fg("muted", `Note: ${details.note}`));
+				return new Text(lines.join("\n"), 0, 0);
 			}
 
 			const correctSet = new Set(details.correctIndices);

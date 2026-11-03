@@ -288,10 +288,24 @@ assert.ok(
 	formatQuizEntry({ status: "cancelled", question: "Q?" }).includes("Quiz · cancelled"),
 	"a cancelled quiz records the status, not a verdict glyph",
 );
-// The steering field is journaled as a labeled line.
+// The follow-up field is journaled as a labeled line.
 assert.ok(
 	formatQuizEntry({ status: "answered", question: "Q?", followUp: "rebuild the ladder" })
-		.includes("**Steering:** rebuild the ladder"),
+		.includes("**Follow-up:** rebuild the ladder"),
+);
+// The note field rides with answered and follow-up quizzes alike.
+assert.ok(
+	formatQuizEntry({ status: "answered", question: "Q?", note: "guessing from the diagram" })
+		.includes("**Note:** guessing from the diagram"),
+);
+assert.ok(
+	formatQuizEntry({ status: "follow-up", question: "Q?", followUp: "rebuild the ladder", note: "unsure" })
+		.includes("**Note:** unsure"),
+	"a note attached to a follow-up is journaled too",
+);
+assert.ok(
+	!formatQuizEntry({ status: "answered", question: "Q?" }).includes("**Note:**"),
+	"a missing note adds nothing to the entry",
 );
 
 const explainEntry = formatExplainEntry({

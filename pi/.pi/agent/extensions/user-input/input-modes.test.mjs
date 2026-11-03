@@ -10,8 +10,6 @@ const {
 	INPUT_MODES,
 	nextInputMode,
 	inputModeLabel,
-	inputModeDeliverAs,
-	inputModeSentConfirmation,
 	inputModeHint,
 	isInputBoxMode,
 } = jiti("./input-modes.ts");
@@ -40,18 +38,15 @@ assert.equal(isInputBoxMode("steering"), true);
 assert.equal(isInputBoxMode("note"), true);
 assert.equal(isInputBoxMode("follow-up"), true);
 
-// Only steering goes out as a live steer; note stays local and follow-up
-// ends the quiz through the tool result.
-assert.equal(inputModeDeliverAs("steering"), "steer");
-assert.equal(inputModeDeliverAs("note"), undefined);
-assert.equal(inputModeDeliverAs("follow-up"), undefined);
-
-// Steering never closes the quiz silently: its confirmation says so, and the
-// steering hint promises the quiz stays open.
-assert.ok(inputModeSentConfirmation("steering").includes("quiz stays open"));
+// The steering hint promises the quiz stays open — the send never closes it
+// silently.
 assert.ok(inputModeHint("steering").includes("quiz stays open"));
-assert.equal(inputModeSentConfirmation("note"), undefined);
-assert.equal(inputModeSentConfirmation("follow-up"), undefined);
+
+// The steering hint only advertises `o` when the quiz has context files to
+// open; without them `o` is literal text, so the hint must not promise it.
+assert.ok(inputModeHint("steering", true).includes("o open files"));
+assert.ok(!inputModeHint("steering", false).includes("o open files"));
+assert.ok(!inputModeHint("steering").includes("o open files"));
 
 // Every input-box mode's hint names what Enter and Tab do next.
 for (const mode of ["steering", "note", "follow-up"]) {

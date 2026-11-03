@@ -151,6 +151,7 @@ interface QuizDetails {
 	correct?: boolean;
 	dontKnow?: boolean;
 	thinking?: string; // the learner's optional reasoning, verbatim
+	note?: string; // free text typed in note mode; rides with the answer or a follow-up/too-hard result
 	explanation?: string;
 	followUp?: string;
 	message?: string;
@@ -203,13 +204,17 @@ export function formatQuizEntry(details: QuizDetails): string {
 		lines.push("");
 		lines.push(`> ${details.thinking.trim().replace(/\n/g, "\n> ")}`);
 	}
+	if (details.note?.trim()) {
+		lines.push("");
+		lines.push(`**Note:** ${details.note.trim()}`);
+	}
 	if (details.explanation) {
 		lines.push("");
 		lines.push(`**Why:** ${details.explanation.trim()}`);
 	}
 	if (details.followUp) {
 		lines.push("");
-		lines.push(`**Steering:** ${details.followUp.trim()}`);
+		lines.push(`**Follow-up:** ${details.followUp.trim()}`);
 	}
 	lines.push("");
 	return lines.join("\n");

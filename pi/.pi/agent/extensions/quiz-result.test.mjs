@@ -154,7 +154,7 @@ const followUp = await quizTool.execute(
 assert.equal(followUp.details.status, "follow-up");
 assert.equal(followUp.details.followUp, "wait");
 assert.deepEqual(followUp.details.answers, []);
-assert.match(followUp.content[0].text, /User steered instead of answering: wait/);
+assert.match(followUp.content[0].text, /User sent a follow-up instead of answering: wait/);
 
 // Every status renders a distinct, visible transcript row.
 const identityTheme = { fg: (_color, text) => text, bold: (text) => text };
@@ -165,7 +165,7 @@ assert.match(render(dontKnow), /Other — I don't know/);
 assert.match(render(dontKnow), /✓ 1\. First/);
 assert.doesNotMatch(render(dontKnow), /✗/, "dontKnow never shows a wrong mark");
 assert.match(render(cancelled), /User cancelled the quiz/);
-assert.match(render(followUp), /Steering: wait/);
+assert.match(render(followUp), /Follow-up: wait/);
 
 // The thinking phase sits between select and feedback: select-Enter opens it,
 // Enter submits the learner's optional reasoning, and the verdict comes after.

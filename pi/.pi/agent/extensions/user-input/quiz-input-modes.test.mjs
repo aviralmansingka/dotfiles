@@ -184,9 +184,10 @@ exports.wrapTextWithAnsi = (text, width) => {
 
 	// With an empty steering buffer, `o` still opens the context files and the
 	// quiz stays open; once text is in the buffer, `o` is literal text again.
+	// The hint only promises `o` because this quiz has context files.
 	globalThis.__openedEditors = [];
 	const steerO = await execute({ ...params, contextFiles: ["notes.md"] }, [
-		{ data: "tab", selected: [/Mode: Steering/] },
+		{ data: "tab", selected: [/Mode: Steering/, /o open files/] },
 		{ data: "o", selected: [/Pick beta[\s\S]*Mode: Steering/] },
 		{ data: "x", selected: [/› x/] },
 		{ data: "o", selected: [/› xo/] },
@@ -217,8 +218,13 @@ exports.wrapTextWithAnsi = (text, width) => {
 	assert.equal(sentSteers.length, 2, "note mode never sends a live steer");
 
 	// Follow-up mode is the only mode that ends the quiz — visibly, with a
-	// follow-up result the agent, the transcript, and the UI all show.
+	// follow-up result the agent, the transcript, and the UI all show. A note
+	// typed earlier rides with the follow-up instead of being discarded.
 	const followUp = await execute(params, [
+		{ data: "tab" },
+		{ data: "tab" },
+		{ data: "i" }, { data: "d" }, { data: "k", selected: [/Mode: Note/, /› idk/] },
+		{ data: "enter", selected: [/Mode: Answer/] },
 		{ data: "tab" },
 		{ data: "tab" },
 		{ data: "tab", selected: [/Mode: Follow-up/, /Enter end quiz and send/] },
@@ -229,9 +235,12 @@ exports.wrapTextWithAnsi = (text, width) => {
 	assert.equal(followUp.details.status, "follow-up");
 	assert.equal(followUp.details.followUp, "go");
 	assert.equal(followUp.details.answers.length, 0);
-	assert.match(followUp.content[0].text, /User steered instead of answering: go/);
+	assert.equal(followUp.details.note, "idk", "the note rides with the follow-up result");
+	assert.match(followUp.content[0].text, /User sent a follow-up instead of answering: go/);
+	assert.match(followUp.content[0].text, /User's note: idk/);
 	const followUpView = quizTool.renderResult({ details: followUp.details }, {}, theme);
-	assert.match(followUpView.text, /Steering: go/);
+	assert.match(followUpView.text, /Follow-up: go/);
+	assert.match(followUpView.text, /Note: idk/);
 	assert.doesNotMatch(followUpView.text, /Correct/);
 	assert.equal(sentSteers.length, 2, "follow-up ends the quiz instead of sending a steer");
 
@@ -247,14 +256,18 @@ exports.wrapTextWithAnsi = (text, width) => {
 	assert.equal(emptyFollowUp.details.status, "cancelled");
 
 	// Ctrl+P still works from every mode — the too-hard escape hatch is never
-	// blocked by an open input box.
+	// blocked by an open input box — and a note already typed rides with the
+	// too-hard result instead of being discarded.
 	const tooHardFromNote = await execute(params, [
 		{ data: "tab" },
 		{ data: "tab", selected: [/Mode: Note/] },
+		{ data: "h" }, { data: "m" }, { data: "m", selected: [/› hmm/] },
 		{ data: "ctrl+p" },
 	]);
 	assert.equal(tooHardFromNote.details.status, "too-hard");
 	assert.equal(tooHardFromNote.details.followUp, undefined);
+	assert.equal(tooHardFromNote.details.note, "hmm", "the note rides with the too-hard result");
+	assert.match(tooHardFromNote.content[0].text, /User's note: hmm/);
 
 	// Multi-select cycles the same modes: a steer keeps the quiz open and the
 	// captain can still toggle and submit an answer afterwards.
