@@ -7,7 +7,7 @@ import { mkdtempSync, writeFileSync, readFileSync, readdirSync, statSync, realpa
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { MissionBridge, repositoryWorkspace, quiescent } from "./core.mjs";
+import { MissionBridge, repositoryWorkspaces, quiescent } from "./core.mjs";
 import { missionLaunchConfig } from "../interactive-subagents/pi-extension/subagents/mission-launch.mjs";
 
 const exec = promisify(execFile);
@@ -30,11 +30,11 @@ test("normal turn is quiescent only without queued work and registered waits", (
   } finally {delete globalThis[key]}
 });
 
-test("workspace resolution uses the primary repository and refuses ambiguity", () => {
-  const records=[{workspace_id:"repo",worktree:{repo_key:"/git/repo",is_linked_worktree:false}}, {workspace_id:"old-feature",worktree:{repo_key:"/git/repo",is_linked_worktree:true}}];
-  assert.equal(repositoryWorkspace(records,"/git/repo"),"repo");
-  assert.throws(()=>repositoryWorkspace(records,"/other"),/primary/);
-  assert.throws(()=>repositoryWorkspace([...records,records[0]],"/git/repo"),/primary/);
+test("workspace lookup keeps every workspace of one repository lineage", () => {
+  const records=[{workspace_id:"repo",worktree:{repo_key:"/git/repo",is_linked_worktree:false}}, {workspace_id:"mission-a",worktree:{repo_key:"/git/repo",is_linked_worktree:true}}, {workspace_id:"other",worktree:{repo_key:"/git/other",is_linked_worktree:false}}];
+  assert.deepEqual(repositoryWorkspaces(records,"/git/repo").map(w=>w.workspace_id),["repo","mission-a"]);
+  assert.deepEqual(repositoryWorkspaces(records,"/git/absent"),[]);
+  assert.deepEqual(repositoryWorkspaces(undefined,"/git/repo"),[]);
 });
 
 test("internal mission launch config forwards only non-secret paths", () => {
@@ -53,15 +53,32 @@ async function fixture(t, checkpoint=false) {
   await git("init","-b","main");
   await git("-c","user.name=Fixture","-c","user.email=test@example.invalid","-c","commit.gpgsign=false","commit","--allow-empty","-m","Fixture");
   const env={...process.env, MISSION_BIN:bin,MISSION_VAULT:vault,MISSION_STATE_DIR:cache,HERDR_ENV:"1",HERDR_PANE_ID:"repo:p2",HERDR_WORKSPACE_ID:"repo"};
+  // These fixtures act as the captain. An ambient subagent identity (the gate
+  // runs inside a pi step agent) must not turn launches into a refusal.
+  delete env.PI_SUBAGENT_NAME;
   // Parent credentials must not leak into requests or any spawned child.
   env.MISSION_TOKEN="unrelated-parent-token";env.MISSION_ATTEMPT="unrelated-parent-attempt";
-  const f={ env, hookFailures:0, hookIDs:[], tabs:[], calls:[] };
+  const f={ env, hookFailures:0, hookIDs:[], tabs:[], worktrees:[], workspaces:[], calls:[] };
   const run=async(binary,args,options={})=>{
     f.calls.push({binary,args,env:options.env});
     if(binary==="herdr") {
-      const result=args[0]==="workspace"?{workspaces:[{workspace_id:"repo",worktree:{repo_key:await f.bridge.common(repo),is_linked_worktree:false}}]}:
-        args[0]==="tab"? (f.tabs.push(args),{root_pane:{pane_id:"repo:p3",workspace_id:"repo"}}):
-        {panes:[{pane_id:env.HERDR_PANE_ID,cwd:f.cwd,foreground_cwd:f.cwd}]};
+      const common=await f.bridge.common(repo);
+      const flag=name=>args[args.indexOf(name)+1];
+      let result;
+      if(args[0]==="workspace") result={workspaces:[{workspace_id:"repo",worktree:{repo_key:common,is_linked_worktree:false}},...f.workspaces]};
+      else if(args[0]==="worktree") {
+        f.worktrees.push(args);
+        const path=flag("--path");
+        let ws=f.workspaces.find(w=>w.worktree.checkout_path===path);
+        const already_open=Boolean(ws);
+        if(!ws) { ws={workspace_id:"w-mission",worktree:{repo_key:common,is_linked_worktree:true,checkout_path:path}}; f.workspaces.push(ws); }
+        result={type:"worktree_opened",already_open,workspace:ws,worktree:{path},root_pane:{pane_id:ws.workspace_id+":p1",workspace_id:ws.workspace_id}};
+      }
+      else if(args[0]==="tab") { f.tabs.push(args); const workspace=flag("--workspace"); result={root_pane:{pane_id:workspace+":p2",workspace_id:workspace}}; }
+      else {
+        const workspace=flag("--workspace"), here=workspace===(f.paneWorkspace||"repo"), cwd=f.paneCwd||f.cwd;
+        result={panes:here?[{pane_id:env.HERDR_PANE_ID,cwd,foreground_cwd:cwd}]:[]};
+      }
       return JSON.stringify({result});
     }
     if(binary===bin && args.includes("hook")) {
@@ -144,17 +161,45 @@ test("failed checks retain ownership and successful correction settles it",needs
   const r=await f.bridge.call(["show",f.handle]);assert.equal(r.state.attempts[0].status,"succeeded");assert.equal(r.state.status,"ready");
 });
 
-test("mission launch reuses repository workspace and reserves only one worker",needsCLI,async t=>{
+test("mission launch registers a Herdr worktree and adopts its workspace",needsCLI,async t=>{
   const f=await fixture(t);const requests=[];
   globalThis.__pi_interactive_subagents={executeSubagent:async(p)=>{requests.push(p);return {details:{status:"started",sessionFile:f.file}}}};
   try {
     const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
-    assert.equal(requests[0].cwd,f.cwd);assert.equal(requests[0].pane,"repo:p3");assert.equal(requests[0].agent,"mission-worker");
+    assert.equal(requests[0].cwd,f.cwd);assert.equal(requests[0].agent,"mission-worker");
     assert.equal(requests[0].missionContext.vault,f.vault);assert.equal(requests[0].missionContext.binary,bin);
     assert.equal(JSON.stringify(requests[0]).includes("unrelated-parent-token"),false);
-    assert.deepEqual(f.tabs[0].slice(0,4),["tab","create","--workspace","repo"]);
-    assert.ok(f.tabs[0].includes("--no-focus"));
+    // The mission branch is mission/<slug>, and Herdr owns that checkout as its
+    // own linked worktree workspace, anchored on the primary checkout.
+    const runtime=(await f.bridge.call(["show",f.handle])).state.runtime;
+    assert.equal(runtime.branch,"mission/session-progress");
+    assert.deepEqual(f.worktrees[0].slice(0,3),["worktree","open","--cwd"]);
+    assert.equal(f.worktrees[0][3],f.repo);assert.equal(f.worktrees[0][f.worktrees[0].indexOf("--path")+1],f.cwd);
+    assert.ok(f.worktrees[0].includes("--no-focus"));
+    // A fresh worktree workspace hosts the worker in its first tab — no extra tab.
+    assert.equal(f.tabs.length,0);assert.equal(requests[0].pane,"w-mission:p1");assert.equal(r.workspace,"w-mission");
+    // The mission session is accepted as a pane of that worktree workspace, and
+    // still refused when its cwd is not the mission checkout.
+    f.paneWorkspace="w-mission";
+    assert.deepEqual(await f.bridge.assertSurface(f.ctx),{workspace:"w-mission",pane:f.env.HERDR_PANE_ID});
+    await assert.rejects(f.bridge.assertSurface({...f.ctx,cwd:f.repo}),/mission worktree/);
+    f.paneWorkspace="repo";
     const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,false);assert.equal(requests.length,1);
+  } finally {delete globalThis.__pi_interactive_subagents}
+});
+
+test("an already open mission workspace gets its own launch tab",needsCLI,async t=>{
+  const f=await fixture(t);const requests=[];
+  // The human already opened the mission worktree as a workspace: relanding on
+  // its parked first tab could take over that pane, so a launch takes a new tab.
+  f.workspaces.push({workspace_id:"w-open",worktree:{repo_key:await f.bridge.common(f.repo),is_linked_worktree:true,checkout_path:f.cwd}});
+  globalThis.__pi_interactive_subagents={executeSubagent:async(p)=>{requests.push(p);return {details:{status:"started",sessionFile:f.file}}}};
+  try {
+    const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
+    assert.equal(f.worktrees.length,1);assert.equal(requests[0].pane,"w-open:p2");
+    assert.deepEqual(f.tabs[0].slice(0,4),["tab","create","--workspace","w-open"]);
+    assert.equal(f.tabs[0][f.tabs[0].indexOf("--cwd")+1],f.cwd);
+    assert.ok(f.tabs[0].includes("--no-focus"));
   } finally {delete globalThis.__pi_interactive_subagents}
 });
 

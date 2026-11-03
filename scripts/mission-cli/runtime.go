@@ -90,6 +90,12 @@ func (s *Store) checkBinding(r Record, cwd, branch string) (string, error) {
 	return common, nil
 }
 
+// missionBranch is the mission's branch. Slugs are validated as
+// [a-z0-9]+(-[a-z0-9]+)*, so the name is a legal ref component; callers still
+// confirm it with `git check-ref-format --branch` because the branch name is a
+// durable, user-visible identity that other tooling matches on.
+func missionBranch(slug string) string { return "mission/" + slug }
+
 // A mission keeps its worktree across steps, retries, and checkpoint revisions.
 // Existing sessions can adopt their current linked worktree with --cwd.
 func (s *Store) workspace(h, cwd, base, root string) (Record, error) {
@@ -135,7 +141,13 @@ func (s *Store) workspace(h, cwd, base, root string) (Record, error) {
 			if e != nil {
 				return e
 			}
-			branch = "task/mission-" + r.Mission.Slug
+			// Missions own mission/<slug>. The checkout lives in the shared Herdr
+			// worktree root so the Herdr worktree registration (done by the Pi
+			// extension) finds an existing linked worktree instead of creating one.
+			branch = missionBranch(r.Mission.Slug)
+			if _, e = gitText(checkout, "check-ref-format", "--branch", branch); e != nil {
+				return problem("invalid_branch", "%s is not a valid git branch name for mission slug %s", branch, r.Mission.Slug)
+			}
 			if root == "" {
 				home, _ := os.UserHomeDir()
 				root = filepath.Join(home, ".herdr", "worktrees", r.Mission.Repo)
@@ -223,16 +235,13 @@ func (s *Store) attachBinding(r *Record, p PiAttachment, cwd, branch string) err
 	if b.SessionFile != "" && b.SessionFile != p.SessionFile {
 		return problem("session_owned", "mission already records a different session file")
 	}
-	// One repository workspace, even when its worktrees have different sessions.
-	all, e := s.list()
-	if e != nil {
-		return e
-	}
-	for _, other := range all {
-		if ob := other.State.Runtime; ob != nil && ob.Common == common && ob.Machine == machine() && ob.Workspace != "" && ob.Workspace != p.Workspace {
-			return problem("workspace_mismatch", "repository missions share Herdr workspace %s", ob.Workspace)
-		}
-	}
+	// Workspace identity is per mission worktree, not per repository: the Pi
+	// extension registers each mission checkout as its own Herdr worktree
+	// workspace, so two missions bound in one repository legitimately record
+	// different workspaces. Missions recorded before that change still share the
+	// repository's primary workspace, so the CLI accepts both shapes. The pane
+	// cwd remains the real binding: checkBinding already refuses a worktree two
+	// missions would share.
 	b.SessionID, b.SessionFile, b.Workspace, b.Pane = p.SessionID, p.SessionFile, p.Workspace, p.Pane
 	return nil
 }

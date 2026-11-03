@@ -9,10 +9,11 @@ const exec = promisify(execFile);
 const hash = text => createHash("sha256").update(text).digest("hex");
 export const slug = title => title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 64).replace(/-$/, "");
 const active = a => a && ["running", "reported"].includes(a.status);
-export function repositoryWorkspace(workspaces, common) {
-  const matches = workspaces.filter(w => w.worktree?.repo_key === common && !w.worktree?.is_linked_worktree);
-  if (matches.length !== 1) throw new Error("Open the repository's primary Herdr workspace first; missions reuse that workspace.");
-  return matches[0].workspace_id;
+/** Every Herdr workspace that belongs to this repository lineage: the primary
+ * checkout's workspace plus one linked-worktree workspace per worktree Herdr
+ * has open (missions register their own mission/<slug> checkout). */
+export function repositoryWorkspaces(workspaces, common) {
+  return (workspaces || []).filter(w => w.worktree?.repo_key === common);
 }
 export function pendingCount(symbol) {
   const fn = globalThis[Symbol.for(symbol)];
@@ -70,15 +71,22 @@ export class MissionBridge {
     return JSON.parse(await this.run("herdr", args, { env: this.env })).result;
   }
   async common(cwd) { return realpathSync((await this.run("git", ["-C", cwd, "rev-parse", "--path-format=absolute", "--git-common-dir"])).trim()); }
-  async workspace(common) { return repositoryWorkspace((await this.herdr(["workspace", "list"])).workspaces, common); }
   async assertSurface(ctx) {
-    const common = await this.common(ctx.cwd), workspace = await this.workspace(common);
-    const result = await this.herdr(["pane", "list", "--workspace", workspace]);
-    const pane = result.panes?.find(p => p.pane_id === this.env.HERDR_PANE_ID);
-    if (!pane || realpathSync(pane.foreground_cwd || pane.cwd) !== realpathSync(ctx.cwd))
-      throw new Error("This session must run in the mission worktree inside the repository's primary workspace. Move/resume it there before attaching.");
-    this.surfaceSession = ctx.sessionManager.getSessionId();
-    return { workspace, pane: pane.pane_id };
+    const common = await this.common(ctx.cwd), cwd = realpathSync(ctx.cwd);
+    const workspaces = repositoryWorkspaces((await this.herdr(["workspace", "list"])).workspaces, common);
+    if (!workspaces.length) throw new Error("Open the repository's Herdr workspace first; missions register their worktree from it.");
+    // A mission session lives in its own worktree workspace. Missions bound
+    // before worktree workspaces existed still sit in the primary workspace, so
+    // accept any workspace of this repository whose pane sits in the mission
+    // checkout — the pane cwd, not the workspace count, is the binding.
+    for (const w of workspaces) {
+      const result = await this.herdr(["pane", "list", "--workspace", w.workspace_id]);
+      const pane = result.panes?.find(p => p.pane_id === this.env.HERDR_PANE_ID);
+      if (!pane || realpathSync(pane.foreground_cwd || pane.cwd) !== cwd) continue;
+      this.surfaceSession = ctx.sessionManager.getSessionId();
+      return { workspace: w.workspace_id, pane: pane.pane_id };
+    }
+    throw new Error("This session must run in the mission worktree inside the repository's Herdr workspace. Move/resume it there before attaching.");
   }
   async restore(ctx) {
     this.hint = null; this.error = null; this.surfaceSession = null; this.expectedAttachment = false;
@@ -178,23 +186,34 @@ export class MissionBridge {
     const repo = repos.find(r => r.slug === initial.mission.repo);
     const checkout = repo?.checkouts?.[(await import("node:os")).hostname()];
     if (!checkout) throw new Error("Register a local repository checkout first.");
-    const workspace = await this.workspace(await this.common(checkout));
     const r = await this.call(["workspace", handle]);
+    const cwd = r.state.runtime.cwd;
     const reservation = await this.call(["launch", handle]);
     if (!reservation.acquired) return { launched: false, reason: "Owner or launch intent already recorded; resume/attach it instead of spawning again.", runtime: reservation.runtime };
     const launchID = reservation.runtime.launch_id;
-    // No workspace create/open: every mission is a tab in the primary repo workspace.
-    const tab = await this.herdr(["tab", "create", "--workspace", workspace, "--cwd", r.state.runtime.cwd, "--label", initial.mission.slug, "--no-focus"]);
-    const pane = tab.root_pane?.pane_id;
-    if (!pane || tab.root_pane.workspace_id !== workspace) throw new Error("Herdr returned a different workspace; launch intent retained for inspection.");
-    const result = await spawn({ agent: "mission-worker", name: "mission-" + hash(handle).slice(0, 20), cwd: r.state.runtime.cwd, pane,
+    // The CLI created the mission/<slug> checkout; Herdr registers it as the
+    // repository's linked worktree workspace (idempotent: a relaunch reuses the
+    // same workspace). Anchored on the primary checkout, because Herdr refuses
+    // create/open from inside a linked worktree.
+    const worktree = await this.herdr(["worktree", "open", "--cwd", checkout, "--path", cwd, "--no-focus"]);
+    const workspace = worktree.workspace?.workspace_id;
+    if (!workspace) throw new Error("Herdr did not return the mission worktree workspace; launch intent retained for inspection.");
+    // A fresh workspace's first tab hosts the worker. A workspace that was
+    // already open may be parked on the mission's previous session, so a
+    // relaunch gets its own tab there instead of taking over that pane.
+    const holder = worktree.already_open
+      ? await this.herdr(["tab", "create", "--workspace", workspace, "--cwd", cwd, "--label", initial.mission.slug, "--no-focus"])
+      : worktree;
+    const pane = holder.root_pane?.pane_id;
+    if (!pane || holder.root_pane.workspace_id !== workspace) throw new Error("Herdr returned a different workspace; launch intent retained for inspection.");
+    const result = await spawn({ agent: "mission-worker", name: "mission-" + hash(handle).slice(0, 20), cwd, pane,
       missionContext: { vault: this.vault, binary: this.binary, stateDir: this.cacheDir },
       task: `Work on mission ${handle}. Before reading or editing repository files, call mission with action=attach, handle=${handle}, launch_id=${launchID}. Then follow the returned step brief and the missions skill. Report structured progress. Write the required artifact and call finish when the step is ready. Stop at checkpoints; keep this session and worktree for later steps.` }, ctx);
     const details = result?.details;
     if (details?.status !== "started" || !details.sessionFile || details.error)
       throw new Error("Mission launch was not acknowledged; intent and tab retained. Inspect the existing session before retrying.");
     await this.call(["launch", handle, "--launch-id", launchID, "--session-file", details.sessionFile]);
-    return { launched: true, runtime: (await this.call(["show", handle])).state.runtime, session_file: details.sessionFile, pane };
+    return { launched: true, runtime: (await this.call(["show", handle])).state.runtime, session_file: details.sessionFile, pane, workspace };
   }
   async action(ctx, p, eventID = randomUUID()) {
     const handle = p.handle || this.hint?.handle;
