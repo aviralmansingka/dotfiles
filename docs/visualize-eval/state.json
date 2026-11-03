@@ -2767,7 +2767,7 @@
   }
  },
  "round_12": {
-  "status": "1 of 2 verdicts in (runtime FAIL - label ownership + cross-view hue); mm judge in stage B",
+  "status": "COMPLETE: 2/8 green (carried); 43P/13F/4B of 60; both reruns FAIL on engine rendering (label ownership x2, cross-view hue new), coverage-over-budget upheld by both judges; 2 review tabs open; round-13 proposal: engine-first",
   "skill": "proposal 11 44935981\u2026 (budget as hint; coverage overrides)",
   "engine": "db70722b\u2026 (unchanged r10 binary)",
   "rubric": "rev 10 5e09b9be\u2026",
@@ -2786,7 +2786,7 @@
     "views": "2: v1 11n/12e control/provision/state 68x41; v2 11n/11e machines/boot/heartbeat/ops 65x41; all 23 relations once each",
     "validation": "captain rerun: all checks passed both views; v2 ambiguous 2->0 via minlen:2 mch->boot corridor",
     "highlights": "1.8x hint density per view; third clean view rejected as 4-edge over-split (density rule working); bridges 6+2 kept with measured reason; 225 records incl. captain's 2 probes",
-    "judge": "spawn next"
+    "judge": "VERDICT FAIL (terra): sema F (4 uncertain v2 owners, checker 0) / work F (3 probe inputs unbundled; captain capture snapshotted pre-revision v2) / anim BLOCKED (independent equal-distance comparison incomplete) / arro-layo-conc-cate-bord P"
    }
   }
  }
