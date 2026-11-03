@@ -585,24 +585,32 @@ async function askRunCommand(
 						addWrapped(top, theme.fg("warning", `${autoRun.message} Esc cancels; hard timeout ${NVIM_RUN_TIMEOUT_MS / 1000}s.`), tw, " ");
 					}
 					if (autoRun.status === "error") {
-						addWrapped(top, theme.fg("warning", `Neovim run failed: ${autoRun.message}. Manual copy/paste still works.`), tw, " ");
+						addWrapped(top, theme.fg("warning", `Neovim run failed: ${autoRun.message}. r retries · Manual copy/paste still works.`), tw, " ");
 					}
 					if (copied) {
 						addT(theme.fg("success", " ✓ copied to clipboard"));
 					}
 					const label =
-						focus === "editor"
-							? theme.fg("accent", "Output (paste what you saw below):")
-							: theme.fg("muted", "Output (paste what you saw below) — Tab to focus:");
+						autoRun.status === "running"
+							? theme.fg("muted", "Capturing output automatically — no paste needed:")
+							: focus === "editor"
+								? theme.fg("accent", "Output (paste what you saw below):")
+								: theme.fg("muted", "Output (paste what you saw below) — Tab to focus:");
 					addWrapped(top, label, tw, " ");
 					addT(
 						theme.fg(
 							"dim",
-							focus === "editor" ? " Enter — submit · Tab — unfocus · Esc — cancel" : " Tab — focus output · Esc — cancel",
+							autoRun.status === "running"
+								? " Esc — cancel the Neovim run"
+								: focus === "editor"
+									? " Enter — submit · Tab — unfocus · Esc — cancel"
+									: " Tab — focus output · Esc — cancel",
 						),
 					);
 					if (focus !== "editor" && editor.getText().trim().length === 0) {
-						bottom.push(theme.fg("dim", " output — Tab to paste"));
+						bottom.push(
+							theme.fg("dim", autoRun.status === "running" ? " output — captured automatically" : " output — Tab to paste"),
+						);
 					} else {
 						for (const line of editorInnerLines(editor, bw)) bottom.push(line);
 					}
@@ -614,6 +622,12 @@ async function askRunCommand(
 				},
 
 				handleInput(data: string) {
+					// While the Neovim run is live, only cancellation is accepted — the
+					// terminal owns the command, so a second submit would duplicate it.
+					if (autoRun.status === "running") {
+						if (matchesKey(data, Key.escape)) finish(null);
+						return;
+					}
 					if (focus === "editor") {
 						if (matchesKey(data, Key.enter)) {
 							finish({ output: outputText() ?? "" });
@@ -632,7 +646,8 @@ async function askRunCommand(
 						return;
 					}
 
-					// Unfocused: y yanks and focuses output, r runs via Neovim, Tab only focuses.
+					// Unfocused: y yanks and focuses output, r (or its R alias) runs via
+					// Neovim, Tab only focuses.
 					if (data === "y") {
 						focus = "editor";
 						editor.focused = true;
@@ -644,7 +659,7 @@ async function askRunCommand(
 							.catch(() => {});
 						return;
 					}
-					if (data === "r") {
+					if (data === "r" || data === "R") {
 						startAutoRun();
 						return;
 					}

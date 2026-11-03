@@ -10,13 +10,6 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-	FAST_MODE_SLOT,
-	fastModeEnabled as slotEnabled,
-	notifyFastModeChange,
-	onFastModeChange,
-	setFastModeEnabled,
-} from "./fast-mode-slot.mjs";
 import { resolveJiti } from "./test-lib/jiti.mjs";
 
 const require = createRequire(import.meta.url);
@@ -34,44 +27,6 @@ const jiti = createJiti(import.meta.url, {
 const savedFastMode = process.env.PI_FAST_MODE;
 delete process.env.PI_FAST_MODE;
 
-// Fireworks chat catalogue: two ids with a Fast sibling, the rest without.
-const fireworksIds = ["glm-latest", "glm-fast-latest", "kimi-k3", "kimi-k3-fast", "deepseek-v3", "auto"];
-
-/** Drop the shared slot so the next read re-resolves the startup default. */
-function resetSlot() {
-	delete globalThis[FAST_MODE_SLOT];
-}
-
-function fakePi() {
-	const commands = new Map();
-	const handlers = new Map();
-	const setModelCalls = [];
-	const pi = {
-		registerCommand: (name, options) => commands.set(name, options),
-		on: (name, handler) => handlers.set(name, handler),
-		setModel: async (model) => {
-			setModelCalls.push(model);
-			return pi.setModelResult;
-		},
-		setModelResult: true,
-	};
-	return { pi, commands, handlers, setModelCalls };
-}
-
-function fakeCtx(model) {
-	const notes = [];
-	const ctx = {
-		model,
-		modelRegistry: {
-			getModelsOfType: (type, provider) =>
-				type === "chat" && provider === "fireworks"
-					? fireworksIds.map((id) => ({ provider: "fireworks", id }))
-					: [],
-		},
-		ui: { notify: (message, level) => notes.push({ message, level }) },
-	};
-	return { ctx, notes };
-}
 
 try {
 	const {

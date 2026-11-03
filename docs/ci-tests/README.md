@@ -17,7 +17,7 @@ pi agent extensions (job `pi-tests`, gated on `pi/**` + `agents/**`):
 | No-mistakes | gate / pane / bridge tests | stmts 93.5 %, branch 79.5 % | 9.4 s |
 | Subagents + editor | interactive-subagents.test.mjs, nvim-open.test.mjs | nvim-open 98 %, herdr 99 %, session 93 %, tmux 91 % | 1.1 s |
 | User input | user-input/** (10 files) + quiz/explain/ask | overall 94.2 %; user-input/** 100/100 | 0.48 s |
-| Run-command | run-command.test.mjs | run-command.ts 95.6 %; nvim-terminal 100 % | 1.22 s |
+| Run-command | run-command.test.mjs | run-command.ts 95.2 %; nvim-terminal 100 % | 1.6 s |
 | Lesson journal | md-log / lesson / focus-buffer tests | 98 / 100 / 97 % | 3.1 s |
 | Practice (problem / conclude) | practice.test.mjs | demand, attempt, commitment, reveal, cancel, session keying, transcript renders | 0.05 s |
 | Mermaid v2 | mermaid.test.mjs | stmts 94.6 %, branch 81.2 %, funcs 100 % | 0.44 s |
