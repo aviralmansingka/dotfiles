@@ -290,6 +290,10 @@ pub struct SpecDiagram {
     /// drawn inside a dotted box, which reads as "inside that box", not as
     /// a node. Routes keep clear of the dotted perimeter.
     pub enclosed: bool,
+    /// Draw the dotted box around exactly these nodes, leaving everything
+    /// else (actors, external systems) outside the boundary. Empty falls
+    /// back to `enclosed`: the whole band.
+    pub enclosure: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -332,6 +336,11 @@ struct RawDiagram {
     trunks: Vec<SpecTrunk>,
     #[serde(default)]
     enclosed: bool,
+    /// The dotted box wraps exactly these nodes (the nested cells), so
+    /// actors and external systems stay outside the boundary. Takes
+    /// precedence over `enclosed`, which wraps the whole diagram band.
+    #[serde(default)]
+    enclosure: Option<Vec<String>>,
 }
 
 /// The single-graph fields, gathered so the validator runs on either the top
@@ -739,6 +748,7 @@ impl Spec {
                 description,
                 graph: Box::new(graph),
                 enclosed: raw.enclosed,
+                enclosure: raw.enclosure.unwrap_or_default(),
             });
         }
 
@@ -1408,9 +1418,12 @@ pub struct Report {
     /// their source nor their destination: the round-13 "false relation"
     /// defect. Zero is the contract.
     pub passes_near_unrelated_node: usize,
-    /// Route cells sitting on a dotted enclosure boundary. A route may run
-    /// inside the box or outside it, never through its dotted line.
+    /// Route cells running ALONG a dotted enclosure boundary. A relation
+    /// may enter the box perpendicularly; it may not travel on its edge.
     pub enclosure_crossings: usize,
+    /// Routes that enter or leave a dotted enclosure: a normal relation
+    /// between an outside element and a nested cell.
+    pub enclosure_entrances: usize,
     /// One entry per `(route, unrelated node)` pair behind that count, so
     /// `--check` can name the relation instead of only counting it.
     pub near_misses: Vec<router::NearMiss>,
@@ -1814,6 +1827,7 @@ fn build_single(
         nodes: boxes.len(),
         edges: spec.edges.len(),
         enclosure_crossings: 0,
+        enclosure_entrances: 0,
         routes: routes_spec.len(),
         extent: plan.extent,
         shared_run: plan.shared_run,
@@ -1961,9 +1975,30 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
         // bounds miss, so the band takes the wider of the two.
         let base_width = ((max_x - min_x).ceil() as i32).max(report.extent.0 + 1);
         let base_height = ((max_y - min_y).ceil() as i32).max(report.extent.1 + 1);
-        // An enclosed diagram gets one cell of clearance on every side, so
-        // no route, label, or dot can ever touch the dotted boundary.
-        let pad = i32::from(diagram.enclosed);
+        // A dotted enclosure wraps the nested cells only when the spec names
+        // them: actors and external systems stay outside the boundary. With
+        // no member list it wraps the whole band.
+        let members: Vec<&str> = diagram.enclosure.iter().map(String::as_str).collect();
+        let member_rect: Option<(i32, i32, i32, i32)> = if members.is_empty() {
+            None
+        } else {
+            let mut rect: Option<(i32, i32, i32, i32)> = None;
+            for node in flow.nodes() {
+                if !members.contains(&node.id.as_str()) {
+                    continue;
+                }
+                let (x0, y0) = (node.position.x as i32, node.position.y as i32);
+                let (x1, y1) = (x0 + node.width as i32 - 1, y0 + node.height as i32 - 1);
+                rect = Some(match rect {
+                    None => (x0, y0, x1, y1),
+                    Some((ax, ay, bx, by)) => (ax.min(x0), ay.min(y0), bx.max(x1), by.max(y1)),
+                });
+            }
+            rect
+        };
+        // One cell of clearance keeps routes, labels, and dots off the dotted
+        // line; a member-based box needs it only around its own rect.
+        let pad = i32::from(diagram.enclosed || member_rect.is_some());
         let width = base_width + pad * 2;
         let height = base_height + pad * 2;
         // Every section opens with a rule above its title - the first one
@@ -2001,9 +2036,19 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
             edges.push(edge);
         }
 
-        let frame = diagram
-            .enclosed
-            .then(|| (0, top - pad, base_width + pad * 2, base_height + pad * 2));
+        let frame = match member_rect {
+            // Coordinates are still in the section's own cell space; the
+            // enclosure is painted after the whole band is translated.
+            Some((x0, y0, x1, y1)) => Some((
+                x0 + dx as i32 - 1,
+                y0 + dy as i32 - 1,
+                x1 - x0 + 3,
+                y1 - y0 + 3,
+            )),
+            None => diagram
+                .enclosed
+                .then(|| (0, top - pad, base_width + pad * 2, base_height + pad * 2)),
+        };
         let focus: Vec<String> = graph
             .nodes
             .iter()
@@ -2079,15 +2124,33 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
         if let Some((fx, fy, fw, fh)) = frame {
             let (x0, y0) = (fx, fy);
             let (x1, y1) = (fx + fw - 1, fy + fh - 1);
+            let on_boundary = |px: i32, py: i32| {
+                let on_row = (py == y0 || py == y1) && px >= x0 && px <= x1;
+                let on_col = (px == x0 || px == x1) && py >= y0 && py <= y1;
+                on_row || on_col
+            };
             for edge in flow.edges() {
                 let Some(route) = edge.content.route() else {
                     continue;
                 };
-                for &(px, py) in &route.points {
-                    let (px, py) = (px as i32 + dx as i32, py as i32 + dy as i32);
-                    let on_row = (py == y0 || py == y1) && px >= x0 && px <= x1;
-                    let on_col = (px == x0 || px == x1) && py >= y0 && py <= y1;
-                    if on_row || on_col {
+                let cells: Vec<(i32, i32)> = route
+                    .points
+                    .iter()
+                    .map(|&(px, py)| (px as i32 + dx as i32, py as i32 + dy as i32))
+                    .collect();
+                let touches = cells.iter().any(|&(px, py)| on_boundary(px, py));
+                if touches {
+                    total.enclosure_entrances += 1;
+                }
+                // A perpendicular entry touches the dotted line for one cell:
+                // that is how a relation joins the nested box. A route that
+                // runs ALONG the boundary is the defect - two consecutive
+                // cells on the same dotted row or column.
+                for pair in cells.windows(2) {
+                    let ((ax, ay), (bx, by)) = (pair[0], pair[1]);
+                    let along_row = ay == by && on_boundary(ax, ay) && on_boundary(bx, by);
+                    let along_col = ax == bx && on_boundary(ax, ay) && on_boundary(bx, by);
+                    if along_row || along_col {
                         total.enclosure_crossings += 1;
                     }
                 }

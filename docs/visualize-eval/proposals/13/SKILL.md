@@ -319,12 +319,17 @@ draw the zoom chain instead of repeating the same box everywhere:
   node the next diagram expands. Its border renders as a second ring, so
   a reader sees exactly which box the next section opens.
 - **The expanded contents sit in a dotted box:** set
-  `"enclosed": true` on the diagram that holds those internals. The
-  dotted frame reads as "inside that box", not as another element.
-- **Routes never cross the dotted line.** The engine gives an enclosed
-  diagram one cell of clearance on every side and reports
-  `enclosure-crossings:`; it must read 0. If a relation must cross the
-  boundary, it belongs at the parent level, not inside the box.
+  `"enclosure": ["id", ...]` on the diagram, listing exactly the nested
+  cells. The dotted frame wraps only those nodes, so actors and external
+  systems stay OUTSIDE the boundary — a box that also contains externals
+  misreads as the wrong ownership boundary. (`"enclosed": true` still
+  wraps the whole band; use it only when everything in the section
+  really is inside the component.)
+- **Relations may enter the box, never travel along its edge.** The
+  engine keeps one cell of clearance and reports
+  `enclosure-entrances:` (normal: a relation joins an outside element to
+  a nested cell) and `enclosure-crossings:` (a route RUNNING ALONG the
+  dotted line) — crossings must read 0.
 - **Keep one reading direction across the canvas.** If every diagram is
   `lr`, keep them all `lr`; mixed directions make a reader re-orient on
   every section. Deviate only with a measured reason.

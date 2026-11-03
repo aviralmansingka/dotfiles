@@ -274,8 +274,14 @@ fn check(spec: &Spec, flow: &mut Graph, report: &Report) -> Result<()> {
         }
         if report.enclosure_crossings > 0 {
             println!(
-                "enclosure-crossings: {} route cell(s) on a dotted boundary (a route may not cross it)",
+                "enclosure-crossings: {} cell(s) of a route RUNNING ALONG a dotted boundary (a route may enter the box, never travel on its edge)",
                 report.enclosure_crossings
+            );
+        }
+        if report.enclosure_entrances > 0 {
+            println!(
+                "enclosure-entrances: {} route(s) enter or leave a dotted enclosure",
+                report.enclosure_entrances
             );
         }
     } else if !spec.layers.is_empty() {
