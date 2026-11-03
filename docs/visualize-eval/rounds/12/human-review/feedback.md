@@ -57,9 +57,16 @@ Reviewer: the owner. Tabs (round 11 left vs round 12 right):
    - Agent judgment rules: use a larger canvas whenever it helps
      clarity; split into described concept-diagrams when concepts
      separate cleanly; never water down.
-   - When the panes-vs-canvas choice materially changes the result, ASK
-     the user one concrete question (multiple panes, or one pane with
+   - When a choice materially changes the result, ASK the user one
+     concrete question (e.g. multiple panes, or one pane with
      everything) before generating.
+   - OWNER REFINEMENT (same day): "Continue asking until you have a
+     good idea for what to draw." The triage loop is PERSISTENT: keep
+     asking focused questions - one at a time - until the agent
+     genuinely knows what to draw (source understood, reader's job
+     known, shape chosen). Do not generate from a vague picture; do
+     not pad with questions once the picture is clear. The agent owns
+     the judgment of when understanding has converged.
    - Triage is part of the skill's contract, not an optional nicety.
 
 2. (owner, 2026-11-03, on gb300 a3 ambiguity) "in cases where the arrows
