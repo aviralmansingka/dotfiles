@@ -9,12 +9,14 @@ const require = createRequire(import.meta.url);
 const { jitiPath } = resolveJiti({ extraFallbacks: [HOMEBREW_JITI] });
 const { createJiti } = require(jitiPath);
 
-// U2 — input-mode cycling inside the quiz panel. The quiz has two input
-// modes: Answer (pick an option) and Steering (type guidance). Tab cycles
-// them. Steering never eats the quiz: an empty submit does nothing, and a
-// real submit ends the quiz with a follow-up result that both the agent and
-// the transcript can see. Hermetic: pi-tui, ./nvim-open and ./md-log are all
-// stubs, so no editor, pane, or journal file is ever touched.
+// U2 — input-mode cycling inside the quiz panel. Tab cycles four modes:
+// Answer (pick an option), Steering (Enter sends a live steer to the agent
+// and the quiz STAYS OPEN), Note (text rides with the eventual answer), and
+// Follow-up (Enter ends the quiz with a visible follow-up result). Steering
+// never eats the quiz: the question stays rendered, `o` still opens context
+// files on an empty buffer, and the send is confirmed in-panel. Hermetic:
+// pi-tui, ./nvim-open and ./md-log are all stubs, so no editor, pane, or
+// journal file is ever touched.
 const tempRoot = mkdtempSync(join(tmpdir(), "quiz-input-modes-test-"));
 try {
 	const stubAgent = join(tempRoot, "pi-coding-agent.cjs");
@@ -24,7 +26,12 @@ try {
 	const stubMdLog = join(tempRoot, "md-log.cjs");
 	writeFileSync(stubAgent, "exports.defineTool = value => value;\n");
 	writeFileSync(stubTypes, "exports.Type = new Proxy({}, { get: () => (...args) => ({ args }) });\n");
-	writeFileSync(stubNvimOpen, "exports.openEditor = async () => ({ message: \"opened\", mode: \"split\" });\n");
+	writeFileSync(stubNvimOpen, `
+exports.openEditor = async (...args) => {
+	(globalThis.__openedEditors ||= []).push(args);
+	return { message: "opened", mode: "split" };
+};
+`);
 	writeFileSync(stubMdLog, `
 exports.openNodeView = async () => ({ mode: "node", message: "node view" });
 exports.openJournalInEditor = async () => ({ mode: "journal", message: "journal" });
@@ -74,7 +81,11 @@ exports.wrapTextWithAnsi = (text, width) => {
 		},
 	});
 	const tools = {};
-	const registry = { registerTool(tool) { tools[tool.name] = tool; } };
+	const sentSteers = [];
+	const registry = {
+		registerTool(tool) { tools[tool.name] = tool; },
+		sendUserMessage(text, options) { sentSteers.push({ text, options }); },
+	};
 	jiti("../quiz.ts").default(registry);
 	const quizTool = tools.quiz;
 	assert.equal(quizTool?.name, "quiz");
@@ -111,6 +122,7 @@ exports.wrapTextWithAnsi = (text, width) => {
 							component.handleInput(step.data);
 							const rendered = component.render(step.width ?? 100).join("\n");
 							for (const rx of step.selected ?? []) assert.match(rendered, rx);
+							for (const rx of step.rejected ?? []) assert.doesNotMatch(rendered, rx);
 						}
 					});
 				},
@@ -119,13 +131,14 @@ exports.wrapTextWithAnsi = (text, width) => {
 		return quizTool.execute("input-modes", runParams, signal, undefined, ctx);
 	}
 
-	// Tab cycles Answer -> Steering -> Answer, and the question stays visible
-	// the whole time — steering is a mode of the quiz, not a replacement for it.
+	// Tab cycles Answer -> Steering -> Note -> Follow-up -> Answer. The mode
+	// indicator and the question stay visible at every stop, so the captain
+	// always sees which mode is active before typing.
 	const cycle = await execute(params, [
-		{ data: "tab", selected: [/Pick beta[\s\S]*Mode: Steering/, /Tab answer/, /type guidance/] },
-		{ data: "tab", selected: [/Mode: Answer[\s\S]*› answer/] },
-		{ data: "tab", selected: [/Mode: Steering[\s\S]*› █/] },
-		{ data: "escape", selected: [/Mode: Answer[\s\S]*› answer/] },
+		{ data: "tab", selected: [/Pick beta[\s\S]*Mode: Steering/, /quiz stays open/, /› █/] },
+		{ data: "tab", selected: [/Pick beta[\s\S]*Mode: Note/, /Tab[\s\S]{0,30}follow-up • Esc answer/, /› █/] },
+		{ data: "tab", selected: [/Pick beta[\s\S]*Mode: Follow-up/, /Enter end quiz and send/, /› █/] },
+		{ data: "tab", selected: [/Mode: Answer[\s\S]*› answer/, /Tab steering/] },
 		// Enter walks select → thinking → feedback; the verdict waits for the
 		// thinking step to finish.
 		{ data: "enter", selected: [/Enter see verdict · Esc skip/, /› your thinking \(optional\)/] },
@@ -135,65 +148,130 @@ exports.wrapTextWithAnsi = (text, width) => {
 	assert.equal(cycle.details.status, "answered");
 	assert.equal(cycle.details.answers[0].value, "alpha");
 
-	// Enter on an EMPTY steering buffer does nothing: the quiz stays open in
-	// steering mode, later typing still works, and the eventual follow-up
-	// carries exactly the text typed after the empty submit.
-	const emptyFollowUp = await execute(params, [
+	// Steering sends the text to the agent as a live steer and the quiz stays
+	// open: the question is still rendered, the send is confirmed in-panel,
+	// and the captain can keep typing (j/k are literal text here, never
+	// navigation) and finally answer the same question.
+	const steer = await execute(params, [
 		{ data: "tab", selected: [/Mode: Steering/] },
-		{ data: "enter", selected: [/Mode: Steering[\s\S]*› █/] },
-		{ data: "g" },
-		{ data: "o" },
+		{ data: "h" }, { data: "e" }, { data: "y" },
+		{
+			data: "enter",
+			selected: [/Pick beta/, /Mode: Steering/, /✓ Steer sent — the quiz stays open/],
+		},
+		// The next interaction dismisses the confirmation; the editor is empty
+		// again and j is text, not navigation.
+		{ data: "j", selected: [/Mode: Steering[\s\S]*› j/], rejected: [/Steer sent/] },
+		{ data: "escape", selected: [/Mode: Answer[\s\S]*› answer/] },
+		{ data: "2", selected: [/● 2\. Beta/] },
+		{ data: "enter" },
+		{ data: "enter" },
 		{ data: "enter" },
 	]);
-	assert.equal(emptyFollowUp.details.status, "follow-up");
-	assert.equal(emptyFollowUp.details.followUp, "go");
-	assert.equal(emptyFollowUp.details.answers.length, 0);
+	assert.equal(steer.details.status, "answered");
+	assert.equal(steer.details.correct, true, "answering after a steer still grades");
+	assert.deepEqual(sentSteers, [{ text: "hey", options: { deliverAs: "steer" } }]);
 
-	// The follow-up result is visible everywhere: tool text for the agent,
-	// structured details for the transcript, and a rendered row for the UI.
-	assert.match(emptyFollowUp.content[0].text, /User steered instead of answering: go/);
-	const followUpView = quizTool.renderResult({ details: emptyFollowUp.details }, {}, theme);
+	// Enter on an EMPTY steering buffer returns to Answer mode instead of
+	// sending an empty steer.
+	const emptySteer = await execute(params, [
+		{ data: "tab", selected: [/Mode: Steering/] },
+		{ data: "enter", selected: [/Mode: Answer[\s\S]*› answer/] },
+		{ data: "escape" },
+	]);
+	assert.equal(emptySteer.details.status, "cancelled");
+	assert.equal(sentSteers.length, 1, "an empty steering Enter sends nothing");
+
+	// With an empty steering buffer, `o` still opens the context files and the
+	// quiz stays open; once text is in the buffer, `o` is literal text again.
+	globalThis.__openedEditors = [];
+	const steerO = await execute({ ...params, contextFiles: ["notes.md"] }, [
+		{ data: "tab", selected: [/Mode: Steering/] },
+		{ data: "o", selected: [/Pick beta[\s\S]*Mode: Steering/] },
+		{ data: "x", selected: [/› x/] },
+		{ data: "o", selected: [/› xo/] },
+		{ data: "enter", selected: [/✓ Steer sent/] },
+		{ data: "escape", selected: [/Mode: Answer/] },
+		{ data: "escape" },
+	]);
+	assert.equal(steerO.details.status, "cancelled");
+	assert.equal(globalThis.__openedEditors.length, 1, "empty-buffer o opens the context files once");
+	assert.deepEqual(globalThis.__openedEditors[0][1], ["notes.md"]);
+	assert.equal(sentSteers.at(-1).text, "xo", "non-empty-buffer o stays literal text");
+
+	// Note mode keeps the quiz open: Enter keeps the note and returns to the
+	// options, and the note rides with the eventual answer.
+	const noted = await execute(params, [
+		{ data: "tab" },
+		{ data: "tab", selected: [/Mode: Note/, /sent with your answer/] },
+		{ data: "i" }, { data: "d" }, { data: "k", selected: [/› idk/] },
+		{ data: "enter", selected: [/Mode: Answer[\s\S]*› answer/] },
+		{ data: "2" },
+		{ data: "enter" },
+		{ data: "enter" },
+		{ data: "enter" },
+	]);
+	assert.equal(noted.details.status, "answered");
+	assert.equal(noted.details.note, "idk");
+	assert.match(noted.content[0].text, /User's note: idk/);
+	assert.equal(sentSteers.length, 2, "note mode never sends a live steer");
+
+	// Follow-up mode is the only mode that ends the quiz — visibly, with a
+	// follow-up result the agent, the transcript, and the UI all show.
+	const followUp = await execute(params, [
+		{ data: "tab" },
+		{ data: "tab" },
+		{ data: "tab", selected: [/Mode: Follow-up/, /Enter end quiz and send/] },
+		{ data: "g" },
+		{ data: "o", selected: [/› go/] },
+		{ data: "enter" },
+	]);
+	assert.equal(followUp.details.status, "follow-up");
+	assert.equal(followUp.details.followUp, "go");
+	assert.equal(followUp.details.answers.length, 0);
+	assert.match(followUp.content[0].text, /User steered instead of answering: go/);
+	const followUpView = quizTool.renderResult({ details: followUp.details }, {}, theme);
 	assert.match(followUpView.text, /Steering: go/);
 	assert.doesNotMatch(followUpView.text, /Correct/);
+	assert.equal(sentSteers.length, 2, "follow-up ends the quiz instead of sending a steer");
 
-	// The steering editor keeps its text on Enter (disableSubmit): the
-	// submitted follow-up is the full composed text, never an empty string.
-	const keeps = await execute(params, [
+	// Enter on an EMPTY follow-up buffer returns to Answer mode — the quiz is
+	// never closed silently.
+	const emptyFollowUp = await execute(params, [
 		{ data: "tab" },
-		{ data: "p" }, { data: "a" }, { data: "u" }, { data: "s" }, { data: "e" },
-		{ data: "enter" },
+		{ data: "tab" },
+		{ data: "tab", selected: [/Mode: Follow-up/] },
+		{ data: "enter", selected: [/Mode: Answer[\s\S]*› answer/] },
+		{ data: "escape" },
 	]);
-	assert.equal(keeps.details.followUp, "pause");
-	assert.match(keeps.content[0].text, /pause/);
+	assert.equal(emptyFollowUp.details.status, "cancelled");
 
-	// Literal j/k are TEXT in steering mode — they must never navigate the
-	// option list (that would steal letters out of the captain's guidance).
-	const literalJk = await execute(params, [
-		{ data: "tab", selected: [/Mode: Steering[\s\S]*› █/] },
-		{ data: "j", selected: [/› j/] },
-		{ data: "k", selected: [/Mode: Steering[\s\S]*› jk/] },
-		{ data: "enter" },
-	]);
-	assert.equal(literalJk.details.status, "follow-up");
-	assert.equal(literalJk.details.followUp, "jk");
-
-	// The same holds in multi-select steering mode.
-	const multiSteer = await execute({ ...params, multiSelect: true }, [
-		{ data: "tab", selected: [/Mode: Steering/] },
-		{ data: "j" }, { data: "k" },
-		{ data: "enter" },
-	]);
-	assert.equal(multiSteer.details.status, "follow-up");
-	assert.equal(multiSteer.details.followUp, "jk");
-
-	// Ctrl+P still works from either mode — the too-hard escape hatch is
-	// never blocked by steering.
-	const tooHardFromSteering = await execute(params, [
-		{ data: "tab", selected: [/Mode: Steering/] },
+	// Ctrl+P still works from every mode — the too-hard escape hatch is never
+	// blocked by an open input box.
+	const tooHardFromNote = await execute(params, [
+		{ data: "tab" },
+		{ data: "tab", selected: [/Mode: Note/] },
 		{ data: "ctrl+p" },
 	]);
-	assert.equal(tooHardFromSteering.details.status, "too-hard");
-	assert.equal(tooHardFromSteering.details.followUp, undefined);
+	assert.equal(tooHardFromNote.details.status, "too-hard");
+	assert.equal(tooHardFromNote.details.followUp, undefined);
+
+	// Multi-select cycles the same modes: a steer keeps the quiz open and the
+	// captain can still toggle and submit an answer afterwards.
+	const multiSteer = await execute({ ...params, multiSelect: true }, [
+		{ data: "tab", selected: [/Mode: Steering/] },
+		{ data: "j" }, { data: "k", selected: [/› jk/] },
+		{ data: "enter", selected: [/✓ Steer sent/] },
+		{ data: "escape", selected: [/Mode: Answer/] },
+		{ data: "1" },
+		{ data: "enter" },
+		{ data: "enter" },
+		{ data: "enter" },
+	]);
+	assert.equal(multiSteer.details.status, "answered");
+	assert.deepEqual(multiSteer.details.answers.map((a) => a.value), ["alpha"]);
+	assert.equal(sentSteers.at(-1).text, "jk");
+	assert.equal(sentSteers.at(-1).options.deliverAs, "steer");
 } finally {
 	rmSync(tempRoot, { recursive: true, force: true });
 }

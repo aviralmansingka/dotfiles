@@ -52,7 +52,10 @@ const jiti = createJiti(import.meta.url, {
 
 const { default: registerQuiz } = jiti("./quiz.ts");
 let quizTool;
-registerQuiz({ registerTool(tool) { quizTool = tool; } });
+registerQuiz({
+	registerTool(tool) { quizTool = tool; },
+	sendUserMessage() {},
+});
 assert.equal(quizTool?.name, "quiz");
 
 const theme = { fg: (_color, text) => text, bold: (text) => text };
@@ -139,13 +142,14 @@ assert.equal(cancelled.details.status, "cancelled");
 assert.deepEqual(cancelled.details.answers, []);
 assert.match(cancelled.content[0].text, /User cancelled the quiz/);
 
-// follow-up: steering guidance ends the quiz as its own visible status.
+// follow-up: guidance typed in follow-up mode (Tab x3) ends the quiz as its
+// own visible status.
 const followUp = await quizTool.execute(
 	"follow-up-result",
 	params,
 	signal,
 	undefined,
-	contextFor(["tab", "w", "a", "i", "t", "enter"]),
+	contextFor(["tab", "tab", "tab", "w", "a", "i", "t", "enter"]),
 );
 assert.equal(followUp.details.status, "follow-up");
 assert.equal(followUp.details.followUp, "wait");
