@@ -60,7 +60,7 @@ set hold no unguarded captured call — the #291 fix wave guarded them.
 | mermaid.ts · python.ts | 1 spawn each | guarded, pipe×3 |
 | image-drop · run-command · tuicr · tuicr-core | async execFile | stderr captured in the error |
 | no-mistakes gate · pane · bridge · report | 3 + 4 + 1 + 2 `pi.exec` | guarded, async, or pi API seam |
-| run-command `r` flow · tuicr pane · nm shim · `exec` wrappers | 6 | intentional passthrough |
+| run-command `R`/`r` auto-run flow · tuicr pane · nm shim · `exec` wrappers | 6 | intentional passthrough |
 | telegram + whatsapp daemons · pi-stt-*.py | 2 each / 0 | pipes, capture_output, or no child |
 
 ## Known gaps

@@ -32,10 +32,11 @@ every capture path working.
   auto-capture stay unchanged.
 - **C5 y copy-and-focus.** The `y` key copies the command and focuses the
   output field. The hint text switches. The clipboard is stubbed.
-- **Panel guards.** `Esc` cancels an auto-run. A float that cannot open shows
-  an error; manual paste still submits. An empty command, a missing UI, and
-  an aborted signal return the correct status. `Enter` on an empty field
-  focuses the field.
+- **Panel guards.** `Esc` cancels an auto-run. The auto-run path answers to
+  both `R` (the advertised shortcut) and lowercase `r`; the hint names `R`.
+  A float that cannot open shows an error; manual paste still submits. An
+  empty command, a missing UI, and an aborted signal return the correct
+  status. `Enter` on an empty field focuses the field.
 - **Self-description.** The description, promptSnippet, and promptGuidelines
   keep the learning-only clause.
 

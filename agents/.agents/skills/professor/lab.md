@@ -48,8 +48,9 @@ Use the `run-command` instrument (`instruments.md`). The learner drives it:
 
 - `y` copies the command and focuses the output field. Use it when typing the
   command is part of the lesson.
-- `r` runs it in a visible Neovim terminal and captures output plus exit
-  status. Use it when reading the result is the learning target.
+- `R` runs it in a visible Neovim terminal and captures output plus exit
+  status. Use it when reading the result is the learning target. Lowercase
+  `r` also works.
 
 You receive the command and the observed output together. Never run the
 command yourself, except to ground a prediction on a machine the learner

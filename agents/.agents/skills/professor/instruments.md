@@ -136,12 +136,13 @@ Hands-on verification through the run-command extension tool
 (`pi/.pi/agent/extensions/run-command.ts`). A floating panel above the prompt
 supports two user-driven paths: `y` copies the command and focuses the output
 field for manual execution and pasting; large pastes stay compact in the
-visible field but are expanded in full when submitted. `r` runs it in a visible
-Neovim `:term dm` pane and automatically captures output plus exit status.
+visible field but are expanded in full when submitted. `R` (lowercase `r` also
+accepted) runs it in a visible Neovim `:term dm` pane and automatically captures
+output plus exit status.
 
 You receive the command and observed output **together**, plus the `prediction`
 you passed with the call. Grading is output against that grounded prediction.
-Prefer `y` when typing the command is part of the lesson; use `r` when
+Prefer `y` when typing the command is part of the lesson; use `R` when
 observing and interpreting its result is the learning target. The pedagogy of
 prediction, command design, and mismatch diagnosis lives in `lab.md`.
 
