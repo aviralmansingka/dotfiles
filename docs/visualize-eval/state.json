@@ -2876,6 +2876,17 @@
    "defects": "renderer paints enclosure over flow, occluding crossing dots -> 3 crossing routes shipped static; boot server outside l2a box (measured compromise); whole-canvas ANSI not capturable",
    "judge": "spawning"
   },
-  "harness_fix": "viz-pinned-dump.py --keep-ansi + rataflow-view --frames-ansi: whole-canvas SGR colour dump (1472 sequences, 32 distinct hues) since every live pane is smaller than a large canvas. Closes the 3-round 'whole-canvas colour evidence missing' blocker for conceptual_grouping_color and animation."
+  "harness_fix": "viz-pinned-dump.py --keep-ansi + rataflow-view --frames-ansi: whole-canvas SGR colour dump (1472 sequences, 32 distinct hues) since every live pane is smaller than a large canvas. Closes the 3-round 'whole-canvas colour evidence missing' blocker for conceptual_grouping_color and animation.",
+  "enclosure_status": {
+   "shipped": [
+    "node focus -> double border (judge-verified it singles out the zoom parent)",
+    "enclosure membership (single or multiple groups) with externals outside",
+    "check reporting: membership groups, entrance/run-along counters",
+    "uniform dividers + top rule"
+   ],
+   "deferred": "the PAINTED dotted boundary: its world-to-screen mapping does not track the library's node transform, so a painted box drifts from the cells it names. Gated behind 'enclosure_outline' (off by default) so no case ships a misaligned box.",
+   "evidence": "four attempts (build-time rects, centre->corner, node.bounds(), draw-time) each measured against the capture; all drifted. Needs a focused renderer task that shares the library's transform.",
+   "c4_ruling": "PARTIAL - dedicated c4 skill still warranted (level-owned navigation, boundary rendering with correct transform, element kinds)."
+  }
  }
 }

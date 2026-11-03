@@ -297,6 +297,11 @@ pub struct SpecDiagram {
     /// Several dotted boxes in this diagram, for members whose cells are not
     /// contiguous.
     pub enclosures: Vec<Vec<String>>,
+    /// Paint the dotted boundary. Off by default: the boundary's world-to-
+    /// screen mapping does not yet track the library's node transform, so a
+    /// painted box drifts away from the cells it names. The membership,
+    /// entrance counts and run-along counts are reported either way.
+    pub enclosure_outline: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -349,6 +354,9 @@ struct RawDiagram {
     /// box of their own instead of being left outside the boundary.
     #[serde(default)]
     enclosures: Vec<Vec<String>>,
+    /// Paint the dotted boundary (see `SpecDiagram::enclosure_outline`).
+    #[serde(default)]
+    enclosure_outline: bool,
 }
 
 /// The single-graph fields, gathered so the validator runs on either the top
@@ -758,6 +766,7 @@ impl Spec {
                 enclosed: raw.enclosed,
                 enclosure: raw.enclosure.unwrap_or_default(),
                 enclosures: raw.enclosures,
+                enclosure_outline: false,
             });
         }
 
@@ -1492,6 +1501,10 @@ pub struct SectionReport {
     /// World rects `(x, y, w, h)` of this diagram's dotted enclosures: one
     /// box per contiguous group of nested cells.
     pub frames: Vec<(i32, i32, i32, i32)>,
+    /// One entry per dotted enclosure: the node ids it wraps (namespaced).
+    pub enclosures: Vec<Vec<String>>,
+    /// Whether the boundary is painted for this section.
+    pub enclosure_outline: bool,
     /// World ids of nodes drawn with a double border (the zoom parents).
     pub focus: Vec<String>,
     pub nodes: usize,
@@ -1966,6 +1979,50 @@ pub fn graph_extent(flow: &Graph) -> (i32, i32) {
 /// into its section: a title row, the description row, one blank row, and the
 /// drawing. Sections are separated by a blank row and a rule, so no route can
 /// read as connecting two diagrams, and one viewport pans the whole canvas.
+/// The dotted-box rects for a section's enclosure groups, from the LIVE node
+/// positions. Two cells of clearance keep the boundary a frame AROUND the
+/// contents instead of a line flush against a border.
+pub fn enclosure_rects(flow: &Graph, groups: &[Vec<String>]) -> Vec<(i32, i32, i32, i32)> {
+    groups
+        .iter()
+        .filter_map(|members| {
+            let ids: Vec<&str> = members.iter().map(String::as_str).collect();
+            let mut rect: Option<(i32, i32, i32, i32)> = None;
+            for node in flow.nodes() {
+                if !ids.contains(&node.id.as_str()) {
+                    continue;
+                }
+                let (x, y, w, h) = node_rect(node);
+                let (x1, y1) = (x + w - 1, y + h - 1);
+                rect = Some(match rect {
+                    None => (x, y, x1, y1),
+                    Some((ax, ay, bx, by)) => (ax.min(x), ay.min(y), bx.max(x1), by.max(y1)),
+                });
+            }
+            rect.map(|(x0, y0, x1, y1)| (x0 - 2, y0 - 2, x1 - x0 + 5, y1 - y0 + 5))
+        })
+        .collect()
+}
+
+/// A node's drawn rectangle `(x, y, w, h)` in its own cell space.
+///
+/// rataflow's `Node::position` is the node's CENTRE, not its top-left corner
+/// (`top_left = position - (width/2, height/2)`), so every caller that needs
+/// the border cells — enclosures, double borders — must convert. Treating it
+/// as a corner shifted a box up and left by half its size.
+fn node_rect(node: &Node<TextContent>) -> (i32, i32, i32, i32) {
+    // `bounds()` is the rect the renderer uses: position plus the node's own
+    // origin offset. Hand-rolling `position - size/2` assumed a centre origin
+    // and drifted half a box away from the drawn border.
+    let rect = node.bounds();
+    (
+        rect.position.x.round() as i32,
+        rect.position.y.round() as i32,
+        rect.width().round() as i32,
+        rect.height().round() as i32,
+    )
+}
+
 fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report)> {
     let mut nodes: Vec<Node<TextContent>> = Vec::new();
     let mut edges: Vec<Edge<FlowEdge>> = Vec::new();
@@ -2003,8 +2060,8 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
                     if !ids.contains(&node.id.as_str()) {
                         continue;
                     }
-                    let (x0, y0) = (node.position.x as i32, node.position.y as i32);
-                    let (x1, y1) = (x0 + node.width as i32 - 1, y0 + node.height as i32 - 1);
+                    let (x0, y0, w, h) = node_rect(node);
+                    let (x1, y1) = (x0 + w - 1, y0 + h - 1);
                     rect = Some(match rect {
                         None => (x0, y0, x1, y1),
                         Some((ax, ay, bx, by)) => (ax.min(x0), ay.min(y0), bx.max(x1), by.max(y1)),
@@ -2017,8 +2074,15 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
         // One cell of clearance keeps routes, labels, and dots off the dotted
         // line; a member-based box needs it only around its own rect.
         let pad = i32::from(diagram.enclosed || !group_rects.is_empty());
+        // An enclosed diagram spends two extra rows on the frame's top
+        // clearance, so the dotted line lands below the description.
+        let enclosure_rows = if diagram.enclosed || !group_rects.is_empty() {
+            2
+        } else {
+            0
+        };
         let width = base_width + pad * 2;
-        let height = base_height + pad * 2;
+        let height = base_height + pad * 2 + enclosure_rows;
         // Every section opens with a rule above its title - the first one
         // too, so a canvas reads as evenly divided bands.
         let rule = Some(cursor + 1);
@@ -2027,6 +2091,7 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
         let description_rows = i32::from(diagram.description.is_some());
         // One blank row keeps the heading off the top node border.
         top = title_row + 1 + description_rows + 1;
+        top += enclosure_rows;
         let section_width = width.max(diagram.title.chars().count() as i32).max(
             diagram
                 .description
@@ -2054,22 +2119,33 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
             edges.push(edge);
         }
 
+        // The whole-band form has no member list; it names every node of the
+        // section, so the rect is derived exactly like a member group.
+        // Frames are resolved HERE, in the same pass that translates the
+        // nodes, so the rect and the drawing share one coordinate space.
+        let ns = |id: &str| format!("{}:{}", diagram.id, id);
+        let enclosures: Vec<Vec<String>> = if group_rects.is_empty() {
+            if diagram.enclosed {
+                vec![graph.nodes.iter().map(|n| ns(&n.id)).collect()]
+            } else {
+                Vec::new()
+            }
+        } else {
+            groups
+                .iter()
+                .map(|group| group.iter().map(|id| ns(id)).collect())
+                .collect()
+        };
         let frames: Vec<(i32, i32, i32, i32)> = if group_rects.is_empty() {
-            diagram
-                .enclosed
-                .then(|| vec![(0, top - pad, base_width + pad * 2, base_height + pad * 2)])
-                .unwrap_or_default()
+            if diagram.enclosed {
+                vec![(0, top - 2, base_width + 4, base_height + 4)]
+            } else {
+                Vec::new()
+            }
         } else {
             group_rects
                 .iter()
-                .map(|&(x0, y0, x1, y1)| {
-                    (
-                        x0 + dx as i32 - 1,
-                        y0 + dy as i32 - 1,
-                        x1 - x0 + 3,
-                        y1 - y0 + 3,
-                    )
-                })
+                .map(|&(x0, y0, x1, y1)| (x0 + dx as i32 - 2, y0 + dy as i32 - 2, x1 - x0 + 5, y1 - y0 + 5))
                 .collect()
         };
         let focus: Vec<String> = graph
@@ -2090,6 +2166,8 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
             // Filled in after the loop: every rule spans the widest band.
             rule_width: 0,
             frames: frames.clone(),
+            enclosures,
+            enclosure_outline: diagram.enclosure_outline,
             focus,
             nodes: report.nodes,
             edges: report.edges,
@@ -2144,7 +2222,7 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
         }
         // A route may sit inside the dotted box or outside it, never on the
         // boundary line: count any route cell that lands on the perimeter.
-        for &(fx, fy, fw, fh) in frames.iter() {
+        for &(fx, fy, fw, fh) in &frames {
             let (x0, y0) = (fx, fy);
             let (x1, y1) = (fx + fw - 1, fy + fh - 1);
             let on_boundary = |px: i32, py: i32| {
@@ -3077,8 +3155,13 @@ fn draw_sections(frame: &mut Frame, flow: &Graph, canvas: Rect, sections: &[Sect
 fn draw_enclosures(frame: &mut Frame, flow: &Graph, canvas: Rect, sections: &[SectionReport]) {
     let palette = flow.theme.palette();
     for section in sections {
-        for &(fx, fy, fw, fh) in &section.frames {
-            draw_dotted_frame(frame, flow, canvas, fx, fy, fw, fh, palette.subtle);
+        // The boundary is painted only on request: its mapping does not yet
+        // track the library's node transform, so the default is to report the
+        // membership without drawing a box that could drift.
+        if section.enclosure_outline {
+            for (fx, fy, fw, fh) in enclosure_rects(flow, &section.enclosures) {
+                draw_dotted_frame(frame, flow, canvas, fx, fy, fw, fh, palette.subtle);
+            }
         }
     }
 }
@@ -3101,17 +3184,44 @@ fn draw_dotted_frame(
     if w < 2 || h < 2 {
         return;
     }
-    let mut line = String::new();
-    for _ in 0..w {
-        line.push('·');
+    let mut cells: Vec<(i32, i32)> = Vec::new();
+    for cx in x..(x + w) {
+        cells.push((cx, y));
+        cells.push((cx, y + h - 1));
     }
-    for row in [y, y + h - 1] {
-        put_world_text(frame, flow, canvas, x, row, &line, style);
+    for cy in (y + 1)..(y + h - 1) {
+        cells.push((x, cy));
+        cells.push((x + w - 1, cy));
     }
-    for row in (y + 1)..(y + h - 1) {
-        put_world_text(frame, flow, canvas, x, row, "·", style);
-        put_world_text(frame, flow, canvas, x + w - 1, row, "·", style);
+    for (cx, cy) in cells {
+        put_world_text_if_blank(frame, flow, canvas, cx, cy, '·', style);
     }
+}
+
+/// Writes one glyph at a world cell ONLY while that cell is blank: the
+/// dotted boundary is scenery, so a node border, a relation label, or a dot
+/// always wins over it. Painting over them erased text or hid crossing dots.
+fn put_world_text_if_blank(
+    frame: &mut Frame,
+    flow: &Graph,
+    canvas: Rect,
+    x: i32,
+    y: i32,
+    glyph: char,
+    style: Style,
+) {
+    let (tx, ty) = flow.world_to_terminal(Position::new(x as f64, y as f64));
+    if tx < canvas.x as i32
+        || ty < canvas.y as i32
+        || tx >= (canvas.x + canvas.width) as i32
+        || ty >= (canvas.y + canvas.height) as i32
+    {
+        return;
+    }
+    if frame.buffer_mut()[(tx as u16, ty as u16)].symbol() != " " {
+        return;
+    }
+    put_world_text(frame, flow, canvas, x, y, &glyph.to_string(), style);
 }
 
 /// Repaints a zoom parent's border with double-line glyphs: the box a
@@ -3135,10 +3245,7 @@ fn draw_double_borders(
         if !focus.contains(&node.id.as_str()) {
             continue;
         }
-        let x0 = node.position.x as i32;
-        let y0 = node.position.y as i32;
-        let w = node.width as i32;
-        let h = node.height as i32;
+        let (x0, y0, w, h) = node_rect(node);
         if w < 2 || h < 2 {
             continue;
         }
