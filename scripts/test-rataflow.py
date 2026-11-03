@@ -44,7 +44,12 @@ except ImportError:  # python 3.9/3.10 (local macs)
 # Spec schema, mirrored from rataflow/src/lib.rs (the Rust code is the
 # source of truth for behavior; this mirror exists to validate the examples
 # and the skill's documented block against drift).
-ALLOWED_TOP = {"direction", "theme", "nodes", "edges", "layers", "trunks"}
+ALLOWED_TOP = {"direction", "theme", "nodes", "edges", "layers", "trunks", "diagrams"}
+# One diagram of the multi-diagram canvas form: several named, described graphs
+# drawn as sections of one canvas (`diagrams` replaces the top-level graph).
+ALLOWED_DIAGRAM = {
+    "id", "title", "description", "direction", "nodes", "edges", "layers", "trunks",
+}
 ALLOWED_NODE = {"id", "label", "group"}
 ALLOWED_EDGE = {"from", "to", "label", "flow", "dots", "style", "duration_ms", "timing", "label_slot"}
 ALLOWED_TRUNK = {"id", "label", "from", "to", "branches"}
@@ -65,13 +70,55 @@ def record(name, ok, reason=""):
 
 
 def validate_spec(doc):
-    """Return a list of schema problems for a parsed spec document."""
-    problems = []
+    """Return a list of schema problems for a parsed spec document.
+
+    Two forms: a single graph (`nodes`/`edges` at the top level), or a canvas of
+    named diagrams (`{"diagrams": [{id, title, description, nodes, edges}]}`).
+    The description is optional in the Rust schema, but the eval validator
+    requires it per diagram: a reader navigates a large canvas by those
+    headings, so a described canvas is the documented form, not a nicety.
+    """
     if not isinstance(doc, dict):
         return ["spec is not a JSON object"]
     unknown = set(doc) - ALLOWED_TOP
-    if unknown:
-        problems.append(f"unknown top-level field(s): {sorted(unknown)}")
+    problems = [f"unknown top-level field(s): {sorted(unknown)}"] if unknown else []
+    diagrams = doc.get("diagrams")
+    if diagrams is None:
+        return problems + validate_graph(doc)
+    if doc.get("theme", "gruvbox") not in THEMES:
+        problems.append(f"bad theme {doc.get('theme')!r}")
+    if not isinstance(diagrams, list) or not diagrams:
+        return problems + ["diagrams must be a non-empty list"]
+    if doc.get("nodes") or doc.get("edges"):
+        problems.append("diagrams is mutually exclusive with top-level nodes/edges")
+    seen_ids = set()
+    for index, diagram in enumerate(diagrams):
+        where = f"diagram {index}"
+        if not isinstance(diagram, dict):
+            problems.append(f"{where} is not an object")
+            continue
+        unknown_keys = set(diagram) - ALLOWED_DIAGRAM
+        if unknown_keys:
+            problems.append(f"{where} has unknown field(s): {sorted(unknown_keys)}")
+        if not str(diagram.get("id", "")).strip():
+            problems.append(f"{where} has an empty id")
+            continue
+        where = f"diagram {diagram['id']}"
+        if diagram["id"] in seen_ids:
+            problems.append(f"duplicate diagram id {diagram['id']}")
+        seen_ids.add(diagram["id"])
+        if not str(diagram.get("title", "")).strip():
+            problems.append(f"{where} has an empty title")
+        description = diagram.get("description")
+        if description is not None and not str(description).strip():
+            problems.append(f"{where} description is empty")
+        problems += [f"{where}: {problem}" for problem in validate_graph(diagram)]
+    return problems
+
+
+def validate_graph(doc):
+    """Schema problems for one graph: a top-level spec or one canvas diagram."""
+    problems = []
     if doc.get("direction", "tb") not in DIRECTIONS:
         problems.append(f"bad direction {doc.get('direction')!r}")
     if doc.get("theme", "gruvbox") not in THEMES:

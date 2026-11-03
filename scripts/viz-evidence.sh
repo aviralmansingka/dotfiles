@@ -4,6 +4,7 @@
 # Usage:
 #   scripts/viz-evidence.sh --spec SPEC.json --bin /abs/path/rataflow-view \
 #       --out OUTDIR --label v1 [--frames 5] [--step-ms 100] [--no-select]
+#       [--pinned-frames 12] [--pinned-size 77x47] [--no-pinned]
 #
 # Writes into OUTDIR:
 #   bin.sha256                 absolute binary path + sha256 actually executed
@@ -12,7 +13,15 @@
 #   LABEL-ansi.ansi            visible pane ANSI (colors, borders)
 #   LABEL-selected.ansi        every node selected, ANSI
 #   LABEL-frames.txt           timestamped animation frames (with --frames)
-#   manifest.json              hashes, pane ids, measured size, cleanup proof
+#   LABEL-77x47-frames.txt     pinned exact-size dump: the fit proof, and the
+#                              frames capture to audit when the pane is smaller
+#   manifest.json              hashes, pane ids, measured size, spec form,
+#                              per-diagram titles/descriptions, cleanup proof
+#
+# A multi-diagram spec (`{"diagrams": [{id, title, description, nodes, edges}]}`)
+# is one spec and one render, so it produces one bundle: the manifest records
+# spec_form "canvas" plus every diagram's title and description, and the
+# validator reads the check's per-diagram extents in place of a 77x47 fit.
 #
 # record mode wraps any rataflow-view invocation (probe, rejected draft,
 # calibration) and appends a reproducible record to a JSONL log:
@@ -86,6 +95,7 @@ if [ "${1:-}" = "record" ]; then
 fi
 
 spec='' bin='' out='' label='v1' frames='' step_ms='100' select=1
+pinned_frames=12 pinned_cols=77 pinned_rows=47
 while [ $# -gt 0 ]; do
   case "$1" in
     --spec) spec=${2:?}; shift 2 ;;
@@ -95,7 +105,10 @@ while [ $# -gt 0 ]; do
     --frames) frames=${2:?}; shift 2 ;;
     --step-ms) step_ms=${2:?}; shift 2 ;;
     --no-select) select=0; shift ;;
-    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
+    --pinned-frames) pinned_frames=${2:?}; shift 2 ;;
+    --pinned-size) pinned_cols=${2%%x*}; pinned_rows=${2##*x}; shift 2 ;;
+    --no-pinned) pinned_frames=0; shift ;;
+    -h|--help) sed -n '2,32p' "$0"; exit 0 ;;
     *) die "unknown argument: $1" ;;
   esac
 done
@@ -112,6 +125,26 @@ command -v jq >/dev/null || die "jq is not on PATH"
 
 spec_abs=$(cd "$(dirname "$spec")" && pwd)/$(basename "$spec")
 out_abs=$(mkdir -p "$out" && cd "$out" && pwd)
+
+# Spec form: one graph, or a multi-diagram canvas ({"diagrams": [...]}). Both
+# forms are captured exactly the same way — one spec file, one pane render, one
+# bundle — so this only records what the bundle is and what each diagram claims
+# to show. A canvas needs a title + description per diagram (the owner navigates
+# a large canvas by those headings), so a missing description is called out here
+# rather than after a pane has already been spent.
+spec_form=$(jq -r 'if (.diagrams | type) == "array" and (.diagrams | length) > 0
+  then "canvas" else "graph" end' "$spec_abs" 2>/dev/null || echo graph)
+diagrams_json='[]'
+if [ "$spec_form" = canvas ]; then
+  diagrams_json=$(jq -c '[.diagrams[] | {id: (.id // null), title: (.title // null),
+    description: (.description // null)}]' "$spec_abs")
+  undescribed=$(jq -r '[.diagrams[] | select((.description // "") | length == 0) | .id]
+    | join(", ")' "$spec_abs")
+  if [ -n "$undescribed" ]; then
+    printf 'viz-evidence: warning: diagram(s) %s carry no description; a reader cannot navigate the canvas without a title + what-it-shows line\n' \
+      "$undescribed" >&2
+  fi
+fi
 
 # 1. Bind the evidence to the executable bytes and the spec bytes.
 bin_sha=$(shasum -a 256 "$bin" | awk '{print $1}')
@@ -219,12 +252,31 @@ if [ -n "$frames" ]; then
 fi
 launch_end=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-# 6. The proof of fit and zoom: the app's own startup line, else its header
+# 6. Pinned exact-size dump: the fit proof (a drawing that fits 77x47 prints no
+# `canvas WxH` extent) and, for a canvas larger than the pane, the capture the
+# frame audit needs. Runs its own pty, so it is independent of the pane above.
+pinned_line='' pinned_file=''
+if [ "$pinned_frames" -gt 0 ]; then
+  command -v python3 >/dev/null || die "python3 is required for the pinned dump (or pass --no-pinned)"
+  pinned_file="$label-${pinned_cols}x${pinned_rows}-frames.txt"
+  pinned_status=0
+  python3 "$(dirname "$0")/viz-pinned-dump.py" --bin "$bin" --spec "$spec_abs" \
+      --cols "$pinned_cols" --rows "$pinned_rows" --frames "$pinned_frames" \
+      --step-ms "$step_ms" > "$out_abs/$pinned_file" 2> "$out_abs/$label-pinned.stderr" \
+    || pinned_status=$?
+  if [ "$pinned_status" -ne 0 ]; then
+    printf 'viz-evidence: warning: pinned %sx%s dump did not report that viewport (see %s)\n' \
+      "$pinned_cols" "$pinned_rows" "$out_abs/$label-pinned.stderr" >&2
+  fi
+  pinned_line=$(grep -m1 '^viewport: ' "$out_abs/$pinned_file" 2>/dev/null || true)
+fi
+
+# 7. The proof of fit and zoom: the app's own startup line, else its header
 # token (the alternate screen erases the startup line in a live pane).
 applied_viewport=$(grep -m1 '^viewport: ' "$out_abs/$label-text.txt" 2>/dev/null || true)
 viewport_token=$(grep -om1 '[0-9]\+x[0-9]\+ @100%' "$out_abs/$label-text.txt" 2>/dev/null || true)
 
-# 7. Close the pane and prove it is gone.
+# 8. Close the pane and prove it is gone.
 closed='still_present'
 herdr pane close "$pane" >/dev/null 2>&1 || true
 sleep 0.3
@@ -234,7 +286,7 @@ fi
 closed_pane=$pane
 pane=''
 
-# 8. Assemble the manifest.
+# 9. Assemble the manifest.
 artifacts='{}'
 for f in "$out_abs"/*; do
   name=$(basename "$f")
@@ -246,6 +298,7 @@ done
 jq -n \
   --arg spec "$spec_abs" --arg spec_sha "$spec_sha" \
   --arg bin "$bin" --arg bin_sha "$bin_sha" \
+  --arg form "$spec_form" --argjson diagrams "$diagrams_json" \
   --arg pane "$closed_pane" --arg rect "$rect" \
   --arg cols "$cols" --arg rows "$rows" \
   --arg vp_rows "$viewport_rows" --arg viewport_line "$applied_viewport" \
@@ -253,11 +306,13 @@ jq -n \
   --arg cleanup "$closed" --arg c0 "$check_start" --arg c1 "$check_end" \
   --arg l0 "$launch_start" --arg l1 "$launch_end" \
   --arg frames "${frames:-}" --arg step "$step_ms" \
+  --arg pinned "$pinned_line" --arg pinned_file "$pinned_file" \
   --argjson check_exit "$check_status" \
   --argjson select_all "$([ "$select" -eq 1 ] && echo true || echo false)" \
   --argjson artifacts "$artifacts" \
   '{
      spec_path: $spec, spec_sha256: $spec_sha,
+     spec_form: $form, diagrams: $diagrams,
      binary_path: $bin, binary_sha256: $bin_sha,
      pane_id: $pane, pane_rect: ($rect | fromjson? // null),
      pane_cols: ($cols | tonumber? // null),
@@ -269,6 +324,9 @@ jq -n \
      cleanup: $cleanup, select_all_frame: $select_all,
      frames: (if $frames == "" then null else ($frames | tonumber) end),
      frame_step_ms: ($step | tonumber),
+     pinned_frames: (if $pinned_file == "" then null
+       else {file: $pinned_file,
+             viewport_line: (if $pinned == "" then null else $pinned end)} end),
      artifacts: $artifacts
    }' > "$out_abs/manifest.json"
 

@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 # Paths: scripts/viz-aggregate.py docs/visualize-eval/**
-"""Aggregate one evaluation round's eight judge results into a matrix.
+"""Aggregate one evaluation round's judge results into a matrix.
 
 Offline and deterministic. Validates every reviewer result against the frozen
 rubric's required shape, recomputes the round metrics, and writes the matrix the
 captain reports from. A missing or malformed case is a failure, never a silent
 skip.
+
+The category set is the ROUND'S OWN rubric, never a hardcoded list: round 13
+adds `navigation_clarity` on top of the long-standing categories, and a later
+round may add or retire another. `CATEGORIES` is only the floor used when a
+rubric declares none.
 
 Usage:
   scripts/viz-aggregate.py --round-dir docs/visualize-eval/rounds/02 \
@@ -31,6 +36,23 @@ CATEGORIES = (
     "workflow_evidence",
     "animation",
 )
+# Categories whose inapplicability the rubric may allow without a rendered
+# reason beyond the source reference. Round 13's navigation_clarity is a
+# rendering-property category like animation: a case whose source asks for no
+# motion (or which was not rendered) can be legitimately inapplicable.
+DEFAULT_INAPPLICABLE = {"animation"}
+# Round-13 check lines that name a defect class rather than a warning. They are
+# counted into each case's summary so a judge's quotation of the check is
+# machine-checked against the bundle's own check output.
+VIOLATION_PATTERNS = {
+    "passes_near_unrelated_node": (
+        re.compile(
+            r"^(?:near[- ]misses|passes-near-unrelated-node)\b[^0-9]{0,24}(\d+)", re.I
+        ),
+        re.compile(r"(\d+)\s+passes-near-unrelated-node", re.I),
+        re.compile(r"^near-miss:\s", re.I),
+    ),
+}
 STATUSES = {"pass", "fail", "blocked"}
 SEVERITIES = ("critical", "high", "medium", "low")
 REQUIRED_TOP = (
@@ -66,8 +88,8 @@ def check_result(result: dict, case: str, round_number: int, rubric: dict) -> li
         problems.append(f"round is {result['round']!r}, expected {round_number}")
 
     categories = result["categories"]
-    declared = tuple((rubric.get("categories") or {}).keys())
-    allowed = declared if set(declared) >= set(CATEGORIES) else CATEGORIES + EXTRA_CATEGORIES
+    allowed = allowed_categories(rubric)
+    inapplicable_ok = categories_allowed_inapplicable(rubric)
     missing = [key for key in allowed if key not in categories]
     extra = [key for key in categories if key not in allowed]
     if missing:
@@ -81,7 +103,7 @@ def check_result(result: dict, case: str, round_number: int, rubric: dict) -> li
         if not isinstance(applicable, bool):
             problems.append(f"{key} applicable is not a boolean")
         elif applicable is False:
-            if key != "animation":
+            if key not in inapplicable_ok:
                 problems.append(f"{key} may not be globally inapplicable")
             if not (entry.get("reason") or "").strip():
                 problems.append(f"{key} is inapplicable without a reason")
@@ -136,6 +158,93 @@ def spec_hash_verified(result: dict, case: str, round_dir: Path) -> bool:
             return True
     return False
 
+def allowed_categories(rubric: dict) -> tuple[str, ...]:
+    """The category set this round's rubric declares.
+
+    Round 13 adds `navigation_clarity` (nine categories); a later round may add
+    or retire another. Deriving the set from the rubric is the only way a new
+    category is accepted without editing this script; the floor tuple is used
+    only when a rubric declares none at all.
+    """
+    declared = tuple((rubric.get("categories") or {}).keys())
+    return declared if set(declared) >= set(CATEGORIES) else CATEGORIES
+
+
+def categories_allowed_inapplicable(rubric: dict) -> set[str]:
+    """Categories this rubric lets a case mark inapplicable.
+
+    A rubric entry opts in with `not_applicable`/`not_applicable_iff` (the
+    animation entry has had `not_applicable_iff` since round 0), so a new
+    rendering-property category such as navigation_clarity can declare the same
+    allowance without a code change here.
+    """
+    allowed = set(DEFAULT_INAPPLICABLE)
+    for key, entry in (rubric.get("categories") or {}).items():
+        if isinstance(entry, dict) and (
+            "not_applicable_iff" in entry or entry.get("allows_not_applicable")
+        ):
+            allowed.add(key)
+    return allowed
+
+
+def count_violations(text: str) -> dict[str, int]:
+    """Count the round-13 violation lines a check output names.
+
+    A check may state the class once as a count, once as a token phrase, or line
+    by line. Those describe the SAME misses, so the total is the largest of the
+    three readings, never their sum.
+    """
+    counts: dict[str, int] = {}
+    for kind, (summary, token, line) in VIOLATION_PATTERNS.items():
+        stated = 0
+        detailed = 0
+        for raw in text.splitlines():
+            stripped = raw.strip()
+            if m := summary.match(stripped):
+                stated = max(stated, int(m.group(1)))
+            elif m := token.search(stripped):
+                stated = max(stated, int(m.group(1)))
+            elif line.match(stripped):
+                detailed += 1
+        total = max(stated, detailed)
+        if total:
+            counts[kind] = total
+    return counts
+
+
+def case_violations(round_dir: Path, case: str, result: dict) -> dict:
+    """Per-case violation totals: the reviewer's own record plus the case's check
+    output, so a judged `passes-near-unrelated-node` line is bound to bytes the
+    case actually bundled rather than to a reviewer's summary alone."""
+    totals: Counter[str] = Counter()
+    sources: list[str] = []
+    declared = result.get("check_violations") or result.get("violations") or {}
+    if isinstance(declared, dict):
+        for kind, value in declared.items():
+            key = str(kind).replace("-", "_").replace(" ", "_")
+            if isinstance(value, int) and value:
+                totals[key] += value
+                sources.append(f"reviewer-result:{kind}")
+    case_dir = round_dir / case
+    if case_dir.is_dir():
+        for path in sorted(case_dir.rglob("check*.txt")):
+            try:
+                found = count_violations(path.read_text(errors="replace"))
+            except OSError:
+                continue
+            if not found:
+                continue
+            totals.update(found)
+            try:
+                sources.append(str(path.relative_to(round_dir.parent.parent.parent)))
+            except ValueError:
+                sources.append(str(path))
+    return {
+        "counts": {key: totals.get(key, 0) for key in VIOLATION_PATTERNS},
+        "sources": sources,
+    }
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--round-dir", required=True)
@@ -157,6 +266,7 @@ def main(argv: list[str]) -> int:
     per_case: dict[str, dict] = {}
     severity_total: Counter[str] = Counter()
     status_total: Counter[str] = Counter()
+    violation_total: Counter[str] = Counter()
     applicable_total = 0
 
     for case in cases:
@@ -208,8 +318,7 @@ def main(argv: list[str]) -> int:
                 problems.append(f"{case}: no spec-manifest.json and the declared spec hash matches no evidenced spec; spec claims are unverified")
 
         matrix = {}
-        declared = tuple((rubric.get("categories") or {}).keys())
-        allowed = declared if set(declared) >= set(CATEGORIES) else CATEGORIES + EXTRA_CATEGORIES
+        allowed = allowed_categories(rubric)
         for key in allowed:
             entry = (result.get("categories") or {}).get(key) or {}
             if entry.get("applicable") is False:
@@ -221,11 +330,16 @@ def main(argv: list[str]) -> int:
 
         severities = Counter(finding.get("severity") for finding in result.get("findings") or [])
         severity_total.update(severities)
+        violations = case_violations(round_dir, case, result)
+        for kind, value in violations["counts"].items():
+            violation_total[kind] += value
         per_case[case] = {
             "categories": matrix,
             "overall": result.get("overall"),
             "findings": len(result.get("findings") or []),
             "severities": {key: severities.get(key, 0) for key in SEVERITIES},
+            "violations": violations["counts"],
+            "violation_sources": violations["sources"],
             "edges_total": len(result.get("edge_audit") or []),
             "edges_pass": sum(
                 1 for audit in result.get("edge_audit") or []
@@ -246,6 +360,9 @@ def main(argv: list[str]) -> int:
         "blocked_applicable_categories": status_total.get("blocked", 0),
         "applicable_categories": applicable_total,
         "finding_severities": {key: severity_total.get(key, 0) for key in SEVERITIES},
+        "violations": {
+            key: violation_total.get(key, 0) for key in VIOLATION_PATTERNS
+        },
     }
     matrix_doc = {
         "round": round_number,
@@ -261,7 +378,10 @@ def main(argv: list[str]) -> int:
 
     for case, row in per_case.items():
         cells = " ".join(f"{key[:4]}={value[:4]}" for key, value in row["categories"].items())
-        print(f"{case:24s} overall={row['overall']:5s} {cells}")
+        near = row["violations"].get("passes_near_unrelated_node", 0)
+        print(
+            f"{case:24s} overall={row['overall']:5s} near={near:<3d} {cells}"
+        )
     print(json.dumps(metrics, indent=1))
     if problems:
         print(f"\n{len(problems)} problem(s):")
