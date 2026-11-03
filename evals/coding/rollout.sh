@@ -126,7 +126,7 @@ run_one() {
   local usage_json tokens_in tokens_out tokens_cached cost commits diff
   case "$agent" in
     pi) usage_json=$("${PY[@]}" "$usage" pi "$ROLL/sessions/pi-$task" 2>/dev/null) ;;
-    claude) usage_json=$("${PY[@]}" "$usage" claude "$CLAUDE_HOME/.claude" --model "${MODEL_CLAUDE:-}" 2>/dev/null) ;;
+    claude) usage_json=$("${PY[@]}" "$usage" claude "$CLAUDE_HOME/.claude" --model "${MODEL_CLAUDE:-}" --worktree "$wt" 2>/dev/null) ;;
     *) usage_json=$("${PY[@]}" "$usage" codex "$wt" --run-dir "$ROLL" --model "$MODEL_CODEX" 2>/dev/null) ;;
   esac
   [ -n "${usage_json:-}" ] || usage_json='{"tokens_in":0,"tokens_out":0,"tokens_cached":0,"cost_usd":0}'

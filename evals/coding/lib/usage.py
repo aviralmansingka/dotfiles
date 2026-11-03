@@ -13,7 +13,7 @@ Two harnesses, two transcript formats:
 Usage:
   usage.py pi <session-dir>                 # JSON: tokens + cost
   usage.py codex <worktree> [--run-dir D]   # JSON: tokens + cost
-  usage.py claude <config-dir> [--model M]  # JSON: tokens + cost
+  usage.py claude <config-dir> [--model M] [--worktree W]  # JSON: tokens + cost
   usage.py table                            # print the rate table
 
 Exit status is 0 with zeroed usage when no transcript is found, so a caller can
@@ -42,6 +42,18 @@ RATES = {
         "input": 0.3, "output": 1.2, "cache_read": 0.006, "cache_write": 0.0,
     },
 }
+
+
+def _claude_cwd(path: str) -> str:
+    for line in open(path, encoding="utf-8", errors="replace"):
+        try:
+            record = json.loads(line)
+        except Exception:
+            continue
+        cwd = record.get("cwd")
+        if cwd:
+            return cwd
+    return ""
 
 
 def rates_for(model: str) -> dict:
@@ -151,10 +163,18 @@ def codex_usage(worktree: str, run_dir: str | None, model: str) -> dict:
     return out
 
 
-def claude_usage(config_dir: str, model: str = "") -> dict:
-    """Claude Code keeps one JSONL per session under <config>/projects/<slug>/."""
+def claude_usage(config_dir: str, model: str = "", worktree: str = "") -> dict:
+    """Claude Code keeps one JSONL per session under <config>/projects/<slug>/.
+
+    A shared config dir holds every session, so a run must be matched by the
+    cwd recorded inside the file. Without `worktree` the totals cover all
+    sessions, which double-counts across runs.
+    """
     out = _empty("claude-session")
     files = glob.glob(os.path.join(config_dir, "projects", "*", "*.jsonl"))
+    if worktree:
+        target = os.path.realpath(worktree)
+        files = [f for f in files if _claude_cwd(f) and os.path.realpath(_claude_cwd(f)) == target]
     if not files:
         out["source"] = "claude-session-missing"
         return out
@@ -199,6 +219,7 @@ def main() -> int:
     p_claude = sub.add_parser("claude")
     p_claude.add_argument("config_dir")
     p_claude.add_argument("--model", default="")
+    p_claude.add_argument("--worktree", default="")
 
     sub.add_parser("table")
 
@@ -209,7 +230,7 @@ def main() -> int:
     if args.command == "pi":
         result = pi_usage(args.session_dir)
     elif args.command == "claude":
-        result = claude_usage(args.config_dir, args.model)
+        result = claude_usage(args.config_dir, args.model, args.worktree)
     else:
         result = codex_usage(args.worktree, args.run_dir, args.model)
     print(json.dumps(result))
