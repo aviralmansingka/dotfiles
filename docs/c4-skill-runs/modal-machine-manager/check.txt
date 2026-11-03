@@ -1,0 +1,25 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=36 edges=29 flows=10 direction=lr theme=gruvbox
+canvas: 5 diagrams on one canvas, drawn whole at 100%
+diagram l0 "L0 · System context" at 0,7: extent=149x15 nodes=8 edges=7 routes=7
+  description: System context: the machine manager is one box. The control plane and humans + mmctl call it; it provisions and boots machines through two provider APIs, audits them over SSH and alerts in Slack. The machines pull boot artefacts from S3, so L1 opens the box.
+diagram l1 "L1 · The machine manager" at 0,29: extent=173x24 nodes=10 edges=8 routes=8
+  description: L0's box opened one level: its boundary services — private gRPC, webapi, the provider adapter, the reconcile loop, SSH + BMC ops and the boot server — sit inside the Machine manager box, while the control plane, humans, providers and machines stay outside it.
+diagram l1b "L1b · The machine side" at 0,60: extent=126x17 nodes=7 edges=4 routes=4
+  description: The fleet end of the same system. Machines run the machine-agent, which registers and heartbeats into public gRPC inside the manager's box; the River queue uploads audit and bench objects to S3 and webapi confirms actions in Slack, both outside. The fleet drives these relations.
+diagram l2 "L2 · Inside — queue and dispatch" at 0,84: extent=145x15 nodes=6 edges=6 routes=6
+  description: Inside the box, first slice: requests land on the River queue, which dispatches provision jobs to the provider adapter, audit work to SSH + BMC ops and diagnostic events to the janitor client; the janitor proposes actions back to webapi. L2b carries the state writes.
+diagram l2b "L2b · Inside — the state writes" at 0,106: extent=59x22 nodes=5 edges=4 routes=4
+  description: Inside the box, second slice: the writes into the Postgres state store — River job rows from the queue, machine rows from private gRPC, machine state from public gRPC heartbeats and cluster rows from the reconcile loop. Same box, same manager; only the state edges are drawn here.
+pins: 17 pinned, 0 conflict(s)
+extent=173x128 cells (whole canvas)
+crossings: 0 bridges, 0 touching bends
+near-misses: 0 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)
+passes-near-unrelated-node: 0
+labels: 29/29 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners
+groups: modal(2) operators(2) machines(5) manager(20) providers(2) storage(3) tooling(2)
+trunks:
+dots: 10 single-dot routes, 0 periodic routes, 0 violations, 10 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 5 by source, 5 by destination, 0 shared-hue pair(s) (source-only 3, destination-only 7)
+origins: 10/10 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

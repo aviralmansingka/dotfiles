@@ -1,0 +1,47 @@
+ rataflow-view · 77x47 @100% · canvas 173x128 · spec.json · 36 nodes · 29 edg
+
+─────────────────────────────────────────────────────────────────────────────
+L0 · System context
+System context: the machine manager is one box. The control plane and humans
+provisions and boots machines through two provider APIs, audits them over SSH
+Slack. The machines pull boot artefacts from S3, so L1 opens the box.
+
+   ╭─────────────╮
+   │machine-agent│────────────────────────╮
+   │             │  register + heartbeat  │
+   ╰─────────────╯                        │               provider API
+                                          │ ╭───────────────╮  boot + audit
+╭───────────────────╮    provisioning     ╰▶│               │────────────────
+│Modal control plane│─────────────────────╮ │               │
+│                   │                     ╰▶│Machine manager│────────────────
+╰───────────────────╯                       │               │
+                                          ╭▶│               │────────────────
+   ╭──────────────╮         http          │ ╰───────────────╯confirm + alerts
+   │humans + mmctl│───────────────────────╯
+   │              │
+   ╰──────────────╯
+
+
+─────────────────────────────────────────────────────────────────────────────
+L1 · The machine manager
+L0's box opened one level: its boundary services — private gRPC, webapi, the
+the reconcile loop, SSH + BMC ops and the boot server — sit inside the Machin
+while the control plane, humans, providers and machines stay outside it.
+
+
+
+                                                   ╔═Machine manager═════════
+                                                   ║                    ╭────
+                                                   ║                    │boot
+                                                   ║                    │
+                                                                            ─
+                                                          █▖▗▖ █▌▗▖
+ ╭───────────────────╮ create / terminate / repair        ▀    ▝            ─
+ │Modal control plane│─────────────────────────────       █▘ ▜▜▌▝▀ ▝▀       r
+ ┌───────┐           │                                        ▐▌
+ │ + [+]─│───────────╯                                    ▀▘▀ ▝▌▝▘          ─
+ │ − [-] │                                                ▄ ▟ ▝▘ █
+ │ ⊡ [f]─│─────────╮               http                   ▄                 ─
+ │ □ [i]a│s + mmctl│───────────────────────────────       █ ▘               d
+ └───────┘         │
+    ╰──────────────╯                               ║   ╰──────╯       ╰──────

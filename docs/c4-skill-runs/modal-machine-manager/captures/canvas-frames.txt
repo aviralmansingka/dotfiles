@@ -1,0 +1,517 @@
+viewport: 173x128 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 173x128 @100% · canvas 173x128 · spec.json · 36 nodes · 29 edges · q quit
+ System context: the machine manager is one box. The control plane and humans + mmctl call it; it
+ provisions and boots machines through two provider APIs, audits them over SSH and alerts in
+ Slack. The machines pull boot artefacts from S3, so L1 opens the box.
+
+    ╭─────────────╮                                                               ╭───────────────────╮
+    │machine-agent│────────────────────────╮                                  ╭──▶│bare-metal machines│────────────────╮
+    │             │  register + heartbeat  │                                  │   │                   │ pull boot image│
+    ╰─────────────╯                        │               provider API       │   ╰───────────────────╯                │
+                                           │ ╭───────────────╮  boot + audit  │                                        │
+ ╭───────────────────╮    provisioning     ╰▶│               │────────────────╯  ╭────────────────────╮                │ ╭───────────────╮
+ │Modal control plane│─────────────────────╮ │               │                 ╭▶│bare-metal providers│                ╰▶│S3 object store│
+ │                   │                     ╰▶│Machine manager│─────────────────╯ │                    │                  │               │
+ ╰───────────────────╯                       │               │                   ╰────────────────────╯                  ╰───────────────╯
+                                           ╭▶│               │────────────────╮
+    ╭──────────────╮         http          │ ╰───────────────╯confirm + alerts│          ╭─────╮
+    │humans + mmctl│───────────────────────╯                                  ╰─────────▶│Slack│
+    │              │                                                                     │     │
+    ╰──────────────╯                                                                     ╰─────╯
+
+
+ ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ L1 · The machine manager
+ L0's box opened one level: its boundary services — private gRPC, webapi, the provider adapter,
+ the reconcile loop, SSH + BMC ops and the boot server — sit inside the Machine manager box,
+ while the control plane, humans, providers and machines stay outside it.
+
+
+                                                                               ╭─────────────────────────────────────────────────────────────────────────────────╮
+                                                                               ▼                                                                                 │
+                                                                         ╭───────────╮                                                                           │
+                                                   ╔═Machine manager═════│boot server│───────────────────────────────────────╮                                   │
+                                                   ║                     │           │  ║       boot.ipxe + S3 args          │ iPXE request                      │
+                                                   ║                     ╰───────────╯  ║                                    │                                   │
+                                                   ║                                    ║                                    ╰───────────────────────╮           │
+  ╭───────────────────╮ create / terminate / repair║ ╭────────────╮   ╭─────────────────╮ gcore sync, 1 min                                          │           │
+  │Modal control plane│─────────────────────────────▶│private gRPC│   │cluster reconcile│──────────────────╮                                         │ ╭───────────────────╮
+  │                   │                            ║ │            │   │                 │                  │ ╭────────────────────╮                  ╰▶│                   │
+  ╰───────────────────╯                            ║ ╰────────────╯   ╰─────────────────╯                  ╰▶│                    │allocate instance   │                   │
+                                                   ║                                    ║                    │bare-metal providers│───────────────────▶│bare-metal machines│
+     ╭──────────────╮               http           ║    ╭──────╮       ╭────────────────╮   provider API   ╭▶│                    │                    │                   │
+     │humans + mmctl│──────────────────────────────────▶│webapi│       │provider adapter│──────────────────╯ ╰────────────────────╯                  ╭▶│                   │
+     │              │                              ║    │      │       │                │                                                            │ ╰───────────────────╯
+     ╰──────────────╯                              ║    ╰──────╯       ╰────────────────╯                                                            │
+                                                   ║                                    ║                                                            │
+                                                   ║                    ╭─────────────╮ ║                     run machine-audit                      │
+                                                   ║                    │SSH + BMC ops│──────────────────────────────────────────────────────────────╯
+                                                   ║                    │             │ ║
+                                                   ║                    ╰─────────────╯ ║
+                                                   ║                                    ║
+                                                   ║                                    ║
+                                                   ╚════════════════════════════════════╝
+ ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ L1b · The machine side
+ The fleet end of the same system. Machines run the machine-agent, which registers and heartbeats
+ into public gRPC inside the manager's box; the River queue uploads audit and bench objects to S3
+ and webapi confirms actions in Slack, both outside. The fleet drives these relations.
+
+
+                                                                            ╭───────────╮
+                                                                         ╭─▶│public gRPC│
+                                                                         │║ │           │
+                                                                         │║ ╰───────────╯                   ╭───────────────╮
+                                                                         │║             ║                 ╭▶│S3 object store│
+  ╭───────────────────╮ runs on host  ╭─────────────╮register + heartbeat│║ ╭───────────╮diagnose uploads │ │               │
+  │bare-metal machines│──────────────▶│machine-agent│────────────────────╯║ │River queue│─────────────────╯ ╰───────────────╯
+  │                   │               │             │                     ║ │           │
+  ╰───────────────────╯               ╰─────────────╯                     ║ ╰───────────╯                        ╭─────╮
+                                                                          ║             ║                      ╭▶│Slack│
+                                                                          ║    ╭──────╮ ║  confirm + alerts    │ │     │
+                                                                          ║    │webapi│────────────────────────╯ ╰─────╯
+                                                                          ║    │      │ ║
+                                                                          ║    ╰──────╯ ║
+                                                                          ║             ║
+                                                                          ║             ║
+                                                                          ╚═════════════╝
+ ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ L2 · Inside — queue and dispatch
+ Inside the box, first slice: requests land on the River queue, which dispatches provision jobs
+ to the provider adapter, audit work to SSH + BMC ops and diagnostic events to the janitor
+ client; the janitor proposes actions back to webapi. L2b carries the state writes.
+
+
+                                        ╭──────╮                                                                   ╭────────────────╮
+╔═Machine manager═════════════════╭────▶│webapi│●──────────────────────────╮═╭───────────╮═══════════════════════╭▶│provider adapter│
+║                                 │     │      │  reinstall / reprovision  │ │           │     provision job     │ │                │
+║ ╭──────────────╮proposed actions│     ╰──────╯                           ╰▶│           │●──────────────────────╯ ╰────────────────╯
+║ │janitor client│●───────────────╯                                          │River queue│                                          ║
+║ │              │                   ╭────────────╮       enqueue job      ╭▶│           │●─────────────────────╮    ╭─────────────╮║
+║ ╰──────────────╯                   │private gRPC│●───────────────────────╯ │           │audit / verify reimage╰───▶│SSH + BMC ops│║
+║        ▲                           │            │                          ╰───────────╯                           │             │║
+║        │                           ╰────────────╯                                ●                                 ╰─────────────╯║
+║        │                                                                         │                                                ║
+║        │                            diagnostic events                            │                                                ║
+╚════════╰─────────────────────────────────────────────────────────────────────────╯════════════════════════════════════════════════╝
+
+
+
+ ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ L2b · Inside — the state writes
+ Inside the box, second slice: the writes into the Postgres state store — River job rows from the
+ queue, machine rows from private gRPC, machine state from public gRPC heartbeats and cluster
+ rows from the reconcile loop. Same box, same manager; only the state edges are drawn here.
+
+
+     ╭────────────╮
+╔═Mac│private gRPC│●───────────────╮══════════╗
+║    │            │  machine rows  │          ║
+║    ╰────────────╯                │          ║
+║                                  │          ║
+║    ╭───────────╮  machine state  │ ╭────────╮
+║    │public gRPC│●───────────────╮╰▶│        │
+║    │           │                │  │        │
+║    ╰───────────╯                ╰─▶│        │
+║                                    │Postgres│
+║    ╭───────────╮    job rows    ╭─▶│        │
+║    │River queue│●───────────────╯  │        │
+║    │           │                 ╭▶│        │
+║    ╰───────────╯                 │ ╰────────╯                                                                                                           █▖▗▖ █▌▗▖
+║                                  │          ║                                                                                                               ▗▖
+║ ╭─────────────────╮ cluster state│          ║                                                                                                           ▀▘ ▀▜▌▝▀ ▝▀
+║┌───────┐ reconcile│●─────────────╯          ║                                                                                                           ▄▖▄ ▗▖▗▖
+║│ + [+] │          │                         ║                                                                                                                ▘ ▘
+║│ − [-]─│──────────╯                         ║                                                                                                           ▀ ▀ ▝▘ ▀
+║│ ⊡ [f] │                                    ║                                                                                                           ▄ ▖
+║│ □ [i] │                                    ║                                                                                                           ▀
+╚└───────┘════════════════════════════════════╝
+
+frame 1 at 100ms
+ rataflow-view · 173x128 @100% · canvas 173x128 · spec.json · 36 nodes · 29 edges · q quit
+ System context: the machine manager is one box. The control plane and humans + mmctl call it; it
+ provisions and boots machines through two provider APIs, audits them over SSH and alerts in
+ Slack. The machines pull boot artefacts from S3, so L1 opens the box.
+
+    ╭─────────────╮                                                               ╭───────────────────╮
+    │machine-agent│────────────────────────╮                                  ╭──▶│bare-metal machines│────────────────╮
+    │             │  register + heartbeat  │                                  │   │                   │ pull boot image│
+    ╰─────────────╯                        │               provider API       │   ╰───────────────────╯                │
+                                           │ ╭───────────────╮  boot + audit  │                                        │
+ ╭───────────────────╮    provisioning     ╰▶│               │────────────────╯  ╭────────────────────╮                │ ╭───────────────╮
+ │Modal control plane│─────────────────────╮ │               │                 ╭▶│bare-metal providers│                ╰▶│S3 object store│
+ │                   │                     ╰▶│Machine manager│─────────────────╯ │                    │                  │               │
+ ╰───────────────────╯                       │               │                   ╰────────────────────╯                  ╰───────────────╯
+                                           ╭▶│               │────────────────╮
+    ╭──────────────╮         http          │ ╰───────────────╯confirm + alerts│          ╭─────╮
+    │humans + mmctl│───────────────────────╯                                  ╰─────────▶│Slack│
+    │              │                                                                     │     │
+    ╰──────────────╯                                                                     ╰─────╯
+
+
+ ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ L1 · The machine manager
+ L0's box opened one level: its boundary services — private gRPC, webapi, the provider adapter,
+ the reconcile loop, SSH + BMC ops and the boot server — sit inside the Machine manager box,
+ while the control plane, humans, providers and machines stay outside it.
+
+
+                                                                               ╭─────────────────────────────────────────────────────────────────────────────────╮
+                                                    ╔═Machine manager══════════▼═════════╗                                                                       │
+                                                    ║                    ╭───────────╮   ║                                                                       │
+                                                    ║                    │boot server│───────────────────────────────────────╮                                   │
+                                                    ║                    │           │   ║      boot.ipxe + S3 args          │ iPXE request                      │
+                                                    ║                    ╰───────────╯   ║                                   │                                   │
+                                                    ║                                    ║                                   ╰───────────────────────╮           │
+  ╭───────────────────╮ create / terminate / repair ║╭────────────╮   ╭─────────────────╮║gcore sync, 1 min                                          │           │
+  │Modal control plane│─────────────────────────────▶│private gRPC│   │cluster reconcile│──────────────────╮                                         │ ╭───────────────────╮
+  │                   │                             ║│            │   │                 │║                 │ ╭────────────────────╮                  ╰▶│                   │
+  ╰───────────────────╯                             ║╰────────────╯   ╰─────────────────╯║                 ╰▶│                    │allocate instance   │                   │
+                                                    ║                                    ║                   │bare-metal providers│───────────────────▶│bare-metal machines│
+     ╭──────────────╮               http            ║   ╭──────╮       ╭────────────────╮║  provider API   ╭▶│                    │                    │                   │
+     │humans + mmctl│──────────────────────────────────▶│webapi│       │provider adapter│──────────────────╯ ╰────────────────────╯                  ╭▶│                   │
+     │              │                               ║   │      │       │                │║                                                           │ ╰───────────────────╯
+     ╰──────────────╯                               ║   ╰──────╯       ╰────────────────╯║                                                           │
+                                                    ║                                    ║                                                           │
+                                                    ║                   ╭─────────────╮  ║                    run machine-audit                      │
+                                                    ║                   │SSH + BMC ops│──────────────────────────────────────────────────────────────╯
+                                                    ║                   │             │  ║
+                                                    ║                   ╰─────────────╯  ║
+                                                    ╚════════════════════════════════════╝
+
+
+ ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ L1b · The machine side
+ The fleet end of the same system. Machines run the machine-agent, which registers and heartbeats
+ into public gRPC inside the manager's box; the River queue uploads audit and bench objects to S3
+ and webapi confirms actions in Slack, both outside. The fleet drives these relations.
+
+                                                                           ╔═════════════╗
+                                                                           ║╭───────────╮║
+                                                                         ╭─▶│public gRPC│║
+                                                                         │ ║│           │║
+                                                                         │ ║╰───────────╯║                  ╭───────────────╮
+                                                                         │ ║             ║                ╭▶│S3 object store│
+  ╭───────────────────╮ runs on host  ╭─────────────╮register + heartbeat│ ║╭───────────╮diagnose uploads │ │               │
+  │bare-metal machines│──────────────▶│machine-agent│────────────────────╯ ║│River queue│─────────────────╯ ╰───────────────╯
+  │                   │               │             │                      ║│           │║
+  ╰───────────────────╯               ╰─────────────╯                      ║╰───────────╯║                       ╭─────╮
+                                                                           ║             ║                     ╭▶│Slack│
+                                                                           ║   ╭──────╮  ║ confirm + alerts    │ │     │
+                                                                           ║   │webapi│────────────────────────╯ ╰─────╯
+                                                                           ║   │      │  ║
+                                                                           ║   ╰──────╯  ║
+                                                                           ╚═════════════╝
+
+
+ ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ L2 · Inside — queue and dispatch
+ Inside the box, first slice: requests land on the River queue, which dispatches provision jobs
+ to the provider adapter, audit work to SSH + BMC ops and diagnostic events to the janitor
+ client; the janitor proposes actions back to webapi. L2b carries the state writes.
+
+ ╔═Machine manager═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+ ║                                      ╭──────╮                                                                   ╭────────────────╮║
+ ║                                ╭────▶│webapi│●──────────────────────────╮ ╭───────────╮                       ╭▶│provider adapter│║
+ ║                                │     │      │  reinstall / reprovision  │ │           │     provision job     │ │                │║
+ ║╭──────────────╮proposed actions│     ╰──────╯                           ╰▶│           │●──────────────────────╯ ╰────────────────╯║
+ ║│janitor client│●───────────────╯                                          │River queue│                                           ║
+ ║│              │                   ╭────────────╮       enqueue job      ╭▶│           │●─────────────────────╮    ╭─────────────╮ ║
+ ║╰──────────────╯                   │private gRPC│●───────────────────────╯ │           │audit / verify reimage╰───▶│SSH + BMC ops│ ║
+ ║       ▲                           │            │                          ╰───────────╯                           │             │ ║
+ ║       │                           ╰────────────╯                                ●                                 ╰─────────────╯ ║
+ ╚═══════│═════════════════════════════════════════════════════════════════════════│═════════════════════════════════════════════════╝
+         │                            diagnostic events                            │
+         ╰─────────────────────────────────────────────────────────────────────────╯
+
+
+
+ ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ L2b · Inside — the state writes
+ Inside the box, second slice: the writes into the Postgres state store — River job rows from the
+ queue, machine rows from private gRPC, machine state from public gRPC heartbeats and cluster
+ rows from the reconcile loop. Same box, same manager; only the state edges are drawn here.
+
+ ╔═Machine manager═════════════════════════════╗
+ ║   ╭────────────╮                            ║
+ ║   │private gRPC│●───────────────╮           ║
+ ║   │            │  machine rows  │           ║
+ ║   ╰────────────╯                │           ║
+ ║                                 │           ║
+ ║   ╭───────────╮  machine state  │ ╭────────╮║
+ ║   │public gRPC│●───────────────╮╰▶│        │║
+ ║   │           │                │  │        │║
+ ║   ╰───────────╯                ╰─▶│        │║
+ ║                                   │Postgres│║
+ ║   ╭───────────╮    job rows    ╭─▶│        │║
+ ║   │River queue│●───────────────╯  │        │║
+ ║   │           │                 ╭▶│        │║
+ ║   ╰───────────╯                 │ ╰────────╯║                                                                                                          █▖▗▖ █▌▗▖
+ ║                                 │           ║                                                                                                              ▗▖
+ ║╭─────────────────╮ cluster state│           ║                                                                                                          ▀▘ ▀▜▌▝▀ ▝▀
+ ┌───────┐ reconcile│●─────────────╯           ║                                                                                                          ▄▖▄ ▗▖▗▖
+ │ + [+] │          │                          ║                                                                                                               ▘ ▘
+ │ − [-]─│──────────╯                          ║                                                                                                          ▀ ▀ ▝▘ ▀
+ │ ⊡ [f]═│═════════════════════════════════════╝                                                                                                          ▄ ▖
+ │ □ [i] │                                                                                                                                                ▀
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 173x128 @100% · canvas 173x128 · spec.json · 36 nodes · 29 edges · q quit
+ System context: the machine manager is one box. The control plane and humans + mmctl call it; it
+ provisions and boots machines through two provider APIs, audits them over SSH and alerts in
+ Slack. The machines pull boot artefacts from S3, so L1 opens the box.
+
+    ╭─────────────╮                                                               ╭───────────────────╮
+    │machine-agent│────────────────────────╮                                  ╭──▶│bare-metal machines│────────────────╮
+    │             │  register + heartbeat  │                                  │   │                   │ pull boot image│
+    ╰─────────────╯                        │               provider API       │   ╰───────────────────╯                │
+                                           │ ╭───────────────╮  boot + audit  │                                        │
+ ╭───────────────────╮    provisioning     ╰▶│               │────────────────╯  ╭────────────────────╮                │ ╭───────────────╮
+ │Modal control plane│─────────────────────╮ │               │                 ╭▶│bare-metal providers│                ╰▶│S3 object store│
+ │                   │                     ╰▶│Machine manager│─────────────────╯ │                    │                  │               │
+ ╰───────────────────╯                       │               │                   ╰────────────────────╯                  ╰───────────────╯
+                                           ╭▶│               │────────────────╮
+    ╭──────────────╮         http          │ ╰───────────────╯confirm + alerts│          ╭─────╮
+    │humans + mmctl│───────────────────────╯                                  ╰─────────▶│Slack│
+    │              │                                                                     │     │
+    ╰──────────────╯                                                                     ╰─────╯
+
+
+ ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ L1 · The machine manager
+ L0's box opened one level: its boundary services — private gRPC, webapi, the provider adapter,
+ the reconcile loop, SSH + BMC ops and the boot server — sit inside the Machine manager box,
+ while the control plane, humans, providers and machines stay outside it.
+
+
+                                                                               ╭─────────────────────────────────────────────────────────────────────────────────╮
+                                                    ╔═Machine manager══════════▼═════════╗                                                                       │
+                                                    ║                    ╭───────────╮   ║                                                                       │
+                                                    ║                    │boot server│───────────────────────────────────────╮                                   │
+                                                    ║                    │           │   ║      boot.ipxe + S3 args          │ iPXE request                      │
+                                                    ║                    ╰───────────╯   ║                                   │                                   │
+                                                    ║                                    ║                                   ╰───────────────────────╮           │
+  ╭───────────────────╮ create / terminate / repair ║╭────────────╮   ╭─────────────────╮║gcore sync, 1 min                                          │           │
+  │Modal control plane│─────────────────────────────▶│private gRPC│   │cluster reconcile│──────────────────╮                                         │ ╭───────────────────╮
+  │                   │                             ║│            │   │                 │║                 │ ╭────────────────────╮                  ╰▶│                   │
+  ╰───────────────────╯                             ║╰────────────╯   ╰─────────────────╯║                 ╰▶│                    │allocate instance   │                   │
+                                                    ║                                    ║                   │bare-metal providers│───────────────────▶│bare-metal machines│
+     ╭──────────────╮               http            ║   ╭──────╮       ╭────────────────╮║  provider API   ╭▶│                    │                    │                   │
+     │humans + mmctl│──────────────────────────────────▶│webapi│       │provider adapter│──────────────────╯ ╰────────────────────╯                  ╭▶│                   │
+     │              │                               ║   │      │       │                │║                                                           │ ╰───────────────────╯
+     ╰──────────────╯                               ║   ╰──────╯       ╰────────────────╯║                                                           │
+                                                    ║                                    ║                                                           │
+                                                    ║                   ╭─────────────╮  ║                    run machine-audit                      │
+                                                    ║                   │SSH + BMC ops│──────────────────────────────────────────────────────────────╯
+                                                    ║                   │             │  ║
+                                                    ║                   ╰─────────────╯  ║
+                                                    ╚════════════════════════════════════╝
+
+
+ ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ L1b · The machine side
+ The fleet end of the same system. Machines run the machine-agent, which registers and heartbeats
+ into public gRPC inside the manager's box; the River queue uploads audit and bench objects to S3
+ and webapi confirms actions in Slack, both outside. The fleet drives these relations.
+
+                                                                           ╔═════════════╗
+                                                                           ║╭───────────╮║
+                                                                         ╭─▶│public gRPC│║
+                                                                         │ ║│           │║
+                                                                         │ ║╰───────────╯║                  ╭───────────────╮
+                                                                         │ ║             ║                ╭▶│S3 object store│
+  ╭───────────────────╮ runs on host  ╭─────────────╮register + heartbeat│ ║╭───────────╮diagnose uploads │ │               │
+  │bare-metal machines│──────────────▶│machine-agent│────────────────────╯ ║│River queue│─────────────────╯ ╰───────────────╯
+  │                   │               │             │                      ║│           │║
+  ╰───────────────────╯               ╰─────────────╯                      ║╰───────────╯║                       ╭─────╮
+                                                                           ║             ║                     ╭▶│Slack│
+                                                                           ║   ╭──────╮  ║ confirm + alerts    │ │     │
+                                                                           ║   │webapi│────────────────────────╯ ╰─────╯
+                                                                           ║   │      │  ║
+                                                                           ║   ╰──────╯  ║
+                                                                           ╚═════════════╝
+
+
+ ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ L2 · Inside — queue and dispatch
+ Inside the box, first slice: requests land on the River queue, which dispatches provision jobs
+ to the provider adapter, audit work to SSH + BMC ops and diagnostic events to the janitor
+ client; the janitor proposes actions back to webapi. L2b carries the state writes.
+
+ ╔═Machine manager═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+ ║                                      ╭──────╮                                                                   ╭────────────────╮║
+ ║                                ╭────▶│webapi│─●─────────────────────────╮ ╭───────────╮                       ╭▶│provider adapter│║
+ ║                                │     │      │  reinstall / reprovision  │ │           │     provision job     │ │                │║
+ ║╭──────────────╮proposed actions│     ╰──────╯                           ╰▶│           │─●─────────────────────╯ ╰────────────────╯║
+ ║│janitor client│─●──────────────╯                                          │River queue│                                           ║
+ ║│              │                   ╭────────────╮       enqueue job      ╭▶│           │─●────────────────────╮    ╭─────────────╮ ║
+ ║╰──────────────╯                   │private gRPC│─●──────────────────────╯ │           │audit / verify reimage╰───▶│SSH + BMC ops│ ║
+ ║       ▲                           │            │                          ╰───────────╯                           │             │ ║
+ ║       │                           ╰────────────╯                                │                                 ╰─────────────╯ ║
+ ╚═══════│═════════════════════════════════════════════════════════════════════════●═════════════════════════════════════════════════╝
+         │                            diagnostic events                            │
+         ╰─────────────────────────────────────────────────────────────────────────╯
+
+
+
+ ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ L2b · Inside — the state writes
+ Inside the box, second slice: the writes into the Postgres state store — River job rows from the
+ queue, machine rows from private gRPC, machine state from public gRPC heartbeats and cluster
+ rows from the reconcile loop. Same box, same manager; only the state edges are drawn here.
+
+ ╔═Machine manager═════════════════════════════╗
+ ║   ╭────────────╮                            ║
+ ║   │private gRPC│─●──────────────╮           ║
+ ║   │            │  machine rows  │           ║
+ ║   ╰────────────╯                │           ║
+ ║                                 │           ║
+ ║   ╭───────────╮  machine state  │ ╭────────╮║
+ ║   │public gRPC│─●──────────────╮╰▶│        │║
+ ║   │           │                │  │        │║
+ ║   ╰───────────╯                ╰─▶│        │║
+ ║                                   │Postgres│║
+ ║   ╭───────────╮    job rows    ╭─▶│        │║
+ ║   │River queue│─●──────────────╯  │        │║
+ ║   │           │                 ╭▶│        │║
+ ║   ╰───────────╯                 │ ╰────────╯║                                                                                                          █▖▗▖ █▌▗▖
+ ║                                 │           ║                                                                                                              ▗▖
+ ║╭─────────────────╮ cluster state│           ║                                                                                                          ▀▘ ▀▜▌▝▀ ▝▀
+ ┌───────┐ reconcile│─●────────────╯           ║                                                                                                          ▄▖▄ ▗▖▗▖
+ │ + [+] │          │                          ║                                                                                                               ▘ ▘
+ │ − [-]─│──────────╯                          ║                                                                                                          ▀ ▀ ▝▘ ▀
+ │ ⊡ [f]═│═════════════════════════════════════╝                                                                                                          ▄ ▖
+ │ □ [i] │                                                                                                                                                ▀
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 173x128 @100% · canvas 173x128 · spec.json · 36 nodes · 29 edges · q quit
+ System context: the machine manager is one box. The control plane and humans + mmctl call it; it
+ provisions and boots machines through two provider APIs, audits them over SSH and alerts in
+ Slack. The machines pull boot artefacts from S3, so L1 opens the box.
+
+    ╭─────────────╮                                                               ╭───────────────────╮
+    │machine-agent│────────────────────────╮                                  ╭──▶│bare-metal machines│────────────────╮
+    │             │  register + heartbeat  │                                  │   │                   │ pull boot image│
+    ╰─────────────╯                        │               provider API       │   ╰───────────────────╯                │
+                                           │ ╭───────────────╮  boot + audit  │                                        │
+ ╭───────────────────╮    provisioning     ╰▶│               │────────────────╯  ╭────────────────────╮                │ ╭───────────────╮
+ │Modal control plane│─────────────────────╮ │               │                 ╭▶│bare-metal providers│                ╰▶│S3 object store│
+ │                   │                     ╰▶│Machine manager│─────────────────╯ │                    │                  │               │
+ ╰───────────────────╯                       │               │                   ╰────────────────────╯                  ╰───────────────╯
+                                           ╭▶│               │────────────────╮
+    ╭──────────────╮         http          │ ╰───────────────╯confirm + alerts│          ╭─────╮
+    │humans + mmctl│───────────────────────╯                                  ╰─────────▶│Slack│
+    │              │                                                                     │     │
+    ╰──────────────╯                                                                     ╰─────╯
+
+
+ ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ L1 · The machine manager
+ L0's box opened one level: its boundary services — private gRPC, webapi, the provider adapter,
+ the reconcile loop, SSH + BMC ops and the boot server — sit inside the Machine manager box,
+ while the control plane, humans, providers and machines stay outside it.
+
+
+                                                                               ╭─────────────────────────────────────────────────────────────────────────────────╮
+                                                    ╔═Machine manager══════════▼═════════╗                                                                       │
+                                                    ║                    ╭───────────╮   ║                                                                       │
+                                                    ║                    │boot server│───────────────────────────────────────╮                                   │
+                                                    ║                    │           │   ║      boot.ipxe + S3 args          │ iPXE request                      │
+                                                    ║                    ╰───────────╯   ║                                   │                                   │
+                                                    ║                                    ║                                   ╰───────────────────────╮           │
+  ╭───────────────────╮ create / terminate / repair ║╭────────────╮   ╭─────────────────╮║gcore sync, 1 min                                          │           │
+  │Modal control plane│─────────────────────────────▶│private gRPC│   │cluster reconcile│──────────────────╮                                         │ ╭───────────────────╮
+  │                   │                             ║│            │   │                 │║                 │ ╭────────────────────╮                  ╰▶│                   │
+  ╰───────────────────╯                             ║╰────────────╯   ╰─────────────────╯║                 ╰▶│                    │allocate instance   │                   │
+                                                    ║                                    ║                   │bare-metal providers│───────────────────▶│bare-metal machines│
+     ╭──────────────╮               http            ║   ╭──────╮       ╭────────────────╮║  provider API   ╭▶│                    │                    │                   │
+     │humans + mmctl│──────────────────────────────────▶│webapi│       │provider adapter│──────────────────╯ ╰────────────────────╯                  ╭▶│                   │
+     │              │                               ║   │      │       │                │║                                                           │ ╰───────────────────╯
+     ╰──────────────╯                               ║   ╰──────╯       ╰────────────────╯║                                                           │
+                                                    ║                                    ║                                                           │
+                                                    ║                   ╭─────────────╮  ║                    run machine-audit                      │
+                                                    ║                   │SSH + BMC ops│──────────────────────────────────────────────────────────────╯
+                                                    ║                   │             │  ║
+                                                    ║                   ╰─────────────╯  ║
+                                                    ╚════════════════════════════════════╝
+
+
+ ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ L1b · The machine side
+ The fleet end of the same system. Machines run the machine-agent, which registers and heartbeats
+ into public gRPC inside the manager's box; the River queue uploads audit and bench objects to S3
+ and webapi confirms actions in Slack, both outside. The fleet drives these relations.
+
+                                                                           ╔═════════════╗
+                                                                           ║╭───────────╮║
+                                                                         ╭─▶│public gRPC│║
+                                                                         │ ║│           │║
+                                                                         │ ║╰───────────╯║                  ╭───────────────╮
+                                                                         │ ║             ║                ╭▶│S3 object store│
+  ╭───────────────────╮ runs on host  ╭─────────────╮register + heartbeat│ ║╭───────────╮diagnose uploads │ │               │
+  │bare-metal machines│──────────────▶│machine-agent│────────────────────╯ ║│River queue│─────────────────╯ ╰───────────────╯
+  │                   │               │             │                      ║│           │║
+  ╰───────────────────╯               ╰─────────────╯                      ║╰───────────╯║                       ╭─────╮
+                                                                           ║             ║                     ╭▶│Slack│
+                                                                           ║   ╭──────╮  ║ confirm + alerts    │ │     │
+                                                                           ║   │webapi│────────────────────────╯ ╰─────╯
+                                                                           ║   │      │  ║
+                                                                           ║   ╰──────╯  ║
+                                                                           ╚═════════════╝
+
+
+ ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ L2 · Inside — queue and dispatch
+ Inside the box, first slice: requests land on the River queue, which dispatches provision jobs
+ to the provider adapter, audit work to SSH + BMC ops and diagnostic events to the janitor
+ client; the janitor proposes actions back to webapi. L2b carries the state writes.
+
+ ╔═Machine manager═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+ ║                                      ╭──────╮                                                                   ╭────────────────╮║
+ ║                                ╭────▶│webapi│─●─────────────────────────╮ ╭───────────╮                       ╭▶│provider adapter│║
+ ║                                │     │      │  reinstall / reprovision  │ │           │     provision job     │ │                │║
+ ║╭──────────────╮proposed actions│     ╰──────╯                           ╰▶│           │─●─────────────────────╯ ╰────────────────╯║
+ ║│janitor client│─●──────────────╯                                          │River queue│                                           ║
+ ║│              │                   ╭────────────╮       enqueue job      ╭▶│           │─●────────────────────╮    ╭─────────────╮ ║
+ ║╰──────────────╯                   │private gRPC│─●──────────────────────╯ │           │audit / verify reimage╰───▶│SSH + BMC ops│ ║
+ ║       ▲                           │            │                          ╰───────────╯                           │             │ ║
+ ║       │                           ╰────────────╯                                │                                 ╰─────────────╯ ║
+ ╚═══════│═════════════════════════════════════════════════════════════════════════●═════════════════════════════════════════════════╝
+         │                            diagnostic events                            │
+         ╰─────────────────────────────────────────────────────────────────────────╯
+
+
+
+ ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ L2b · Inside — the state writes
+ Inside the box, second slice: the writes into the Postgres state store — River job rows from the
+ queue, machine rows from private gRPC, machine state from public gRPC heartbeats and cluster
+ rows from the reconcile loop. Same box, same manager; only the state edges are drawn here.
+
+ ╔═Machine manager═════════════════════════════╗
+ ║   ╭────────────╮                            ║
+ ║   │private gRPC│─●──────────────╮           ║
+ ║   │            │  machine rows  │           ║
+ ║   ╰────────────╯                │           ║
+ ║                                 │           ║
+ ║   ╭───────────╮  machine state  │ ╭────────╮║
+ ║   │public gRPC│─●──────────────╮╰▶│        │║
+ ║   │           │                │  │        │║
+ ║   ╰───────────╯                ╰─▶│        │║
+ ║                                   │Postgres│║
+ ║   ╭───────────╮    job rows    ╭─▶│        │║
+ ║   │River queue│─●──────────────╯  │        │║
+ ║   │           │                 ╭▶│        │║
+ ║   ╰───────────╯                 │ ╰────────╯║                                                                                                          █▖▗▖ █▌▗▖
+ ║                                 │           ║                                                                                                              ▗▖
+ ║╭─────────────────╮ cluster state│           ║                                                                                                          ▀▘ ▀▜▌▝▀ ▝▀
+ ┌───────┐ reconcile│─●────────────╯           ║                                                                                                          ▄▖▄ ▗▖▗▖
+ │ + [+] │          │                          ║                                                                                                               ▘ ▘
+ │ − [-]─│──────────╯                          ║                                                                                                          ▀ ▀ ▝▘ ▀
+ │ ⊡ [f]═│═════════════════════════════════════╝                                                                                                          ▄ ▖
+ │ □ [i] │                                                                                                                                                ▀
+ └───────┘
+

@@ -1,0 +1,14 @@
+{
+ "binary": "/Users/aviral/.cargo/bin/rataflow-view",
+ "binary_sha256": "fa76dde2c248af2c16095d5c37def3e5e11af35545abad9bf3dcc9eca98f7f69",
+ "spec": "spec.json (spec sha256 in the commit that added this run)",
+ "viewport_natural": "173x128 (exact canvas, drawn whole at 100%)",
+ "frames": {
+  "canvas-text.txt": "COLUMNS=173 LINES=128 --frames 1, plain text",
+  "canvas-ansi.ansi": "COLUMNS=173 LINES=128 --frames 1 --frames-ansi",
+  "canvas-selected.ansi": "COLUMNS=173 LINES=128 --select-all --frames 1 --frames-ansi",
+  "canvas-frames.txt": "COLUMNS=173 LINES=128 --frames 4 (levels 0-1b static; L2/L2b dots advance)",
+  "pane-77x47.txt": "herdr pane at 77x47, canvas pans (recorded residual)"
+ },
+ "pane_close": "w86:p12S closed, {\"id\":\"cli:pane:close\",\"result\":{\"type\":\"ok\"}}"
+}
