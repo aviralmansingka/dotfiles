@@ -108,6 +108,18 @@ assert.deepEqual(deep.parsed, { complete: true, exitCode: 42 });
 assert.equal(deep.output, "deep");
 assert.equal(deep.status, 42);
 
+// Quotes, escapes, and globs stay literal and multi-line commands keep
+// their lines: the command rides the wrapper verbatim, so it needs no extra
+// encoding (the auto-run robustness contract carried over from the merged
+// R-shortcut design).
+const quoted = captureViaFile(`printf '%s\\n' "it's \\$HOME \\\`x\\\` *"`, "quoted");
+assert.deepEqual(quoted.parsed, { complete: true, exitCode: 0 });
+assert.equal(quoted.output, "it's $HOME `x` *");
+
+const multi = captureViaFile("printf 'l1\\n'\nprintf 'l2'\ntrue", "multi");
+assert.deepEqual(multi.parsed, { complete: true, exitCode: 0 });
+assert.equal(multi.output, "l1\nl2");
+
 // The tee + EXIT-trap exit-code recovery is portable: the captain's `dm` is
 // zsh-based, so verify the wrapper behaves identically under sh, bash, zsh,
 // and dash (whichever are installed) — no reliance on bash-only PIPESTATUS.
@@ -810,6 +822,22 @@ try {
 	}
 	assertRpcRoundTrip(envRun.exprs);
 
+	// The uppercase R key - the shortcut's original spelling from the merged
+	// branch - is an alias and drives the same auto-capture path as r.
+	const aliasRun = await driveAuto({
+		keys: ["R"],
+		command: "printf 'alias ok\\n'",
+		setup: ({ nvimDir }) => {
+			const sock = join(nvimDir, "sock-alias");
+			writeFileSync(sock, "");
+			return { sock, env: { NVIM_LISTEN_ADDRESS: sock } };
+		},
+	});
+	assert.equal(aliasRun.result.details.status, "answered");
+	assert.equal(aliasRun.result.details.autoRun, true);
+	assert.equal(aliasRun.result.details.output, "alias ok");
+	assert.equal(aliasRun.herdrCalls.length, 0, "R follows the same env-override path as r");
+
 	// C3: no drivable nvim anywhere → null → split fallback. The owned pane is
 	// closed on completion; the launch argv is recorded.
 	const splitRun = await driveAuto({
@@ -915,6 +943,29 @@ try {
 	assert.notEqual(floatFail.result.details.autoRun, true);
 	assert.ok(floatFail.renders.some(r => /Neovim run failed/.test(r)), "the panel shows the auto-run failure");
 	assert.ok(floatFail.renders.some(r => /Manual copy\/paste still works/.test(r)), "the panel keeps the manual path");
+	assert.ok(floatFail.renders.some(r => /r retries/.test(r)), "the failure banner offers the retry key");
+
+	// While the auto-run is live the panel accepts only Esc: Tab, y, and Enter
+	// are swallowed - no focus change, no clipboard write, no duplicate
+	// submit - and the panel stays in its capturing state until Esc cancels.
+	const guarded = await driveAuto({
+		keys: ["r", /Esc cancels/, "\t", "y", "\r", "\x1b"],
+		command: "printf 'guard ok\\n'",
+		setup: ({ nvimDir }) => {
+			const sock = join(nvimDir, "sock-guard");
+			writeFileSync(sock, "");
+			return { sock, env: { NVIM_LISTEN_ADDRESS: sock, FAKE_NVIM_DELAYED: "1" } };
+		},
+	});
+	assert.equal(guarded.result.details.status, "cancelled");
+	assert.ok(
+		!globalThis.__runCommandClipboardCalls.includes("printf 'guard ok\\n'"),
+		"y during the live run never reaches the clipboard",
+	);
+	for (const render of guarded.renders.slice(3, 6)) {
+		assert.match(render, /Capturing output automatically/, "the panel keeps the capturing state");
+		assert.doesNotMatch(render, /Enter — submit/, "the output field is never focused mid-run");
+	}
 
 	// Optional real-Lua gate: when a Lua interpreter is installed, every Lua
 	// chunk recorded above must compile under load() (skip-if-absent matrix).
