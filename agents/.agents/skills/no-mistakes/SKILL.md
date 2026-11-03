@@ -30,7 +30,6 @@ detached in the background, headless. Keep non-axi commands such as
 `no-mistakes rerun` and `no-mistakes doctor` in the bash tool. If the tool
 is not available, use the bash tool as before.
 
-
 ## Active validation-step boundary
 
 A no-mistakes validation-step agent is already inside an active outer run. It
