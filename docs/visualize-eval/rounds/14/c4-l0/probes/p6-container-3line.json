@@ -1,0 +1,49 @@
+{
+ "direction": "lr",
+ "theme": "gruvbox",
+ "diagrams": [
+  {
+   "id": "x",
+   "title": "T",
+   "description": "System context: the machine manager is one box. The control plane and humans + mmctl call it; it drives the bare-metal providers, boots and audits the machines, which pull their boot image from S3, and it alerts in Slack.",
+   "containers": [
+    {
+     "label": "Machine manager",
+     "members": [
+      "a",
+      "b",
+      "c"
+     ]
+    }
+   ],
+   "nodes": [
+    {
+     "id": "a",
+     "label": "alpha"
+    },
+    {
+     "id": "b",
+     "label": "beta"
+    },
+    {
+     "id": "c",
+     "label": "gamma"
+    }
+   ],
+   "edges": [
+    {
+     "from": "a",
+     "to": "b",
+     "label": "x1",
+     "dots": 0
+    },
+    {
+     "from": "b",
+     "to": "c",
+     "label": "x2",
+     "dots": 0
+    }
+   ]
+  }
+ ]
+}

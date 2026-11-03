@@ -1,0 +1,100 @@
+{
+ "direction": "lr",
+ "theme": "gruvbox",
+ "diagrams": [
+  {
+   "id": "l2",
+   "title": "L2 \u00b7 Inside the box \u2014 queue and dispatch",
+   "description": "The same box opened: requests land on the River queue, which dispatches to the provider registry, the SSH ops path and the janitor.",
+   "containers": [
+    {
+     "label": "Machine manager",
+     "members": [
+      "pgrpc",
+      "wapi",
+      "q",
+      "reg",
+      "ssh",
+      "jan"
+     ]
+    }
+   ],
+   "nodes": [
+    {
+     "id": "pgrpc",
+     "label": "private gRPC",
+     "group": "manager"
+    },
+    {
+     "id": "wapi",
+     "label": "webapi",
+     "group": "manager"
+    },
+    {
+     "id": "q",
+     "label": "River job queue",
+     "group": "manager"
+    },
+    {
+     "id": "reg",
+     "label": "provider registry",
+     "group": "manager"
+    },
+    {
+     "id": "ssh",
+     "label": "SSH + BMC ops",
+     "group": "manager"
+    },
+    {
+     "id": "jan",
+     "label": "janitor app",
+     "group": "manager"
+    }
+   ],
+   "edges": [
+    {
+     "from": "pgrpc",
+     "to": "q",
+     "label": "enqueue job",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "wapi",
+     "to": "q",
+     "label": "reinstall / reprovision",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "q",
+     "to": "reg",
+     "label": "provision job",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "q",
+     "to": "ssh",
+     "label": "audit / verify reimage",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "q",
+     "to": "jan",
+     "label": "diagnostic events",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "jan",
+     "to": "wapi",
+     "label": "proposed actions",
+     "flow": true,
+     "dots": 1
+    }
+   ]
+  }
+ ]
+}

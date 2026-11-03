@@ -2892,6 +2892,16 @@
    "binary": "80d36c42dc5d7edc105b0f2843be51012a645bcc7682d29c1811850531d55c0b",
    "skill": "086394bd1bb4423007fd4704d694c2e7da69a07c54c958d1817aa6c5184b91c4",
    "status": "full run launching (containers replace the dotted boundary)"
+  },
+  "c4_l0": {
+   "status": "OWNER-APPROVED: C4 ladder on one canvas (L0 plain box, L1/L1b/L2/L2b containers), 3-row wrapped descriptions",
+   "spec": "docs/visualize-eval/rounds/14/c4-l0/specs/c4-l0-final.json",
+   "checks": "29/29 labels 0 ambiguous, near-misses 0, 10 dots 0 violations, frame audit PASS (129 windows), validator all-green",
+   "residuals": [
+    "crossing arrow can overwrite a container-label cell",
+    "container border drifts on panned/differently-fitted panes (exact at natural fit)"
+   ],
+   "binary": "fa76dde2c248af2c"
   }
  }
 }

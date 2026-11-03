@@ -1,0 +1,68 @@
+{
+  "spec_path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/14/c4-l0/specs/c4-l0-final.json",
+  "spec_sha256": "97fe7eb242d61af5c12473029ba2387ade709497a1876b45347e7820291688c4",
+  "spec_form": "canvas",
+  "diagrams": [
+    {
+      "id": "l0",
+      "title": "L0 · System context",
+      "description": "System context: the machine manager is one box. The control plane and humans + mmctl call it; it drives the bare-metal providers, boots and audits the machines, which pull their boot image from S3, and it alerts in Slack. Nothing inside is shown yet, so L1 opens it."
+    },
+    {
+      "id": "l1",
+      "title": "L1 · The machine manager",
+      "description": "L0's box opened one level: its boundary services — private gRPC, webapi, provider registry, cluster reconcile, SSH + BMC ops and the boot server — sit in the Machine manager box, while the control plane, humans, providers and machines stay outside it."
+    },
+    {
+      "id": "l1b",
+      "title": "L1b · The machine side",
+      "description": "The fleet end of the same system. Bare-metal machines run the machine-agent, which registers and heartbeats into public gRPC inside the manager's box; the River queue uploads diagnostics to S3 and webapi confirms actions in Slack, both outside. The fleet drives these outward relations."
+    },
+    {
+      "id": "l2",
+      "title": "L2 · Inside — queue and dispatch",
+      "description": "Inside the box, first slice: requests land on the River queue, which dispatches provision jobs to the provider registry, audit work to SSH + BMC ops and diagnostic events to the janitor; the janitor proposes actions back to webapi. L2b carries the state writes this slice leaves out."
+    },
+    {
+      "id": "l2b",
+      "title": "L2b · Inside — the state writes",
+      "description": "Inside the box, second slice: the writes into the Postgres state store — job rows from the queue, machine rows from private gRPC, machine state from public gRPC heartbeats and cluster state from the reconcile loop. Same box, same manager; only the state edges are drawn here."
+    }
+  ],
+  "binary_path": "/tmp/visualize-eval/round-14/bin/rataflow-view",
+  "binary_sha256": "fa76dde2c248af2c16095d5c37def3e5e11af35545abad9bf3dcc9eca98f7f69",
+  "pane_id": "w7E:p12G",
+  "pane_rect": null,
+  "pane_cols": null,
+  "pane_rows": 44,
+  "viewport_line": null,
+  "viewport_token": "68x44 @100%",
+  "check_exit": 0,
+  "check_window": [
+    "2026-11-03T18:22:39Z",
+    "2026-11-03T18:22:39Z"
+  ],
+  "capture_window": [
+    "2026-11-03T18:22:39Z",
+    "2026-11-03T18:22:44Z"
+  ],
+  "cleanup": "confirmed_closed",
+  "select_all_frame": true,
+  "frames": 140,
+  "frame_step_ms": 100,
+  "pinned_frames": {
+    "file": "canvas-77x47-frames.txt",
+    "viewport_line": "viewport: 77x47 zoom: 1.00 natural"
+  },
+  "artifacts": {
+    "bin.sha256": "3015ef06c78a1be74cfdc70d4d3973f1e5b3a2cfa12cd8c873f545c6ba7419c9",
+    "canvas-77x47-frames.txt": "4cc20e5e934efd93c2b5965c671c6198401bb311424468c361e9647647e4c5e0",
+    "canvas-ansi.ansi": "ce5695a597d1b9fde6cfe70f614373e672addb57a541aede8fb3fda61d1fc2b5",
+    "canvas-frames.ansi": "975f63a4e5109c6b79bda88f08c1b0f53ea02a713f80ffb563616ad518f4746d",
+    "canvas-frames.txt": "e77d9d9d128b0b17216696bd069c7bf2976a05ab15afdc5c4ddbb50376b9b445",
+    "canvas-pinned.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "canvas-selected.ansi": "1a7228b3ec388f6c23c86e1c687151d3dd91efa9242a3c6657d1137b54578ca5",
+    "canvas-text.txt": "1b2bc3a3a2f7154fca28fdff80a0d86131090b3d2ee427fe6e4416b034003c41",
+    "check.txt": "5eddb2d63f4a32941941ef57a8f97131cac505b0edf234599e8f648d57d3f621"
+  }
+}

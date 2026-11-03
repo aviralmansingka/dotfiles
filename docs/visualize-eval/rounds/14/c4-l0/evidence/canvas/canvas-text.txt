@@ -1,0 +1,44 @@
+ rataflow-view · 68x44 @100% · canvas 173x128 · c4-l0-final.json · 3
+
+────────────────────────────────────────────────────────────────────
+L0 · System context
+System context: the machine manager is one box. The control plane an
+drives the bare-metal providers, boots and audits the machines, whic
+S3, and it alerts in Slack. Nothing inside is shown yet, so L1 opens
+
+   ╭─────────────╮
+   │machine-agent│────────────────────────╮
+   │             │  register + heartbeat  │
+   ╰─────────────╯                        │               provider A
+                                          │ ╭───────────────╮  boot
+╭───────────────────╮    provisioning     ╰▶│               │───────
+│Modal control plane│─────────────────────╮ │               │
+│                   │                     ╰▶│Machine manager│───────
+╰───────────────────╯                       │               │
+                                          ╭▶│               │───────
+   ╭──────────────╮         http          │ ╰───────────────╯confirm
+   │humans + mmctl│───────────────────────╯
+   │              │
+   ╰──────────────╯
+
+
+────────────────────────────────────────────────────────────────────
+L1 · The machine manager
+L0's box opened one level: its boundary services — private gRPC, web
+cluster reconcile, SSH + BMC ops and the boot server — sit in the Ma
+control plane, humans, providers and machines stay outside it.
+
+
+
+                                                   ╔═Machine manager
+
+                                                 █▖▗▖ █▌▗▖
+                                                 ▀    ▝
+                                                 █▘ ▜█▌▝▀ ▝▀
+ ┌───────┐                                           ▗▖
+ │ + [+]─│───────────╮ create / terminate        ▀▘▀ ▝▌ ▀
+ │ − [-]c│ntrol plane│────────────────────       ▄ ▙ ▝▘ ▜▖
+ │ ⊡ [f] │           │                           ▄
+ │ □ [i]─│───────────╯                           █ ▘
+ └───────┘
+    ╭──────────────╮                               ║   ╭──────╮

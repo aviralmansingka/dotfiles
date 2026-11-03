@@ -1,0 +1,22 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=8 edges=4 flows=0 direction=lr theme=gruvbox
+canvas: 4 diagrams on one canvas, drawn whole at 100%
+diagram probe-l0 "Probe L0" at 0,7: extent=31x5 nodes=2 edges=1 routes=1
+  description: System context: the machine manager is one box. The control plane and humans + mmctl call it; it drives the bare-metal providers, boots and audits the machines, keeps images and diagnostics in S3, and alerts in Slack. Nothing inside is shown yet, so L1 opens it.
+diagram probe-l1 "Probe L1" at 0,19: extent=31x5 nodes=2 edges=1 routes=1
+  description: L0's box opened one level: its boundary services — private gRPC, webapi, provider registry, cluster reconcile, SSH + BMC ops and the boot server — sit in the Machine manager box, while the control plane, humans, providers, machines and S3 stay outside it.
+diagram probe-l1b "Probe L1B" at 0,31: extent=31x5 nodes=2 edges=1 routes=1
+  description: The fleet end of the same system. Bare-metal machines run the machine-agent, which registers and heartbeats into public gRPC inside the manager's box; the River queue uploads diagnostics to S3 and webapi confirms actions in Slack, both outside. The fleet drives these outward relations.
+diagram probe-l2 "Probe L2" at 0,43: extent=31x5 nodes=2 edges=1 routes=1
+  description: The manager's inside: requests land on the River queue, which dispatches provision jobs, audits and diagnostic events; the janitor proposes actions back to webapi, and the queue, private gRPC, public gRPC and reconcile write into Postgres. Every node here is inside the box.
+extent=96x48 cells (whole canvas)
+crossings: 0 bridges, 0 touching bends
+near-misses: 0 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)
+passes-near-unrelated-node: 0
+labels: 4/4 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners
+groups:
+trunks:
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 0 by source, 0 by destination, 0 shared-hue pair(s) (source-only 0, destination-only 0)
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

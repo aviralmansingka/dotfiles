@@ -1,0 +1,19 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    {"id": "in", "label": "inbound", "group": "g1"},
+    {"id": "q", "label": "hub q", "group": "g2"},
+    {"id": "jan", "label": "sibling jan", "group": "g2"},
+    {"id": "db", "label": "sibling db", "group": "g2"},
+    {"id": "out", "label": "outbound", "group": "g3"}
+  ],
+  "layers": [["in"], ["jan", "q", "db"], ["out"]],
+  "edges": [
+    {"from": "in", "to": "q", "label": "feeds", "dots": 0},
+    {"from": "q", "to": "jan", "label": "same rank A", "dots": 0},
+    {"from": "q", "to": "db", "label": "same rank B", "dots": 0},
+    {"from": "jan", "to": "out", "label": "leaves", "dots": 0},
+    {"from": "db", "to": "out", "label": "leaves too", "dots": 0}
+  ]
+}

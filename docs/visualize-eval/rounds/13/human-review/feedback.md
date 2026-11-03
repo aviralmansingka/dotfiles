@@ -76,3 +76,13 @@ recent prior generation on the left, r13 on the right).
    d. ORIENTATION CONSISTENCY: diagrams on one canvas keep ONE reading
       direction unless a measured reason forces a change (owner: "if all
       are left-right oriented, then keep all of them that way").
+
+6. (owner, 2026-11-03, after the C4 container render) "this diagram is
+   great." Approved: the L0 -> L1/L1b -> L2/L2b ladder on one canvas with
+   container boxes, wrapped multi-line descriptions, and the manager as a
+   plain box at context zoom. Mechanism confirmed: `containers`
+   (labelled double-bordered box grown around its members) replaces the
+   drawn group region and the dotted boundary; `focus` is optional.
+   Known residuals to fix next: a crossing arrow can eat a container-label
+   character, and container borders drift on a panned/differently-fitted
+   pane (exact at the natural fit).

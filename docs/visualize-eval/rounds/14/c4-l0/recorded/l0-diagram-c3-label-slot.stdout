@@ -1,0 +1,18 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=8 edges=7 flows=0 direction=lr theme=gruvbox
+canvas: 1 diagrams on one canvas, drawn whole at 100%
+diagram l0 "L0 · System context" at 0,7: extent=114x20 nodes=8 edges=7 routes=7
+  description: System context: the machine manager is one box. The control plane and humans + mmctl call it; it drives the bare-metal providers, boots and audits the machines, keeps images and diagnostics in S3, and alerts in Slack. Nothing inside is shown yet, so L1 opens it.
+extent=114x27 cells (whole canvas)
+crossings: 0 bridges, 0 touching bends
+near-misses: 0 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)
+passes-near-unrelated-node: 0
+labels: 7/7 placed, 0 leader-ticked, 0 on route, 0 skipped, 1 ambiguous owners
+unowned label: l0:e3 "provider API"
+warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge
+groups: modal(1) operators(1) machines(2) manager(1) providers(1) storage(1) tooling(1)
+trunks:
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 0 by source, 0 by destination, 0 shared-hue pair(s) (source-only 0, destination-only 0)
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step
