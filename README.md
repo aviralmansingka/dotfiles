@@ -198,8 +198,9 @@ launchctl print "gui/$UID/com.aviral.dotfiles-auto-sync"
 
 ## Pi agent
 
-Vault-backed missions add persistent attempts, structured progress, and one linked
-worktree per mission in the repository's shared workspace. See the
+Vault-backed missions add persistent attempts, structured progress, and one
+`mission/<slug>` Herdr worktree per mission, linked under the repository's
+workspace. See the
 [Pi missions guide](docs/pi-missions.md) for setup, existing-session attachment,
 and the preview launcher.
 
