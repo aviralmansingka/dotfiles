@@ -2847,6 +2847,12 @@
   "digest_correction": "rounds 10-13 carried dataset sha e69179e5\u2026e8672b\u2026 \u2014 a transcription typo; actual cases.json is e69179e5\u2026e8692b\u2026. All 7 rounds of judge digest-mismatch flags trace to this captain-side typo. Per-file case_hashes (identical since r09) were always the true proof. Corrected everywhere.",
   "harness_fixes_midround": [
    "viz-validate.py: leader-tick warning exempted from check_warnings_absent (the r13 ownership rescue was unshippable otherwise)"
-  ]
+  ],
+  "c4_probe": {
+   "status": "owner-requested exploratory probe: explain modal-machine-manager with C4 diagrams; frozen binary/skill/rubric unchanged; dataset untouched; output to rounds/13/c4-probe/; if the skill cannot express C4 well, the owner will create a dedicated c4 skill",
+   "brief": "rounds/13/c4-probe/brief.md",
+   "worker": "viz-ds13-c4",
+   "judge": "pending"
+  }
  }
 }
