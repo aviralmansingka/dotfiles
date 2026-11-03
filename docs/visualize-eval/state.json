@@ -2843,7 +2843,7 @@
     "judge": "VERDICT FAIL (6F + 2B + anim PASS): 29 near-miss cells on 4 routes; ECMP pairing not independently established from captures (r10 history repeats); evidence gaps (lower-diagram ANSI/pan); one triage attribution error (ISP answer credited to brief, not source)"
    }
   },
-  "status": "ALL VERDCTS IN: 0/8 green expected; aggregating",
+  "status": "COMPLETE: 0/8 green (24P/33F/11B of 68; 48 near-miss cells). Engine fixes visible (OOB-hug gone, labels clean everywhere, canvas form in 5/8 cases); fails cluster in near-miss remainder (gb300 19, dc 29), evidence coverage, dot cycling, semantic drops (nv-rms). 7-round digest typo fixed (e8672b->e8692b). 8 corrected before/after tabs open (w7E:tD5-tDC); awaiting human feedback -> round 14 (engine cross-gaps, whole-canvas evidence, ledger completeness)",
   "digest_correction": "rounds 10-13 carried dataset sha e69179e5\u2026e8672b\u2026 \u2014 a transcription typo; actual cases.json is e69179e5\u2026e8692b\u2026. All 7 rounds of judge digest-mismatch flags trace to this captain-side typo. Per-file case_hashes (identical since r09) were always the true proof. Corrected everywhere.",
   "harness_fixes_midround": [
    "viz-validate.py: leader-tick warning exempted from check_warnings_absent (the r13 ownership rescue was unshippable otherwise)"
