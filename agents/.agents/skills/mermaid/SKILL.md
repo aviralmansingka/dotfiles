@@ -98,8 +98,10 @@ audiences, who think in ownership boundaries.
   sake of shrinking, and do not pad for the sake of width.
 - In pi chat the `mermaid` tool does this for you: it resolves the chat's
   own grok-mermaid copy (from the pi managed install; `PI_MERMAID_GROK`
-  overrides), trims the art to its smallest bounding box, and gates pane
-  fit with zero warnings before displaying the transcript row.
+  overrides), compacts the art to the minimum width and height its
+  content needs — blank margins cut, lane gaps and connector runs
+  squeezed, filler connector rows dropped — and gates pane fit with zero
+  warnings before displaying the transcript row.
 - grok-mermaid IGNORES inner subgraph `direction` settings: a
   serpentine previews as vertically stacked groups. The PNG from
   mermaid.ink still shows the true layout — say so when previewing.
