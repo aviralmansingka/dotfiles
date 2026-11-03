@@ -20,7 +20,8 @@ is labeled `no-mistakes: <phase>`. `/no-mistakes` focuses that pane, and
 `/no-mistakes close` (or `stop`) cancels the run and closes it.
 
 Every command below is shown in CLI form for reference. Submit it through
-`no_mistakes_axi` with the arguments after `axi`.
+`no_mistakes_axi` with the arguments after `axi`. If your harness does not
+provide the `no_mistakes_axi` tool, run the CLI form through your shell.
 
 
 ## Active validation-step boundary

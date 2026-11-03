@@ -52,7 +52,7 @@ const {
 // and the command runs in the caller's directory even when the pane shell is
 // elsewhere.
 // ---------------------------------------------------------------------------
-function runScript(axiArgs, token, stubExit, runCwd) {
+function runScript(axiArgs, token, stubExit, runCwd, stubLines) {
 	const dir = mkdtempSync(join(tmpdir(), "pi-nm-stub-"));
 	const outFile = join(dir, "capture.out");
 	const scriptFile = join(dir, "run.sh");
@@ -60,7 +60,7 @@ function runScript(axiArgs, token, stubExit, runCwd) {
 	const cwd = runCwd ?? dir;
 	writeFileSync(
 		stubPath,
-		[
+		(stubLines ?? [
 			"#!/bin/sh",
 			'printf "arg=%s\\n" "$@"',
 			'printf "PWD=%s\\n" "$PWD"',
@@ -68,7 +68,7 @@ function runScript(axiArgs, token, stubExit, runCwd) {
 			'printf "STDOUT_LINE\\n"',
 			`exit ${stubExit}`,
 			"",
-		].join("\n"),
+		]).join("\n"),
 	);
 	chmodSync(stubPath, 0o755);
 	writeFileSync(scriptFile, buildPaneScript(axiArgs, token, outFile, cwd));
@@ -132,6 +132,27 @@ function runScript(axiArgs, token, stubExit, runCwd) {
 }
 
 {
+	// A stdout tail without a trailing newline lands on the END-marker line,
+	// because tee's last write and the marker printf share that line; the
+	// tail is still stdout and must reach the agent.
+	const token = `notrail${process.pid}`;
+	const { captured } = runScript(["run"], token, 0, undefined, [
+		"#!/bin/sh",
+		'printf "outcome: passed"',
+		"exit 0",
+		"",
+	]);
+	const parsed = extractMarkedOutput(captured, token);
+	assert.equal(parsed.complete, true, "the END marker landed");
+	assert.equal(
+		parsed.output,
+		"outcome: passed",
+		"the last stdout line before the END marker must not be dropped",
+	);
+	assert.equal(parsed.exitCode, 0);
+}
+
+{
 	// A bad cwd completes the capture with 127 instead of hanging the pane.
 	const token = "badcwd1";
 	const missing = join(tmpdir(), `pi-nm-missing-${process.pid}-${Date.now()}`);
@@ -174,6 +195,13 @@ function runScript(axiArgs, token, stubExit, runCwd) {
 
 	// A different call's markers never satisfy this call.
 	assert.equal(extractMarkedOutput("__NM_START_other__\nx\n__NM_END_other__:0", "abc123").complete, false);
+
+	// A stdout tail without a trailing newline shares the END-marker's line;
+	// the text before the marker is still captured stdout.
+	assert.deepEqual(
+		extractMarkedOutput("__NM_START_abc123__\noutcome: passed__NM_END_abc123__:0", "abc123"),
+		{ complete: true, output: "outcome: passed", exitCode: 0 },
+	);
 }
 
 // ---------------------------------------------------------------------------

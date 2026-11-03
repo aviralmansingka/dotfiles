@@ -189,9 +189,26 @@ async function runInline(
 		};
 	} catch (error) {
 		if (signal?.aborted) return { output: "", exitCode: -1, where, trouble: "Cancelled." };
-		const e = error as { stdout?: string; stderr?: string; code?: unknown; message?: string };
+		const e = error as {
+			stdout?: string;
+			stderr?: string;
+			code?: unknown;
+			killed?: boolean;
+			signal?: string;
+			message?: string;
+		};
 		if (e.stdout === undefined && e.stderr === undefined) {
 			throw new Error(`no-mistakes axi failed to start: ${e.message ?? String(error)}`);
+		}
+		if (e.killed === true && e.signal === "SIGTERM") {
+			return {
+				output: joinStreams(e.stdout, e.stderr),
+				exitCode: -1,
+				where,
+				trouble:
+					`Killed after the ${NM_PANE_TIMEOUT_MS / 60_000}m inline timeout; ` +
+					`call status to read the run state.`,
+			};
 		}
 		const exitCode = typeof e.code === "number" ? e.code : 1;
 		return {
@@ -325,7 +342,7 @@ async function runAxi(
 	const axiArgs = toAxiArgs(rawArgs);
 	const sub = subcommandOf(axiArgs);
 	const inHerdr = uiAvailable && Boolean(process.env.HERDR_PANE_ID || getCurrentPane());
-	const busy = paneBusy();
+	let busy = paneBusy();
 
 	// Fast introspection, no Herdr, or a pane already owned by a live call:
 	// these all stay out of the pane so a visible run is never corrupted.
@@ -337,6 +354,19 @@ async function runAxi(
 	if (!inHerdr) {
 		const done = await runInline(axiArgs, cwd, signal, "(inline: no Herdr pane available)");
 		return formatOutcome(done);
+	}
+	if (busy && !dispatching && pending) {
+		const stale = pending;
+		dispatching = true;
+		try {
+			if ((await paneState(stale.paneId, signal)) === false) {
+				clearPending();
+				runPaneId = null;
+			}
+		} finally {
+			dispatching = false;
+		}
+		busy = paneBusy();
 	}
 	if (busy) {
 		if (!QUICK_SUBCOMMANDS.has(sub)) {

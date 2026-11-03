@@ -93,6 +93,7 @@ export function extractMarkedOutput(buffer: string, token: string): MarkedOutput
 		const endIndex = line.indexOf(end);
 		if (endIndex >= 0) {
 			const exitCode = Number.parseInt(line.slice(endIndex + end.length).trim(), 10);
+			out.push(line.slice(0, endIndex));
 			return {
 				complete: true,
 				output: out.join("\n").trim(),
