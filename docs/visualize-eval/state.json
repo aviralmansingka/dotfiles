@@ -2565,7 +2565,7 @@
   }
  },
  "round_11": {
-  "status": "GENERATION COMPLETE: 6/6 landed; 5 verdicts in; network judge launching - final verdict pending",
+  "status": "COMPLETE: 2/8 green (pipeline carried + network captain-judged); 27P/13F/4B of 44; matrix+decision written; 6 review tabs open; awaiting human feedback",
   "skill": {
    "proposal": "10",
    "sha256": "fb975dbe337bee801dc098f58695e0068cb1b2d7d79f34c0e473e24a1626cd4e",
