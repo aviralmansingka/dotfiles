@@ -1,0 +1,532 @@
+{
+  "case_id": "modal-machine-manager-c4-probe",
+  "probe_kind": "owner-requested C4 lens (round-13 appendix, not part of the frozen 8-case dataset)",
+  "round": "13",
+  "generator": {
+    "label": "viz-ds13-c4",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "frozen_inputs": {
+    "candidate_skill": "docs/visualize-eval/rounds/13/SKILL.md (proposal 12)",
+    "skill_sha256": "65d826f0f1f9e61ddfd806628cb162827b0e6cf6d7df2490c9d75e6cbe485d2a",
+    "renderer_path": "/tmp/visualize-eval/round-13/bin/rataflow-view",
+    "renderer_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+    "rubric_revision": 11,
+    "rubric_sha256": "6bfd3733c8d08b66af9a92e71985a20846f954d7916eaf9685f86c8d2f96bcb8",
+    "source": "docs/visualize-eval/cases/modal-machine-manager/source.md",
+    "viewport_target": "77x47 @100% natural"
+  },
+
+  "triage": {
+    "annex": "TRIAGE-modal-machine-manager (generator-task.md annex) + c4-probe/brief.md",
+    "questions_provoked": [
+      "Q1 — scope: all 23 relations, or only the main paths?",
+      "Q2 — shape: one canvas with named diagrams, or several separate panes?",
+      "Q3 — motion: does the source's 'slow, sparse dots, one per live transition' still apply, and where?",
+      "Q4 — C4 levels: which of Context / Container / Component / Code does this source actually support?",
+      "Q5 — Component level: the brief's example names webapi internals (auth, intake, jobs, persistence) — does the source state them?",
+      "Q6 — does one C4 level have to fit one diagram, or may a level take more than one diagram?",
+      "Q7 — is the machine-agent inside the system boundary (a manager container) or a machine-side actor?",
+      "Q8 — do the source's 'historical claims' qualifier require dashed (unconfirmed) edges?",
+      "Q9 — must a context-level edge repeat each container-level relation, or expand into them?"
+    ],
+    "questions_used": [
+      {
+        "id": "TRIAGE-modal-machine-manager-1",
+        "question": "Q1 — all 23 relations, or only the main paths?",
+        "answer": "All of them. Every relation once. I'd rather navigate a big canvas than lose a path.",
+        "answer_source": "annex answer TRIAGE-modal-machine-manager-1"
+      },
+      {
+        "id": "TRIAGE-modal-machine-manager-2",
+        "question": "Q2 — one canvas with named diagrams, or several separate panes?",
+        "answer": "One canvas with everything, split into named diagrams I can read. Describe each one so I know what I'm looking at.",
+        "answer_source": "annex answer TRIAGE-modal-machine-manager-2"
+      },
+      {
+        "id": "TRIAGE-modal-machine-manager-3",
+        "question": "Q3 — motion: does the source's slow, sparse dot request still apply?",
+        "answer": "Slow, sparse dots — one per live transition. Nothing on the historical ones, and no dot sitting on a border.",
+        "answer_source": "annex answer TRIAGE-modal-machine-manager-3"
+      },
+      {
+        "id": "C4-Q4",
+        "question": "Q4/Q5 — which C4 levels does the source support, and does it state any single container's internals (the brief's webapi example: auth, intake, jobs, persistence)?",
+        "answer": "Level 1 (context) and level 2 (containers) are fully supported. Level 3 is not: the source names no internals of any container — webapi appears only through its external relations (http in, reinstall/reprovision out, janitor proposals in, Slack out). The brief's own rule is 'include only if the source's facts support it', so level 3 is omitted rather than invented; level 4 (code/classes) the brief puts out of scope and the source has none.",
+        "answer_source": "own judgment — reason: brief.md marks level 3 optional and forbids inventing internals; source.md states no container internals"
+      },
+      {
+        "id": "C4-Q6",
+        "question": "Q6 — may one C4 level take more than one diagram?",
+        "answer": "Yes, when the engine cannot hold the level whole: the frozen check reports 'above the readable budget (12/16)' for a one-diagram container view (probe-l2-one-diagram-tb, 17 nodes / 23 edges at 105x171 with 73 near-miss cells) and refuses to route it in lr ('no obstacle-safe route for wapi -> q'). Level 2 therefore ships as two container diagrams whose union covers all 23 relations, with the split stated per diagram.",
+        "answer_source": "own judgment — reason: measured engine behaviour (probe-l2-one-diagram*, attempts-log.jsonl), and the skill's rule that layout may not thin content"
+      },
+      {
+        "id": "C4-Q7",
+        "question": "Q7 — is the machine-agent inside the system boundary or a machine-side actor?",
+        "answer": "Inside: the agent is how the manager observes its machines ('runs on host', 'register + heartbeat'), so context zoom shows the machine→manager heartbeat aggregate and the container level shows mch → agent → public gRPC → Postgres verbatim.",
+        "answer_source": "own judgment — reason: source lists machine-agent as a component of the manager's own path list, not as a provider or actor"
+      },
+      {
+        "id": "C4-Q8",
+        "question": "Q8 — do the source's 'historical claims' need dashed (unconfirmed) edges?",
+        "answer": "No dashed edges: the qualifier is about the chat excerpt being evidence, not about any individual link being unconfirmed; no relation in the source is marked unconfirmed, so every edge is solid and the evidence status is recorded here instead of drawn as a style the source never states.",
+        "answer_source": "own judgment — reason: source.md's 'historical' qualifier scopes the whole excerpt; the 'Fixed constraints' treat the 23 relations as the drawing's facts"
+      },
+      {
+        "id": "C4-Q9",
+        "question": "Q9 — does a context-level edge repeat each container-level relation, or expand into them?",
+        "answer": "Expands: one context edge per system-boundary interaction, with its expansion recorded in the coverage map (e.g. machine manager → machines 'boot+audit' expands to boot→mch 'boot.ipxe + S3 args' and ssh→mch 'run machine-audit'). No source relation is counted as dropped when its aggregate is drawn.",
+        "answer_source": "own judgment — reason: brief.md states C4 zoom semantics ('a context-level edge EXPANDS into several container-level edges … record that expansion, not a drop')"
+      }
+    ],
+    "unnecessary_questions": [
+      "Reader's job (top-down: context first, then containers) — settled by the brief's framing, never asked.",
+      "Whether panes could be separate — Q2 answered it, asking again would be padding.",
+      "Whether all 17 components must appear — settled by the brief's coverage rule and the source's fixed constraints."
+    ],
+    "converged_when": "The reader's job (top-down C4), the scope (all 23 relations, every relation at its most-fitting level), the shape (one canvas, described diagram per supported level), the level set (1 and 2 supported; 3 unsupported by the source; 4 out of scope) and the motion rule (one dot per live transition, none on borders) were all fixed, and only layout levers remained.",
+    "shape_decision": "canvas with 3 described diagrams: l1 (system context), l2a + l2b (the container level, split because the engine's readable budget and routing refuse one 17-node section)."
+  },
+
+  "classification": {
+    "family": "lifecycle-machines",
+    "evidence": "the source's own path list fans out of one queue/machine spine (q -> reg, ssh, s3, jan, db; mch -> boot, s3, agent) and its history ends with 'use way less dots. keep on dot alive per line' — a wide fan with one live dot per line is the lifecycle-machine signature.",
+    "tie_breakers_considered": [
+      "Density: 23 relations over 17 components (E > N but not by much) — not a flow-chain, not a dense fabric.",
+      "Anti-parallel pair present (machines -> boot server iPXE request AND boot server -> machines boot.ipxe + S3 args) — borrows service-mesh habits, not the family.",
+      "Qualifier/identifier content is thin (one time qualifier '1 min', one payload 'boot.ipxe + S3 args') — not an identity-probe-map."
+    ],
+    "secondary_recipe": "service-meshes: the two boot directions ship in ONE diagram (l2a) with distinct labels and distinct ports, and the queue's fan is declared in the source's listing order.",
+    "reclassification": null
+  },
+
+  "view_shape": {
+    "rung_chosen": "rung 2 — ONE pannable canvas hosting three named, described diagrams",
+    "source_facts_that_decided_it": [
+      "C4 asks for a described diagram per level, and the levels are separate concepts (context zoom vs container zoom) that the reader compares top-down.",
+      "The container level is 17 nodes / 23 relations once every source relation keeps its verb; one section is over the engine's readable budget (12/16) and unroutable in lr (measured probes).",
+      "The brief's own form is a canvas: 'one canvas, described diagrams per level'."
+    ],
+    "rejected_rungs": [
+      {
+        "rung": "1 — one view side-by-side with chat",
+        "reason": "the container level alone is 17 nodes / 23 relations; measured as a single diagram it needs 105x171 in tb (23 crossings, 73 near-miss cells, 1 skipped label) and cannot be routed at all in lr."
+      },
+      {
+        "rung": "several separate panes (one per level)",
+        "reason": "the reader asked for one canvas with named diagrams (annex TRIAGE-modal-machine-manager-2); separate panes also lose the top-down comparison."
+      }
+    ],
+    "c4_levels_shipped": ["L1 system context", "L2 containers (two diagrams)"],
+    "c4_levels_omitted": [
+      {
+        "level": "L3 component",
+        "reason": "source.md states no internals for any container; drawing webapi's auth/intake/jobs/persistence would invent components the source never states (brief.md: include only if the source supports it)."
+      },
+      {
+        "level": "L4 code",
+        "reason": "out of scope per brief.md; the source contains no classes or code."
+      }
+    ]
+  },
+
+  "surfaces": [
+    {
+      "surface": "canvas",
+      "spec": "specs/c4-canvas.json",
+      "spec_sha256": "1d7672ea0e6d7f1e595e5edaf2c7e93f5aa44259f6e7fe15f584c1eb0fae9312",
+      "bundle": "evidence/canvas",
+      "check": "evidence/canvas/check.txt",
+      "text": "evidence/canvas/canvas-text.txt",
+      "ansi": "evidence/canvas/canvas-ansi.ansi",
+      "selected_ansi": "evidence/canvas/canvas-selected.ansi",
+      "frames_text": "evidence/canvas/canvas-frames.txt",
+      "frames_ansi": "evidence/canvas/canvas-frames.ansi",
+      "whole_canvas_frames": "evidence/canvas/canvas-228x80-frames.txt",
+      "frame_audit": "evidence/canvas/frame-audit.txt",
+      "validator": "evidence/canvas/validator.txt",
+      "measured": {
+        "pane_token": "68x44 @100%",
+        "pane_capture_note": "the half pane in this tab measures 68x44, so the pane capture shows the top of the canvas (l1 whole, l2a heading); the canvas form is navigated by pan",
+        "pinned_viewport_line": "viewport: 228x80 zoom: 1.00 natural",
+        "pinned_capture": "canvas-228x80-frames.txt (whole canvas, no overflow banner: extent 228x79 fits a 228x80 viewport)"
+      },
+      "cleanup": "confirmed_closed (pane id in evidence/canvas/manifest.json, cleanup: confirmed_closed)",
+      "canvas_totals": {
+        "node_instances": 28,
+        "edges": 30,
+        "routes": 30,
+        "extent": "228x79",
+        "animated_routes": 12,
+        "crossings": "1 bridge, 1 touching bend",
+        "near_misses": 0,
+        "labels": "30/30 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners",
+        "origins": "12/12",
+        "pin_conflicts": 0
+      },
+      "diagrams": [
+        {
+          "id": "l1",
+          "title": "L1 · System context — the machine manager",
+          "description": "One system: humans and mmctl call it over http; providers allocate machines; machines boot, audit and report heartbeat.",
+          "check_origin": [0, 3],
+          "check_extent": "57x37",
+          "nodes": 6,
+          "edges": 7,
+          "routes": 7,
+          "direction": "tb",
+          "capture_rows_in_whole_canvas_dump": "title row 0 (dump line 4), description row 1, drawing rows 3-39",
+          "heading_visible_in_pane_capture": true
+        },
+        {
+          "id": "l2a",
+          "title": "L2 · Containers — request, provisioning and boot",
+          "description": "API actions (create/term/repair, reinstall/reprov) become a River job, a provider allocation, then a boot; the reconcile loop syncs gcore every minute.",
+          "check_origin": [0, 45],
+          "check_extent": "228x16",
+          "nodes": 12,
+          "edges": 14,
+          "routes": 14,
+          "direction": "lr",
+          "capture_rows_in_whole_canvas_dump": "rule row 42 (dump line 45, 228 cells wide), title row 43 (dump line 46), description 44, drawing 45-60",
+          "heading_visible_in_pane_capture": false
+        },
+        {
+          "id": "l2b",
+          "title": "L2 · Containers — heartbeat, audits and diagnostics",
+          "description": "Agent heartbeat, slow audit and diagnose jobs, janitor proposals and the Slack alerts they raise.",
+          "check_origin": [0, 66],
+          "check_extent": "175x13",
+          "nodes": 10,
+          "edges": 9,
+          "routes": 9,
+          "direction": "lr",
+          "capture_rows_in_whole_canvas_dump": "rule row 63 (dump line 66, 181 cells wide), title row 64 (dump line 67), description 65, drawing 66-78",
+          "heading_visible_in_pane_capture": false
+        }
+      ]
+    }
+  ],
+
+  "per_diagram_content": {
+    "l1": {
+      "nodes": [
+        {"id": "web", "label": "humans + mmctl", "group": "humans"},
+        {"id": "mm", "label": "machine manager", "group": null},
+        {"id": "prov", "label": "providers (BM)", "group": "external"},
+        {"id": "mch", "label": "machines (BM)", "group": "external"},
+        {"id": "s3", "label": "S3 object store", "group": "external"},
+        {"id": "slack", "label": "Slack", "group": "external"}
+      ],
+      "edges": [
+        {"id": "l1:e0", "from": "web", "to": "mm", "label": "http", "dots": 1, "timing": "constant"},
+        {"id": "l1:e1", "from": "mm", "to": "prov", "label": "API+sync 1m", "dots": 1, "timing": "constant"},
+        {"id": "l1:e2", "from": "prov", "to": "mch", "label": "allocate inst", "dots": 0},
+        {"id": "l1:e3", "from": "mm", "to": "mch", "label": "boot+audit", "dots": 1, "timing": "constant"},
+        {"id": "l1:e4", "from": "mch", "to": "mm", "label": "iPXE+heart", "dots": 1, "timing": "constant"},
+        {"id": "l1:e5", "from": "mm", "to": "s3", "label": "diag uploads", "dots": 0},
+        {"id": "l1:e6", "from": "mm", "to": "slack", "label": "confirm+alerts", "dots": 0}
+      ],
+      "note": "context zoom: the manager is ONE box; every edge is a system-boundary interaction and the container wiring behind it is recorded as an expansion in coverage_map."
+    },
+    "l2a": {
+      "nodes": [
+        {"id": "web", "label": "humans + mmctl", "group": "humans"},
+        {"id": "cp", "label": "control plane", "group": "control"},
+        {"id": "wapi", "label": "webapi server", "group": "control"},
+        {"id": "pgrpc", "label": "private gRPC", "group": "control"},
+        {"id": "q", "label": "River queue", "group": "async"},
+        {"id": "rec", "label": "reconcile loop", "group": "async"},
+        {"id": "reg", "label": "provider registry", "group": "async"},
+        {"id": "boot", "label": "boot server", "group": "hostops"},
+        {"id": "db", "label": "Postgres", "group": "state"},
+        {"id": "prov", "label": "providers (BM)", "group": "external"},
+        {"id": "mch", "label": "machines (BM)", "group": "external"},
+        {"id": "s3", "label": "S3 object store", "group": "external"}
+      ],
+      "edges": [
+        {"id": "l2a:e0", "from": "web", "to": "wapi", "label": "http", "dots": 1},
+        {"id": "l2a:e1", "from": "cp", "to": "pgrpc", "label": "create/term/repair", "dots": 1},
+        {"id": "l2a:e2", "from": "pgrpc", "to": "q", "label": "enqueue job", "dots": 0},
+        {"id": "l2a:e3", "from": "wapi", "to": "q", "label": "reinstall/reprov", "dots": 0},
+        {"id": "l2a:e4", "from": "q", "to": "reg", "label": "provision job", "dots": 0},
+        {"id": "l2a:e5", "from": "reg", "to": "prov", "label": "provider API", "dots": 1},
+        {"id": "l2a:e6", "from": "prov", "to": "mch", "label": "allocate inst", "dots": 1},
+        {"id": "l2a:e7", "from": "mch", "to": "boot", "label": "iPXE request", "dots": 1},
+        {"id": "l2a:e8", "from": "boot", "to": "mch", "label": "boot.ipxe + S3", "dots": 1},
+        {"id": "l2a:e9", "from": "mch", "to": "s3", "label": "pull boot image", "dots": 0},
+        {"id": "l2a:e10", "from": "pgrpc", "to": "db", "label": "machine rows", "dots": 0},
+        {"id": "l2a:e11", "from": "q", "to": "db", "label": "job rows", "dots": 0},
+        {"id": "l2a:e12", "from": "rec", "to": "prov", "label": "gcore sync 1m", "dots": 0},
+        {"id": "l2a:e13", "from": "rec", "to": "db", "label": "cluster state", "dots": 0}
+      ]
+    },
+    "l2b": {
+      "nodes": [
+        {"id": "pub", "label": "public gRPC", "group": "control"},
+        {"id": "wapi", "label": "webapi server", "group": "control"},
+        {"id": "q", "label": "River queue", "group": "async"},
+        {"id": "ssh", "label": "SSH + BMC ops", "group": "hostops"},
+        {"id": "agent", "label": "machine-agent", "group": "hostops"},
+        {"id": "db", "label": "Postgres", "group": "state"},
+        {"id": "jan", "label": "janitor app", "group": "ops"},
+        {"id": "mch", "label": "machines (BM)", "group": "external"},
+        {"id": "s3", "label": "S3 object store", "group": "external"},
+        {"id": "slack", "label": "Slack", "group": "external"}
+      ],
+      "edges": [
+        {"id": "l2b:e0", "from": "q", "to": "ssh", "label": "audit", "dots": 0},
+        {"id": "l2b:e1", "from": "ssh", "to": "mch", "label": "machine-audit", "dots": 0},
+        {"id": "l2b:e2", "from": "mch", "to": "agent", "label": "runs on host", "dots": 0},
+        {"id": "l2b:e3", "from": "agent", "to": "pub", "label": "register+beat", "dots": 1},
+        {"id": "l2b:e4", "from": "pub", "to": "db", "label": "machine state", "dots": 0},
+        {"id": "l2b:e5", "from": "q", "to": "jan", "label": "diag events", "dots": 0},
+        {"id": "l2b:e6", "from": "jan", "to": "wapi", "label": "proposed acts", "dots": 0},
+        {"id": "l2b:e7", "from": "wapi", "to": "slack", "label": "confirm+alerts", "dots": 1},
+        {"id": "l2b:e8", "from": "q", "to": "s3", "label": "diag uploads", "dots": 0}
+      ]
+    }
+  },
+
+  "coverage_map": {
+    "rule": "each source relation is drawn verbatim at its most-fitting level (here always the container level, because every relation's endpoints are containers or external systems); context edges are aggregates whose expansions are listed, never counted as the relation's surface.",
+    "relations": [
+      {"id": 1, "source": "cp -> pgrpc", "verb": "create / terminate / repair", "level": "L2 container", "surface": "l2a:e1", "kind": "verbatim"},
+      {"id": 2, "source": "web -> wapi", "verb": "http", "level": "L2 container", "surface": "l2a:e0", "kind": "verbatim", "also_expanded_by": "l1:e0 (http)"},
+      {"id": 3, "source": "pgrpc -> q", "verb": "enqueue job", "level": "L2 container", "surface": "l2a:e2", "kind": "verbatim"},
+      {"id": 4, "source": "wapi -> q", "verb": "reinstall / reprovision", "level": "L2 container", "surface": "l2a:e3", "kind": "verbatim"},
+      {"id": 5, "source": "q -> reg", "verb": "provision job", "level": "L2 container", "surface": "l2a:e4", "kind": "verbatim"},
+      {"id": 6, "source": "reg -> prov", "verb": "provider API", "level": "L2 container", "surface": "l2a:e5", "kind": "verbatim", "also_expanded_by": "l1:e1 (API+sync 1m)"},
+      {"id": 7, "source": "prov -> mch", "verb": "allocate instance", "level": "L2 container", "surface": "l2a:e6", "kind": "verbatim", "also_expanded_by": "l1:e2 (allocate inst)"},
+      {"id": 8, "source": "mch -> boot", "verb": "iPXE request", "level": "L2 container", "surface": "l2a:e7", "kind": "verbatim", "also_expanded_by": "l1:e4 (iPXE+heart)"},
+      {"id": 9, "source": "boot -> mch", "verb": "boot.ipxe + S3 args", "level": "L2 container", "surface": "l2a:e8", "kind": "verbatim", "also_expanded_by": "l1:e3 (boot+audit)"},
+      {"id": 10, "source": "mch -> agent", "verb": "runs on host", "level": "L2 container", "surface": "l2b:e2", "kind": "verbatim"},
+      {"id": 11, "source": "agent -> pub", "verb": "register + heartbeat", "level": "L2 container", "surface": "l2b:e3", "kind": "verbatim", "also_expanded_by": "l1:e4 (iPXE+heart)"},
+      {"id": 12, "source": "pub -> db", "verb": "machine state", "level": "L2 container", "surface": "l2b:e4", "kind": "verbatim"},
+      {"id": 13, "source": "pgrpc -> db", "verb": "machine rows", "level": "L2 container", "surface": "l2a:e10", "kind": "verbatim"},
+      {"id": 14, "source": "q -> db", "verb": "job rows", "level": "L2 container", "surface": "l2a:e11", "kind": "verbatim"},
+      {"id": 15, "source": "q -> ssh", "verb": "audit / verify reimage", "level": "L2 container", "surface": "l2b:e0", "kind": "verbatim (label shortened to 'audit', see abbreviations)"},
+      {"id": 16, "source": "ssh -> mch", "verb": "run machine-audit", "level": "L2 container", "surface": "l2b:e1", "kind": "verbatim", "also_expanded_by": "l1:e3 (boot+audit)"},
+      {"id": 17, "source": "mch -> s3", "verb": "pull boot image", "level": "L2 container", "surface": "l2a:e9", "kind": "verbatim"},
+      {"id": 18, "source": "q -> s3", "verb": "diagnose uploads", "level": "L2 container", "surface": "l2b:e8", "kind": "verbatim", "also_expanded_by": "l1:e5 (diag uploads)"},
+      {"id": 19, "source": "q -> jan", "verb": "diagnostic events", "level": "L2 container", "surface": "l2b:e5", "kind": "verbatim"},
+      {"id": 20, "source": "jan -> wapi", "verb": "proposed actions", "level": "L2 container", "surface": "l2b:e6", "kind": "verbatim"},
+      {"id": 21, "source": "wapi -> slack", "verb": "confirm + alerts", "level": "L2 container", "surface": "l2b:e7", "kind": "verbatim", "also_expanded_by": "l1:e6 (confirm+alerts)"},
+      {"id": 22, "source": "rec -> prov", "verb": "gcore sync, 1 min", "level": "L2 container", "surface": "l2a:e12", "kind": "verbatim", "also_expanded_by": "l1:e1 (API+sync 1m)"},
+      {"id": 23, "source": "rec -> db", "verb": "cluster state", "level": "L2 container", "surface": "l2a:e13", "kind": "verbatim"}
+    ],
+    "expansions": [
+      {"context_edge": "l1:e0", "label": "http", "expands_to": ["web -> wapi http"]},
+      {"context_edge": "l1:e1", "label": "API+sync 1m", "expands_to": ["reg -> prov provider API", "rec -> prov gcore sync, 1 min"]},
+      {"context_edge": "l1:e2", "label": "allocate inst", "expands_to": ["prov -> mch allocate instance"]},
+      {"context_edge": "l1:e3", "label": "boot+audit", "expands_to": ["boot -> mch boot.ipxe + S3 args", "ssh -> mch run machine-audit"]},
+      {"context_edge": "l1:e4", "label": "iPXE+heart", "expands_to": ["mch -> boot iPXE request", "agent -> pub register + heartbeat"]},
+      {"context_edge": "l1:e5", "label": "diag uploads", "expands_to": ["q -> s3 diagnose uploads"]},
+      {"context_edge": "l1:e6", "label": "confirm+alerts", "expands_to": ["wapi -> slack confirm + alerts"]}
+    ],
+    "levels_with_no_relation": [
+      {"level": "L3 component", "why": "no source relation names a container's internals"},
+      {"level": "L4 code", "why": "out of scope; source has no classes"}
+    ],
+    "components_covered": "all 17 source components appear: l1 has web, prov, mch, s3, slack plus the manager box; l2a has web, cp, wapi, pgrpc, q, rec, reg, boot, db, prov, mch, s3; l2b has pub, wapi, q, ssh, agent, db, jan, mch, s3, slack. Union = all 17.",
+    "drops": "none. Every source relation is drawn verbatim once and every context aggregate is recorded as an expansion."
+  },
+
+  "meaning_ledger": [
+    {"fact": "17 component names (control plane, webapi server, private gRPC, public gRPC, River job queue, reconcile loop, provider registry, SSH + BMC ops, boot server, machine-agent, Postgres, janitor app, providers, machines, S3, Slack, humans + mmctl)", "kind": "identifier", "fate": "drawn", "note": "node labels, one per component; container labels keep the source names"},
+    {"fact": "bare-metal providers / bare-metal machines", "kind": "role", "fate": "abbreviated", "note": "'providers (BM)' / 'machines (BM)' — 17-cell node labels; BM = bare metal stated here and in the L1 description ('providers allocate machines')"},
+    {"fact": "create / terminate / repair", "kind": "action verbs", "fate": "abbreviated", "note": "'create/term/repair' on l2a:e1, keyed by the l2a description '(create/term/repair, reinstall/reprov)'"},
+    {"fact": "reinstall / reprovision", "kind": "action verbs", "fate": "abbreviated", "note": "'reinstall/reprov' on l2a:e3, same description key"},
+    {"fact": "audit / verify reimage", "kind": "action verbs", "fate": "abbreviated", "note": "'audit' on l2b:e0 — shortened because the longer label had no unambiguous owner at the queue's fan; 'verify reimage' stays in this ledger"},
+    {"fact": "run machine-audit payload", "kind": "payload", "fate": "drawn", "note": "'machine-audit' on l2b:e1"},
+    {"fact": "iPXE request", "kind": "protocol", "fate": "drawn", "note": "l2a:e7 and the l1 aggregate l1:e4"},
+    {"fact": "boot.ipxe + S3 args", "kind": "payload", "fate": "drawn", "note": "'boot.ipxe + S3' on l2a:e8"},
+    {"fact": "register + heartbeat", "kind": "action verbs", "fate": "abbreviated", "note": "'register+beat' on l2b:e3; 'heartbeat' is spelled out in the l1 and l2b descriptions"},
+    {"fact": "gcore sync, 1 min (periodic qualifier)", "kind": "qualifier", "fate": "drawn", "note": "'gcore sync 1m' on l2a:e12; the L2a description says 'syncs gcore every minute'"},
+    {"fact": "diagnose uploads (distinct from provider API, janitor and boot image)", "kind": "action + separation", "fate": "drawn", "note": "l2b:e8 'diag uploads' — separate from reg->prov, boot->mch and q->jan"},
+    {"fact": "janitor proposes actions back through webapi", "kind": "protocol chain", "fate": "drawn", "note": "l2b:e5 'diag events' + l2b:e6 'proposed acts'"},
+    {"fact": "webapi confirms via Slack", "kind": "protocol", "fate": "drawn", "note": "l2b:e7 'confirm+alerts' and l1:e6"},
+    {"fact": "'historical claims' qualifier on the chat excerpt", "kind": "qualifier", "fate": "drawn", "note": "recorded as evidence status in this file (and in C4-Q8); no relation is individually marked unconfirmed, so no dashed edge"},
+    {"fact": "machine-agent runs on the host", "kind": "residency", "fate": "drawn", "note": "l2b:e2 'runs on host' (container level only — at context zoom the agent is inside the boundary)"},
+    {"fact": "reconcile loop syncs gcore clusters every minute", "kind": "periodic action", "fate": "drawn", "note": "l2a:e12"},
+    {"fact": "machine state / machine rows / job rows / cluster state", "kind": "state writes", "fate": "drawn", "note": "l2b:e4, l2a:e10, l2a:e11, l2a:e13"},
+    {"fact": "'no dot sitting on a border' + 'one dot per live transition'", "kind": "motion rule", "fate": "drawn", "note": "dots:1 on 12 live transitions; check reports 0 dot violations and 12/12 origins; frames show every dot off the borders"},
+    {"fact": "the source's path groupings (request, heartbeat, ops)", "kind": "concept grouping", "fate": "drawn", "note": "l2a follows the request/provisioning path, l2b the heartbeat/ops/diagnostics path; the split is named in each description"}
+  ],
+
+  "relationship_audit": {
+    "note": "one row per drawn route; label owner is the edge id itself (every label belongs to exactly one route)",
+    "rows": [
+      {"id": "l1:e0", "from": "web", "to": "mm", "verb": "http", "label_owner": "l1:e0", "surface": "l1"},
+      {"id": "l1:e1", "from": "mm", "to": "prov", "verb": "provider API + gcore sync 1m (aggregate)", "label_owner": "l1:e1", "surface": "l1"},
+      {"id": "l1:e2", "from": "prov", "to": "mch", "verb": "allocate instance", "label_owner": "l1:e2", "surface": "l1"},
+      {"id": "l1:e3", "from": "mm", "to": "mch", "verb": "boot.ipxe + S3 args / run machine-audit (aggregate)", "label_owner": "l1:e3", "surface": "l1"},
+      {"id": "l1:e4", "from": "mch", "to": "mm", "verb": "iPXE request + register/heartbeat (aggregate)", "label_owner": "l1:e4", "surface": "l1"},
+      {"id": "l1:e5", "from": "mm", "to": "s3", "verb": "diagnose uploads (aggregate)", "label_owner": "l1:e5", "surface": "l1"},
+      {"id": "l1:e6", "from": "mm", "to": "slack", "verb": "confirm + alerts (aggregate)", "label_owner": "l1:e6", "surface": "l1"},
+      {"id": "l2a:e0", "from": "web", "to": "wapi", "verb": "http", "label_owner": "l2a:e0", "surface": "l2a"},
+      {"id": "l2a:e1", "from": "cp", "to": "pgrpc", "verb": "create/terminate/repair", "label_owner": "l2a:e1", "surface": "l2a"},
+      {"id": "l2a:e2", "from": "pgrpc", "to": "q", "verb": "enqueue job", "label_owner": "l2a:e2", "surface": "l2a"},
+      {"id": "l2a:e3", "from": "wapi", "to": "q", "verb": "reinstall/reprovision", "label_owner": "l2a:e3", "surface": "l2a"},
+      {"id": "l2a:e4", "from": "q", "to": "reg", "verb": "provision job", "label_owner": "l2a:e4", "surface": "l2a"},
+      {"id": "l2a:e5", "from": "reg", "to": "prov", "verb": "provider API", "label_owner": "l2a:e5", "surface": "l2a"},
+      {"id": "l2a:e6", "from": "prov", "to": "mch", "verb": "allocate instance", "label_owner": "l2a:e6", "surface": "l2a"},
+      {"id": "l2a:e7", "from": "mch", "to": "boot", "verb": "iPXE request", "label_owner": "l2a:e7", "surface": "l2a"},
+      {"id": "l2a:e8", "from": "boot", "to": "mch", "verb": "boot.ipxe + S3 args", "label_owner": "l2a:e8", "surface": "l2a"},
+      {"id": "l2a:e9", "from": "mch", "to": "s3", "verb": "pull boot image", "label_owner": "l2a:e9", "surface": "l2a"},
+      {"id": "l2a:e10", "from": "pgrpc", "to": "db", "verb": "machine rows", "label_owner": "l2a:e10", "surface": "l2a"},
+      {"id": "l2a:e11", "from": "q", "to": "db", "verb": "job rows", "label_owner": "l2a:e11", "surface": "l2a"},
+      {"id": "l2a:e12", "from": "rec", "to": "prov", "verb": "gcore sync, 1 min", "label_owner": "l2a:e12", "surface": "l2a"},
+      {"id": "l2a:e13", "from": "rec", "to": "db", "verb": "cluster state", "label_owner": "l2a:e13", "surface": "l2a"},
+      {"id": "l2b:e0", "from": "q", "to": "ssh", "verb": "audit / verify reimage", "label_owner": "l2b:e0", "surface": "l2b"},
+      {"id": "l2b:e1", "from": "ssh", "to": "mch", "verb": "run machine-audit", "label_owner": "l2b:e1", "surface": "l2b"},
+      {"id": "l2b:e2", "from": "mch", "to": "agent", "verb": "runs on host", "label_owner": "l2b:e2", "surface": "l2b"},
+      {"id": "l2b:e3", "from": "agent", "to": "pub", "verb": "register + heartbeat", "label_owner": "l2b:e3", "surface": "l2b"},
+      {"id": "l2b:e4", "from": "pub", "to": "db", "verb": "machine state", "label_owner": "l2b:e4", "surface": "l2b"},
+      {"id": "l2b:e5", "from": "q", "to": "jan", "verb": "diagnostic events", "label_owner": "l2b:e5", "surface": "l2b"},
+      {"id": "l2b:e6", "from": "jan", "to": "wapi", "verb": "proposed actions", "label_owner": "l2b:e6", "surface": "l2b"},
+      {"id": "l2b:e7", "from": "wapi", "to": "slack", "verb": "confirm + alerts", "label_owner": "l2b:e7", "surface": "l2b"},
+      {"id": "l2b:e8", "from": "q", "to": "s3", "verb": "diagnose uploads", "label_owner": "l2b:e8", "surface": "l2b"}
+    ],
+    "antiparallel_pairs": [
+      {"pair": "machines <-> boot server", "edges": ["l2a:e7 mch -> boot iPXE request", "l2a:e8 boot -> mch boot.ipxe + S3"], "kept_in_one_diagram": true, "note": "the source's fixed constraint; both directions are separate routes with separate labels and their own dots"},
+      {"pair": "machines <-> machine manager (context zoom)", "edges": ["l1:e3 mm -> mch boot+audit", "l1:e4 mch -> mm iPXE+heart"], "kept_in_one_diagram": true, "note": "the context aggregate keeps the two directions apart instead of one bidirectional arrow"}
+    ]
+  },
+
+  "structural_levers": [
+    {"lever": "diagrams (canvas)", "where": "whole spec", "source_fact": "the brief asks for one canvas with a described diagram per C4 level; the container level is 17 nodes / 23 relations (probe-l2-one-diagram*: over the engine's 12/16 readable budget, unroutable in lr), so it takes two described container diagrams"},
+    {"lever": "groups (hue only, nothing painted)", "where": "all diagrams", "source_fact": "the source names the planes itself: control plane / API surface (control), River queue + registry + reconcile loop (async), SSH + boot + agent (hostops), Postgres (state), janitor (ops), providers/machines/S3/Slack (external), humans + mmctl (humans); the context system box carries no group because the whole system is not one concept group"},
+    {"lever": "layers (rank pins)", "where": "l1, l2a, l2b", "source_fact": "l2a pins the source's own request order (control plane -> private gRPC -> River job -> provider registry -> provider -> machine -> boot) with the reconcile loop beside the queue whose rows it shares; l2b pins the heartbeat/audit chain the source lists (queue -> SSH -> machines -> agent -> public gRPC -> Postgres) and keeps janitor proposals beside webapi; l1 pins web / the system / the four external systems so the manager sits between its caller and its externals. 27 pins, 0 conflicts."},
+    {"lever": "label_slot", "where": "none", "source_fact": "not used: the frozen engine only reserves a gutter for labels on edges spanning 2+ ranks, and every span-1 label here would lose its slot; labels stay in rank gaps and are sized by the engine"},
+    {"lever": "minlen", "where": "none", "source_fact": "no corridor length is stated by the source"},
+    {"lever": "trunks", "where": "none", "source_fact": "no shared bus: every relation is independent"},
+    {"lever": "dots: 1 + flow: true", "where": "12 routes", "source_fact": "the source asks for slow, sparse dots, one per live transition, and its history corrects it to 'keep on dot alive per line'"}
+  ],
+
+  "routing_record": {
+    "per_attempt": [
+      {"attempt": "canvas-attempt1", "near_miss_cells": 5, "crossings": 10, "relief": "reduced the manager/machine context bundle from five parallel edges to two aggregates; split rec/prov out of l2b"},
+      {"attempt": "canvas-attempt2", "near_miss_cells": 19, "crossings": 1, "relief": "moved l1 from tb (label-room gaps) to a compact rank plan; moved the machine->s3 hop so boot and s3 stop sharing a column"},
+      {"attempt": "canvas-attempt3", "near_miss_cells": null, "crossings": null, "relief": "no route at all (exit 1) — inside-rank edges are vertical in lr; reverted to tb for the context and removed the inside-rank hops"},
+      {"attempt": "canvas-attempt4", "near_miss_cells": 55, "crossings": 4, "relief": "moved prov into the manager's rank for l1 (removing the inside-rank prov->mch crossing) and gave s3 its own rank slot beside prov in l2a"},
+      {"attempt": "canvas-attempt5", "near_miss_cells": 0, "crossings": 1, "relief": "0 — already clean; only one ambiguous label owner remained"},
+      {"attempt": "canvas-attempt6 (shipped)", "near_miss_cells": 0, "crossings": 1, "relief": "0 — label-ownership lever only: 'audit/verify' shortened to 'audit' on l2b:e0"}
+    ],
+    "final": {"near_miss_lines": [], "passes_near_unrelated_node": 0, "crossings": "1 bridge, 1 touching bend", "pin_conflicts": 0}
+  },
+
+  "hue_record": {
+    "rule": "one `group` tag = one hue family across every diagram of the canvas (engine-derived from the group name); the context system box carries no group and no group hue",
+    "group_families": [
+      {"group": "humans", "members": ["web"], "sampled_rgb": "#73ce73", "sample_source": "evidence/canvas/canvas-ansi.ansi row 5 ('humans + mmctl' border)"},
+      {"group": "external", "members": ["prov", "mch", "s3", "slack"], "sampled_rgb": "#7daea3 (one family, per-member shades)", "sample_source": "evidence/canvas/canvas-ansi.ansi row 16 ('providers (BM)' border)"},
+      {"group": "control", "members": ["cp", "wapi", "pgrpc", "pub"], "sampled_rgb": "not in the 68x44 pane slice (l2a/l2b headings are below the fold); family derived from the tag, stable across both container diagrams by engine rule", "sample_source": "n/a"},
+      {"group": "async", "members": ["q", "rec", "reg"], "sampled_rgb": "not in the pane slice", "sample_source": "n/a"},
+      {"group": "hostops", "members": ["ssh", "boot", "agent"], "sampled_rgb": "not in the pane slice", "sample_source": "n/a"},
+      {"group": "state", "members": ["db"], "sampled_rgb": "not in the pane slice", "sample_source": "n/a"},
+      {"group": "ops", "members": ["jan"], "sampled_rgb": "not in the pane slice", "sample_source": "n/a"},
+      {"group": null, "members": ["mm (context system box)"], "sampled_rgb": "#7daea3", "sample_source": "evidence/canvas/canvas-ansi.ansi row 16"}
+    ],
+    "check_group_counts": "groups: humans(2) external(10) control(5) async(4) hostops(3) state(2) ops(1)",
+    "dot_hues": {
+      "check_line": "dot hues: 11 by source, 1 by destination, 0 shared-hue pair(s) (source-only 1, destination-only 2)",
+      "binding_rule": "each dot takes its own route's source-or-destination hue, whichever end leaves fewer routes sharing one hue; the engine decides per route",
+      "by_source": 11,
+      "by_destination": 1,
+      "destination_bound_route": "l1:e1 (machine manager -> providers 'API+sync 1m'): the context system box carries no group hue, so the dot takes the providers' hue — visible in evidence/canvas/canvas-ansi.ansi at row 16, where the dot immediately right of '│machine manager│' is painted in the providers' border colour",
+      "shared_hue_pairs": 0
+    }
+  },
+
+  "habits_and_deviations": {
+    "habits_borrowed": [
+      "lifecycle-machines: coverage first — every one of the 23 relations is drawn once; the phase/fan axis organises the container diagrams (l2a request -> provisioning -> boot; l2b queue -> audits/heartbeat -> state)",
+      "lifecycle-machines: every live transition carries exactly one dot, structural/state routes carry none",
+      "service-meshes: the anti-parallel boot pair stays in ONE diagram with distinct labels and ports",
+      "placement-planes (borrowed at context zoom): the manager sits between its caller column and its external-systems column, and the machine/provider world is drawn beside the control world"
+    ],
+    "deviations": [
+      {"deviation": "one C4 level ships as two diagrams (l2a, l2b)", "reason": "the frozen engine's own readable budget (12 nodes / 16 edges per diagram) and its router refuse a single 17-node container section; measured in probe-l2-one-diagram (exit 1) and probe-l2-one-diagram-tb (105x171, 23 crossings, 73 near-miss cells, 1 skipped label)", "capture": "evidence/canvas/check.txt plus recorded probe outputs in attempts-log.jsonl"},
+      {"deviation": "the context level uses compound labels ('boot+audit', 'iPXE+heart', 'API+sync 1m') to aggregate several container relations per system-boundary interaction", "reason": "C4 zoom semantics (an interaction, not a message); five parallel manager/machine edges cannot be routed (attempt1: l1 58x45 tall, 5 near-miss cells)", "capture": "evidence/canvas/canvas-228x80-frames.txt rows 3-39"},
+      {"deviation": "labels shortened below the source wording ('create/term/repair', 'reinstall/reprov', 'register+beat', 'audit')", "reason": "14-character label guidance and one ambiguous-ownership defect; every shortening is keyed in a diagram description or this ledger", "capture": "evidence/canvas/check.txt labels line (30/30, 0 ambiguous)"},
+      {"deviation": "the canvas is 228x79, far larger than one 77x47 screen", "reason": "the skill's canvas rung: content is not thinned to fit; the reader pans, and the whole canvas is drawn at 100% (no zoom-out)", "capture": "evidence/canvas/canvas-228x80-frames.txt (whole canvas, 228x80 viewport, no overflow banner)"}
+    ]
+  },
+
+  "c4_capability_verdict": {
+    "verdict": "partial",
+    "expressed_cleanly": [
+      "L1 system context: the system as one box, the actor (humans + mmctl) and the external systems (providers, machines, S3, Slack) with one-line relations and their qualifiers",
+      "L2 containers: every deployable unit as a node with the source's own relation verbs, split across two named diagrams; group hues stable across both",
+      "one dot per live transition with 12/12 origins, 0 violations, 0 shared hues"
+    ],
+    "partially_expressed": [
+      "L2 as a single container diagram: not expressible — the engine caps a readable section at 12 nodes / 16 edges and cannot route 17 nodes / 23 relations in lr (exit 1) or cleanly in tb (105x171, 23 crossings, 73 near-miss cells, 1 skipped label). A C4 container view of a real system therefore needs the builder to split a single C4 level across diagrams, and nothing in the canvas form names a level that owns several diagrams (no level heading above a group of sections, no per-level extent).",
+      "C4 grouping semantics: the engine paints no boundary box and no group title, so the C4 convention of a labelled system/container boundary is only expressible as a node label plus hue families."
+    ],
+    "blocked": [
+      {
+        "gap": "owner canvas dividers: a top divider above the first diagram, and dividers of uniform width at the maximum section width",
+        "evidence": "the shipped capture shows NO rule above L1 (row 0 is the title) and two rules of different lengths: 228 cells above l2a (dump line 45) and 181 cells above l2b (dump line 66) — the frozen engine draws a rule only for diagrams after the first, each at its own section width, and exposes no spec field for either behaviour",
+        "failing_spec_attempt": "no spec field exists to attempt it: `diagrams[]` has no divider/rule key, and `--check` reports no per-level band. Recorded rather than imitated."
+      },
+      {
+        "gap": "L3 component level",
+        "evidence": "docs/visualize-eval/cases/modal-machine-manager/source.md names no container internals (webapi appears only through its external relations); the brief's example (auth, intake, jobs, persistence) is background, not a source fact",
+        "failing_spec_attempt": "not attempted by design — drawing it would invent components, which the brief forbids"
+      }
+    ],
+    "conclusion": "The current skill + engine can carry a C4 ask at levels 1 and 2 only by (a) splitting one C4 level across several canvas diagrams because of the 12/16 readable budget, and (b) expressing C4 boundaries as hue families instead of boxes. The owner's canvas chrome (top divider, uniform divider width) is not expressible at all. A dedicated c4 skill would earn its place if it specified level-owned bands (a level heading over several diagrams), C4 boundary rendering, and the divider contract; today the visualize skill has no C4 vocabulary and the engine has no level concept."
+  },
+
+  "defects": [
+    "labels are shortened from the source wording ('audit' for 'audit / verify reimage'); keyed in this ledger and in the diagram descriptions, but a reader cannot recover 'verify reimage' from the canvas alone",
+    "'BM' (bare metal) is an unkeyed abbreviation on the canvas itself — keyed only in this file and implied by the L1 description",
+    "the 68x44 pane capture shows only the top of the 228x79 canvas; the l2a and l2b headings are outside the pane slice and are proven by the 228x80 whole-canvas dump instead",
+    "per-node group hues are sampled only where the pane slice reaches them (l1); the container-level families are asserted from the engine's group rule and the check's group counts, not from sampled pixels",
+    "five spec candidates and two single-diagram probes exceed the three-candidate budget; all are recorded in attempts-log.jsonl and listed in attempts.json (views[0].attempts kept to three, experiments under abandoned_shapes)"
+  ],
+
+  "blockers": [
+    "owner canvas rule 1 (a top divider above the first diagram): no spec field, engine draws a rule only for index > 0",
+    "owner canvas rule 2 (uniform dividers at the max section width): the engine draws each rule at its own section width (228 vs 181 cells in this capture)",
+    "C4 L3: unsupported by the source (no stated internals), so the probe cannot test the skill's component-level behaviour"
+  ],
+
+  "known_defects_of_shipped_surface": "none that the frozen check reports: 0 near-miss, 0 ambiguous owners, 30/30 labels, 12/12 origins, 0 dot violations, 0 pin conflicts, 1 bridge crossing. The remaining defects are the label abbreviations, the unkeyed 'BM', and the three owner/engine gaps above.",
+
+  "cleanup": {
+    "pane": "split by scripts/viz-evidence.sh inside this agent's own tab (w7E), closed after capture",
+    "manifest_cleanup": "confirmed_closed",
+    "other_panes": "none opened by this worker"
+  },
+
+  "validator": {
+    "command": "python3 scripts/viz-validate.py docs/visualize-eval/rounds/13/c4-probe/evidence/canvas --require-select --require-frames --attempts docs/visualize-eval/rounds/13/c4-probe/attempts.json --require-records --frame-audit",
+    "exit": 0,
+    "output": "evidence/canvas/validator.txt",
+    "summary": "all checks passed, including frame_audit_passes (12/12 routes steady, equal distance, 0.5 cells/frame)"
+  },
+
+  "frame_audit": {
+    "input": "evidence/canvas/canvas-228x80-frames.txt (48 frames, 100 ms step, whole canvas at 228x80)",
+    "longest_route_cells": 23,
+    "frames_required": 46,
+    "frames_captured": 48,
+    "verdict": "PASS — every tracked dot holds one rate and covers equal distance (0.500..0.500 cells/frame, spread 0.0)",
+    "table": "evidence/canvas/frame-audit.txt"
+  },
+
+  "source_pointers": [
+    "docs/visualize-eval/cases/modal-machine-manager/source.md — component list, 23 relationship facts, fixed constraints (dots, both boot directions, janitor proposals, separate diagnose uploads)"
+  ],
+  "abbreviations": {
+    "BM": "bare metal (providers (BM), machines (BM))",
+    "term": "terminate (create/term/repair)",
+    "reprov": "reprovision (reinstall/reprov)",
+    "beat": "heartbeat (register+beat)",
+    "1m": "one minute (gcore sync 1m)"
+  }
+}

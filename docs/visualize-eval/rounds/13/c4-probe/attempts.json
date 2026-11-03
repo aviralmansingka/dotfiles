@@ -1,0 +1,87 @@
+{
+  "case_id": "modal-machine-manager-c4-probe",
+  "round": "13",
+  "probe": "owner-requested C4 lens on the frozen modal-machine-manager source (round-13 appendix, not one of the frozen 8 cases)",
+  "binary": "/tmp/visualize-eval/round-13/bin/rataflow-view",
+  "binary_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+  "skill": "docs/visualize-eval/rounds/13/SKILL.md (proposal 12)",
+  "skill_sha256": "65d826f0f1f9e61ddfd806628cb162827b0e6cf6d7df2490c9d75e6cbe485d2a",
+  "records_log": "attempts-log.jsonl",
+  "views": [
+    {
+      "view": "canvas",
+      "spec": "specs/c4-canvas.json",
+      "spec_sha256": "1d7672ea0e6d7f1e595e5edaf2c7e93f5aa44259f6e7fe15f584c1eb0fae9312",
+      "bundle": "evidence/canvas",
+      "diagrams": ["l1", "l2a", "l2b"],
+      "attempts": [
+        {
+          "id": "canvas-attempt1",
+          "record_label": "canvas-attempt1",
+          "spec": "attempts/c4-canvas-attempt1.json",
+          "spec_sha256": "13297f246fe4df13761a71003d3095159a2b8cfbb1fc0d14e32a9d7b2ac9e184",
+          "check": "extent=230x92; l1 58x45 (4 parallel manager/machine edges plus 5 label rows in one tb rank gap); l2a 230x11; l2b 179x23",
+          "crossings": 10,
+          "near_misses": 5,
+          "ambiguous_labels": 1,
+          "verdict": "rejected — l1 tb blew up on parallel edges (58x45) and one route hugged s3"
+        },
+        {
+          "id": "canvas-attempt2",
+          "record_label": "canvas-attempt2",
+          "spec": "specs/c4-canvas-attempt2.json",
+          "spec_sha256": "8dfffa7e9b2c3d16706b6b4b9cb6f0d77e705d12f38a85494f831a6f9cee2862",
+          "check": "extent=231x92; l1 76x48 (tb label-room = label length + 3 rows per gap); l2a 231x16; l2b 175x15",
+          "crossings": 1,
+          "near_misses": 19,
+          "ambiguous_labels": 6,
+          "verdict": "rejected — six label owners ambiguous and nineteen cells hugging unrelated boxes"
+        },
+        {
+          "id": "canvas-attempt6",
+          "record_label": "canvas-attempt6",
+          "spec": "specs/c4-canvas.json",
+          "spec_sha256": "1d7672ea0e6d7f1e595e5edaf2c7e93f5aa44259f6e7fe15f584c1eb0fae9312",
+          "check": "extent=228x79; l1 57x37; l2a 228x16; l2b 175x13",
+          "crossings": 1,
+          "near_misses": 0,
+          "ambiguous_labels": 0,
+          "verdict": "accepted — 0 near-miss, 30/30 labels placed with 0 ambiguous owners, 12/12 dot origins, 0 dot violations, 0 pin conflicts"
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "label": "canvas-attempt3",
+      "spec": "specs/c4-canvas-attempt3.json",
+      "record_label": "canvas-attempt3",
+      "why": "lr with pins that put prov+mch (L1) and mch+s3 (L2a) in the same rank: inside-rank edges are vertical in lr and the router gave up — exit 1, 'no obstacle-safe route for mch -> s3, prov -> mch; increase node/layer spacing'. Recorded as the measured proof that same-rank relations must be horizontal (tb) in this engine."
+    },
+    {
+      "label": "canvas-attempt4",
+      "spec": "specs/c4-canvas-attempt4.json",
+      "record_label": "canvas-attempt4",
+      "why": "tb L1 with mm alone in rank 1 and prov+mch+s3+slack in rank 2: barycenter ordered the rank prov/slack/mch/s3, so the inside-rank prov->mch route crossed Slack (12 cells at ring 2) and the machine->s3 hop in L2b looped around the diagram (55 near-miss cells total)."
+    },
+    {
+      "label": "canvas-attempt5",
+      "spec": "specs/c4-canvas-attempt5.json",
+      "record_label": "canvas-attempt5",
+      "why": "structure identical to the shipped spec; one label owner ambiguous (l2b:e0 'audit/verify' equidistant between the queue's two fan routes). Kept as the pre-label-lever control: only the label text changed in the shipped attempt."
+    },
+    {
+      "label": "probe-l2-one-diagram",
+      "spec": "probes/l2-container-one-diagram.json",
+      "record_label": "probe-l2-one-diagram",
+      "why": "capability probe: the whole C4 container level as ONE diagram (17 containers, 23 relations). lr exits 1 — 'no obstacle-safe route for wapi -> q'. Evidence that a strict single-diagram C4 container view is not expressible here."
+    },
+    {
+      "label": "probe-l2-one-diagram-tb",
+      "spec": "probes/l2-container-one-diagram-tb.json",
+      "record_label": "probe-l2-one-diagram-tb",
+      "why": "same probe in tb: it renders, but the engine itself refuses the section — 'warning: diagram l2-one-tb has 17 nodes / 23 edges, above the readable budget (12/16)' — at 105x171 with 23 crossings, 73 near-miss cells and 1 skipped label. This is why one C4 level ships as two container diagrams."
+    }
+  ],
+  "budget_note": "The contract's three-candidate budget per rendered diagram is exceeded: six canvas candidates (three accepted-path repairs, three shape probes) plus two single-diagram probes. Every run is recorded in attempts-log.jsonl with its raw check output and its input bundled beside it. The two rejected shipping candidates are under views[0].attempts (3, the budget); the four shape experiments are under abandoned_shapes, where the skill allows exploratory probes that never ship."
+}

@@ -1,0 +1,65 @@
+PASS manifest_readable
+PASS binary_path_absolute
+PASS binary_hash_recorded
+PASS artifact_hashes
+PASS check_output_present
+PASS check_exit_zero
+PASS check_warnings_absent
+PASS labels_parsed
+PASS labels_complete
+PASS labels_off_routes
+PASS labels_not_skipped
+PASS dots_parsed
+PASS dots_no_violations
+PASS origins_reported
+PASS origins_complete
+PASS dots_sync_reported
+PASS arrivals_reported
+PASS arrivals_complete
+PASS labels_ownership_reported
+PASS labels_ownership_clear
+PASS crossings_reported
+PASS routes_near_unrelated_nodes
+PASS canvas_diagrams_reported
+PASS canvas_diagrams_parsed
+PASS canvas_diagrams_described
+PASS canvas_extents_recorded
+PASS canvas_extents_consistent
+PASS viewport_proven
+PASS viewport_proven_measurable
+PASS viewport_matches_target
+note layout_fit_canvas_form — 3 diagram(s) on a 228x79 canvas, drawn whole at 100% and navigated by pan; the owner's navigable-canvas form
+PASS cleanup_confirmed
+PASS select_all_frame
+PASS select_all_artifact
+PASS frames_artifact
+PASS frames_timestamped
+PASS attempts_readable
+PASS attempts_view_budget
+PASS attempts_spec_budget
+PASS attempts_records_complete
+PASS probe_inputs_present
+
+frame audit (canvas-228x80-frames.txt)
+  viewport: 228x80 @1.00 natural · step 100ms · 12 route(s) tracked · dots/frame [12]
+  frames evenly spaced: pass · steady routes: 12/12
+  r1    19 cells / [3, 7, 0, 3, 6] → Δ per 10 frames [5, 5, 5, 5, 5] · stall 1 · steady
+  r2    23 cells / [23] → Δ per 10 frames [5, 5, 5, 5, 5] · stall 1 · steady
+  r3    22 cells / [10, 12] → Δ per 10 frames [5, 5, 5, 5, 5] · stall 1 · steady
+  r4    20 cells / [5, 5, 6, 4] → Δ per 10 frames [5, 5, 5, 5, 5] · stall 1 · steady
+  r5    22 cells / [20, 2] → Δ per 10 frames [5, 5, 5, 5, 5] · stall 1 · steady
+  r6    21 cells / [13, 0, 8] → Δ per 10 frames [5, 5, 5, 5, 5] · stall 1 · steady
+  r7    22 cells / [16, 6] → Δ per 10 frames [5, 5, 5, 5, 5] · stall 1 · steady
+  r8    22 cells / [16, 6] → Δ per 10 frames [5, 5, 5, 5, 5] · stall 1 · steady
+  r9    22 cells / [19, 3] → Δ per 10 frames [5, 5, 5, 5, 5] · stall 1 · steady
+  r10   20 cells / [9, 4, 3, 4] → Δ per 10 frames [5, 5, 5, 5, 5] · stall 1 · steady
+  r11   22 cells / [15, 7] → Δ per 10 frames [5, 5, 5, 5, 5] · stall 1 · steady
+  r12   22 cells / [18, 4] → Δ per 10 frames [5, 5, 5, 5, 5] · stall 1 · steady
+  equal distance: pass over 37 x 10 frame window(s) (spread ≤ 1) — 0-10:0, 1-11:0, 2-12:0, 3-13:0, 4-14:0, 5-15:0
+  rates: 0.500..0.500 cells/frame, spread 0.0 (allowed 0.05)
+  verdict: PASS — every tracked dot holds one rate and covers equal distance
+  the check reports 12 dot route(s); the capture tracked 12 (a clipped capture tracks fewer)
+
+PASS frame_audit_passes
+
+all checks passed

@@ -1,0 +1,1000 @@
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 26 at 2600ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      ●
+                      │
+                      │
+                http  │
+             ╭────────╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│─●▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰─────────────╮ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+g uploads │ │ │               │ │
+          │ │ │               ● │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰──●─────────────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 27 at 2700ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      ●
+                      │
+                      │
+                http  │
+             ╭────────╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│─●▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰─────────────╮ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+g uploads │ │ │               │ │
+          │ │ │               ● │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰──●─────────────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 28 at 2800ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      ●
+                      │
+                http  │
+             ╭────────╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│●─▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰─────────────╮ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+g uploads │ │ │               ● │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰───●────────────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 29 at 2900ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      ●
+                      │
+                http  │
+             ╭────────╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│●─▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰─────────────╮ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+g uploads │ │ │               ● │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰───●────────────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 30 at 3000ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      │
+                      ●
+                http  │
+             ╭────────╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│─●▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰─────────────╮ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               ● │
+g uploads │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰────●───────────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 31 at 3100ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      │
+                      ●
+                http  │
+             ╭────────╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│─●▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰─────────────╮ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               ● │
+g uploads │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰────●───────────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 32 at 3200ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      │
+                      │
+                http  ●
+             ╭────────╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│●─▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰─────────────╮ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               ● │
+          │ │ │               │ │
+g uploads │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰─────●──────────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 33 at 3300ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      │
+                      │
+                http  ●
+             ╭────────╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│●─▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰─────────────╮ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               ● │
+          │ │ │               │ │
+g uploads │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰─────●──────────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 34 at 3400ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      │
+                      │
+                http  │
+             ╭───────●╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│─●▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰─────────────╮ │
+          │ │ │               │ │
+          │ │ │               ● │
+          │ │ │               │ │
+          │ │ │               │ │
+g uploads │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰──────●─────────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 35 at 3500ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      │
+                      │
+                http  │
+             ╭───────●╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│─●▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰─────────────╮ │
+          │ │ │               │ │
+          │ │ │               ● │
+          │ │ │               │ │
+          │ │ │               │ │
+g uploads │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰──────●─────────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 36 at 3600ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      │
+                      │
+                http  │
+             ╭──────●─╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│●─▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰─────────────╮ │
+          │ │ │               ● │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+g uploads │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰───────●────────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 37 at 3700ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      │
+                      │
+                http  │
+             ╭──────●─╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│●─▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰─────────────╮ │
+          │ │ │               ● │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+g uploads │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰───────●────────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 38 at 3800ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      │
+                      │
+                http  │
+             ╭─────●──╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│─●▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰────────────●╮ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+g uploads │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰────────●───────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 39 at 3900ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      │
+                      │
+                http  │
+             ╭─────●──╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│─●▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰────────────●╮ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+g uploads │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰────────●───────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 40 at 4000ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      │
+                      │
+                http  │
+             ╭────●───╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│●─▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰───────────●─╮ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+g uploads │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰─────────●──────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 41 at 4100ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      │
+                      │
+                http  │
+             ╭────●───╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│●─▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰───────────●─╮ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+g uploads │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰─────────●──────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 42 at 4200ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      │
+                      │
+                http  │
+             ╭───●────╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│─●▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰──────────●──╮ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+g uploads │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰──────────●─────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 43 at 4300ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      │
+                      │
+                http  │
+             ╭───●────╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│─●▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰──────────●──╮ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+g uploads │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰──────────●─────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 44 at 4400ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      │
+                      │
+                http  │
+             ╭──●─────╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│●─▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰─────────●───╮ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+g uploads │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰───────────●────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 45 at 4500ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      │
+                      │
+                http  │
+             ╭──●─────╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│●─▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰─────────●───╮ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+g uploads │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰───────────●────────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 46 at 4600ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      │
+                      │
+                http  │
+             ╭─●──────╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│─●▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰────────●────╮ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+g uploads │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰────────────●───────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+frame 47 at 4700ms
+ rataflow-view · 68x44 @100% · canvas 228x79 · c4-canvas.json · 28 n
+L1 · System context — the machine manager
+One system: humans and mmctl call it over http; providers allocate m
+
+               ╭──────────────╮
+               │humans + mmctl│
+               │              │
+               ╰──────────────╯
+                      │
+                      │
+                      │
+                http  │
+             ╭─●──────╯
+             │
+             ▼    API+sync 1m
+     ╭───────────────╮   ╭──────────────╮
+     │machine manager│─●▶│providers (BM)│
+     │               │   │              │
+     ╰───────────────╯   ╰──────────────╯
+          │ │ │ ▲  allocate inst│
+          │ │ │ │ iPXE+heart    │
+          │ │ │ ╰────────●────╮ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ │
+g uploads │ │ │               │ │
+          │ │ │               │ │
+          │ │ │               │ ╰──────╮
+          │ │ │    boot+audit ╰──────╮ │
+          │ │ ╰────────────●───────╮ │ │
+          │ │                      │ │ │
+          │ │ confirm+alerts       │ │ │
+          │ ╰──────────╮           │ │ │
+        ╭─╯            │           │ │ │    ▝▀
+        ▼              ▼           ▼ │ ▼   ▝▀▀▀
+╭───────────────╮   ╭─────╮   ╭───────────
+│┌───────┐ store│   │Slack│   │machines (B ▄▄▖▄▖
+││ + [+] │      │   │     │   │                ▄▖     ▗▖ ▗▄
+╰│ − [-]─│──────╯   ╰─────╯   ╰─────────── █▌  ▄▖ ▐█ ▗▄▖ ▗▄▖ ▀▘ ▝▀
+ │ ⊡ [f] │                                    ▄▄
+ │ □ [i] │                                 ▀▘ ▀▘ ▐█ ▐█  ▜▘ ▀
+─└───────┘────────────────────────────────                         ─
+L2 · Containers — request, provisioning and boot
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1
+) on ☁️  aviralmansingka@gmail.com
+❯
