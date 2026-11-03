@@ -1,0 +1,445 @@
+{
+  "theme": "gruvbox",
+  "direction": "lr",
+  "diagrams": [
+    {
+      "id": "l1",
+      "title": "L1 · System context — the machine manager",
+      "description": "One double-bordered manager box; providers (BM = bare metal) and machines stay outside it, S3 and Slack beyond. Two arrows run between manager and machines, one each way.",
+      "nodes": [
+        {
+          "id": "web",
+          "label": "humans + mmctl",
+          "group": "humans"
+        },
+        {
+          "id": "mm",
+          "label": "machine manager",
+          "focus": true
+        },
+        {
+          "id": "prov",
+          "label": "providers (BM)",
+          "group": "external"
+        },
+        {
+          "id": "s3",
+          "label": "S3 object store",
+          "group": "external"
+        },
+        {
+          "id": "slack",
+          "label": "Slack",
+          "group": "external"
+        },
+        {
+          "id": "mch",
+          "label": "machines (BM)",
+          "group": "external"
+        }
+      ],
+      "layers": [
+        [
+          "web"
+        ],
+        [
+          "mm"
+        ],
+        [
+          "prov",
+          "s3",
+          "slack"
+        ],
+        [
+          "mch"
+        ]
+      ],
+      "edges": [
+        {
+          "from": "web",
+          "to": "mm",
+          "label": "http",
+          "dots": 0
+        },
+        {
+          "from": "mm",
+          "to": "prov",
+          "label": "provider API",
+          "dots": 0
+        },
+        {
+          "from": "mm",
+          "to": "s3",
+          "label": "diagnose",
+          "dots": 0
+        },
+        {
+          "from": "mm",
+          "to": "slack",
+          "label": "confirm + alerts",
+          "dots": 0
+        },
+        {
+          "from": "mm",
+          "to": "mch",
+          "label": "boot, audit",
+          "dots": 0
+        },
+        {
+          "from": "mch",
+          "to": "mm",
+          "label": "iPXE, heartbeat",
+          "dots": 0
+        },
+        {
+          "from": "prov",
+          "to": "mch",
+          "label": "allocate instance",
+          "dots": 0
+        }
+      ]
+    },
+    {
+      "id": "l2a",
+      "title": "L2 · Containers — request, provisioning and boot",
+      "description": "Dotted box = the manager's own containers; the caller, providers (BM) and machines stay outside it. Actions become a River job, a provider allocation, then a boot.",
+      "enclosure": [
+        "cp",
+        "wapi",
+        "pgrpc",
+        "q",
+        "rec",
+        "reg",
+        "db"
+      ],
+      "nodes": [
+        {
+          "id": "web",
+          "label": "humans + mmctl",
+          "group": "humans"
+        },
+        {
+          "id": "cp",
+          "label": "control plane",
+          "group": "control"
+        },
+        {
+          "id": "wapi",
+          "label": "webapi server",
+          "group": "control"
+        },
+        {
+          "id": "pgrpc",
+          "label": "private gRPC",
+          "group": "control"
+        },
+        {
+          "id": "q",
+          "label": "River queue",
+          "group": "async"
+        },
+        {
+          "id": "rec",
+          "label": "reconcile loop",
+          "group": "async"
+        },
+        {
+          "id": "reg",
+          "label": "provider registry",
+          "group": "async"
+        },
+        {
+          "id": "boot",
+          "label": "boot server",
+          "group": "hostops"
+        },
+        {
+          "id": "db",
+          "label": "Postgres",
+          "group": "state"
+        },
+        {
+          "id": "prov",
+          "label": "providers (BM)",
+          "group": "external"
+        },
+        {
+          "id": "s3",
+          "label": "S3 object store",
+          "group": "external"
+        },
+        {
+          "id": "mch",
+          "label": "machines (BM)",
+          "group": "external"
+        }
+      ],
+      "layers": [
+        [
+          "web"
+        ],
+        [
+          "cp",
+          "wapi"
+        ],
+        [
+          "pgrpc"
+        ],
+        [
+          "q",
+          "rec"
+        ],
+        [
+          "reg",
+          "db"
+        ],
+        [
+          "prov",
+          "s3"
+        ],
+        [
+          "mch"
+        ],
+        [
+          "boot"
+        ]
+      ],
+      "edges": [
+        {
+          "from": "web",
+          "to": "wapi",
+          "label": "http",
+          "dots": 0
+        },
+        {
+          "from": "cp",
+          "to": "pgrpc",
+          "label": "create/terminate/repair",
+          "dots": 0
+        },
+        {
+          "from": "pgrpc",
+          "to": "q",
+          "label": "enqueue job",
+          "dots": 0
+        },
+        {
+          "from": "wapi",
+          "to": "q",
+          "label": "reinstall/reprovision",
+          "dots": 0
+        },
+        {
+          "from": "q",
+          "to": "reg",
+          "label": "provision job",
+          "dots": 0
+        },
+        {
+          "from": "reg",
+          "to": "prov",
+          "label": "provider API",
+          "dots": 0
+        },
+        {
+          "from": "prov",
+          "to": "mch",
+          "label": "allocate instance",
+          "dots": 0
+        },
+        {
+          "from": "mch",
+          "to": "boot",
+          "label": "iPXE request",
+          "dots": 0
+        },
+        {
+          "from": "boot",
+          "to": "mch",
+          "label": "boot.ipxe + S3 args",
+          "dots": 0
+        },
+        {
+          "from": "mch",
+          "to": "s3",
+          "label": "pull boot image",
+          "dots": 0
+        },
+        {
+          "from": "pgrpc",
+          "to": "db",
+          "label": "machine rows",
+          "dots": 0
+        },
+        {
+          "from": "q",
+          "to": "db",
+          "label": "job rows",
+          "dots": 0
+        },
+        {
+          "from": "rec",
+          "to": "prov",
+          "label": "gcore sync, 1 min",
+          "dots": 0
+        },
+        {
+          "from": "rec",
+          "to": "db",
+          "label": "cluster state",
+          "dots": 0
+        }
+      ]
+    },
+    {
+      "id": "l2b",
+      "title": "L2 · Containers — heartbeat, audits and diagnostics",
+      "description": "Dotted box = the manager's own containers; machines (BM), S3 and Slack stay outside it. Agent heartbeat, audit and diagnose jobs, janitor proposals and Slack alerts.",
+      "enclosure": [
+        "pub",
+        "wapi",
+        "q",
+        "ssh",
+        "agent",
+        "db",
+        "jan"
+      ],
+      "nodes": [
+        {
+          "id": "s3",
+          "label": "S3 object store",
+          "group": "external"
+        },
+        {
+          "id": "mch",
+          "label": "machines (BM)",
+          "group": "external"
+        },
+        {
+          "id": "q",
+          "label": "River queue",
+          "group": "async"
+        },
+        {
+          "id": "ssh",
+          "label": "SSH + BMC ops",
+          "group": "hostops"
+        },
+        {
+          "id": "jan",
+          "label": "janitor app",
+          "group": "ops"
+        },
+        {
+          "id": "agent",
+          "label": "machine-agent",
+          "group": "hostops"
+        },
+        {
+          "id": "wapi",
+          "label": "webapi server",
+          "group": "control"
+        },
+        {
+          "id": "pub",
+          "label": "public gRPC",
+          "group": "control"
+        },
+        {
+          "id": "db",
+          "label": "Postgres",
+          "group": "state"
+        },
+        {
+          "id": "slack",
+          "label": "Slack",
+          "group": "external"
+        }
+      ],
+      "layers": [
+        [
+          "s3",
+          "mch"
+        ],
+        [
+          "ssh"
+        ],
+        [
+          "q",
+          "agent"
+        ],
+        [
+          "pub",
+          "jan"
+        ],
+        [
+          "wapi"
+        ],
+        [
+          "db"
+        ],
+        [
+          "slack"
+        ]
+      ],
+      "edges": [
+        {
+          "from": "q",
+          "to": "ssh",
+          "label": "audit/verify reimage",
+          "dots": 0
+        },
+        {
+          "from": "ssh",
+          "to": "mch",
+          "label": "run machine-audit",
+          "dots": 0
+        },
+        {
+          "from": "mch",
+          "to": "agent",
+          "label": "runs on host",
+          "dots": 0
+        },
+        {
+          "from": "agent",
+          "to": "pub",
+          "label": "register + heartbeat",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "pub",
+          "to": "db",
+          "label": "machine state",
+          "dots": 0
+        },
+        {
+          "from": "q",
+          "to": "jan",
+          "label": "diagnostic events",
+          "dots": 0
+        },
+        {
+          "from": "jan",
+          "to": "wapi",
+          "label": "proposed actions",
+          "dots": 0
+        },
+        {
+          "from": "wapi",
+          "to": "slack",
+          "label": "confirm + alerts",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "q",
+          "to": "s3",
+          "label": "diagnose uploads",
+          "dots": 0
+        }
+      ]
+    }
+  ]
+}

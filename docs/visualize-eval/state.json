@@ -2867,6 +2867,14 @@
    "check": "29/29 labels 0 ambiguous; near-misses 0; 11 dots 0 violations; frame audit PASS; enclosure crossings 0 (scan-verified, line absent at 0)",
    "blockers": "one-diagram L2 still impossible at lr (no obstacle-safe route wapi->q) - measured split, engine item for round 14",
    "judge": "spawning"
+  },
+  "c4_retry_v2": {
+   "worker": "viz-ds13-c4 (7m46s)",
+   "fix": "member-based enclosure (externals outside the dotted line), audit restored on q->ssh, L1 directions distinct",
+   "structure": "253x74, l2a box wraps 7 members (web/prov/mch/s3/boot outside), l2b box wraps 7 (mch/s3/slack outside); 5 entrances, 0 run-alongs",
+   "check": "30/30 labels 0 ambiguous; near-misses 0; frame audit PASS; 4 bridges",
+   "defects": "renderer paints enclosure over flow, occluding crossing dots -> 3 crossing routes shipped static; boot server outside l2a box (measured compromise); whole-canvas ANSI not capturable",
+   "judge": "spawning"
   }
  }
 }

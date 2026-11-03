@@ -1,0 +1,79 @@
+{
+  "case_id": "modal-machine-manager-c4-retry",
+  "round": "14",
+  "probe": "owner-requested C4 zoom-in retry (round-14 appendix; not one of the frozen cases)",
+  "binary": "/tmp/visualize-eval/round-14/bin/rataflow-view",
+  "binary_sha256": "2b1dd35301e19c03951c5ba7b546b4fdbcb18cec596dfe372526b2d83272abf0",
+  "skill": "docs/visualize-eval/proposals/13/SKILL.md",
+  "skill_sha256": "86b72df4dc3e9f77fbdeb70e2025f58a4fd95be590227b8606a0081efc48b714",
+  "records_log": "attempts-log.jsonl",
+  "views": [
+    {
+      "view": "canvas",
+      "spec": "specs/c4-canvas.json",
+      "spec_sha256": "f514f96a9b011c0dd4fab318020fbc1d2b1ad7994b3873afb293fa0257a2f819",
+      "bundle": "evidence/canvas",
+      "diagrams": [
+        "l1",
+        "l2a",
+        "l2b"
+      ],
+      "attempts": [
+        {
+          "id": "canvas-attempt1",
+          "record_label": "canvas-attempt1",
+          "spec": "specs/c4-canvas-attempt1.json",
+          "check": "extent=244x66; l1 91x18, l2a 244x18 enclosed, l2b 200x15 enclosed; 4 ambiguous owners, 4 near-miss cells (l1:e4 beside s3)",
+          "near_misses": 4,
+          "ambiguous_labels": 4,
+          "verdict": "rejected — the manager box's right side carried four runs (the anti-parallel pair plus two statics) on three port rows, so labels sat one row from a neighbour route"
+        },
+        {
+          "id": "canvas-attempt2",
+          "record_label": "canvas-attempt2",
+          "spec": "specs/c4-canvas-attempt2.json",
+          "check": "extent=244x66; l1 90x18; still 4 near-miss cells and 4 ambiguous owners",
+          "near_misses": 4,
+          "ambiguous_labels": 4,
+          "verdict": "rejected — reordering the right column and coarsening the context labels did not change the port crowding"
+        },
+        {
+          "id": "canvas-attempt5",
+          "record_label": "canvas-attempt5",
+          "spec": "specs/c4-canvas.json",
+          "check": "extent=244x62; l1 98x16 (double border), l2a 244x18 enclosed, l2b 214x13 enclosed; 0 near-miss, 29/29 labels, 0 ambiguous, 0 dot violations, 0 pin conflicts",
+          "near_misses": 0,
+          "ambiguous_labels": 0,
+          "verdict": "accepted"
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "label": "canvas-attempt3",
+      "spec": "specs/c4-canvas-attempt3.json",
+      "record_label": "canvas-attempt3",
+      "why": "fold-one-pair experiment: the manager→machines anti-parallel pair collapsed into one context aggregate and S3 moved left of the queue in l2b. l2b became clean and l1 dropped to 16 rows, but one label ('provider API' beside the manager's left-side 'http' run) stayed ambiguous; kept as the control for the shipped label lever."
+    },
+    {
+      "label": "canvas-attempt4",
+      "spec": "specs/c4-canvas-attempt4.json",
+      "record_label": "canvas-attempt4",
+      "why": "four-column context (web | manager | providers+S3+Slack | machines): 0 near-miss and 0 ambiguous owners, but the context's machine route spanned two columns and wrapped the full canvas width (long animated route for a mere context aggregate) and the layout was 121 wide; rejected in favour of the compact 3-column context."
+    },
+    {
+      "label": "probe-budget-lr",
+      "spec": "probes/l2-one-diagram-lr.json",
+      "record_label": "probe-budget-lr",
+      "why": "measures the owner's goal directly: the whole L2 container level (17 containers, 23 relations) as ONE diagram at the mandated canvas direction lr. The new build still exits 1 — 'no obstacle-safe route for wapi -> q; increase node/layer spacing'. This is why the container level ships as two enclosed halves."
+    },
+    {
+      "label": "probe-budget-tb",
+      "spec": "probes/l2-one-diagram-tb.json",
+      "record_label": "probe-budget-tb",
+      "why": "same probe in tb (the direction the owner forbids): it renders but the build itself refuses the section — 'warning: diagram l2-one-tb has 17 nodes / 23 edges, above the readable budget (12/16)' — at 105x171 with 23 crossings, 73 near-miss cells and 1 skipped label. Two independent reasons, both measured on the frozen 2b1dd353 build."
+    }
+  ],
+  "budget_note": "Five canvas candidates plus two single-diagram probes. Two rejected candidates are listed under views[0].attempts (3 with the shipped one, the budget) and the rest are shape experiments under abandoned_shapes, each with its record and its input bundled. Full disclosure: this exceeds the three-candidate guidance; the extra attempts were spent on label-ownership geometry (an anti-parallel pair and a back edge sharing one rank gap), not on stylistic iteration."
+}

@@ -5,7 +5,7 @@
     {
       "id": "l1",
       "title": "L1 · System context — the machine manager",
-      "description": "The manager as one double-bordered box that the next section opens; callers, providers, machines, S3 and Slack around it.",
+      "description": "One double-bordered manager box; providers (BM = bare metal) and machines stay outside it, S3 and Slack beyond. Two arrows run between manager and machines, one each way.",
       "nodes": [
         {
           "id": "web",
@@ -13,18 +13,13 @@
           "group": "humans"
         },
         {
-          "id": "prov",
-          "label": "providers (BM)",
-          "group": "external"
-        },
-        {
           "id": "mm",
           "label": "machine manager",
           "focus": true
         },
         {
-          "id": "mch",
-          "label": "machines (BM)",
+          "id": "prov",
+          "label": "providers (BM)",
           "group": "external"
         },
         {
@@ -36,19 +31,26 @@
           "id": "slack",
           "label": "Slack",
           "group": "external"
+        },
+        {
+          "id": "mch",
+          "label": "machines (BM)",
+          "group": "external"
         }
       ],
       "layers": [
         [
-          "web",
-          "prov"
+          "web"
         ],
         [
           "mm"
         ],
         [
+          "prov",
           "s3",
-          "slack",
+          "slack"
+        ],
+        [
           "mch"
         ]
       ],
@@ -68,25 +70,6 @@
           "dots": 1
         },
         {
-          "from": "prov",
-          "to": "mch",
-          "label": "allocate instance"
-        },
-        {
-          "from": "mm",
-          "to": "mch",
-          "label": "boot + audit",
-          "flow": true,
-          "dots": 1
-        },
-        {
-          "from": "mch",
-          "to": "mm",
-          "label": "iPXE + heartbeat",
-          "flow": true,
-          "dots": 1
-        },
-        {
           "from": "mm",
           "to": "s3",
           "label": "diagnose uploads"
@@ -95,14 +78,42 @@
           "from": "mm",
           "to": "slack",
           "label": "confirm + alerts"
+        },
+        {
+          "from": "mm",
+          "to": "mch",
+          "label": "boot, audit",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "mch",
+          "to": "mm",
+          "label": "iPXE, heartbeat",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "prov",
+          "to": "mch",
+          "label": "allocate instance"
         }
       ]
     },
     {
       "id": "l2a",
       "title": "L2 · Containers — request, provisioning and boot",
-      "description": "Enclosed in the dotted box: API actions become a River job, a provider allocation and a boot; the reconcile loop syncs gcore each minute.",
-      "enclosed": true,
+      "description": "Dotted box = the manager's own containers; the caller, providers (BM) and machines stay outside it. Actions become a River job, a provider allocation, then a boot.",
+      "enclosure": [
+        "cp",
+        "wapi",
+        "pgrpc",
+        "q",
+        "rec",
+        "reg",
+        "boot",
+        "db"
+      ],
       "nodes": [
         {
           "id": "web",
@@ -167,11 +178,13 @@
       ],
       "layers": [
         [
-          "web",
-          "cp"
+          "web"
         ],
         [
-          "wapi",
+          "cp",
+          "wapi"
+        ],
+        [
           "pgrpc"
         ],
         [
@@ -183,14 +196,14 @@
           "db"
         ],
         [
+          "boot"
+        ],
+        [
           "prov",
           "s3"
         ],
         [
           "mch"
-        ],
-        [
-          "boot"
         ]
       ],
       "edges": [
@@ -281,18 +294,26 @@
     {
       "id": "l2b",
       "title": "L2 · Containers — heartbeat, audits and diagnostics",
-      "description": "Also inside the dotted box: agent heartbeat, slow audit and diagnose jobs, janitor proposals and the Slack alerts they raise.",
-      "enclosed": true,
+      "description": "Dotted box = the manager's own containers; machines (BM), S3 and Slack stay outside it. Agent heartbeat, audit and diagnose jobs, janitor proposals and Slack alerts.",
+      "enclosure": [
+        "pub",
+        "wapi",
+        "q",
+        "ssh",
+        "agent",
+        "db",
+        "jan"
+      ],
       "nodes": [
         {
-          "id": "pub",
-          "label": "public gRPC",
-          "group": "control"
+          "id": "mch",
+          "label": "machines (BM)",
+          "group": "external"
         },
         {
-          "id": "wapi",
-          "label": "webapi server",
-          "group": "control"
+          "id": "s3",
+          "label": "S3 object store",
+          "group": "external"
         },
         {
           "id": "q",
@@ -305,29 +326,29 @@
           "group": "hostops"
         },
         {
-          "id": "agent",
-          "label": "machine-agent",
-          "group": "hostops"
-        },
-        {
-          "id": "db",
-          "label": "Postgres",
-          "group": "state"
-        },
-        {
           "id": "jan",
           "label": "janitor app",
           "group": "ops"
         },
         {
-          "id": "mch",
-          "label": "machines (BM)",
-          "group": "external"
+          "id": "agent",
+          "label": "machine-agent",
+          "group": "hostops"
         },
         {
-          "id": "s3",
-          "label": "S3 object store",
-          "group": "external"
+          "id": "wapi",
+          "label": "webapi server",
+          "group": "control"
+        },
+        {
+          "id": "pub",
+          "label": "public gRPC",
+          "group": "control"
+        },
+        {
+          "id": "db",
+          "label": "Postgres",
+          "group": "state"
         },
         {
           "id": "slack",
@@ -337,33 +358,35 @@
       ],
       "layers": [
         [
-          "q"
+          "mch"
         ],
         [
           "ssh",
           "s3"
         ],
         [
-          "mch",
+          "q",
+          "agent"
+        ],
+        [
           "jan"
         ],
         [
-          "agent",
-          "wapi"
-        ],
-        [
-          "slack",
+          "wapi",
           "pub"
         ],
         [
           "db"
+        ],
+        [
+          "slack"
         ]
       ],
       "edges": [
         {
           "from": "q",
           "to": "ssh",
-          "label": "verify reimage"
+          "label": "audit/verify reimage"
         },
         {
           "from": "ssh",

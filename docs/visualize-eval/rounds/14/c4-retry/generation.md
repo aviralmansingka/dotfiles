@@ -1,79 +1,65 @@
-# C4 zoom-in retry — modal-machine-manager (round 14)
+# C4 zoom-in retry — v2 (member-based enclosure)
 
-Retry of the round-13 C4 probe on the new frozen build, using the three features that were
-missing: `focus` (double border on the zoom parent), `enclosed` (dotted box around the expanded
-contents), and uniform dividers with a top rule above the first section.
+Regenerated on build `b0282d3b…` after the v1 verdict (FAIL-partial). v1 is archived unchanged
+under `v1/`.
 
-Frozen: binary `/tmp/visualize-eval/round-14/bin/rataflow-view` (sha `2b1dd353…`), skill
-`proposals/13/SKILL.md` (sha `86b72df4…`, section "Zoom-in views (C4-style)"). Facts only from
-`cases/modal-machine-manager/source.md`.
+## What changed versus v1
 
-## What shipped
+| v1 (failed) | v2 (this run) |
+|---|---|
+| `enclosed: true` put actors/externals **inside** the dotted box | `enclosure: [...]` lists only the manager's cells; every actor/external sits **outside** the boundary |
+| `queue → SSH` label `verify reimage` (lost `audit`) | label `audit/verify reimage` — both source actions |
+| L1 folded the machine→manager directions into one outward arrow | two L1 arrows: `mm → mch "boot, audit"` and `mch → mm "iPXE, heartbeat"` |
+| L2 descriptions called the dotted area "contents" while externals sat inside | descriptions say the box is the manager's containers and name what is outside |
+| `BM` unkeyed | "BM = bare metal" keyed in all three on-canvas descriptions |
+| pinned dump clipped the far-right enclosure edge | pinned 260×90 for a 253×74 canvas: 3 cols + 16 rows of margin, legend below the drawing |
 
-One canvas, **direction `lr` everywhere** (declared once at canvas level, no override), three
-described diagrams:
+## Structure
 
-| diagram | C4 level | new feature | extent | nodes/edges | dots |
-|---|---|---|---|---|---|
-| l1 | L1 context | `focus: true` on `mm` → double border (`╔══╗`) | 98x16 at 0,5 | 6 / 6 | 3 |
-| l2a | L2 containers (request·provisioning·boot) | `enclosed: true` → dotted box 244x18 at 0,25 | 244x18 at 0,26 | 12 / 14 | 6 |
-| l2b | L2 containers (heartbeat·audits·diagnostics) | `enclosed: true` → dotted box 214x13 at 0,48 | 214x13 at 0,49 | 10 / 9 | 2 |
+| diagram | level | feature | extent | nodes/edges/dots |
+|---|---|---|---|---|
+| l1 | L1 context | `focus: true` on `mm` → double border | 112x21 @0,5 | 6/7/4 |
+| l2a | L2 containers (request·provisioning·boot) | enclosure: `cp wapi pgrpc q rec reg db` — outside: `web prov mch s3 boot` | 253x20 @0,31; box 131x16 @23,31 | 12/14/5 |
+| l2b | L2 containers (heartbeat·audits·diagnostics) | enclosure: `pub wapi q ssh agent db jan` — outside: `mch s3 slack` | 189x18 @0,56; box 140x14 @22,56 | 10/9/0 |
 
-Whole canvas **244x62**; 28 node instances, 29 routes, 11 animated. L3 omitted (the source states
-no container internals), L4 out of scope.
+Canvas 253×74, one `lr` direction declared at canvas scope, uniform rules (257 cells, rows 8/34/59)
+with the top rule above L1.
 
-## Owner directives, checked
+## Enclosure metrics
 
-- **One direction:** `direction: "lr"` on the canvas; `--check` reports `direction=lr` once, no
-  diagram carries a direction.
-- **Qualifiers on the canvas:** `verify reimage` (l2b:e0) and `boot.ipxe + S3 args` (l2a:e8) are now
-  labels, plus `create/terminate/repair`, `reinstall/reprovision`, `gcore sync, 1 min`,
-  `run machine-audit`, `register + heartbeat`, `diagnostic events`, `proposed actions`,
-  `confirm + alerts`, `diagnose uploads`, `pull boot image`, `allocate instance`. Nothing the
-  round-13 judge missed lives only in a ledger now.
-- **Uniform dividers + top rule:** rows 7, 28 and 51 of the capture, each 250 cells (the widest
-  band); the top rule above L1 exists.
-- **Dots through the dotted line:** no route crosses either enclosure. The build prints the
-  `enclosed:` lines but no `enclosure-crossings:` line (the brief allows 0 or absent), so I also
-  scanned every dotted row in all 56 frames — no route or border glyph on any of them.
-
-## Why L2 is still two diagrams (measured, not chosen)
-
-The dotted box does not make a 17-container section routable on this build:
-
-- `lr` (the mandated direction): exit 1 — `no obstacle-safe route for wapi -> q; increase
-  node/layer spacing` (`probes/l2-one-diagram-lr.json`).
-- `tb`: renders, but the build itself refuses the section — `17 nodes / 23 edges, above the
-  readable budget (12/16)` — at 105x171 with 23 crossings, 73 near-miss cells, 1 skipped label
-  (`probes/l2-one-diagram-tb.json`).
-
-So both halves ship `enclosed`, and the union covers all 23 relations exactly once.
+`enclosure-entrances: 5` (relations joining an outside element to a nested cell — normal).
+`enclosure-crossings:` absent ⇒ 0; the metric is live — a rejected probe reported
+`enclosure-crossings: 1 cell(s) of a route RUNNING ALONG a dotted boundary`.
 
 ## Check summary
 
-`--check` on the final spec: extent 244x62, 1 bridge / 1 touching bend, **0 near-miss cells**,
-**29/29 labels placed, 0 ambiguous owners**, 11 single-dot routes with **0 violations**, **11/11
-origins**, 28 pins / **0 conflicts**, `double border: 1 zoom parent(s) - l1:mm`, two `enclosed:`
-boxes. Frame audit: **PASS** — 11/11 routes steady, equal distance, 0.500 cells/frame, longest
-route 26 cells → 52 frames needed, 56 captured. Validator (`--require-select --require-frames
---require-records --frame-audit`): **all checks passed**.
+extent 253x74 · 4 bridges / 0 touching bends · **0 near-miss cells** · **30/30 labels, 0 ambiguous
+owners** · 9 single-dot routes, **0 violations, 9/9 origins** · 28 pins / 0 conflicts · double border
+on `l1:mm` · two member-based dotted boxes. Frame audit **PASS** (9/9 steady, equal distance,
+0.500 cells/frame; longest route 28 cells → 56 frames needed, 60 captured).
+Validator (select + frames + records + frame-audit): **all checks passed**.
 
-## Defects / notes
+## Coverage
 
-- L1's `boot + audit + heartbeat` aggregate folds the machine→manager directions; both boot
-  directions and the heartbeat are drawn verbatim at L2 (l2a:e7/e8, l2b:e3) and the expansion is
-  recorded in `generation.json`.
-- `l1:e1` reads `prov API` (full `provider API` on l2a:e5); `BM` = bare metal is keyed only in the
-  record.
-- Two dotted boxes, not one nested box: the engine has a single enclosure level, so level 2 reads
-  as two enclosed halves.
-- The controls legend sits at the viewport's bottom-left; pinned at exactly the canvas extent it
-  covered the second enclosure's border, so the whole-canvas dump is pinned 250x76 (drawing ends
-  row 66, legend row 70). Viewer chrome, not a spec error.
+All 23 relations verbatim once at L2, all 17 components, 7 context aggregates with recorded
+expansions, no drops. Qualifiers on canvas: `audit/verify reimage`, `boot.ipxe + S3 args`,
+`create/terminate/repair`, `reinstall/reprovision`, `gcore sync, 1 min`, `run machine-audit`,
+`register + heartbeat`, `diagnostic events`, `proposed actions`, `confirm + alerts`,
+`diagnose uploads`, `pull boot image`, `allocate instance`, the three state writes, `runs on host`.
 
-## Evidence layout
+## Defects / blockers
 
-`specs/c4-canvas.json` (final) + attempts 1–5, `probes/` (the two one-diagram measurements),
-`evidence/canvas/` (check, pane text/ANSI/selected, 56 frames, whole-canvas 250x76 dump, frame
-audit, validator, manifest with `confirmed_closed`), `attempts.json`, `attempts-log.jsonl`
-(8 records), `generation.json`.
+- **Renderer**: the dotted boundary is painted after the flow, so a dot crossing it is occluded for
+  a frame and the frame audit splits that route (12/12 dots visible under `enclosed:true`, 11/12
+  under member enclosures). The three boundary-crossing routes (`web→wapi`, `reg→prov`,
+  `wapi→slack`) therefore ship static; the other nine keep one dot each.
+- **Membership compromise**: the boot server is a manager service but sits outside the L2a box —
+  the source chain `reg→prov→mch→boot` interleaves two externals between members, and every
+  rectangle that keeps boot inside also engulfs prov/mch (measured probes; 30+ near-miss cells).
+- L1's `diagnose` is shortened from `diagnose uploads` (full phrase on l2b:e8).
+- Whole-canvas ANSI/selected-state is still not capturable by the harness (ANSI is pane-only), so
+  the v1 judge's color/animation "blocked" finding remains an evidence gap.
+- The frozen binary was SIGKILLed at its path by the OS signature cache; identical bytes were
+  re-materialised at the same path (sha unchanged) and every later run succeeded.
+- Process: 9 layout probes + 6 frame-audit variants ran outside the record wrapper (specs bundled,
+  listed in `attempts.json`); only the attempts and evidence runs are recorded.

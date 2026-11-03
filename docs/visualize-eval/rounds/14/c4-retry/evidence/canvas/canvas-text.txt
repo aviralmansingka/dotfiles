@@ -1,44 +1,44 @@
- rataflow-view · 68x44 @100% · canvas 244x62 · c4-canvas.json · 28 n
+ rataflow-view · 68x44 @100% · canvas 253x74 · c4-canvas.json · 28 n
 
 ────────────────────────────────────────────────────────────────────
 L1 · System context — the machine manager
-The manager as one double-bordered box that the next section opens;
+One double-bordered manager box; providers (BM = bare metal) and mac
 
-
-                     ╭──────────────────────────────────────────────
-                     │    allocate instance
-╭──────────────╮     │                      ╭───────────────────────
-│              │─────╯  ╔═══════════════╗   ●boot + audit + heartbea
-│providers (BM)│        ║               ║   │
-│              │◀─╮     ║               ║───╯
-╰──────────────╯  ╰●────║               ║     diagnose uploads     ╭
-             prov API   ║machine manager║──────────────────────────╯
-╭──────────────╮ http ╭▶║               ║
-│humans + mmctl│────●─╯ ║               ║─────────────────────────╮
-│              │        ║               ║    confirm + alerts     │
-╰──────────────╯        ╚═══════════════╝                         ╰─
-
-
+                               ╭────────────────────────────────────
+                               │
+                               │
+                               │                            ╭───────
+                iPXE, heartbeat│          ╭────────────────▶│provide
+                               │          ● provider API    │
+                               ▼          │                 ╰───────
+                       ╔═══════════════╗  │
+                       ║               ║──╯                ╭────────
+╭──────────────╮http   ║               ║    diagnose     ╭▶│S3 objec
+│humans + mmctl│────●╮ ║               ║─────────────────╯ │
+│              │     ╰▶║machine manager║                   ╰────────
+╰──────────────╯       ║               ║────●───────────╮
+                       ║               ║                │       ╭───
+                       ║               ║────────────────⌒──────▶│Sla
+                       ╚═══════════════╝                │       │
+                                      confirm + alerts  │       ╰───
+                                                        │
+                                                        │
+                                                        ╰───────────
 
 
 ────────────────────────────────────────────────────────────────────
 L2 · Containers — request, provisioning and boot
-Enclosed in the dotted box: API actions become a River job, a provid
-····································································
-·
-·
-·
-·                                           ╭────────────╮
-· ╭─────────────╮  create/terminate/repair  │            │──────────
-· │control plane│────●─────────────────────▶│private gRPC│
-· │             │                                                  ─
-· ╰─────────────╯                                                  e
-·                                          ▄▖▄▖   ▄▖
-·╭──────────────╮          http            ▀▘▀▘  ▝▛                /
-·┌───────┐ mmctl│────●────────────────────     ▄▖     ▗▖ ▗▄        ─
-·│ + [+] │      │                          █▌  ▄▖  █▌ ▄▄ ▗▄  ▀▘ ▝▀
-·│ − [-]─│──────╯
-·│ ⊡ [f] │                                 ▀▘▀▘ ▐█ ▐█  ▟▖  ▀▘ ▀
-·│ □ [i] │
-·└───────┘
-····································································
+Dotted box = the manager's own containers; the caller, providers (BM
+
+                       ·············································
+                       ·
+                       ·
+                       ·                     ▄▖ ▗▄                 ╭
+                       ·╭─────────────╮    ▀▘▀▘ ▀▘ ▝▀              │
+ ┌───────┐           ╭─·│webapi server│───          ▗▖ ▄▖ ▗▄       ╯
+ │ + [+]─│──────╮http│ ·│             │    ▀▘█▌  ▀▘ ▄▖ ▝▘ ▄▖ ▝▀ ▝▘
+ │ − [-] │ mmctl│────╯ ·╰─────────────╯
+ │ ⊡ [f] │      │      ·                   █▌▄▖ █▘ ▐▌ ▗▄▝▘▝
+ │ □ [i]─│──────╯      ·╭─────────────╮
+ └───────┘             ·│control plane│───                         ─
+                       ·│             │
