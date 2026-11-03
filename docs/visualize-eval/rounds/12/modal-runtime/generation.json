@@ -1,0 +1,198 @@
+{
+  "case_id": "modal-runtime",
+  "round": "12",
+  "generator": {
+    "worker": "viz-ds12-7c",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "reviewer": "none run by the generator (captain starts the terra judge separately)"
+  },
+  "frozen_inputs": {
+    "skill_path": "docs/visualize-eval/rounds/12/SKILL.md",
+    "skill_sha256": "44935981b942e49ef475f7e7203fcb2035db88339977e0f072cb806463dd2a9b",
+    "renderer_path": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+    "renderer_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+    "target": "77x47 natural zoom 1.00",
+    "case_source": "docs/visualize-eval/cases/modal-runtime/source.md",
+    "case_source_sha256": "c6e4552d5842347bc9472e53a2351897c3624c92b5a14541aaa3c28216dc4a0d"
+  },
+  "step0_classification": {
+    "family": "service-meshes",
+    "evidence": "one core (modal-runtime) carries a fan of three out-relations (dispatches tasks, fs HTTP over UDS, events + management RPCs) and an anti-parallel pair worker -> runtime / runtime -> worker stated as two distinct relations.",
+    "tie_breakers_considered": [
+      "flow-chains: E = N (8/8) invites a chain, but the anti-parallel pair and the 4-edge fan around modal-runtime give one core, not a stage sequence — density wins over depth.",
+      "placement-planes: no source-named bus and one connected component, so there are no two weakly-connected worlds to separate.",
+      "identity-probe-maps: the source names components and two protocols, not addresses, ports or uncertainty markers; nothing is label-dense in the identity-map sense.",
+      "redundant-fabrics: no redundant parallel links and no double-arrowhead targets; the two directions on one pair are request/response, not redundancy."
+    ],
+    "secondary_recipe": "identity-probe-map habit borrowed: every interface qualifier (worker gRPC vs filesystem HTTP over UDS) is its own ledger row with a named view before drawing, because the case's fixed constraint turns on keeping those two interfaces distinct.",
+    "reclassification": "none"
+  },
+  "views": [
+    {
+      "view": "v1",
+      "role": "worker seam: the anti-parallel gRPC pair plus the dispatch relation",
+      "spec": "specs/v1.json",
+      "spec_sha256": "873bcd691aa59b8341ddfd530c625a5dcf53c812a71a33587595c1ca4da9b25d",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "check": "evidence/v1/check.txt",
+      "frames": "evidence/v1/v1-frames.txt",
+      "frames_ansi": "evidence/v1/v1-frames.ansi",
+      "manifest": "evidence/v1/manifest.json",
+      "pinned_target_dump": "evidence/v1/v1-77x47-frames.txt",
+      "measured_dimensions": { "pane": "83x51", "check_extent": "57x11", "pinned_dump": "77x47" },
+      "viewport_line": "viewport: unknown zoom: 1.00 natural (--check); pinned dump: viewport: 77x47 zoom: 1.00 natural; pane header: 83x51 @100%",
+      "viewport_token": "83x51 @100%",
+      "nodes": 3,
+      "edges": 3,
+      "dots": "none (static case, no source motion)",
+      "family_recipe_implemented": "service-mesh anti-parallel pair: request and response drawn as two distinct edges in ONE view with distinct ports and distinct labels, never merged into one bidirectional arrow, never split across views.",
+      "habits_borrowed": [
+        "stable fan port order: the runtime's out-edges follow the source's own listing order (worker, engine, then the daemon seam in v2)",
+        "the pair's two labels are kept apart by reserved gutter bands so each text has exactly one owner"
+      ],
+      "structural_levers": [
+        { "lever": "direction: lr", "source_fact": "worker -> runtime and runtime -> worker are two directions of one seam: drawn as two horizontal lanes they read as a pair (frame v1-77x47-frames.txt rows 21-30), while tb stacks them into the fan gutter where their labels tie (measured in the a3/a4/a5 single-view probes)." },
+        { "lever": "label_slot on e1 and e2", "source_fact": "the two seam labels are the longest in the case (task input + control RPCs / events + management RPCs, both gRPC): a reserved side gutter gives each its own home. Without it e1's label ties at 1 cell with the dispatch route (v1-1: 1 ambiguous)." },
+        { "lever": "groups worker-plane / orchestration", "source_fact": "the source separates the worker plane (modal-worker) from the orchestration core (modal-runtime, Task engine) — different hue families, no box drawn." }
+      ],
+      "deviations": [
+        { "deviation": "the view carries 3 of 8 relations: the filesystem seam (runtime -> daemon) sits in v2 instead of here.", "reason": "measured impossible to join without a defect: v1-3 (57x15) gave 2 bridges + 1 ambiguous, the merged 4-edge probes seams-2/4/5 gave 2 ambiguous or a clipped label. Capture: evidence/v1/v1-77x47-frames.txt, check output in attempts-log.jsonl label v1-3." },
+        { "deviation": "edge verb 'dispatches tasks' rendered as 'dispatch tasks'.", "reason": "same verb, normalised tense; no fact dropped. Label length is what keeps the fan label off the pair's gutter in v1." }
+      ]
+    },
+    {
+      "view": "v2",
+      "role": "execution + storage: the filesystem HTTP-over-UDS seam with the task-execution and storage chains",
+      "spec": "specs/v2.json",
+      "spec_sha256": "53390239cb7979d1e7d47fdfd0dbcf42de8e4c562992a229e30b625525e10576",
+      "text": "evidence/v2/v2-text.txt",
+      "ansi": "evidence/v2/v2-ansi.ansi",
+      "selected_ansi": "evidence/v2/v2-selected.ansi",
+      "check": "evidence/v2/check.txt",
+      "frames": "evidence/v2/v2-frames.txt",
+      "frames_ansi": "evidence/v2/v2-frames.ansi",
+      "manifest": "evidence/v2/manifest.json",
+      "pinned_target_dump": "evidence/v2/v2-77x47-frames.txt",
+      "measured_dimensions": { "pane": "83x51", "check_extent": "58x21", "pinned_dump": "77x47" },
+      "viewport_line": "viewport: unknown zoom: 1.00 natural (--check); pinned dump: viewport: 77x47 zoom: 1.00 natural; pane header: 83x51 @100%",
+      "viewport_token": "83x51 @100%",
+      "nodes": 7,
+      "edges": 5,
+      "dots": "none (static case, no source motion)",
+      "family_recipe_implemented": "service-mesh fan with its lanes ordered by the source's own listing, plus the chain tails a mesh hands off to: the daemon lane (HTTP over UDS) is kept visually apart from the two gRPC lanes in v1 so the interfaces never read as one.",
+      "habits_borrowed": [
+        "fan lanes occupy a stable left-to-right order (compute, storage, then the daemon seam) that follows the source's component listing",
+        "one hop, one label, one owner: every gutter band holds a single edge's text"
+      ],
+      "structural_levers": [
+        { "lever": "direction: tb", "source_fact": "the execution and storage relations run engine -> backend -> container and engine -> filesystem -> blobnet; tb spends height (21 of 47 rows) and keeps the 7 boxes under 58 of 77 columns, where lr measured 104x14 (v2-1)." },
+        { "lever": "label_slot on all five edges", "source_fact": "the five labels are 14-19 characters; reserved side gutters cut the drawing from 58x55 (v2-2, every label in a rank gap) to 58x21 without changing a word." },
+        { "lever": "groups orchestration / worker-plane / compute / storage", "source_fact": "the source names task orchestration, container backends, storage and the workers as separate concerns; four hue families, no boxes, one sibling order across both views." }
+      ],
+      "deviations": [
+        { "deviation": "Task engine appears in both views; runtime -> engine (e3) is drawn once, in v1.", "reason": "v2's chain needs its start visible; the dispatch statement is not duplicated so no relation has two owners. See the coverage map." },
+        { "deviation": "node label 'Filesystem + volumes' abbreviated to 'Filesystem + vols'.", "reason": "node box width; 'vols' is the source's own term abbreviated, and the relation label 'image + volume data' next to Blobnet keeps the word 'volume' on the same view." },
+        { "deviation": "two arrowheads sit flush against their labels (mounts / snapshots▼, runs user process▼).", "reason": "the label gutter band ends one cell before the target box at this extent; the check reports 0 labels on route cells and 0 ambiguous owners. Capture: evidence/v2/v2-77x47-frames.txt rows 9-11 and 27-29." }
+      ]
+    }
+  ],
+  "coverage_map": [
+    { "view": "v1", "carries": "nodes modal-worker, modal-runtime, Task engine; e1 worker->runtime, e2 runtime->worker, e3 runtime->engine" },
+    { "view": "v2", "carries": "nodes modal-runtime, modal-daemon, Task engine (context root), Container backend, Task container, Filesystem + vols, Blobnet; e8 runtime->daemon, e4 engine->backend, e6 engine->filesystem, e5 backend->container, e7 filesystem->blobnet" }
+  ],
+  "meaning_ledger": [
+    { "fact": "modal-worker", "kind": "component name", "fate": "drawn v1" },
+    { "fact": "modal-runtime", "kind": "component name", "fate": "drawn v1, v2" },
+    { "fact": "Task engine", "kind": "component name", "fate": "drawn v1, v2" },
+    { "fact": "Container backend", "kind": "component name", "fate": "drawn v2" },
+    { "fact": "Task container", "kind": "component name", "fate": "drawn v2" },
+    { "fact": "Filesystem + volumes", "kind": "component name", "fate": "abbreviated to 'Filesystem + vols' in v2 (vols = volumes, source's own word abbreviated)" },
+    { "fact": "Blobnet", "kind": "component name", "fate": "drawn v2" },
+    { "fact": "modal-daemon", "kind": "component name", "fate": "drawn v2" },
+    { "fact": "worker -> runtime: task input + control RPCs", "kind": "action verb + payload", "fate": "drawn v1 as 'task input + ctrl gRPC'" },
+    { "fact": "runtime -> worker: events + management RPCs", "kind": "action verb + payload", "fate": "drawn v1 as 'events + mgmt gRPC'" },
+    { "fact": "worker seam protocol is gRPC", "kind": "protocol", "fate": "drawn v1: the token gRPC is on both pair labels (the round-11 loss this rerun repairs)" },
+    { "fact": "runtime -> engine: dispatches tasks", "kind": "action verb", "fate": "drawn v1 as 'dispatch tasks' (tense normalised)" },
+    { "fact": "engine -> backend: starts / manages", "kind": "action verb", "fate": "drawn v2" },
+    { "fact": "backend -> container: runs user process", "kind": "action verb", "fate": "drawn v2" },
+    { "fact": "engine -> filesystem: mounts / snapshots", "kind": "action verb", "fate": "drawn v2" },
+    { "fact": "filesystem -> blobnet: image + volume data", "kind": "payload", "fate": "drawn v2" },
+    { "fact": "runtime -> daemon: filesystem HTTP over UDS", "kind": "protocol + path", "fate": "drawn v2 as 'fs HTTP over UDS'" },
+    { "fact": "HTTP over Unix-domain sockets is a different interface from the worker gRPC seam", "kind": "qualifier / interface distinction", "fate": "drawn: three separate edges with their own protocol labels, never merged (v1 rows 21-30, v2 row 11)" },
+    { "fact": "'three worker RPC seams' (historical line 55)", "kind": "role fact", "fate": "drawn: the two gRPC seams in v1 and the HTTP-over-UDS seam in v2" },
+    { "fact": "the whole graph is a historical chat claim (line 55), not a live probe", "kind": "qualifier / evidence status", "fate": "not marked per edge: the brief attaches no per-link uncertainty (the source states no 'unconfirmed'/'inactive' link), so the historical status is carried here and in the reply instead of as invented dashed edges" },
+    { "fact": "go and Rust runtime sources discussed at original chat lines 27-51", "kind": "source pointer", "fate": "dropped with reason: a provenance pointer, not a graph fact; carried here and in source_pointers" }
+  ],
+  "relationship_audit": [
+    { "id": "e1", "from": "worker", "to": "runtime", "verb_tech": "task input + control RPCs, gRPC", "label": "task input + ctrl gRPC", "label_owner": "e1", "view": "v1" },
+    { "id": "e2", "from": "runtime", "to": "worker", "verb_tech": "events + management RPCs, gRPC", "label": "events + mgmt gRPC", "label_owner": "e2", "view": "v1" },
+    { "id": "e3", "from": "runtime", "to": "engine", "verb_tech": "dispatches tasks", "label": "dispatch tasks", "label_owner": "e3", "view": "v1" },
+    { "id": "e4", "from": "engine", "to": "backend", "verb_tech": "starts / manages", "label": "starts / manages", "label_owner": "e4", "view": "v2" },
+    { "id": "e5", "from": "backend", "to": "container", "verb_tech": "runs user process", "label": "runs user process", "label_owner": "e5", "view": "v2" },
+    { "id": "e6", "from": "engine", "to": "filesystem", "verb_tech": "mounts / snapshots", "label": "mounts / snapshots", "label_owner": "e6", "view": "v2" },
+    { "id": "e7", "from": "filesystem", "to": "blobnet", "verb_tech": "image + volume data", "label": "image + volume data", "label_owner": "e7", "view": "v2" },
+    { "id": "e8", "from": "runtime", "to": "daemon", "verb_tech": "filesystem HTTP over UDS", "label": "fs HTTP over UDS", "label_owner": "e8", "view": "v2" }
+  ],
+  "original_to_view_mapping": [
+    { "original": "worker -> runtime (task input + control RPCs)", "visible": "v1 e1: modal-worker rightward arrow into modal-runtime's right side, label above the lane" },
+    { "original": "runtime -> worker (events + management RPCs)", "visible": "v1 e2: separate leftward-returning lane from modal-runtime to modal-worker, its own label below it" },
+    { "original": "runtime -> engine (dispatches tasks)", "visible": "v1 e3: top lane from modal-runtime to Task engine" },
+    { "original": "engine -> backend (starts / manages)", "visible": "v2 e4: left lane from Task engine down to Container backend" },
+    { "original": "backend -> container (runs user process)", "visible": "v2 e5: Container backend down to Task container" },
+    { "original": "engine -> filesystem (mounts / snapshots)", "visible": "v2 e6: middle lane from Task engine down to Filesystem + vols" },
+    { "original": "filesystem -> blobnet (image + volume data)", "visible": "v2 e7: Filesystem + vols down to Blobnet" },
+    { "original": "runtime -> daemon (filesystem HTTP over UDS)", "visible": "v2 e8: right lane from modal-runtime down to modal-daemon, protocol kept in the label" }
+  ],
+  "recipe_yield": {
+    "demand": "round-12 order: the pair + fan + seam together in one 77x47 view when they fit, split only on genuine overflow.",
+    "measured_attempts": [
+      "whole graph 8n/8e: 84 rows (tb), 89 columns (lr), 65x30 with 2 ambiguous labels (tb + bands), 56x42 and 56x47 with 2 ambiguous (tb + minlen 2/3) — records v1-a1..v1-a5",
+      "pair + fan + seam 4n/4e: 46x17 (2 bridges, 1 label unplaced), 76x14 (2 ambiguous), 70x22 (2 bridges), 76x27 (1 ambiguous + clipped label at the pane edge), 76x14 (2 ambiguous), 83x13 (over width, 1 bridge) — records seams-1..seams-6",
+      "pair + dispatch + seam 4n/4e in lr: 57x15, 2 bridges + 1 ambiguous — record v1-3"
+    ],
+    "yield": "The renderer cannot hold modal-runtime's fan (3 out-relations) and its anti-parallel pair in one 77x47 view without a bridge, a tie-owned label, or an overflow: fan lanes sit two cells apart, so any label placed beside a lane is measurably closer to its neighbour's lane, and the only clean route is a reserved gutter band, which the band-drop pass releases as soon as a route fails. Recipe yields: the pair keeps its own view (v1, 3 edges) and the third fan edge joins the execution/storage picture (v2, 5 edges).",
+    "closest_shipped_numbers": "v1 3 nodes / 3 edges at 57x11; v2 7 nodes / 5 edges at 58x21; together 8/8 nodes and 8/8 relations, 0 bridges, 0 ambiguous owners, 0 unplaced labels. Round-10 held four edges in one picture; v2 holds five."
+  },
+  "abbreviations": [
+    { "text": "ctrl", "meaning": "control (RPCs)", "view": "v1" },
+    { "text": "mgmt", "meaning": "management (RPCs)", "view": "v1" },
+    { "text": "fs", "meaning": "filesystem", "view": "v2" },
+    { "text": "vols", "meaning": "volumes", "view": "v2" },
+    { "text": "dispatch tasks", "meaning": "dispatches tasks (source verb, tense normalised)", "view": "v1" }
+  ],
+  "deliberate_drops": [
+    { "fact": "'go and Rust runtime source' provenance pointer", "reason": "not a graph fact; the audit trail is source_pointers below" },
+    { "fact": "historical-chat status as a per-edge qualifier", "reason": "the source states no per-link uncertainty; marking every confirmed relation dashed would promote nothing and would invent an unconfirmed flag the brief does not give" }
+  ],
+  "known_defects": [
+    "v1 carries 3 of 8 relations; the runtime fan is split across v1/v2 because no single view holds it cleanly (see recipe_yield).",
+    "Node label 'Filesystem + vols' abbreviates 'volumes'.",
+    "Edge verb 'dispatches tasks' rendered as 'dispatch tasks'.",
+    "Two labels in v2 end flush against their arrowhead (mounts / snapshots▼, runs user process▼) — cosmetic crowding, not an ownership or route defect."
+  ],
+  "blockers": [],
+  "cleanup": {
+    "panes": [
+      { "view": "v1", "pane_id": "w7E:pY6", "result": "confirmed_closed" },
+      { "view": "v2", "pane_id": "w7E:pY7", "result": "confirmed_closed" }
+    ],
+    "note": "every --check probe ran headless (no pane); only the two evidence captures opened panes, and both closed with cleanup 'confirmed_closed' recorded in their manifests."
+  },
+  "source_pointers": [
+    "docs/visualize-eval/cases/modal-runtime/source.md — historical chat lines 5, 12, 55 and the fixed constraints",
+    "original chat: /Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-modal-learn-runtime-arch--/2026-10-14T20-36-14-065Z_01a13c21-3e70-754d-a101-f5817da3e05a.jsonl, graph write at line 55 (not re-read; the case brief's excerpts were the only input)"
+  ],
+  "validator": {
+    "command": "scripts/viz-validate.py docs/visualize-eval/rounds/12/modal-runtime/evidence/<view> --require-select --require-frames --require-records --attempts docs/visualize-eval/rounds/12/modal-runtime/attempts.json",
+    "v1": {
+      "result": "all checks passed",
+      "detail": "manifest_readable PASS; binary_path_absolute PASS; binary_hash_recorded PASS; artifact_hashes PASS; check_output_present PASS; check_exit_zero PASS; check_warnings_absent PASS; labels_parsed/labels_complete 3/3 PASS; labels_off_routes 0 PASS; labels_not_skipped 0 PASS; dots_parsed/dots_no_violations 0 PASS; origins_reported/origins_complete 0/0 PASS; dots_sync_reported PASS; arrivals_reported/arrivals_complete 0/0 PASS; labels_ownership_reported/clear 0 PASS; crossings_reported PASS; viewport_proven PASS; viewport_proven_measurable PASS; viewport_matches_target PASS (pinned 77x47 dump of this view's final spec); cleanup_confirmed PASS; select_all_frame/select_all_artifact PASS; frames_artifact/frames_timestamped (4 frames) PASS; attempts_readable/attempts_view_budget/attempts_spec_budget PASS; attempts_records_complete PASS"
+    },
+    "v2": {
+      "result": "all checks passed",
+      "detail": "same check set; labels 5/5, 0 on route cells, 0 skipped, 0 ambiguous owners; crossings 0 bridges, 0 touching bends; checker extent 58x21 with a pinned 77x47 dump of this view's final spec as fit proof; 4 timestamped frames; records log verified (18 records, all raw stdout/stderr hashes match)."
+    }
+  }
+}

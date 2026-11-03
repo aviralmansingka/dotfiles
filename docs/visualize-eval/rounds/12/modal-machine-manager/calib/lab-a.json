@@ -1,0 +1,36 @@
+{
+ "direction": "tb",
+ "theme": "gruvbox",
+ "nodes": [
+  {
+   "id": "a",
+   "label": "control plane"
+  },
+  {
+   "id": "b",
+   "label": "humans + mmctl"
+  },
+  {
+   "id": "c",
+   "label": "private gRPC"
+  },
+  {
+   "id": "d",
+   "label": "webapi server"
+  }
+ ],
+ "edges": [
+  {
+   "from": "a",
+   "to": "c",
+   "label": "create/terminate/repair",
+   "label_slot": true
+  },
+  {
+   "from": "b",
+   "to": "d",
+   "label": "http",
+   "label_slot": true
+  }
+ ]
+}

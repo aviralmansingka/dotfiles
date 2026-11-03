@@ -2765,5 +2765,21 @@
     ]
    }
   }
+ },
+ "round_12": {
+  "status": "frozen 1a53adaf; 1 of 2 rerun cases landed (modal-runtime COMPLETE, validated by captain); modal-machine-manager generating (viz-ds12-6c in flight)",
+  "skill": "proposal 11 44935981\u2026 (budget as hint; coverage overrides)",
+  "engine": "db70722b\u2026 (unchanged r10 binary)",
+  "rubric": "rev 10 5e09b9be\u2026",
+  "arrivals": {
+   "modal-runtime": {
+    "worker": "viz-ds12-7c (10m20s; spawn cohort 6c/7c after 4 startup crashes)",
+    "family": "service-meshes (core fan + anti-parallel pair; identity-map for qualifiers)",
+    "views": "2: v1 3n/3e pair+dispatch (57x11 lr); v2 7n/5e seams+chains (58x21 tb)",
+    "validation": "captain rerun: 33 PASS / 0 FAIL both views (worker reported same)",
+    "highlights": "v2 holds 5 edges (r10 reference held 4; r11 shipped 2-edge views); 8/8 relations+nodes; 0 ambiguous/bridges; one-view merge measured 11x, every variant ambiguous-or-overflow -> recorded recipe_yield; abbreviations disclosed; no blockers",
+    "judge": "spawn after mm lands"
+   }
+  }
  }
 }

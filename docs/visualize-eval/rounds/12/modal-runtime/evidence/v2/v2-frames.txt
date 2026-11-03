@@ -1,0 +1,235 @@
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotfi
+les/fix-visualize-skill/docs/visualize-eval/rounds/12/modal-runtime/specs/v2.json
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  aviral
+mansingka@gmail.com
+❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/12/modal-runtime/specs/v2.json
+
+viewport: 83x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  aviral
+mansingka@gmail.com
+❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/12/modal-runtime/specs/v2.json
+ --select-all
+viewport: 83x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  aviral
+mansingka@gmail.com
+❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/12/modal-runtime/specs/v2.json
+ --frames 4 --step-ms 100
+viewport: 83x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 83x51 @100% · v2.json · 7 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          ╭───────────╮   ╭─────────────╮
+                          │Task engine│   │modal-runtime│
+                          │           │   │             │
+                          ╰───────────╯   ╰─────────────╯
+                               │ │               │
+                               │ │               │
+               starts / manages│ │               │
+                     ╭─────────╯ ╰─────────╮     ╰────────────╮
+                     ▼   mounts / snapshots▼  fs HTTP over UDS▼
+            ╭─────────────────╮   ╭─────────────────╮   ╭────────────╮
+            │Container backend│   │Filesystem + vols│   │modal-daemon│
+            │                 │   │                 │   │            │
+            ╰─────────────────╯   ╰─────────────────╯   ╰────────────╯
+                     │                     │
+                     │                     │ image + volume data
+                     ╰────────────╮        ╰──────╮
+                 runs user process▼               ▼
+                           ╭──────────────╮   ╭───────╮
+                           │Task container│   │Blobnet│
+                           │              │   │       │
+                           ╰──────────────╯   ╰───────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 83x51 @100% · v2.json · 7 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          ╭───────────╮   ╭─────────────╮
+                          │Task engine│   │modal-runtime│
+                          │           │   │             │
+                          ╰───────────╯   ╰─────────────╯
+                               │ │               │
+                               │ │               │
+               starts / manages│ │               │
+                     ╭─────────╯ ╰─────────╮     ╰────────────╮
+                     ▼   mounts / snapshots▼  fs HTTP over UDS▼
+            ╭─────────────────╮   ╭─────────────────╮   ╭────────────╮
+            │Container backend│   │Filesystem + vols│   │modal-daemon│
+            │                 │   │                 │   │            │
+            ╰─────────────────╯   ╰─────────────────╯   ╰────────────╯
+                     │                     │
+                     │                     │ image + volume data
+                     ╰────────────╮        ╰──────╮
+                 runs user process▼               ▼
+                           ╭──────────────╮   ╭───────╮
+                           │Task container│   │Blobnet│
+                           │              │   │       │
+                           ╰──────────────╯   ╰───────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 83x51 @100% · v2.json · 7 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          ╭───────────╮   ╭─────────────╮
+                          │Task engine│   │modal-runtime│
+                          │           │   │             │
+                          ╰───────────╯   ╰─────────────╯
+                               │ │               │
+                               │ │               │
+               starts / manages│ │               │
+                     ╭─────────╯ ╰─────────╮     ╰────────────╮
+                     ▼   mounts / snapshots▼  fs HTTP over UDS▼
+            ╭─────────────────╮   ╭─────────────────╮   ╭────────────╮
+            │Container backend│   │Filesystem + vols│   │modal-daemon│
+            │                 │   │                 │   │            │
+            ╰─────────────────╯   ╰─────────────────╯   ╰────────────╯
+                     │                     │
+                     │                     │ image + volume data
+                     ╰────────────╮        ╰──────╮
+                 runs user process▼               ▼
+                           ╭──────────────╮   ╭───────╮
+                           │Task container│   │Blobnet│
+                           │              │   │       │
+                           ╰──────────────╯   ╰───────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 83x51 @100% · v2.json · 7 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          ╭───────────╮   ╭─────────────╮
+                          │Task engine│   │modal-runtime│
+                          │           │   │             │
+                          ╰───────────╯   ╰─────────────╯
+                               │ │               │
+                               │ │               │
+               starts / manages│ │               │
+                     ╭─────────╯ ╰─────────╮     ╰────────────╮
+                     ▼   mounts / snapshots▼  fs HTTP over UDS▼
+            ╭─────────────────╮   ╭─────────────────╮   ╭────────────╮
+            │Container backend│   │Filesystem + vols│   │modal-daemon│
+            │                 │   │                 │   │            │
+            ╰─────────────────╯   ╰─────────────────╯   ╰────────────╯
+                     │                     │
+                     │                     │ image + volume data
+                     ╰────────────╮        ╰──────╮
+                 runs user process▼               ▼
+                           ╭──────────────╮   ╭───────╮
+                           │Task container│   │Blobnet│
+                           │              │   │       │
+                           ╰──────────────╯   ╰───────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  aviral
+mansingka@gmail.com
+❯

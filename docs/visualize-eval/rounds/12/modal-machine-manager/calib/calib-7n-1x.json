@@ -1,0 +1,86 @@
+{
+ "direction": "tb",
+ "theme": "gruvbox",
+ "nodes": [
+  {
+   "id": "n0",
+   "label": "n0"
+  },
+  {
+   "id": "n1",
+   "label": "n1"
+  },
+  {
+   "id": "n2",
+   "label": "n2"
+  },
+  {
+   "id": "n3",
+   "label": "n3"
+  },
+  {
+   "id": "n4",
+   "label": "n4"
+  },
+  {
+   "id": "n5",
+   "label": "n5"
+  },
+  {
+   "id": "n6",
+   "label": "n6"
+  }
+ ],
+ "edges": [
+  {
+   "from": "n0",
+   "to": "n1",
+   "label": "e0",
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "n1",
+   "to": "n2",
+   "label": "e1",
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "n2",
+   "to": "n3",
+   "label": "e2",
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "n3",
+   "to": "n4",
+   "label": "e3",
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "n4",
+   "to": "n5",
+   "label": "e4",
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "n5",
+   "to": "n6",
+   "label": "e5",
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "n0",
+   "to": "n6",
+   "label": "long",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  }
+ ]
+}
