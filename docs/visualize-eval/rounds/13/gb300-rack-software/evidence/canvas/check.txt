@@ -1,0 +1,22 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=14 edges=8 flows=0 direction=tb theme=gruvbox
+canvas: 2 diagrams on one canvas, drawn whole at 100%
+diagram oob "OOB hardware-control plane" at 0,3: extent=58x38 nodes=5 edges=1 routes=4
+  description: one OOB trunk to the BMCs and power shelf; nv-rms source is free
+diagram inband "In-band compute and NVSwitch software" at 0,46: extent=32x49 nodes=9 edges=7 routes=7
+  description: compute chain plus NVSwitch software; the OOB LAN reaches NVOS
+extent=64x95 cells (whole canvas)
+crossings: 1 bridges, 1 touching bends
+warning: two edges share 2 cell(s), including ports; increase routing space
+near-misses: 19 cell(s) inside the 2-cell margin of a node the route does not serve (19 on trunk buses)
+passes-near-unrelated-node: 19
+near-miss: route oob:e2 passes 6 cell(s) at ring 2 of node 'pwr' (nearest cell 34,31)
+near-miss: route oob:e3 passes 13 cell(s) at ring 2 of node 'pwr' (nearest cell 34,31)
+warning: 19 route cell(s) hug a node their relation does not serve; move the affected relations or let them route around
+labels: 6/6 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners
+groups: oob-mgmt(1) oob-lan(5) switch(2) inband(6)
+trunks: oob:lane from oob to pwr, 2 branches, 1 junctions
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 0 by source, 0 by destination, 0 shared-hue pair(s) (source-only 0, destination-only 0)
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

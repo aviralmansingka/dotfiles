@@ -1,0 +1,1096 @@
+{
+  "case_id": "datacenter-redundancy",
+  "round": "13",
+  "generator": {
+    "worker_label": "viz-ds13-8",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "role": "round-13 generator (fresh DeepSeek generation, no judges run)"
+  },
+  "frozen_inputs": {
+    "candidate_skill": "docs/visualize-eval/rounds/13/SKILL.md",
+    "candidate_skill_sha256": "65d826f0f1f9e61ddfd806628cb162827b0e6cf6d7df2490c9d75e6cbe485d2a",
+    "renderer_binary": "/tmp/visualize-eval/round-13/bin/rataflow-view",
+    "renderer_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+    "rubric_revision": 11,
+    "rubric_sha256": "6bfd3733c8d08b66af9a92e71985a20846f954d7916eaf9685f86c8d2f96bcb8",
+    "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+    "source": "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+    "source_sha256": "a3051af3eeeec31aee53558dafbbea5d061dc74253618fd6940eba5c39b5bb98",
+    "target_viewport": "77x47 @ 100% natural",
+    "dataset_sha256_note": "taken from rounds/13/config.json as frozen; the earlier ...e8672b... transcription typo in rounds 10-13 was corrected captain-side, so the value above is the corrected cases.json digest"
+  },
+  "triage": {
+    "brief_annex": "TRIAGE-datacenter-redundancy",
+    "questions_provoked": [
+      "TRIAGE-datacenter-redundancy-1 (Q1): What is the reader auditing?",
+      "TRIAGE-datacenter-redundancy-2 (Q2): May independent redundancy links share a bus or be bundled?",
+      "TRIAGE-datacenter-redundancy-3 (Q3): One pane beside the chat, or a canvas I navigate?",
+      "TRIAGE-datacenter-redundancy-4 (Q4): Dots on any link?",
+      "Q5: Which layers must be countable, and in which order? (the framing already lists them)",
+      "Q6: Must the tier levels be preserved \u2014 border leaves and rack leaves on one level, both spines above them? (the framing states it)",
+      "Q7: Do the four ISP identities stay separate nodes, or may they fold into the MUX labels? (the framing names four ISPs; source.md allows folding only with explicit coverage)",
+      "Q8: Are the arrows traffic direction or physical connectivity? (the framing and source.md answer it)",
+      "Q9: How many ISPs land on each MUX? (the framing states two)"
+    ],
+    "questions_used": [
+      {
+        "id": "TRIAGE-datacenter-redundancy-1",
+        "question": "What is the reader auditing?",
+        "answer": "Redundancy. I want to count the paths at each layer \u2014 two per MUX to the cores, both firewalls to both border leaves, both spines to each leaf, both leaves to each rack.",
+        "answer_source": "annex answer TRIAGE-datacenter-redundancy-1"
+      },
+      {
+        "id": "TRIAGE-datacenter-redundancy-2",
+        "question": "May independent links share a bus?",
+        "answer": "Never. Each redundancy link stays its own line; if I can't count it, the diagram is wrong.",
+        "answer_source": "annex answer TRIAGE-datacenter-redundancy-2"
+      },
+      {
+        "id": "TRIAGE-datacenter-redundancy-3",
+        "question": "One pane beside the chat, or a canvas I navigate?",
+        "answer": "One pane if the fabric reads at natural zoom; a canvas if it truly needs it. No shrinking the text.",
+        "answer_source": "annex answer TRIAGE-datacenter-redundancy-3",
+        "resolution": "The annex sets the preference order and leaves the judgment to the generator. Measured: a single view of all 28 relations is 60x82 cells against a 77x47 pane (recorded/probe-single-view.stdout), so it does not read at natural zoom and the canvas rung applies. No zoom-out was used anywhere."
+      },
+      {
+        "id": "TRIAGE-datacenter-redundancy-4",
+        "question": "Dots on any link?",
+        "answer": "None. The source turned them off and these are physical links.",
+        "answer_source": "annex answer TRIAGE-datacenter-redundancy-4"
+      },
+      {
+        "id": "Q5",
+        "question": "Which layers must be countable, and in which order?",
+        "answer": "four ISPs into two MUXes (two each), each MUX to both cores, both cores into both firewalls with active/standby stated, both firewalls into both border leaves, both spines into every leaf, both leaves into every rack; border leaves and rack leaves at the same level, spines above them.",
+        "answer_source": "brief framing"
+      },
+      {
+        "id": "Q6",
+        "question": "Must the tier levels be preserved?",
+        "answer": "Yes: border leaves and rack leaves at the same level, spines above them (source.md line 248, restated in the brief).",
+        "answer_source": "brief framing"
+      },
+      {
+        "id": "Q7",
+        "question": "Do the four ISP identities stay separate nodes?",
+        "answer": "Keep them separate. The framing counts four ISPs, and source.md allows folding into MUX labels only with explicit coverage; four labelled ISP nodes cost nothing in a canvas and make the 2+2 handoff countable.",
+        "answer_source": "own judgment",
+        "reason": "The annex and framing say nothing about folding; source.md's fixed constraint permits folding only conditionally, so the safe, countable reading is four ISP nodes labelled ISP A-D."
+      },
+      {
+        "id": "Q8",
+        "question": "Are the arrows traffic direction or physical connectivity?",
+        "answer": "Physical connectivity; the source states it is not proof of one-way traffic, so the drawn arrow keeps the source's endpoint order and the convention is stated in generation.md.",
+        "answer_source": "brief framing"
+      },
+      {
+        "id": "Q9",
+        "question": "How many ISPs land on each MUX?",
+        "answer": "Two per MUX: ISP A and ISP B into MUX 1, ISP C and ISP D into MUX 2.",
+        "answer_source": "brief framing"
+      }
+    ],
+    "converged_when": "After the annex fixed the audit rule (count every path, never bundle), the shape preference (no shrinking), the level order (leaves level, spines above) and the motion answer (none), the only open item was whether the fabric reads at natural zoom. The recorded single-view probe measured 60x82 against 77x47, which settled it to the canvas rung; the picture was then complete and no further question could have changed a spec fact without inventing one.",
+    "shape_decision": {
+      "rung": "canvas: one canvas of 3 described concept-diagrams",
+      "diagrams": [
+        "uplinks \u2014 8 nodes / 8 edges",
+        "security \u2014 6 nodes / 8 edges",
+        "fabric \u2014 8 nodes / 12 edges"
+      ],
+      "why_not_a_single_view": "Measured extent 60x82 cells for the same 28 relations (recorded/probe-single-view.stdout), 35 rows over the 77x47 pane at natural zoom, plus 31 near-miss cells, 4 ambiguous label owners and the 18-node/28-edge readable-budget warning. The brief forbids shrinking to reach rung 1."
+    }
+  },
+  "classification": {
+    "family": "redundant-fabrics",
+    "evidence": "18 nodes against 28 relations with four tiers that each form a complete 2x2 cross-connect, and the source kills the dots outright (line 134: 'remove the dots flowing for now'): the densest, dot-free fabric case.",
+    "tie_breakers_considered": [
+      "service-meshes \u2014 rejected: no anti-parallel pair, and the source is four adjacent redundant tiers rather than a fan around one core.",
+      "placement-planes \u2014 rejected: one connected fabric with no bus between worlds, and the source forbids buses outright (line 270).",
+      "flow-chains \u2014 rejected: E(28) clearly exceeds N(18), so density wins over depth."
+    ],
+    "secondary_recipe": "identity-probe-maps coverage discipline: every device identifier and every qualifier (active / standby, ECMP, dual) is a ledger row before the first spec, and the source's own appliance/role words are kept in the node labels.",
+    "reclassification": null
+  },
+  "view_shape": {
+    "rung_chosen": 2,
+    "source_facts_that_decided_it": [
+      "18 devices / 28 relations across seven tiers; measured single-view extent 60x82 cells against a 77x47 pane.",
+      "The source's fixed constraint itself says 'in the fabric view', so the case already needs a named fabric view rather than one undifferentiated graph.",
+      "Source line 158 ('I want the text to be readable at the default zoom') and the brief's 'don't shrink the text to squeeze it in' forbid a zoomed-out fit."
+    ],
+    "rungs_rejected": [
+      {
+        "rung": 1,
+        "reason": "does not fit honestly: 60x82 measured, 35 rows of overflow at 100% natural zoom, plus near-miss and label defects (recorded/probe-single-view.stdout)"
+      },
+      {
+        "rung": 3,
+        "reason": "no relation was dropped or thinned; all 28 source relations are drawn, so rung 3 was never needed"
+      }
+    ],
+    "split_coverage_map": [
+      {
+        "surface": "uplinks",
+        "carries": "e1-e8: the four ISP handoffs and the MUX-to-core cross-connect (nodes ISP A-D, MUX appliance 1-2, Core router 1-2)"
+      },
+      {
+        "surface": "security",
+        "carries": "e9-e16: both cores into both firewalls with active/standby, both firewalls into both border leaves (nodes Core router 1-2, FW1 active, FW2 standby, Border leaf 1-2)"
+      },
+      {
+        "surface": "fabric",
+        "carries": "e17-e28: both border leaves to both spines, both spines to both rack leaves (same level), both rack leaves to both racks (nodes Spine 1-2, Border leaf 1-2, Rack leaf 1-2, Rack 1-2)"
+      }
+    ],
+    "coverage_check": "28/28 relations drawn exactly once; no relation split across surfaces, no node tier dropped, no label dropped (24/24 placed)."
+  },
+  "surfaces": [
+    {
+      "view": "v1",
+      "form": "canvas",
+      "spec": "specs/canvas-3.json",
+      "spec_sha256": "c8de11474fa80d1361025b6cedf83ec6059411331cff929a3b35f8e54b274e8f",
+      "spec_sha256_source": "shasum -a 256 specs/canvas-3.json",
+      "check": "evidence/v1/check.txt",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "frames": "evidence/v1/v1-frames.txt",
+      "pinned_frames_77x47": "evidence/v1/v1-77x47-frames.txt",
+      "measured_viewport_line": "viewport: 77x47 zoom: 1.00 natural (pinned dump)",
+      "measured_header_token": "68x44 @100% (live pane w7E:p08)",
+      "measured_pane": "68x44",
+      "canvas_extent": "71x106 cells (whole canvas)",
+      "fit_note": "Canvas form: whole canvas 71x106 drawn at 100%, no zoom-out; the reader pans (the header carries 'canvas 71x106'). Width 71 fits the 77x47 target, height 106 does not, which the canvas rung expects.",
+      "diagrams": [
+        {
+          "id": "uplinks",
+          "title": "ISP uplinks and core cross-connect",
+          "description": "Four ISP handoffs, two per MUX; each MUX reaches both cores.",
+          "origin": "0,3",
+          "extent": "49x30",
+          "nodes": 8,
+          "edges": 8,
+          "routes": 8,
+          "labels": [
+            "x-connect x4"
+          ],
+          "groups": [
+            "isp",
+            "mux",
+            "core"
+          ]
+        },
+        {
+          "id": "security",
+          "title": "Active/standby firewall pair",
+          "description": "FW1 active, FW2 standby, fed by both cores, feeding both border leaves.",
+          "origin": "0,38",
+          "extent": "45x33",
+          "nodes": 6,
+          "edges": 8,
+          "routes": 8,
+          "labels": [
+            "active x4",
+            "standby x4"
+          ],
+          "groups": [
+            "core",
+            "firewall",
+            "border-leaf"
+          ]
+        },
+        {
+          "id": "fabric",
+          "title": "Dual-spine fabric and dual-homed racks",
+          "description": "Each leaf reaches both spines; both leaves dual-home both racks.",
+          "origin": "0,76",
+          "extent": "66x30",
+          "nodes": 8,
+          "edges": 12,
+          "routes": 12,
+          "labels": [
+            "ECMP x8",
+            "dual x4"
+          ],
+          "groups": [
+            "spine",
+            "border-leaf",
+            "rack-leaf",
+            "rack"
+          ]
+        }
+      ],
+      "canvas_totals": {
+        "diagrams": 3,
+        "nodes": 22,
+        "edges": 28,
+        "routes": 28,
+        "labels_placed": "24/24",
+        "labels_skipped": 0,
+        "labels_ambiguous": 0,
+        "labels_leadered": 0,
+        "shared_runs": 0,
+        "crossings": "14 bridges, 9 touching bends",
+        "trunks": 0,
+        "dots": "0 single-dot, 0 periodic, 0 violations"
+      }
+    }
+  ],
+  "per_surface_detail": {
+    "uplinks": {
+      "nodes": [
+        {
+          "id": "ispA",
+          "label": "ISP A",
+          "group": "isp"
+        },
+        {
+          "id": "ispB",
+          "label": "ISP B",
+          "group": "isp"
+        },
+        {
+          "id": "ispC",
+          "label": "ISP C",
+          "group": "isp"
+        },
+        {
+          "id": "ispD",
+          "label": "ISP D",
+          "group": "isp"
+        },
+        {
+          "id": "mux1",
+          "label": "MUX appliance 1",
+          "group": "mux"
+        },
+        {
+          "id": "mux2",
+          "label": "MUX appliance 2",
+          "group": "mux"
+        },
+        {
+          "id": "core1",
+          "label": "Core router 1",
+          "group": "core"
+        },
+        {
+          "id": "core2",
+          "label": "Core router 2",
+          "group": "core"
+        }
+      ],
+      "edges": [
+        "e1 ispA->mux1 (no label: source states none)",
+        "e2 ispB->mux1 (no label)",
+        "e3 ispC->mux2 (no label)",
+        "e4 ispD->mux2 (no label)",
+        "e5 mux1->core1 x-connect",
+        "e6 mux1->core2 x-connect",
+        "e7 mux2->core1 x-connect",
+        "e8 mux2->core2 x-connect"
+      ],
+      "habits_borrowed": "redundant-fabrics: rank pins for the source's tiers, one route per parallel link, no trunk."
+    },
+    "security": {
+      "nodes": [
+        {
+          "id": "core1",
+          "label": "Core router 1",
+          "group": "core"
+        },
+        {
+          "id": "core2",
+          "label": "Core router 2",
+          "group": "core"
+        },
+        {
+          "id": "fw1",
+          "label": "FW1 active",
+          "group": "firewall"
+        },
+        {
+          "id": "fw2",
+          "label": "FW2 standby",
+          "group": "firewall"
+        },
+        {
+          "id": "bl1",
+          "label": "Border leaf 1",
+          "group": "border-leaf"
+        },
+        {
+          "id": "bl2",
+          "label": "Border leaf 2",
+          "group": "border-leaf"
+        }
+      ],
+      "edges": [
+        "e9 core1->fw1 active",
+        "e10 core2->fw1 active",
+        "e11 core1->fw2 standby",
+        "e12 core2->fw2 standby",
+        "e13 fw1->bl1 active",
+        "e14 fw1->bl2 active",
+        "e15 fw2->bl1 standby",
+        "e16 fw2->bl2 standby"
+      ],
+      "habits_borrowed": "redundant-fabrics: the active/standby role is stated on every firewall edge, not implied; the 2x2 cross-connect is complete at both hops."
+    },
+    "fabric": {
+      "nodes": [
+        {
+          "id": "sp1",
+          "label": "Spine 1",
+          "group": "spine"
+        },
+        {
+          "id": "sp2",
+          "label": "Spine 2",
+          "group": "spine"
+        },
+        {
+          "id": "bl1",
+          "label": "Border leaf 1",
+          "group": "border-leaf"
+        },
+        {
+          "id": "bl2",
+          "label": "Border leaf 2",
+          "group": "border-leaf"
+        },
+        {
+          "id": "leaf1",
+          "label": "Rack leaf 1",
+          "group": "rack-leaf"
+        },
+        {
+          "id": "leaf2",
+          "label": "Rack leaf 2",
+          "group": "rack-leaf"
+        },
+        {
+          "id": "rack1",
+          "label": "Rack 1",
+          "group": "rack"
+        },
+        {
+          "id": "rack2",
+          "label": "Rack 2",
+          "group": "rack"
+        }
+      ],
+      "edges": [
+        "e17 bl1->sp1 ECMP",
+        "e18 bl1->sp2 ECMP",
+        "e19 bl2->sp1 ECMP",
+        "e20 bl2->sp2 ECMP",
+        "e21 sp1->leaf1 ECMP",
+        "e22 sp1->leaf2 ECMP",
+        "e23 sp2->leaf1 ECMP",
+        "e24 sp2->leaf2 ECMP",
+        "e25 leaf1->rack1 dual",
+        "e26 leaf2->rack1 dual",
+        "e27 leaf1->rack2 dual",
+        "e28 leaf2->rack2 dual"
+      ],
+      "habits_borrowed": "redundant-fabrics: the source's tier pins put both spines above a single level holding both border leaves and both rack leaves; every leaf-to-spine and leaf-to-rack link is its own edge."
+    }
+  },
+  "deviations": [
+    {
+      "surface": "v1 (canvas)",
+      "deviation": "The fabric family's habit is one graph; this case is one canvas of three described concept-diagrams.",
+      "reason": "Rung 1 does not fit: the same relations measured 60x82 cells. The skill's ladder puts several concepts on one canvas, and the brief explicitly allows rung 2.",
+      "shown_by": "recorded/probe-single-view.stdout (extent=60x82) and evidence/v1/v1-text.txt (header 'canvas 71x106')"
+    },
+    {
+      "surface": "uplinks, security, fabric",
+      "deviation": "Node labels are the source's full appliance/role words (MUX appliance 1, Core router 1, Border leaf 1, Rack leaf 1, FW1 active) instead of the short ids (MUX 1, Core 1, BL 1, Leaf 1, FW1).",
+      "reason": "The short identifiers put every labelled fan's ports 2 cells apart, and --check reported 7 ambiguous owners plus 1 skipped label (attempt 1). The wider identities are source words (source.md line 126 'MUX appliances' / 'core routers'; node list 'FW1 active' / 'FW2 standby'; tiers 'border leaf' and leafs 'connected to racks'), and they let every one of the 24 labels read as its own route's label: 0 ambiguous, 0 skipped, 0 leader-ticked.",
+      "shown_by": "recorded/canvas-1.stdout ('labels: 23/24 placed, 0 leader-ticked, 0 on route, 1 skipped, 7 ambiguous owners') against recorded/canvas-3.stdout ('labels: 24/24 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners')"
+    },
+    {
+      "surface": "fabric",
+      "deviation": "The diagram stays tb even though four relations run upward (bl -> sp) and therefore take an inside-hop return path.",
+      "reason": "The source's fixed constraint puts both spines above a level that holds both border leaves and both rack leaves; only tb carries that vertical level. An lr candidate was measured and rejected (it made label ownership worse and added near-miss routes).",
+      "shown_by": "recorded/canvas-2.stdout (lr uplinks/security: 8 ambiguous owners, 16 near-miss cells) against recorded/canvas-3.stdout (tb: 0 ambiguous, 29 near-miss cells but labels fully owned)"
+    }
+  ],
+  "meaning_ledger": [
+    {
+      "fact": "ISP A / ISP B / ISP C / ISP D",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "uplinks"
+    },
+    {
+      "fact": "MUX 1 / MUX 2 (2 MUX appliances)",
+      "kind": "identifier + role",
+      "fate": "drawn as 'MUX appliance 1/2'",
+      "where": "uplinks"
+    },
+    {
+      "fact": "Core 1 / Core 2 (core routers)",
+      "kind": "identifier + role",
+      "fate": "drawn as 'Core router 1/2'",
+      "where": "uplinks, security"
+    },
+    {
+      "fact": "FW1 active / FW2 standby",
+      "kind": "identifier + qualifier",
+      "fate": "drawn: the qualifier is in the node label and on all four of its edges",
+      "where": "security"
+    },
+    {
+      "fact": "active-passive firewall pair (line 126 wording)",
+      "kind": "qualifier",
+      "fate": "drawn as the per-edge active / standby facts the relationship list states",
+      "where": "security"
+    },
+    {
+      "fact": "BL 1 / BL 2 (border leaves)",
+      "kind": "identifier + role",
+      "fate": "drawn as 'Border leaf 1/2'",
+      "where": "security, fabric"
+    },
+    {
+      "fact": "Spine 1 / Spine 2",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "fabric"
+    },
+    {
+      "fact": "Leaf 1 / Leaf 2 (leafs connected to racks)",
+      "kind": "identifier + role",
+      "fate": "drawn as 'Rack leaf 1/2'",
+      "where": "fabric"
+    },
+    {
+      "fact": "Rack 1 / Rack 2",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "fabric"
+    },
+    {
+      "fact": "4 ISP links into 2 MUXes, 2 each",
+      "kind": "relationship",
+      "fate": "drawn, unlabelled (the source gives no protocol; none invented)",
+      "where": "uplinks"
+    },
+    {
+      "fact": "x-connect: each MUX to both cores",
+      "kind": "relationship + label",
+      "fate": "drawn, label 'x-connect' on each of the four",
+      "where": "uplinks"
+    },
+    {
+      "fact": "each core to a firewall; core1/core2 -> fw1 active, -> fw2 standby",
+      "kind": "relationship + label",
+      "fate": "drawn",
+      "where": "security"
+    },
+    {
+      "fact": "firewall appliance to the border leaf: fw1 -> bl1/bl2 active, fw2 -> bl1/bl2 standby",
+      "kind": "relationship + label",
+      "fate": "drawn",
+      "where": "security"
+    },
+    {
+      "fact": "each border leaf to both spines, ECMP",
+      "kind": "relationship + label",
+      "fate": "drawn",
+      "where": "fabric"
+    },
+    {
+      "fact": "both spines to each leaf, ECMP",
+      "kind": "relationship + label",
+      "fate": "drawn",
+      "where": "fabric"
+    },
+    {
+      "fact": "both leaves to each rack, dual",
+      "kind": "relationship + label",
+      "fate": "drawn",
+      "where": "fabric"
+    },
+    {
+      "fact": "remove the dots (line 134)",
+      "kind": "motion qualifier",
+      "fate": "drawn: nothing in the spec animates; frames byte-identical",
+      "where": "v1"
+    },
+    {
+      "fact": "show the cross-connect at each layer to demonstrate redundancy (line 142)",
+      "kind": "structural demand",
+      "fate": "drawn: each adjacent redundant tier is a complete cross-connect",
+      "where": "uplinks, security, fabric"
+    },
+    {
+      "fact": "never merge core1/core2 or mux1/mux2 arrows; independent links (line 270)",
+      "kind": "structural demand",
+      "fate": "drawn: 28 separate edges, no trunks key anywhere",
+      "where": "v1"
+    },
+    {
+      "fact": "border leaf and leaf at the same height, spine above the leaf (line 248)",
+      "kind": "level constraint",
+      "fate": "drawn: fabric rank 0 = spines, rank 1 = both border leaves and both rack leaves",
+      "where": "fabric"
+    },
+    {
+      "fact": "compact / smaller boxes / readable at default zoom (lines 150, 158, 166)",
+      "kind": "historical styling request",
+      "fate": "superseded with reason: the brief's audit framing says give room rather than shrink, and the canvas is read by panning at 100%",
+      "where": "v1"
+    },
+    {
+      "fact": "arrows are physical connectivity, not one-way traffic",
+      "kind": "convention",
+      "fate": "drawn: endpoint order kept exactly as the source states; convention stated in generation.md",
+      "where": "v1"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "ispA",
+      "to": "mux1",
+      "verb": "ISP handoff",
+      "label_owner": null,
+      "view": "uplinks"
+    },
+    {
+      "id": "e2",
+      "from": "ispB",
+      "to": "mux1",
+      "verb": "ISP handoff",
+      "label_owner": null,
+      "view": "uplinks"
+    },
+    {
+      "id": "e3",
+      "from": "ispC",
+      "to": "mux2",
+      "verb": "ISP handoff",
+      "label_owner": null,
+      "view": "uplinks"
+    },
+    {
+      "id": "e4",
+      "from": "ispD",
+      "to": "mux2",
+      "verb": "ISP handoff",
+      "label_owner": null,
+      "view": "uplinks"
+    },
+    {
+      "id": "e5",
+      "from": "mux1",
+      "to": "core1",
+      "verb": "cross-connect",
+      "label_owner": "e5",
+      "view": "uplinks"
+    },
+    {
+      "id": "e6",
+      "from": "mux1",
+      "to": "core2",
+      "verb": "cross-connect",
+      "label_owner": "e6",
+      "view": "uplinks"
+    },
+    {
+      "id": "e7",
+      "from": "mux2",
+      "to": "core1",
+      "verb": "cross-connect",
+      "label_owner": "e7",
+      "view": "uplinks"
+    },
+    {
+      "id": "e8",
+      "from": "mux2",
+      "to": "core2",
+      "verb": "cross-connect",
+      "label_owner": "e8",
+      "view": "uplinks"
+    },
+    {
+      "id": "e9",
+      "from": "core1",
+      "to": "fw1",
+      "verb": "active path",
+      "label_owner": "e9",
+      "view": "security"
+    },
+    {
+      "id": "e10",
+      "from": "core2",
+      "to": "fw1",
+      "verb": "active path",
+      "label_owner": "e10",
+      "view": "security"
+    },
+    {
+      "id": "e11",
+      "from": "core1",
+      "to": "fw2",
+      "verb": "standby path",
+      "label_owner": "e11",
+      "view": "security"
+    },
+    {
+      "id": "e12",
+      "from": "core2",
+      "to": "fw2",
+      "verb": "standby path",
+      "label_owner": "e12",
+      "view": "security"
+    },
+    {
+      "id": "e13",
+      "from": "fw1",
+      "to": "bl1",
+      "verb": "active path",
+      "label_owner": "e13",
+      "view": "security"
+    },
+    {
+      "id": "e14",
+      "from": "fw1",
+      "to": "bl2",
+      "verb": "active path",
+      "label_owner": "e14",
+      "view": "security"
+    },
+    {
+      "id": "e15",
+      "from": "fw2",
+      "to": "bl1",
+      "verb": "standby path",
+      "label_owner": "e15",
+      "view": "security"
+    },
+    {
+      "id": "e16",
+      "from": "fw2",
+      "to": "bl2",
+      "verb": "standby path",
+      "label_owner": "e16",
+      "view": "security"
+    },
+    {
+      "id": "e17",
+      "from": "bl1",
+      "to": "sp1",
+      "verb": "ECMP uplink",
+      "label_owner": "e17",
+      "view": "fabric"
+    },
+    {
+      "id": "e18",
+      "from": "bl1",
+      "to": "sp2",
+      "verb": "ECMP uplink",
+      "label_owner": "e18",
+      "view": "fabric"
+    },
+    {
+      "id": "e19",
+      "from": "bl2",
+      "to": "sp1",
+      "verb": "ECMP uplink",
+      "label_owner": "e19",
+      "view": "fabric"
+    },
+    {
+      "id": "e20",
+      "from": "bl2",
+      "to": "sp2",
+      "verb": "ECMP uplink",
+      "label_owner": "e20",
+      "view": "fabric"
+    },
+    {
+      "id": "e21",
+      "from": "sp1",
+      "to": "leaf1",
+      "verb": "ECMP downlink",
+      "label_owner": "e21",
+      "view": "fabric"
+    },
+    {
+      "id": "e22",
+      "from": "sp1",
+      "to": "leaf2",
+      "verb": "ECMP downlink",
+      "label_owner": "e22",
+      "view": "fabric"
+    },
+    {
+      "id": "e23",
+      "from": "sp2",
+      "to": "leaf1",
+      "verb": "ECMP downlink",
+      "label_owner": "e23",
+      "view": "fabric"
+    },
+    {
+      "id": "e24",
+      "from": "sp2",
+      "to": "leaf2",
+      "verb": "ECMP downlink",
+      "label_owner": "e24",
+      "view": "fabric"
+    },
+    {
+      "id": "e25",
+      "from": "leaf1",
+      "to": "rack1",
+      "verb": "dual-homed",
+      "label_owner": "e25",
+      "view": "fabric"
+    },
+    {
+      "id": "e26",
+      "from": "leaf2",
+      "to": "rack1",
+      "verb": "dual-homed",
+      "label_owner": "e26",
+      "view": "fabric"
+    },
+    {
+      "id": "e27",
+      "from": "leaf1",
+      "to": "rack2",
+      "verb": "dual-homed",
+      "label_owner": "e27",
+      "view": "fabric"
+    },
+    {
+      "id": "e28",
+      "from": "leaf2",
+      "to": "rack2",
+      "verb": "dual-homed",
+      "label_owner": "e28",
+      "view": "fabric"
+    }
+  ],
+  "relationship_mapping": "Each source relation maps to exactly one drawn edge with the same endpoints, the same direction and its own label: source relation n -> canvas e n (e1-e28). No relation is duplicated, merged, reversed or spread across two surfaces, and no edge appears that the source does not state.",
+  "structural_levers": [
+    {
+      "lever": "diagrams",
+      "surface": "v1",
+      "declared": "uplinks, security, fabric",
+      "source_fact": "the source's own sections: uplinks (ISPs/MUXes/cores), the active-passive security hop, the spine/leaf fabric with racks; source line 248 names the 'fabric' level order separately from the rest"
+    },
+    {
+      "lever": "layers (rank pins)",
+      "surface": "uplinks",
+      "declared": "[[ispA,ispB,ispC,ispD],[mux1,mux2],[core1,core2]]",
+      "source_fact": "line 126: 4 ISPs to 2 MUXes, each MUX to both core routers"
+    },
+    {
+      "lever": "layers (rank pins)",
+      "surface": "security",
+      "declared": "[[core1,core2],[fw1,fw2],[bl1,bl2]]",
+      "source_fact": "line 126: each core to a firewall appliance, the firewall to the border leaf"
+    },
+    {
+      "lever": "layers (rank pins)",
+      "surface": "fabric",
+      "declared": "[[sp1,sp2],[bl1,bl2,leaf1,leaf2],[rack1,rack2]]",
+      "source_fact": "line 248: border leaf and leaf at the same height, spine above the leaf; line 126: leafs connect to racks"
+    },
+    {
+      "lever": "groups",
+      "surface": "all",
+      "declared": "isp, mux, core, firewall, border-leaf, spine, rack-leaf, rack",
+      "source_fact": "the source names eight device tiers; the brief lists the same eight hue families"
+    },
+    {
+      "lever": "trunks",
+      "surface": "all",
+      "declared": "none (no trunks key in the spec)",
+      "source_fact": "line 270: never merge the core1/core2 or mux1/mux2 arrows; buses are forbidden in this case"
+    },
+    {
+      "lever": "minlen / label_slot / rank pins beyond layers",
+      "surface": "all",
+      "declared": "none",
+      "source_fact": "no source fact describes a longer corridor or a gutter label; adding them would invent geometry"
+    }
+  ],
+  "routing_record": {
+    "per_attempt": [
+      {
+        "label": "probe-single-view",
+        "spec": "specs/probe-single-view.json",
+        "near_miss_cells": 31,
+        "passes_near_unrelated_node": 31,
+        "routes": [
+          "e17 (bl1->sp2) 8 @bl2",
+          "e19 (bl2->sp1) 8 @leaf1",
+          "e22 (sp1->leaf2) 5 @leaf2",
+          "e26 (leaf2->rack1) 10 @rack1"
+        ],
+        "lever_tried": "none (shape probe; abandoned)"
+      },
+      {
+        "label": "canvas-1",
+        "spec": "specs/canvas-1.json",
+        "near_miss_cells": 19,
+        "passes_near_unrelated_node": 19,
+        "routes": [
+          "security:e2 9 @fw1",
+          "fabric:e2 3 @sp2",
+          "fabric:e6 3 @leaf2",
+          "fabric:e7 4 @bl1"
+        ],
+        "lever_tried": "baseline: tb, short identifiers"
+      },
+      {
+        "label": "canvas-2",
+        "spec": "specs/canvas-2.json",
+        "near_miss_cells": 16,
+        "passes_near_unrelated_node": 16,
+        "routes": [
+          "uplinks:e6 2 @core2",
+          "security:e2 2 @fw1",
+          "security:e6 2 @bl2",
+          "fabric:e2 3 @sp2",
+          "fabric:e6 3 @leaf2",
+          "fabric:e7 4 @bl1"
+        ],
+        "lever_tried": "change the direction: lr for uplinks and security (2 cells each, but label ownership got worse: 8 ambiguous)"
+      },
+      {
+        "label": "canvas-3 (shipped)",
+        "spec": "specs/canvas-3.json",
+        "near_miss_cells": 29,
+        "passes_near_unrelated_node": 29,
+        "routes": [
+          "uplinks:e5 2 @core1",
+          "security:e5 2 @bl1",
+          "fabric:e2 22 @sp2",
+          "fabric:e6 3 @sp1"
+        ],
+        "lever_tried": "move the space: source-backed full identifiers widen every rank and fan (labels became 24/24 owned); the worst hug grew because fabric:e2's inside-hop return path has no affordable clean lane"
+      },
+      {
+        "label": "canvas-1-visual / canvas-3-visual",
+        "spec": "specs/canvas-1.json / specs/canvas-3.json",
+        "near_miss_cells": null,
+        "passes_near_unrelated_node": null,
+        "routes": [],
+        "lever_tried": "diagnostic frame dumps of the same specs (recorded, no new candidate)"
+      }
+    ],
+    "geometry_note": "Two sibling boxes in one tb rank are always 3 cells apart (ACROSS_GAP_TB = 3 in rataflow/src/layout.rs), so every cell of that gap is inside ring 2 of one sibling or the other: a route that has to pass a sibling box cannot be clean there and must go around it. The shipped fabric's bl2->sp1 is a back edge whose inside hop must re-enter the spine from below (sides_for: within NEAR_RANKS = 1, tb -> (Top, Bottom)); the router paid NEAR_BAND_COST (8 per cell, rataflow/src/router.rs) for 22 cells rather than detour, which it only does when no corridor it can reach is clear.",
+    "no_lever_removed_it": "Three candidates (baseline tb, lr orientation, wider source-backed spacing) were measured; the count fell from 31 (single view) to 19, 16 and 29 cells, and always on fan-crossing routes. The budget of three spec candidates per rendered diagram is spent; the remaining defect is reported, not hidden."
+  },
+  "hue_record": {
+    "group_hue_families": [
+      {
+        "group": "isp",
+        "members": "ISP A, ISP B, ISP C, ISP D",
+        "hue_family": "green",
+        "captured": "ISP A #b7ce73, ISP B #cbdb99, ISP C #a4c14e, ISP D #dce7bb (border foreground, evidence/v1/v1-ansi.ansi)"
+      },
+      {
+        "group": "mux",
+        "members": "MUX appliance 1, MUX appliance 2",
+        "hue_family": "orange",
+        "captured": "#cea173, #dbba99 (evidence/v1/v1-ansi.ansi)"
+      },
+      {
+        "group": "core",
+        "members": "Core router 1 (uplinks, security), Core router 2 (uplinks, security)",
+        "hue_family": "violet",
+        "captured": "#8a73ce, #aa99db in the uplinks section (evidence/v1/v1-ansi.ansi); the same group name carries the same family in the security section by the canvas palette"
+      },
+      {
+        "group": "firewall",
+        "members": "FW1 active, FW2 standby",
+        "hue_family": "one family derived from the group name",
+        "captured": "check groups line firewall(2); not inside the 68x44 ANSI slice"
+      },
+      {
+        "group": "border-leaf",
+        "members": "Border leaf 1, Border leaf 2 (security), plus Border leaf 1/2 (fabric)",
+        "hue_family": "one family shared across both diagrams",
+        "captured": "check groups line border-leaf(4); the canvas GroupPalette hands one hue per group name to every diagram (lib.rs build_canvas)"
+      },
+      {
+        "group": "spine",
+        "members": "Spine 1, Spine 2",
+        "hue_family": "one family",
+        "captured": "check groups line spine(2)"
+      },
+      {
+        "group": "rack-leaf",
+        "members": "Rack leaf 1, Rack leaf 2",
+        "hue_family": "one family",
+        "captured": "check groups line rack-leaf(2)"
+      },
+      {
+        "group": "rack",
+        "members": "Rack 1, Rack 2",
+        "hue_family": "one family",
+        "captured": "check groups line rack(2)"
+      }
+    ],
+    "capture_limitation": "The live pane is 68x44, so only the uplinks section (origin 0,3 extent 49x30) and the start of the security heading fit the ANSI slice; the pinned 77x47 dump is plain text. The fabric's four hue families are therefore recorded from the check's groups line and the canvas palette rule, not from an ANSI frame of that section.",
+    "dot_hues": {
+      "line": "dot hues: 0 by source, 0 by destination, 0 shared-hue pair(s) (source-only 0, destination-only 0)",
+      "end_binding": "No route is animated: the source forbids dots (line 134) and the case's motion is frozen off, so no dot exists to bind to an end."
+    }
+  },
+  "recipe_yield": {
+    "demand": "Redundant-fabrics habit plus the brief: every redundancy link individually traceable, and no route running near a box it does not connect.",
+    "attempts_that_measured_it": [
+      "probe-single-view (31 cells)",
+      "canvas-1 (19 cells)",
+      "canvas-2 (16 cells)",
+      "canvas-3 (29 cells)"
+    ],
+    "proven_impossible": "Not proven impossible in general; proven resistant to the three levers the budget allowed. The geometry fact recorded above (3-cell across gap between siblings; a one-rank back edge must re-enter from the target's bottom) explains why a crossing fan cannot be clean at its crossing.",
+    "how_close_the_shipped_surface_comes": "28/28 relations drawn as separate routes, 24/24 labels owned with 0 ambiguous and 0 skipped, 0 shared runs, 0 trunks, 14 bridge crossings; 4 of 28 routes still enter a foreign box's 2-cell margin (29 cells, 22 of them on fabric:e2)."
+  },
+  "source_pointers": [
+    "docs/visualize-eval/cases/datacenter-redundancy/source.md line 126 (components and tiers)",
+    "source.md line 134 (dots removed)",
+    "source.md line 142 (cross-connect at each layer)",
+    "source.md lines 150/158/166 (compactness and readable-at-default-zoom requests)",
+    "source.md line 248 (border leaf and leaf same height; spine above)",
+    "source.md line 270 (never merge core1/core2 or mux1/mux2 arrows; independent links)",
+    "source.md 'Relationship facts' (18 nodes, 28 relations with x-connect / active / standby / ECMP / dual)"
+  ],
+  "abbreviations": [
+    {
+      "drawn": "MUX appliance 1/2",
+      "source": "mux1/mux2, '2 MUX appliances' (line 126)"
+    },
+    {
+      "drawn": "Core router 1/2",
+      "source": "core1/core2, '2 core routers' (line 126)"
+    },
+    {
+      "drawn": "FW1 active / FW2 standby",
+      "source": "fw1/fw2 node facts, verbatim"
+    },
+    {
+      "drawn": "Border leaf 1/2",
+      "source": "bl1/bl2, 'the border leaf of the spine' (line 126)"
+    },
+    {
+      "drawn": "Rack leaf 1/2",
+      "source": "leaf1/leaf2, 'other leafs that are connected to racks' (line 126)"
+    },
+    {
+      "drawn": "x-connect",
+      "source": "verbatim 'x-connect' from the relationship facts"
+    }
+  ],
+  "deliberate_drops": [],
+  "known_defects": [
+    {
+      "defect": "4 routes pass inside the 2-cell margin of a node they do not serve (passes-near-unrelated-node: 29 cells)",
+      "detail": "uplinks:e5 (mux1->core2) 2 cells at Core router 1; security:e5 (fw1->bl2) 2 cells at Border leaf 1; fabric:e2 (bl2->sp1) 22 cells at Spine 2; fabric:e6 (sp2->leaf1) 3 cells at Spine 1",
+      "validator": "FAIL check_warnings_absent, FAIL routes_near_unrelated_nodes",
+      "visible_in": "evidence/v1/check.txt lines 13-19, and recorded/canvas-3-visual.stdout rows 81-90 (the canvas drawn whole), where the fabric's return path climbs above the spine row and rides 2 cells off Spine 2"
+    },
+    {
+      "defect": "The fabric section reads busiest of the three: 12 relations in one section, four of them return paths that re-enter the spines from below.",
+      "detail": "This is the source's own level order (spines above both leaf kinds), so it was kept rather than relaxed.",
+      "validator": "not a validator failure; readability note",
+      "visible_in": "recorded/canvas-3-visual.stdout (fabric section, rows 76-103) and specs/canvas-3.json diagram 'fabric'"
+    }
+  ],
+  "blockers": [],
+  "cleanup": {
+    "pane_id": "w7E:p08",
+    "result": "confirmed_closed",
+    "evidence": "evidence/v1/manifest.json cleanup field",
+    "pane_size_note": "The capture pane measured 68x44 (header token 68x44 @100%); the fit proof uses the pinned direct dump at exactly 77x47 natural zoom."
+  },
+  "motion": {
+    "applicable": false,
+    "source_fact": "line 134: 'remove the dots flowing for now'",
+    "spec_motion_keys": "none (no flow, timing, duration_ms or dots field anywhere)",
+    "proof": "evidence/v1/v1-77x47-frames.txt: 12 timestamped frames, byte-identical drawing bodies; evidence/v1/v1-frames.txt: 3 timestamped pane frames whose drawings are identical (the third carries the shell prompt residue of the closed pane, not a drawing change)",
+    "check_lines": [
+      "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+      "origins: 0/0 routes start at their arrow origin",
+      "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+    ],
+    "frame_audit": "not run as a gate: the bundle carries no animated frames capture. scripts/viz-frame-audit.py on the static pinned dump reports 'no dot moved in this capture: the source asks for no dots (animation is not applicable, so do not request --frame-audit)' \u2014 0 routes tracked, 0 dots per frame."
+  },
+  "validator": {
+    "command": "scripts/viz-validate.py docs/visualize-eval/rounds/13/datacenter-redundancy/evidence/v1 --require-select --require-frames --require-records --attempts docs/visualize-eval/rounds/13/datacenter-redundancy/attempts.json",
+    "full_output": "validate-v1.txt",
+    "result": "38 PASS, 2 FAIL",
+    "failing_checks": [
+      "check_warnings_absent",
+      "routes_near_unrelated_nodes"
+    ],
+    "passing_highlights": [
+      "labels_complete",
+      "labels_not_skipped",
+      "labels_ownership_clear",
+      "dots_no_violations",
+      "canvas_diagrams_described",
+      "canvas_extents_consistent",
+      "viewport_matches_target (canvas form note)",
+      "cleanup_confirmed",
+      "attempts_records_complete",
+      "probe_inputs_present"
+    ]
+  },
+  "claims_with_citations": [
+    {
+      "claim": "All 28 source relations are drawn once, each as its own route",
+      "cited_by": "evidence/v1/check.txt ('ok: nodes=22 edges=28 flows=0', diagram lines nodes/edges/routes 8/8/8, 6/8/8, 8/12/12) and specs/canvas-3.json"
+    },
+    {
+      "claim": "Every one of the 24 edge labels is placed, off routes, with no ambiguous owner and no leader tick",
+      "cited_by": "evidence/v1/check.txt 'labels: 24/24 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners'"
+    },
+    {
+      "claim": "No independent redundancy link is merged: no trunk and no shared route cells",
+      "cited_by": "evidence/v1/check.txt 'trunks:' (empty) and no 'two edges share' warning"
+    },
+    {
+      "claim": "Border leaves and rack leaves sit on one level with both spines above them",
+      "cited_by": "recorded/canvas-3-visual.stdout (the whole canvas at 72x112: the Spine 1/Spine 2 row sits above a single row holding Rack leaf 1, Rack leaf 2, Border leaf 1, Border leaf 2, with Rack 1/Rack 2 below), the fabric layers in specs/canvas-3.json, and evidence/v1/check.txt 'diagram fabric ... at 0,76: extent=66x30 nodes=8 edges=12'"
+    },
+    {
+      "claim": "Nothing moves (the source forbids dots)",
+      "cited_by": "evidence/v1/v1-77x47-frames.txt 12 identical frame bodies; check 'dots: ... 0 violations'"
+    },
+    {
+      "claim": "Group hues come from one family per tier and repeat across diagrams",
+      "cited_by": "evidence/v1/v1-ansi.ansi border colours (isp green, mux orange, core violet) and the check 'groups:' line"
+    },
+    {
+      "claim": "Each diagram is described by a drawn title and one-line description",
+      "cited_by": "evidence/v1/check.txt diagram + description lines (the uplinks heading is visible in evidence/v1/v1-text.txt rows 2-3); recorded/canvas-3-visual.stdout draws all three headings above their own drawing, including 'Dual-spine fabric and dual-homed racks' and 'Each leaf reaches both spines; both leaves dual-home both racks.'"
+    }
+  ],
+  "views": [
+    {
+      "view": "v1",
+      "form": "canvas",
+      "spec": "specs/canvas-3.json",
+      "evidence": "evidence/v1",
+      "diagrams": [
+        "uplinks",
+        "security",
+        "fabric"
+      ]
+    }
+  ]
+}

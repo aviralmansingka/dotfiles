@@ -1,0 +1,668 @@
+{
+  "protocol_version": 1,
+  "round": 13,
+  "case_id": "modal-runtime",
+  "candidate_sha256": "83d3c0cfd116348adc8f00b8ceb0ad6470f236e8c1cf008f34bd7c5b80c331e1",
+  "renderer_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+  "rubric_sha256": "6bfd3733c8d08b66af9a92e71985a20846f954d7916eaf9685f86c8d2f96bcb8",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "83d3c0cfd116348adc8f00b8ceb0ad6470f236e8c1cf008f34bd7c5b80c331e1",
+  "generator": {
+    "worker_id": "viz-ds13-6",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge13-runtime",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 68,
+    "rows": 44
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/13/reviews/modal-runtime/observed-first.md",
+      "sha256": "88a7413ac4e74a8e7f6ab481fb9c91e6140c202aa2a7deb007b18c17fbb36f80",
+      "description": "Immutable stage-A observation",
+      "capture": null
+    },
+    {
+      "id": "spec",
+      "path": "docs/visualize-eval/rounds/13/modal-runtime/specs/modal-runtime-canvas.json",
+      "sha256": "83d3c0cfd116348adc8f00b8ceb0ad6470f236e8c1cf008f34bd7c5b80c331e1",
+      "description": "Shipped canvas spec",
+      "capture": null
+    },
+    {
+      "id": "check",
+      "path": "docs/visualize-eval/rounds/13/modal-runtime/evidence/canvas/check.txt",
+      "sha256": "49b0ca746b81b188d756ad21942e4c0bc0a0e35d2b797fdaaaa5a9b2cfe90397",
+      "description": "Shipped spec check",
+      "capture": null
+    },
+    {
+      "id": "pinned",
+      "path": "docs/visualize-eval/rounds/13/modal-runtime/evidence/canvas/canvas-77x47-frames.txt",
+      "sha256": "d7716a15db7e3b747d498494c438edbf3204923a9330a7a352c9847c7cb3e755",
+      "description": "Natural pinned frames",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "canvas",
+        "frame": "0\u201311",
+        "timestamp": "2026-11-03T14:03:57Z\u20132026-11-03T14:04:20Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "whole",
+      "path": "docs/visualize-eval/rounds/13/modal-runtime/evidence/canvas/canvas-whole-135x48-frames.txt",
+      "sha256": "7712aff33825b374276bada02f92f559628f9bdbf903d90a0e8f76493bcb1f4a",
+      "description": "Whole natural canvas frames",
+      "capture": {
+        "dimensions": {
+          "columns": 135,
+          "rows": 48
+        },
+        "view": "canvas",
+        "frame": "0\u20132",
+        "timestamp": "2026-11-03T14:03:57Z\u20132026-11-03T14:04:20Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "live",
+      "path": "docs/visualize-eval/rounds/13/modal-runtime/evidence/canvas/canvas-text.txt",
+      "sha256": "5e6629d13b17380724b403c2d985fb5f2c002d2763508dfd93a6a1a9c8d85371",
+      "description": "Live pane text",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "canvas",
+        "frame": "capture",
+        "timestamp": "2026-11-03T14:03:57Z\u20132026-11-03T14:04:20Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi",
+      "path": "docs/visualize-eval/rounds/13/modal-runtime/evidence/canvas/canvas-ansi.ansi",
+      "sha256": "cb798e042b785a5060487dc8a6e1b8224af0dd2ec66c4bfaf45f68972ffbbfdc",
+      "description": "Live normal ANSI",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "canvas",
+        "frame": "capture",
+        "timestamp": "2026-11-03T14:03:57Z\u20132026-11-03T14:04:20Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected",
+      "path": "docs/visualize-eval/rounds/13/modal-runtime/evidence/canvas/canvas-selected.ansi",
+      "sha256": "cc0b81db802f132872d830449c17ad0c75ac907337e3fd7211ad5fb84051bc50",
+      "description": "Live select-all ANSI",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "canvas",
+        "frame": "capture",
+        "timestamp": "2026-11-03T14:03:57Z\u20132026-11-03T14:04:20Z",
+        "state": "select all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "frames",
+      "path": "docs/visualize-eval/rounds/13/modal-runtime/evidence/canvas/canvas-frames.txt",
+      "sha256": "abeecdb97938a1feeb0e6aeb8333ae4a3cf73a2275b2b6be8c7878e6182659b8",
+      "description": "Five static live frames",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "canvas",
+        "frame": "0\u20134",
+        "timestamp": "2026-11-03T14:03:57Z\u20132026-11-03T14:04:20Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "short",
+      "path": "docs/visualize-eval/rounds/13/modal-runtime/recorded/canvas-whole-135x40.stdout",
+      "sha256": "06039c4ae3bd8d7d449e54bdb27e690fdc3ea6780cb3dfb93d38c6f46206aa12",
+      "description": "Recorded palette collision",
+      "capture": {
+        "dimensions": {
+          "columns": 135,
+          "rows": 40
+        },
+        "view": "canvas",
+        "frame": "0\u20132",
+        "timestamp": "2026-11-03T14:03:57Z\u20132026-11-03T14:04:20Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "validator",
+      "path": "docs/visualize-eval/rounds/13/modal-runtime/evidence/canvas/validator.txt",
+      "sha256": "5025c2af741d1aa0d9bb0d5487a62202601f00ba483cdccf4a92d4094d544145",
+      "description": "Evidence validator",
+      "capture": null
+    },
+    {
+      "id": "manifest",
+      "path": "docs/visualize-eval/rounds/13/modal-runtime/evidence/canvas/manifest.json",
+      "sha256": "7df3af30439fa511206a6e0540c07eebbd234d468e71030a0e54fde4625c05ad",
+      "description": "Evidence and cleanup manifest",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/13/modal-runtime/generation.json",
+      "sha256": "a0a441af6632734941c49916ab3b67cd958abe4868905aa416b87f52e0585777",
+      "description": "Triage, classification and coverage map",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/13/modal-runtime/attempts.json",
+      "sha256": "650bdb647a053f3f736c269358d692a930ad330e2376b49c359d541ca391c44b",
+      "description": "Candidate measurements",
+      "capture": null
+    },
+    {
+      "id": "log",
+      "path": "docs/visualize-eval/rounds/13/modal-runtime/attempts-log.jsonl",
+      "sha256": "0d5950c14cde3a77bd21ec2ac6ba57565c9bd224b7228a0cefec9eb69fe79390",
+      "description": "Recorded probes",
+      "capture": null
+    },
+    {
+      "id": "section1",
+      "path": "docs/visualize-eval/rounds/13/modal-runtime/evidence/canvas/sections/d1-section.txt",
+      "sha256": "090ab1e264ba672afdbf4d52d1f9f551a65788044dd9909c8d1023aa9e86d5f7",
+      "description": "d1 whole-frame crop",
+      "capture": null
+    },
+    {
+      "id": "section2",
+      "path": "docs/visualize-eval/rounds/13/modal-runtime/evidence/canvas/sections/d2-section.txt",
+      "sha256": "140dede70ac304d59801818df4fbd425da9518ca52425b971e121b1457af99aa",
+      "description": "d2 whole-frame crop",
+      "capture": null
+    },
+    {
+      "id": "section3",
+      "path": "docs/visualize-eval/rounds/13/modal-runtime/evidence/canvas/sections/d3-section.txt",
+      "sha256": "7fa4ddd43b4bb789e28f3371429bb8348f390d8723c9cbdca15dccd2afe2b4b4",
+      "description": "d3 whole-frame crop",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All eight exact relation strings and nodes are present; worker gRPC is named in d3 description and HTTP over UDS in its edge. But d1 e0 label lies between both routes, so its ownership is not reliably unambiguous for the reader.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/rounds/13/briefs/modal-runtime.md"
+      ],
+      "evidence_ids": [
+        "whole",
+        "blind",
+        "spec"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Eight continuous directed routes with unique arrowheads; no apparent branch, crossings, or unrelated-node near misses. Pair label ambiguity is assessed under semantic fidelity.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/rounds/13/briefs/modal-runtime.md"
+      ],
+      "evidence_ids": [
+        "whole",
+        "check"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Branch B meets canvas check, natural whole-canvas extents, descriptions, and source split prerequisites. At 68\u00d744 and pinned 77\u00d747 content is clipped; no capture demonstrates panning to the hidden right side, so actual reachability proof is missing.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/rounds/13/briefs/modal-runtime.md"
+      ],
+      "evidence_ids": [
+        "whole",
+        "pinned",
+        "live",
+        "check"
+      ]
+    },
+    "navigation_clarity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Descriptions are distinct and true in whole capture, coverage map complete. On the demonstrated 68\u00d744 and 77\u00d747 views all descriptions are clipped, and there is no visible pan guidance or captured pan to the hidden right side.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/rounds/13/briefs/modal-runtime.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "live",
+        "whole",
+        "generation"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Visible orchestration remains pink across all diagrams; blue compute and yellow-green storage are partly seen. Offscreen Task container and Blobnet have no ANSI evidence, so consistency of those groups is not proven.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/rounds/13/briefs/modal-runtime.md"
+      ],
+      "evidence_ids": [
+        "ansi",
+        "whole",
+        "spec"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "The shipped-spec 135\u00d740 capture shows the palette overwrite d3 runtime border. Normal and select-all ANSI at 68 columns also omit full color and selected-border evidence for Task container, Blobnet and part of backend.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/rounds/13/briefs/modal-runtime.md"
+      ],
+      "evidence_ids": [
+        "short",
+        "ansi",
+        "selected",
+        "whole"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Triage is substantially faithful and recorded, probes and cleanup are recorded, and hashes match; nevertheless selected and normal color/state coverage omits two nodes and part of a third, and no captured pan demonstrates access to clipped content.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/rounds/13/briefs/modal-runtime.md"
+      ],
+      "evidence_ids": [
+        "generation",
+        "log",
+        "validator",
+        "selected",
+        "manifest",
+        "pinned"
+      ]
+    },
+    "animation": {
+      "applicable": false,
+      "status": null,
+      "reason": "Source does not show motion, cases manifest marks motion optional, and annex answer 4 requests static; 5 drawing frames show no dots.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases.json",
+        "docs/visualize-eval/rounds/13/generator-task.md"
+      ],
+      "evidence_ids": [
+        "frames",
+        "check"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Judged and stated family service-meshes. Source has a core with fan and an antiparallel worker/runtime pair; both directions co-occur as distinct routes, though e0 label clarity fails semantic fidelity. The source-backed fan is split across d2/d3, a measured and explicitly reasoned deviation; chain ranks are a stated secondary pattern.",
+      "judged_family": "service-meshes",
+      "generator_family": "service-meshes",
+      "evidence_line": "a core (modal-runtime) with a 2-3 edge fan and an anti-parallel pair (worker -> runtime / runtime -> worker) that the brief names as the case's recurring failure.",
+      "recipe_facts": [
+        "two distinct co-viewed opposing arrows",
+        "fan split with measured attempts and stated rationale",
+        "per-hop chain ranks in d2"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e0",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md"
+      ],
+      "expected": "worker \u2192 runtime: task input + control RPCs",
+      "observed": "Left pointing distinct arrowhead and traceable route, label 'task input + control RPCs'; ownership is visually uncertain between adjacent pair routes.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            28,
+            12,
+            25,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md"
+      ],
+      "expected": "runtime \u2192 worker: events + management RPCs",
+      "observed": "Right pointing distinct arrowhead and traceable route, label 'events + management RPCs'; label owner clear.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            28,
+            13,
+            24,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md"
+      ],
+      "expected": "runtime \u2192 engine: dispatches tasks",
+      "observed": "Right pointing distinct arrowhead and traceable route, label 'dispatches tasks'; label owner clear.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            24,
+            23,
+            16,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md"
+      ],
+      "expected": "engine \u2192 backend: starts / manages",
+      "observed": "Right pointing distinct arrowhead and traceable route, label 'starts / manages'; label owner clear.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            56,
+            23,
+            16,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md"
+      ],
+      "expected": "backend \u2192 container: runs user process",
+      "observed": "Right pointing distinct arrowhead and traceable route, label 'runs user process'; label owner clear.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            94,
+            23,
+            17,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md"
+      ],
+      "expected": "engine \u2192 filesystem: mounts / snapshots",
+      "observed": "Right pointing distinct arrowhead and traceable route, label 'mounts / snapshots'; label owner clear.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            26,
+            33,
+            18,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md"
+      ],
+      "expected": "filesystem \u2192 Blobnet: image + volume data",
+      "observed": "Right pointing distinct arrowhead and traceable route, label 'image + volume data'; label owner clear.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            73,
+            33,
+            19,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md"
+      ],
+      "expected": "runtime \u2192 daemon: filesystem HTTP over UDS",
+      "observed": "Right pointing distinct arrowhead and traceable route, label 'filesystem HTTP over UDS'; label owner clear.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            26,
+            36,
+            24,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e0",
+        "e1"
+      ],
+      "severity": "high",
+      "description": "d1 task input + control RPCs is sandwiched between two opposite routes without a leader. Although 8/8 labels and zero ambiguous owners are reported, a reader must use elimination to assign it. Historical pair ownership is not reliably resolved.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/rounds/13/briefs/modal-runtime.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            23,
+            11,
+            35,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "navigation_clarity",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "All three descriptions are clipped in both demonstrated narrow viewports; right-hand boxes and relations are also clipped. No pan action is captured or clearly explained in the drawing.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/rounds/13/briefs/modal-runtime.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            1,
+            4,
+            77,
+            2
+          ]
+        },
+        {
+          "evidence_id": "pinned",
+          "region": [
+            1,
+            16,
+            77,
+            7
+          ]
+        },
+        {
+          "evidence_id": "pinned",
+          "region": [
+            1,
+            26,
+            77,
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "category": "border_integrity",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "At 135\u00d740 the palette overwrites the left and lower border of the d3 runtime box in the shipped spec.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/rounds/13/briefs/modal-runtime.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "short",
+          "region": [
+            1,
+            34,
+            15,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "68-column normal and select-all ANSI do not cover Task container or Blobnet and capture only part of Container backend; full border hue and selected-state evidence are missing.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/rounds/13/briefs/modal-runtime.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "selected",
+          "region": [
+            65,
+            16,
+            4,
+            4
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "No captured pan demonstrates that all content can be reached in the narrow live or pinned view.",
+    "Full-width ANSI and select-all evidence for Task container, Blobnet, and the clipped Container backend is missing."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pZ0"
+    ],
+    "closed_pane_ids": [
+      "w7E:pZ0"
+    ],
+    "status": "done",
+    "reason": "Evidence manifest reports confirmed_closed; generation cleanup records the same pane."
+  },
+  "overall": "fail"
+}

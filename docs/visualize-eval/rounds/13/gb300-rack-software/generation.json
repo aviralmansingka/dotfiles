@@ -1,0 +1,403 @@
+{
+  "case_id": "gb300-rack-software",
+  "round": "13",
+  "generator": {
+    "label": "viz-ds13-7",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "role": "round-13 generator, case gb300-rack-software"
+  },
+  "frozen_inputs": {
+    "candidate_skill": {
+      "path": "docs/visualize-eval/rounds/13/SKILL.md",
+      "proposal": 12,
+      "sha256": "65d826f0f1f9e61ddfd806628cb162827b0e6cf6d7df2490c9d75e6cbe485d2a"
+    },
+    "renderer": {
+      "path": "/tmp/visualize-eval/round-13/bin/rataflow-view",
+      "sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13"
+    },
+    "rubric": { "revision": 11, "sha256": "6bfd3733c8d08b66af9a92e71985a20846f954d7916eaf9685f86c8d2f96bcb8" },
+    "source": {
+      "path": "docs/visualize-eval/cases/gb300-rack-software/source.md",
+      "sha256": "10d440af0be8d3730c448e710a48d4dfbd527a966f532084e7f98fd2d4b83fda"
+    },
+    "target_viewport": "77x47 @ 100% natural"
+  },
+  "triage": {
+    "annex": "TRIAGE-gb300-rack-software",
+    "questions_provoked": [
+      "TRIAGE-gb300-rack-software-1 (asked): How separate are the OOB and in-band worlds?",
+      "TRIAGE-gb300-rack-software-2 (asked): The OOB fan — one line per BMC, or one trunk?",
+      "TRIAGE-gb300-rack-software-3 (asked): Free software only?",
+      "TRIAGE-gb300-rack-software-4 (asked): Panes, or a canvas?",
+      "Q5 (own judgment): The canvas form cannot draw a route between two diagrams. The one cross-plane relation (oob -> nvos) has its two ends in different worlds — how is it drawn?",
+      "Q6 (own judgment): Which verbs and protocols go on the routes? The frozen relation list marks every relation unlabeled, while the excerpts name Redfish/HTTPS, NVML, :9400, DaemonSet and 'hosts'.",
+      "Q7 (made unnecessary by the framing): Motion? The brief already fixes it — the source animates nothing, so the honest result is static.",
+      "Q8 (made unnecessary by the framing): May the graph be large? The framing asks for the two worlds to stay apart and the annex allows a canvas, so size is not a question I had to put to the reader."
+    ],
+    "questions_used": [
+      {
+        "id": "TRIAGE-gb300-rack-software-1",
+        "question": "How separate are the OOB and in-band worlds?",
+        "answer": "Completely. OOB is its own Ethernet network for hardware control; the in-band fabric carries training and storage. Keep the two worlds apart so nothing reads across them.",
+        "answer_source": "annex answer 1"
+      },
+      {
+        "id": "TRIAGE-gb300-rack-software-2",
+        "question": "The OOB fan: one line per BMC, or one trunk?",
+        "answer": "One trunk that splits exactly once into the compute BMC, NVSwitch BMC and power shelf branches. Not a pile of lines that happen to touch.",
+        "answer_source": "annex answer 2"
+      },
+      {
+        "id": "TRIAGE-gb300-rack-software-3",
+        "question": "Free software only?",
+        "answer": "Yes. Anything that needs money stays out, and don't imply the gated images are free.",
+        "answer_source": "annex answer 3"
+      },
+      {
+        "id": "TRIAGE-gb300-rack-software-4",
+        "question": "Panes, or a canvas?",
+        "answer": "One canvas with a diagram per world is fine if that keeps the planes from bleeding into each other.",
+        "answer_source": "annex answer 4"
+      },
+      {
+        "id": "Q5",
+        "question": "How is oob -> nvos drawn when the canvas form cannot route between two diagrams?",
+        "answer": "The OOB LAN node is drawn a second time, inside the in-band diagram, as an explicit boundary stub carrying the same group tag (so the same hue), and its single edge reaches NVOS. The planes stay separate — the sections are separated by blank space and a rule, never a box — and the relation is not dropped.",
+        "answer_source": "own judgment",
+        "reason": "The engine namespaces diagram node ids and separates sections with a blank row and a rule, so a cross-diagram route is impossible. The frozen constraint set forbids dropping a relation, and 'oob -> nvos' is a source relation."
+      },
+      {
+        "id": "Q6",
+        "question": "Which verbs and protocols label the routes, when the frozen relation list says 'unlabeled — do not invent a protocol'?",
+        "answer": "Only what the excerpts state, on the route that states it: 'client' on rms -> oob ('It is a client on that network, not part of it'), 'Redfish/HTTPS' on the OOB trunk (the LAN carries Redfish over HTTPS), 'hosts' on nvos -> nmxc (NVOS hosting NMX-C/T), 'DaemonSet' on gpuop -> dcgm ('deployed as a DaemonSet by the GPU Operator'), ':9400' on dcgm -> dcgmx (the exporter's Prometheus port) and 'NVML' on dcgm -> drvk (reads GPU state via NVML against the driver). k8s -> gpuop and drvk -> fm stay unlabeled: no excerpt states a verb, and 'manages'/'deploys' would be the invented dependency the constraint forbids.",
+        "answer_source": "own judgment",
+        "reason": "source.md gives the protocols in its excerpts; the label rule in the case is 'protocols where the excerpts give them', so using them is not inventing, and adding any other verb would be."
+      }
+    ],
+    "converged_when": "The reader's job (per component: which plane, which controller reaches it), the audited claims (nv-rms is a client of the OOB LAN; DCGM has no OOB edge), the shape (a canvas with one described diagram per world), the trunk (one corridor, one split, three destinations) and the free-software rule were all fixed by the framing and the annex answers; nothing else changes the drawing.",
+    "shape_decision": "canvas: 2 described diagrams — 'OOB hardware-control plane' (oob) and 'In-band compute and NVSwitch software' (inband)"
+  },
+  "classification": {
+    "family": "placement-planes",
+    "evidence": "Two weakly-connected worlds — oob/rms/bmc_c/bmc_s/pwr on one side, k8s/gpuop/dcgm/dcgmx/drvk/fm/nvos/nmxc on the other — joined by exactly one bus (the OOB LAN, which fans to three device classes) and one cross-plane relation (oob -> nvos).",
+    "tie_breakers_considered": [
+      "Density (E=11 vs N=13, so E < N): would favour flow-chains, but a chain has one relation per node and no shared bus — the OOB LAN has four, three of them through one declared trunk.",
+      "A bus between disconnected worlds means placement-planes, even when the bus looks like a chain (tie-breaker 2).",
+      "Identifier content: the case carries protocols and one port (:9400), but they are labels on a structural graph, not the subject — identity-probe-map (tie-breaker 3) does not win."
+    ],
+    "secondary_recipe": "identity-probe-maps habits borrowed for coverage only: every protocol/identifier the excerpts give (Redfish/HTTPS, NVML, :9400, DaemonSet, hosts, client) was made a ledger row before the spec, and qualified facts were kept as qualifiers (nv-rms source free, image gated) instead of being cleaned up.",
+    "reclassification": null
+  },
+  "view_shape": {
+    "rung_chosen": "rung 2 — one canvas hosting named, described concept-diagrams",
+    "source_facts_that_decided_it": [
+      "The source's own task line separates four things (off-rack management, OOB hardware control, NVSwitch software, in-band compute software) and the brief's reader wants per-component plane membership: the picture is two worlds, not one graph.",
+      "The two worlds share exactly one relation (oob -> nvos), so they separate cleanly without losing a relation.",
+      "One view has to hold both worlds in a single layout: 13 nodes, 11 relations and 6 protocol/verb labels (up to 13 characters) whose gutters cost rank rows. Measured, the two worlds need different rank depths (3 ranks vs 5 ranks), so a single tb drawing takes the union depth and the label gutters push it past 47 rows; the two sections measured here are 58x38 and 32x49 on their own, and 95 rows together.",
+      "The triage annex answer 4 makes the reader's preference explicit: a canvas with a diagram per world is fine if the planes stay apart."
+    ],
+    "rejected_rungs": [
+      {
+        "rung": "rung 1 — one side-by-side view at 77x47",
+        "reason": "13 nodes with two weakly-connected worlds, a three-way trunk fan and 6 labels in a single layout cannot fit 77x47 at natural zoom without thinning relations or shrinking text: the two worlds have different rank depths (3 vs 5), so one drawing needs the union depth plus the label gutters, and the measured sections are 58x38 and 32x49 on their own (95 rows stacked)."
+      },
+      {
+        "rung": "rung 3 — add a diagram rather than drop a concept",
+        "reason": "No concept was dropped, so no extra diagram was needed. Splitting the in-band world further (compute vs NVSwitch software) was considered and rejected: the source names NVSwitch software as its own tier, but the brief places NVOS/NMX-C/T inside the in-band world, and a three-node section would be a fragment, not a concept."
+      }
+    ]
+  },
+  "surfaces": [
+    {
+      "diagram_id": "oob",
+      "title": "OOB hardware-control plane",
+      "description": "one OOB trunk to the BMCs and power shelf; nv-rms source is free",
+      "spec": "specs/canvas-v3.json",
+      "spec_sha256": "7f95990ab59ad8ea067200816162292dc19cd54216c82c522ceed3a49dfaad14",
+      "direction": "tb",
+      "check_origin": [0, 3],
+      "extent": [58, 38],
+      "nodes": 5,
+      "edges": 1,
+      "trunk_legs": 3,
+      "routes": 4,
+      "artifacts": {
+        "check": "evidence/canvas/check.txt",
+        "plain_text": "evidence/canvas/canvas-text.txt",
+        "ansi": "evidence/canvas/canvas-ansi.ansi",
+        "selected_ansi": "evidence/canvas/canvas-selected.ansi",
+        "frames": "evidence/canvas/canvas-frames.txt",
+        "frames_ansi": "evidence/canvas/canvas-frames.ansi",
+        "pinned_77x47": "evidence/canvas/canvas-77x47-frames.txt",
+        "manifest": "evidence/canvas/manifest.json",
+        "validator": "evidence/canvas/validator.txt"
+      },
+      "measured_dimensions": {
+        "pane_viewport_token": "68x44 @100%",
+        "pinned_dump_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "canvas_extent_in_pane": "canvas 64x95",
+        "note": "The whole canvas is drawn at natural 100% and the reader pans it; the pinned 77x47 dump reports 'canvas 64x95', which is the navigable large-canvas form, not a fit claim."
+      },
+      "nodes_drawn": [
+        { "id": "rms", "label": "nv-rms (free src)", "group": "oob-mgmt" },
+        { "id": "oob", "label": "OOB LAN", "group": "oob-lan" },
+        { "id": "bmc_c", "label": "Compute BMC", "group": "oob-lan" },
+        { "id": "pwr", "label": "Power shelf", "group": "oob-lan" },
+        { "id": "sw", "label": "NVSwitch BMC", "group": "oob-lan" }
+      ],
+      "edges_drawn": [
+        { "id": "e0", "from": "rms", "to": "oob", "label": "client", "label_owner": "e0", "style": "solid" },
+        { "id": "trunk:lane", "from": "oob", "to": "pwr", "label": "Redfish/HTTPS", "label_owner": "trunk:lane", "kind": "trunk corridor" },
+        { "id": "trunk:lane:spur0", "from": "oob", "to": "bmc_c", "label": null, "kind": "trunk spur" },
+        { "id": "trunk:lane:spur1", "from": "oob", "to": "sw", "label": null, "kind": "trunk spur" }
+      ],
+      "habits_borrowed": [
+        "placement-planes: each weakly-connected world occupies its own area of the canvas, and the bus splits once with a junction glyph.",
+        "The source's own spatial fact: 'it sits above every other node in the graph' — hence tb with the OOB LAN above its three device classes."
+      ],
+      "deviations": [
+        {
+          "habit": "placement-planes: 'the worlds sit side by side'",
+          "deviation": "The engine stacks canvas sections vertically, so the worlds sit one above the other, separated by a blank row and a rule.",
+          "reason": "The canvas form stacks its sections; the family's actual demand — spatial separation, never a drawn box — is satisfied by the rule and the blank row (capture: canvas-text.txt rows 42-45).",
+          "capture": "evidence/canvas/canvas-text.txt"
+        }
+      ]
+    },
+    {
+      "diagram_id": "inband",
+      "title": "In-band compute and NVSwitch software",
+      "description": "compute chain plus NVSwitch software; the OOB LAN reaches NVOS",
+      "spec": "specs/canvas-v3.json",
+      "direction": "tb",
+      "check_origin": [0, 46],
+      "extent": [32, 49],
+      "nodes": 9,
+      "edges": 7,
+      "routes": 7,
+      "artifacts": { "same bundle": "evidence/canvas" },
+      "nodes_drawn": [
+        { "id": "oob", "label": "OOB LAN", "group": "oob-lan", "role": "boundary stub — the same node as in the OOB diagram, drawn again so its one cross-plane relation stays drawable" },
+        { "id": "nvos", "label": "NVOS", "group": "switch" },
+        { "id": "nmxc", "label": "NMX-C/T", "group": "switch" },
+        { "id": "k8s", "label": "Kubernetes", "group": "inband" },
+        { "id": "gpuop", "label": "GPU Operator", "group": "inband" },
+        { "id": "dcgm", "label": "DCGM", "group": "inband" },
+        { "id": "dcgmx", "label": "dcgm-exporter", "group": "inband" },
+        { "id": "drvk", "label": "Driver+CUDA", "group": "inband" },
+        { "id": "fm", "label": "Fabric Mgr", "group": "inband" }
+      ],
+      "edges_drawn": [
+        { "id": "e0", "from": "oob", "to": "nvos", "label": null, "note": "the cross-plane relation, drawn from the boundary stub; unlabeled because the source states no verb for it" },
+        { "id": "e1", "from": "nvos", "to": "nmxc", "label": "hosts", "label_owner": "e1" },
+        { "id": "e2", "from": "k8s", "to": "gpuop", "label": null, "note": "unlabeled: no excerpt states the verb" },
+        { "id": "e3", "from": "gpuop", "to": "dcgm", "label": "DaemonSet", "label_owner": "e3" },
+        { "id": "e4", "from": "dcgm", "to": "dcgmx", "label": ":9400", "label_owner": "e4" },
+        { "id": "e5", "from": "dcgm", "to": "drvk", "label": "NVML", "label_owner": "e5" },
+        { "id": "e6", "from": "drvk", "to": "fm", "label": null, "note": "unlabeled: deliberately no deploys/manages verb (fixed constraint)" }
+      ],
+      "habits_borrowed": [
+        "placement-planes for the cross-plane edge: it is the one long relation that crosses the world boundary, entering the in-band section from the boundary stub.",
+        "identity-probe-maps coverage habit: the exporter's port (:9400) and the read path (NVML) are drawn, not described away."
+      ],
+      "deviations": [
+        {
+          "habit": "family habit 'lr for chains of five or more layers'",
+          "deviation": "The five-rank in-band chain is drawn tb.",
+          "reason": "In lr the across gap between siblings is one row, so any route leaving a rank runs beside its siblings at ring 1-2; measured in probe-fan diagram b (6 corridor + 4 arm near-miss cells). tb's three-cell sibling gap plus the label-driven rank gaps keep the routes clear — canvas-v1 and canvas-v3 both measure 0 in-band near-misses.",
+          "capture": "evidence/canvas/check.txt (diagram inband: no near-miss lines)"
+        },
+        {
+          "habit": "placement-planes: cross-plane relations are long edges between the worlds",
+          "deviation": "The cross-plane relation is drawn inside the in-band diagram from a repeated OOB LAN boundary stub; no route spans the two sections.",
+          "reason": "A canvas route cannot span diagrams (ids are namespaced and sections are separated by a rule). Drawing the stub keeps the relation visible and keeps its hue (oob-lan) identical across the canvas.",
+          "capture": "evidence/canvas/canvas-text.txt (in-band section, first row of nodes)"
+        }
+      ]
+    }
+  ],
+  "canvas_totals": {
+    "diagrams": 2,
+    "check_line": "canvas: 2 diagrams on one canvas, drawn whole at 100%",
+    "whole_canvas_extent": "64x95",
+    "nodes": 14,
+    "node_boxes_distinct": 13,
+    "spec_edges": 8,
+    "trunk_legs": 3,
+    "relations_drawn": 11,
+    "routes": 11,
+    "labels": "6/6 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners",
+    "groups_line": "groups: oob-mgmt(1) oob-lan(5) switch(2) inband(6)",
+    "trunks_line": "trunks: oob:lane from oob to pwr, 2 branches, 1 junctions",
+    "crossings": "1 bridges, 1 touching bends",
+    "dots_line": "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms"
+  },
+  "meaning_ledger": [
+    { "fact": "OOB LAN is a separate physical Ethernet network for hardware control", "kind": "qualifier/role", "fate": "drawn", "where": "the OOB diagram's own section + the boundary stub in the in-band diagram; the separation is the canvas split itself" },
+    { "fact": "1/10/25G link rates, its own switch pair", "kind": "detail", "fate": "dropped with reason", "reason": "descriptive colour about the LAN, not one of the eleven audited relations; the node label budget is spent on the protocol that the reader needs (Redfish/HTTPS) and the reader's job is plane membership" },
+    { "fact": "Protocol: Redfish over HTTPS (legacy IPMI)", "kind": "protocol", "fate": "abbreviated to 'Redfish/HTTPS' on the OOB trunk", "reason": "IPMI is the legacy qualifier and would exceed the 14-char edge-label budget; recorded here" },
+    { "fact": "nv-rms runs on a management node and is a CLIENT of the OOB LAN, not part of it", "kind": "role", "fate": "drawn", "where": "node 'nv-rms (free src)' with edge label 'client'" },
+    { "fact": "Reach: every compute tray BMC (18 in an NVL72), the NVSwitch tray BMCs, and the power-shelf controllers", "kind": "role/residency", "fate": "drawn", "where": "the trunk's three destinations: Compute BMC, NVSwitch BMC, Power shelf" },
+    { "fact": "The CDU controller and the PDUs also hang off the OOB LAN", "kind": "role", "fate": "dropped with reason", "reason": "outside the frozen node/relation set for this case (the brief's OOB list ends at the power shelf); drawing them would add relations the source's relationship facts do not state" },
+    { "fact": "nv-rms southbound: compute BMCs and power shelf over Redfish/HTTPS; NVSwitch trays over NVUE REST, SSH/SFTP and NMX-C gRPC", "kind": "protocol", "fate": "partly drawn; the NVUE/SSH/SFTP/gRPC list dropped with reason", "reason": "the frozen relation set has no rms -> NVSwitch-tray edge (nv-rms reaches the switch through NVOS), so those protocols would attach to a relation the source does not state" },
+    { "fact": "nv-rms source is free (Apache-2.0); its prebuilt NGC image is entitlement-gated", "kind": "qualifier", "fate": "abbreviated on the node label 'nv-rms (free src)' and in the section description 'nv-rms source is free'", "reason": "'src' keeps it short and never implies the image is free; the gated image is recorded here" },
+    { "fact": "Paid or gated software: Mission Control, BCM, UFM, NetQ, NGC gated images", "kind": "exclusion", "fate": "dropped with reason", "reason": "the request excludes anything that costs money; nothing in the drawing may imply they are available" },
+    { "fact": "Kubernetes, GPU Operator, DCGM, dcgm-exporter are Apache-2.0", "kind": "qualifier", "fate": "drawn as nodes; free status not repeated per node", "reason": "the free rule is stated once on the OOB section and is not contradicted anywhere in the in-band section" },
+    { "fact": "NVOS, NMX-C/T, Fabric Manager, driver+CUDA, BMC firmware are bundled with the hardware", "kind": "qualifier", "fate": "drawn as nodes" },
+    { "fact": "NVOS hosts NMX-C/T", "kind": "residency", "fate": "drawn", "where": "edge label 'hosts'" },
+    { "fact": "DCGM has no OOB edge", "kind": "negative relation", "fate": "drawn", "where": "the OOB LAN's only cross-plane edge reaches NVOS; DCGM appears nowhere in the OOB diagram" },
+    { "fact": "DCGM inbound: reads GPU state via NVML against the driver over the local PCIe/driver path (no network)", "kind": "protocol/path", "fate": "abbreviated to the 'NVML' edge label", "reason": "'PCIe/driver path' is the residency fact already carried by the in-band section title and the Driver+CUDA node" },
+    { "fact": "DCGM outbound: dcgm-exporter serves Prometheus metrics on :9400 over the normal in-band network", "kind": "protocol + identifier", "fate": "abbreviated to ':9400'", "reason": "identifier kept; 'Prometheus metrics' is the node's own job name (dcgm-exporter) and the 5-char label keeps the in-band rank gap wide enough that no route hugs a sibling box (measured: canvas-v2 with the 13-char label produced 8 near-miss cells, canvas-v3 with ':9400' produced 0)" },
+    { "fact": "DCGM is deployed as a DaemonSet by the GPU Operator over Kubernetes", "kind": "verb", "fate": "drawn", "where": "edge label 'DaemonSet' on gpuop -> dcgm, plus k8s -> gpuop" },
+    { "fact": "Driver/CUDA/DCGM/Fabric Manager run on compute hosts, not on the GPU die", "kind": "residency", "fate": "drawn", "where": "separate in-band nodes; no die node exists in the drawing" },
+    { "fact": "Fabric Manager is the NVLink fabric manager (UFM is InfiniBand and paid)", "kind": "role", "fate": "drawn as 'Fabric Mgr'; UFM excluded" },
+    { "fact": "The DCGM -> driver -> Fabric Manager chain is unlabeled in the history; do not invent deploys/manages", "kind": "qualifier", "fate": "drawn", "where": "drvk -> fm is an unlabeled arrow; dcgm -> drvk is labeled 'NVML' (read semantics)" }
+  ],
+  "relationship_audit": [
+    { "id": "e1", "from": "rms", "to": "oob", "verb": "client", "label_owner": "e1", "surface": "oob" },
+    { "id": "e2", "from": "oob", "to": "bmc_c", "verb": "trunk spur (Redfish/HTTPS bus)", "label_owner": "trunk:lane", "surface": "oob" },
+    { "id": "e3", "from": "oob", "to": "bmc_s", "verb": "trunk spur (Redfish/HTTPS bus)", "label_owner": "trunk:lane", "surface": "oob" },
+    { "id": "e4", "from": "oob", "to": "pwr", "verb": "trunk corridor (Redfish/HTTPS bus)", "label_owner": "trunk:lane", "surface": "oob" },
+    { "id": "e5", "from": "oob", "to": "nvos", "verb": "unlabeled (source states no verb)", "label_owner": null, "surface": "inband (from the boundary stub)" },
+    { "id": "e6", "from": "nvos", "to": "nmxc", "verb": "hosts", "label_owner": "e6", "surface": "inband" },
+    { "id": "e7", "from": "k8s", "to": "gpuop", "verb": "unlabeled", "label_owner": null, "surface": "inband" },
+    { "id": "e8", "from": "gpuop", "to": "dcgm", "verb": "DaemonSet", "label_owner": "e8", "surface": "inband" },
+    { "id": "e9", "from": "dcgm", "to": "dcgmx", "verb": "serves metrics :9400", "label_owner": "e9", "surface": "inband" },
+    { "id": "e10", "from": "dcgm", "to": "drvk", "verb": "reads via NVML", "label_owner": "e10", "surface": "inband" },
+    { "id": "e11", "from": "drvk", "to": "fm", "verb": "unlabeled (no deploys/manages invented)", "label_owner": null, "surface": "inband" }
+  ],
+  "split_coverage_map": [
+    { "surface": "oob", "carries": "13 nodes' OOB half (rms, oob, bmc_c, bmc_s, pwr), e1-e4, the ONE trunk with its single split, the free/gated qualifier on nv-rms" },
+    { "surface": "inband", "carries": "the in-band half (k8s, gpuop, dcgm, dcgmx, drvk, fm, nvos, nmxc) plus the OOB LAN boundary stub, e5-e11, every protocol label except Redfish/HTTPS and client" }
+  ],
+  "structural_levers": [
+    { "lever": "diagrams (canvas, 2 named + described sections)", "source_fact": "two weakly-connected worlds: OOB hardware control vs in-band compute/NVSwitch software (source Task line; entirely separate networks)" },
+    { "lever": "trunks (one declared bus, one corridor, two branch spurs, one corridor terminus)", "source_fact": "'the OOB LAN is a shared rail that every BMC hangs off' + the requested ONE trunk that splits once into compute BMC, NVSwitch BMC and power shelf" },
+    { "lever": "group x4 (oob-mgmt, oob-lan, switch, inband)", "source_fact": "the source's own tier list: off-rack management, OOB hardware control, NVSwitch software, in-band compute software" },
+    { "lever": "direction tb in both diagrams", "source_fact": "the OOB LAN 'sits above every other node in the graph'; the in-band chain also reads down the page (k8s -> gpuop -> dcgm -> drvk -> fm)" },
+    { "lever": "node ids bmc_c < pwr < sw (layout lever, not drawn)", "source_fact": "none — this is an engine lever: id order decides within-rank order (measured in probe-order), and centring the trunk terminus on the corridor keeps the bus off the other boxes" },
+    { "lever": "label_slot: not used", "source_fact": "rejected: canvas-v2 shows that collapsing the in-band label gutters lets a route hug dcgm-exporter (8 near-miss cells)" },
+    { "lever": "minlen: not used", "source_fact": "no source fact asks for a reserved rank gap; the trunk corridor cannot take one anyway (trunk legs rank at minlen 1)" },
+    { "lever": "layers: not used in the final spec", "source_fact": "probe-fan diagram c pinned the terminus one rank below the branches and the corridor then ran in the three-cell gap between them (18 near-miss cells)" }
+  ],
+  "routing_record": {
+    "per_attempt": [
+      { "attempt": "canvas-v1", "near_misses": 16, "passes_near_unrelated_node": 16, "detail": "corridor 10 cells at ring 2 of NVSwitch BMC + arm 6 cells at ring 2 of the same box" },
+      { "attempt": "canvas-v2", "near_misses": 24, "passes_near_unrelated_node": 24, "detail": "the v1 fan cells plus 8 in-band cells (dcgm -> driver hugging dcgm-exporter)" },
+      { "attempt": "probe-fan (a)", "near_misses": 19, "passes_near_unrelated_node": 19, "detail": "arms 6 + 13 cells at ring 2 of the centred terminus; corridor clean" },
+      { "attempt": "probe-fan (b)", "near_misses": 10, "passes_near_unrelated_node": 10, "detail": "corridor 6 cells + arm 4 cells at ring 2" },
+      { "attempt": "probe-fan (c)", "near_misses": 24, "passes_near_unrelated_node": 24, "detail": "corridor 18 cells in the three-cell gap between the branch boxes + arm 6 cells" },
+      { "attempt": "canvas-v3", "near_misses": 19, "passes_near_unrelated_node": 19, "detail": "the two split arms (6 + 13 cells at ring 2 of the Power shelf); the trunk corridor and the whole in-band diagram are clean" }
+    ],
+    "relief_used": "canvas-v1 -> canvas-v3 removed the corridor violation (10 cells) by centring the trunk terminus in its rank, which is an id-order lever; it removed the in-band violation (8 cells) by shortening the exporter label so the rank gap stays wide. The residual 19 cells are the split arms.",
+    "residual_is_structural": {
+      "demand": "one trunk that splits once into three destinations, with no route inside the two-cell margin of a box it does not serve",
+      "measured_attempts": ["canvas-v1", "canvas-v2", "canvas-v3", "probe-fan (a)", "probe-fan (b)", "probe-fan (c)"],
+      "why_it_cannot_be_met": "The engine's hub junction is placed at the corridor cell nearest the branch centroid, which is always one to two rows above the middle box's top (router.rs try_hub: candidates sort by distance to the centroid of the branch centres). Both arms therefore leave that cell two rows above that box's span and cross it at ring 2. Routing cannot recover: the near-node price is NEAR_BAND_COST 8 against STEP_COST 10 per cell, so the A* only takes a detour when it is under one cell long. Every fan topology that keeps the corridor clean (terminus centred) puts the junction over the terminus; every topology that moves the junction off it puts the corridor in the three-cell sibling gap (probe-fan c) or beside the boxes (probe-fan b).",
+      "how_close_the_shipped_surface_comes": "The bus itself — the part the round-11 a3 defect was about — is fully clear: 0 corridor cells, and the in-band world is at 0. The residual is 2 routes x one box."
+    }
+  },
+  "hue_record": {
+    "group_to_hue_family": [
+      { "group": "oob-mgmt", "members": ["nv-rms"], "where": "oob diagram" },
+      { "group": "oob-lan", "members": ["OOB LAN", "Compute BMC", "NVSwitch BMC", "Power shelf", "OOB LAN (in-band boundary stub)"], "where": "both diagrams — one hue family across the canvas" },
+      { "group": "switch", "members": ["NVOS", "NMX-C/T"], "where": "inband diagram" },
+      { "group": "inband", "members": ["Kubernetes", "GPU Operator", "DCGM", "dcgm-exporter", "Driver+CUDA", "Fabric Mgr"], "where": "inband diagram" }
+    ],
+    "case_wide_consistency": "No group appears with two hues: every group's members live in one diagram, except oob-lan, whose repeated member is the same group tag and therefore the same hue (the stub is what lets the reader see it is the same plane).",
+    "dot_hues_line": "dot hues: 0 by source, 0 by destination, 0 shared-hue pair(s) (source-only 0, destination-only 0)",
+    "dot_hue_note": "No route is animated, so no dot hue had to be bound; the line is recorded for completeness."
+  },
+  "motion": {
+    "applicability": "static",
+    "reason": "The source animates nothing and the brief fixes the honest result as static; cases.json marks dots optional for this case.",
+    "dots_line": "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+    "origins_line": "origins: 0/0 routes start at their arrow origin",
+    "arrivals_line": "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step",
+    "frames_capture": "evidence/canvas/canvas-frames.txt and canvas/77x47-frames.txt — 5 and 12 timestamped frames proving time passes and nothing moves"
+  },
+  "source_pointers": [
+    "source.md line 271 (assistant): 'What the OOB LAN actually is' — separate physical Ethernet, Redfish over HTTPS, one drop to every BMC; paid software removed table",
+    "source.md line 272 (user): 'Will it truly be connected to the DCGM agent or is that something different?'",
+    "source.md line 277 (assistant): 'No, OOB does not touch DCGM' — NVML inbound, :9400 outbound, DaemonSet via the GPU Operator; nv-rms is a client",
+    "source.md line 278 (user): 'Doesn't the NV rack management software sit on top of the compute, PMC, NV switch, and power shelf?'",
+    "source.md line 283 (assistant): nv-rms southbound table; 'NVOS hangs off rms and not off the BMC'",
+    "source.md line 284 (user): the one-arrow-that-splits-in-exactly-one-spot request",
+    "source.md Relationship facts: the 13 nodes and 11 relations drawn unchanged"
+  ],
+  "abbreviations": [
+    "nv-rms (free src) = nv-rms, Apache-2.0 source, prebuilt NGC image entitlement-gated",
+    "Redfish/HTTPS = Redfish over HTTPS (legacy IPMI dropped)",
+    "Fabric Mgr = Fabric Manager",
+    "Driver+CUDA = driver + CUDA (bundled with the hardware)",
+    ":9400 = the dcgm-exporter Prometheus port"
+  ],
+  "deliberate_drops": [
+    { "fact": "OOB LAN link rates 1/10/25G and its own switch pair", "reason": "descriptive detail, not an audited relation; no label budget left after the protocol" },
+    { "fact": "CDU controllers and PDUs on the OOB LAN", "reason": "outside the frozen node/relation set the brief scopes" },
+    { "fact": "NVUE REST / SSH+SFTP / NMX-C gRPC as rms southbound to the NVSwitch tray", "reason": "the frozen relation set has no rms -> NVSwitch-tray edge; the protocols would attach to a relation the source does not state" },
+    { "fact": "Mission Control, BCM, UFM, NetQ, NGC gated images", "reason": "paid or gated; the request excludes them" },
+    { "fact": "Slurm", "reason": "the source itself leaves it out — free, but no distinct edge" },
+    { "fact": "18 compute tray BMCs as 18 boxes", "reason": "abbreviated to one 'Compute BMC' class node; the source's own relation set does the same" }
+  ],
+  "known_defects": [
+    {
+      "id": "D1",
+      "defect": "19 route cells inside the two-cell margin of the Power shelf box, on the trunk's two split arms (routes oob:e2 and oob:e3).",
+      "status": "reported, not hidden; structural yield recorded above with six measured attempts",
+      "capture": "evidence/canvas/check.txt (near-miss lines)"
+    },
+    {
+      "id": "D2",
+      "defect": "'warning: two edges share 2 cell(s), including ports' — the trunk hub puts the corridor and one arm on the same axis at the junction cell.",
+      "status": "engine behaviour, not a spec fault: every trunk spec measured here emits it (canvas-v1/v2/v3, probe-capability, probe-fan) and a trunk-free spec does not (probe-order). It also fails the validator's check_warnings_absent for any spec that uses the case's mandated feature.",
+      "capture": "evidence/canvas/check.txt line 10; recorded/canvas-v1.stdout, recorded/probe-capability.stdout"
+    },
+    {
+      "id": "D3",
+      "defect": "The canvas is 64x95 and does not fit the 77x47 pane; the reader pans.",
+      "status": "expected for the canvas form (the pinned 77x47 dump reports 'canvas 64x95'); the validator's canvas branch accepts the recorded per-diagram extents",
+      "capture": "evidence/canvas/canvas-77x47-frames.txt line 1-3"
+    },
+    {
+      "id": "D4",
+      "defect": "The OOB LAN node is drawn twice (once in each diagram).",
+      "status": "deliberate: it is the boundary stub that keeps the one cross-plane relation drawable in the canvas form; the group tag keeps its hue identical",
+      "capture": "evidence/canvas/canvas-text.txt (in-band section, first row)"
+    },
+    {
+      "id": "D5",
+      "defect": "The palette corner is anchored to the viewport, not to the canvas, so in a clipped view of the tall canvas it is drawn over the drawing: it overwrites the Compute BMC box border and the in-band title row.",
+      "status": "engine behaviour, not a spec fault. In a full-height dump the palette sits clear at the canvas's bottom-left (68x96 dump: palette rows clear of Fabric Mgr); only a panned slice collides. It cannot be fixed from the spec: the palette follows the viewport, and the canvas cannot be made to fit 47 rows without dropping relations.",
+      "capture": "evidence/canvas/canvas-text.txt lines 38-43; evidence/canvas/canvas-77x47-frames.txt lines 39-45"
+    }
+  ],
+  "blockers": [
+    {
+      "blocker": "viz-validate.py cannot pass a spec that uses `trunks`.",
+      "evidence": "The engine's shared-run check counts the hub junction cell (corridor and arm share an axis there) and prints 'warning: two edges share N cell(s), including ports'; the validator's check_warnings_absent treats every warning except near-miss lines as a failure. Measured on all four trunk specs in this case."
+    },
+    {
+      "blocker": "A three-way trunk split cannot be drawn without ring-1/ring-2 cells on its arms on this engine.",
+      "evidence": "Six measured layouts (see routing_record): the hub junction sits one to two rows above the middle box's top by construction, and the near-node price (8) is too small against the step cost (10) to make the A* take a detour."
+    }
+  ],
+  "validator": {
+    "command": "scripts/viz-validate.py docs/visualize-eval/rounds/13/gb300-rack-software/evidence/canvas --require-select --require-frames --require-records --attempts docs/visualize-eval/rounds/13/gb300-rack-software/attempts.json",
+    "output": "evidence/canvas/validator.txt",
+    "summary": "38 checks passed, 2 failed: check_warnings_absent (the shared-run warning plus the near-miss hug warning) and routes_near_unrelated_nodes (19 cells). Everything else passes, including labels, dots, origins, arrivals, canvas extents, viewport proof, select-all frame, frames, cleanup, attempts budgets, the record log and the probe-input bundling.",
+    "failing_checks": [
+      "check_warnings_absent",
+      "routes_near_unrelated_nodes"
+    ],
+    "green": false
+  },
+  "cleanup": {
+    "pane_id": "w7E:p09",
+    "result": "confirmed_closed",
+    "evidence": "evidence/canvas/manifest.json (cleanup field)",
+    "stray_panes": "none; every capture ran in a no-focus half pane of this session's own tab and the harness closed it"
+  },
+  "self_assessment": "Not green. The drawing covers all 13 nodes and all 11 relations, the trunk splits once at one junction, the trunk corridor and the whole in-band world route clear of unrelated boxes, and the planes, hues and descriptions are drawn as the brief asks. Two validator checks fail, both from the trunk's split arms; the measurements say no legal arrangement of this engine's trunk hub avoids them, and both are listed as defects above."
+}

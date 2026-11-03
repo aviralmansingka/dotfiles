@@ -1,0 +1,549 @@
+{
+  "protocol_version": 1,
+  "round": 13,
+  "case_id": "network",
+  "candidate_sha256": "dcf349a6f91792249214387c99cc95985a9a61f2f8dba8826febb74864e0bd54",
+  "renderer_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+  "rubric_sha256": "6bfd3733c8d08b66af9a92e71985a20846f954d7916eaf9685f86c8d2f96bcb8",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "dcf349a6f91792249214387c99cc95985a9a61f2f8dba8826febb74864e0bd54",
+  "generator": {
+    "worker_id": "viz-ds13-2",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge13-network",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 68,
+    "rows": 44
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/13/reviews/network/observed-first.md",
+      "sha256": "d51c9404b2ed023e920ba73c224159fa6a6f231293c468ab72e3726ec3e05633",
+      "description": "Blind record saved before reveal",
+      "capture": null
+    },
+    {
+      "id": "spec",
+      "path": "docs/visualize-eval/rounds/13/network/spec.json",
+      "sha256": "dcf349a6f91792249214387c99cc95985a9a61f2f8dba8826febb74864e0bd54",
+      "description": "Final graph spec",
+      "capture": null
+    },
+    {
+      "id": "pinned",
+      "path": "docs/visualize-eval/rounds/13/network/evidence/v1/v1-77x47-frames.txt",
+      "sha256": "0f9a733b258a678b7e47b94d411bac9e15e107abcfe7ce352fce4c16d04e411f",
+      "description": "Final-spec pinned natural-size frames",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frames 0–29 (30 frames)",
+        "timestamp": "0–2900ms",
+        "state": "normal animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "text",
+      "path": "docs/visualize-eval/rounds/13/network/evidence/v1/v1-text.txt",
+      "sha256": "dd07698b12fb95c19fc7cc40fc2838b014c88a77ac077f3646d1795f9d6bdbff",
+      "description": "Live pane capture",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "captured 2026-11-03T14:02:17Z–14:02:22Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi",
+      "path": "docs/visualize-eval/rounds/13/network/evidence/v1/v1-ansi.ansi",
+      "sha256": "8b250eb915ac5faf6bffa6182eba64778cd74918e8517ad6051bbacbcc231a3d",
+      "description": "Normal pane ANSI colors",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "captured 2026-11-03T14:02:17Z–14:02:22Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected",
+      "path": "docs/visualize-eval/rounds/13/network/evidence/v1/v1-selected.ansi",
+      "sha256": "7a9bc9f9dadd9d3f0192165b7460098843793e4581cea25be5e64e4abc619ba4",
+      "description": "Select-all ANSI state",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "captured 2026-11-03T14:02:17Z–14:02:22Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "check",
+      "path": "docs/visualize-eval/rounds/13/network/evidence/v1/check.txt",
+      "sha256": "c0ac60ca78f23bfdd7ccc52005a0a7ef5e3b72274b1621e89d7deb04b2d7271c",
+      "description": "Renderer checks",
+      "capture": null
+    },
+    {
+      "id": "audit",
+      "path": "docs/visualize-eval/rounds/13/network/evidence/v1/frame-audit.txt",
+      "sha256": "dca93257a2e24e6abbe4e1afe30f4c955017d4b39efe40e14f51396225d1412e",
+      "description": "Recorded frame audit",
+      "capture": null
+    },
+    {
+      "id": "validator",
+      "path": "docs/visualize-eval/rounds/13/network/validation.txt",
+      "sha256": "5d32c0e88405826e610e55757620dd202a60b9c951894d7ed90f5cf7d2c17f97",
+      "description": "Recorded validation output",
+      "capture": null
+    },
+    {
+      "id": "manifest",
+      "path": "docs/visualize-eval/rounds/13/network/evidence/v1/manifest.json",
+      "sha256": "3219ee6249eb5d142f8909eb5e156982cdcbd82f323e6060ef5e0449d6ba2bfd",
+      "description": "Capture provenance and pane cleanup",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/13/network/generation.json",
+      "sha256": "4c9f6442dfbb36b7f3de41c754921301ffea92f2c1e6658a436d80399adc752b",
+      "description": "Generator record including triage",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/13/network/attempts.json",
+      "sha256": "1160b5ab5e3cc5ac0abcdc28f0122e9509dcfd10278c19573bec4951601fe636",
+      "description": "Candidate attempts and budget disclosure",
+      "capture": null
+    },
+    {
+      "id": "records",
+      "path": "docs/visualize-eval/rounds/13/network/attempts-log.jsonl",
+      "sha256": "faf59275dee2197bd06486d3ec030a6f320c71b9fe2301a1b4ebd55ac473ad9e",
+      "description": "Recorded checks and probes",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All six source nodes and seven directed relations, speed labels, order and distinct Redis relations are visible.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "spec"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Seven distinct traceable directed routes; no crossings, branches or unrelated-node near misses; check and capture agree.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "check"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Pinned final spec fits 77×47 at natural 100% with complete graph; live pane 68×44; source fan order is retained.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "manifest",
+        "check"
+      ]
+    },
+    "navigation_clarity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "One connected concept in a single graph fitting branch A; diagram title and description are exempt.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "spec"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Fabric is blue, application tiers purple, order retained, no group enclosures; one view only.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "evidence_ids": [
+        "ansi",
+        "spec"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "ANSI proves all six continuous borders, including all six bold selected borders; no overlay.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "evidence_ids": [
+        "ansi",
+        "selected"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Frames and audit do not establish full traversal of the first two animated routes; fourth distinct candidate exceeds the three-candidate cap despite clear disclosure. Triage summary also miscounts annex answers, although individual attributions are honest.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "audit",
+        "validator",
+        "attempts",
+        "generation",
+        "records",
+        "blind"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "First two dots repeatedly cycle between two cells without traversing the drawn arrows; frame-audit PASS contradicts actual frames. Four destination-bound colors are correct and fan dots advance, but visible direction on those two routes is not carried through.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "audit",
+        "check",
+        "ansi",
+        "blind"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Judged and stated family service-meshes. Source-backed evidence: core switch fans to web and Redis and Redis receives distinct core and web relations; 7 edges / 6 nodes, two double-input targets, sparse identifiers. The source-ordered fan web then Redis and two distinct co-viewed Redis relations are verified; chain secondary spine and recorded static-application deviation are visible.",
+      "judged_family": "service-meshes",
+      "generator_family": "service-meshes",
+      "evidence_line": "The core switch is a two-edge fan (core->web 10 GbE, core->cache 25 GbE) with a second fan of application relations below it, and the same targets carry two different relations (core->cache 25 GbE vs web->cache session; fw->core and core->web are both 10 GbE) — the family's parallel/anti-parallel pressure.",
+      "recipe_facts": [
+        "Source fan order web then Redis retained",
+        "Distinct core→Redis and web→Redis edges co-viewed",
+        "Chain spine has individual short ranks"
+      ],
+      "blind_observation_sha256": "d51c9404b2ed023e920ba73c224159fa6a6f231293c468ab72e3726ec3e05633"
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e0",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "expected": "WAN → Firewall: 1 GbE",
+      "observed": "WAN → Firewall: 1 GbE; separate visible route from source to arrowhead, no crossing or junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            38,
+            8,
+            8,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "expected": "Firewall → Core switch: 10 GbE",
+      "observed": "Firewall → Core switch: 10 GbE; separate visible route from source to arrowhead, no crossing or junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            38,
+            16,
+            9,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "expected": "Core switch → Web tier: 10 GbE",
+      "observed": "Core switch → Web tier: 10 GbE; separate visible route from source to arrowhead, no crossing or junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            30,
+            24,
+            9,
+            9
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "expected": "Core switch → Redis: 25 GbE",
+      "observed": "Core switch → Redis: 25 GbE; separate visible route from source to arrowhead, no crossing or junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            40,
+            24,
+            9,
+            9
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "expected": "Web tier → Redis: session",
+      "observed": "Web tier → Redis: session; separate visible route from source to arrowhead, no crossing or junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            37,
+            32,
+            8,
+            3
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "expected": "Web tier → DB tier: queries",
+      "observed": "Web tier → DB tier: queries; separate visible route from source to arrowhead, no crossing or junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            33,
+            37,
+            10,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "expected": "Redis → DB tier: fill",
+      "observed": "Redis → DB tier: fill; separate visible route from source to arrowhead, no crossing or junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            40,
+            37,
+            11,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "animation",
+      "edge_ids": [
+        "e0",
+        "e1"
+      ],
+      "severity": "medium",
+      "description": "Frames 0–29: e0 alternates (39,8)/(39,9), e1 (38,16)/(38,17), looping without reaching the rest of either route. Audit declares four steady 14/11-cell routes; visual capture contradicts its traversal conclusion.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/rounds/13/briefs/network.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            38,
+            8,
+            2,
+            4
+          ]
+        },
+        {
+          "evidence_id": "pinned",
+          "region": [
+            38,
+            16,
+            2,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "workflow_evidence",
+      "edge_ids": [
+        "e0",
+        "e1"
+      ],
+      "severity": "high",
+      "description": "The timestamped full-traversal proof for both short routes is absent despite the frame-audit and validator passing. Animation is required and the capture is not proof of full-arrow motion.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            38,
+            8,
+            2,
+            4
+          ]
+        },
+        {
+          "evidence_id": "pinned",
+          "region": [
+            38,
+            16,
+            2,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "Four distinct candidates were checked against a three-candidate cap. The attempt record openly discloses a1 as an abandoned orientation probe and does not erase the breach; validator passes budget despite that disclosure.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/13/briefs/network.md"
+      ],
+      "locations": []
+    },
+    {
+      "id": "F4",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "low",
+      "description": "The convergence summary says five annex answers, but four individual answers cite the annex; the other three cite two own judgments and the brief. The actual answer attributions are honest and no fabricated user dialogue is found.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/13/briefs/network.md"
+      ],
+      "locations": []
+    }
+  ],
+  "blockers": [],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pZY"
+    ],
+    "closed_pane_ids": [
+      "w7E:pZY"
+    ],
+    "status": "done",
+    "reason": "Evidence manifest reports confirmed_closed."
+  },
+  "overall": "fail"
+}

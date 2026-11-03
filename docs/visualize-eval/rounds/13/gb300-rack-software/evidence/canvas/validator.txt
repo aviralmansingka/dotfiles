@@ -1,0 +1,43 @@
+PASS manifest_readable
+PASS binary_path_absolute
+PASS binary_hash_recorded
+PASS artifact_hashes
+PASS check_output_present
+PASS check_exit_zero
+FAIL check_warnings_absent — warning: two edges share 2 cell(s), including ports; increase routing space; warning: 19 route cell(s) hug a node their relation does not serve; move the affected relations or let them route around
+PASS labels_parsed
+PASS labels_complete
+PASS labels_off_routes
+PASS labels_not_skipped
+PASS dots_parsed
+PASS dots_no_violations
+PASS origins_reported
+PASS origins_complete
+PASS dots_sync_reported
+PASS arrivals_reported
+PASS arrivals_complete
+PASS labels_ownership_reported
+PASS labels_ownership_clear
+PASS crossings_reported
+FAIL routes_near_unrelated_nodes — 19 route(s) pass near a node that is neither their source nor their destination; the pass reads as a connection the source never draws
+PASS canvas_diagrams_reported
+PASS canvas_diagrams_parsed
+PASS canvas_diagrams_described
+PASS canvas_extents_recorded
+PASS canvas_extents_consistent
+PASS viewport_proven
+PASS viewport_proven_measurable
+PASS viewport_matches_target
+note layout_fit_canvas_form — 2 diagram(s) on a 64x95 canvas, drawn whole at 100% and navigated by pan; the owner's navigable-canvas form
+PASS cleanup_confirmed
+PASS select_all_frame
+PASS select_all_artifact
+PASS frames_artifact
+PASS frames_timestamped
+PASS attempts_readable
+PASS attempts_view_budget
+PASS attempts_spec_budget
+PASS attempts_records_complete
+PASS probe_inputs_present
+
+2 check(s) failed: check_warnings_absent, routes_near_unrelated_nodes
