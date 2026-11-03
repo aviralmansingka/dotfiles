@@ -11,6 +11,17 @@ user-invocable: true
 the configured push target. You drive it through the `no-mistakes axi` command family, which prints
 machine-readable [TOON](https://toonformat.dev) to stdout and progress to stderr.
 
+## Visible pane
+
+Run every no-mistakes command through the `no_mistakes_axi` tool, not the bash
+tool. The command runs in a Herdr pane beside the agent pane, so the captain
+watches the pipeline live, and the tool returns the same TOON result. The pane
+is labeled `no-mistakes: <phase>`. `/no-mistakes` focuses that pane, and
+`/no-mistakes close` (or `stop`) cancels the run and closes it.
+
+Every command below is shown in CLI form for reference. Submit it through
+`no_mistakes_axi` with the arguments after `axi`.
+
 
 ## Active validation-step boundary
 
@@ -141,14 +152,15 @@ that a reviewer reading only the diff would not know.
 Run the pipeline and decide on its findings as they come up:
 
 1. Start the run. It blocks until the first decision point or the end:
-   ```sh
-   no-mistakes axi run --intent "<what the user set out to accomplish>"
+   ```text
+   no_mistakes_axi args: run --intent "<what the user set out to accomplish>"
    ```
-   `axi run` and every `axi respond` block synchronously - the review, test,
-   and CI steps can each take **several minutes**, so a single call may not
-   return for a while. That is normal; allow a long timeout and do not cancel
-   or re-issue the command because it seems slow. To check progress without
-   disturbing the run, use `no-mistakes axi status` from a separate call.
+   The command runs in the visible pane, and its TOON result comes back as the
+   tool result. `axi run` and every `axi respond` block until the next decision
+   point - the review, test, and CI steps can each take **several minutes**, so
+   a single call may not return for a while. That is normal; allow a long
+   timeout and do not re-issue the call because it seems slow. To check progress
+   without disturbing the run, call `no_mistakes_axi args: status`.
    A long-running call is working, not stalled - background it if your harness
    needs to, but the run **never advances past a gate on its own**. Read every
    return; on a `gate:`, respond; loop until an `outcome:`. Never idle-wait
@@ -181,16 +193,16 @@ Run the pipeline and decide on its findings as they come up:
    self-fixed. (Other steps such as test and lint may auto-fix within the
    pipeline and re-run before they ever gate.)
 
-   Choose one response:
-   ```sh
+   Choose one response, submitted through the tool:
+   ```text
    # accept the step as-is and continue
-   no-mistakes axi respond --action approve
+   no_mistakes_axi args: respond --action approve
 
    # have the pipeline fix specific findings, then continue
-   no-mistakes axi respond --action fix --findings <id1,id2> --instructions "<optional guidance>"
+   no_mistakes_axi args: respond --action fix --findings <id1,id2> --instructions "<optional guidance>"
 
    # skip this step
-   no-mistakes axi respond --action skip
+   no_mistakes_axi args: respond --action skip
    ```
    While a run is active, never fix findings by editing the code yourself -
    the pipeline owns both the findings and the fixes. Your job at a gate is to
@@ -302,6 +314,9 @@ fix round, accepts the resulting fix review, and approves gates with only
 run without checking back.
 
 ## Inspecting state
+
+Submit these through `no_mistakes_axi` too, with the arguments after `axi`.
+The listing below shows the CLI form for reference.
 
 ```sh
 no-mistakes axi               # home view: current branch, active runs, next steps

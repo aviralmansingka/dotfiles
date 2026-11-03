@@ -47,7 +47,7 @@ function herdrOk(args: string[]): boolean {
 		return false;
 	}
 }
-function getCurrentPane(): PaneInfo | null {
+export function getCurrentPane(): PaneInfo | null {
 	const res = herdrJson(["pane", "current"]) as
 		| { result?: { pane?: PaneInfo } } | null;
 	return res?.result?.pane ?? null;
@@ -150,7 +150,7 @@ function launchEditor(cwd: string, files: string[]): string | null {
  * to the editor pane using `herdr pane neighbor`. `herdr pane focus` requires
  * --direction, so we cannot focus by pane ID alone.
  */
-function focusEditorPane(editorPaneId: string, currentPaneId: string): boolean {
+export function focusEditorPane(editorPaneId: string, currentPaneId: string): boolean {
 	const directions = ["right", "down", "left", "up"] as const;
 	for (const dir of directions) {
 		const res = herdrJson(["pane", "neighbor", "--pane", currentPaneId, "--direction", dir]) as
@@ -196,7 +196,7 @@ function tmuxFallback(cwd: string, files: string[]): boolean {
  * Parse a string into arguments, respecting single and double quotes.
  * Handles paths with spaces like: docs/"My Notes.md" or docs/'My Notes.md'
  */
-function parseArgs(input: string): string[] {
+export function parseArgs(input: string): string[] {
 	const args: string[] = [];
 	let current = "";
 	let inSingle = false;
