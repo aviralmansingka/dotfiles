@@ -619,3 +619,54 @@ fn debug_world_to_terminal() {
         }
     }
 }
+
+#[test]
+fn container_members_keep_all_four_borders() {
+    let text = std::fs::read_to_string("/tmp/container-demo2.json").expect("demo spec");
+    let (mut graph, report) = build(&text);
+    let mut terminal = ratatui::Terminal::new(ratatui::backend::TestBackend::new(130, 20)).expect("terminal");
+    terminal
+        .draw(|frame| rataflow_view::draw_canvas(frame, &mut graph, "t", &report.sections))
+        .expect("draw");
+    let buffer = terminal.backend().buffer().clone();
+    let width = buffer.area.width as usize;
+    let grid: Vec<Vec<char>> = buffer
+        .content
+        .chunks(width)
+        .map(|r| r.iter().map(|c| c.symbol().chars().next().unwrap_or(' ')).collect())
+        .collect();
+
+    for label in ["webapi", "River", "reconcile", "Postgres"] {
+        let (row, col) = grid
+            .iter()
+            .enumerate()
+            .find_map(|(y, row)| row.iter().position(|&c| c != ' ').map(|x| (y, x)))
+            .map(|_| (0, 0))
+            .unwrap_or((0, 0));
+        let _ = (row, col);
+        // Locate the label, then the box corner directly above-left of it.
+        let mut hit = None;
+        for (y, line) in grid.iter().enumerate() {
+            let text: String = line.iter().collect();
+            if let Some(byte_col) = text.find(label) {
+                let char_col = text[..byte_col].chars().count();
+                hit = Some((y, char_col));
+                break;
+            }
+        }
+        let (y, x) = hit.unwrap_or_else(|| panic!("{label} is not drawn"));
+        let above = &grid[y - 1];
+        let has_top = above.get(x.saturating_sub(1)) == Some(&'\u{256d}')
+            || above.get(x) == Some(&'\u{256d}');
+        assert!(has_top, "{label}: no top border above it");
+        // A node is 3-4 rows tall (border, text lines, border), so the
+        // bottom corner sits one to three rows below the label.
+        let has_bottom = (1..=3).any(|d| {
+            grid.get(y + d).is_some_and(|below| {
+                below.get(x.saturating_sub(1)) == Some(&'\u{2570}')
+                    || below.get(x) == Some(&'\u{2570}')
+            })
+        });
+        assert!(has_bottom, "{label}: no bottom border within three rows");
+    }
+}
