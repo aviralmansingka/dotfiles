@@ -32,6 +32,9 @@ every capture path working.
   auto-capture stay unchanged.
 - **C5 y copy-and-focus.** The `y` key copies the command and focuses the
   output field. The hint text switches. The clipboard is stubbed.
+- **Auto-run shortcut.** Uppercase `R` is an alias for `r`: it takes the same
+  Neovim `:term dm` auto-capture path, submits the captured output and exit
+  status without a paste step, and the panel hint advertises `r/R`.
 - **Panel guards.** `Esc` cancels an auto-run. A float that cannot open shows
   an error; manual paste still submits. An empty command, a missing UI, and
   an aborted signal return the correct status. `Enter` on an empty field

@@ -21,7 +21,7 @@ pi agent extensions (job `pi-tests`, gated on `pi/**` + `agents/**`):
 | Lesson journal | md-log / lesson / focus-buffer tests | 98 / 100 / 97 % | 3.1 s |
 | Practice (problem / conclude) | practice.test.mjs | demand, attempt, commitment, reveal, cancel, session keying, transcript renders | 0.05 s |
 | Mermaid v2 | mermaid.test.mjs | stmts 94.6 %, branch 81.2 %, funcs 100 % | 0.44 s |
-| Tuicr | tuicr.test.mjs | stmts 92.5 % | 1.7 s |
+| Tuicr | tuicr.test.mjs | stmts 92.5 % | ~3 s |
 | Telegram daemon | pi/bin unittest (155 cases) | daemon 75 % (mention gating was 0 %) | 1.1 s |
 | Loader | scripts/test-extension-loader.mjs | 26 factories + 23 nested + settings entries | 0.2 s |
 | OpenGateway provider | opengateway.test.mjs | provider registration + model metadata | 0.13 s |
