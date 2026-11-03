@@ -8,6 +8,7 @@ timers use injected/fake clocks, and no sleep exceeds 100 ms.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import importlib.util
 import io
@@ -23,6 +24,7 @@ import unittest
 import urllib.error
 import urllib.request
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 # Load the daemon module (hyphen in filename requires importlib)
@@ -2442,6 +2444,81 @@ class TestShortcutEndpoint(unittest.TestCase):
         self.assertEqual(voices, [("123456789", b"audio-bytes")])
         self.assertEqual(len(asked), 1)
 
+    def test_shortcut_relay_uploads_and_answers_in_the_intake_chat(self):
+        uploaded, texts = [], []
+
+        class Relay:
+            def chat_label(self):
+                return "me"
+
+            def send_voice_note(self, audio_path):
+                uploaded.append(Path(audio_path).read_bytes())
+                return True
+
+            def send_text(self, text):
+                texts.append(text)
+                return True
+
+        pi = MagicMock()
+        with patch.object(daemon, "answer_voice_note", return_value="agent reply"), \
+             patch.object(daemon, "transcribe_with_command") as transcribe, \
+             patch.object(daemon, "send_telegram") as send, patch.object(daemon, "log"):
+            daemon.handle_shortcut_audio(pi, "note.m4a", b"audio-bytes", Relay())
+        self.assertEqual(uploaded, [b"audio-bytes"])
+        self.assertEqual(texts, ["agent reply"])
+        transcribe.assert_not_called()
+        send.assert_not_called()
+        pi.ask.assert_not_called()
+
+    def test_shortcut_relay_leaves_the_answer_to_the_bot_path(self):
+        uploaded = []
+
+        class BotRelay:
+            def chat_label(self):
+                return "@virus_bot"
+
+            def send_voice_note(self, audio_path):
+                uploaded.append(Path(audio_path).read_bytes())
+                return True
+
+            def send_text(self, text):
+                raise AssertionError("the bot path answers, not the relay")
+
+            def answers_inline(self):
+                return False
+
+        pi = MagicMock()
+        with patch.object(daemon, "answer_voice_note") as answer, patch.object(daemon, "log"):
+            daemon.handle_shortcut_audio(pi, "note.m4a", b"audio-bytes", BotRelay())
+        self.assertEqual(uploaded, [b"audio-bytes"])
+        answer.assert_not_called()
+        pi.ask.assert_not_called()
+
+    def test_shortcut_relay_failure_falls_back_to_the_direct_answer(self):
+        asked, sent = [], []
+
+        class BrokenRelay:
+            def chat_label(self):
+                return "me"
+
+            def send_voice_note(self, audio_path):
+                raise RuntimeError("upload failed")
+
+        class FakePi:
+            def ask(self, message, chat_id=None, reply_to=None, images=None):
+                asked.append(message)
+                return "agent reply"
+
+        with patch.object(daemon, "transcribe_with_command", return_value="words"), \
+             patch.object(daemon, "configured_voice_provider", return_value="command"), \
+             patch.object(daemon, "send_telegram",
+                          side_effect=lambda cid, text, reply_to_message_id=None: sent.append(text)), \
+             patch.object(daemon, "ChatActionLoop"), patch.object(daemon, "log"):
+            daemon.handle_shortcut_audio(FakePi(), "note.m4a", b"audio-bytes", BrokenRelay())
+        self.assertEqual(len(asked), 1)
+        self.assertIn("words", asked[0])
+        self.assertEqual(sent, ["agent reply"])
+
     def test_http_rejects_bad_token_and_missing_file(self):
         pi = MagicMock()
         with patch.object(daemon, "_run_shortcut_note") as run_note:
@@ -2490,6 +2567,410 @@ class TestShortcutEndpoint(unittest.TestCase):
             finally:
                 server.shutdown()
                 server.server_close()
+
+
+# ---------------------------------------------------------------------------
+# Telethon user-session voice-note intake (offline, fake client)
+# ---------------------------------------------------------------------------
+
+
+class _FakeTelethonClient:
+    """Stands in for telethon.TelegramClient. Records what the listener does."""
+
+    def __init__(self, listener=None, authorized=True, connect_error=None):
+        self.listener = listener
+        self.authorized = authorized
+        self.connect_error = connect_error
+        self.connected = False
+        self.disconnected = False
+        self.handlers = []
+        self.sent = []
+        self.files = []
+        self.attempts = 0
+
+    async def connect(self):
+        self.attempts += 1
+        if self.connect_error is not None:
+            raise self.connect_error
+        self.connected = True
+
+    async def is_user_authorized(self):
+        return self.authorized
+
+    async def get_me(self):
+        return SimpleNamespace(username="owner", id=42)
+
+    def add_event_handler(self, handler, event_filter):
+        self.handlers.append((handler, event_filter))
+
+    async def run_until_disconnected(self):
+        if self.listener is not None:
+            self.listener._stopping.set()
+
+    async def send_message(self, chat_id, text, **kwargs):
+        self.sent.append((chat_id, text, kwargs))
+
+    async def send_file(self, chat_id, file, **kwargs):
+        self.files.append((chat_id, Path(file).read_bytes(), kwargs))
+        if kwargs.get("voice_note") and getattr(self, "reject_voice", False):
+            raise RuntimeError("voice notes must be ogg")
+
+    async def disconnect(self):
+        self.disconnected = True
+
+
+class _FakeEvent:
+    def __init__(self, data=b"voice-bytes", chat_id=42, media="voice", mime_type="audio/ogg"):
+        self.chat_id = chat_id
+        self.sender_id = 42
+        self._data = data
+        self.downloads = 0
+        if media is not None:
+            setattr(self, media, SimpleNamespace(mime_type=mime_type, file_size=len(data)))
+
+    async def download_media(self, file=None):
+        self.downloads += 1
+        return self._data
+
+
+def _fake_telethon_module(client):
+    return SimpleNamespace(
+        TelegramClient=lambda *args, **kwargs: client,
+        events=SimpleNamespace(NewMessage=lambda **kwargs: ("new-message", kwargs)),
+    )
+
+
+class TestTelethonSettings(unittest.TestCase):
+    """The listener is opt-in, and a half-configured pair is loud."""
+
+    def setUp(self):
+        self._saved = (daemon.TELETHON_API_ID, daemon.TELETHON_API_HASH,
+                       daemon.TELETHON_SESSION, daemon.TELETHON_CHAT)
+
+    def tearDown(self):
+        (daemon.TELETHON_API_ID, daemon.TELETHON_API_HASH,
+         daemon.TELETHON_SESSION, daemon.TELETHON_CHAT) = self._saved
+
+    def test_listener_is_off_without_credentials(self):
+        daemon.TELETHON_API_ID = ""
+        daemon.TELETHON_API_HASH = ""
+        self.assertIsNone(daemon.telethon_settings())
+
+    def test_half_configuration_is_an_operator_error(self):
+        daemon.TELETHON_API_ID = "12345"
+        daemon.TELETHON_API_HASH = ""
+        with self.assertRaises(RuntimeError) as ctx:
+            daemon.telethon_settings()
+        self.assertIn("or neither", str(ctx.exception))
+        daemon.TELETHON_API_ID = ""
+        daemon.TELETHON_API_HASH = "hash"
+        with self.assertRaises(RuntimeError):
+            daemon.telethon_settings()
+
+    def test_non_numeric_api_id_is_refused(self):
+        daemon.TELETHON_API_ID = "abc"
+        daemon.TELETHON_API_HASH = "hash"
+        with self.assertRaises(RuntimeError) as ctx:
+            daemon.telethon_settings()
+        self.assertIn("numeric api_id", str(ctx.exception))
+
+    def test_settings_default_to_saved_messages(self):
+        daemon.TELETHON_API_ID = "12345"
+        daemon.TELETHON_API_HASH = "hash"
+        daemon.TELETHON_SESSION = "~/x/pi-telethon"
+        daemon.TELETHON_CHAT = ""
+        settings = daemon.telethon_settings()
+        self.assertEqual(settings["api_id"], 12345)
+        self.assertEqual(settings["session"], str(Path("~/x/pi-telethon").expanduser()))
+        self.assertEqual(settings["chat"], "me")
+
+    def test_missing_telethon_names_the_install_command(self):
+        with patch.dict(sys.modules, {"telethon": None}):
+            with self.assertRaises(RuntimeError) as ctx:
+                daemon.import_telethon()
+        self.assertIn("uv pip install telethon", str(ctx.exception))
+
+
+class TestTelethonListener(unittest.TestCase):
+    """The user-session listener against a fake Telethon client."""
+
+    def _listener(self, client, settings=None):
+        listener = daemon.TelethonNoteListener(
+            MagicMock(),
+            settings if settings is not None else {
+                "api_id": 12345, "api_hash": "hash", "session": "/tmp/x", "chat": "me",
+            },
+        )
+        client.listener = listener
+        listener.client = client  # direct handler tests skip _serve's connect
+        for patcher in (
+            patch.object(daemon, "import_telethon",
+                         return_value=_fake_telethon_module(client)),
+            patch.object(daemon, "build_telethon_client", return_value=client),
+        ):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        return listener
+
+    def test_serve_registers_one_saved_messages_handler(self):
+        client = _FakeTelethonClient()
+        listener = self._listener(client)
+        listener.run()
+        self.assertTrue(client.connected)
+        self.assertEqual(len(client.handlers), 1)
+        self.assertEqual(client.handlers[0][1], ("new-message", {"chats": "me"}))
+
+    def test_unauthorized_session_does_not_retry(self):
+        client = _FakeTelethonClient(authorized=False)
+        listener = self._listener(client)
+        with patch.object(daemon, "log") as log:
+            listener.run()
+        self.assertTrue(client.disconnected)
+        self.assertEqual(client.handlers, [])
+        self.assertEqual(client.attempts, 1)
+        self.assertTrue(any("--telethon-login" in str(c.args) for c in log.call_args_list))
+
+    def test_start_is_a_no_op_when_settings_are_absent(self):
+        listener = daemon.TelethonNoteListener(MagicMock(), settings=None)
+        self.assertIsNone(listener.start())
+
+    def test_start_reports_a_half_configured_pair(self):
+        with patch.object(daemon, "TELETHON_API_ID", "12345"), \
+             patch.object(daemon, "TELETHON_API_HASH", ""), \
+             patch.object(daemon, "log") as log:
+            self.assertIsNone(daemon.start_telethon_listener(MagicMock()))
+        self.assertTrue(any("disabled" in str(c.args) for c in log.call_args_list))
+
+    def test_note_is_answered_in_the_same_chat_and_temp_file_is_removed(self):
+        client = _FakeTelethonClient()
+        listener = self._listener(client)
+        seen = {}
+
+        def fake_answer(pi, audio_path, mime_type, source_note, chat_label, sender, timestamp):
+            seen["exists"] = audio_path.exists()
+            seen["bytes"] = audio_path.read_bytes()
+            seen["mime"] = mime_type
+            seen["source"] = source_note
+            seen["chat"] = chat_label
+            seen["sender"] = sender
+            seen["path"] = audio_path
+            return "agent reply"
+
+        event = _FakeEvent()
+        with patch.object(daemon, "answer_voice_note", side_effect=fake_answer), \
+             patch.object(daemon, "log") as log:
+            asyncio.run(listener._on_new_message(event))
+        self.assertTrue(seen["exists"])
+        self.assertEqual(seen["bytes"], b"voice-bytes")
+        self.assertEqual(seen["mime"], "audio/ogg")
+        self.assertIn("Saved Messages", seen["source"])
+        self.assertEqual((seen["chat"], seen["sender"]), ("42", "42"))
+        self.assertFalse(seen["path"].exists())
+        self.assertEqual(client.sent[0][0], 42)
+        self.assertIn("agent reply", client.sent[0][1])
+        self.assertEqual(client.sent[0][2], {"parse_mode": "html", "link_preview": False})
+        self.assertTrue(
+            any("Telethon voice note answered" in str(c.args) for c in log.call_args_list)
+        )
+
+    def test_text_note_is_ignored(self):
+        client = _FakeTelethonClient()
+        listener = self._listener(client)
+        event = _FakeEvent(media=None)
+        with patch.object(daemon, "answer_voice_note") as answer:
+            asyncio.run(listener._on_new_message(event))
+        self.assertEqual(event.downloads, 0)
+        self.assertFalse(answer.called)
+        self.assertEqual(client.sent, [])
+
+    def test_note_failure_answers_in_the_chat(self):
+        client = _FakeTelethonClient()
+        listener = self._listener(client)
+        with patch.object(daemon, "answer_voice_note", side_effect=RuntimeError("no provider")), \
+             patch.object(daemon, "log"):
+            asyncio.run(listener._on_new_message(_FakeEvent()))
+        self.assertEqual(len(client.sent), 1)
+        self.assertIn("Pi voice-note error: no provider", client.sent[0][1])
+
+    def test_long_reply_is_chunked(self):
+        client = _FakeTelethonClient()
+        listener = self._listener(client)
+        reply = "\n".join(f"line {n}" for n in range(1, 6))
+        with patch.object(daemon, "answer_voice_note", return_value=reply), \
+             patch.object(daemon, "MAX_REPLY_CHARS", 10):
+            asyncio.run(listener._on_new_message(_FakeEvent()))
+        self.assertGreater(len(client.sent), 1)
+        joined = "".join(text for _, text, _ in client.sent)
+        self.assertEqual(joined.count("line"), reply.count("line"))
+
+    def test_connection_failure_retries_until_stopped(self):
+        client = _FakeTelethonClient(connect_error=ConnectionError("network down"))
+        listener = self._listener(client)
+        with patch.object(daemon, "RETRY_SECONDS", 0.01), patch.object(daemon, "log"):
+            thread = threading.Thread(target=listener.run, daemon=True)
+            thread.start()
+            deadline = time.time() + 2
+            while time.time() < deadline and client.attempts < 2:
+                time.sleep(0.005)
+            listener.stop()
+            thread.join(timeout=2)
+        self.assertFalse(thread.is_alive())
+        self.assertGreaterEqual(client.attempts, 2)
+        self.assertEqual(listener.error, "network down")
+
+    def test_session_file_is_owner_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            settings = {"session": str(Path(tmp) / "pi-telethon")}
+            session_file = Path(f"{settings['session']}.session")
+            session_file.write_bytes(b"auth-key")
+            session_file.chmod(0o644)
+            daemon.protect_session_file(settings)
+            self.assertEqual(session_file.stat().st_mode & 0o777, 0o600)
+            # A missing session file is not an error (first connect).
+            daemon.protect_session_file({"session": str(Path(tmp) / "absent")})
+
+    def test_voice_note_path_keeps_ogg(self):
+        note = Path("/tmp/note.ogg")
+        with patch.object(daemon.shutil, "which") as which:
+            self.assertEqual(daemon.voice_note_path(note), note)
+        which.assert_not_called()
+
+    def test_voice_note_path_transcodes_when_ffmpeg_exists(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            note = Path(tmp) / "note.m4a"
+            note.write_bytes(b"aac")
+            expected = Path(tmp) / "note.voice.ogg"
+
+            class _Result:
+                returncode = 0
+
+            def fake_run(args, **kwargs):
+                Path(args[-1]).write_bytes(b"opus")
+                return _Result()
+
+            with patch.object(daemon.shutil, "which", return_value="/usr/bin/ffmpeg"), \
+                 patch.object(daemon.subprocess, "run", side_effect=fake_run):
+                out = daemon.voice_note_path(note)
+            self.assertEqual(out, expected)
+            self.assertTrue(expected.exists())
+
+    def test_voice_note_path_without_ffmpeg_or_on_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            note = Path(tmp) / "note.m4a"
+            note.write_bytes(b"aac")
+            with patch.object(daemon.shutil, "which", return_value=None):
+                self.assertIsNone(daemon.voice_note_path(note))
+
+            class _Fail:
+                returncode = 1
+
+            with patch.object(daemon.shutil, "which", return_value="/usr/bin/ffmpeg"), \
+                 patch.object(daemon.subprocess, "run", return_value=_Fail()), \
+                 patch.object(daemon, "log"):
+                self.assertIsNone(daemon.voice_note_path(note))
+            self.assertEqual(sorted(p.name for p in Path(tmp).iterdir()), ["note.m4a"])
+
+    def test_relay_chat_defaults_to_the_intake_chat(self):
+        with patch.object(daemon, "TELETHON_API_ID", "12345"), \
+             patch.object(daemon, "TELETHON_API_HASH", "hash"):
+            settings = daemon.telethon_settings()
+        self.assertEqual(settings["relay_chat"], settings["chat"])
+        self.assertEqual(settings["relay_answer"], "inline")
+
+    def test_relay_chat_and_answer_mode_overrides(self):
+        with patch.object(daemon, "TELETHON_API_ID", "12345"), \
+             patch.object(daemon, "TELETHON_API_HASH", "hash"), \
+             patch.object(daemon, "TELETHON_RELAY_CHAT", "@virus_bot"), \
+             patch.object(daemon, "TELETHON_RELAY_ANSWER", " bot "):
+            settings = daemon.telethon_settings()
+        self.assertEqual(settings["relay_chat"], "@virus_bot")
+        self.assertEqual(settings["relay_answer"], "bot")
+        listener = daemon.TelethonNoteListener(MagicMock(), settings)
+        self.assertEqual(listener.chat_label(), "@virus_bot")
+        self.assertFalse(listener.answers_inline())
+
+    def test_relay_answer_mode_rejects_unknown_values(self):
+        with self.assertRaises(RuntimeError):
+            daemon._relay_answer_mode("sometimes")
+
+    def test_own_uploads_are_not_answered_again(self):
+        listener = self._listener(_FakeTelethonClient())
+        event = MagicMock(out=True, voice=MagicMock(), chat_id=42)
+        with patch.object(daemon, "log"):
+            asyncio.run(listener._on_new_message(event))
+        self.assertFalse(event.download_media.called)
+
+    def test_relay_uploads_the_note_into_the_intake_chat(self):
+        client = _FakeTelethonClient()
+        listener = self._listener(client)
+        with tempfile.TemporaryDirectory() as tmp:
+            note = Path(tmp) / "note.m4a"
+            note.write_bytes(b"note-bytes")
+            with patch.object(daemon, "voice_note_path", return_value=None), \
+                 patch.object(daemon, "log"):
+                self.assertTrue(asyncio.run(listener._upload(note)))
+        self.assertEqual(client.files[0][0], "me")
+        self.assertEqual(client.files[0][1], b"note-bytes")
+        self.assertEqual(client.files[0][2], {"voice_note": True})
+
+    def test_relay_falls_back_to_audio_when_voice_is_rejected(self):
+        client = _FakeTelethonClient()
+        client.reject_voice = True
+        listener = self._listener(client)
+        with tempfile.TemporaryDirectory() as tmp:
+            note = Path(tmp) / "note.m4a"
+            note.write_bytes(b"note-bytes")
+            with patch.object(daemon, "log"):
+                self.assertTrue(asyncio.run(listener._upload(note)))
+        self.assertEqual(len(client.files), 2)
+        self.assertEqual(client.files[1][2], {})
+    def test_relay_text_is_chunked_through_the_user_session(self):
+        client = _FakeTelethonClient()
+        listener = self._listener(client)
+        with patch.object(daemon, "MAX_REPLY_CHARS", 10):
+            self.assertTrue(asyncio.run(listener._send_chunks(daemon.chunk_reply("line 1\nline 2\nline 3"))))
+        self.assertGreater(len(client.sent), 1)
+        self.assertTrue(all(chat_id == "me" for chat_id, _, _ in client.sent))
+
+    def test_relay_is_unavailable_without_a_connected_client(self):
+        listener = daemon.TelethonNoteListener(MagicMock(), settings=None)
+        self.assertFalse(listener.send_voice_note(Path("/tmp/nope.m4a")))
+
+    def test_login_requires_credentials(self):
+        with patch.object(daemon, "TELETHON_API_ID", ""), \
+             patch.object(daemon, "TELETHON_API_HASH", ""), \
+             patch.object(daemon, "log"):
+            self.assertEqual(daemon.telethon_login(), 2)
+
+    def test_login_authorizes_the_session_file(self):
+        client = _FakeTelethonClient()
+        started = []
+
+        async def fake_start():
+            started.append(True)
+
+        client.start = fake_start
+        with patch.object(daemon, "TELETHON_API_ID", "12345"), \
+             patch.object(daemon, "TELETHON_API_HASH", "hash"), \
+             patch.object(daemon, "build_telethon_client", return_value=client), \
+             patch.object(daemon, "log"):
+            self.assertEqual(daemon.telethon_login(), 0)
+        self.assertEqual(started, [True])
+        self.assertTrue(client.disconnected)
+
+    def test_main_starts_the_listener(self):
+        with patch.object(daemon, "BOT_TOKEN", "test-token"), \
+             patch.object(daemon, "ALLOWED_CHATS", {"123"}), \
+             patch.object(daemon, "fetch_bot_identity"), \
+             patch.object(daemon, "load_state", return_value={"last_update_id": 0}), \
+             patch.object(daemon, "save_state"), \
+             patch.object(daemon, "start_shortcut_listener"), \
+             patch.object(daemon, "start_telethon_listener") as start_telethon, \
+             patch.object(daemon, "PiRPC"), \
+             patch.object(daemon, "fetch_updates", side_effect=SystemExit(0)):
+            with self.assertRaises(SystemExit):
+                daemon.main()
+        start_telethon.assert_called_once()
 
 
 if __name__ == "__main__":

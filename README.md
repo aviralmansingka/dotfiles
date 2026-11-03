@@ -282,6 +282,45 @@ systemctl --user daemon-reload
 systemctl --user enable --now pi-telegram.service
 ```
 
+Voice notes from the iPhone Action Button shortcut arrive through a Telethon
+user session: a bot cannot write a voice note as you, and it cannot read Saved
+Messages. The unit runs the daemon from `~/.local/share/pi-telegram/.venv`; the
+venv carries Telethon and keeps it out of Ubuntu's PEP 668-managed system python.
+Create an app at my.telegram.org, then provision the venv on the host:
+
+```sh
+uv venv --python 3.13 ~/.local/share/pi-telegram/.venv
+uv pip install --python ~/.local/share/pi-telegram/.venv/bin/python "telethon==1.45.0"
+```
+
+Set `PI_TELEGRAM_TELETHON_API_ID`, `PI_TELEGRAM_TELETHON_API_HASH` and
+`PI_TELEGRAM_TELETHON_SESSION` in `~/.config/pi-telegram.env`, then authorise
+the session file once from a terminal:
+
+```sh
+~/.local/share/pi-telegram/.venv/bin/python ~/bin/pi-telegram-daemon.py --telethon-login
+systemctl --user restart pi-telegram.service
+```
+
+The shortcut keeps posting to the local endpoint (`/shortcut-audio`, port 8766 on
+Tailscale), and that endpoint stays the phone intake. When the Telethon session is
+connected, the daemon uploads the note into the bot DM through the user session, as a
+real voice bubble, and the bot path answers it there — the same reply you would get
+from a note you send by hand. Set:
+
+```sh
+PI_TELEGRAM_TELETHON_RELAY_CHAT=@avirus_xyz_bot   # empty: follow PI_TELEGRAM_TELETHON_CHAT
+PI_TELEGRAM_TELETHON_RELAY_ANSWER=bot            # inline: this listener answers instead
+```
+
+`PI_TELEGRAM_TELETHON_CHAT` (default `me`) is the chat the listener reads phone
+voice notes from. When the session is not authorised, or the relay cannot upload,
+the endpoint answers directly through the bot, so the Action Button keeps working.
+That fallback is deliberate: it is the only path left when the user session is
+absent. The listener stays off until the api_id/api_hash pair is set. Check one
+relay with `journalctl --user -u pi-telegram.service | grep relayed`: the line
+prints the chat, the message id and whether a voice bubble was used.
+
 Retired units, kept out of the tracked set on purpose (remove any live copies on the host):
 
 - `pr-digest.service` / `pr-digest.timer` — daily merged-PR digest via Telegram; removed together with their digest script.

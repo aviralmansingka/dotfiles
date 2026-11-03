@@ -11,6 +11,7 @@ Default behavior is intentionally conservative:
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import hmac
 import html
@@ -19,8 +20,10 @@ import mimetypes
 import os
 import queue
 import re
+import shutil
 import signal
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -98,6 +101,25 @@ SHORTCUT_SEND_TO_TELEGRAM = os.environ.get("PI_TELEGRAM_SHORTCUT_SEND_TELEGRAM_R
 # Pin the pi session file so daemon restarts continue the same conversation.
 # Without this, each restart starts a fresh session.
 PI_SESSION = os.environ.get("PI_TELEGRAM_SESSION", "").strip()
+
+# --- Telethon user-session voice-note intake ------------------------------
+# The owner's iPhone shortcut sends a voice note to Saved Messages. A bot
+# cannot read Saved Messages, so the daemon keeps one Telethon user session and
+# listens there. Telethon stays optional: the listener starts only when an
+# api_id/api_hash pair is set, and `--telethon-login` authorises the session
+# file once from a terminal.
+TELETHON_API_ID = os.environ.get("PI_TELEGRAM_TELETHON_API_ID", "").strip()
+TELETHON_API_HASH = os.environ.get("PI_TELEGRAM_TELETHON_API_HASH", "").strip()
+TELETHON_SESSION = os.environ.get(
+    "PI_TELEGRAM_TELETHON_SESSION", str(HOME / ".pi/agent/pi-telethon")
+).strip() or str(HOME / ".pi/agent/pi-telethon")
+# Chat that receives the shortcut notes. "me" is the owner's Saved Messages.
+TELETHON_CHAT = os.environ.get("PI_TELEGRAM_TELETHON_CHAT", "me").strip() or "me"
+TELETHON_RELAY_CHAT = os.environ.get("PI_TELEGRAM_TELETHON_RELAY_CHAT", "").strip()
+TELETHON_RELAY_ANSWER = (
+    os.environ.get("PI_TELEGRAM_TELETHON_RELAY_ANSWER", "inline").strip().lower() or "inline"
+)
+TELETHON_NOTE_SOURCE = "Saved Messages voice-note transcript"
 
 SYSTEM_PROMPT = """
 You are Pi, running headlessly behind the owner's Telegram bot.
@@ -912,9 +934,43 @@ def image_rpc_payload(image_path: Path, mime_type: str) -> dict[str, Any]:
     }
 
 
-def transcribe_telegram_audio(msg: IncomingMessage) -> str:
+def voice_transcript_from_file(audio_path: Path, mime_type: str) -> str:
+    """Transcribe an audio file with the configured provider."""
     provider = configured_voice_provider()
     if not provider:
+        raise RuntimeError(
+            "Voice notes need transcription configured. Set OPENAI_API_KEY/PI_TELEGRAM_OPENAI_API_KEY, "
+            "or set PI_TELEGRAM_VOICE_TRANSCRIPTION_CMD."
+        )
+    if provider == "command":
+        return transcribe_with_command(audio_path, mime_type)
+    if provider == "openai":
+        return transcribe_with_openai(audio_path, mime_type)
+    raise RuntimeError(f"Unsupported voice transcription provider: {provider}")
+
+
+def answer_voice_note(
+    pi: "PiRPC",
+    audio_path: Path,
+    mime_type: str,
+    source_note: str,
+    chat_label: str,
+    sender: str,
+    timestamp: int,
+) -> str:
+    """Transcribe one voice note and return pi's answer."""
+    transcript = voice_transcript_from_file(audio_path, mime_type)
+    if not transcript.strip():
+        raise RuntimeError("Transcription came back empty")
+    prompt = (
+        f"{source_note} from chat {chat_label} by {sender} "
+        f"at unix timestamp {timestamp}:\n\n{transcript}"
+    )
+    return pi.ask(prompt)
+
+
+def transcribe_telegram_audio(msg: IncomingMessage) -> str:
+    if not configured_voice_provider():
         raise RuntimeError(
             "Voice notes need transcription configured. Set OPENAI_API_KEY/PI_TELEGRAM_OPENAI_API_KEY, "
             "or set PI_TELEGRAM_VOICE_TRANSCRIPTION_CMD."
@@ -922,11 +978,7 @@ def transcribe_telegram_audio(msg: IncomingMessage) -> str:
     audio_path = download_telegram_audio(msg)
     try:
         mime_type = msg.audio_mime_type or mimetypes.guess_type(audio_path.name)[0] or "audio/ogg"
-        if provider == "command":
-            return transcribe_with_command(audio_path, mime_type)
-        if provider == "openai":
-            return transcribe_with_openai(audio_path, mime_type)
-        raise RuntimeError(f"Unsupported voice transcription provider: {provider}")
+        return voice_transcript_from_file(audio_path, mime_type)
     finally:
         audio_path.unlink(missing_ok=True)
 
@@ -1545,8 +1597,22 @@ def shortcut_target_chat_id() -> str:
     return private_chats[0] if len(private_chats) == 1 else ""
 
 
-def handle_shortcut_audio(pi: "PiRPC", filename: Optional[str], data: bytes) -> None:
-    """Transcribe a shortcut voice note, hand it to pi, reply in the chat."""
+def handle_shortcut_audio(
+    pi: "PiRPC",
+    filename: Optional[str],
+    data: bytes,
+    relay: Optional["TelethonNoteListener"] = None,
+) -> None:
+    """Take a shortcut voice note.
+
+    When the Telethon listener is connected, the note is uploaded into the
+    intake chat through the user session, answered there, and the reply is sent
+    back through the same session, so the chat keeps a visible, playable record.
+    The answer does not wait for the session's own update to come back: a note
+    the session sent itself is not guaranteed to be dispatched as an event.
+    Otherwise the daemon answers directly, which keeps the endpoint working while
+    the session is not authorised.
+    """
     chat_id = shortcut_target_chat_id()
     if not chat_id:
         raise RuntimeError("PI_TELEGRAM_ALLOWED_CHATS must contain exactly one numeric private chat id")
@@ -1556,12 +1622,28 @@ def handle_shortcut_audio(pi: "PiRPC", filename: Optional[str], data: bytes) -> 
     try:
         with os.fdopen(fd, "wb") as fh:
             fh.write(data)
-        provider = configured_voice_provider()
         mime_type = mimetypes.guess_type(audio_path.name)[0] or "audio/mp4"
-        if provider == "openai":
-            transcript = transcribe_with_openai(audio_path, mime_type)
-        else:
-            transcript = transcribe_with_command(audio_path, mime_type)
+        if relay is not None:
+            try:
+                if relay.send_voice_note(audio_path):
+                    log(f"Shortcut note relayed into {relay.chat_label()!r} for the Telethon path")
+                    answers_inline = getattr(relay, "answers_inline", None)
+                    if answers_inline is not None and not answers_inline():
+                        log(
+                            f"Shortcut note left for {relay.chat_label()!r} to answer "
+                            "(PI_TELEGRAM_TELETHON_RELAY_ANSWER=bot)"
+                        )
+                        return
+                    reply = answer_voice_note(
+                        pi, audio_path, mime_type, "iOS Shortcut voice-note transcript",
+                        relay.chat_label(), "owner", int(time.time()),
+                    )
+                    if relay.send_text(reply):
+                        log(f"Shortcut note answered in {relay.chat_label()!r}")
+                        return
+            except Exception as e:
+                log(f"Shortcut relay failed ({type(e).__name__}); answering directly")
+        transcript = voice_transcript_from_file(audio_path, mime_type)
         if SHORTCUT_SEND_TO_TELEGRAM:
             try:
                 send_telegram_voice(chat_id, audio_path)
@@ -1580,9 +1662,14 @@ def handle_shortcut_audio(pi: "PiRPC", filename: Optional[str], data: bytes) -> 
     send_telegram_reply(chat_id, reply)
 
 
-def _run_shortcut_note(pi: "PiRPC", filename: Optional[str], data: bytes) -> None:
+def _run_shortcut_note(
+    pi: "PiRPC",
+    filename: Optional[str],
+    data: bytes,
+    relay: Optional["TelethonNoteListener"] = None,
+) -> None:
     try:
-        handle_shortcut_audio(pi, filename, data)
+        handle_shortcut_audio(pi, filename, data, relay)
     except Exception as e:
         log(f"Shortcut audio failed: {e}")
         chat_id = shortcut_target_chat_id()
@@ -1640,28 +1727,37 @@ class ShortcutHandler(BaseHTTPRequestHandler):
             self._respond(400, {"ok": False, "error": "missing file field"})
             return
         pi = getattr(self.server, "pi", None)
+        relay = getattr(self.server, "relay", None)
         if pi is None:
             self._respond(503, {"ok": False, "error": "agent not ready"})
             return
-        threading.Thread(target=_run_shortcut_note, args=(pi, filename, data), daemon=True, name="shortcut-note").start()
+        threading.Thread(
+            target=_run_shortcut_note, args=(pi, filename, data, relay),
+            daemon=True, name="shortcut-note",
+        ).start()
         self._respond(200, {"ok": True, "bytes": len(data)})
 
 
 class ShortcutHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, address: tuple[str, int], pi: "PiRPC") -> None:
+    def __init__(self, address: tuple[str, int], pi: "PiRPC", relay: Any = None) -> None:
         self.pi = pi
+        self.relay = relay
         super().__init__(address, ShortcutHandler)
 
 
-def start_shortcut_listener(pi: "PiRPC") -> Optional[threading.Thread]:
-    """Serve the shortcut audio endpoint. Returns its thread, or None if disabled."""
+def start_shortcut_listener(pi: "PiRPC", relay: Any = None) -> Optional[threading.Thread]:
+    """Serve the shortcut audio endpoint. Returns its thread, or None if disabled.
+
+    `relay` is the Telethon listener when one is configured: the endpoint then
+    uploads each note into the intake chat instead of answering directly.
+    """
     if not (SHORTCUT_TOKEN and SHORTCUT_PORT):
         log("Shortcut endpoint disabled (PI_TELEGRAM_SHORTCUT_TOKEN/PORT not set)")
         return None
     try:
-        httpd = ShortcutHTTPServer((SHORTCUT_HOST or "0.0.0.0", SHORTCUT_PORT), pi)
+        httpd = ShortcutHTTPServer((SHORTCUT_HOST or "0.0.0.0", SHORTCUT_PORT), pi, relay)
     except OSError as e:
         log(f"Shortcut endpoint failed to bind {SHORTCUT_HOST}:{SHORTCUT_PORT}: {e}")
         return None
@@ -1669,6 +1765,359 @@ def start_shortcut_listener(pi: "PiRPC") -> Optional[threading.Thread]:
     t.start()
     log(f"Shortcut audio endpoint on http://{SHORTCUT_HOST or '0.0.0.0'}:{SHORTCUT_PORT}{SHORTCUT_PATH}")
     return t
+
+
+# ---------------------------------------------------------------------------
+# Telethon user-session voice notes: the shortcut sends to Saved Messages,
+# which only a user session can read.
+# ---------------------------------------------------------------------------
+
+
+def telethon_settings() -> Optional[dict[str, Any]]:
+    """Client settings for the user session, or None when the listener is off.
+
+    A half-configured pair is an operator error, not a silent disable.
+    """
+    if not TELETHON_API_ID and not TELETHON_API_HASH:
+        return None
+    if not (TELETHON_API_ID and TELETHON_API_HASH):
+        raise RuntimeError(
+            "Set both PI_TELEGRAM_TELETHON_API_ID and PI_TELEGRAM_TELETHON_API_HASH, or neither"
+        )
+    if not TELETHON_API_ID.isdigit():
+        raise RuntimeError(
+            "PI_TELEGRAM_TELETHON_API_ID must be the numeric api_id from my.telegram.org"
+        )
+    return {
+        "api_id": int(TELETHON_API_ID),
+        "api_hash": TELETHON_API_HASH,
+        "session": str(Path(TELETHON_SESSION).expanduser()),
+        "chat": str(TELETHON_CHAT).strip() or "me",
+        "relay_chat": str(TELETHON_RELAY_CHAT or TELETHON_CHAT).strip() or "me",
+        "relay_answer": _relay_answer_mode(TELETHON_RELAY_ANSWER),
+    }
+
+
+def _relay_answer_mode(value: str) -> str:
+    """Validate the relay answer mode: inline (this listener) or bot."""
+    mode = (value or "inline").strip().lower()
+    if mode not in {"inline", "bot"}:
+        raise RuntimeError("PI_TELEGRAM_TELETHON_RELAY_ANSWER must be 'inline' or 'bot'")
+    return mode
+
+
+def import_telethon() -> Any:
+    """Import Telethon lazily: the bot bridge never needs it installed."""
+    try:
+        import telethon
+    except ImportError as e:
+        raise RuntimeError(
+            "Telethon is not installed for this interpreter. Install it with: uv pip install telethon"
+        ) from e
+    return telethon
+
+
+def build_telethon_client(settings: dict[str, Any]) -> Any:
+    telethon = import_telethon()
+    session_path = Path(settings["session"])
+    session_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    return telethon.TelegramClient(str(session_path), settings["api_id"], settings["api_hash"])
+
+
+def protect_session_file(settings: dict[str, Any]) -> None:
+    """The session file holds the account auth key; keep it owner-only.
+
+    Telethon creates it with the default umask, and the default parent
+    (~/.pi/agent) is not private on the homelab.
+    """
+    try:
+        os.chmod(f"{settings['session']}.session", 0o600)
+    except OSError:
+        pass  # not created yet (first connect fails before the file exists)
+
+
+def _event_timestamp(event: Any) -> int:
+    when = getattr(event, "date", None)
+    try:
+        return int(when.timestamp())
+    except Exception:
+        return int(time.time())
+
+
+VOICE_SUFFIXES = {".ogg", ".oga", ".opus"}
+
+
+def voice_note_path(audio_path: Path) -> Optional[Path]:
+    """Return a path Telegram renders as a voice bubble, or None if it cannot.
+
+    A voice note must be OGG/Opus. The iPhone shortcut records m4a, which
+    Telegram stores as an audio document unless it is transcoded first.
+    """
+    if audio_path.suffix.lower() in VOICE_SUFFIXES:
+        return audio_path
+    if not shutil.which("ffmpeg"):
+        return None
+    target = audio_path.with_name(audio_path.stem + ".voice.ogg")
+    result = subprocess.run(
+        ["ffmpeg", "-nostdin", "-y", "-i", str(audio_path),
+         "-ac", "1", "-c:a", "libopus", "-b:a", "48k", "-ar", "48000", str(target)],
+        capture_output=True,
+        timeout=180,
+    )
+    if result.returncode != 0 or not target.exists() or target.stat().st_size == 0:
+        target.unlink(missing_ok=True)
+        log(f"Voice-note transcode failed ({result.returncode}); relaying the original file")
+        return None
+    return target
+
+
+class TelethonNoteListener:
+    """One user session that turns voice notes into pi prompts.
+
+    A bot cannot read Saved Messages, so the shortcut posts there and this
+    listener is the intake. The asyncio loop lives in a daemon thread, and each
+    note is answered in a worker thread so a long pi turn never stalls
+    Telethon's keepalive. Replies go back through the user session into the same
+    chat, because the bot API cannot write there either.
+    """
+
+    def __init__(self, pi: "PiRPC", settings: Optional[dict[str, Any]] = None) -> None:
+        self.pi = pi
+        self.settings = telethon_settings() if settings is None else settings
+        self.client: Any = None
+        self.loop: Optional[asyncio.AbstractEventLoop] = None
+        self.error: Optional[str] = None
+        self._stopping = threading.Event()
+
+    def start(self) -> Optional[threading.Thread]:
+        if self.settings is None:
+            log("Telethon listener disabled (PI_TELEGRAM_TELETHON_API_ID/API_HASH not set)")
+            return None
+        thread = threading.Thread(target=self.run, daemon=True, name="telethon-listener")
+        thread.start()
+        return thread
+
+    def run(self) -> None:
+        """Serve until stopped. A lost connection retries; a bad session does not."""
+        while not self._stopping.is_set():
+            try:
+                served = asyncio.run(self._serve())
+            except Exception as e:
+                self.error = str(e)
+                log(f"Telethon listener failed: {e}")
+                served = True  # network or connection failure: retry later
+            if not served:
+                return
+            if self._stopping.wait(RETRY_SECONDS):
+                return
+            log("Telethon listener reconnecting")
+
+    async def _serve(self) -> bool:
+        """Connect the user session. Returns False when the session is unusable."""
+        if self.settings is None:
+            return False
+        self.loop = asyncio.get_running_loop()
+        client = build_telethon_client(self.settings)
+        self.client = client
+        telethon = import_telethon()
+        await client.connect()
+        protect_session_file(self.settings)
+        if not await client.is_user_authorized():
+            log(
+                "Telethon session is not authorized. Run "
+                "'pi-telegram-daemon.py --telethon-login' once, then restart the daemon."
+            )
+            await client.disconnect()
+            return False
+        me = await client.get_me()
+        who = getattr(me, "username", None) or getattr(me, "id", "?")
+        log(
+            f"Telethon voice-note listener ready as {who}; chat={self.settings['chat']!r}"
+            f" relay_chat={self.chat_label()!r} relay_answer={self.settings.get('relay_answer', 'inline')!r}"
+        )
+        client.add_event_handler(
+            self._on_new_message, telethon.events.NewMessage(chats=self.settings["chat"])
+        )
+        await client.run_until_disconnected()
+        return True
+
+    async def _on_new_message(self, event: Any) -> None:
+        if getattr(event, "out", False):
+            # A note this session uploaded itself: the relay answers it, and
+            # answering again here would double every shortcut note.
+            return
+        media = (
+            getattr(event, "voice", None)
+            or getattr(event, "audio", None)
+            or getattr(event, "video_note", None)
+        )
+        if media is None:
+            # Text notes and our own replies are not voice notes.
+            return
+        log(f"Telethon voice note received chat={event.chat_id}")
+        try:
+            await self._handle_note(event, media)
+        except Exception as e:
+            log(f"Telethon voice note failed: {e}")
+            await self._send(event.chat_id, f"Pi voice-note error: {e}")
+
+    async def _handle_note(self, event: Any, media: Any) -> None:
+        mime_type = str(getattr(media, "mime_type", "") or "")
+        suffix = mimetypes.guess_extension(mime_type.split(";")[0].strip()) or ".oga"
+        fd, tmp_name = tempfile.mkstemp(prefix="pi-telethon-voice-", suffix=suffix)
+        os.close(fd)
+        audio_path = Path(tmp_name)
+        try:
+            data = await event.download_media(file=bytes)
+            if not data:
+                raise RuntimeError("Telethon returned no audio data")
+            if len(data) > MAX_AUDIO_BYTES:
+                raise RuntimeError(
+                    f"Voice note is too large ({len(data)} bytes > {MAX_AUDIO_BYTES} byte limit)"
+                )
+            audio_path.write_bytes(data)
+            chat_label = str(getattr(event, "chat_id", "") or self.settings["chat"])
+            reply = await asyncio.to_thread(
+                answer_voice_note,
+                self.pi,
+                audio_path,
+                mime_type,
+                TELETHON_NOTE_SOURCE,
+                chat_label,
+                str(getattr(event, "sender_id", "") or ""),
+                _event_timestamp(event),
+            )
+        finally:
+            audio_path.unlink(missing_ok=True)
+        for chunk in chunk_reply(reply):
+            await self._send(event.chat_id, chunk)
+        # One line per handled note: the live proof and later forensics.
+        log(f"Telethon voice note answered chat={event.chat_id} reply_chars={len(reply)}")
+
+    def chat_label(self) -> str:
+        """Chat the relay writes into: the intake chat unless overridden."""
+        if not self.settings:
+            return "me"
+        return str(self.settings.get("relay_chat") or self.settings["chat"])
+
+    def answers_inline(self) -> bool:
+        """False when the bot path answers the relayed note instead of us."""
+        return (self.settings or {}).get("relay_answer", "inline") == "inline"
+
+    def send_text(self, text: str) -> bool:
+        """Send a reply into the intake chat through the user session."""
+        client, loop = self.client, self.loop
+        if client is None or loop is None or loop.is_closed():
+            return False
+        future = asyncio.run_coroutine_threadsafe(self._send_chunks(chunk_reply(text)), loop)
+        return bool(future.result(timeout=300))
+
+    async def _send_chunks(self, chunks: list[str]) -> bool:
+        for chunk in chunks:
+            await self._send(self.chat_label(), chunk)
+        return True
+
+    def send_voice_note(self, audio_path: Path) -> bool:
+        """Upload a local voice note into the intake chat (shortcut relay).
+
+        Returns False when the listener is not connected, so the caller falls
+        back to answering the note directly. A rejected voice bubble is retried
+        once as a plain audio file; the listener handles both.
+        """
+        client, loop = self.client, self.loop
+        if client is None or loop is None or loop.is_closed():
+            return False
+        future = asyncio.run_coroutine_threadsafe(
+            self._upload(audio_path), loop
+        )
+        return bool(future.result(timeout=300))
+
+    async def _upload(self, audio_path: Path) -> bool:
+        client = self.client
+        if client is None:
+            return False
+        prepared = voice_note_path(audio_path)
+        sent_path = prepared or audio_path
+        try:
+            try:
+                message = await client.send_file(self.chat_label(), str(sent_path), voice_note=True)
+            except Exception as e:
+                # Telegram rejects a voice bubble for codecs it will not rewrap.
+                log(f"Voice-note relay rejected as voice ({type(e).__name__}); sending it as a file")
+                message = await client.send_file(self.chat_label(), str(audio_path))
+        finally:
+            if prepared is not None and prepared != audio_path:
+                prepared.unlink(missing_ok=True)
+        log(
+            f"Voice note relayed to {self.chat_label()!r} as message id={getattr(message, 'id', '?')}"
+            f" voice={'yes' if prepared else 'no'}"
+        )
+        return True
+
+    async def _send(self, chat_id: Any, text: str) -> None:
+        client = self.client
+        if client is None:
+            return
+        try:
+            await client.send_message(
+                chat_id, telegram_html(text), parse_mode="html", link_preview=False
+            )
+        except Exception as e:
+            # A timeout can mean Telegram delivered the reply. Do not send again.
+            log(f"Telethon reply failed ({type(e).__name__}); delivery may be unknown")
+
+    def stop(self) -> None:
+        self._stopping.set()
+        client, loop = self.client, self.loop
+        if client is None or loop is None or loop.is_closed():
+            return
+        try:
+            asyncio.run_coroutine_threadsafe(client.disconnect(), loop).result(timeout=5)
+        except Exception:
+            pass
+
+
+def start_telethon_listener(pi: "PiRPC") -> Optional[TelethonNoteListener]:
+    """Start the user-session listener. Returns None when it is disabled."""
+    try:
+        listener = TelethonNoteListener(pi)
+    except RuntimeError as e:
+        log(f"Telethon listener disabled: {e}")
+        return None
+    return listener if listener.start() is not None else None
+
+
+def telethon_login() -> int:
+    """Authorise the user session once: phone number, login code, 2FA password."""
+    try:
+        settings = telethon_settings()
+    except RuntimeError as e:
+        log(str(e))
+        return 2
+    if settings is None:
+        log("Set PI_TELEGRAM_TELETHON_API_ID and PI_TELEGRAM_TELETHON_API_HASH first")
+        return 2
+    try:
+        client = build_telethon_client(settings)
+    except RuntimeError as e:
+        log(str(e))
+        return 2
+
+    async def _authorize() -> Any:
+        await client.start()  # interactive prompt on stdin
+        protect_session_file(settings)
+        me = await client.get_me()
+        await client.disconnect()
+        return me
+
+    try:
+        me = asyncio.run(_authorize())
+    except Exception as e:
+        log(f"Telethon login failed ({type(e).__name__}): {e}")
+        return 1
+    who = getattr(me, "username", None) or getattr(me, "id", "?")
+    log(f"Telethon session authorized as {who}; saved at {settings['session']}")
+    return 0
 
 
 def should_handle(msg: IncomingMessage) -> Optional[str]:
@@ -1725,7 +2174,10 @@ def handle_callback_query(update: dict[str, Any]) -> None:
         log(f"Callback answer failed: {e}")
 
 
-def main() -> int:
+def main(argv: Optional[list[str]] = None) -> int:
+    args = sys.argv[1:] if argv is None else argv
+    if "--telethon-login" in args:
+        return telethon_login()
     if not BOT_TOKEN:
         log("PI_TELEGRAM_BOT_TOKEN is required")
         return 1
@@ -1741,7 +2193,8 @@ def main() -> int:
         log(f"Initialized last_update_id={state['last_update_id']}")
 
     pi = PiRPC()
-    start_shortcut_listener(pi)
+    telethon_listener = start_telethon_listener(pi)
+    start_shortcut_listener(pi, telethon_listener)
     stop = False
 
     def _stop(_signum: int, _frame: Any) -> None:
@@ -1832,6 +2285,8 @@ def main() -> int:
             log(f"Loop error: {e}")
             time.sleep(RETRY_SECONDS)
 
+    if telethon_listener is not None:
+        telethon_listener.stop()
     pi.stop()
     return 0
 

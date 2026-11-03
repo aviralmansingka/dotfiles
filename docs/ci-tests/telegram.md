@@ -43,6 +43,17 @@ timers.
   tests check early and late titles, stale events, and title priority. The
   last status mark shows before the message is deleted. Polling also receives
   callbacks from old buttons.
+- Shortcut relay. When a Telethon listener is passed to the endpoint, a
+  shortcut note is transcoded to OGG/Opus (when `ffmpeg` is present) and
+  uploaded into the relay chat as a voice bubble, and the direct answer path is
+  skipped. `voice_note_path` keeps an already-OGG note, returns None without
+  `ffmpeg` or on a failed transcode, and always removes its temp copy. A
+  rejected voice bubble is retried once as a plain file. The relay chat is
+  `PI_TELEGRAM_TELETHON_RELAY_CHAT` (empty: follow `PI_TELEGRAM_TELETHON_CHAT`).
+  `PI_TELEGRAM_TELETHON_RELAY_ANSWER=bot` skips the inline answer, because the
+  bot path answers the note in the chat that received it; `inline` keeps the
+  relay answering. A failed upload falls back to the direct answer, so the
+  Action Button still works while the session is unauthorised.
 - Reply rendering. The reply filter removes suggested follow-up sections.
   It keeps later sections, code fences, and needed questions. Rich Messages
   use Markdown and keep the reply target. The daemon escapes raw HTML and
@@ -58,6 +69,20 @@ timers.
   and `none`. A voice note without a provider fails with a clear error. The
   command provider substitutes the file and mime placeholders. A shortcut
   reply needs exactly one numeric private chat in the allowlist.
+- Telethon listener. Settings are off without credentials, and a half pair or a
+  non-numeric api_id is an operator error; an unknown relay answer mode is too.
+  The listener registers exactly one `NewMessage` handler restricted to the
+  configured chat (default `me`, Saved Messages). Messages the session sent
+  itself (`event.out`) are ignored, so the relay never answers its own upload. An
+  unauthorised session logs the `--telethon-login` hint and does
+  not retry; a failed connect retries until the listener is stopped. A voice
+  note is downloaded to a temp file, answered through `answer_voice_note`, and
+  the temp file is removed. Text notes (our own replies) are ignored. Failures
+  answer in the same chat. Long replies are chunked, and each chunk is sent as
+  Telegram HTML. The ready line prints `chat`, `relay_chat` and `relay_answer`.
+  The login helper authorises the session file and reports
+  missing credentials without touching the network. The main loop starts the
+  listener next to the shortcut endpoint.
 - Pi 1.5 RPC. A handled extension command does not wait for `agent_settled`
   or return an earlier assistant reply.
 
@@ -79,9 +104,10 @@ The suite runs about 200 tests in 3 s on a laptop. One timeout test waits
 
 ## Coverage result
 
-Coverage of `pi-telegram-daemon.py` is 75 percent. It was 57 percent before
+Coverage of `pi-telegram-daemon.py` is 78 percent. It was 57 percent before
 this work. The new tests cover the mention gate, the image path, the main
-loop, `scan_session`, the status life cycle, and reply rendering.
+loop, `scan_session`, the status life cycle, reply rendering, the shortcut
+relay, and the Telethon listener.
 
 ## Known gaps
 
@@ -90,3 +116,8 @@ loop, `scan_session`, the status life cycle, and reply rendering.
 - The OpenAI voice upload path stays untested. It needs a live API key.
 - The main loop branches for `reset`, `chats`, and `switch` commands have
   no direct test.
+- The Telethon listener runs against a fake client. A real user-session login
+  and a live shortcut note are provisioning checks, not unit tests. The live
+  check is one Action Button press followed by
+  `journalctl --user -u pi-telegram.service | grep "Voice note relayed"`, which
+  prints the chat, the message id, and `voice=yes`.
