@@ -1,0 +1,42 @@
+{
+  "id": "mtu-blackhole",
+  "topic": "A path where SSH connects but a bulk transfer stalls: find the MTU black hole without guessing.",
+  "goal": "Explain why a small-packet connection works while large packets vanish, and name the check that proves it.",
+  "target": "G1",
+  "grill": [
+    "I run scp to a VM in Chennai over a VPN and it hangs after a few seconds.",
+    "The SSH prompt works, so I thought the network was fine.",
+    "I want the cause, not a guess."
+  ],
+  "facts": [
+    {
+      "id": "K1",
+      "claim": "The TCP handshake completes before bulk data flows.",
+      "keywords": ["handshake", "complete", "before"],
+      "known": true
+    },
+    {
+      "id": "K2",
+      "claim": "scp sends bulk data in large segments.",
+      "keywords": ["scp", "bulk", "large", "segment"],
+      "known": true
+    },
+    {
+      "id": "K3",
+      "claim": "A VPN can reduce the usable MTU on a path.",
+      "keywords": ["vpn", "reduce", "mtu"],
+      "known": true
+    },
+    {
+      "id": "G1",
+      "claim": "SSH uses small packets. The transfer uses large packets. A black hole drops only the large ones, so the connection works and the transfer stalls.",
+      "wrong": "SSH connects, so the path is healthy and the stall must be the server or its disk.",
+      "keywords": ["ssh", "stall", "large", "small", "blackhole", "mtu", "connect"],
+      "teachGroups": [
+        ["large packet", "large segment", "larger packet", "mtu", "black hole", "blackhole"],
+        ["small packet", "handshake", "fragment", "df bit", "ssh"]
+      ]
+    }
+  ],
+  "commandOutput": "ping -s 1400: 100% packet loss\nping -s 1200: 0% packet loss\ntcpdump: ssh 22 bytes in, no segments > 1200 seen"
+}

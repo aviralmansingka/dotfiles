@@ -99,12 +99,10 @@ const OptionSchema = Type.Object({
 });
 
 const QuizParams = Type.Object({
-	title: Type.Optional(
-		Type.String({
-			description:
-				"Short title for this quiz. Keep it under 40 characters. Name the node under test and the teaching goal. Example: 'Node E — ROV drop scope'. The panel shows it as the heading. The journal records it as the entry heading. Headings carry no timestamp.",
-		}),
-	),
+	title: Type.String({
+		description:
+			"REQUIRED. Short title for this quiz. Keep it under 40 characters. Name the node under test and the teaching goal. Example: 'Node E — ROV drop scope'. The panel shows it as the heading. The journal records it as the entry heading. Headings carry no timestamp.",
+	}),
 	question: Type.String({
 		description: "The single quiz question. Ask exactly one question per tool call.",
 	}),
@@ -133,12 +131,10 @@ const QuizParams = Type.Object({
 				"Defaults to true. The tool reorders the options at random before display, so the correct answer does not stay in one position. Set to false only when the order carries meaning. Examples: ordered numeric values, or 'All/None of the above' as the last option.",
 		}),
 	),
-	contextFiles: Type.Optional(
-		Type.Array(Type.String(), {
-			description:
-				"Optional file paths that give context for this question. When present, the panel shows an `o` shortcut. Pressing `o` opens these files in vim. Relative paths resolve from the session cwd.",
-		}),
-	),
+	contextFiles: Type.Array(Type.String(), {
+		description:
+			"REQUIRED. File paths that give context for this question. When present, the panel shows an `o` shortcut. Pressing `o` opens these files in vim. Relative paths resolve from the session cwd.",
+	}),
 	stage: Type.Optional(
 		Type.Union([Type.Literal("probe"), Type.Literal("teach")], {
 			description:

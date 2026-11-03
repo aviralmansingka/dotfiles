@@ -1,0 +1,40 @@
+{
+  "id": "lesson-channel",
+  "topic": "What net present value answers for a deal.",
+  "goal": "Explain NPV as a hurdle-rate test, not a cash total.",
+  "target": "G1",
+  "grill": [
+    "I keep forgetting what NPV is for.",
+    "I discount cash flows in a deal model.",
+    "I think NPV is just the sum of the cash flows."
+  ],
+  "interjections": [
+    {"afterCall": 3, "text": "it's really irritating me how you teach me something in an output and it disappears before I can read it"}
+  ],
+  "channelCheck": true,
+  "channelLimit": 700,
+  "facts": [
+    {
+      "id": "K1",
+      "claim": "A discount rate is the return the investor could get elsewhere.",
+      "keywords": ["discount", "rate", "return", "elsewhere"],
+      "known": true
+    },
+    {
+      "id": "K2",
+      "claim": "NPV discounts future cash flows to today.",
+      "keywords": ["npv", "discount", "future", "today"],
+      "known": true
+    },
+    {
+      "id": "G1",
+      "claim": "NPV asks whether the deal beats the hurdle rate, so a positive NPV adds value.",
+      "wrong": "NPV is just the total of all cash flows.",
+      "keywords": ["npv", "present", "value", "discount", "hurdle", "positive"],
+      "teachGroups": [
+        ["discount", "hurdle", "today"],
+        ["positive", "adds value", "beats", "sign", "above zero", "exceeds"]
+      ]
+    }
+  ]
+}

@@ -96,12 +96,10 @@ interface ExplainDetails {
 }
 
 const ExplainParams = Type.Object({
-	title: Type.Optional(
-		Type.String({
-			description:
-				"Short title for this question. Keep it under 40 characters. Name the node under test and the teaching goal. Example: 'Node E — ROV drop scope'. The panel shows it as the heading. The journal records it as the entry heading. Headings carry no timestamp.",
-		}),
-	),
+	title: Type.String({
+		description:
+			"REQUIRED. Short title for this question. Keep it under 40 characters. Name the node under test and the teaching goal. Example: 'Node E — ROV drop scope'. The panel shows it as the heading. The journal records it as the entry heading. Headings carry no timestamp.",
+	}),
 	question: Type.String({
 		description:
 			"The single question. The user must answer it in their own words. Ask exactly one question per tool call. Force precise terminology. Ask 'name the kernel construct and explain why'. Do not ask 'what do you think about X'.",

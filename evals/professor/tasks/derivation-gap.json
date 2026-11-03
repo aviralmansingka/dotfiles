@@ -1,0 +1,44 @@
+{
+  "id": "derivation-gap",
+  "topic": "The 16 KiB stride in a naive transpose: where that number comes from.",
+  "goal": "Derive the stride from the matrix size and the element size.",
+  "target": "G1",
+  "grill": [
+    "I keep seeing 16 KiB in transpose explanations.",
+    "I want to derive it, not memorize it.",
+    "I think the kernel allocates a 16 KiB buffer per warp."
+  ],
+  "interjections": [
+    {"afterCall": 4, "text": "where did 16 KiB come from? again, you're not explaining enough here"}
+  ],
+  "bodyChecks": [
+    {
+      "label": "16 KiB derivation",
+      "groups": [["4096", "32"], ["4 bytes", "16384", "16 kib"]]
+    }
+  ],
+  "facts": [
+    {
+      "id": "K1",
+      "claim": "A float is 4 bytes.",
+      "keywords": ["float", "4", "bytes", "size"],
+      "known": true
+    },
+    {
+      "id": "K2",
+      "claim": "A 32-thread warp writing a column touches one element per row.",
+      "keywords": ["warp", "32", "column", "row", "thread"],
+      "known": true
+    },
+    {
+      "id": "G1",
+      "claim": "The stride is 4096 floats times 4 bytes, which is 16384 bytes or 16 KiB, so each warp write touches 32 separate cache lines.",
+      "wrong": "The stride is 16 KiB because the kernel allocates a 16 KiB buffer per warp.",
+      "keywords": ["16", "kib", "stride", "bytes", "cache", "line"],
+      "teachGroups": [
+        ["4096", "32", "n times 4", "n * 4"],
+        ["16384", "16 kib", "16kib", "4 bytes"]
+      ]
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "id": "already-known",
+  "topic": "Check whether I can already explain why a CUDA event pair excludes enqueue latency.",
+  "goal": "Confirm the learner holds the event-timing claim; teach nothing the learner already holds.",
+  "mode": "already-known",
+  "target": "G1",
+  "grill": [
+    "I want to check my understanding, not learn it from scratch.",
+    "I will explain it to a colleague tomorrow.",
+    "If I already hold it, say so and stop."
+  ],
+  "facts": [
+    {
+      "id": "K1",
+      "claim": "The host launches kernels asynchronously, so the launch returns before the kernel finishes.",
+      "keywords": ["host", "launch", "asynchronous", "return"],
+      "known": true
+    },
+    {
+      "id": "K2",
+      "claim": "A CUDA event is recorded in a stream and timestamped when the stream reaches it.",
+      "keywords": ["event", "stream", "timestamp"],
+      "known": true
+    },
+    {
+      "id": "G1",
+      "claim": "A host timer measures the enqueue cost, because the kernel runs later; only an in-stream event measures device progress.",
+      "keywords": ["wall", "clock", "timer", "enqueue", "host", "device", "progress"],
+      "known": true,
+      "teachGroups": [
+        ["enqueue", "host-side", "host side", "launch latency", "asynchronous"],
+        ["device-side", "device side", "device progress", "stream reaches", "same stream"]
+      ]
+    }
+  ]
+}

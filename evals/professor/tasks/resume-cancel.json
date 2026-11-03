@@ -1,0 +1,38 @@
+{
+  "id": "resume-cancel",
+  "topic": "Resume the rack-bench internet checks session.",
+  "goal": "Continue the 13-check arc from the session file without re-posing the cancelled quiz.",
+  "mode": "resume",
+  "target": "G1",
+  "cancelledTitle": "N2 — Upload windows",
+  "workspace": "resume-cancel",
+  "grill": [
+    "Continue where we stopped.",
+    "The upload windows node was delivered but not verified.",
+    "Do not restart the grill."
+  ],
+  "facts": [
+    {
+      "id": "K1",
+      "claim": "The 13 checks per provider are measured by rack-bench bench internet.",
+      "keywords": ["13", "checks", "provider", "rack-bench"],
+      "known": true
+    },
+    {
+      "id": "K2",
+      "claim": "A tenant pulls datasets and pushes checkpoints.",
+      "keywords": ["tenant", "dataset", "checkpoint", "pull", "push"],
+      "known": true
+    },
+    {
+      "id": "G1",
+      "claim": "A SKIP means the check did not apply to that provider; it is not a pass.",
+      "wrong": "A SKIP counts as a pass.",
+      "keywords": ["skip", "pass", "apply", "provider"],
+      "teachGroups": [
+        ["skip", "not applicable", "did not apply"],
+        ["not a pass", "not pass", "does not count"]
+      ]
+    }
+  ]
+}

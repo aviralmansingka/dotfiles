@@ -1,0 +1,36 @@
+{
+  "id": "ncp-diagnostic",
+  "topic": "Inventory what I hold on NVLink fabric management, and what I do not. Do not teach.",
+  "goal": "Produce a held list, ranked gaps, and one next move. No lesson.",
+  "mode": "diagnostic",
+  "target": "G1",
+  "grill": [
+    "Survey my fabric knowledge. Do not teach in this session.",
+    "I will use the result to choose next week's session.",
+    "Include what I already hold, so I do not re-read it."
+  ],
+  "facts": [
+    {
+      "id": "K1",
+      "claim": "A GB300 NVL72 rack is one NVLink domain of 72 GPUs.",
+      "keywords": ["nvlink", "domain", "rack", "gpu", "72"],
+      "known": true
+    },
+    {
+      "id": "K2",
+      "claim": "Fabric Manager configures and monitors the NVSwitch fabric.",
+      "keywords": ["fabric", "manager", "nvswitch", "configure", "monitor"],
+      "known": true
+    },
+    {
+      "id": "G1",
+      "claim": "A persistent Fabric Manager crash leaves the domain untrusted, so the whole rack drains.",
+      "wrong": "Fabric Manager only passes messages between nodes.",
+      "keywords": ["fabric", "manager", "crash", "domain", "untrusted", "rack"],
+      "teachGroups": [
+        ["domain state", "untrusted", "nvswitch"],
+        ["drain", "whole rack", "all nodes"]
+      ]
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "id": "framing-complaint",
+  "topic": "Why per-stream decode speed flattens at low concurrency.",
+  "goal": "Explain the flat zone of a concurrency sweep and the knee.",
+  "target": "G1",
+  "grill": [
+    "I run a concurrency sweep on a decode endpoint.",
+    "Per-stream speed looks flat at first, then drops.",
+    "I do not trust my reading of the curve."
+  ],
+  "interjections": [
+    {"afterCall": 4, "text": "I didn't understand your question. It wasn't framed very well"}
+  ],
+  "interjectionCheck": "repair",
+  "facts": [
+    {
+      "id": "K1",
+      "claim": "Concurrency C is the number of live decode streams.",
+      "keywords": ["concurrency", "streams", "live"],
+      "known": true
+    },
+    {
+      "id": "K2",
+      "claim": "Iteration duration D is the time one decode step takes for the whole batch.",
+      "keywords": ["iteration", "duration", "batch", "step"],
+      "known": true
+    },
+    {
+      "id": "G1",
+      "claim": "Per-stream speed is 1/D and stays flat while the batch shares one iteration; it drops only when the batch saturates compute.",
+      "wrong": "Per-stream speed drops immediately as C grows, because each stream waits for the others.",
+      "keywords": ["per-stream", "decode", "concurrency", "speed", "flat", "drop"],
+      "teachGroups": [
+        ["1/d", "same iteration", "shared iteration", "iteration", "step", "per step"],
+        ["saturat", "compute", "bandwidth", "batch"]
+      ]
+    }
+  ]
+}
