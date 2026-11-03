@@ -41,9 +41,11 @@ assert.ok(
   "ci.yml trigger block must not have a paths filter (PR #175: required checks stop reporting)",
 );
 
-// 1b. The merge queue runs entries on a synthetic gh-readonly-queue merge
-//     commit. Without its own trigger the required "CI result" check never
-//     reports on that ref, so every queued PR waits until the queue timeout.
+// 1b. The native merge queue runs entries on a synthetic gh-readonly-queue merge
+//     commit. Mergify does not use it, but the native queue is the fallback: if
+//     it is ever enabled, a missing trigger means the required "CI result" check
+//     never reports on that ref and every queued PR waits until the queue times
+//     out. Keep the trigger.
 assert.ok(
   /^\s{2}merge_group:\s*$/m.test(triggerBlock),
   "ci.yml must trigger on merge_group (a queue entry runs on a synthetic merge commit)",

@@ -31,12 +31,16 @@ ruby -ryaml -e '
   rule = mergify.fetch("pull_request_rules").first
   abort "the rule must queue: #{rule.inspect}" unless rule.fetch("actions").key?("queue")
   abort "the rule must gate on the label: #{rule.inspect}" unless rule.fetch("conditions").include?("label = queue")
+  drop = mergify.fetch("pull_request_rules")[1]
+  abort "a dropped entry must lose the submit label: #{drop.inspect}" unless drop && drop.fetch("conditions") == ["label = dequeued"]
+  removed = drop.fetch("actions").fetch("label").fetch("remove")
+  abort "a dropped entry must lose queue and dequeued: #{removed.inspect}" unless removed.sort == %w[dequeued queue]
   queue = mergify.fetch("queue_rules").first
   abort "the queue must accept the label: #{queue.inspect}" unless queue.fetch("queue_conditions").include?("label = queue")
   abort "unexpected merge_method: #{queue.inspect}" unless queue.fetch("merge_method") == "squash"
   abort "unexpected batch_size: #{queue.inspect}" unless queue.fetch("batch_size") == 1
   abort "unexpected checks_timeout: #{queue.inspect}" unless queue.fetch("checks_timeout") == "60 minutes"
-  puts "MERGIFY: queue #{queue.fetch("name")} => squash, batch #{queue.fetch("batch_size")}, #{queue.fetch("checks_timeout")}, gated on the queue label"
+  puts "MERGIFY: queue #{queue.fetch("name")} => squash, batch #{queue.fetch("batch_size")}, #{queue.fetch("checks_timeout")}, gated on the queue label; a dropped entry loses it"
 ' "$config" "$mergify"
 
 bin="$test_dir/bin"
@@ -150,6 +154,12 @@ expect_no_label() {
   fi
 }
 
+# Names every case in the output; a case that already failed stays unnamed
+# behind its FAIL lines.
+done_case() {
+  if [ "$fail" -eq 0 ]; then printf 'PASS %s\n' "$case_name"; fi
+}
+
 reset() { : > "$log"; printf '%s\n' "$1" > "$state_file"; }
 
 labels_json() { # a PR state with the given labels
@@ -163,40 +173,46 @@ run
 expect_status 2
 expect_err "Usage: gh-dash-enqueue-pr REPO_NAME PR_NUMBER"
 expect_no_edit
+done_case
 
 case_name="non-numeric pr"
 run aviralmansingka/dotfiles 4x
 expect_status 2
 expect_err "Invalid pull request number: 4x"
+done_case
 
 case_name="repo without owner"
 run dotfiles 42
 expect_status 2
 expect_err "Invalid repository name: dotfiles"
+done_case
 
 # 2. States that need no submit stay no-ops.
-case_name="already queued"
+case_name="labelled pr is a no-op"
 reset "$(labels_json queue)"
 run aviralmansingka/dotfiles 42
 expect_status 0
 expect_out "aviralmansingka/dotfiles#42 is already in the merge queue"
 expect_no_edit
+done_case
 
-case_name="closed pr"
+case_name="closed pr errors"
 reset '{"state":"CLOSED","labels":[]}'
 run aviralmansingka/dotfiles 42
 expect_status 1
 expect_err "is not open"
 expect_no_edit
+done_case
 
-# 3. An open PR submits by label, and a second submit is a no-op.
-case_name="open pr submitted"
+# 3. An unlabelled open PR gets the label, and a second submit is a no-op.
+case_name="unlabelled pr gets the label"
 reset '{"state":"OPEN","labels":[]}'
 run aviralmansingka/dotfiles 42
 expect_status 0
 expect_out "entered the merge queue"
 expect_edit "pr edit 42 --repo aviralmansingka/dotfiles --add-label queue"
 expect_label queue
+done_case
 
 case_name="second submit is a no-op"
 : > "$log"
@@ -204,6 +220,17 @@ run aviralmansingka/dotfiles 42
 expect_status 0
 expect_out "is already in the merge queue"
 expect_no_edit
+done_case
+
+# Mergify's own `queued` label is not the submit, so it must not short-circuit one.
+case_name="mergify queued label is not the submit"
+reset "$(labels_json queued)"
+run aviralmansingka/dotfiles 42
+expect_status 0
+expect_out "entered the merge queue"
+expect_edit "pr edit 42 --repo aviralmansingka/dotfiles --add-label queue"
+expect_label queue
+done_case
 
 # 4. A dropped attempt is resubmitted: the stale mark comes off in the same edit.
 case_name="dropped pr resubmitted"
@@ -214,8 +241,9 @@ expect_out "entered the merge queue"
 expect_edit "pr edit 42 --repo aviralmansingka/dotfiles --remove-label dequeued --add-label queue"
 expect_label queue
 expect_no_label dequeued
+done_case
 
 if [ "$fail" -ne 0 ]; then
   exit 1
 fi
-printf 'PASS gh-dash-enqueue-pr: argument guards, no-op states, label submit, dropped resubmit, second run no-op, and the M binding\n'
+printf 'PASS gh-dash-enqueue-pr: argument guards, labelled and closed no-ops, label submit, second run no-op, dropped resubmit, and the M binding\n'

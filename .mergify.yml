@@ -15,11 +15,25 @@ pull_request_rules:
       - label = queue
       # Mergify marks a dropped attempt with the `dequeued` label and leaves
       # `queue` in place. This guard keeps a red entry from requeueing itself
-      # in a loop; the submit clears the mark when a human asks again.
+      # in the loop the removal rule below would otherwise close.
       - label != dequeued
     actions:
       queue:
         name: main
+
+  # A red queue check drops the pull request from the queue and marks it.
+  # Take the submit label off with the mark, so the pull request returns to
+  # My Pull Requests and leaves the Merge Queue section until it is submitted
+  # again. Removing the mark too leaves nothing for the next rule pass to
+  # match, so this cannot loop.
+  - name: drop the submit when Mergify drops the entry
+    conditions:
+      - label = dequeued
+    actions:
+      label:
+        remove:
+          - queue
+          - dequeued
 
 queue_rules:
   - name: main
