@@ -149,7 +149,7 @@ npm install
 
 Pi's read-only No Mistakes timeline polls `no-mistakes axi status` and displays the nine AXI phases below the editor when the current repository has a run. Use `/no-mistakes-timeline` to toggle it, or pass `on`, `off`, or `refresh`; the widget stays hidden when no run exists.
 
-The `no-mistakes-pane` extension runs every `no-mistakes axi` call in a Herdr pane beside the agent pane, so the pipeline is visible while it runs. The pane is labeled `no-mistakes: <phase>`. stdout is teed to the pane and returned to the agent as TOON; stderr progress also stays on the pane. The agent calls the `no_mistakes_axi` tool instead of the bash tool. `/no-mistakes` focuses the run pane; `/no-mistakes close` (or `stop`) cancels and closes it. Without Herdr the same tool falls back to an inline call.
+The `no-mistakes-pane` extension runs `no-mistakes axi` pipeline calls in a Herdr pane beside the agent pane, so the pipeline is visible while it runs; introspection calls (the bare home view, `--help`, `--version`) stay inline. The pane is labeled `no-mistakes: <phase>`. stdout is teed to the pane and returned to the agent as TOON; stderr progress also stays on the pane. The agent calls the `no_mistakes_axi` tool instead of the bash tool. `/no-mistakes` focuses the run pane; `/no-mistakes close` (or `stop`) cancels and closes it. When Herdr or a TUI is unavailable, the same tool falls back to an inline call.
 
 For Pi over WhatsApp, copy `~/.config/pi-whatsapp.env.example` to `~/.config/pi-whatsapp.env`, fill in the allowed chat IDs, then enable the user services:
 

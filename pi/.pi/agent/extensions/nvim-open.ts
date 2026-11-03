@@ -146,9 +146,10 @@ function launchEditor(cwd: string, files: string[]): string | null {
 	return newPaneId;
 }
 /**
- * Focus the editor pane by discovering the direction from the current pane
- * to the editor pane using `herdr pane neighbor`. `herdr pane focus` requires
- * --direction, so we cannot focus by pane ID alone.
+ * Focus a target pane (the editor pane, or the no-mistakes run pane) by
+ * discovering the direction from the current pane to the target pane using
+ * `herdr pane neighbor`. `herdr pane focus` requires --direction, so we
+ * cannot focus by pane ID alone.
  */
 export function focusEditorPane(editorPaneId: string, currentPaneId: string): boolean {
 	const directions = ["right", "down", "left", "up"] as const;
