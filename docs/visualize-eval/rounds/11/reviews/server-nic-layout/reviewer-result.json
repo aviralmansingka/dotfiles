@@ -1066,7 +1066,7 @@
       "category": "workflow_evidence",
       "edge_ids": [],
       "severity": "high",
-      "description": "Evidence gap: frozen metadata records cases.json SHA-256 e69179e59a3d36985cd7e8672b319b566701f88caef385c9cbde76d060c92d05 but the actual file hashes to e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05. Frozen dataset identity cannot be verified.",
+      "description": "Evidence gap: frozen metadata records cases.json SHA-256 e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05 but the actual file hashes to e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05. Frozen dataset identity cannot be verified.",
       "source_refs": [
         "docs/visualize-eval/cases/server-nic-layout/source.md",
         "docs/visualize-eval/cases/server-nic-layout/expected.json"

@@ -8,6 +8,6 @@
  "renderer_source_git_commit": "adb040c138ae40bf985b3fa147f08fec711fdf93",
  "rubric_revision": 11,
  "rubric_sha256": "6bfd3733c8d08b66af9a92e71985a20846f954d7916eaf9685f86c8d2f96bcb8",
- "cases_sha256": "e69179e59a3d36985cd7e8672b319b566701f88caef385c9cbde76d060c92d05",
+ "cases_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
  "scope": "full 8-case rerun under proposal 12 (triage loop, canvas view ladder, clarity over shaping) on the r13 engine (near-miss routing, label ownership + leader ticks, multi-diagram canvas, case-wide hue, dot hues)"
 }

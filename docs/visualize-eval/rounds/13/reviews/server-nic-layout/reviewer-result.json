@@ -1,0 +1,716 @@
+{
+  "protocol_version": 1,
+  "round": 13,
+  "case_id": "server-nic-layout",
+  "candidate_sha256": "4191e3da8268045f273f74e18b72789da08d230cb7e02155529ff9cd344c3af3",
+  "renderer_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+  "rubric_sha256": "6bfd3733c8d08b66af9a92e71985a20846f954d7916eaf9685f86c8d2f96bcb8",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "4191e3da8268045f273f74e18b72789da08d230cb7e02155529ff9cd344c3af3",
+  "generator": {
+    "worker_id": "viz-ds13-3",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge13-server",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": false
+  },
+  "live_pane": {
+    "columns": 68,
+    "rows": 44
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/13/reviews/server-nic-layout/observed-first.md",
+      "sha256": "96d57adfd45200dcb7dd89df4c33af0c37e6ddf9f32590c5502a3f345239ee0f",
+      "description": "Blind stage A record",
+      "capture": null
+    },
+    {
+      "id": "spec",
+      "path": "docs/visualize-eval/rounds/13/server-nic-layout/specs/canvas-a3.json",
+      "sha256": "4191e3da8268045f273f74e18b72789da08d230cb7e02155529ff9cd344c3af3",
+      "description": "Shipped canvas spec",
+      "capture": null
+    },
+    {
+      "id": "wide",
+      "path": "docs/visualize-eval/rounds/13/server-nic-layout/evidence/canvas-wide/canvas-wide-140x40-frames.txt",
+      "sha256": "58d9974ef5861904ba6c5107ac7496de519b7254aa18fe0811a782a02cf6727f",
+      "description": "Whole canvas direct dump",
+      "capture": {
+        "dimensions": {
+          "columns": 140,
+          "rows": 40
+        },
+        "view": "canvas",
+        "frame": "0",
+        "timestamp": "0ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "narrow",
+      "path": "docs/visualize-eval/rounds/13/server-nic-layout/evidence/canvas/canvas-77x47-frames.txt",
+      "sha256": "4c5f40fba56fbcfdad82ea2e29dade9d66bc2a3c2310df3ec8223dda96f2cf7b",
+      "description": "Target pinned capture",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "canvas",
+        "frame": "0",
+        "timestamp": "0ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi",
+      "path": "docs/visualize-eval/rounds/13/server-nic-layout/evidence/canvas-wide/canvas-wide-ansi.ansi",
+      "sha256": "c0596101e9ded0454bc9c04617ca8dea43577e187897f66c3712c992f512368c",
+      "description": "Live pane normal ANSI",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "canvas",
+        "frame": "pane",
+        "timestamp": "capture window",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected",
+      "path": "docs/visualize-eval/rounds/13/server-nic-layout/evidence/canvas-wide/canvas-wide-selected.ansi",
+      "sha256": "8c30f8c77a1430314b58e995ee1f0049cce40c20c190db61350af4c5ceb215a0",
+      "description": "Live pane select-all ANSI",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "canvas",
+        "frame": "pane",
+        "timestamp": "capture window",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "check",
+      "path": "docs/visualize-eval/rounds/13/server-nic-layout/evidence/canvas-wide/check.txt",
+      "sha256": "38705e472c919e0d3475e60fb2538669440596aaa81136356410626cd28c41a8",
+      "description": "Frozen check output",
+      "capture": null
+    },
+    {
+      "id": "validator",
+      "path": "docs/visualize-eval/rounds/13/server-nic-layout/validator-canvas.txt",
+      "sha256": "e52c8a5291c8dbb0b9cf271f8d3936fe6f852b178b2be08103fc17c8c1b07a92",
+      "description": "Recorded pane validator",
+      "capture": null
+    },
+    {
+      "id": "validator-wide",
+      "path": "docs/visualize-eval/rounds/13/server-nic-layout/validator-canvas-wide.txt",
+      "sha256": "e52c8a5291c8dbb0b9cf271f8d3936fe6f852b178b2be08103fc17c8c1b07a92",
+      "description": "Recorded wide validator",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/13/server-nic-layout/generation.json",
+      "sha256": "a21e23aa94d04a16d11b3cf7283ddeab7dd1e526d3638bc1a20803f6f157c317",
+      "description": "Generation and triage record",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/13/server-nic-layout/attempts-log.jsonl",
+      "sha256": "416ec83d2f19aae39d3247e741fbe5bf1be6e79aa36f5e646015e975762bde90",
+      "description": "Recorded attempts",
+      "capture": null
+    },
+    {
+      "id": "manifest",
+      "path": "docs/visualize-eval/rounds/13/server-nic-layout/evidence/canvas/manifest.json",
+      "sha256": "ae8e68318802f2c6977592acb183c852ba4685053a4aa25f0be622f51a658b6c",
+      "description": "Pane capture and cleanup manifest",
+      "capture": null
+    },
+    {
+      "id": "manifest-wide",
+      "path": "docs/visualize-eval/rounds/13/server-nic-layout/evidence/canvas-wide/manifest.json",
+      "sha256": "7186caa8e398ffa617b10ea030fb9731a22a6c4ac7e26ca0e80b9ec6d0916691",
+      "description": "Wide pane capture and cleanup manifest",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Operator name and full address prefix omitted; hop 3/6 silence and hop 5 80% loss compressed beyond recovery; unqualified cable/free claims contradict the source caution. Eight relationships present but e1/e5 qualifiers are misleading.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "evidence_ids": [
+        "wide",
+        "spec",
+        "generation"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All eight stems and arrowheads trace in whole view; no bridges, touching bends or unrelated-node near misses observed or reported.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "evidence_ids": [
+        "wide",
+        "check"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Branch B geometry and descriptions pass, but branch B does not excuse thinned required relations: cable/free qualifications fail.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "evidence_ids": [
+        "wide",
+        "narrow",
+        "check"
+      ]
+    },
+    "navigation_clarity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "The titles and descriptions accurately identify distinct local and upstream diagrams in the whole-canvas dump. Both descriptions are clipped in actual 68-column pane and 77-column target capture; no panned capture proves their full text readable in that pane.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "evidence_ids": [
+        "wide",
+        "narrow",
+        "ansi"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Tags are logical; visible green, teal, magenta, pink and tan fragments support group families. Local access gateway is outside ANSI and check lists tags, not per-node rendered hues, so cross-diagram access hue continuity is not visually proven.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "evidence_ids": [
+        "ansi",
+        "check",
+        "wide"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Correct dominant family identity-probe-maps; generator states identity-probe-maps. Evidence line: Nine nodes that are addresses, ports and qualifier markers - eno16595np0, .57/.58/.59/.60-.62, AS132717/AS13335, 'OUI is not a ToR proof' - strung down a deep lr chain gw -> airtel -> airtelbb -> cf; the meaning lives in the identifiers and their caveats, not in crossings. Recipe visibly preserves many identifiers and uses a local audit plus an lr chain, with measured split yield and secondary chain rationale recorded; however the identity ledger fails to preserve operator name, full address prefix, hop loss details and inference qualifications.",
+      "family_judged": "identity-probe-maps",
+      "family_stated": "identity-probe-maps",
+      "evidence_ids": [
+        "generation",
+        "wide"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Text proves box geometry in wide dump, but ANSI/select-all captures only 68 columns; local gateway and Cloudflare have no border color/selected evidence and several nodes are only partially captured. No known border defect.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "evidence_ids": [
+        "wide",
+        "ansi",
+        "selected"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Triage Q1 is attributed to annex verbatim but replaces its em dash with hyphen; annex explicitly requires verbatim. It otherwise attributes Q2/Q3 and five own decisions without inventing a dialogue; records, frames and pane cleanup exist. The reviewer also inadvertently printed non-triage generator ledger/source claims during stage A before saving the blind record; it was saved before expectation reveal but is not strictly blind to those claims. Full-canvas ANSI/selected evidence is missing.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "evidence_ids": [
+        "generation",
+        "attempts",
+        "manifest",
+        "manifest-wide",
+        "selected"
+      ]
+    },
+    "animation": {
+      "applicable": false,
+      "status": null,
+      "reason": "Source never requests animation; case manifest marks it optional. Static frames show no dots.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases.json"
+      ],
+      "evidence_ids": [
+        "wide",
+        "check"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "expected": "dark -> s1: historical no cable, not proven by inactivity",
+      "observed": "7 dark NICs -> server1, dashed right arrow; no cable seen asserts unestablished observation; no visible crossing, junction, or near-miss.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            9,
+            14,
+            49,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "expected": "s1 -> nic: only uplink",
+      "observed": "server1 -> eno, right/up/right solid route, arrowhead at eno; no visible crossing, junction, or near-miss.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            56,
+            10,
+            16,
+            6
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "expected": "nic -> gw: default gateway 0.1 ms",
+      "observed": "eno -> gateway, right/down/right solid route, unique arrowhead; no visible crossing, junction, or near-miss.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            90,
+            10,
+            22,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "expected": "s2 -> gw: same /29",
+      "observed": "server2 -> gateway, right/down/right solid route, unique arrowhead; no visible crossing, junction, or near-miss.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            90,
+            14,
+            22,
+            3
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "expected": "spare -> gw: free in /29, inferred not proven",
+      "observed": "free tail -> gateway, dashed right/up/right route; free, unprobed fails to qualify availability; no visible crossing, junction, or near-miss.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            89,
+            18,
+            23,
+            3
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "expected": "gw -> airtel: transit 1.8 ms",
+      "observed": "Arista -> Airtel, solid right arrow, transit 1.8 ms; no visible crossing, junction, or near-miss.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            29,
+            30,
+            19,
+            2
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "expected": "airtel -> airtelbb: 7.1 ms",
+      "observed": "Airtel -> backbone, solid right arrow, 7.1 ms; no visible crossing, junction, or near-miss.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            63,
+            30,
+            11,
+            2
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "expected": "airtelbb -> cf: 8.3 ms",
+      "observed": "backbone -> Cloudflare, solid right arrow, 8.3 ms; brief explicitly chooses 8.3 despite source prose 8.6; no visible crossing, junction, or near-miss.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            98,
+            30,
+            11,
+            2
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e1",
+        "e5"
+      ],
+      "severity": "critical",
+      "description": "The source warns inactive NICs do not prove no cable; no cable seen asserts an observation not established by the supplied source. Free, unprobed and .60-.62 free still assert availability rather than marking it inferred from unresponsiveness.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            23,
+            14,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "wide",
+          "region": [
+            75,
+            20,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "wide",
+          "region": [
+            91,
+            19,
+            14,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "semantic_fidelity",
+      "edge_ids": [],
+      "severity": "critical",
+      "description": "Operator NxtGen Cloud is absent, and .57/.58/.59 lack the source address prefix 103.19.91, so the full addresses cannot be reconstructed from the drawing alone.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            112,
+            16,
+            19,
+            1
+          ]
+        },
+        {
+          "evidence_id": "wide",
+          "region": [
+            39,
+            15,
+            17,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "category": "semantic_fidelity",
+      "edge_ids": [],
+      "severity": "critical",
+      "description": "Silent hops does not preserve hops 3 and 6 unanswered or hop 5 losing 80%; partial loss is not synonymous with silence.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            9,
+            27,
+            114,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "category": "layout_fit",
+      "edge_ids": [
+        "e1",
+        "e5"
+      ],
+      "severity": "medium",
+      "description": "Branch B has valid large-canvas shape and measured extents, but cannot pass with e1/e5 source qualifications thinned.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            23,
+            14,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "wide",
+          "region": [
+            91,
+            19,
+            14,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F5",
+      "category": "navigation_clarity",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "Both description lines are clipped in captured live and 77-column views; the full text is shown only in a wider direct dump, with no captured pan demonstration.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "narrow",
+          "region": [
+            1,
+            3,
+            77,
+            1
+          ]
+        },
+        {
+          "evidence_id": "narrow",
+          "region": [
+            1,
+            23,
+            77,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F6",
+      "category": "category_fit",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "Correct family and measured split do not fulfill the identity-map coverage recipe; source identifiers and qualifiers are omitted or overstated.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            112,
+            16,
+            19,
+            1
+          ]
+        },
+        {
+          "evidence_id": "wide",
+          "region": [
+            9,
+            27,
+            114,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F7",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "low",
+      "description": "Q1 annex answer is represented as verbatim but replaces the annex em dash after canvas with an ASCII hyphen; protocol requires exact verbatim. No invented user answer found.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "locations": []
+    },
+    {
+      "id": "F8",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "During stage A the reviewer inadvertently printed generation.json non-triage fields beyond the permitted declarations, including its source-claims ledger, before saving the blind record. The source, brief, expected data, and triage block had not yet been opened, but independence from generator source claims is compromised.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/rounds/13/briefs/server-nic-layout.md"
+      ],
+      "locations": []
+    }
+  ],
+  "blockers": [
+    "Missing full-canvas normal and selected ANSI/buffer evidence for all node borders, including local gateway and Cloudflare; shared access hue across diagrams unverified.",
+    "Stage A record was saved before expected reveal but was inadvertently exposed to generator source claims; strict blind independence cannot be restored retrospectively.",
+    "Frozen schema requires viewport 77x47 with no note and forbids a top-level blind_observation_sha256; user-requested 131x28 viewport/note and extra field cannot coexist with schema. Verified canvas extent and blind hash are in evidence and critique."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pZV",
+      "w7E:pZW"
+    ],
+    "closed_pane_ids": [
+      "w7E:pZV",
+      "w7E:pZW"
+    ],
+    "status": "done",
+    "reason": "Both capture manifests record cleanup=confirmed_closed."
+  },
+  "overall": "fail"
+}

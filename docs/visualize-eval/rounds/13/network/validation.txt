@@ -1,0 +1,51 @@
+PASS manifest_readable
+PASS binary_path_absolute
+PASS binary_hash_recorded
+PASS artifact_hashes
+PASS check_output_present
+PASS check_exit_zero
+PASS check_warnings_absent
+PASS labels_parsed
+PASS labels_complete
+PASS labels_off_routes
+PASS labels_not_skipped
+PASS dots_parsed
+PASS dots_no_violations
+PASS origins_reported
+PASS origins_complete
+PASS dots_sync_reported
+PASS arrivals_reported
+PASS arrivals_complete
+PASS labels_ownership_reported
+PASS labels_ownership_clear
+PASS crossings_reported
+PASS routes_near_unrelated_nodes
+PASS viewport_proven
+PASS viewport_proven_measurable
+PASS viewport_matches_target
+PASS cleanup_confirmed
+PASS select_all_frame
+PASS select_all_artifact
+PASS frames_artifact
+PASS frames_timestamped
+PASS attempts_readable
+PASS attempts_view_budget
+PASS attempts_spec_budget
+PASS attempts_records_complete
+PASS probe_inputs_present
+
+frame audit (v1-77x47-frames.txt)
+  viewport: 77x47 @1.00 natural · step 100ms · 4 route(s) tracked · dots/frame [4]
+  frames evenly spaced: pass · steady routes: 4/4
+  r1    14 cells / [14] → Δ per 10 frames [5, 5, 5, 5, 5] · stall 1 · steady
+  r2    14 cells / [14] → Δ per 10 frames [5, 5, 5, 5, 5] · stall 1 · steady
+  r3    11 cells / [5, 3, 0, 3] → Δ per 10 frames [5, 5] · stall 1 · steady
+  r4    11 cells / [5, 3, 0, 3] → Δ per 10 frames [5, 5] · stall 1 · steady
+  equal distance: pass over 19 x 10 frame window(s) (spread ≤ 1) — 0-10:0, 1-11:0, 2-12:0, 3-13:0, 4-14:0, 5-15:0
+  rates: 0.500..0.500 cells/frame, spread 0.0 (allowed 0.05)
+  verdict: PASS — every tracked dot holds one rate and covers equal distance
+  the check reports 4 dot route(s); the capture tracked 4 (a clipped capture tracks fewer)
+
+PASS frame_audit_passes
+
+all checks passed

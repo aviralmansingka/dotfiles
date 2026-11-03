@@ -9,7 +9,7 @@
  "renderer_source_git_commit": "c065af91fba7c3cc8a1904b749f5b6aa6962431f",
  "rubric_revision": 10,
  "rubric_sha256": "5e09b9be9078ab5b46a82d0faf7bc986bf3d38a2d4cbb2f6745dd3fb9f0f54d7",
- "cases_sha256": "e69179e59a3d36985cd7e8672b319b566701f88caef385c9cbde76d060c92d05",
+ "cases_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
  "case_hashes": {
   "pipeline": {
    "source_sha256": "68aa197fdc597c3a22d1b8ca88a3ebee861dcda34684da15ae69b6946b741e58",

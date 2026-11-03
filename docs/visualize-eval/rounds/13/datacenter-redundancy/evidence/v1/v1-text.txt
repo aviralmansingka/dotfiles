@@ -1,0 +1,44 @@
+ rataflow-view · 68x44 @100% · canvas 71x106 · canvas-3.json · 22 no
+ISP uplinks and core cross-connect
+Four ISP handoffs, two per MUX; each MUX reaches both cores.
+
+╭─────╮   ╭─────╮   ╭─────╮   ╭─────╮
+│ISP A│   │ISP B│   │ISP C│   │ISP D│
+│     │   │     │   │     │   │     │
+╰─────╯   ╰─────╯   ╰─────╯   ╰─────╯
+   │         │         │         │
+   │         │         │         │
+   │         │         │         │
+   ╰───╮ ╭───╯         ╰───╮ ╭───╯
+       ▼ ▼                 ▼ ▼
+╭───────────────╮   ╭───────────────╮
+│MUX appliance 1│   │MUX appliance 2│
+│               │   │               │
+╰───────────────╯   ╰───────────────╯
+       │ │                 │ │
+       │ │                 │ │
+       │ │                 │ │
+       │ │ x-connect       │ │
+       │ │                 │ │
+connect│ │     x-connect   │ │
+       │ │╭────────────────╯ │
+       │ ││                  │
+       │ ││         x-connect│
+       │ ╰⌒───────╮          │
+       ╰╮ │       ╰───────╮ ╭╯
+        ▼ ▼               ▼ ▼
+  ╭─────────────╮   ╭─────────────╮
+  │Core router 1│   │Core router 2│
+  │             │   │             │
+  ╰─────────────╯   ╰─────────────╯
+
+                                                   ▐▟▙▌
+──────────────────────────────────────────                         ─
+Active/standby firewall pair                       ▗▛█
+F┌───────┐, FW2 standby, fed by both cores          ▄▄             v
+ │ + [+] │
+╭│ − [-]─│────╮   ╭─────────────╮                  ▝▘▜▗
+││ ⊡ [f]u│er 1│   │Core router 2│                  ▗▖▄▄▗▖
+││ □ [i] │    │   │             │                    ▗▗
+╰└───────┘────╯   ╰─────────────╯
+      │ │               │ │

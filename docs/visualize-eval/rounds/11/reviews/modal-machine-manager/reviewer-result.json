@@ -1914,7 +1914,7 @@
       "category": "workflow_evidence",
       "edge_ids": [],
       "severity": "high",
-      "description": "Evidence defect: frozen metadata cases_sha256 is e69179e59a3d36985cd7e8672b319b566701f88caef385c9cbde76d060c92d05 but independently computed actual cases.json SHA-256 is e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05. A mismatch blocks frozen dataset identity; do not substitute either silently.",
+      "description": "Evidence defect: frozen metadata cases_sha256 is e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05 but independently computed actual cases.json SHA-256 is e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05. A mismatch blocks frozen dataset identity; do not substitute either silently.",
       "source_refs": [
         "metadata",
         "dataset"

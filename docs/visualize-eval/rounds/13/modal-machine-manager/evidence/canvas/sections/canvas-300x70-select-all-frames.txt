@@ -1,0 +1,433 @@
+viewport: 300x70 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 300x70 @100% · canvas.json · 26 nodes · 23 edges · q quit
+
+                          Request and provisioning path
+                          Humans and the control plane enter through webapi and private gRPC, enqueue River jobs, and provision bare metal down to the iPXE boot.
+
+                                                                                                                                                                              ╭────────────────────╮
+                           ╭─────────────╮  create/terminate/repair  ╭────────────╮      enqueue job                                                                        ╭▶│bare-metal providers│●───────────────────╮
+                           │control plane│●─────────────────────────▶│private gRPC│●─────────────────────╮                                                                  │ │                    │  allocate instance │ ╭───────────────────╮
+                           │             │                           │            │                      │ ╭───────────────╮                ╭─────────────────╮provider API │ ╰────────────────────╯                    ╰▶│                   │                  ╭───────────────╮
+                           ╰─────────────╯                           ╰────────────╯                      ╰▶│               │ provision job╭▶│provider registry│●────────────╯                             iPXE request    │                   │ pull boot image╭▶│S3 object store│
+                                                                                                           │River job queue│●─────────────╯ │                 │                    ╭───────────╮      ╭──────────────────●│bare-metal machines│●───────────────╯ │               │
+                          ╭──────────────╮          http            ╭─────────────╮ reinstall/reprovision╭▶│               │                ╰─────────────────╯                    │           │◀─────╯                   │                   │                  ╰───────────────╯
+                          │humans + mmctl│●────────────────────────▶│webapi server│●─────────────────────╯ ╰───────────────╯                                                       │boot server│                        ╭▶│                   │
+                          │              │                          │             │                                                                                                │           │●───────────────────────╯ ╰───────────────────╯
+                          ╰──────────────╯                          ╰─────────────╯                                                                                                ╰───────────╯   boot.ipxe + S3 args
+
+
+                          ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                          Heartbeat and machine state
+                          The fastest path: each host's machine-agent registers and heartbeats over public gRPC. Public gRPC, private gRPC and the queue each write their own Postgres rows.
+
+                                                                                                      ╭───────────╮
+                                                                                                   ╭─▶│public gRPC│●───────────────╮
+                                                                                                   │  │           │  machine state │
+                                                                                                   │  ╰───────────╯                │
+                                                                                                   │                               │ ╭────────╮
+                          ╭───────────────────╮ runs on host  ╭─────────────╮ register + heartbeat │  ╭────────────╮ machine rows  ╰▶│        │
+                          │bare-metal machines│──────────────▶│machine-agent│●─────────────────────╯  │private gRPC│●─────────────╮  │        │
+                          │                   │               │             │                         │            │              ╰─▶│Postgres│
+                          ╰───────────────────╯               ╰─────────────╯                         ╰────────────╯                 │        │
+                                                                                                                                   ╭▶│        │
+                                                                                                    ╭───────────────╮   job rows   │ ╰────────╯
+                                                                                                    │River job queue│●─────────────╯
+                                                                                                    │               │
+                                                                                                    ╰───────────────╯
+
+
+                          ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                          Slow ops path and reconcile loop
+                          Queued work beside the fast path: SSH audits, diagnostics to the janitor, its proposals through webapi to Slack, and the one-minute gcore cluster sync.
+
+                                                                         ╭───────────╮
+                                              ╭─────────────────────────▶│janitor app│●────────────────────────╮
+                                              │    diagnostic events     │           │    proposed actions     │
+                                              │                          ╰───────────╯                         │
+                                              │                                                                │
+                                              │                        ╭───────────────╮                       │
+                           ╭───────────────╮  │                      ╭▶│S3 object store│                       │
+                           │               │●─╯                      │ │               │                       │
+                           │               │    diagnose uploads     │ ╰───────────────╯                       │ ╭─────────────╮  confirm + alerts
+                           │River job queue│●────────────────────────╯                                         ╰▶│webapi server│●───────────────────╮
+                           │               │                            ╭─────────────╮  run machine-audit       │             │                    │ ╭─────╮
+                           │               │●──────────────────────────▶│SSH + BMC ops│●────────────────────╮    ╰─────────────╯                    ╰▶│Slack│
+                           ╰───────────────╯   audit/verify reimage     │             │                     │                                         │     │
+                                                                        ╰─────────────╯                     │ ╭───────────────────╮                   ╰─────╯
+                          ╭─────────────────╮      cluster state                                            ╰▶│bare-metal machines│
+                          │                 │●───────────────────────╮    ╭────────╮                          │                   │
+                          │cluster reconcile│                        ╰───▶│Postgres│                          ╰───────────────────╯
+                          │                 │●────────────────────╮       │        │
+                          ╰─────────────────╯  gcore sync, 1 min  │       ╰────────╯
+                                                                  │
+                                                                  │ ╭────────────────────╮
+                                                                  ╰▶│bare-metal providers│
+ ┌───────┐                                                          │                    │
+ │ + [+] │                                                          ╰────────────────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+selected: 26 nodes
+frame 1 at 100ms
+ rataflow-view · 300x70 @100% · canvas.json · 26 nodes · 23 edges · q quit
+
+                          Request and provisioning path
+                          Humans and the control plane enter through webapi and private gRPC, enqueue River jobs, and provision bare metal down to the iPXE boot.
+
+                                                                                                                                                                              ╭────────────────────╮
+                           ╭─────────────╮  create/terminate/repair  ╭────────────╮      enqueue job                                                                        ╭▶│bare-metal providers│●───────────────────╮
+                           │control plane│●─────────────────────────▶│private gRPC│●─────────────────────╮                                                                  │ │                    │  allocate instance │ ╭───────────────────╮
+                           │             │                           │            │                      │ ╭───────────────╮                ╭─────────────────╮provider API │ ╰────────────────────╯                    ╰▶│                   │                  ╭───────────────╮
+                           ╰─────────────╯                           ╰────────────╯                      ╰▶│               │ provision job╭▶│provider registry│●────────────╯                             iPXE request    │                   │ pull boot image╭▶│S3 object store│
+                                                                                                           │River job queue│●─────────────╯ │                 │                    ╭───────────╮      ╭──────────────────●│bare-metal machines│●───────────────╯ │               │
+                          ╭──────────────╮          http            ╭─────────────╮ reinstall/reprovision╭▶│               │                ╰─────────────────╯                    │           │◀─────╯                   │                   │                  ╰───────────────╯
+                          │humans + mmctl│●────────────────────────▶│webapi server│●─────────────────────╯ ╰───────────────╯                                                       │boot server│                        ╭▶│                   │
+                          │              │                          │             │                                                                                                │           │●───────────────────────╯ ╰───────────────────╯
+                          ╰──────────────╯                          ╰─────────────╯                                                                                                ╰───────────╯   boot.ipxe + S3 args
+
+
+                          ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                          Heartbeat and machine state
+                          The fastest path: each host's machine-agent registers and heartbeats over public gRPC. Public gRPC, private gRPC and the queue each write their own Postgres rows.
+
+                                                                                                      ╭───────────╮
+                                                                                                   ╭─▶│public gRPC│●───────────────╮
+                                                                                                   │  │           │  machine state │
+                                                                                                   │  ╰───────────╯                │
+                                                                                                   │                               │ ╭────────╮
+                          ╭───────────────────╮ runs on host  ╭─────────────╮ register + heartbeat │  ╭────────────╮ machine rows  ╰▶│        │
+                          │bare-metal machines│──────────────▶│machine-agent│●─────────────────────╯  │private gRPC│●─────────────╮  │        │
+                          │                   │               │             │                         │            │              ╰─▶│Postgres│
+                          ╰───────────────────╯               ╰─────────────╯                         ╰────────────╯                 │        │
+                                                                                                                                   ╭▶│        │
+                                                                                                    ╭───────────────╮   job rows   │ ╰────────╯
+                                                                                                    │River job queue│●─────────────╯
+                                                                                                    │               │
+                                                                                                    ╰───────────────╯
+
+
+                          ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                          Slow ops path and reconcile loop
+                          Queued work beside the fast path: SSH audits, diagnostics to the janitor, its proposals through webapi to Slack, and the one-minute gcore cluster sync.
+
+                                                                         ╭───────────╮
+                                              ╭─────────────────────────▶│janitor app│●────────────────────────╮
+                                              │    diagnostic events     │           │    proposed actions     │
+                                              │                          ╰───────────╯                         │
+                                              │                                                                │
+                                              │                        ╭───────────────╮                       │
+                           ╭───────────────╮  │                      ╭▶│S3 object store│                       │
+                           │               │●─╯                      │ │               │                       │
+                           │               │    diagnose uploads     │ ╰───────────────╯                       │ ╭─────────────╮  confirm + alerts
+                           │River job queue│●────────────────────────╯                                         ╰▶│webapi server│●───────────────────╮
+                           │               │                            ╭─────────────╮  run machine-audit       │             │                    │ ╭─────╮
+                           │               │●──────────────────────────▶│SSH + BMC ops│●────────────────────╮    ╰─────────────╯                    ╰▶│Slack│
+                           ╰───────────────╯   audit/verify reimage     │             │                     │                                         │     │
+                                                                        ╰─────────────╯                     │ ╭───────────────────╮                   ╰─────╯
+                          ╭─────────────────╮      cluster state                                            ╰▶│bare-metal machines│
+                          │                 │●───────────────────────╮    ╭────────╮                          │                   │
+                          │cluster reconcile│                        ╰───▶│Postgres│                          ╰───────────────────╯
+                          │                 │●────────────────────╮       │        │
+                          ╰─────────────────╯  gcore sync, 1 min  │       ╰────────╯
+                                                                  │
+                                                                  │ ╭────────────────────╮
+                                                                  ╰▶│bare-metal providers│
+ ┌───────┐                                                          │                    │
+ │ + [+] │                                                          ╰────────────────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+selected: 26 nodes
+frame 2 at 200ms
+ rataflow-view · 300x70 @100% · canvas.json · 26 nodes · 23 edges · q quit
+
+                          Request and provisioning path
+                          Humans and the control plane enter through webapi and private gRPC, enqueue River jobs, and provision bare metal down to the iPXE boot.
+
+                                                                                                                                                                              ╭────────────────────╮
+                           ╭─────────────╮  create/terminate/repair  ╭────────────╮      enqueue job                                                                        ╭▶│bare-metal providers│─●──────────────────╮
+                           │control plane│─●────────────────────────▶│private gRPC│─●────────────────────╮                                                                  │ │                    │  allocate instance │ ╭───────────────────╮
+                           │             │                           │            │                      │ ╭───────────────╮                ╭─────────────────╮provider API │ ╰────────────────────╯                    ╰▶│                   │                  ╭───────────────╮
+                           ╰─────────────╯                           ╰────────────╯                      ╰▶│               │ provision job╭▶│provider registry│─●───────────╯                             iPXE request    │                   │ pull boot image╭▶│S3 object store│
+                                                                                                           │River job queue│─●────────────╯ │                 │                    ╭───────────╮      ╭─────────────────●─│bare-metal machines│─●──────────────╯ │               │
+                          ╭──────────────╮          http            ╭─────────────╮ reinstall/reprovision╭▶│               │                ╰─────────────────╯                    │           │◀─────╯                   │                   │                  ╰───────────────╯
+                          │humans + mmctl│─●───────────────────────▶│webapi server│─●────────────────────╯ ╰───────────────╯                                                       │boot server│                        ╭▶│                   │
+                          │              │                          │             │                                                                                                │           │─●──────────────────────╯ ╰───────────────────╯
+                          ╰──────────────╯                          ╰─────────────╯                                                                                                ╰───────────╯   boot.ipxe + S3 args
+
+
+                          ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                          Heartbeat and machine state
+                          The fastest path: each host's machine-agent registers and heartbeats over public gRPC. Public gRPC, private gRPC and the queue each write their own Postgres rows.
+
+                                                                                                      ╭───────────╮
+                                                                                                   ╭─▶│public gRPC│─●──────────────╮
+                                                                                                   │  │           │  machine state │
+                                                                                                   │  ╰───────────╯                │
+                                                                                                   │                               │ ╭────────╮
+                          ╭───────────────────╮ runs on host  ╭─────────────╮ register + heartbeat │  ╭────────────╮ machine rows  ╰▶│        │
+                          │bare-metal machines│──────────────▶│machine-agent│─●────────────────────╯  │private gRPC│─●────────────╮  │        │
+                          │                   │               │             │                         │            │              ╰─▶│Postgres│
+                          ╰───────────────────╯               ╰─────────────╯                         ╰────────────╯                 │        │
+                                                                                                                                   ╭▶│        │
+                                                                                                    ╭───────────────╮   job rows   │ ╰────────╯
+                                                                                                    │River job queue│─●────────────╯
+                                                                                                    │               │
+                                                                                                    ╰───────────────╯
+
+
+                          ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                          Slow ops path and reconcile loop
+                          Queued work beside the fast path: SSH audits, diagnostics to the janitor, its proposals through webapi to Slack, and the one-minute gcore cluster sync.
+
+                                                                         ╭───────────╮
+                                              ╭─────────────────────────▶│janitor app│─●───────────────────────╮
+                                              │    diagnostic events     │           │    proposed actions     │
+                                              │                          ╰───────────╯                         │
+                                              │                                                                │
+                                              │                        ╭───────────────╮                       │
+                           ╭───────────────╮  │                      ╭▶│S3 object store│                       │
+                           │               │─●╯                      │ │               │                       │
+                           │               │    diagnose uploads     │ ╰───────────────╯                       │ ╭─────────────╮  confirm + alerts
+                           │River job queue│─●───────────────────────╯                                         ╰▶│webapi server│─●──────────────────╮
+                           │               │                            ╭─────────────╮  run machine-audit       │             │                    │ ╭─────╮
+                           │               │─●─────────────────────────▶│SSH + BMC ops│─●───────────────────╮    ╰─────────────╯                    ╰▶│Slack│
+                           ╰───────────────╯   audit/verify reimage     │             │                     │                                         │     │
+                                                                        ╰─────────────╯                     │ ╭───────────────────╮                   ╰─────╯
+                          ╭─────────────────╮      cluster state                                            ╰▶│bare-metal machines│
+                          │                 │─●──────────────────────╮    ╭────────╮                          │                   │
+                          │cluster reconcile│                        ╰───▶│Postgres│                          ╰───────────────────╯
+                          │                 │─●───────────────────╮       │        │
+                          ╰─────────────────╯  gcore sync, 1 min  │       ╰────────╯
+                                                                  │
+                                                                  │ ╭────────────────────╮
+                                                                  ╰▶│bare-metal providers│
+ ┌───────┐                                                          │                    │
+ │ + [+] │                                                          ╰────────────────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+selected: 26 nodes
+frame 3 at 300ms
+ rataflow-view · 300x70 @100% · canvas.json · 26 nodes · 23 edges · q quit
+
+                          Request and provisioning path
+                          Humans and the control plane enter through webapi and private gRPC, enqueue River jobs, and provision bare metal down to the iPXE boot.
+
+                                                                                                                                                                              ╭────────────────────╮
+                           ╭─────────────╮  create/terminate/repair  ╭────────────╮      enqueue job                                                                        ╭▶│bare-metal providers│─●──────────────────╮
+                           │control plane│─●────────────────────────▶│private gRPC│─●────────────────────╮                                                                  │ │                    │  allocate instance │ ╭───────────────────╮
+                           │             │                           │            │                      │ ╭───────────────╮                ╭─────────────────╮provider API │ ╰────────────────────╯                    ╰▶│                   │                  ╭───────────────╮
+                           ╰─────────────╯                           ╰────────────╯                      ╰▶│               │ provision job╭▶│provider registry│─●───────────╯                             iPXE request    │                   │ pull boot image╭▶│S3 object store│
+                                                                                                           │River job queue│─●────────────╯ │                 │                    ╭───────────╮      ╭─────────────────●─│bare-metal machines│─●──────────────╯ │               │
+                          ╭──────────────╮          http            ╭─────────────╮ reinstall/reprovision╭▶│               │                ╰─────────────────╯                    │           │◀─────╯                   │                   │                  ╰───────────────╯
+                          │humans + mmctl│─●───────────────────────▶│webapi server│─●────────────────────╯ ╰───────────────╯                                                       │boot server│                        ╭▶│                   │
+                          │              │                          │             │                                                                                                │           │─●──────────────────────╯ ╰───────────────────╯
+                          ╰──────────────╯                          ╰─────────────╯                                                                                                ╰───────────╯   boot.ipxe + S3 args
+
+
+                          ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                          Heartbeat and machine state
+                          The fastest path: each host's machine-agent registers and heartbeats over public gRPC. Public gRPC, private gRPC and the queue each write their own Postgres rows.
+
+                                                                                                      ╭───────────╮
+                                                                                                   ╭─▶│public gRPC│─●──────────────╮
+                                                                                                   │  │           │  machine state │
+                                                                                                   │  ╰───────────╯                │
+                                                                                                   │                               │ ╭────────╮
+                          ╭───────────────────╮ runs on host  ╭─────────────╮ register + heartbeat │  ╭────────────╮ machine rows  ╰▶│        │
+                          │bare-metal machines│──────────────▶│machine-agent│─●────────────────────╯  │private gRPC│─●────────────╮  │        │
+                          │                   │               │             │                         │            │              ╰─▶│Postgres│
+                          ╰───────────────────╯               ╰─────────────╯                         ╰────────────╯                 │        │
+                                                                                                                                   ╭▶│        │
+                                                                                                    ╭───────────────╮   job rows   │ ╰────────╯
+                                                                                                    │River job queue│─●────────────╯
+                                                                                                    │               │
+                                                                                                    ╰───────────────╯
+
+
+                          ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                          Slow ops path and reconcile loop
+                          Queued work beside the fast path: SSH audits, diagnostics to the janitor, its proposals through webapi to Slack, and the one-minute gcore cluster sync.
+
+                                                                         ╭───────────╮
+                                              ╭─────────────────────────▶│janitor app│─●───────────────────────╮
+                                              │    diagnostic events     │           │    proposed actions     │
+                                              │                          ╰───────────╯                         │
+                                              │                                                                │
+                                              │                        ╭───────────────╮                       │
+                           ╭───────────────╮  │                      ╭▶│S3 object store│                       │
+                           │               │─●╯                      │ │               │                       │
+                           │               │    diagnose uploads     │ ╰───────────────╯                       │ ╭─────────────╮  confirm + alerts
+                           │River job queue│─●───────────────────────╯                                         ╰▶│webapi server│─●──────────────────╮
+                           │               │                            ╭─────────────╮  run machine-audit       │             │                    │ ╭─────╮
+                           │               │─●─────────────────────────▶│SSH + BMC ops│─●───────────────────╮    ╰─────────────╯                    ╰▶│Slack│
+                           ╰───────────────╯   audit/verify reimage     │             │                     │                                         │     │
+                                                                        ╰─────────────╯                     │ ╭───────────────────╮                   ╰─────╯
+                          ╭─────────────────╮      cluster state                                            ╰▶│bare-metal machines│
+                          │                 │─●──────────────────────╮    ╭────────╮                          │                   │
+                          │cluster reconcile│                        ╰───▶│Postgres│                          ╰───────────────────╯
+                          │                 │─●───────────────────╮       │        │
+                          ╰─────────────────╯  gcore sync, 1 min  │       ╰────────╯
+                                                                  │
+                                                                  │ ╭────────────────────╮
+                                                                  ╰▶│bare-metal providers│
+ ┌───────┐                                                          │                    │
+ │ + [+] │                                                          ╰────────────────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+selected: 26 nodes
+frame 4 at 400ms
+ rataflow-view · 300x70 @100% · canvas.json · 26 nodes · 23 edges · q quit
+
+                          Request and provisioning path
+                          Humans and the control plane enter through webapi and private gRPC, enqueue River jobs, and provision bare metal down to the iPXE boot.
+
+                                                                                                                                                                              ╭────────────────────╮
+                           ╭─────────────╮  create/terminate/repair  ╭────────────╮      enqueue job                                                                        ╭▶│bare-metal providers│──●─────────────────╮
+                           │control plane│──●───────────────────────▶│private gRPC│──●───────────────────╮                                                                  │ │                    │  allocate instance │ ╭───────────────────╮
+                           │             │                           │            │                      │ ╭───────────────╮                ╭─────────────────╮provider API │ ╰────────────────────╯                    ╰▶│                   │                  ╭───────────────╮
+                           ╰─────────────╯                           ╰────────────╯                      ╰▶│               │ provision job╭▶│provider registry│──●──────────╯                             iPXE request    │                   │ pull boot image╭▶│S3 object store│
+                                                                                                           │River job queue│──●───────────╯ │                 │                    ╭───────────╮      ╭────────────────●──│bare-metal machines│──●─────────────╯ │               │
+                          ╭──────────────╮          http            ╭─────────────╮ reinstall/reprovision╭▶│               │                ╰─────────────────╯                    │           │◀─────╯                   │                   │                  ╰───────────────╯
+                          │humans + mmctl│──●──────────────────────▶│webapi server│──●───────────────────╯ ╰───────────────╯                                                       │boot server│                        ╭▶│                   │
+                          │              │                          │             │                                                                                                │           │──●─────────────────────╯ ╰───────────────────╯
+                          ╰──────────────╯                          ╰─────────────╯                                                                                                ╰───────────╯   boot.ipxe + S3 args
+
+
+                          ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                          Heartbeat and machine state
+                          The fastest path: each host's machine-agent registers and heartbeats over public gRPC. Public gRPC, private gRPC and the queue each write their own Postgres rows.
+
+                                                                                                      ╭───────────╮
+                                                                                                   ╭─▶│public gRPC│──●─────────────╮
+                                                                                                   │  │           │  machine state │
+                                                                                                   │  ╰───────────╯                │
+                                                                                                   │                               │ ╭────────╮
+                          ╭───────────────────╮ runs on host  ╭─────────────╮ register + heartbeat │  ╭────────────╮ machine rows  ╰▶│        │
+                          │bare-metal machines│──────────────▶│machine-agent│──●───────────────────╯  │private gRPC│──●───────────╮  │        │
+                          │                   │               │             │                         │            │              ╰─▶│Postgres│
+                          ╰───────────────────╯               ╰─────────────╯                         ╰────────────╯                 │        │
+                                                                                                                                   ╭▶│        │
+                                                                                                    ╭───────────────╮   job rows   │ ╰────────╯
+                                                                                                    │River job queue│──●───────────╯
+                                                                                                    │               │
+                                                                                                    ╰───────────────╯
+
+
+                          ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                          Slow ops path and reconcile loop
+                          Queued work beside the fast path: SSH audits, diagnostics to the janitor, its proposals through webapi to Slack, and the one-minute gcore cluster sync.
+
+                                                                         ╭───────────╮
+                                              ╭─────────────────────────▶│janitor app│──●──────────────────────╮
+                                              │    diagnostic events     │           │    proposed actions     │
+                                              │                          ╰───────────╯                         │
+                                              │                                                                │
+                                              │                        ╭───────────────╮                       │
+                           ╭───────────────╮  ●                      ╭▶│S3 object store│                       │
+                           │               │──╯                      │ │               │                       │
+                           │               │    diagnose uploads     │ ╰───────────────╯                       │ ╭─────────────╮  confirm + alerts
+                           │River job queue│──●──────────────────────╯                                         ╰▶│webapi server│──●─────────────────╮
+                           │               │                            ╭─────────────╮  run machine-audit       │             │                    │ ╭─────╮
+                           │               │──●────────────────────────▶│SSH + BMC ops│──●──────────────────╮    ╰─────────────╯                    ╰▶│Slack│
+                           ╰───────────────╯   audit/verify reimage     │             │                     │                                         │     │
+                                                                        ╰─────────────╯                     │ ╭───────────────────╮                   ╰─────╯
+                          ╭─────────────────╮      cluster state                                            ╰▶│bare-metal machines│
+                          │                 │──●─────────────────────╮    ╭────────╮                          │                   │
+                          │cluster reconcile│                        ╰───▶│Postgres│                          ╰───────────────────╯
+                          │                 │──●──────────────────╮       │        │
+                          ╰─────────────────╯  gcore sync, 1 min  │       ╰────────╯
+                                                                  │
+                                                                  │ ╭────────────────────╮
+                                                                  ╰▶│bare-metal providers│
+ ┌───────┐                                                          │                    │
+ │ + [+] │                                                          ╰────────────────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+selected: 26 nodes
+frame 5 at 500ms
+ rataflow-view · 300x70 @100% · canvas.json · 26 nodes · 23 edges · q quit
+
+                          Request and provisioning path
+                          Humans and the control plane enter through webapi and private gRPC, enqueue River jobs, and provision bare metal down to the iPXE boot.
+
+                                                                                                                                                                              ╭────────────────────╮
+                           ╭─────────────╮  create/terminate/repair  ╭────────────╮      enqueue job                                                                        ╭▶│bare-metal providers│──●─────────────────╮
+                           │control plane│──●───────────────────────▶│private gRPC│──●───────────────────╮                                                                  │ │                    │  allocate instance │ ╭───────────────────╮
+                           │             │                           │            │                      │ ╭───────────────╮                ╭─────────────────╮provider API │ ╰────────────────────╯                    ╰▶│                   │                  ╭───────────────╮
+                           ╰─────────────╯                           ╰────────────╯                      ╰▶│               │ provision job╭▶│provider registry│──●──────────╯                             iPXE request    │                   │ pull boot image╭▶│S3 object store│
+                                                                                                           │River job queue│──●───────────╯ │                 │                    ╭───────────╮      ╭────────────────●──│bare-metal machines│──●─────────────╯ │               │
+                          ╭──────────────╮          http            ╭─────────────╮ reinstall/reprovision╭▶│               │                ╰─────────────────╯                    │           │◀─────╯                   │                   │                  ╰───────────────╯
+                          │humans + mmctl│──●──────────────────────▶│webapi server│──●───────────────────╯ ╰───────────────╯                                                       │boot server│                        ╭▶│                   │
+                          │              │                          │             │                                                                                                │           │──●─────────────────────╯ ╰───────────────────╯
+                          ╰──────────────╯                          ╰─────────────╯                                                                                                ╰───────────╯   boot.ipxe + S3 args
+
+
+                          ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                          Heartbeat and machine state
+                          The fastest path: each host's machine-agent registers and heartbeats over public gRPC. Public gRPC, private gRPC and the queue each write their own Postgres rows.
+
+                                                                                                      ╭───────────╮
+                                                                                                   ╭─▶│public gRPC│──●─────────────╮
+                                                                                                   │  │           │  machine state │
+                                                                                                   │  ╰───────────╯                │
+                                                                                                   │                               │ ╭────────╮
+                          ╭───────────────────╮ runs on host  ╭─────────────╮ register + heartbeat │  ╭────────────╮ machine rows  ╰▶│        │
+                          │bare-metal machines│──────────────▶│machine-agent│──●───────────────────╯  │private gRPC│──●───────────╮  │        │
+                          │                   │               │             │                         │            │              ╰─▶│Postgres│
+                          ╰───────────────────╯               ╰─────────────╯                         ╰────────────╯                 │        │
+                                                                                                                                   ╭▶│        │
+                                                                                                    ╭───────────────╮   job rows   │ ╰────────╯
+                                                                                                    │River job queue│──●───────────╯
+                                                                                                    │               │
+                                                                                                    ╰───────────────╯
+
+
+                          ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                          Slow ops path and reconcile loop
+                          Queued work beside the fast path: SSH audits, diagnostics to the janitor, its proposals through webapi to Slack, and the one-minute gcore cluster sync.
+
+                                                                         ╭───────────╮
+                                              ╭─────────────────────────▶│janitor app│──●──────────────────────╮
+                                              │    diagnostic events     │           │    proposed actions     │
+                                              │                          ╰───────────╯                         │
+                                              │                                                                │
+                                              │                        ╭───────────────╮                       │
+                           ╭───────────────╮  ●                      ╭▶│S3 object store│                       │
+                           │               │──╯                      │ │               │                       │
+                           │               │    diagnose uploads     │ ╰───────────────╯                       │ ╭─────────────╮  confirm + alerts
+                           │River job queue│──●──────────────────────╯                                         ╰▶│webapi server│──●─────────────────╮
+                           │               │                            ╭─────────────╮  run machine-audit       │             │                    │ ╭─────╮
+                           │               │──●────────────────────────▶│SSH + BMC ops│──●──────────────────╮    ╰─────────────╯                    ╰▶│Slack│
+                           ╰───────────────╯   audit/verify reimage     │             │                     │                                         │     │
+                                                                        ╰─────────────╯                     │ ╭───────────────────╮                   ╰─────╯
+                          ╭─────────────────╮      cluster state                                            ╰▶│bare-metal machines│
+                          │                 │──●─────────────────────╮    ╭────────╮                          │                   │
+                          │cluster reconcile│                        ╰───▶│Postgres│                          ╰───────────────────╯
+                          │                 │──●──────────────────╮       │        │
+                          ╰─────────────────╯  gcore sync, 1 min  │       ╰────────╯
+                                                                  │
+                                                                  │ ╭────────────────────╮
+                                                                  ╰▶│bare-metal providers│
+ ┌───────┐                                                          │                    │
+ │ + [+] │                                                          ╰────────────────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+selected: 26 nodes

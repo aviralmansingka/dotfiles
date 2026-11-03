@@ -1,0 +1,53 @@
+{
+  "spec_path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/13/server-nic-layout/specs/canvas-a3.json",
+  "spec_sha256": "4191e3da8268045f273f74e18b72789da08d230cb7e02155529ff9cd344c3af3",
+  "spec_form": "canvas",
+  "diagrams": [
+    {
+      "id": "local",
+      "title": "server1 ports and its /29",
+      "description": "Bare-metal server1, one live uplink of eight NICs; the /29 is public L3 - no NAT, no v6. Arista OUI: clue, not a ToR proof."
+    },
+    {
+      "id": "upstream",
+      "title": "the hops the trace answered",
+      "description": "Hops the trace answered, at its own latencies; Cloudflare is AS13335. Silent hops and hidden fabric are not drawn."
+    }
+  ],
+  "binary_path": "/tmp/visualize-eval/round-13/bin/rataflow-view",
+  "binary_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+  "pane_id": "w7E:pZW",
+  "pane_rect": null,
+  "pane_cols": null,
+  "pane_rows": 44,
+  "viewport_line": null,
+  "viewport_token": "68x44 @100%",
+  "check_exit": 0,
+  "check_window": [
+    "2026-11-03T14:02:04Z",
+    "2026-11-03T14:02:04Z"
+  ],
+  "capture_window": [
+    "2026-11-03T14:02:04Z",
+    "2026-11-03T14:02:08Z"
+  ],
+  "cleanup": "confirmed_closed",
+  "select_all_frame": true,
+  "frames": 3,
+  "frame_step_ms": 100,
+  "pinned_frames": {
+    "file": "canvas-wide-140x40-frames.txt",
+    "viewport_line": "viewport: 140x40 zoom: 1.00 natural"
+  },
+  "artifacts": {
+    "bin.sha256": "41acd28bd47aeed7923377b953efce1900faf3bdd0d9c08a898ca8ffaf087a8d",
+    "canvas-wide-140x40-frames.txt": "58d9974ef5861904ba6c5107ac7496de519b7254aa18fe0811a782a02cf6727f",
+    "canvas-wide-ansi.ansi": "c0596101e9ded0454bc9c04617ca8dea43577e187897f66c3712c992f512368c",
+    "canvas-wide-frames.ansi": "d96d6591bc126959f47daf2916936176bf333c03c4546fe10dd81206af92803a",
+    "canvas-wide-frames.txt": "6f4e97137af851355181d4a6e808dfb19754c91a9bd59547386f32d579bc0b52",
+    "canvas-wide-pinned.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "canvas-wide-selected.ansi": "8c30f8c77a1430314b58e995ee1f0049cce40c20c190db61350af4c5ceb215a0",
+    "canvas-wide-text.txt": "99c8161b6478ccf6ecdcb7a5a9c8edbd1673440493248d73009c3267f0c68a29",
+    "check.txt": "38705e472c919e0d3475e60fb2538669440596aaa81136356410626cd28c41a8"
+  }
+}

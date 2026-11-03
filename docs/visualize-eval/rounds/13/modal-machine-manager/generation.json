@@ -1,0 +1,540 @@
+{
+  "case_id": "modal-machine-manager",
+  "round": "13",
+  "generator": {
+    "identity": "viz-ds13-5",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "frozen_inputs": {
+    "skill": {
+      "path": "docs/visualize-eval/rounds/13/SKILL.md",
+      "proposal": 12,
+      "sha256": "65d826f0f1f9e61ddfd806628cb162827b0e6cf6d7df2490c9d75e6cbe485d2a"
+    },
+    "renderer": {
+      "path": "/tmp/visualize-eval/round-13/bin/rataflow-view",
+      "sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13"
+    },
+    "rubric_revision": 11,
+    "source": {
+      "path": "docs/visualize-eval/cases/modal-machine-manager/source.md",
+      "sha256": "a41065d9ceca1ed035bfd6282f0e937abbd0034ad497a33637a76f2d8a9ebab3"
+    },
+    "brief": "docs/visualize-eval/rounds/13/briefs/modal-machine-manager.md",
+    "target_viewport": "77x47 @100% natural zoom"
+  },
+  "triage": {
+    "annex_id": "TRIAGE-modal-machine-manager",
+    "questions_provoked": [
+      {
+        "id": "TRIAGE-modal-machine-manager-1",
+        "question": "All 23 relations, or the main paths?",
+        "used": true
+      },
+      {
+        "id": "TRIAGE-modal-machine-manager-2",
+        "question": "One canvas or several separate panes?",
+        "used": true
+      },
+      {
+        "id": "TRIAGE-modal-machine-manager-3",
+        "question": "Motion?",
+        "used": true
+      },
+      {
+        "id": "Q4",
+        "question": "Which concepts separate into diagrams, and on what seam?",
+        "used": true,
+        "note": "The framing names the paths that must stay recognisable; the exact split is the generator's call and is recorded as own judgment."
+      },
+      {
+        "id": "Q5",
+        "question": "Are provider registry and machine-agent grouped, drawn as their own boxes, or dropped?",
+        "used": true,
+        "note": "Answered by the brief ('the source permits grouping, never dropping') plus the source's own node list; resolved as drawn boxes carrying a group tag."
+      },
+      {
+        "id": "Q6",
+        "question": "Do both machines -> boot and boot -> machines survive, and is the queue -> S3 diagnostics edge kept apart from the machine image pull?",
+        "used": true,
+        "note": "Fixed constraints; resolved as two anti-parallel labelled edges in one diagram and two separate edges in different diagrams."
+      },
+      {
+        "id": "Q7",
+        "question": "Which hops are historical, so they carry no dot?",
+        "used": true,
+        "note": "source.md marks no relation historical or unconfirmed; resolved by own judgment (see below), not by inventing a qualifier."
+      },
+      {
+        "id": "Q8",
+        "question": "Would one pane beside the chat be enough instead of a canvas?",
+        "used": false,
+        "note": "Provoked by the skill's route table but already answered by the framing ('Put it on one canvas if that's what it takes'), so asking it would be padding."
+      }
+    ],
+    "questions_used": [
+      {
+        "id": "TRIAGE-modal-machine-manager-1",
+        "question": "All 23 relations, or the main paths?",
+        "answer": "All of them. Every relation once. I'd rather navigate a big canvas than lose a path.",
+        "answer_source": "annex answer TRIAGE-modal-machine-manager-1"
+      },
+      {
+        "id": "TRIAGE-modal-machine-manager-2",
+        "question": "One canvas or several separate panes?",
+        "answer": "One canvas with everything, split into named diagrams I can read. Describe each one so I know what I'm looking at.",
+        "answer_source": "annex answer TRIAGE-modal-machine-manager-2"
+      },
+      {
+        "id": "TRIAGE-modal-machine-manager-3",
+        "question": "Motion?",
+        "answer": "Slow, sparse dots — one per live transition. Nothing on the historical ones, and no dot sitting on a border.",
+        "answer_source": "annex answer TRIAGE-modal-machine-manager-3"
+      },
+      {
+        "id": "Q4",
+        "question": "Which concepts separate into diagrams, and on what seam?",
+        "answer": "Three described diagrams on the source's own clusters: request+provisioning (control-plane gRPC, webapi, River queue, provider registry, providers, machines, boot server, S3), heartbeat+machine state (agent, public gRPC, Postgres and the other two Postgres writers), slow ops+reconcile (SSH audits, janitor, webapi to Slack, one-minute gcore sync). No component is unique to a fourth cluster, and a fourth diagram would be a two-edge fragment.",
+        "answer_source": "own judgment — source.md names its three edge groups itself (\"Request path (provisioning)\", \"Heartbeat path (fastest)\", \"Ops path (slow)\"), and the brief asks for named, described sections; the split follows those three groups verbatim."
+      },
+      {
+        "id": "Q5",
+        "question": "Are provider registry and machine-agent grouped, drawn as their own boxes, or dropped?",
+        "answer": "Both are drawn as their own boxes with group tags (provider registry: control, machine-agent: hardware) and both keep every relation they own in the source.",
+        "answer_source": "own judgment — the brief allows grouping but forbids dropping, and source.md lists both as nodes with edges of their own; a group tag is the least lossy way to satisfy both."
+      },
+      {
+        "id": "Q6",
+        "question": "Do both machines -> boot and boot -> machines survive, and is the queue -> S3 diagnostics edge kept apart from the machine image pull?",
+        "answer": "Yes: R8 'iPXE request' and R9 'boot.ipxe + S3 args' are two separately labelled routes in the request diagram; O6 'diagnose uploads' (queue -> S3) sits in the ops diagram, in a different section from R10 'pull boot image' (machines -> S3).",
+        "answer_source": "own judgment — fixed constraints in source.md, checked by the relationship audit below."
+      },
+      {
+        "id": "Q7",
+        "question": "Which hops are historical, so they carry no dot?",
+        "answer": "None is marked historical in source.md, so no relation is muted on that ground. Exactly one relation is dot-free: H1 machines -> machine-agent 'runs on host', which is a residency fact, not a live transition.",
+        "answer_source": "own judgment — source.md qualifies no relation as historical/unconfirmed and describes every other relation as a moving action or message; the source's own correction ('use way less dots. keep on dot alive per line') and its constraint ('slow, sparse dots on selected communication edges') both point at communication, and 'runs on host' communicates nothing."
+      }
+    ],
+    "converged_when": "After the three annex answers plus the Q4-Q7 judgments: scope (all 17 components, all 23 relations), shape (one canvas of described diagrams), seam (the source's three named paths), coverage qualifiers (both boot directions, the separate queue -> S3 diagnostics, registry/agent never dropped) and motion (one constant-speed dot per live transition, none on the residency edge) were all fixed. No remaining question could change the drawing, so triage stopped.",
+    "shape_decision": "canvas with 3 described diagrams"
+  },
+  "classification": {
+    "family": "lifecycle-machines",
+    "evidence": "One River job queue state fans to 5 destinations (provider registry, Postgres, SSH+BMC ops, janitor, S3) and the source marks every transition live ('keep on dot alive per line'), so one dot per line.",
+    "tie_breakers_considered": [
+      "Density: E=23 > N=17, so it is not a flow-chain (E≈N) even though several of its paths are chains.",
+      "No source-named shared bus between weakly connected worlds, so it is not placement-planes; the phases connect through the queue, the database and the providers.",
+      "Identifier density is low (verbs and payloads, few addresses), so it is not an identity-probe-map."
+    ],
+    "secondary_recipe": "service-meshes: its anti-parallel-pair habit was borrowed for machines <-> boot server, which stay in ONE diagram as two labelled routes with distinct ports (R8/R9) instead of being split.",
+    "reclassification": null
+  },
+  "view_shape": {
+    "rung": 2,
+    "rung_label": "one large canvas hosting several concept-diagrams, each with a drawn title and one-line description",
+    "deciding_source_facts": [
+      "17 components and 23 directed relations; a 7-rank request chain (cp -> pgrpc -> q -> reg -> prov -> mch -> boot) alone is 260 cells wide at natural zoom with its 17-22 character labels.",
+      "The source groups its own relations into three named paths (request/provisioning, heartbeat/fastest, ops/slow), each a separate concept a reader can name.",
+      "The brief states the reader's job is navigational ('where does this path go?') and asks for named, described sections.",
+      "Round 12's honest measurement of the same facts as one flat graph was 101x136 - larger than the 77x47 pane on both axes."
+    ],
+    "rungs_rejected": [
+      {
+        "rung": 1,
+        "label": "one concept that fits 77x47 at natural zoom",
+        "reason": "Measured, not assumed: the shipped canvas is 260x64 and the narrowest honest section is 118x15; 23 relations with 17-22 character labels cannot be drawn inside 77x47 at 100% without thinning a relation or shortening a source label. The 7-rank provisioning chain alone exceeds the pane width 3.4 times."
+      },
+      {
+        "rung": 3,
+        "label": "drop or thin a concept to fit",
+        "reason": "Refused by the contract and by the brief's fixed constraints; every one of the 17 components and 23 relations is drawn."
+      }
+    ]
+  },
+  "surfaces": [
+    {
+      "surface": "canvas",
+      "kind": "canvas (3 described diagrams)",
+      "spec": "specs/canvas.json",
+      "spec_sha256": "2cd0500be4927ea084971cb0274bd30c032aa940a48ad6ac8a0601dbb71e0dff",
+      "bundle": "evidence/canvas",
+      "text": "evidence/canvas/canvas-text.txt",
+      "ansi": "evidence/canvas/canvas-ansi.ansi",
+      "selected_ansi": "evidence/canvas/canvas-selected.ansi",
+      "check": "evidence/canvas/check.txt",
+      "frames": "evidence/canvas/canvas-frames.txt",
+      "frames_ansi": "evidence/canvas/canvas-frames.ansi",
+      "pinned_77x47_frames": "evidence/canvas/canvas-77x47-frames.txt",
+      "whole_canvas_fit_frames": "evidence/canvas/canvas-300x70-frames.txt",
+      "whole_canvas_select_all_frames": "evidence/canvas/sections/canvas-300x70-select-all-frames.txt",
+      "validator": "evidence/canvas/validator.txt",
+      "frame_audit": "evidence/canvas/frame-audit-300x70.txt",
+      "measured": {
+        "pane_viewport_token": "68x44 @100%",
+        "pane_viewport_line": null,
+        "pinned_77x47_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "whole_canvas_viewport_line": "viewport: 300x70 zoom: 1.00 natural",
+        "natural_zoom": "1.00",
+        "whole_canvas_extent": "260x64",
+        "note": "The half pane Herdr gave this tab is 68x44 (its width follows the tab, not the generator). The 77x47 target is proven by the pinned dump of this same final spec, which reports 'canvas 260x64' - the expected navigable-canvas overflow - and by the 300x70 dump, which draws the entire canvas at 100% with no overflow token."
+      },
+      "canvas_check_block": [
+        "canvas: 3 diagrams on one canvas, drawn whole at 100%",
+        "diagram request \"Request and provisioning path\" at 0,3: extent=260x11 nodes=10 edges=10 routes=10",
+        "diagram heartbeat \"Heartbeat and machine state\" at 0,19: extent=118x15 nodes=6 edges=5 routes=5",
+        "diagram ops \"Slow ops path and reconcile loop\" at 0,39: extent=132x25 nodes=10 edges=8 routes=8",
+        "extent=260x64 cells (whole canvas)"
+      ],
+      "totals": {
+        "drawn_node_instances": 26,
+        "unique_source_components": 17,
+        "edges": 23,
+        "routes": 23,
+        "animated_routes": 22,
+        "static_routes": 1,
+        "labels": "23/23 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners",
+        "crossings": "0 bridges, 0 touching bends",
+        "near_misses": 0,
+        "passes_near_unrelated_node": 0,
+        "origins": "22/22"
+      },
+      "diagrams": [
+        {
+          "id": "request",
+          "title": "Request and provisioning path",
+          "description": "Humans and the control plane enter through webapi and private gRPC, enqueue River jobs, and provision bare metal down to the iPXE boot.",
+          "direction": "lr",
+          "check_origin": [0, 3],
+          "check_extent": [260, 11],
+          "nodes": 10,
+          "edges": 10,
+          "routes": 10,
+          "node_ids": ["cp", "web", "pgrpc", "wapi", "q", "reg", "prov", "mch", "boot", "s3"],
+          "edge_ids": ["R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10"],
+          "label_owner_map": {
+            "R1": "create/terminate/repair",
+            "R2": "http",
+            "R3": "reinstall/reprovision",
+            "R4": "enqueue job",
+            "R5": "provision job",
+            "R6": "provider API",
+            "R7": "allocate instance",
+            "R8": "iPXE request",
+            "R9": "boot.ipxe + S3 args",
+            "R10": "pull boot image"
+          },
+          "hues": {
+            "control": ["cp", "pgrpc", "wapi", "q", "reg"],
+            "humans": ["web"],
+            "hardware": ["prov", "mch", "boot"],
+            "state": ["s3"]
+          },
+          "section_capture": "evidence/canvas/sections/request-300x18-frames.txt"
+        },
+        {
+          "id": "heartbeat",
+          "title": "Heartbeat and machine state",
+          "description": "The fastest path: each host's machine-agent registers and heartbeats over public gRPC. Public gRPC, private gRPC and the queue each write their own Postgres rows.",
+          "direction": "lr",
+          "check_origin": [0, 19],
+          "check_extent": [118, 15],
+          "nodes": 6,
+          "edges": 5,
+          "routes": 5,
+          "node_ids": ["mch", "agent", "pub", "pgrpc", "q", "db"],
+          "edge_ids": ["H1", "H2", "H3", "H4", "H5"],
+          "label_owner_map": {
+            "H1": "runs on host",
+            "H2": "register + heartbeat",
+            "H3": "machine state",
+            "H4": "machine rows",
+            "H5": "job rows"
+          },
+          "hues": {
+            "hardware": ["mch", "agent"],
+            "control": ["pub", "pgrpc", "q"],
+            "state": ["db"]
+          },
+          "section_capture": "evidence/canvas/sections/heartbeat-300x38-frames.txt"
+        },
+        {
+          "id": "ops",
+          "title": "Slow ops path and reconcile loop",
+          "description": "Queued work beside the fast path: SSH audits, diagnostics to the janitor, its proposals through webapi to Slack, and the one-minute gcore cluster sync.",
+          "direction": "lr",
+          "check_origin": [0, 39],
+          "check_extent": [132, 25],
+          "nodes": 10,
+          "edges": 8,
+          "routes": 8,
+          "node_ids": ["q", "rec", "ssh", "jan", "s3", "mch", "prov", "wapi", "db", "slack"],
+          "edge_ids": ["O1", "O2", "O3", "O4", "O5", "O6", "O7", "O8"],
+          "label_owner_map": {
+            "O1": "audit/verify reimage",
+            "O2": "run machine-audit",
+            "O3": "diagnostic events",
+            "O4": "proposed actions",
+            "O5": "confirm + alerts",
+            "O6": "diagnose uploads",
+            "O7": "gcore sync, 1 min",
+            "O8": "cluster state"
+          },
+          "hues": {
+            "control": ["q", "wapi"],
+            "ops": ["rec", "ssh", "jan"],
+            "state": ["s3", "db"],
+            "hardware": ["mch", "prov"],
+            "humans": ["slack"]
+          },
+          "section_capture": "evidence/canvas/sections/ops-300x70-frames.txt"
+        }
+      ],
+      "supplemental_evidence": {
+        "note": "Created by scripts/viz-pinned-dump.py after the viz-evidence bundle was assembled, so they are not in the bundle manifest; their sha256s are recorded here instead.",
+        "files": {
+          "evidence/canvas/sections/request-300x18-frames.txt": "370a4f0ddf67eaad2634f46dc2520da3608f394576e4c87d10443dd342b54162",
+          "evidence/canvas/sections/heartbeat-300x38-frames.txt": "25c4a06e510c947f4a0a9276acc3747642899672521e1fc3db938c27450e1795",
+          "evidence/canvas/sections/ops-300x70-frames.txt": "3be1ca20ef745cff25fb5f7c3a27a75cd4fa211392326f432a1858083ef0a709",
+          "evidence/canvas/sections/canvas-300x70-select-all-frames.txt": "caafb4e93b720663484079323926da859da998b4433bb6d2dc2f47cf5bc89fe5",
+          "evidence/canvas/frame-audit-300x70.txt": "c898f96eaa0e2c5c3cd1406239b7e5680100996ea9d844b34c356a7e561a9e99",
+          "evidence/canvas/validator.txt": "written by scripts/viz-validate.py (see the file)"
+        }
+      }
+    }
+  ],
+  "habits_borrowed": [
+    "lifecycle-machines: the phase axis is the rank axis in every diagram - the request chain runs control plane -> gRPC -> queue -> registry -> providers -> machines -> boot; the ops diagram runs the queue's fan outward and the reconcile loop's two writes.",
+    "lifecycle-machines: coverage before shape - every one of the 17 components and 23 relations is drawn somewhere; no side relation was demoted to a note.",
+    "lifecycle-machines: one dot per live transition, none on a static relation, each transition labelled with the action it carries.",
+    "service-meshes (secondary): the anti-parallel machines <-> boot pair stays in one diagram with two labels and two ports (evidence/canvas/sections/request-300x18-frames.txt, the two routes around 'boot server').",
+    "placement-planes (borrowed only as spatial separation): the three concepts occupy their own bands of the canvas, separated by a drawn rule row, and no cross-section route exists because diagrams never share a route."
+  ],
+  "deviations": [
+    {
+      "deviation": "Three diagrams instead of the family's single 'spine plus side relations' picture.",
+      "reason": "The spine is 7 ranks and the side relations (webapi entry, database writes, ops fan) make a 260-cell ribbon; the source itself names three edge groups, so the split follows the source rather than a node count.",
+      "capture": "evidence/canvas/check.txt (per-diagram extents), evidence/canvas/canvas-300x70-frames.txt frame 0."
+    },
+    {
+      "deviation": "Everything flows left-to-right, including the two fan diagrams, instead of the family's usual top-to-bottom phase axis.",
+      "reason": "Measured: a top-to-bottom axis turns each 17-22 character verb label into a rank gap as tall as the text is wide (attempt c1: request 39x150, canvas 162x257; attempt c3 with label_slot: request 54x104 plus 6 near-misses and 2 ambiguous labels). Left-to-right spends width instead of height and produced the only clean check.",
+      "capture": "recorded/c1-tb-all.stdout, recorded/c3-request-tb-slots.stdout, evidence/canvas/check.txt."
+    },
+    {
+      "deviation": "One route is drawn without a dot although the case is animated.",
+      "reason": "H1 machines -> machine-agent is labelled 'runs on host': a residency fact, not a live transition. No source relation is marked historical, so no other route is muted.",
+      "capture": "evidence/canvas/canvas-300x70-frames.txt frame 0, heartbeat band, 'runs on host' route: a plain line with no dot; the check reports 22 single-dot routes against 23 routes."
+    }
+  ],
+  "meaning_ledger": [
+    {"fact": "cp = Modal control plane", "kind": "role", "fate": "drawn (label 'control plane')", "surface": "request"},
+    {"fact": "web = humans + mmctl", "kind": "role", "fate": "drawn (label 'humans + mmctl')", "surface": "request"},
+    {"fact": "pgrpc = private gRPC", "kind": "protocol", "fate": "drawn", "surface": "request, heartbeat"},
+    {"fact": "wapi = webapi server", "kind": "role", "fate": "drawn", "surface": "request, ops"},
+    {"fact": "pub = public gRPC", "kind": "protocol", "fate": "drawn", "surface": "heartbeat"},
+    {"fact": "boot = boot server", "kind": "role", "fate": "drawn", "surface": "request"},
+    {"fact": "q = River job queue", "kind": "role", "fate": "drawn", "surface": "request, heartbeat, ops"},
+    {"fact": "rec = cluster reconcile loop, every minute", "kind": "role + cadence", "fate": "drawn node 'cluster reconcile' + label 'gcore sync, 1 min'", "surface": "ops"},
+    {"fact": "ssh = SSH + BMC ops", "kind": "role", "fate": "drawn", "surface": "ops"},
+    {"fact": "db = Postgres", "kind": "role", "fate": "drawn", "surface": "heartbeat, ops"},
+    {"fact": "s3 = S3 object store", "kind": "role", "fate": "drawn", "surface": "request, ops"},
+    {"fact": "reg = provider registry", "kind": "role", "fate": "drawn (grouped, not dropped)", "surface": "request"},
+    {"fact": "prov = bare-metal providers", "kind": "role", "fate": "drawn", "surface": "request, ops"},
+    {"fact": "mch = bare-metal machines", "kind": "role", "fate": "drawn", "surface": "request, heartbeat, ops"},
+    {"fact": "agent = machine-agent, on each host", "kind": "role + residency", "fate": "drawn (grouped, not dropped) + residency edge H1", "surface": "heartbeat"},
+    {"fact": "jan = janitor app", "kind": "role", "fate": "drawn", "surface": "ops"},
+    {"fact": "slack = Slack", "kind": "role", "fate": "drawn", "surface": "ops"},
+    {"fact": "create / terminate / repair on private gRPC", "kind": "action verbs", "fate": "drawn as label 'create/terminate/repair'", "surface": "request"},
+    {"fact": "http from humans + mmctl to webapi", "kind": "protocol", "fate": "drawn as 'http'", "surface": "request"},
+    {"fact": "reinstall / reprovision on webapi -> queue", "kind": "action verbs", "fate": "drawn as 'reinstall/reprovision'", "surface": "request"},
+    {"fact": "enqueue job on private gRPC -> queue", "kind": "action", "fate": "drawn", "surface": "request"},
+    {"fact": "provision job on queue -> provider registry", "kind": "action", "fate": "drawn", "surface": "request"},
+    {"fact": "provider API on registry -> bare-metal providers", "kind": "protocol", "fate": "drawn", "surface": "request"},
+    {"fact": "allocate instance on providers -> machines", "kind": "action", "fate": "drawn", "surface": "request"},
+    {"fact": "machines iPXE-boot from the boot server", "kind": "action", "fate": "drawn as 'iPXE request'", "surface": "request"},
+    {"fact": "boot server answers with boot.ipxe + S3 args", "kind": "payload", "fate": "drawn as 'boot.ipxe + S3 args' (opposite arrowhead)", "surface": "request"},
+    {"fact": "machines pull boot images from S3", "kind": "action", "fate": "drawn as 'pull boot image'", "surface": "request"},
+    {"fact": "machine-agent runs on the host", "kind": "residency", "fate": "drawn as H1 'runs on host', static (no dot)", "surface": "heartbeat"},
+    {"fact": "agent registers and heartbeats over public gRPC", "kind": "action", "fate": "drawn as 'register + heartbeat'", "surface": "heartbeat"},
+    {"fact": "public gRPC writes machine state to Postgres", "kind": "action", "fate": "drawn as 'machine state'", "surface": "heartbeat"},
+    {"fact": "private gRPC writes machine rows", "kind": "action", "fate": "drawn as 'machine rows'", "surface": "heartbeat"},
+    {"fact": "queue writes job rows", "kind": "action", "fate": "drawn as 'job rows'", "surface": "heartbeat"},
+    {"fact": "queue SSHes into machines for audits / verify reimage", "kind": "action", "fate": "drawn as 'audit/verify reimage'", "surface": "ops"},
+    {"fact": "SSH + BMC ops runs machine-audit on the machine", "kind": "action", "fate": "drawn as 'run machine-audit'", "surface": "ops"},
+    {"fact": "queue posts diagnostic events to the janitor", "kind": "action", "fate": "drawn as 'diagnostic events'", "surface": "ops"},
+    {"fact": "janitor proposes actions back through webapi", "kind": "action", "fate": "drawn as 'proposed actions'", "surface": "ops"},
+    {"fact": "webapi confirms via Slack and sends alerts", "kind": "action", "fate": "drawn as 'confirm + alerts'", "surface": "ops"},
+    {"fact": "queue uploads diagnostics to S3 (separate from the image pull)", "kind": "action", "fate": "drawn as 'diagnose uploads', own route in its own diagram", "surface": "ops"},
+    {"fact": "reconcile loop syncs gcore clusters every minute", "kind": "action + cadence", "fate": "drawn as 'gcore sync, 1 min'", "surface": "ops"},
+    {"fact": "reconcile loop syncs cluster state to Postgres", "kind": "action", "fate": "drawn as 'cluster state'", "surface": "ops"},
+    {"fact": "historical correction: 'use way less dots. keep on dot alive per line'", "kind": "qualifier on motion", "fate": "drawn: dots: 1 on 22 routes, constant 0.5 cells/step", "surface": "canvas"},
+    {"fact": "historical correction: 'Remove the yellow dots where arrows attach' / 'never on borders'", "kind": "qualifier on motion", "fate": "drawn: dots start at the first drawn cell after the source port; origins 22/22", "surface": "canvas"},
+    {"fact": "provider registry and machine-agent may be grouped but not silently dropped", "kind": "constraint", "fate": "drawn as nodes with group tags (control / hardware)", "surface": "request, heartbeat"}
+  ],
+  "relationship_audit": [
+    {"id": "R1", "engine_route": "request:e0", "from": "cp", "to": "pgrpc", "verb": "create / terminate / repair", "label": "create/terminate/repair", "diagram": "request", "dot": true},
+    {"id": "R2", "engine_route": "request:e1", "from": "web", "to": "wapi", "verb": "http", "label": "http", "diagram": "request", "dot": true},
+    {"id": "R3", "engine_route": "request:e2", "from": "wapi", "to": "q", "verb": "reinstall / reprovision", "label": "reinstall/reprovision", "diagram": "request", "dot": true},
+    {"id": "R4", "engine_route": "request:e3", "from": "pgrpc", "to": "q", "verb": "enqueue job", "label": "enqueue job", "diagram": "request", "dot": true},
+    {"id": "R5", "engine_route": "request:e4", "from": "q", "to": "reg", "verb": "provision job", "label": "provision job", "diagram": "request", "dot": true},
+    {"id": "R6", "engine_route": "request:e5", "from": "reg", "to": "prov", "verb": "provider API", "label": "provider API", "diagram": "request", "dot": true},
+    {"id": "R7", "engine_route": "request:e6", "from": "prov", "to": "mch", "verb": "allocate instance", "label": "allocate instance", "diagram": "request", "dot": true},
+    {"id": "R8", "engine_route": "request:e7", "from": "mch", "to": "boot", "verb": "iPXE request", "label": "iPXE request", "diagram": "request", "dot": true},
+    {"id": "R9", "engine_route": "request:e8", "from": "boot", "to": "mch", "verb": "boot.ipxe + S3 args", "label": "boot.ipxe + S3 args", "diagram": "request", "dot": true},
+    {"id": "R10", "engine_route": "request:e9", "from": "mch", "to": "s3", "verb": "pull boot image", "label": "pull boot image", "diagram": "request", "dot": true},
+    {"id": "H1", "engine_route": "heartbeat:e0", "from": "mch", "to": "agent", "verb": "runs on host (residency)", "label": "runs on host", "diagram": "heartbeat", "dot": false},
+    {"id": "H2", "engine_route": "heartbeat:e1", "from": "agent", "to": "pub", "verb": "register + heartbeat", "label": "register + heartbeat", "diagram": "heartbeat", "dot": true},
+    {"id": "H3", "engine_route": "heartbeat:e2", "from": "pub", "to": "db", "verb": "machine state", "label": "machine state", "diagram": "heartbeat", "dot": true},
+    {"id": "H4", "engine_route": "heartbeat:e3", "from": "pgrpc", "to": "db", "verb": "machine rows", "label": "machine rows", "diagram": "heartbeat", "dot": true},
+    {"id": "H5", "engine_route": "heartbeat:e4", "from": "q", "to": "db", "verb": "job rows", "label": "job rows", "diagram": "heartbeat", "dot": true},
+    {"id": "O1", "engine_route": "ops:e0", "from": "q", "to": "ssh", "verb": "audit / verify reimage", "label": "audit/verify reimage", "diagram": "ops", "dot": true},
+    {"id": "O2", "engine_route": "ops:e1", "from": "ssh", "to": "mch", "verb": "run machine-audit", "label": "run machine-audit", "diagram": "ops", "dot": true},
+    {"id": "O3", "engine_route": "ops:e2", "from": "q", "to": "jan", "verb": "diagnostic events", "label": "diagnostic events", "diagram": "ops", "dot": true},
+    {"id": "O4", "engine_route": "ops:e3", "from": "jan", "to": "wapi", "verb": "proposed actions", "label": "proposed actions", "diagram": "ops", "dot": true},
+    {"id": "O5", "engine_route": "ops:e4", "from": "wapi", "to": "slack", "verb": "confirm + alerts", "label": "confirm + alerts", "diagram": "ops", "dot": true},
+    {"id": "O6", "engine_route": "ops:e5", "from": "q", "to": "s3", "verb": "diagnose uploads", "label": "diagnose uploads", "diagram": "ops", "dot": true},
+    {"id": "O7", "engine_route": "ops:e6", "from": "rec", "to": "prov", "verb": "gcore sync, 1 min", "label": "gcore sync, 1 min", "diagram": "ops", "dot": true},
+    {"id": "O8", "engine_route": "ops:e7", "from": "rec", "to": "db", "verb": "cluster state", "label": "cluster state", "diagram": "ops", "dot": true}
+  ],
+  "split_coverage_map": [
+    {"diagram": "request", "carries": "cp, web, pgrpc, wapi, q, reg, prov, mch, boot, s3 + R1-R10 (both boot directions, the image pull)"},
+    {"diagram": "heartbeat", "carries": "mch, agent, pub, pgrpc, q, db + H1-H5 (all three Postgres writers)"},
+    {"diagram": "ops", "carries": "q, rec, ssh, jan, s3, mch, prov, wapi, db, slack + O1-O8 (audits, diagnostics, proposals, Slack, the separate queue->S3 diagnostics upload, the one-minute sync)"}
+  ],
+  "relationship_mapping": [
+    {"source_relation": "cp -> pgrpc: create / terminate / repair", "visible_as": "R1 in 'Request and provisioning path'"},
+    {"source_relation": "web -> wapi: http", "visible_as": "R2 in 'Request and provisioning path'"},
+    {"source_relation": "pgrpc -> q: enqueue job", "visible_as": "R4 in 'Request and provisioning path'"},
+    {"source_relation": "wapi -> q: reinstall / reprovision", "visible_as": "R3 in 'Request and provisioning path'"},
+    {"source_relation": "q -> reg: provision job", "visible_as": "R5 in 'Request and provisioning path'"},
+    {"source_relation": "reg -> prov: provider API", "visible_as": "R6 in 'Request and provisioning path'"},
+    {"source_relation": "prov -> mch: allocate instance", "visible_as": "R7 in 'Request and provisioning path'"},
+    {"source_relation": "mch -> boot: iPXE request", "visible_as": "R8 in 'Request and provisioning path'"},
+    {"source_relation": "boot -> mch: boot.ipxe + S3 args", "visible_as": "R9 in 'Request and provisioning path' (opposite direction, own ports)"},
+    {"source_relation": "mch -> agent: runs on host", "visible_as": "H1 in 'Heartbeat and machine state' (static)"},
+    {"source_relation": "agent -> pub: register + heartbeat", "visible_as": "H2 in 'Heartbeat and machine state'"},
+    {"source_relation": "pub -> db: machine state", "visible_as": "H3 in 'Heartbeat and machine state'"},
+    {"source_relation": "pgrpc -> db: machine rows", "visible_as": "H4 in 'Heartbeat and machine state'"},
+    {"source_relation": "q -> db: job rows", "visible_as": "H5 in 'Heartbeat and machine state'"},
+    {"source_relation": "q -> ssh: audit / verify reimage", "visible_as": "O1 in 'Slow ops path and reconcile loop'"},
+    {"source_relation": "ssh -> mch: run machine-audit", "visible_as": "O2 in 'Slow ops path and reconcile loop'"},
+    {"source_relation": "q -> jan: diagnostic events", "visible_as": "O3 in 'Slow ops path and reconcile loop'"},
+    {"source_relation": "jan -> wapi: proposed actions", "visible_as": "O4 in 'Slow ops path and reconcile loop'"},
+    {"source_relation": "wapi -> slack: confirm + alerts", "visible_as": "O5 in 'Slow ops path and reconcile loop'"},
+    {"source_relation": "mch -> s3: pull boot image", "visible_as": "R10 in 'Request and provisioning path'"},
+    {"source_relation": "q -> s3: diagnose uploads", "visible_as": "O6 in 'Slow ops path and reconcile loop' (a different diagram from R10)"},
+    {"source_relation": "rec -> prov: gcore sync, 1 min", "visible_as": "O7 in 'Slow ops path and reconcile loop'"},
+    {"source_relation": "rec -> db: cluster state", "visible_as": "O8 in 'Slow ops path and reconcile loop'"}
+  ],
+  "structural_levers": [
+    {"lever": "diagrams (3)", "why": "the source's own three edge groups, and 23 relations do not fit 77x47 honestly", "source_fact": "\"Request path (provisioning)\", \"Heartbeat path (fastest)\", \"Ops path (slow)\""},
+    {"lever": "per-diagram direction lr", "why": "17-22 character verb labels cost width instead of height; measured against tb (c1 162x257, c3 162x157)", "source_fact": "the source's labels are multi-verb strings (create / terminate / repair; reinstall / reprovision; audit / verify reimage; boot.ipxe + S3 args)"},
+    {"lever": "group tags: control, hardware, state, humans, ops", "why": "case-wide hue families; group gives the reader a plane cue and keeps repeated nodes the same colour in all three diagrams", "source_fact": "the source's roles: control plane / gRPC / queue / registry, bare-metal plant, Postgres + S3 storage, humans + mmctl + Slack, janitor/SSH/reconcile ops"},
+    {"lever": "two anti-parallel routes in one diagram (R8/R9)", "why": "the source states both directions; one diagram keeps the pair readable", "source_fact": "mch -> boot: iPXE request; boot -> mch: boot.ipxe + S3 args"},
+    {"lever": "not used: trunks", "why": "the source names no shared bus; the queue's fan is independent jobs", "source_fact": "q -> reg / ssh / jan / s3 / db are separate relations"},
+    {"lever": "not used: layers / rank pins", "why": "the source states no tier order inside a diagram; the engine's longest-path ranks already follow the phase order", "source_fact": "none stated"},
+    {"lever": "not used: label_slot", "why": "attempt c3 measured it as worse (request 54x104, 6 near-misses, 2 ambiguous owners, 1 skipped label), so the lever was reverted", "source_fact": "n/a (lever trial, recorded in attempts.json c3)"}
+  ],
+  "routing_record": [
+    {"attempt": "c1-tb-all", "near_miss_lines": 0, "passes_near_unrelated_node": 0, "relief": "not needed"},
+    {"attempt": "c2-lr-all (shipped)", "near_miss_lines": 0, "passes_near_unrelated_node": 0, "relief": "not needed"},
+    {"attempt": "c3-request-tb-slots", "near_miss_lines": 1, "passes_near_unrelated_node": 6, "relief": "none legal: label_slot itself caused the hug (route request:e7 at ring 2 of node 'prov'); the attempt was rejected and the clean c2 spec shipped instead"}
+  ],
+  "hue_record": {
+    "group_family_table": {
+      "control": {"members_unique": ["cp", "pgrpc", "wapi", "q", "reg", "pub"], "instances": 10, "measured_sample": "control plane border = rgb(206,115,138), a shade of the pink family"},
+      "hardware": {"members_unique": ["prov", "mch", "boot", "agent"], "instances": 7, "measured_sample": "bare-metal machines border = rgb(197,143,89), orange family"},
+      "state": {"members_unique": ["db", "s3"], "instances": 4, "measured_sample": "Postgres / S3 borders in the olive family rgb(168,153,104) (visible in evidence/canvas/canvas-ansi.ansi, frames row band 22-33)"},
+      "humans": {"members_unique": ["web", "slack"], "instances": 2, "measured_sample": "humans + mmctl border = rgb(115,206,183), teal family"},
+      "ops": {"members_unique": ["rec", "ssh", "jan"], "instances": 3, "measured_sample": "ops nodes sit below the 68x44 pane's visible band; the family is assigned case-wide by the engine (check reports ops(3)) and is visible in evidence/canvas/sections/ops-300x70-frames.txt text plus the ANSI capture of the same rows when the reader pans"}
+    },
+    "case_wide_note": "One group tag keeps one hue family across every diagram (check groups: control(10) humans(2) hardware(7) state(4) ops(3) sums to the 26 drawn node instances), so 'mch', 'q' and 'db' keep the same family in every section they appear in.",
+    "dot_hues_line": "dot hues: 13 by source, 9 by destination, 0 shared-hue pair(s) (source-only 5, destination-only 5)",
+    "dot_hues_line_scope": "The frozen binary prints ONE canvas-level 'dot hues:' line, not one per diagram; the totals cover the 10 animated routes of the request section, the 4 of the heartbeat section and the 8 of the ops section. No per-diagram breakdown is printed, so none is claimed here.",
+    "dot_binding": "Each of the 22 dots takes its own route's source-or-destination hue, whichever end leaves fewer routes sharing one hue. 13 routes bound to their source end, 9 to their destination end; no route pair shares one hue (0 shared-hue pairs).",
+    "measured_dot_colours": [
+      "rgb(206,115,138) - control pink, on cp -> private gRPC (source end)",
+      "rgb(219,153,170) - control pink shade, on private gRPC -> River job queue",
+      "rgb(115,206,183) - humans teal, on humans + mmctl -> webapi server (source end)",
+      "rgb(193,78,106) - control magenta shade, on webapi server -> River job queue",
+      "rgb(197,143,89) - hardware orange, on bare-metal providers -> bare-metal machines (source end)"
+    ],
+    "measurement_source": "evidence/canvas/canvas-ansi.ansi (the 68x44 pane's top band: request and part of heartbeat). Every dot glyph carries a node hue, never the accent colour."
+  },
+  "motion_record": {
+    "mode": "constant (default), 0.5 cells per 100 ms step",
+    "routes_with_one_dot": 22,
+    "routes_static": 1,
+    "static_reason": "H1 machines -> machine-agent 'runs on host' is residency, not a live transition",
+    "longest_route_cells": 42,
+    "frames_required_full_lap": 84,
+    "frames_supplied": 88,
+    "origins": "22/22 routes start at their arrow origin",
+    "arrivals": "0/0 (same-arrival mode not used)",
+    "frame_audit": "PASS - 88 frames, 22/22 routes tracked, every dot at 0.500 cells/frame, equal distance over 77 ten-frame windows (spread 0), no stalls beyond the render's own resting frame"
+  },
+  "attempts": {
+    "log": "attempts-log.jsonl",
+    "log_sha256": "1f68a6be852580f6d0c10052fa0b154720089080b4b4ed62b233bf4b7207046d",
+    "records": 3,
+    "inputs_bundled": ["attempts/c1-tb-all.json", "attempts/c2-lr-all.json", "attempts/c3-request-tb-slots.json"],
+    "raw_outputs": "recorded/*.stdout, recorded/*.stderr",
+    "manifest": "attempts.json"
+  },
+  "validator": {
+    "command": "scripts/viz-validate.py evidence/canvas --require-select --require-frames --require-records --attempts attempts.json --frame-audit",
+    "result": "all checks passed (41 PASS lines, 0 FAIL)",
+    "output": "evidence/canvas/validator.txt",
+    "note_layout_fit": "note layout_fit_canvas_form - 3 diagram(s) on a 260x64 canvas, drawn whole at 100% and navigated by pan; the owner's navigable-canvas form"
+  },
+  "source_pointers": [
+    "docs/visualize-eval/cases/modal-machine-manager/source.md - node list, 23 relationship facts, fixed constraints, historical corrections (lines 50, 64, 148, 217)",
+    "docs/visualize-eval/rounds/13/briefs/modal-machine-manager.md - framing, reader's job",
+    "docs/visualize-eval/rounds/13/generator-task.md - contract, TRIAGE PROTOCOL"
+  ],
+  "abbreviations": [
+    {"drawn": "control plane", "source": "Modal control plane"},
+    {"drawn": "cluster reconcile", "source": "cluster reconcile loop"},
+    {"drawn": "humans + mmctl", "source": "humans + mmctl (verbatim)"},
+    {"drawn": "create/terminate/repair", "source": "create / terminate / repair (one verb set, one edge)"},
+    {"drawn": "reinstall/reprovision", "source": "reinstall / reprovision"},
+    {"drawn": "audit/verify reimage", "source": "audit / verify reimage"},
+    {"drawn": "gcore sync, 1 min", "source": "gcore sync, 1 min"}
+  ],
+  "deliberate_drops": [],
+  "known_defects": [
+    {
+      "defect": "The canvas is 260x64, so no pane at 77x47 can show it whole; the reader pans. The request section is a 260x11 ribbon (3.4 pane widths).",
+      "why_it_stands": "Its 7-rank chain with 17-22 character source labels does not shrink honestly: top-to-bottom cost 150 rows (c1), label_slot gutters cost routing (c3: 6 near-miss cells, 2 ambiguous labels, 1 skipped label). Left-to-right was the only clean option.",
+      "capture": "evidence/canvas/check.txt (extents), evidence/canvas/canvas-77x47-frames.txt frame 0 (header 'canvas 260x64'), evidence/canvas/canvas-300x70-frames.txt (whole canvas)."
+    },
+    {
+      "defect": "The viewer's controls legend (and, when the drawing overflows, its minimap) is painted over the canvas at the viewport's bottom corners, so on any pane smaller than the canvas it overwrites drawing cells.",
+      "why_it_stands": "Viewer chrome, not a spec property (rataflow/src/lib.rs draw_frame renders Controls and MiniMap after the canvas); the spec cannot move a section out of the corner. In the 68x44 pane the legend covers the first 11 cells of the ops title (evidence/canvas/canvas-text.txt, last 8 rows) and in the 300x18 request window it covers part of the 'humans + mmctl' label (evidence/canvas/sections/request-300x18-frames.txt rows 8-13, cols 1-10). At 300x70, where the whole canvas fits, the legend falls on the empty left margin only (evidence/canvas/canvas-300x70-frames.txt rows 63-69).",
+      "capture": "evidence/canvas/canvas-text.txt; evidence/canvas/sections/request-300x18-frames.txt"
+    },
+    {
+      "defect": "The pane capture measured 68x44 rather than the 77x47 target.",
+      "why_it_stands": "Herdr's half-pane width follows the tab, which the generator does not control. The 77x47 target is proven by the pinned dump of the same final spec ('viewport: 77x47 zoom: 1.00 natural', header 'canvas 260x64'), and the whole canvas is drawn at 100% in the 300x70 capture.",
+      "capture": "evidence/canvas/manifest.json (viewport_token 68x44 @100%), evidence/canvas/canvas-77x47-frames.txt"
+    },
+    {
+      "defect": "The --select-all proof covers only the pane's visible band at the target viewport.",
+      "why_it_stands": "The canvas is 260x64 and the pane 68x44, so evidence/canvas/canvas-selected.ansi shows the accent border (216,166,87) on the request and heartbeat nodes it can see (229 border cells), while the ops nodes are outside that band. The 300x70 select-all capture selects all 26 nodes, but a text dump cannot show the accent style; the checker reports select_all_frame true.",
+      "capture": "evidence/canvas/canvas-selected.ansi (accent 216,166,87 border cells), evidence/canvas/sections/canvas-300x70-select-all-frames.txt"
+    },
+    {
+      "defect": "The bundle's pane frames capture holds frames 66-87 only (22 of 88), because a 68x44 pane read is capped at 4000 lines.",
+      "why_it_stands": "Harness read limit; the pinned 77x47 dump and the 300x70 whole-canvas dump both hold all 88 frames, and the frame audit ran on the 300x70 one (22/22 routes tracked).",
+      "capture": "evidence/canvas/canvas-frames.txt (first line 'frame 66 at 6600ms'), evidence/canvas/canvas-77x47-frames.txt (88 frames)"
+    }
+  ],
+  "blockers": [],
+  "cleanup": {
+    "pane": "w7E:pZS",
+    "result": "confirmed_closed",
+    "probe": "herdr pane get w7E:pZS fails after close; manifest cleanup=confirmed_closed"
+  },
+  "independent_review": "not run - the harness forbids spawning a reviewer; the captain starts a separate terra judge."
+}

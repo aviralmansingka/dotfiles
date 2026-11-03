@@ -1,0 +1,58 @@
+{
+  "spec_path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/13/datacenter-redundancy/specs/canvas-3.json",
+  "spec_sha256": "c8de11474fa80d1361025b6cedf83ec6059411331cff929a3b35f8e54b274e8f",
+  "spec_form": "canvas",
+  "diagrams": [
+    {
+      "id": "uplinks",
+      "title": "ISP uplinks and core cross-connect",
+      "description": "Four ISP handoffs, two per MUX; each MUX reaches both cores."
+    },
+    {
+      "id": "security",
+      "title": "Active/standby firewall pair",
+      "description": "FW1 active, FW2 standby, fed by both cores, feeding both border leaves."
+    },
+    {
+      "id": "fabric",
+      "title": "Dual-spine fabric and dual-homed racks",
+      "description": "Each leaf reaches both spines; both leaves dual-home both racks."
+    }
+  ],
+  "binary_path": "/tmp/visualize-eval/round-13/bin/rataflow-view",
+  "binary_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+  "pane_id": "w7E:p08",
+  "pane_rect": null,
+  "pane_cols": null,
+  "pane_rows": 44,
+  "viewport_line": null,
+  "viewport_token": "68x44 @100%",
+  "check_exit": 0,
+  "check_window": [
+    "2026-11-03T14:08:43Z",
+    "2026-11-03T14:08:44Z"
+  ],
+  "capture_window": [
+    "2026-11-03T14:08:44Z",
+    "2026-11-03T14:08:48Z"
+  ],
+  "cleanup": "confirmed_closed",
+  "select_all_frame": true,
+  "frames": 3,
+  "frame_step_ms": 100,
+  "pinned_frames": {
+    "file": "v1-77x47-frames.txt",
+    "viewport_line": "viewport: 77x47 zoom: 1.00 natural"
+  },
+  "artifacts": {
+    "bin.sha256": "41acd28bd47aeed7923377b953efce1900faf3bdd0d9c08a898ca8ffaf087a8d",
+    "check.txt": "edda31bc8c6c5eb3633b392d07015cc3c482f742ea71abc66a0dc9cdd585899e",
+    "v1-77x47-frames.txt": "6e1ec59029971424a6be7d59ce1f3070ae8678e362664731bb64c5cc9b630908",
+    "v1-ansi.ansi": "a7f9068bdd199ba2d08770931cc082ac3bd41c291877974d10ed375f9a331e8a",
+    "v1-frames.ansi": "d80e27970b6f28723b9b307325f98c311ddae05d25d1065614a1709b6c7cdeba",
+    "v1-frames.txt": "4c6b8376f63d5d900c7b63f828e827d882022e58cc6b2954d6c172e2e42a6a94",
+    "v1-pinned.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "v1-selected.ansi": "e229f607dd74094f8ffed169832c32d0d65ae31a8b25ae129d3c7676f18569c1",
+    "v1-text.txt": "95356fbcb4fc2d0bb9b2521e6738f4696287c2f532fa891dc04ec74e2db7bc6b"
+  }
+}

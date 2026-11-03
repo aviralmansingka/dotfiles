@@ -1,0 +1,81 @@
+{
+ "case_id": "network",
+ "round": "13",
+ "generator": "viz-ds13-2",
+ "views": [
+  {
+   "view": "v1",
+   "kind": "single view (one tb graph)",
+   "spec": "spec.json",
+   "spec_sha256": "dcf349a6f91792249214387c99cc95985a9a61f2f8dba8826febb74864e0bd54",
+   "attempts": [
+    {
+     "name": "a2-tb-gutters",
+     "spec": "attempts/a2-tb-gutters.json",
+     "spec_sha256": "c5c6e3c9c5ac2d817645e6b180518572c8c8f09978b61e0df2538d8d8fc7e4e0",
+     "record_label": "a2-tb-gutters",
+     "check": {
+      "extent": "27x45",
+      "near_misses": 5,
+      "passes_near_unrelated_node": 5,
+      "labels": "7/7 placed, 0 leader-ticked, 0 on route, 0 skipped, 1 ambiguous owners",
+      "dot_violations": 0
+     },
+     "verdict": "rejected \u2014 5 near-miss cells (route e3, core->cache, hugging node 'web' at ring 2) and 1 ambiguous label owner ('session'); label_slot on every edge squeezed every rank gap to 2 rows"
+    },
+    {
+     "name": "a3-tb-pinned-tiers",
+     "spec": "attempts/a3-tb-pinned-tiers.json",
+     "spec_sha256": "cfac91dd6f05d00de9e07e212669298a945e0b5e39fe5ce09b79a47793b71ec9",
+     "record_label": "a3-tb-pinned-tiers",
+     "check": {
+      "extent": "34x36",
+      "near_misses": 2,
+      "passes_near_unrelated_node": 2,
+      "labels": "7/7 placed, 0 leader-ticked, 0 on route, 0 skipped, 1 ambiguous owners",
+      "dot_violations": 0,
+      "layers": "5 (6 pinned, within-rank order automatic)"
+     },
+     "verdict": "rejected \u2014 the layers pin fixed the rank order (web+Redis as one tier band, db below) and cut the near-misses to 2, but the 2-row core fan gap still put the core->cache jog inside web's 2-cell margin, and 'session' still had an ambiguous owner"
+    },
+    {
+     "name": "a4-tb-open-fan",
+     "spec": "attempts/a4-tb-open-fan.json",
+     "spec_sha256": "dcf349a6f91792249214387c99cc95985a9a61f2f8dba8826febb74864e0bd54",
+     "record_label": "a4-tb-open-fan",
+     "check": {
+      "extent": "34x41",
+      "near_misses": 0,
+      "passes_near_unrelated_node": 0,
+      "labels": "7/7 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners",
+      "dot_violations": 0,
+      "crossings": "0 bridges, 0 touching bends"
+     },
+     "verdict": "SHIPPED \u2014 byte-identical to spec.json (sha256 dcf349a6\u2026); clean check, validator green"
+    }
+   ]
+  }
+ ],
+ "abandoned_shapes": [
+  {
+   "name": "a1-tb-four-dots",
+   "record_label": "a1-tb-four-dots",
+   "spec": "attempts/a1-tb-four-dots.json",
+   "spec_sha256": "c7ba7979e6e0ef4672b54064c55c1d2b402869aece5c6bc8022bca83fea8241b",
+   "check": {
+    "extent": "29x67",
+    "near_misses": 0,
+    "labels": "7/7 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners"
+   },
+   "why": "orientation probe: the plain tb graph with no pins and no label gutters. Clean routing and labels, but every rank gap reserves label_width+3 rows (9 for '1 GbE'), so the drawing is 67 rows tall \u2014 20 rows past the 77x47 pane. Never shippable; it is the measurement that forced the label_slot lever in a2."
+  },
+  {
+   "name": "final-check-spec-identical-to-a4",
+   "record_label": "final-check-spec-identical-to-a4",
+   "spec": "spec.json",
+   "spec_sha256": "dcf349a6f91792249214387c99cc95985a9a61f2f8dba8826febb74864e0bd54",
+   "why": "re-check of the shipped bytes after copying a4 -> spec.json (same sha256, diff of the two check captures is empty). Not a new candidate."
+  }
+ ],
+ "budget_note": "Four distinct spec candidates were checked for v1 (a1 probe, a2, a3, a4). The third-candidate cap is exceeded by one, recorded openly here and in generation.json: a1 could never ship (67 rows) and is listed as an abandoned orientation probe, while a2 and a3 each failed one round-13 routing/label rule, so a fourth drawing was needed to reach passes-near-unrelated-node: 0 and 0 ambiguous owners. views[].attempts lists the three drafts that competed for shipping."
+}

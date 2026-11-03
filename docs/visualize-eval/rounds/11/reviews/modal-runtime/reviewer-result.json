@@ -644,7 +644,7 @@
     "workflow_evidence": {
       "applicable": true,
       "status": "blocked",
-      "reason": "The actual cases.json SHA-256 e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05 differs from frozen metadata cases_sha256 e69179e59a3d36985cd7e8672b319b566701f88caef385c9cbde76d060c92d05; frozen dataset identity cannot be verified. Case-specific source/expected/variants hashes match. All 28 log raw hashes and capture-manifest artifacts match; offline validators pass.",
+      "reason": "The actual cases.json SHA-256 e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05 differs from frozen metadata cases_sha256 e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05; frozen dataset identity cannot be verified. Case-specific source/expected/variants hashes match. All 28 log raw hashes and capture-manifest artifacts match; offline validators pass.",
       "source_refs": [
         "source",
         "expected"

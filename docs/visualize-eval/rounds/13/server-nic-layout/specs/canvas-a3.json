@@ -1,0 +1,42 @@
+{
+  "theme": "gruvbox",
+  "direction": "lr",
+  "diagrams": [
+    {
+      "id": "local",
+      "title": "server1 ports and its /29",
+      "description": "Bare-metal server1, one live uplink of eight NICs; the /29 is public L3 - no NAT, no v6. Arista OUI: clue, not a ToR proof.",
+      "nodes": [
+        { "id": "dark", "label": "7 dark NICs", "group": "ports" },
+        { "id": "s1", "label": "server1 .58 R7725", "group": "hosts" },
+        { "id": "nic", "label": "eno16595np0 25 GbE", "group": "ports" },
+        { "id": "s2", "label": "server2 .59 R7725", "group": "hosts" },
+        { "id": "spare", "label": ".60-.62 free", "group": "pool" },
+        { "id": "gw", "label": "Arista .57 AS132717", "group": "access" }
+      ],
+      "edges": [
+        { "from": "dark", "to": "s1", "label": "no cable seen", "style": "dashed" },
+        { "from": "s1", "to": "nic", "label": "only uplink" },
+        { "from": "nic", "to": "gw", "label": "default gw 0.1 ms" },
+        { "from": "s2", "to": "gw", "label": "same /29" },
+        { "from": "spare", "to": "gw", "label": "free, unprobed", "style": "dashed" }
+      ]
+    },
+    {
+      "id": "upstream",
+      "title": "the hops the trace answered",
+      "description": "Hops the trace answered, at its own latencies; Cloudflare is AS13335. Silent hops and hidden fabric are not drawn.",
+      "nodes": [
+        { "id": "gw", "label": "Arista .57 AS132717", "group": "access" },
+        { "id": "airtel", "label": "Airtel 14.143.x", "group": "wan" },
+        { "id": "airtelbb", "label": "Airtel backbone 14.141.x", "group": "wan" },
+        { "id": "cf", "label": "Cloudflare 1.1.1.1", "group": "wan" }
+      ],
+      "edges": [
+        { "from": "gw", "to": "airtel", "label": "transit 1.8 ms" },
+        { "from": "airtel", "to": "airtelbb", "label": "7.1 ms" },
+        { "from": "airtelbb", "to": "cf", "label": "8.3 ms" }
+      ]
+    }
+  ]
+}

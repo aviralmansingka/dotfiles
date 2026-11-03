@@ -1,0 +1,13 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=6 edges=6 flows=6 direction=tb theme=gruvbox
+extent=31x46 cells
+crossings: 0 bridges, 0 touching bends
+near-misses: 0 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)
+passes-near-unrelated-node: 0
+labels: 4/4 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners
+groups: client(1) services(2) workers(2) store(1)
+trunks:
+dots: 6 single-dot routes, 0 periodic routes, 0 violations, 6 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 6 by source, 0 by destination, 1 shared-hue pair(s) (source-only 1, destination-only 1)
+origins: 6/6 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

@@ -1,0 +1,329 @@
+{
+  "theme": "gruvbox",
+  "direction": "lr",
+  "diagrams": [
+    {
+      "id": "request",
+      "title": "Request and provisioning path",
+      "description": "Humans and the control plane enter through webapi and private gRPC, enqueue River jobs, and provision bare metal down to the iPXE boot.",
+      "direction": "tb",
+      "nodes": [
+        {
+          "id": "cp",
+          "label": "control plane",
+          "group": "control"
+        },
+        {
+          "id": "web",
+          "label": "humans + mmctl",
+          "group": "humans"
+        },
+        {
+          "id": "pgrpc",
+          "label": "private gRPC",
+          "group": "control"
+        },
+        {
+          "id": "wapi",
+          "label": "webapi server",
+          "group": "control"
+        },
+        {
+          "id": "q",
+          "label": "River job queue",
+          "group": "control"
+        },
+        {
+          "id": "reg",
+          "label": "provider registry",
+          "group": "control"
+        },
+        {
+          "id": "prov",
+          "label": "bare-metal providers",
+          "group": "hardware"
+        },
+        {
+          "id": "mch",
+          "label": "bare-metal machines",
+          "group": "hardware"
+        },
+        {
+          "id": "boot",
+          "label": "boot server",
+          "group": "hardware"
+        },
+        {
+          "id": "s3",
+          "label": "S3 object store",
+          "group": "state"
+        }
+      ],
+      "edges": [
+        {
+          "from": "cp",
+          "to": "pgrpc",
+          "label": "create/terminate/repair",
+          "dots": 1,
+          "flow": true,
+          "label_slot": true
+        },
+        {
+          "from": "web",
+          "to": "wapi",
+          "label": "http",
+          "dots": 1,
+          "flow": true
+        },
+        {
+          "from": "wapi",
+          "to": "q",
+          "label": "reinstall/reprovision",
+          "dots": 1,
+          "flow": true,
+          "label_slot": true
+        },
+        {
+          "from": "pgrpc",
+          "to": "q",
+          "label": "enqueue job",
+          "dots": 1,
+          "flow": true
+        },
+        {
+          "from": "q",
+          "to": "reg",
+          "label": "provision job",
+          "dots": 1,
+          "flow": true
+        },
+        {
+          "from": "reg",
+          "to": "prov",
+          "label": "provider API",
+          "dots": 1,
+          "flow": true
+        },
+        {
+          "from": "prov",
+          "to": "mch",
+          "label": "allocate instance",
+          "dots": 1,
+          "flow": true,
+          "label_slot": true
+        },
+        {
+          "from": "mch",
+          "to": "boot",
+          "label": "iPXE request",
+          "dots": 1,
+          "flow": true
+        },
+        {
+          "from": "boot",
+          "to": "mch",
+          "label": "boot.ipxe + S3 args",
+          "dots": 1,
+          "flow": true,
+          "label_slot": true
+        },
+        {
+          "from": "mch",
+          "to": "s3",
+          "label": "pull boot image",
+          "dots": 1,
+          "flow": true
+        }
+      ]
+    },
+    {
+      "id": "heartbeat",
+      "title": "Heartbeat and machine state",
+      "description": "The fastest path: each host's machine-agent registers and heartbeats over public gRPC. Public gRPC, private gRPC and the queue each write their own Postgres rows.",
+      "direction": "lr",
+      "nodes": [
+        {
+          "id": "mch",
+          "label": "bare-metal machines",
+          "group": "hardware"
+        },
+        {
+          "id": "agent",
+          "label": "machine-agent",
+          "group": "hardware"
+        },
+        {
+          "id": "pub",
+          "label": "public gRPC",
+          "group": "control"
+        },
+        {
+          "id": "pgrpc",
+          "label": "private gRPC",
+          "group": "control"
+        },
+        {
+          "id": "q",
+          "label": "River job queue",
+          "group": "control"
+        },
+        {
+          "id": "db",
+          "label": "Postgres",
+          "group": "state"
+        }
+      ],
+      "edges": [
+        {
+          "from": "mch",
+          "to": "agent",
+          "label": "runs on host"
+        },
+        {
+          "from": "agent",
+          "to": "pub",
+          "label": "register + heartbeat",
+          "dots": 1,
+          "flow": true
+        },
+        {
+          "from": "pub",
+          "to": "db",
+          "label": "machine state",
+          "dots": 1,
+          "flow": true
+        },
+        {
+          "from": "pgrpc",
+          "to": "db",
+          "label": "machine rows",
+          "dots": 1,
+          "flow": true
+        },
+        {
+          "from": "q",
+          "to": "db",
+          "label": "job rows",
+          "dots": 1,
+          "flow": true
+        }
+      ]
+    },
+    {
+      "id": "ops",
+      "title": "Slow ops path and reconcile loop",
+      "description": "Queued work beside the fast path: SSH audits, diagnostics to the janitor, its proposals through webapi to Slack, and the one-minute gcore cluster sync.",
+      "direction": "lr",
+      "nodes": [
+        {
+          "id": "q",
+          "label": "River job queue",
+          "group": "control"
+        },
+        {
+          "id": "rec",
+          "label": "cluster reconcile",
+          "group": "ops"
+        },
+        {
+          "id": "ssh",
+          "label": "SSH + BMC ops",
+          "group": "ops"
+        },
+        {
+          "id": "jan",
+          "label": "janitor app",
+          "group": "ops"
+        },
+        {
+          "id": "s3",
+          "label": "S3 object store",
+          "group": "state"
+        },
+        {
+          "id": "mch",
+          "label": "bare-metal machines",
+          "group": "hardware"
+        },
+        {
+          "id": "prov",
+          "label": "bare-metal providers",
+          "group": "hardware"
+        },
+        {
+          "id": "wapi",
+          "label": "webapi server",
+          "group": "control"
+        },
+        {
+          "id": "db",
+          "label": "Postgres",
+          "group": "state"
+        },
+        {
+          "id": "slack",
+          "label": "Slack",
+          "group": "humans"
+        }
+      ],
+      "edges": [
+        {
+          "from": "q",
+          "to": "ssh",
+          "label": "audit/verify reimage",
+          "dots": 1,
+          "flow": true
+        },
+        {
+          "from": "ssh",
+          "to": "mch",
+          "label": "run machine-audit",
+          "dots": 1,
+          "flow": true
+        },
+        {
+          "from": "q",
+          "to": "jan",
+          "label": "diagnostic events",
+          "dots": 1,
+          "flow": true
+        },
+        {
+          "from": "jan",
+          "to": "wapi",
+          "label": "proposed actions",
+          "dots": 1,
+          "flow": true
+        },
+        {
+          "from": "wapi",
+          "to": "slack",
+          "label": "confirm + alerts",
+          "dots": 1,
+          "flow": true
+        },
+        {
+          "from": "q",
+          "to": "s3",
+          "label": "diagnose uploads",
+          "dots": 1,
+          "flow": true
+        },
+        {
+          "from": "rec",
+          "to": "prov",
+          "label": "gcore sync, 1 min",
+          "dots": 1,
+          "flow": true
+        },
+        {
+          "from": "rec",
+          "to": "db",
+          "label": "cluster state",
+          "dots": 1,
+          "flow": true
+        }
+      ]
+    }
+  ]
+}

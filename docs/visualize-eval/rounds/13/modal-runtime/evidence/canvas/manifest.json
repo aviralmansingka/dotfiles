@@ -1,0 +1,58 @@
+{
+  "spec_path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/13/modal-runtime/specs/modal-runtime-canvas.json",
+  "spec_sha256": "83d3c0cfd116348adc8f00b8ceb0ad6470f236e8c1cf008f34bd7c5b80c331e1",
+  "spec_form": "canvas",
+  "diagrams": [
+    {
+      "id": "d1",
+      "title": "worker and runtime: the two RPC seams",
+      "description": "Task input plus control RPCs down; events plus management RPCs back. Two directed seams, never one arrow."
+    },
+    {
+      "id": "d2",
+      "title": "task dispatch down to the container",
+      "description": "modal-runtime dispatches to the Task engine, which starts a Container backend that runs the user process."
+    },
+    {
+      "id": "d3",
+      "title": "storage and daemon interfaces",
+      "description": "Engine mounts/snapshots Filesystem + volumes, then Blobnet; runtime to daemon: HTTP/UDS, not worker gRPC."
+    }
+  ],
+  "binary_path": "/tmp/visualize-eval/round-13/bin/rataflow-view",
+  "binary_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+  "pane_id": "w7E:pZ0",
+  "pane_rect": null,
+  "pane_cols": null,
+  "pane_rows": 44,
+  "viewport_line": null,
+  "viewport_token": "68x44 @100%",
+  "check_exit": 0,
+  "check_window": [
+    "2026-11-03T14:03:57Z",
+    "2026-11-03T14:03:57Z"
+  ],
+  "capture_window": [
+    "2026-11-03T14:03:57Z",
+    "2026-11-03T14:04:02Z"
+  ],
+  "cleanup": "confirmed_closed",
+  "select_all_frame": true,
+  "frames": 5,
+  "frame_step_ms": 100,
+  "pinned_frames": {
+    "file": "canvas-77x47-frames.txt",
+    "viewport_line": "viewport: 77x47 zoom: 1.00 natural"
+  },
+  "artifacts": {
+    "bin.sha256": "41acd28bd47aeed7923377b953efce1900faf3bdd0d9c08a898ca8ffaf087a8d",
+    "canvas-77x47-frames.txt": "d7716a15db7e3b747d498494c438edbf3204923a9330a7a352c9847c7cb3e755",
+    "canvas-ansi.ansi": "cb798e042b785a5060487dc8a6e1b8224af0dd2ec66c4bfaf45f68972ffbbfdc",
+    "canvas-frames.ansi": "33ee52f3658f087e02be6cad6c08997323e39361be210f3b3001d2e4d8781e5f",
+    "canvas-frames.txt": "abeecdb97938a1feeb0e6aeb8333ae4a3cf73a2275b2b6be8c7878e6182659b8",
+    "canvas-pinned.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "canvas-selected.ansi": "cc0b81db802f132872d830449c17ad0c75ac907337e3fd7211ad5fb84051bc50",
+    "canvas-text.txt": "5e6629d13b17380724b403c2d985fb5f2c002d2763508dfd93a6a1a9c8d85371",
+    "check.txt": "49b0ca746b81b188d756ad21942e4c0bc0a0e35d2b797fdaaaa5a9b2cfe90397"
+  }
+}

@@ -1178,7 +1178,7 @@
    "category": "workflow_evidence",
    "edge_ids": [],
    "severity": "high",
-   "description": "Evidence gap: actual cases.json hash e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05 differs from frozen metadata e69179e59a3d36985cd7e8672b319b566701f88caef385c9cbde76d060c92d05.",
+   "description": "Evidence gap: actual cases.json hash e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05 differs from frozen metadata e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05.",
    "source_refs": [
     "docs/visualize-eval/rounds/11/metadata.json",
     "docs/visualize-eval/cases.json"

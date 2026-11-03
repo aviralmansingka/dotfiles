@@ -983,7 +983,7 @@
   "workflow_evidence": {
    "applicable": true,
    "status": "fail",
-   "reason": "Frozen metadata cases_sha256 differs from actual cases.json SHA-256: metadata e69179e59a3d36985cd7e8672b319b566701f88caef385c9cbde76d060c92d05, actual e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05. Dataset freeze cannot be verified by that binding. Remaining checked input hashes match; 21 records/spec/stdout/stderr hashes verified, all exit 0; validators pass, live dimensions, blind record, frames and cleanup preserved.",
+   "reason": "Frozen metadata cases_sha256 differs from actual cases.json SHA-256: metadata e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05, actual e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05. Dataset freeze cannot be verified by that binding. Remaining checked input hashes match; 21 records/spec/stdout/stderr hashes verified, all exit 0; validators pass, live dimensions, blind record, frames and cleanup preserved.",
    "source_refs": [
     "docs/visualize-eval/cases/datacenter-redundancy/source.md: original lines 126, 134, 142, 248, 270 and relationship facts",
     "docs/visualize-eval/cases/datacenter-redundancy/expected.json: constraints and historical_reference"
@@ -1721,7 +1721,7 @@
    "category": "workflow_evidence",
    "edge_ids": [],
    "severity": "high",
-   "description": "Actual cases.json SHA-256 e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05 does not match frozen metadata cases_sha256 e69179e59a3d36985cd7e8672b319b566701f88caef385c9cbde76d060c92d05. Cannot certify frozen dataset binding.",
+   "description": "Actual cases.json SHA-256 e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05 does not match frozen metadata cases_sha256 e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05. Cannot certify frozen dataset binding.",
    "source_refs": [
     "docs/visualize-eval/rounds/10/metadata.json",
     "docs/visualize-eval/cases.json"

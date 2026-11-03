@@ -1,0 +1,26 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=26 edges=23 flows=22 direction=mixed theme=gruvbox
+canvas: 3 diagrams on one canvas, drawn whole at 100%
+diagram request "Request and provisioning path" at 0,3: extent=54x104 nodes=10 edges=10 routes=10
+  description: Humans and the control plane enter through webapi and private gRPC, enqueue River jobs, and provision bare metal down to the iPXE boot.
+diagram heartbeat "Heartbeat and machine state" at 0,112: extent=118x15 nodes=6 edges=5 routes=5
+  description: The fastest path: each host's machine-agent registers and heartbeats over public gRPC. Public gRPC, private gRPC and the queue each write their own Postgres rows.
+diagram ops "Slow ops path and reconcile loop" at 0,132: extent=132x25 nodes=10 edges=8 routes=8
+  description: Queued work beside the fast path: SSH audits, diagnostics to the janitor, its proposals through webapi to Slack, and the one-minute gcore cluster sync.
+extent=162x157 cells (whole canvas)
+crossings: 0 bridges, 0 touching bends
+warning: 1 edge label(s) had no free slot; shorten the labels or split the graph
+near-misses: 6 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)
+passes-near-unrelated-node: 6
+near-miss: route request:e7 passes 6 cell(s) at ring 2 of node 'prov' (nearest cell 19,73)
+warning: 6 route cell(s) hug a node their relation does not serve; move the affected relations or let them route around
+labels: 22/23 placed, 0 leader-ticked, 0 on route, 1 skipped, 2 ambiguous owners
+unowned label: request:e6 "allocate instance"
+unowned label: request:e7 "iPXE request"
+warning: 2 label(s) have an ambiguous owner: another route is as close to the text as its own edge
+groups: control(10) humans(2) hardware(7) state(4) ops(3)
+trunks:
+dots: 22 single-dot routes, 0 periodic routes, 0 violations, 22 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 13 by source, 9 by destination, 0 shared-hue pair(s) (source-only 5, destination-only 5)
+origins: 22/22 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

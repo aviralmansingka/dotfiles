@@ -1,0 +1,21 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=11 edges=8 flows=0 direction=mixed theme=gruvbox
+canvas: 3 diagrams on one canvas, drawn whole at 100%
+diagram d1 "worker and runtime: the two RPC seams" at 0,3: extent=27x36 nodes=2 edges=2 routes=2
+  description: Task input plus control RPCs go down to modal-runtime; events plus management RPCs come back. Two directed seams, never one merged arrow.
+diagram d2 "task dispatch down to the container" at 0,44: extent=133x5 nodes=4 edges=3 routes=3
+  description: modal-runtime dispatches tasks to the Task engine, which starts and manages a Container backend that runs the user process in the Task container.
+diagram d3 "storage and daemon interfaces" at 0,54: extent=107x10 nodes=5 edges=3 routes=3
+  description: The engine mounts and snapshots Filesystem + volumes, whose data flows to Blobnet; modal-runtime reaches modal-daemon over filesystem HTTP on UDS, not worker gRPC.
+extent=163x64 cells (whole canvas)
+crossings: 0 bridges, 0 touching bends
+warning: 2 edge label(s) had no free slot; shorten the labels or split the graph
+near-misses: 0 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)
+passes-near-unrelated-node: 0
+labels: 6/8 placed, 0 leader-ticked, 0 on route, 2 skipped, 0 ambiguous owners
+groups: orchestration(5) compute(2) storage(2)
+trunks:
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 0 by source, 0 by destination, 0 shared-hue pair(s) (source-only 0, destination-only 0)
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

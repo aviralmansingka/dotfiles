@@ -1,0 +1,76 @@
+{
+  "case_id": "modal-machine-manager",
+  "round": "13",
+  "form": "canvas",
+  "final_view": "canvas",
+  "budget": {
+    "spec_candidates_per_rendered_diagram": 3,
+    "candidates_used": 3,
+    "counted": "every --check run on a distinct spec, each wrapped by scripts/viz-evidence.sh record"
+  },
+  "views": [
+    {
+      "view": "canvas",
+      "spec": "specs/canvas.json",
+      "spec_sha256": "2cd0500be4927ea084971cb0274bd30c032aa940a48ad6ac8a0601dbb71e0dff",
+      "bundle": "evidence/canvas",
+      "attempts": [
+        {
+          "id": "c1",
+          "label": "c1-tb-all",
+          "spec": "attempts/c1-tb-all.json",
+          "record": "attempts-log.jsonl#c1-tb-all",
+          "shape": "one canvas, 3 diagrams, every diagram tb",
+          "check": {
+            "canvas_extent": "162x257",
+            "diagram_extents": ["request 39x150", "heartbeat 118x15", "ops 90x79"],
+            "labels": "21/23 placed, 0 leader-ticked, 0 on route, 2 skipped, 1 ambiguous owners",
+            "near_misses": 0,
+            "passes_near_unrelated_node": 0,
+            "crossings": "0 bridges, 0 touching bends",
+            "dots": "22 single-dot routes, 0 violations"
+          },
+          "outcome": "rejected",
+          "why": "tb turns each long verb label into a rank gap as tall as the text is wide: the request section alone measured 39x150 and the canvas 162x257. Two labels had no free slot (create/terminate/repair, reinstall/reprovision) and boot.ipxe + S3 args had an ambiguous owner against its anti-parallel partner. Raw output: recorded/c1-tb-all.stdout and .stderr."
+        },
+        {
+          "id": "c2",
+          "label": "c2-lr-all",
+          "spec": "attempts/c2-lr-all.json",
+          "record": "attempts-log.jsonl#c2-lr-all",
+          "shape": "one canvas, 3 diagrams, every diagram lr",
+          "check": {
+            "canvas_extent": "260x64",
+            "diagram_extents": ["request 260x11", "heartbeat 118x15", "ops 132x25"],
+            "labels": "23/23 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners",
+            "near_misses": 0,
+            "passes_near_unrelated_node": 0,
+            "crossings": "0 bridges, 0 touching bends",
+            "dots": "22 single-dot routes, 0 periodic routes, 0 violations, 22 constant at 0.5c/step",
+            "origins": "22/22"
+          },
+          "outcome": "shipped",
+          "why": "lr spends width instead of height, so the same labels cost 11 rows in the request section instead of 150, every label finds its own slot, no label is ambiguous, and no route comes near an unrelated node. This spec is byte-identical to specs/canvas.json (cp), whose --check is evidence/canvas/check.txt."
+        },
+        {
+          "id": "c3",
+          "label": "c3-request-tb-slots",
+          "spec": "attempts/c3-request-tb-slots.json",
+          "record": "attempts-log.jsonl#c3-request-tb-slots",
+          "shape": "same as c2 but request in tb with label_slot on its four long labels",
+          "check": {
+            "canvas_extent": "162x157",
+            "diagram_extents": ["request 54x104", "heartbeat 118x15", "ops 132x25"],
+            "labels": "22/23 placed, 0 leader-ticked, 0 on route, 1 skipped, 2 ambiguous owners",
+            "near_misses": 6,
+            "passes_near_unrelated_node": 6,
+            "crossings": "0 bridges, 0 touching bends"
+          },
+          "outcome": "rejected",
+          "why": "the gutter bands did not collapse the rank gaps (request still 54x104) and cost routing: 6 route cells hugged node 'prov' at ring 2 (near-miss: route request:e7), 2 labels lost their owner (allocate instance, iPXE request) and one had no slot. Raw output: recorded/c3-request-tb-slots.stdout and .stderr."
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": []
+}

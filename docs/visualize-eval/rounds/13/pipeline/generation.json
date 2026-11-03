@@ -1,0 +1,773 @@
+{
+ "case_id": "pipeline",
+ "round": "13",
+ "generator": {
+  "label": "viz-ds13-1",
+  "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+  "harness": "fresh DeepSeek generation, round 13"
+ },
+ "frozen_inputs": {
+  "skill": {
+   "path": "docs/visualize-eval/rounds/13/SKILL.md",
+   "sha256": "65d826f0f1f9e61ddfd806628cb162827b0e6cf6d7df2490c9d75e6cbe485d2a",
+   "proposal": 12
+  },
+  "renderer": {
+   "path": "/tmp/visualize-eval/round-13/bin/rataflow-view",
+   "sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13"
+  },
+  "rubric": {
+   "path": "docs/visualize-eval/rounds/13/rubric.json",
+   "revision": 11,
+   "sha256": "6bfd3733c8d08b66af9a92e71985a20846f954d7916eaf9685f86c8d2f96bcb8"
+  },
+  "source": {
+   "path": "docs/visualize-eval/cases/pipeline/source.md",
+   "sha256": "68aa197fdc597c3a22d1b8ca88a3ebee861dcda34684da15ae69b6946b741e58"
+  },
+  "target": {
+   "columns": 77,
+   "rows": 47,
+   "zoom": "100% natural"
+  },
+  "cases_animation_applicability": "animated (dots required; case is animated in cases.json and the source asks for slow, sparse motion)"
+ },
+ "triage": {
+  "annex": "TRIAGE-pipeline",
+  "annex_block": "docs/visualize-eval/rounds/13/generator-task.md#TRIAGE-pipeline",
+  "brief_annex": "docs/visualize-eval/rounds/13/briefs/pipeline.md (quick reference, side-by-side)",
+  "questions_provoked": [
+   "TRIAGE-pipeline-1 \u2014 shape: one pane beside the chat, or a canvas?",
+   "TRIAGE-pipeline-2 \u2014 motion: does the source's traffic request still apply?",
+   "TRIAGE-pipeline-3 \u2014 the two database paths: one label or two?",
+   "scope: which components are in scope \u2014 all six, or just the request path? (the framing names six: CLI, API gateway, auth, job queue, worker pool, Postgres)",
+   "reader's job: what is the reader doing while the diagram is open? (the framing says glancing left of the chat while running jobs)",
+   "motion semantics: does the dot speed stand for a measurement? (the framing says the dots are slow so the reader can tell direction apart from speed)",
+   "labels: may the two unlabeled source relations (cli->api, queue->worker) get a protocol label? (no annex answer exists; source.md is the authority and says unlabeled)"
+  ],
+  "questions_used": [
+   {
+    "id": "TRIAGE-pipeline-1",
+    "question": "Shape: one pane beside the chat, or a canvas?",
+    "answer": "One, beside my chat. I'm reading it while I work \u2014 it should fit without me dragging anything.",
+    "answer_source": "annex answer TRIAGE-pipeline-1",
+    "bearing": "sets shape_decision = one view (ladder rung 1) and makes 'no drag to read' a requirement, not a preference"
+   },
+   {
+    "id": "TRIAGE-pipeline-2",
+    "question": "Motion: does the source's traffic request still apply?",
+    "answer": "Yes, slow and sparse like the source says. I want to see direction, not speed.",
+    "answer_source": "annex answer TRIAGE-pipeline-2",
+    "bearing": "dots on, constant default 0.5 c/step, one dot per animated hop; no numeric flow rate anywhere in the spec"
+   },
+   {
+    "id": "TRIAGE-pipeline-3",
+    "question": "The two database paths: one label or two?",
+    "answer": "Two. The auth read and the worker write are different paths; don't collapse them.",
+    "answer_source": "annex answer TRIAGE-pipeline-3",
+    "bearing": "keeps `read` (auth->db) and `write` (worker->db) as two routes with two label owners converging on Postgres at two ports, never one shared 'db' label"
+   },
+   {
+    "id": "TRIAGE-pipeline-scope",
+    "question": "Scope: which components are in scope \u2014 all six, or just the request path?",
+    "answer": "Six things: the CLI, the API gateway, auth, the job queue, the worker pool, Postgres \u2014 plus both database paths.",
+    "answer_source": "brief framing",
+    "bearing": "no split and no thinning was allowed; the six nodes and six relations are all drawn"
+   },
+   {
+    "id": "TRIAGE-pipeline-reader",
+    "question": "Reader's job: what is the reader doing while the diagram is open?",
+    "answer": "Glancing left of the chat and back while running jobs; confirming which way traffic goes and that the two database paths are separate.",
+    "answer_source": "brief framing",
+    "bearing": "readability beat ornament: no decoration, no side structure, labels owned one-to-one"
+   },
+   {
+    "id": "TRIAGE-pipeline-speed",
+    "question": "Motion semantics: does the dot speed stand for a measurement?",
+    "answer": "No \u2014 slow, sparse dots so I can tell direction apart from speed.",
+    "answer_source": "brief framing",
+    "bearing": "constant mode at the engine default; no rate, no duration_ms, no same-arrival"
+   },
+   {
+    "id": "TRIAGE-pipeline-unlabeled",
+    "question": "May the two unlabeled source relations (cli->api, queue->worker) carry a protocol label?",
+    "answer": "No label was supplied and source.md calls both relations unlabeled; the source explicitly says not to invent a protocol.",
+    "answer_source": "own judgment",
+    "reason": "the annex has no answer for this and the source.md fixed constraint 'keep every historical relation' plus 'do not invent a protocol' decides it; inventing HTTP or AMQP would add a fact no source states"
+   }
+  ],
+  "converged_when": "After the three annex answers the picture was complete: shape fixed (one side-by-side view), motion fixed (slow sparse dots, direction not speed), reader's job fixed (glance-level, two separate database paths), scope fixed by the framing (six named components) and by source.md (six relations), and label ownership fixed (read and write stay apart, the two unlabeled hops stay unlabeled). Nothing left open could change the drawing \u2014 grouping, orientation and dot hue binding are the skill's layout judgment, not user decisions \u2014 so triage stopped there instead of padding questions.",
+  "shape_decision": "one view (ladder rung 1): a single 31x46 drawing at natural zoom, no canvas, no diagram titles required"
+ },
+ "classification": {
+  "family": "flow-chains",
+  "evidence": "E \u2248 N: six components carry six relations along one shallow chain (cli -> api -> {auth, queue} -> worker -> db), the source asks for slow sparse traffic on it, and there is no bus, no fan of three around a core and no identifier/qualifier content.",
+  "tie_breakers_considered": [
+   "Density: E == N (6/6) so it is a chain, not a mesh or a fabric \u2014 no fan of 2-3 edges around a core and no double-arrowhead targets.",
+   "Bus with disconnected worlds: none; the graph is weakly connected, so not placement-planes.",
+   "Identifier/qualifier content: none (no addresses, ports, AS numbers, historical or unconfirmed facts), so not identity-probe-maps.",
+   "Motion is a signature, not a tie-breaker: one dot per line here, but the fan is depth-2 (api has two out-edges), not the 5-wide phase fan of a lifecycle machine."
+  ],
+  "secondary_recipe_borrowed": "lifecycle-machines: 'every live transition carries exactly one dot' \u2014 all six relations are live traffic, so all six carry one dot and none is left static.",
+  "reclassification": null
+ },
+ "shape_decision": {
+  "rung": 1,
+  "rung_text": "one concept that fits 77x47 at natural zoom -> one view, readable side-by-side with the chat",
+  "source_facts_that_decided_it": [
+   "one concept, six components, six relations (source.md relationship facts)",
+   "the drawing measures 31x46 cells at natural zoom \u2014 inside 77x47, proven by the pinned dump of the final spec at exactly 77x47 with no canvas extent printed",
+   "triage answer TRIAGE-pipeline-1 asks for one pane that fits without dragging"
+  ],
+  "rejected_rungs": [
+   {
+    "rung": 2,
+    "reason": "a canvas of named concept-diagrams would split one concept. The source has no separable clusters: every relation joins the same chain, and the whole graph fits one view. Splitting six nodes across diagrams would be the roll-11 failure mode (sparse fragments with nicer titles), and the brief names the canvas here as the negative case."
+   },
+   {
+    "rung": 3,
+    "reason": "nothing was dropped or thinned: all six nodes, all six relations and all four source verbs are drawn."
+   }
+  ],
+  "coverage_map": [
+   {
+    "diagram": "v1",
+    "carries": "all six nodes (cli, api, auth, queue, worker, db), all six relations (e1\u2013e6), all four labels (e2 verify, e3 enqueue, e5 write, e6 read), the two database routes converging on Postgres separately, the semantic tiers (client/services/workers/store) and the motion (one dot per route)"
+   }
+  ]
+ },
+ "surfaces": [
+  {
+   "view": "v1",
+   "kind": "single view (graph form)",
+   "spec": "docs/visualize-eval/rounds/13/pipeline/specs/spec.json",
+   "spec_sha256": "050a052477e03bd2609b4382c2ce9a17cce4699a64b88b689458f539214cc902",
+   "check": "docs/visualize-eval/rounds/13/pipeline/evidence/v1/check.txt",
+   "text": "docs/visualize-eval/rounds/13/pipeline/evidence/v1/v1-text.txt",
+   "ansi": "docs/visualize-eval/rounds/13/pipeline/evidence/v1/v1-ansi.ansi",
+   "selected_ansi": "docs/visualize-eval/rounds/13/pipeline/evidence/v1/v1-selected.ansi",
+   "frames": "docs/visualize-eval/rounds/13/pipeline/evidence/v1/v1-frames.txt",
+   "frames_ansi": "docs/visualize-eval/rounds/13/pipeline/evidence/v1/v1-frames.ansi",
+   "pinned_frames": "docs/visualize-eval/rounds/13/pipeline/evidence/v1/v1-77x47-frames.txt",
+   "manifest": "docs/visualize-eval/rounds/13/pipeline/evidence/v1/manifest.json",
+   "validator_output": "docs/visualize-eval/rounds/13/pipeline/validation-v1.txt",
+   "frame_audit": {
+    "text": "docs/visualize-eval/rounds/13/pipeline/frame-audit-v1.txt",
+    "json": "docs/visualize-eval/rounds/13/pipeline/frame-audit-v1.json"
+   },
+   "measured_pane": {
+    "token": "68x44 @100%",
+    "source": "app header in v1-text.txt line 1",
+    "note": "viz-evidence could not parse pane_cols from `herdr pane layout` (manifest pane_cols null); the app's own header token is the measurement"
+   },
+   "measured_pinned": {
+    "line": "viewport: 77x47 zoom: 1.00 natural",
+    "source": "v1-77x47-frames.txt line 1 (viz-pinned-dump.py pty at exactly 77x47)"
+   },
+   "dimensions": {
+    "check_extent": "31x46 cells",
+    "app_canvas_header_at_68x44": "canvas 21x46",
+    "pane_viewport": "68x44",
+    "pinned_viewport": "77x47",
+    "fit_at_target": "yes \u2014 pinned dump prints no `canvas WxH` extent and no drag-to-pan badge"
+   },
+   "counts": {
+    "nodes": 6,
+    "edges": 6,
+    "routes": 6,
+    "labels": 4,
+    "label_owners": 4,
+    "unlabeled_relations": 2,
+    "groups": 4,
+    "dots": 6,
+    "trunks": 0,
+    "crossings": 0
+   },
+   "check_lines": [
+    "viewport: unknown zoom: 1.00 natural",
+    "ok: nodes=6 edges=6 flows=6 direction=tb theme=gruvbox",
+    "extent=31x46 cells",
+    "crossings: 0 bridges, 0 touching bends",
+    "near-misses: 0 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)",
+    "passes-near-unrelated-node: 0",
+    "labels: 4/4 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners",
+    "groups: client(1) services(2) workers(2) store(1)",
+    "trunks:",
+    "dots: 6 single-dot routes, 0 periodic routes, 0 violations, 6 constant at 0.5c/step, 0 same-arrival at 2000ms",
+    "dot hues: 6 by source, 0 by destination, 1 shared-hue pair(s) (source-only 1, destination-only 1)",
+    "origins: 6/6 routes start at their arrow origin",
+    "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+   ],
+   "pane_note": "the live half pane in THIS worker tab is 68x44, two rows shorter than the 46-row drawing, so that pane shows the drag-to-pan badge and Postgres' label row falls outside the slice. The graded target is 77x47, where the pinned dump of this same spec shows the whole drawing at natural zoom."
+  }
+ ],
+ "per_view_content": {
+  "v1": {
+   "nodes": [
+    {
+     "id": "cli",
+     "label": "CLI",
+     "group": "client"
+    },
+    {
+     "id": "api",
+     "label": "API gateway",
+     "group": "services"
+    },
+    {
+     "id": "auth",
+     "label": "Auth",
+     "group": "services"
+    },
+    {
+     "id": "queue",
+     "label": "Job queue",
+     "group": "workers"
+    },
+    {
+     "id": "worker",
+     "label": "Worker pool",
+     "group": "workers"
+    },
+    {
+     "id": "db",
+     "label": "Postgres",
+     "group": "store"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e1",
+     "from": "cli",
+     "to": "api",
+     "label": null,
+     "dots": 1,
+     "flow": true
+    },
+    {
+     "id": "e2",
+     "from": "api",
+     "to": "auth",
+     "label": "verify",
+     "dots": 1,
+     "flow": true
+    },
+    {
+     "id": "e3",
+     "from": "api",
+     "to": "queue",
+     "label": "enqueue",
+     "dots": 1,
+     "flow": true
+    },
+    {
+     "id": "e4",
+     "from": "queue",
+     "to": "worker",
+     "label": null,
+     "dots": 1,
+     "flow": true
+    },
+    {
+     "id": "e5",
+     "from": "worker",
+     "to": "db",
+     "label": "write",
+     "dots": 1,
+     "flow": true
+    },
+    {
+     "id": "e6",
+     "from": "auth",
+     "to": "db",
+     "label": "read",
+     "dots": 1,
+     "flow": true
+    }
+   ],
+   "labels": {
+    "placed": 4,
+    "total": 4,
+    "leader_ticked": 0,
+    "on_route": 0,
+    "skipped": 0,
+    "ambiguous_owners": 0
+   },
+   "hues": "see hue_record"
+  },
+  "canvas_totals": "not a canvas; the single view carries 6 nodes, 6 edges, 6 routes, 4 labels"
+ },
+ "habits_borrowed": [
+  {
+   "habit": "flow-chains: every hop short, one node per rank, one dot per hop, constant speed",
+   "kept": true
+  },
+  {
+   "habit": "flow-chains: do not invent side branches to fill space",
+   "kept": true,
+   "note": "six nodes, nothing padded; the drawing leaves the right half of the pane empty on purpose"
+  },
+  {
+   "habit": "lifecycle-machines: every live transition carries exactly one dot",
+   "kept": true,
+   "source_fact": "source.md 'Use slow, sparse motion for traffic'"
+  }
+ ],
+ "deviations": [
+  {
+   "deviation": "direction tb although the chain has five ranks (the flow-chains habit says lr for five or more stages)",
+   "reason": "measured: lr needs 89 columns (check extent=89x9); the pinned 77x47 dump reports `canvas 78x9` and clips db past the right edge. The chain is five ranks wide because auth and queue sit on one rank as siblings and db must follow worker, and no source fact lets me remove a rank.",
+   "capture": "docs/visualize-eval/rounds/13/pipeline/attempts/a1-lr-77x47-frames.txt",
+   "record": "attempts-log.jsonl#a1-lr"
+  },
+  {
+   "deviation": "labels sit in rank gaps sized to their own width (largest gap between api and the auth/queue rank)",
+   "reason": "with tb the four verbs run down vertical gaps; the engine reserves the gap it needs and reports 0 labels on route cells and 0 ambiguous owners, so no label_slot gutter was needed. The gutter draft (a3) is rejected because it shortened the api->auth hop until the frame audit failed.",
+   "capture": "docs/visualize-eval/rounds/13/pipeline/evidence/v1/v1-77x47-frames.txt",
+   "record": "attempts-log.jsonl#a3-tb-slots"
+  }
+ ],
+ "meaning_ledger": [
+  {
+   "fact": "cli \u2014 CLI",
+   "kind": "component role",
+   "fate": "drawn"
+  },
+  {
+   "fact": "api \u2014 API gateway",
+   "kind": "component role",
+   "fate": "drawn"
+  },
+  {
+   "fact": "auth \u2014 Auth",
+   "kind": "component role",
+   "fate": "drawn"
+  },
+  {
+   "fact": "queue \u2014 Job queue",
+   "kind": "component role",
+   "fate": "drawn"
+  },
+  {
+   "fact": "worker \u2014 Worker pool",
+   "kind": "component role",
+   "fate": "drawn"
+  },
+  {
+   "fact": "db \u2014 Postgres",
+   "kind": "component role",
+   "fate": "drawn"
+  },
+  {
+   "fact": "cli -> api, unlabeled historical relation",
+   "kind": "relation + qualifier (unlabeled)",
+   "fate": "drawn unlabeled \u2014 no protocol invented"
+  },
+  {
+   "fact": "api -> auth: verify",
+   "kind": "action verb",
+   "fate": "drawn, label owned by e2"
+  },
+  {
+   "fact": "api -> queue: enqueue",
+   "kind": "action verb",
+   "fate": "drawn, label owned by e3"
+  },
+  {
+   "fact": "queue -> worker, unlabeled historical relation",
+   "kind": "relation + qualifier (unlabeled)",
+   "fate": "drawn unlabeled \u2014 no protocol invented"
+  },
+  {
+   "fact": "worker -> db: write",
+   "kind": "action verb",
+   "fate": "drawn, label owned by e5"
+  },
+  {
+   "fact": "auth -> db: read",
+   "kind": "action verb",
+   "fate": "drawn, label owned by e6"
+  },
+  {
+   "fact": "the auth read and the worker write must not be confused",
+   "kind": "fixed constraint",
+   "fate": "drawn: two routes, two labels, two separate arrowheads into Postgres (pinned dump row 39-40 '\u2570\u2500\u2500\u2500\u2500\u2500\u256e \u256d\u2500\u256f' then '\u25bc \u25bc')"
+  },
+  {
+   "fact": "slow, sparse motion for traffic",
+   "kind": "motion qualifier",
+   "fate": "drawn: 6 single-dot constant routes at 0.5 cells/100 ms, no rate override"
+  },
+  {
+   "fact": "semantic tiers, related color shades",
+   "kind": "style constraint",
+   "fate": "drawn: 4 groups (client, services, workers, store); services share a hue family in two shades, workers likewise (see hue_record)"
+  },
+  {
+   "fact": "plain background, no border dots",
+   "kind": "style constraint",
+   "fate": "drawn: gruvbox plain background (48;2;40;40;40 throughout v1-ansi.ansi); every dot sits on a route cell, none on a box border"
+  },
+  {
+   "fact": "no invented protocol on the two unlabeled relations",
+   "kind": "qualifier",
+   "fate": "drawn as bare arrows"
+  }
+ ],
+ "relationship_audit": [
+  {
+   "id": "e1",
+   "from": "cli",
+   "to": "api",
+   "verb": "unlabeled (source gives none; not invented)",
+   "label_owner": null,
+   "view": "v1"
+  },
+  {
+   "id": "e2",
+   "from": "api",
+   "to": "auth",
+   "verb": "verify",
+   "label_owner": "e2",
+   "view": "v1"
+  },
+  {
+   "id": "e3",
+   "from": "api",
+   "to": "queue",
+   "verb": "enqueue",
+   "label_owner": "e3",
+   "view": "v1"
+  },
+  {
+   "id": "e4",
+   "from": "queue",
+   "to": "worker",
+   "verb": "unlabeled (source gives none; not invented)",
+   "label_owner": null,
+   "view": "v1"
+  },
+  {
+   "id": "e5",
+   "from": "worker",
+   "to": "db",
+   "verb": "write",
+   "label_owner": "e5",
+   "view": "v1"
+  },
+  {
+   "id": "e6",
+   "from": "auth",
+   "to": "db",
+   "verb": "read",
+   "label_owner": "e6",
+   "view": "v1"
+  }
+ ],
+ "relationship_mapping": [
+  {
+   "original": "cli -> api",
+   "visible": "v1 e1: CLI box bottom centre, arrow down into API gateway top centre, no label, one dot"
+  },
+  {
+   "original": "api -> auth (verify)",
+   "visible": "v1 e2: API gateway bottom-left port, corridor down the left gap, arrowhead into Auth top; label 'verify' in the left gap beside its route"
+  },
+  {
+   "original": "api -> queue (enqueue)",
+   "visible": "v1 e3: API gateway bottom-right port, corridor down the right gap, arrowhead into Job queue top; label 'enqueue' in the right gap beside its route"
+  },
+  {
+   "original": "queue -> worker",
+   "visible": "v1 e4: Job queue bottom, short corridor to Worker pool top, no label, one dot"
+  },
+  {
+   "original": "worker -> db (write)",
+   "visible": "v1 e5: Worker pool bottom port, corridor to the right arrowhead of Postgres; label 'write' on the right of its route"
+  },
+  {
+   "original": "auth -> db (read)",
+   "visible": "v1 e6: Auth bottom port, long corridor down the left margin then into the left arrowhead of Postgres; label 'read' on the left of its route"
+  }
+ ],
+ "structural_levers": [
+  {
+   "lever": "direction: tb",
+   "source_fact": "none \u2014 layout judgment",
+   "justification": "the chain has five ranks, which is wider than 77 columns in lr (measured, attempt a1); tb spends the pane's 47 rows instead and fits"
+  },
+  {
+   "lever": "group x4 (client, services, workers, store)",
+   "source_fact": "'Use semantic tiers, related color shades' + 'Show the separate read/write and authentication/queue paths'",
+   "justification": "the tiers are the source's own functional split: the human-facing CLI, the request-serving services (gateway + auth), the async job tier (queue + worker), and the store"
+  },
+  {
+   "lever": "dots: 1 + flow: true on all six routes",
+   "source_fact": "'Use slow, sparse motion for traffic' (and cases.json animation applicability) plus triage answer TRIAGE-pipeline-2",
+   "justification": "constant engine default 0.5 cells/100 ms; no numeric flow, so speed never reads as a measurement"
+  },
+  {
+   "lever": "layers",
+   "used": false,
+   "reason": "the source states no rank or tier order to pin; the engine's longest-path ranking already yields cli, api, {auth,queue}, worker, db"
+  },
+  {
+   "lever": "trunks",
+   "used": false,
+   "reason": "no shared bus in the source; the two arrows into Postgres are two independent relations and stay independently traceable"
+  },
+  {
+   "lever": "minlen",
+   "used": false,
+   "reason": "the source describes no corridor that needs a reserved rank gap"
+  },
+  {
+   "lever": "label_slot",
+   "used": false,
+   "reason": "not needed at 31x46 (4/4 labels placed, 0 on route); the gutter draft a3 was rejected because it shortened the api->auth hop and broke the frame audit"
+  },
+  {
+   "lever": "edges[].label",
+   "used": "4 of 6",
+   "reason": "verify, enqueue, write, read are source verbs; cli->api and queue->worker stay unlabeled because the source calls them unlabeled"
+  }
+ ],
+ "routing_record": [
+  {
+   "attempt": "a1-lr",
+   "near_misses": 0,
+   "passes_near_unrelated_node": 0,
+   "relief_lever": null,
+   "note": "0 already; the attempt died on width, not routing"
+  },
+  {
+   "attempt": "a2-tb (shipped)",
+   "near_misses": 0,
+   "passes_near_unrelated_node": 0,
+   "relief_lever": null,
+   "note": "no route enters another node's 2-cell ring; the auth->db corridor runs down the left margin and the worker->db corridor down the middle, both landing on Postgres at their own ports"
+  },
+  {
+   "attempt": "a3-tb-slots",
+   "near_misses": 0,
+   "passes_near_unrelated_node": 0,
+   "relief_lever": null
+  }
+ ],
+ "hue_record": {
+  "group_to_hue_family": [
+   {
+    "group": "client",
+    "members": [
+     "cli"
+    ],
+    "observed_rgb": [
+     115,
+     161,
+     206
+    ],
+    "family": "gruvbox blue",
+    "evidence": "v1-ansi.ansi row 2, CLI box border"
+   },
+   {
+    "group": "services",
+    "members": [
+     "api",
+     "auth"
+    ],
+    "observed_rgb": {
+     "api": [
+      206,
+      115,
+      138
+     ],
+     "auth": [
+      219,
+      153,
+      170
+     ]
+    },
+    "family": "gruvbox red/pink, two related shades",
+    "evidence": "v1-ansi.ansi row 10 API gateway border, row 24 Auth border"
+   },
+   {
+    "group": "workers",
+    "members": [
+     "queue",
+     "worker"
+    ],
+    "observed_rgb": {
+     "queue": [
+      115,
+      206,
+      115
+     ],
+     "worker": [
+      153,
+      219,
+      153
+     ]
+    },
+    "family": "gruvbox green, two related shades",
+    "evidence": "v1-ansi.ansi row 24 Job queue border, row 32 Worker pool border"
+   },
+   {
+    "group": "store",
+    "members": [
+     "db"
+    ],
+    "observed_rgb": [
+     206,
+     161,
+     115
+    ],
+    "family": "gruvbox orange",
+    "evidence": "v1-ansi.ansi row 43: the top border of the Postgres box (its label row falls outside the 68x44 pane slice; the pinned 77x47 text shows the full box)"
+   }
+  ],
+  "collapse_vs_siblings": "families collide across no two groups: blue (client), red/pink (services), green (workers), orange (store); within services and within workers the two members are related shades of one family, which is the source's 'related color shades'",
+  "dot_hues_line": "dot hues: 6 by source, 0 by destination, 1 shared-hue pair(s) (source-only 1, destination-only 1)",
+  "dot_end_bound": "source end, for all six routes",
+  "dot_end_reason": "the check reports a tie (source leaves 1 shared pair, destination leaves 1), so the engine's default source binding stands; binding to the destination would share Postgres' hue across the two database routes, which is exactly the blur triage answer TRIAGE-pipeline-3 forbids",
+  "per_route": [
+   {
+    "edge": "e1 cli->api",
+    "hue_owner": "cli (client)",
+    "observed_dot_rgb": [
+     115,
+     161,
+     206
+    ],
+    "evidence": "v1-ansi.ansi row 6 col 21 (dot at the CLI origin)"
+   },
+   {
+    "edge": "e2 api->auth (verify)",
+    "hue_owner": "api (services)",
+    "observed_dot_rgb": [
+     206,
+     115,
+     138
+    ],
+    "evidence": "v1-ansi.ansi row 17 col 20"
+   },
+   {
+    "edge": "e3 api->queue (enqueue)",
+    "hue_owner": "api (services)",
+    "observed_dot_rgb": [
+     206,
+     115,
+     138
+    ],
+    "evidence": "v1-ansi.ansi row 17 col 22 \u2014 this is the one shared-hue pair the check reports"
+   },
+   {
+    "edge": "e4 queue->worker",
+    "hue_owner": "queue (workers)",
+    "observed_dot_rgb": [
+     115,
+     206,
+     115
+    ],
+    "evidence": "v1-ansi.ansi row 27 col 25"
+   },
+   {
+    "edge": "e5 worker->db (write)",
+    "hue_owner": "worker (workers)",
+    "observed_dot_rgb": [
+     153,
+     219,
+     153
+    ],
+    "evidence": "v1-ansi.ansi row 39 col 24"
+   },
+   {
+    "edge": "e6 auth->db (read)",
+    "hue_owner": "auth (services)",
+    "observed_dot_rgb": [
+     219,
+     153,
+     170
+    ],
+    "evidence": "v1-ansi.ansi row 31 col 13"
+   }
+  ],
+  "shared_pair_note": "1 shared pair is the minimum for this source: the gateway is the source of two routes, and Postgres the destination of two, so either end leaves exactly one pair sharing (check: source-only 1, destination-only 1). The shared pair is deliberately the two gateway routes, so `read` and `write` keep distinct dot hues.",
+  "dot_hue_vs_node_hue": "every dot's RGB equals its own source node's border RGB in the same frame, so the dot binds the route it rides and never reads as another node's traffic"
+ },
+ "motion_record": {
+  "mode": "constant (engine default, 0.5 cells per 100 ms step)",
+  "animated_routes": 6,
+  "static_routes": 0,
+  "rate_overrides": "none \u2014 no numeric flow, no timing, no duration_ms",
+  "frames_captured": 40,
+  "step_ms": 100,
+  "longest_route_cells": 19,
+  "frames_required": "ceil(19 / 0.5) = 38; captured 40",
+  "frame_audit": {
+   "capture": "docs/visualize-eval/rounds/13/pipeline/evidence/v1/v1-77x47-frames.txt",
+   "verdict": "PASS",
+   "routes_tracked": 6,
+   "dots_per_frame": [
+    6
+   ],
+   "rates": "0.500..0.500 cells/frame, spread 0.0 (allowed 0.05)",
+   "equal_distance_windows": 25,
+   "lap_cells_per_route": {
+    "r1": 13,
+    "r2": 16,
+    "r3": 16,
+    "r4": 17,
+    "r5": 19,
+    "r6": 15
+   },
+   "summary": "every tracked dot holds one rate and covers equal distance; frames evenly spaced; no stall longer than 1 frame"
+  },
+  "two_well_spaced_frames": "frame 0 (dots at their origins, e.g. CLI dot row 7 col 38 in v1-77x47-frames.txt) and frame 10 (every dot five cells further along its own route); the check's origins: 6/6 agrees",
+  "direction_readability": "each of the six dots travels source -> target along its own arrow; the two database routes converge with two separate arrowheads (pinned dump, frame 0, last rows: '\u2570\u2500\u2500\u2500\u2500\u2500\u256e \u256d\u2500\u256f' then '\u25bc \u25bc')"
+ },
+ "recipe_yield": null,
+ "source_pointers": [
+  "docs/visualize-eval/cases/pipeline/source.md 'Relationship facts from the historical attempt' (six nodes, six relations, two unlabeled)",
+  "docs/visualize-eval/cases/pipeline/source.md 'Fixed constraints' (keep every relation; do not confuse read with write; semantic tiers, related shades, plain background, no border dots)",
+  "docs/visualize-eval/cases/pipeline/source.md Task line ('Use slow, sparse motion for traffic')",
+  "TRIAGE-pipeline answers 1-3 (shape, motion, two database paths)"
+ ],
+ "abbreviations": [],
+ "deliberate_drops": [],
+ "known_defects": [
+  "the live half pane in this worker tab is 68x44; the drawing is 46 rows tall, so that pane shows the drag-to-pan badge and Postgres' label row is outside the visible slice (v1-text.txt). The graded 77x47 target fit is proven by the pinned dump of the same spec, which prints no canvas extent.",
+  "two extent readings disagree: --check reports extent=31x46 while the app's own header in the 68x44 pane prints 'canvas 21x46'. Both are recorded; the check's number includes the label gutters the header does not count. Neither reading is a fit claim \u2014 the fit claim rests on the pinned 77x47 dump having no canvas extent at all.",
+  "one shared dot hue (e2/e3 share the API gateway's hue). It is the minimum possible for this source and it is deliberate: the alternative end shares Postgres' hue across `read` and `write`.",
+  "the drawing uses 46 of the 47 target rows, so there is one row of vertical slack; a pane one row shorter than the target would pan.",
+  "the manifest's pane_cols is null (viz-evidence could not parse `herdr pane layout` for this split); size is taken from the app's own header token, per the contract's sanctioned measurement."
+ ],
+ "blockers": [],
+ "cleanup": {
+  "status": "confirmed_closed",
+  "pane_id": "w7E:pZX",
+  "evidence": "evidence/v1/manifest.json cleanup: confirmed_closed (viz-evidence closed the pane it split and re-read the id)"
+ },
+ "validator": {
+  "bundle": "docs/visualize-eval/rounds/13/pipeline/evidence/v1",
+  "command": "python3 scripts/viz-validate.py docs/visualize-eval/rounds/13/pipeline/evidence/v1 --require-select --require-frames --require-records --attempts docs/visualize-eval/rounds/13/pipeline/attempts.json --frame-audit",
+  "exit_status": 0,
+  "result": "all checks passed",
+  "output": "docs/visualize-eval/rounds/13/pipeline/validation-v1.txt"
+ },
+ "approval_claim": null,
+ "notes": [
+  "Three spec candidates for the one view, the whole allowance (a1-lr, a2-tb, a3-tb-slots). a2 (tb, default label placement) ships.",
+  "a3 (tb + label_slot) fits every pane size but fails the round-13 frame audit: label_slot collapsed the api->auth hop to a 2-3 cell route, whose dot loops faster than the capture can measure (rate 0.000). Per skill Step 6 a route too short to show motion should not be animated, so the compact draft was abandoned rather than shipped with a broken dot.",
+  "attempts-log.jsonl keeps records for all three candidates plus three re-checks of specs/spec.json; see attempts.json records_note for which spec bytes each re-check bound.",
+  "no subagent or judge was spawned; the captain starts the terra judge."
+ ],
+ "views": [
+  {
+   "view": "v1",
+   "spec": "specs/spec.json",
+   "spec_sha256": "050a052477e03bd2609b4382c2ce9a17cce4699a64b88b689458f539214cc902",
+   "bundle": "evidence/v1",
+   "kind": "single view (graph form)"
+  }
+ ]
+}

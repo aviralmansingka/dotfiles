@@ -2789,5 +2789,50 @@
     "judge": "VERDICT FAIL (terra): sema F (4 uncertain v2 owners, checker 0) / work F (3 probe inputs unbundled; captain capture snapshotted pre-revision v2) / anim BLOCKED (independent equal-distance comparison incomplete) / arro-layo-conc-cate-bord P"
    }
   }
+ },
+ "round_13": {
+  "arrivals": {
+   "pipeline": {
+    "worker": "viz-ds13-1 (6m27s, first of 8)",
+    "triage": "7 provoked, 3 annex + 3 framing + 1 own judgment; converged first pass",
+    "form": "rung-1 single tb view 31x46; canvas rejected with measured reason",
+    "validation": "captain rerun: 37 PASS incl. frame audit (rates 0.500, spread 0)",
+    "check": "near-misses 0; labels 4/4, 0 ambiguous; 6 dots bound to source hues",
+    "judge": "VERDICT FAIL (7P/1F/1B): drawing clean (sema/arro/layo/navi/conc/cate/anim PASS); work F on the digest typo (now fixed); border BLOCKED on clipped-pane color evidence"
+   },
+   "server-nic-layout": {
+    "worker": "viz-ds13-3 (6m42s)",
+    "triage": "8 provoked, 3 annex + 5 own-judgment with reasons; rung-1 rejected by measurement (183x14 lr / 53x96 tb)",
+    "form": "CANVAS 2 described diagrams (local 124x15, upstream 131x5; total 131x28); family identity-probe-maps + flow-chain",
+    "validation": "captain rerun: both bundles all checks passed; near-misses 0, labels 8/8 0 ambiguous",
+    "judge": "VERDICT FAIL (2P/5F/2B): sema F (operator name, /24 prefix, hop-loss compression, overstated claims), navi F, cate F (annex answer not verbatim), work F (digest typo), conc+border BLOCKED (offscreen evidence); PROVENANCE: judge disclosed it saw generator claims before saving the blind record"
+   },
+   "homelab-nic-trace": {
+    "worker": "viz-ds13-4 (7m21s)",
+    "triage": "8 provoked, 4 annex + 3 framing + 1 own judgment; rung-1 rejected by measurement (293x15)",
+    "form": "CANVAS 3 described diagrams (egress 210x5, local 88x10, secondary 151x10; total 210x38); identity-probe-maps",
+    "validation": "captain rerun: 40 PASS; near-misses 0; labels 14/14, 0 ambiguous; all 14 relations once",
+    "judge": "spawned"
+   },
+   "network": {
+    "worker": "viz-ds13-2 (7m39s)",
+    "triage": "7 provoked, 4 annex + 1 framing + 2 own judgment; converged after 4 answers",
+    "form": "rung-1 single tb view 34x41 (a1-a4 iterated to clean); service-meshes",
+    "validation": "captain rerun: 36 PASS incl. frame audit; near-misses 0; labels 7/7, 0 ambiguous; dots 4 by destination hue",
+    "judge": "spawned (delayed by digest fix turn)"
+   },
+   "modal-machine-manager": {
+    "worker": "viz-ds13-5 (8m14s)",
+    "triage": "8 provoked, 3 annex + 4 own-judgment + 1 unnecessary; converged recorded",
+    "form": "CANVAS 260x64, 3 described diagrams (request 260x11, heartbeat 118x15, ops 132x25); 17 components, all 23 relations, 22 animated",
+    "validation": "captain rerun: 41 PASS; labels 23/23 0 ambiguous (beats r12 4 uncertain); near-misses 0; frame audit 88 frames PASS",
+    "judge": "spawned"
+   }
+  },
+  "status": "2 verdicts in (pipeline FAIL 7P/1F/1B, server FAIL 2P/5F/2B); 3 judges in flight; 2 generating",
+  "digest_correction": "rounds 10-13 carried dataset sha e69179e5\u2026e8672b\u2026 \u2014 a transcription typo; actual cases.json is e69179e5\u2026e8692b\u2026. All 7 rounds of judge digest-mismatch flags trace to this captain-side typo. Per-file case_hashes (identical since r09) were always the true proof. Corrected everywhere.",
+  "harness_fixes_midround": [
+   "viz-validate.py: leader-tick warning exempted from check_warnings_absent (the r13 ownership rescue was unshippable otherwise)"
+  ]
  }
 }

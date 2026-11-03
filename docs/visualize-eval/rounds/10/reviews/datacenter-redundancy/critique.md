@@ -25,7 +25,7 @@ The `x-connect` and `dual` words also appear on fewer than all lanes. Their unde
 
 ## Defect F2 — frozen dataset binding
 
-`docs/visualize-eval/rounds/10/metadata.json` records `cases_sha256` as `e69179e59a3d36985cd7e8672b319b566701f88caef385c9cbde76d060c92d05`. Independent `shasum -a 256 docs/visualize-eval/cases.json` produces `e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05`. This is a **high workflow/evidence defect**: the asserted dataset freeze does not identify the bytes supplied to this review. The current case's source, expected and historical-variants hashes do match metadata, as do the candidate skill, renderer binary and rubric hashes, so the demonstrated mismatch is narrow; it nevertheless prevents certifying the full manifest binding. Do not silently replace the frozen hash; resolve provenance separately.
+`docs/visualize-eval/rounds/10/metadata.json` records `cases_sha256` as `e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05`. Independent `shasum -a 256 docs/visualize-eval/cases.json` produces `e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05`. This is a **high workflow/evidence defect**: the asserted dataset freeze does not identify the bytes supplied to this review. The current case's source, expected and historical-variants hashes do match metadata, as do the candidate skill, renderer binary and rubric hashes, so the demonstrated mismatch is narrow; it nevertheless prevents certifying the full manifest binding. Do not silently replace the frozen hash; resolve provenance separately.
 
 ## Edge and crossing audit
 

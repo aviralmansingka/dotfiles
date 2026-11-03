@@ -1,0 +1,10 @@
+       ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+       task dispatch down to the container
+       modal-runtime dispatches to the Task engine, which starts a Container backend that runs the user process.
+
+       ╭─────────────╮                   ╭───────────╮                   ╭─────────────────╮                    ╭──────────────╮
+       │modal-runtime│──────────────────▶│Task engine│──────────────────▶│Container backend│───────────────────▶│Task container│
+       │             │ dispatches tasks  │           │ starts / manages  │                 │ runs user process  │              │
+       ╰─────────────╯                   ╰───────────╯                   ╰─────────────────╯                    ╰──────────────╯
+
+

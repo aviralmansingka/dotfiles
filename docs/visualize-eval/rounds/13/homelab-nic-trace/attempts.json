@@ -1,0 +1,99 @@
+{
+  "case_id": "homelab-nic-trace",
+  "round": "13",
+  "generator": "viz-ds13-4",
+  "binary_path": "/tmp/visualize-eval/round-13/bin/rataflow-view",
+  "binary_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+  "target": "77x47 @100% natural zoom",
+  "spec_budget_per_rendered_diagram": 3,
+  "budget_note": "The shipped canvas renders three diagrams; every --check run on a distinct spec is counted once per rendered diagram. Three canvas candidates (canvas-a, canvas-b, canvas-c) were checked = 3 per diagram; one single-graph probe measured the first rung and is listed under abandoned_shapes as its own rendered diagram (1 candidate).",
+  "views": [
+    {
+      "view": "canvas",
+      "spec": "spec.json",
+      "spec_sha256": "9ddfaef45aa5b7fd0e98fdc5bcd256c702dac1a83276af0715667a2e6acaf1b8",
+      "spec_form": "canvas",
+      "diagrams": ["egress", "local", "secondary"],
+      "evidence_bundle": "evidence/canvas",
+      "attempts": [
+        {
+          "label": "canvas-a",
+          "spec": "attempts/canvas-a.json",
+          "record": "attempts-log.jsonl#canvas-a",
+          "raw_check": "recorded/canvas-a.stdout",
+          "direction": "all three diagrams lr",
+          "result": {
+            "canvas_extent": "210x38",
+            "extents": { "egress": "210x5", "local": "88x10", "secondary": "151x10" },
+            "near_misses": 0,
+            "passes_near_unrelated_node": 0,
+            "labels": "14/14 placed, 0 on route, 0 skipped, 0 ambiguous owners",
+            "crossings": "0 bridges, 0 touching bends",
+            "warnings": 0
+          },
+          "verdict": "shipped (bytes identical to spec.json)"
+        },
+        {
+          "label": "canvas-b",
+          "spec": "attempts/canvas-b.json",
+          "record": "attempts-log.jsonl#canvas-b",
+          "raw_check": "recorded/canvas-b.stdout",
+          "direction": "all three diagrams tb",
+          "result": {
+            "canvas_extent": "71x212",
+            "extents": { "egress": "37x93", "local": "42x45", "secondary": "50x61" },
+            "near_misses": 0,
+            "passes_near_unrelated_node": 0,
+            "labels": "14/14 placed, 0 on route, 0 skipped, 0 ambiguous owners",
+            "warnings": 0
+          },
+          "verdict": "rejected: tb spends a rank gap as tall as the label is wide, so the seven-hop egress chain alone needed 93 rows (two panes tall) and the whole canvas 212 rows; the reader would pan the main trace instead of following it"
+        },
+        {
+          "label": "canvas-c",
+          "spec": "attempts/canvas-c.json",
+          "record": "attempts-log.jsonl#canvas-c",
+          "raw_check": "recorded/canvas-c.stdout",
+          "direction": "all three diagrams tb with label_slot on every edge",
+          "result": {
+            "canvas_extent": "71x116",
+            "extents": { "egress": "40x53", "local": "51x21", "secondary": "57x29" },
+            "near_misses": 4,
+            "passes_near_unrelated_node": 4,
+            "near_miss_lines": [
+              "near-miss: route secondary:e0 passes 4 cell(s) at ring 2 of node 'bond0' (nearest cell 31,6)"
+            ],
+            "labels": "14/14 placed, 0 on route, 0 skipped, 0 ambiguous owners",
+            "warnings": 1
+          },
+          "verdict": "rejected: label_slot shortened the sections but moved the ts -> box route into ring 2 of bond0, which reads as a false connection; the near-miss total must be 0, so this geometry loses to canvas-a even though it is smaller"
+        }
+      ]
+    }
+  ],
+  "shipped_check_record": {
+    "label": "final-canvas-a",
+    "spec": "spec.json",
+    "record": "attempts-log.jsonl#final-canvas-a",
+    "raw_check": "recorded/final-canvas-a.stdout",
+    "note": "byte-identical spec to canvas-a (same sha256), checked once more as the shipped artefact; its raw output is identical to recorded/canvas-a.stdout"
+  },
+  "abandoned_shapes": [
+    {
+      "label": "probe-1-single-view",
+      "shape": "one graph, all 13 nodes and 14 edges, lr",
+      "spec": "attempts/probe-1-single-view.json",
+      "record": "attempts-log.jsonl#probe-1-single-view",
+      "raw_check": "recorded/probe-1-single-view.stdout",
+      "result": {
+        "extent": "293x15",
+        "near_misses": 0,
+        "labels": "14/14 placed, 0 on route, 0 skipped, 0 ambiguous owners",
+        "warnings": [
+          "warning: 13 nodes / 14 edges is above the readable budget (12/16); split it into an overview and detail graphs"
+        ]
+      },
+      "reason": "rung 1 measured: 293 columns is 3.8x the 77-column pane and the seven-hop egress chain plus the two side worlds cannot be read side-by-side with chat at natural zoom"
+    }
+  ]
+}

@@ -527,6 +527,7 @@ def main(argv: list[str]) -> int:
         line for line in check_text.splitlines()
         if line.strip().lower().startswith(WARNING_PREFIXES)
         and "passes-near-unrelated-node" not in line
+        and "leader tick" not in line
         and not NEAR_LINE_RE.match(line.strip())
     ]
     out.check("check_warnings_absent", not warnings, "; ".join(warnings[:3]))

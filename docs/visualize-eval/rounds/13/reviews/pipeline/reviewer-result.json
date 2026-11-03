@@ -1,0 +1,542 @@
+{
+  "protocol_version": 1,
+  "round": 13,
+  "case_id": "pipeline",
+  "candidate_sha256": "050a052477e03bd2609b4382c2ce9a17cce4699a64b88b689458f539214cc902",
+  "spec_sha256": "050a052477e03bd2609b4382c2ce9a17cce4699a64b88b689458f539214cc902",
+  "renderer_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+  "rubric_sha256": "6bfd3733c8d08b66af9a92e71985a20846f954d7916eaf9685f86c8d2f96bcb8",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "generator": {
+    "worker_id": "viz-ds13-1",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge13-pipeline",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 68,
+    "rows": 44
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/13/reviews/pipeline/observed-first.md",
+      "sha256": "ac0648e162db959dc40831910942139b7fcb03c89ead483fea29bfd07570ff7b",
+      "description": "Blind stage-A observations",
+      "capture": null
+    },
+    {
+      "id": "spec",
+      "path": "docs/visualize-eval/rounds/13/pipeline/specs/spec.json",
+      "sha256": "050a052477e03bd2609b4382c2ce9a17cce4699a64b88b689458f539214cc902",
+      "description": "Shipped graph spec",
+      "capture": null
+    },
+    {
+      "id": "pinned",
+      "path": "docs/visualize-eval/rounds/13/pipeline/evidence/v1/v1-77x47-frames.txt",
+      "sha256": "46f2030c0d7348f3cb1f99362fe616a59bed35fa87d0339d6dd7807e27d78647",
+      "description": "Pinned final-spec 40-frame direct dump",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frame 0",
+        "timestamp": "0ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi",
+      "path": "docs/visualize-eval/rounds/13/pipeline/evidence/v1/v1-ansi.ansi",
+      "sha256": "610bc6ffbaeea5038b0c84bbba14cf58b9489946b91c09ba85426b31dfce38d5",
+      "description": "Live normal pane ANSI",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "v1",
+        "frame": "captured",
+        "timestamp": "capture window 2026-11-03T14:02:11Z–14:02:16Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected",
+      "path": "docs/visualize-eval/rounds/13/pipeline/evidence/v1/v1-selected.ansi",
+      "sha256": "53597afd7837f6ebc66f012c42efad4641a5bb3f83970f033c341dae77bca188",
+      "description": "Live select-all ANSI",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "v1",
+        "frame": "captured",
+        "timestamp": "capture window 2026-11-03T14:02:11Z–14:02:16Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "check",
+      "path": "docs/visualize-eval/rounds/13/pipeline/evidence/v1/check.txt",
+      "sha256": "6859e996ece77ec9028c22e6b05f470ffa314da0e7540f0aa1c531ead677164a",
+      "description": "Shipped check",
+      "capture": null
+    },
+    {
+      "id": "manifest",
+      "path": "docs/visualize-eval/rounds/13/pipeline/evidence/v1/manifest.json",
+      "sha256": "4ef5f90e724df73ec7d4fbb0a5ba1158843c3a1f6e697ac027e25c0e9bf32924",
+      "description": "Capture provenance and cleanup",
+      "capture": null
+    },
+    {
+      "id": "validator",
+      "path": "docs/visualize-eval/rounds/13/pipeline/validation-v1.txt",
+      "sha256": "2bfa4dcf87cd74132d72d8904185d3be925b1a31b94a2a781b90d46b4cb63b6a",
+      "description": "Validator output with frame audit",
+      "capture": null
+    },
+    {
+      "id": "audit",
+      "path": "docs/visualize-eval/rounds/13/pipeline/frame-audit-v1.txt",
+      "sha256": "b2c0a070922136066a9dd8c7522ea69eba183577dd844b5e78b864cdf507a408",
+      "description": "Mechanical frame audit",
+      "capture": null
+    },
+    {
+      "id": "audit-json",
+      "path": "docs/visualize-eval/rounds/13/pipeline/frame-audit-v1.json",
+      "sha256": "e9af0bc2bcccf22a66782c7be6a58242d87da08376e2cc1fad842e9624ed4a5d",
+      "description": "Mechanical frame audit JSON",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/13/pipeline/generation.json",
+      "sha256": "8b6460b05b45881a91014795726ae05f9ad204b2150196e14b62f61b38a440b3",
+      "description": "Generator classification, triage and decisions",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/13/pipeline/attempts.json",
+      "sha256": "faa4cc71fce5df8bcdd372587564af2253580207078cce88e454bf96cf7d76c4",
+      "description": "Attempt decisions",
+      "capture": null
+    },
+    {
+      "id": "log",
+      "path": "docs/visualize-eval/rounds/13/pipeline/attempts-log.jsonl",
+      "sha256": "11073a3ae3d8ea1f3246df6b860c89ccd70d187aa8aaf6af31af6488048c1b0e",
+      "description": "Probe records",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Dataset actual digest",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/13/metadata.json",
+      "sha256": "0fa051bbd9f4333e339fe695225a0e4c7d1be2b7ec92b584c62791cf69a3ecc6",
+      "description": "Frozen metadata",
+      "capture": null
+    },
+    {
+      "id": "a3audit",
+      "path": "docs/visualize-eval/rounds/13/pipeline/attempts/a3-tb-slots-frame-audit.json",
+      "sha256": "9484418f69bfe04a6323962cbd4f2cb34bba874718c7c00e2b26e7dc24dc68b1",
+      "description": "Rejected compact-draft frame audit",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Six required nodes and six relationships appear with correct directions and four correct verb labels; two unlabeled links remain unlabeled. Read and write remain distinct.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json",
+        "docs/visualize-eval/rounds/13/briefs/pipeline.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "spec",
+        "blind"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Six distinct routes have clear source stems and arrowheads, no misleading junctions or crossings, and zero unrelated-node near misses in check and capture.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json",
+        "docs/visualize-eval/rounds/13/briefs/pipeline.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "check",
+        "blind"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Branch A: final-spec pinned 77×47 natural dump shows the full drawing without overflow or occlusion. The actual 68×44 pane clips Postgres; this is a real reader-job limitation outside the frozen target, not a disproof of branch A.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/13/briefs/pipeline.md",
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "ansi",
+        "check",
+        "manifest"
+      ]
+    },
+    "navigation_clarity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "One self-contained graph of one concept fits branch A. The single-graph title and description exemption applies; no multi-diagram navigation is needed.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/13/briefs/pipeline.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "spec"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Four meaningful groups use distinct hue families; related API/Auth and queue/worker members use related shades; no unsupported tier ordering or drawn group boxes.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "evidence_ids": [
+        "ansi",
+        "spec",
+        "generation"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Correct dominant and stated family: flow-chains. Evidence line: E ≈ N: six components carry six relations along one shallow chain (cli -> api -> {auth, queue} -> worker -> db), the source asks for slow sparse traffic on it, and there is no bus, no fan of three around a core and no identifier/qualifier content. Verified connected directed progression, fan two, distinct convergence, corridor space, sparse per-hop dots and no invented links; recorded top-to-bottom deviation from left-to-right follows measured overflow. The separate tie-breaker claim of no double-arrowhead target is false: Postgres has two. It does not overturn the supported dominant family.",
+      "judged_family": "flow-chains",
+      "stated_family": "flow-chains",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/rounds/13/briefs/pipeline.md"
+      ],
+      "evidence_ids": [
+        "generation",
+        "pinned",
+        "attempts"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "At the target, pinned text shows all six complete boxes, but normal and select-all ANSI are clipped after the Postgres top border in the actual 68×44 pane. Full Postgres border color continuity and complete selected border are not proven; do not infer them from monochrome text.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "ansi",
+        "selected"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Frozen metadata and generator claim the dataset digest ending 8672b…, but the actual cases.json digest contains 8692b…; reproducible frozen input identity therefore fails. Blind-first, capture provenance, recorded probes, frame capture and confirmed cleanup are present. The clipped ANSI also leaves full Postgres color/selected-state coverage unproven.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/13/metadata.json",
+        "docs/visualize-eval/rounds/13/generator-task.md#TRIAGE PROTOCOL"
+      ],
+      "evidence_ids": [
+        "dataset",
+        "metadata",
+        "generation",
+        "validator",
+        "log",
+        "manifest",
+        "selected",
+        "blind"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "40 timestamped frames show one source-hued dot per route, each starting at its route origin, with no label/corner occupancy; offline audit passes at 0.500 cells/frame with zero spread. Source-only and destination-only each share one pair; source binding keeps read/write dots distinct.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/rounds/13/briefs/pipeline.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "ansi",
+        "check",
+        "audit",
+        "audit-json"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "expected": "CLI → API gateway, unlabeled",
+      "observed": "CLI down into API gateway, unlabeled, continuous and unique",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            39,
+            6,
+            1,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "expected": "API gateway → Auth: verify",
+      "observed": "API left stem descends and turns left into Auth; verify belongs to this route",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            31,
+            14,
+            8,
+            10
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "expected": "API gateway → Job queue: enqueue",
+      "observed": "API right stem descends and turns right into Job queue; enqueue belongs to this route",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            36,
+            14,
+            8,
+            10
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "expected": "Job queue → Worker pool, unlabeled",
+      "observed": "Queue descends, jogs left, enters Worker pool; unlabeled",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            42,
+            28,
+            2,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "expected": "Worker pool → Postgres: write",
+      "observed": "Worker descends, turns left and enters Postgres right port; write is beside its route",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            37,
+            36,
+            6,
+            8
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "expected": "Auth → Postgres: read",
+      "observed": "Auth descends left of Worker then turns right into Postgres left port; read is beside its route",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            26,
+            28,
+            12,
+            16
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "dataset-hash-mismatch",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "metadata.json and generation.json assert e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05, but SHA-256 of the provided cases.json is e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05. The frozen dataset identity is not reproducible as asserted.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/13/metadata.json"
+      ],
+      "locations": []
+    },
+    {
+      "id": "live-border-clipping",
+      "category": "border_integrity",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "In the actual 68×44 live pane Postgres is clipped below its top border; the ANSI captures do not establish the complete normal or selected border color. The pinned target text shows the box whole but has no color information. This is an evidence blocker, not proof of a color discontinuity.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/13/briefs/pipeline.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "ansi",
+          "region": [
+            17,
+            44,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "selected",
+          "region": [
+            17,
+            44,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pinned",
+          "region": [
+            34,
+            44,
+            10,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "classification-tiebreaker",
+      "category": "category_fit",
+      "edge_ids": [
+        "e5",
+        "e6"
+      ],
+      "severity": "low",
+      "description": "The generator separately asserts no double-arrowhead target, but Postgres has two distinct incoming arrowheads. The chosen family and main evidence line remain supported; this is a record error, not a family-category failure.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            37,
+            43,
+            3,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "Full Postgres normal and select-all border color continuity is not captured; both ANSI captures clip it below the top border."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pZX"
+    ],
+    "closed_pane_ids": [
+      "w7E:pZX"
+    ],
+    "status": "done",
+    "reason": "Manifest reports confirmed_closed for the owned pane."
+  },
+  "overall": "fail"
+}

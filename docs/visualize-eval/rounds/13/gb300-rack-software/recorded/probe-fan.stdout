@@ -1,0 +1,29 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=15 edges=3 flows=0 direction=mixed theme=gruvbox
+canvas: 3 diagrams on one canvas, drawn whole at 100%
+diagram a "probe A tb fan, terminus centred" at 0,3: extent=58x38 nodes=5 edges=1 routes=4
+  description: layout probe only: tb fan with the trunk corridor over the middle box
+diagram b "probe B lr stack, terminus at the bottom" at 0,46: extent=71x18 nodes=5 edges=1 routes=4
+  description: layout probe only: lr stack with the trunk corridor below the branch boxes
+diagram c "probe C tb fan, terminus a rank below" at 0,69: extent=34x35 nodes=5 edges=1 routes=4
+  description: layout probe only: tb with the trunk terminus pinned one rank under the branches
+pins: 5 pinned, 0 conflict(s)
+extent=80x104 cells (whole canvas)
+crossings: 7 bridges, 4 touching bends
+warning: two edges share 6 cell(s), including ports; increase routing space
+near-misses: 53 cell(s) inside the 2-cell margin of a node the route does not serve (53 on trunk buses)
+passes-near-unrelated-node: 53
+near-miss: route a:e2 passes 6 cell(s) at ring 2 of node 'pwr' (nearest cell 34,31)
+near-miss: route a:e3 passes 13 cell(s) at ring 2 of node 'pwr' (nearest cell 34,31)
+near-miss: route b:e1 passes 6 cell(s) at ring 2 of node 'nvsw' (nearest cell 51,6)
+near-miss: route b:e2 passes 4 cell(s) at ring 2 of node 'nvsw' (nearest cell 51,6)
+near-miss: route c:e1 passes 18 cell(s) at ring 2 of node 'nvsw' (nearest cell 23,20)
+near-miss: route c:e2 passes 6 cell(s) at ring 2 of node 'nvsw' (nearest cell 23,20)
+warning: 53 route cell(s) hug a node their relation does not serve; move the affected relations or let them route around
+labels: 6/6 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners
+groups: oob-mgmt(3) oob-lan(12)
+trunks: a:lane from oob to pwr, 2 branches, 1 junctions b:lane from oob to shelf, 2 branches, 1 junctions c:lane from oob to shelf, 2 branches, 1 junctions
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 0 by source, 0 by destination, 0 shared-hue pair(s) (source-only 0, destination-only 0)
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

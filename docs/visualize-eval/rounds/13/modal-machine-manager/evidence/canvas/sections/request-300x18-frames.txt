@@ -1,0 +1,153 @@
+viewport: 300x18 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 300x18 @100% · canvas 260x64 · canvas.json · 26 nodes · 23 edges · q quit
+Request and provisioning path
+Humans and the control plane enter through webapi and private gRPC, enqueue River jobs, and provision bare metal down to the iPXE boot.
+
+                                                                                                                                                    ╭────────────────────╮
+ ╭─────────────╮  create/terminate/repair  ╭────────────╮      enqueue job                                                                        ╭▶│bare-metal providers│●───────────────────╮
+ │control plane│●─────────────────────────▶│private gRPC│●─────────────────────╮                                                                  │ │                    │  allocate instance │ ╭───────────────────╮
+ │             │                           │            │                      │ ╭───────────────╮                ╭─────────────────╮provider API │ ╰────────────────────╯                    ╰▶│                   │                  ╭───────────────╮
+ ╰─────────────╯                           ╰────────────╯                      ╰▶│               │ provision job╭▶│provider registry│●────────────╯                             iPXE request    │                   │ pull boot image╭▶│S3 object store│
+                                                                                 │River job queue│●─────────────╯ │                 │                    ╭───────────╮      ╭──────────────────●│bare-metal machines│●───────────────╯ │               │                           ▄  ▄       ▄▖ ▗▄
+╭──────────────╮          http            ╭─────────────╮ reinstall/reprovision╭▶│               │                ╰─────────────────╯                    │           │◀─────╯                   │                   │                  ╰───────────────╯                           ▀  ▀  ▀▘▝▀ ▝▘    ▝▀
+│┌───────┐mmctl│●────────────────────────▶│webapi server│●─────────────────────╯ ╰───────────────╯                                                       │boot server│                        ╭▶│                   │                                                              ▀▘▝▘ ▐▙ ▀
+││ + [+] │     │                          │             │                                                                                                │           │●───────────────────────╯ ╰───────────────────╯                                                                 ▄▖
+╰│ − [-]─│─────╯                          ╰─────────────╯                                                                                                ╰───────────╯   boot.ipxe + S3 args                                                                                       █▌ ▐▌ ▟▌ ▝
+ │ ⊡ [f] │                                                                                                                                                                                                                                                                            ▀▘
+ │ □ [i] │
+─└───────┘────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Heartbeat and machine state
+frame 1 at 100ms
+ rataflow-view · 300x18 @100% · canvas 260x64 · canvas.json · 26 nodes · 23 edges · q quit
+Request and provisioning path
+Humans and the control plane enter through webapi and private gRPC, enqueue River jobs, and provision bare metal down to the iPXE boot.
+
+                                                                                                                                                    ╭────────────────────╮
+ ╭─────────────╮  create/terminate/repair  ╭────────────╮      enqueue job                                                                        ╭▶│bare-metal providers│●───────────────────╮
+ │control plane│●─────────────────────────▶│private gRPC│●─────────────────────╮                                                                  │ │                    │  allocate instance │ ╭───────────────────╮
+ │             │                           │            │                      │ ╭───────────────╮                ╭─────────────────╮provider API │ ╰────────────────────╯                    ╰▶│                   │                  ╭───────────────╮
+ ╰─────────────╯                           ╰────────────╯                      ╰▶│               │ provision job╭▶│provider registry│●────────────╯                             iPXE request    │                   │ pull boot image╭▶│S3 object store│
+                                                                                 │River job queue│●─────────────╯ │                 │                    ╭───────────╮      ╭──────────────────●│bare-metal machines│●───────────────╯ │               │                           ▄  ▄       ▄▖ ▗▄
+╭──────────────╮          http            ╭─────────────╮ reinstall/reprovision╭▶│               │                ╰─────────────────╯                    │           │◀─────╯                   │                   │                  ╰───────────────╯                           ▀  ▀  ▀▘▝▀ ▝▘    ▝▀
+│┌───────┐mmctl│●────────────────────────▶│webapi server│●─────────────────────╯ ╰───────────────╯                                                       │boot server│                        ╭▶│                   │                                                              ▀▘▝▘ ▐▙ ▀
+││ + [+] │     │                          │             │                                                                                                │           │●───────────────────────╯ ╰───────────────────╯                                                                 ▄▖
+╰│ − [-]─│─────╯                          ╰─────────────╯                                                                                                ╰───────────╯   boot.ipxe + S3 args                                                                                       █▌ ▐▌ ▟▌ ▝
+ │ ⊡ [f] │                                                                                                                                                                                                                                                                            ▀▘
+ │ □ [i] │
+─└───────┘────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Heartbeat and machine state
+frame 2 at 200ms
+ rataflow-view · 300x18 @100% · canvas 260x64 · canvas.json · 26 nodes · 23 edges · q quit
+Request and provisioning path
+Humans and the control plane enter through webapi and private gRPC, enqueue River jobs, and provision bare metal down to the iPXE boot.
+
+                                                                                                                                                    ╭────────────────────╮
+ ╭─────────────╮  create/terminate/repair  ╭────────────╮      enqueue job                                                                        ╭▶│bare-metal providers│─●──────────────────╮
+ │control plane│─●────────────────────────▶│private gRPC│─●────────────────────╮                                                                  │ │                    │  allocate instance │ ╭───────────────────╮
+ │             │                           │            │                      │ ╭───────────────╮                ╭─────────────────╮provider API │ ╰────────────────────╯                    ╰▶│                   │                  ╭───────────────╮
+ ╰─────────────╯                           ╰────────────╯                      ╰▶│               │ provision job╭▶│provider registry│─●───────────╯                             iPXE request    │                   │ pull boot image╭▶│S3 object store│
+                                                                                 │River job queue│─●────────────╯ │                 │                    ╭───────────╮      ╭─────────────────●─│bare-metal machines│─●──────────────╯ │               │                           ▄  ▄       ▄▖ ▗▄
+╭──────────────╮          http            ╭─────────────╮ reinstall/reprovision╭▶│               │                ╰─────────────────╯                    │           │◀─────╯                   │                   │                  ╰───────────────╯                           ▀  ▀  ▀▘▝▀ ▝▘    ▝▀
+│┌───────┐mmctl│─●───────────────────────▶│webapi server│─●────────────────────╯ ╰───────────────╯                                                       │boot server│                        ╭▶│                   │                                                              ▀▘▝▘ ▐▙ ▀
+││ + [+] │     │                          │             │                                                                                                │           │─●──────────────────────╯ ╰───────────────────╯                                                                 ▄▖
+╰│ − [-]─│─────╯                          ╰─────────────╯                                                                                                ╰───────────╯   boot.ipxe + S3 args                                                                                       █▌ ▐▌ ▟▌ ▝
+ │ ⊡ [f] │                                                                                                                                                                                                                                                                            ▀▘
+ │ □ [i] │
+─└───────┘────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Heartbeat and machine state
+frame 3 at 300ms
+ rataflow-view · 300x18 @100% · canvas 260x64 · canvas.json · 26 nodes · 23 edges · q quit
+Request and provisioning path
+Humans and the control plane enter through webapi and private gRPC, enqueue River jobs, and provision bare metal down to the iPXE boot.
+
+                                                                                                                                                    ╭────────────────────╮
+ ╭─────────────╮  create/terminate/repair  ╭────────────╮      enqueue job                                                                        ╭▶│bare-metal providers│─●──────────────────╮
+ │control plane│─●────────────────────────▶│private gRPC│─●────────────────────╮                                                                  │ │                    │  allocate instance │ ╭───────────────────╮
+ │             │                           │            │                      │ ╭───────────────╮                ╭─────────────────╮provider API │ ╰────────────────────╯                    ╰▶│                   │                  ╭───────────────╮
+ ╰─────────────╯                           ╰────────────╯                      ╰▶│               │ provision job╭▶│provider registry│─●───────────╯                             iPXE request    │                   │ pull boot image╭▶│S3 object store│
+                                                                                 │River job queue│─●────────────╯ │                 │                    ╭───────────╮      ╭─────────────────●─│bare-metal machines│─●──────────────╯ │               │                           ▄  ▄       ▄▖ ▗▄
+╭──────────────╮          http            ╭─────────────╮ reinstall/reprovision╭▶│               │                ╰─────────────────╯                    │           │◀─────╯                   │                   │                  ╰───────────────╯                           ▀  ▀  ▀▘▝▀ ▝▘    ▝▀
+│┌───────┐mmctl│─●───────────────────────▶│webapi server│─●────────────────────╯ ╰───────────────╯                                                       │boot server│                        ╭▶│                   │                                                              ▀▘▝▘ ▐▙ ▀
+││ + [+] │     │                          │             │                                                                                                │           │─●──────────────────────╯ ╰───────────────────╯                                                                 ▄▖
+╰│ − [-]─│─────╯                          ╰─────────────╯                                                                                                ╰───────────╯   boot.ipxe + S3 args                                                                                       █▌ ▐▌ ▟▌ ▝
+ │ ⊡ [f] │                                                                                                                                                                                                                                                                            ▀▘
+ │ □ [i] │
+─└───────┘────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Heartbeat and machine state
+frame 4 at 400ms
+ rataflow-view · 300x18 @100% · canvas 260x64 · canvas.json · 26 nodes · 23 edges · q quit
+Request and provisioning path
+Humans and the control plane enter through webapi and private gRPC, enqueue River jobs, and provision bare metal down to the iPXE boot.
+
+                                                                                                                                                    ╭────────────────────╮
+ ╭─────────────╮  create/terminate/repair  ╭────────────╮      enqueue job                                                                        ╭▶│bare-metal providers│──●─────────────────╮
+ │control plane│──●───────────────────────▶│private gRPC│──●───────────────────╮                                                                  │ │                    │  allocate instance │ ╭───────────────────╮
+ │             │                           │            │                      │ ╭───────────────╮                ╭─────────────────╮provider API │ ╰────────────────────╯                    ╰▶│                   │                  ╭───────────────╮
+ ╰─────────────╯                           ╰────────────╯                      ╰▶│               │ provision job╭▶│provider registry│──●──────────╯                             iPXE request    │                   │ pull boot image╭▶│S3 object store│
+                                                                                 │River job queue│──●───────────╯ │                 │                    ╭───────────╮      ╭────────────────●──│bare-metal machines│──●─────────────╯ │               │                           ▄  ▄       ▄▖ ▗▄
+╭──────────────╮          http            ╭─────────────╮ reinstall/reprovision╭▶│               │                ╰─────────────────╯                    │           │◀─────╯                   │                   │                  ╰───────────────╯                           ▀  ▀  ▀▘▝▀ ▝▘    ▝▀
+│┌───────┐mmctl│──●──────────────────────▶│webapi server│──●───────────────────╯ ╰───────────────╯                                                       │boot server│                        ╭▶│                   │                                                              ▀▘▝▘ ▐▙ ▀
+││ + [+] │     │                          │             │                                                                                                │           │──●─────────────────────╯ ╰───────────────────╯                                                                 ▄▖
+╰│ − [-]─│─────╯                          ╰─────────────╯                                                                                                ╰───────────╯   boot.ipxe + S3 args                                                                                       █▌ ▐▌ ▟▌ ▝
+ │ ⊡ [f] │                                                                                                                                                                                                                                                                            ▀▘
+ │ □ [i] │
+─└───────┘────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Heartbeat and machine state
+frame 5 at 500ms
+ rataflow-view · 300x18 @100% · canvas 260x64 · canvas.json · 26 nodes · 23 edges · q quit
+Request and provisioning path
+Humans and the control plane enter through webapi and private gRPC, enqueue River jobs, and provision bare metal down to the iPXE boot.
+
+                                                                                                                                                    ╭────────────────────╮
+ ╭─────────────╮  create/terminate/repair  ╭────────────╮      enqueue job                                                                        ╭▶│bare-metal providers│──●─────────────────╮
+ │control plane│──●───────────────────────▶│private gRPC│──●───────────────────╮                                                                  │ │                    │  allocate instance │ ╭───────────────────╮
+ │             │                           │            │                      │ ╭───────────────╮                ╭─────────────────╮provider API │ ╰────────────────────╯                    ╰▶│                   │                  ╭───────────────╮
+ ╰─────────────╯                           ╰────────────╯                      ╰▶│               │ provision job╭▶│provider registry│──●──────────╯                             iPXE request    │                   │ pull boot image╭▶│S3 object store│
+                                                                                 │River job queue│──●───────────╯ │                 │                    ╭───────────╮      ╭────────────────●──│bare-metal machines│──●─────────────╯ │               │                           ▄  ▄       ▄▖ ▗▄
+╭──────────────╮          http            ╭─────────────╮ reinstall/reprovision╭▶│               │                ╰─────────────────╯                    │           │◀─────╯                   │                   │                  ╰───────────────╯                           ▀  ▀  ▀▘▝▀ ▝▘    ▝▀
+│┌───────┐mmctl│──●──────────────────────▶│webapi server│──●───────────────────╯ ╰───────────────╯                                                       │boot server│                        ╭▶│                   │                                                              ▀▘▝▘ ▐▙ ▀
+││ + [+] │     │                          │             │                                                                                                │           │──●─────────────────────╯ ╰───────────────────╯                                                                 ▄▖
+╰│ − [-]─│─────╯                          ╰─────────────╯                                                                                                ╰───────────╯   boot.ipxe + S3 args                                                                                       █▌ ▐▌ ▟▌ ▝
+ │ ⊡ [f] │                                                                                                                                                                                                                                                                            ▀▘
+ │ □ [i] │
+─└───────┘────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Heartbeat and machine state
+frame 6 at 600ms
+ rataflow-view · 300x18 @100% · canvas 260x64 · canvas.json · 26 nodes · 23 edges · q quit
+Request and provisioning path
+Humans and the control plane enter through webapi and private gRPC, enqueue River jobs, and provision bare metal down to the iPXE boot.
+
+                                                                                                                                                    ╭────────────────────╮
+ ╭─────────────╮  create/terminate/repair  ╭────────────╮      enqueue job                                                                        ╭▶│bare-metal providers│───●────────────────╮
+ │control plane│───●──────────────────────▶│private gRPC│───●──────────────────╮                                                                  │ │                    │  allocate instance │ ╭───────────────────╮
+ │             │                           │            │                      │ ╭───────────────╮                ╭─────────────────╮provider API │ ╰────────────────────╯                    ╰▶│                   │                  ╭───────────────╮
+ ╰─────────────╯                           ╰────────────╯                      ╰▶│               │ provision job╭▶│provider registry│───●─────────╯                             iPXE request    │                   │ pull boot image╭▶│S3 object store│
+                                                                                 │River job queue│───●──────────╯ │                 │                    ╭───────────╮      ╭───────────────●───│bare-metal machines│───●────────────╯ │               │                           ▄  ▄       ▄▖ ▗▄
+╭──────────────╮          http            ╭─────────────╮ reinstall/reprovision╭▶│               │                ╰─────────────────╯                    │           │◀─────╯                   │                   │                  ╰───────────────╯                           ▀  ▀  ▀▘▝▀ ▝▘    ▝▀
+│┌───────┐mmctl│───●─────────────────────▶│webapi server│───●──────────────────╯ ╰───────────────╯                                                       │boot server│                        ╭▶│                   │                                                              ▀▘▝▘ ▐▙ ▀
+││ + [+] │     │                          │             │                                                                                                │           │───●────────────────────╯ ╰───────────────────╯                                                                 ▄▖
+╰│ − [-]─│─────╯                          ╰─────────────╯                                                                                                ╰───────────╯   boot.ipxe + S3 args                                                                                       █▌ ▐▌ ▟▌ ▝
+ │ ⊡ [f] │                                                                                                                                                                                                                                                                            ▀▘
+ │ □ [i] │
+─└───────┘────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Heartbeat and machine state
+frame 7 at 700ms
+ rataflow-view · 300x18 @100% · canvas 260x64 · canvas.json · 26 nodes · 23 edges · q quit
+Request and provisioning path
+Humans and the control plane enter through webapi and private gRPC, enqueue River jobs, and provision bare metal down to the iPXE boot.
+
+                                                                                                                                                    ╭────────────────────╮
+ ╭─────────────╮  create/terminate/repair  ╭────────────╮      enqueue job                                                                        ╭▶│bare-metal providers│───●────────────────╮
+ │control plane│───●──────────────────────▶│private gRPC│───●──────────────────╮                                                                  │ │                    │  allocate instance │ ╭───────────────────╮
+ │             │                           │            │                      │ ╭───────────────╮                ╭─────────────────╮provider API │ ╰────────────────────╯                    ╰▶│                   │                  ╭───────────────╮
+ ╰─────────────╯                           ╰────────────╯                      ╰▶│               │ provision job╭▶│provider registry│───●─────────╯                             iPXE request    │                   │ pull boot image╭▶│S3 object store│
+                                                                                 │River job queue│───●──────────╯ │                 │                    ╭───────────╮      ╭───────────────●───│bare-metal machines│───●────────────╯ │               │                           ▄  ▄       ▄▖ ▗▄
+╭──────────────╮          http            ╭─────────────╮ reinstall/reprovision╭▶│               │                ╰─────────────────╯                    │           │◀─────╯                   │                   │                  ╰───────────────╯                           ▀  ▀  ▀▘▝▀ ▝▘    ▝▀
+│┌───────┐mmctl│───●─────────────────────▶│webapi server│───●──────────────────╯ ╰───────────────╯                                                       │boot server│                        ╭▶│                   │                                                              ▀▘▝▘ ▐▙ ▀
+││ + [+] │     │                          │             │                                                                                                │           │───●────────────────────╯ ╰───────────────────╯                                                                 ▄▖
+╰│ − [-]─│─────╯                          ╰─────────────╯                                                                                                ╰───────────╯   boot.ipxe + S3 args                                                                                       █▌ ▐▌ ▟▌ ▝
+ │ ⊡ [f] │                                                                                                                                                                                                                                                                            ▀▘
+ │ □ [i] │
+─└───────┘────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Heartbeat and machine state

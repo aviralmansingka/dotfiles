@@ -1,0 +1,15 @@
+{
+  "theme": "gruvbox",
+  "direction": "lr",
+  "nodes": [
+    { "id": "zz", "label": "Zeta", "group": "kids" },
+    { "id": "aa", "label": "Alpha", "group": "kids" },
+    { "id": "mm", "label": "Mu", "group": "kids" },
+    { "id": "par", "label": "Parent", "group": "top" }
+  ],
+  "edges": [
+    { "from": "par", "to": "zz" },
+    { "from": "par", "to": "aa" },
+    { "from": "par", "to": "mm" }
+  ]
+}

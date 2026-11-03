@@ -916,7 +916,7 @@
       "category": "workflow_evidence",
       "edge_ids": [],
       "severity": "high",
-      "description": "Evidence identity defect: metadata freezes cases.json as e69179e59a3d36985cd7e8672b319b566701f88caef385c9cbde76d060c92d05, while the actual index hashes to e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05. The network source, expected and variant hashes individually match; the frozen dataset index as a whole is not identified reliably.",
+      "description": "Evidence identity defect: metadata freezes cases.json as e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05, while the actual index hashes to e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05. The network source, expected and variant hashes individually match; the frozen dataset index as a whole is not identified reliably.",
       "source_refs": [
         "docs/visualize-eval/rounds/10/metadata.json"
       ],
