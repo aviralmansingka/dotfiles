@@ -151,9 +151,25 @@ if [ -n "$rect_w" ] && [ -n "$rect_h" ]; then
 fi
 
 wait_for_header() {
-  herdr pane wait-output --match 'rataflow-view' --source visible "$pane" \
-    >/dev/null 2>&1 || true
-  sleep 1
+  # Poll for the app's OWN header line (` rataflow-view · 82x51 @100% · …`).
+  # Matching the plain string 'rataflow-view' instead also matches the echo of
+  # the command line that pane run types, which returns before the app paints:
+  # every capture then lands on a bare prompt (and the follow-up `q` is
+  # buffered into the tty and kills the app as soon as it starts). Bounded so a
+  # viewer that never paints fails loudly instead of yielding an empty frame.
+  local waited=0
+  while [ "$waited" -lt 60 ]; do
+    if herdr pane read "$pane" --source visible --format text 2>/dev/null \
+        | grep -q 'rataflow-view · '; then
+      sleep 0.3
+      return 0
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+  printf 'viz-evidence: no "rataflow-view · " header in pane %s after %ss — the viewer never painted, refusing to capture an empty frame\n' \
+    "$pane" "$waited" >&2
+  return 1
 }
 
 # 3. Natural-zoom frame, plain text and ANSI.

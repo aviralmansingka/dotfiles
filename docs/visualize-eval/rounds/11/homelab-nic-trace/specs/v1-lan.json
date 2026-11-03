@@ -1,0 +1,16 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "box", "label": "homelab host: ASUS, Linux 7.0, ~/rack-bench, v6 ULA-only", "group": "host" },
+    { "id": "bond0", "label": "bond0 192.168.1.197", "group": "nics" },
+    { "id": "wlp", "label": "wlp8s0 192.168.1.213", "group": "nics" },
+    { "id": "rtr", "label": "Fios router 192.168.1.1 (hist.): ToR+spine+border+FW, NAT+DHCP", "group": "gateway" }
+  ],
+  "edges": [
+    { "from": "box", "to": "bond0", "label": "eno1 2.5 GbE", "label_slot": true },
+    { "from": "box", "to": "wlp", "label": "backup path", "label_slot": true },
+    { "from": "bond0", "to": "rtr", "label": "LAN /24, def gw 0.5 ms", "label_slot": true },
+    { "from": "wlp", "to": "rtr", "label": "metric failover, not ECMP", "label_slot": true }
+  ]
+}

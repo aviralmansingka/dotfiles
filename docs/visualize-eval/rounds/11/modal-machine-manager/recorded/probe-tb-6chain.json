@@ -1,0 +1,18 @@
+{
+  "direction": "tb",
+  "nodes": [
+    {"id": "n1", "label": "control plane", "group": "a"},
+    {"id": "n2", "label": "private gRPC", "group": "b"},
+    {"id": "n3", "label": "River jobs", "group": "b"},
+    {"id": "n4", "label": "provider registry", "group": "c"},
+    {"id": "n5", "label": "bare-metal providers", "group": "c"},
+    {"id": "n6", "label": "machines", "group": "d"}
+  ],
+  "edges": [
+    {"from": "n1", "to": "n2", "label": "create / terminate / repair", "label_slot": true, "dots": 1, "flow": true},
+    {"from": "n2", "to": "n3", "label": "enqueue job", "label_slot": true},
+    {"from": "n3", "to": "n4", "label": "provision job", "label_slot": true, "dots": 1, "flow": true},
+    {"from": "n4", "to": "n5", "label": "provider API", "label_slot": true},
+    {"from": "n5", "to": "n6", "label": "allocate instance", "label_slot": true, "dots": 1, "flow": true}
+  ]
+}

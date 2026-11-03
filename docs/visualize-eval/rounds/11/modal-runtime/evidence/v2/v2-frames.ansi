@@ -1,0 +1,29 @@
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/v2-fan-
+final.json
+
+[0m[1m[38;5;6mfix-visualize-skill[0m on [0m[1m[38;5;5m fix/visualize-skill[0m [0m[1m[38;5;1m[$][0m on [0m[1m[38;5;3m☁️  (ap-south-1) [0mon [0m[1m[38;5;4m☁️  aviral[0m
+[0m[1m[38;5;4mmansingka@gmail.com[0m 
+[0m[1m[38;5;1m󰂄 5%[0m [0m[1m[38;5;2m❯[0m [0m[38;5;2m/tmp/visualize-eval/round-10/bin/rataflow-view[0m [0m[4m/Users/aviral/.herdr/worktre[0m
+[0m[4mes/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/[0m
+[0m[4mv2-fan-final.json[0m
+viewport: 82x51 zoom: 1.00 natural
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/v2-fan-
+final.json --select-all
+
+[0m[1m[38;5;6mfix-visualize-skill[0m on [0m[1m[38;5;5m fix/visualize-skill[0m [0m[1m[38;5;1m[$!?][0m on [0m[1m[38;5;3m☁️  (ap-south-1) [0mon [0m[1m[38;5;4m☁️  avir[0m
+[0m[1m[38;5;4malmansingka@gmail.com[0m took [0m[1m[38;5;3m2s[0m 
+[0m[1m[38;5;1m󰂄 5%[0m [0m[1m[38;5;2m❯[0m [0m[38;5;2m/tmp/visualize-eval/round-10/bin/rataflow-view[0m [0m[4m/Users/aviral/.herdr/worktre[0m
+[0m[4mes/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/[0m
+[0m[4mv2-fan-final.json[0m --select-all
+viewport: 82x51 zoom: 1.00 natural
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/v2-fan-
+final.json --frames 5 --step-ms 100
+
+[0m[1m[38;5;6mfix-visualize-skill[0m on [0m[1m[38;5;5m fix/visualize-skill[0m [0m[1m[38;5;1m[$!?][0m on [0m[1m[38;5;3m☁️  (ap-south-1) [0mon [0m[1m[38;5;4m☁️  avir[0m
+[0m[1m[38;5;4malmansingka@gmail.com[0m 
+[0m[1m[38;5;1m󰂄 5%[0m [0m[1m[38;5;2m❯[0m /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/
+v2-fan-final.json --fra

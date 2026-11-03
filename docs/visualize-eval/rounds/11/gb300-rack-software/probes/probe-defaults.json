@@ -1,0 +1,10 @@
+{
+  "direction": "lr",
+  "nodes": [
+    { "id": "a", "label": "Alpha" },
+    { "id": "b", "label": "Beta" }
+  ],
+  "edges": [
+    { "from": "a", "to": "b", "label": "one hop" }
+  ]
+}

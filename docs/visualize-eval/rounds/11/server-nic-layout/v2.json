@@ -1,0 +1,15 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "nic", "label": "eno16595np0 .58/29", "group": "nics" },
+    { "id": "s2", "label": "server2 .59 R7725", "group": "servers" },
+    { "id": "spare", "label": ".60-.62 free", "group": "pool" },
+    { "id": "gw", "label": ".57 Arista ToR · MAC OUI", "group": "access" }
+  ],
+  "edges": [
+    { "from": "nic", "to": "gw", "label": "routed /29 · no NAT/proxy/v6", "label_slot": true },
+    { "from": "s2", "to": "gw", "label": "same /29" },
+    { "from": "spare", "to": "gw", "label": "free · unprobed", "style": "dashed" }
+  ]
+}

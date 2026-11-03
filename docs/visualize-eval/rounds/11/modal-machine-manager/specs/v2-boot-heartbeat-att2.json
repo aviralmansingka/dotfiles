@@ -1,0 +1,110 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "mch",
+      "label": "bare-metal machines",
+      "group": "machines"
+    },
+    {
+      "id": "boot",
+      "label": "boot server",
+      "group": "machines"
+    },
+    {
+      "id": "agent",
+      "label": "machine-agent",
+      "group": "machines"
+    },
+    {
+      "id": "pgrpc",
+      "label": "private gRPC",
+      "group": "control"
+    },
+    {
+      "id": "pub",
+      "label": "public gRPC",
+      "group": "control"
+    },
+    {
+      "id": "db",
+      "label": "Postgres",
+      "group": "state"
+    },
+    {
+      "id": "s3",
+      "label": "S3 object store",
+      "group": "state"
+    },
+    {
+      "id": "pgrpc",
+      "label": "private gRPC",
+      "group": "control"
+    }
+  ],
+  "edges": [
+    {
+      "from": "mch",
+      "to": "boot",
+      "label": "iPXE request",
+      "label_slot": true,
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "boot",
+      "to": "mch",
+      "label": "boot.ipxe + S3 args",
+      "label_slot": true,
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "mch",
+      "to": "s3",
+      "label": "pull boot image",
+      "label_slot": true,
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "mch",
+      "to": "agent",
+      "label": "runs on host",
+      "label_slot": true
+    },
+    {
+      "from": "agent",
+      "to": "pub",
+      "label": "register + heartbeat",
+      "label_slot": true,
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "pub",
+      "to": "db",
+      "label": "machine state",
+      "label_slot": true,
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "pgrpc",
+      "to": "db",
+      "label": "machine rows",
+      "label_slot": true,
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "pgrpc",
+      "to": "db",
+      "label": "machine rows",
+      "label_slot": true,
+      "dots": 1,
+      "flow": true
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/11/gb300-rack-software/specs/v
+3-rms-api-a2.json
+q%
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/11/gb300-rack-software/specs/v
+3-rms-api-a2.json --select-all
+q[WARN] - (starship::utils): Executing command "/usr/bin/git" timed out.
+[WARN] - (starship::utils): You can set command_timeout in your config to a higher
+ value to allow longer-running commands to keep executing.
+
+fix-visualize-skill on  fix/visualize-skill [$] on ☁️  (ap-south-1) on ☁️  aviral
+mansingka@gmail.com
+󰂄 4% ❯ /tmp/visualize-eval/round-10/bin/rataflow-vi

@@ -1,0 +1,18 @@
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-machine-manager/specs
+/v1-provision-att3.json
+q/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-machine-manager/spec
+s/v1-provision-att3.json --select-all
+q/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-machine-manager/spec
+s/v1-provision-att3.json --frames 48 --step-ms 100
+[WARN] - (starship::utils): Executing command "/opt/homebrew/bin/rustc" timed out.
+[WARN] - (starship::utils): You can set command_timeout in your config to a higher
+ value to allow longer-running commands to keep executing.
+[WARN] - (starship::utils): Executing command "/opt/homebrew/bin/node" timed out.
+[WARN] - (starship::utils): Executing command "/usr/bin/python3" timed out.
+
+/private/tmp via 🐹 v1.26.1 via 🌙 v5.5.0 via  via 🐍 via 🦀 on ☁️  (ap-south-1)
+on ☁️  aviralmansingka@gmail.com
+󰂄 4% ❯ /tmp/visualize-eval/round-

@@ -1,0 +1,49 @@
+viewport: 77x47 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 77x47 @100% · v2-fan-c.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+                               ╭─────────────╮
+                               │modal-runtime│
+                               │             │
+                               ╰─────────────╯
+                                     │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                     dispatches tasks│ │
+                    fs HTTP over UDS │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                             ╭───────╯ ╰──────╮
+                             ▼                ▼
+                       ╭────────────╮   ╭───────────╮
+                       │modal-daemon│   │Task engine│
+                       │            │   │           │
+                       ╰────────────╯   ╰───────────╯
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+

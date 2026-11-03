@@ -1,0 +1,49 @@
+viewport: 77x47 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 77x47 @100% · v1-a.json · 4 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+                               ╭─────────────╮
+                               │modal-runtime│
+                               │             │
+               fs HTTP over UDS╰─────────────╯
+                   dispatches tasks│ │ ▲ │
+             task input + ctrl RPCs│ │ │ │events + mgmt RPCs
+                     ╭─────────────╯ │ │ ╰─────────────╮
+                     │               │ │               │
+                     │               │ ╰─────────────╮ │
+                     │               │               │ │
+                     │               │               │ │
+                     │               │               │ │
+                     │               │               │ │
+                     │               │               │ │
+                     │               │               │ │
+                     │               │               │ │
+                     │               │               │ │
+                     │               │               │ │
+                     │               │               │ │
+                     │               │               │ │
+                     │               │               │ │
+                     │               ╰╮              │ │
+                     ▼                ▼              │ ▼
+               ╭────────────╮   ╭───────────╮   ╭────────────╮
+               │modal-daemon│   │Task engine│   │modal-worker│
+               │            │   │           │   │            │
+               ╰────────────╯   ╰───────────╯   ╰────────────╯
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+

@@ -1,0 +1,99 @@
+{
+  "case_id": "network",
+  "round": "11",
+  "note": "Order of work: family classification first (service-meshes), then the meaning ledger, then this attempt record. Budget accounting: 3 candidates for the single view v1; every other distinct spec below is an exploratory probe, listed with its record label in attempts-log.jsonl. All probe specs are also copied into attempts/ (recorded spec_sha256 unchanged).",
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "spec_sha256": "1a4d98691002a625213670d5626fce5122ccce7c4b6350088f80ae4bdc198a1e",
+          "spec": "attempts/v1-a-tb-auto.json",
+          "record_label": "v1-attempt1-tb-auto",
+          "note": "candidate 1 \u2014 direction tb, groups, no layers, no label_slot. Auto ranks follow the longest path (wan,fw,core,web,cache,db = 6 ranks), so the core fan is not side by side and every labelled rank gap costs label_width+3 rows: extent 29x67, overflows the 47-row target. Rejected."
+        },
+        {
+          "spec_sha256": "1e59d2a417e6a5c32847aaa709ce8ddf089ea1ef9e8cc8ec04cfd518f661fd9c",
+          "spec": "attempts/v1-b-layers.json",
+          "record_label": "v1-attempt2-layers-tb",
+          "note": "candidate 2 \u2014 added layers pins [wan][fw][core][web,cache][db] so core's fan sits side by side in source listing order (web left, cache right) and web->cache becomes an intra-rank edge. Fan fixed, but the five labelled rank gaps still cost label_width+3 rows: extent 31x56, still overflows. Rejected."
+        },
+        {
+          "spec_sha256": "ce5e36bbc86b4bf46036e6fa05e6f2f2939af4d241bf43e6cd836be9e2ad9b1c",
+          "spec": "v1.json",
+          "record_label": "v1-final-short-hops-static",
+          "note": "candidate 3 (SHIPPED) \u2014 layers pins + label_slot gutters on wan->fw, fw->core, web->cache, web->db to buy rank height back; the three labels that read better in their rank gap (core->web, core->cache, cache->db) keep no gutter, which is also what clears the label-owner ambiguity. extent 31x44, crossings 0, labels 7/7 with 0 ambiguous, dots 4 single-dot routes, origins 4/4. Dots are off on the three hops whose animatable path is only 2 cells (frames show the dot alternating between two cells and never reaching its arrowhead); reason recorded in generation.json."
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "record_label": "v1-attempt3-layers-gutter-tb",
+      "spec_sha256": "de298dd33edfe19a5576111673a8d457499649dfd4b418192f29e4c6df3cae9f",
+      "finding": "all 7 labels in label_slot gutters: extent 34x36 fits, but 1 ambiguous label owner (the queries/fill pair share a corridor). Abandoned, not shipped."
+    },
+    {
+      "record_label": "v1-probe-d-gutter-mix",
+      "spec_sha256": "a9374ee421a69a5a77ecdfe898f857d1dcac719b7894ea73938a43c7206f5a52",
+      "finding": "ungutter core->web only: extent 34x41, still 1 ambiguous owner. Abandoned."
+    },
+    {
+      "record_label": "v1-probe-e-gutter-mix",
+      "spec_sha256": "4dc936496bf0edabdcfb0e8bae5c5830f7799390801bd14b224ff74eb6b925de",
+      "finding": "ungutter both core fan labels so 10 GbE sits left of the left route and 25 GbE right of the right route: extent 34x41, reads well, still 1 ambiguous owner (queries/fill). Became the basis of the shipped spec once cache->db was ungutterd too."
+    },
+    {
+      "record_label": "v1-probe-f-lr-gutter",
+      "spec_sha256": "4192ef43d8e7d283f26a7e0396c9e6a4dfab00541ac63aec9a47fc1c723769d6",
+      "finding": "lr orientation probe of the same 5-rank spec: renderer exit 1, 'no obstacle-safe route for web -> cache; increase node/layer spacing'. This is the record for choosing tb."
+    },
+    {
+      "record_label": "v1-probe-g-tb-auto-gutter",
+      "spec_sha256": "27ce194b1bba23264f90086b91694cdaedcb3c64de5174031bb7507ac989948d",
+      "finding": "tb with auto ranks (6 ranks) but all labels in gutters: extent 27x45 fits, 1 ambiguous owner, and the fan reads as a chain with one bypass instead of a side-by-side fan. Abandoned."
+    },
+    {
+      "record_label": "toggle-0 ... toggle-6",
+      "spec_sha256": [
+        "52a532e42c848ac63696ff96a95123dae09ac652b570a7561a7e8bedb0bfc67f",
+        "0c12d31a2859e29b8d2412ec602e3bb24b693ac45e086d20db4a72e213ccd944",
+        "afc19a4fd669408d585985c9631b3efabe720e544a918c761e45585cb226f306",
+        "a8cf0e1d14a9716d89291da1c45e8e07a0732d7a238f8f64fa34e2358ccc70b6",
+        "b4f5d9bca170bf30f497de2de5f1aa7e9cbf654fa588a867d46e9782a5f4d80f",
+        "04c3ea4d21423761093a12698eee92461d610b819a2d36988053f146f5801eb0",
+        "b6546b91e5e384ddc7c0c457dfe930937e5f6bf435f2927e94cbe2a5851f91f4"
+      ],
+      "finding": "label_slot removed from one edge at a time on the 6-rank layout to locate the ambiguous label: only dropping core->web's gutter clears it (extent 27x50, too tall). Abandoned with the 6-rank shape."
+    },
+    {
+      "record_label": "fan-toggle-wan-fw ... fan-toggle-cache-db",
+      "spec": "attempts/fan-toggle-*.json",
+      "spec_sha256": [
+        "fa57e5a63fcb6b6d2ed467aabff088b7f658bdb15708df4fdc8387b35201e2ec",
+        "ec46d62a6f786b964f1c98fe1b871d9176aabf10e19ad203eaccd5f5c373a1eb",
+        "a9374ee421a69a5a77ecdfe898f857d1dcac719b7894ea73938a43c7206f5a52",
+        "7d85e42b5064f9a83a9760d7fd6f722eb718e90aa38f3b8b2a1a36bfc948239d",
+        "83288b2059c282a4dd105ac159af8e07269fda88ad4146f36aacc958b3d688c0",
+        "97f6549547a53e205d96e1e404c4fdbc5cbf176003f95a08e10f6c1134a1a372",
+        "1516562bd139fabbbbfad05bef060ec93c8874cf798003282f747f5c0cf71235"
+      ],
+      "finding": "same one-edge-at-a-time sweep on the SHIPPED 5-rank fan layout: dropping web->db's gutter (34x42) or cache->db's gutter (31x39) clears the ambiguity; every other edge leaves 1 ambiguous owner."
+    },
+    {
+      "record_label": "v1-probe-h-fill",
+      "spec_sha256": "f297356befed37f18f11e6d3e7825053780dace21822a01397c12dbd6609ce8d",
+      "finding": "core fan ungutterd + cache->db ungutterd: extent 31x44, 0 ambiguous owners, 0 crossings. This is the shipped shape before the dot decision."
+    },
+    {
+      "record_label": "v1-probe-h-queries",
+      "spec_sha256": "0907a66f569c026d0a1d70971b4aead21a449baa88010102178ee0f4acac6b42",
+      "finding": "same but unguttering web->db instead of cache->db: extent 34x47 \u2014 fills the whole target height with no margin. Rejected on fit margin."
+    },
+    {
+      "record_label": "v1-final-layers-gutter-mix",
+      "spec_sha256": "f297356befed37f18f11e6d3e7825053780dace21822a01397c12dbd6609ce8d",
+      "finding": "the v1-h-fill shape re-run against the shipped spec path with all 7 routes animated; kept only as a probe: the motion evidence showed the 2-cell hops twitching, so the shipped spec sets dots:0 on wan->fw, fw->core, web->cache."
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "gw", "label": ".57 Arista ToR · MAC OUI · NxtGen AS132717 Bengaluru", "group": "access" },
+    { "id": "airtel", "label": "Airtel 14.143.x", "group": "isp" },
+    { "id": "airtelbb", "label": "Airtel backbone 14.141.x", "group": "isp" },
+    { "id": "cf", "label": "Cloudflare 1.1.1.1 AS13335", "group": "target" }
+  ],
+  "edges": [
+    { "from": "gw", "to": "airtel", "label": "1.8 ms · unseen bridge/tunnel/silent", "style": "dashed", "label_slot": true },
+    { "from": "airtel", "to": "airtelbb", "label": "7.1 ms · h3 mute ≠ L2", "label_slot": true },
+    { "from": "airtelbb", "to": "cf", "label": "8.3-8.6 ms · h5 -80% h6 mute", "label_slot": true }
+  ]
+}

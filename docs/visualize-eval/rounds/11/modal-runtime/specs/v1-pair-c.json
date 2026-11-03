@@ -1,0 +1,12 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "worker", "label": "modal-worker", "group": "agents" },
+    { "id": "runtime", "label": "modal-runtime", "group": "control" }
+  ],
+  "edges": [
+    { "from": "worker", "to": "runtime", "label": "task input + ctrl RPCs" },
+    { "from": "runtime", "to": "worker", "label": "events + mgmt RPCs" }
+  ]
+}

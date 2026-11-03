@@ -1,0 +1,18 @@
+{
+  "direction": "tb",
+  "nodes": [
+    { "id": "rms", "label": "nv-rms" },
+    { "id": "oob", "label": "OOB LAN" },
+    { "id": "bmc_c", "label": "Compute BMC x18" },
+    { "id": "bmc_s", "label": "NVSwitch BMC" },
+    { "id": "pwr", "label": "Power shelf" },
+    { "id": "nvos", "label": "NVOS" }
+  ],
+  "trunks": [
+    { "id": "oob-bus", "label": "physical reach", "from": "oob", "to": "nvos",
+      "branches": ["bmc_c", "bmc_s", "pwr"] }
+  ],
+  "edges": [
+    { "from": "rms", "to": "oob", "label": "client on LAN" }
+  ]
+}

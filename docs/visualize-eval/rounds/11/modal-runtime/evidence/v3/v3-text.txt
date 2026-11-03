@@ -1,0 +1,9 @@
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/v3-comp
+ute.json
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+󰂃 4% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/
+v3-compute.json

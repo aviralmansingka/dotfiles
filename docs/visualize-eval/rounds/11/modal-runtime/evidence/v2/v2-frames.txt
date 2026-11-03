@@ -1,0 +1,29 @@
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/v2-fan-
+final.json
+
+fix-visualize-skill on  fix/visualize-skill [$] on ☁️  (ap-south-1) on ☁️  aviral
+mansingka@gmail.com
+󰂄 5% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/
+v2-fan-final.json
+viewport: 82x51 zoom: 1.00 natural
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/v2-fan-
+final.json --select-all
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com took 2s
+󰂄 5% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/
+v2-fan-final.json --select-all
+viewport: 82x51 zoom: 1.00 natural
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/v2-fan-
+final.json --frames 5 --step-ms 100
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+󰂄 5% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/
+v2-fan-final.js

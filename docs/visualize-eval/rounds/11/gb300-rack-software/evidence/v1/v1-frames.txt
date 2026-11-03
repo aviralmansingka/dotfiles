@@ -1,0 +1,20 @@
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/11/gb300-rack-software/specs/v
+1-planes-a3.json
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+󰂃 3% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/gb300-rack-software/
+specs/v1-planes-a3.json
+viewport: 82x51 zoom: 1.00 natural
+q/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/11/gb300-rack-software/specs/
+v1-planes-a3.json --frames 5 --step-ms 100
+[WARN] - (starship::utils): Executing command "/usr/bin/git" timed out.
+[WARN] - (starship::utils): You can set command_timeout in your config to a higher
+ value to allow longer-running commands to keep executing.
+
+fix-visualize-skill on  fix/visualize-skill [$] on ☁️  (ap-south-1) on ☁️  aviral
+mansingka@gmail.com
+󰂃 3% ❯ q/tmp/visualize-eva

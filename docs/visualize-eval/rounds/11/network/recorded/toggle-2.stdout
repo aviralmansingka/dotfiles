@@ -1,0 +1,10 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=6 edges=7 flows=7 direction=tb theme=gruvbox
+extent=27x50 cells
+crossings: 0 bridges, 0 touching bends
+labels: 7/7 placed, 0 on route cells, 0 skipped, 0 ambiguous owners
+groups: ingress(2) switching(1) compute(1) data(2)
+trunks:
+dots: 7 single-dot routes, 0 periodic routes, 0 violations, 7 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 7/7 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

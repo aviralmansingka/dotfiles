@@ -1,0 +1,111 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "wan",
+      "label": "WAN",
+      "group": "ingress"
+    },
+    {
+      "id": "fw",
+      "label": "Firewall",
+      "group": "ingress"
+    },
+    {
+      "id": "core",
+      "label": "Core switch",
+      "group": "switching"
+    },
+    {
+      "id": "web",
+      "label": "Web tier",
+      "group": "compute"
+    },
+    {
+      "id": "cache",
+      "label": "Redis",
+      "group": "data"
+    },
+    {
+      "id": "db",
+      "label": "DB tier",
+      "group": "data"
+    }
+  ],
+  "edges": [
+    {
+      "from": "wan",
+      "to": "fw",
+      "label": "1 GbE",
+      "dots": 1,
+      "flow": true,
+      "label_slot": true
+    },
+    {
+      "from": "fw",
+      "to": "core",
+      "label": "10 GbE",
+      "dots": 1,
+      "flow": true,
+      "label_slot": true
+    },
+    {
+      "from": "core",
+      "to": "web",
+      "label": "10 GbE",
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "core",
+      "to": "cache",
+      "label": "25 GbE",
+      "dots": 1,
+      "flow": true,
+      "label_slot": true
+    },
+    {
+      "from": "web",
+      "to": "cache",
+      "label": "session",
+      "dots": 1,
+      "flow": true,
+      "label_slot": true
+    },
+    {
+      "from": "web",
+      "to": "db",
+      "label": "queries",
+      "dots": 1,
+      "flow": true,
+      "label_slot": true
+    },
+    {
+      "from": "cache",
+      "to": "db",
+      "label": "fill",
+      "dots": 1,
+      "flow": true,
+      "label_slot": true
+    }
+  ],
+  "layers": [
+    [
+      "wan"
+    ],
+    [
+      "fw"
+    ],
+    [
+      "core"
+    ],
+    [
+      "web",
+      "cache"
+    ],
+    [
+      "db"
+    ]
+  ]
+}

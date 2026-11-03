@@ -1,0 +1,113 @@
+{
+  "case_id": "gb300-rack-software",
+  "round": "11",
+  "view_budget": 4,
+  "spec_budget_per_view": 3,
+  "views": [
+    {
+      "view": "v1",
+      "final_spec": "specs/v1-planes-a3.json",
+      "attempts": [
+        {
+          "spec": "specs/v1-planes-a1.json",
+          "spec_sha256": "2d430deef238bdab65479ab1d24c37fe0363f04e4222da867a95045fa39c83bf",
+          "record_label": "v1-a1-check",
+          "result": "extent=68x41, crossings 3 bridges, 7/7 labels",
+          "note": "13 nodes with auto ranks: rejected \u2014 check warned '13 nodes / 7 edges is above the readable budget (12/16)' and the trunk corridor looped right over the two plane clusters"
+        },
+        {
+          "spec": "specs/v1-planes-a2.json",
+          "spec_sha256": "39b10a0b6a8c0f97f949bf11ccd6c5591b159f968923ca3636bbc355a3341f22",
+          "record_label": "v1-planes-a2-check",
+          "result": "extent=61x46, crossings 2 bridges 1 touching bend",
+          "note": "6 pinned ranks, 12 nodes: rank pinning fixed the corridor loop but the graph grew to 46 rows, so the palette corner overlapped the Fabric Mgr box; rejected"
+        },
+        {
+          "spec": "specs/v1-planes-a3.json",
+          "spec_sha256": "48cfb550e6962dfb3cf881a68a19fca334e3c1204540ec109ad451ef84f7655a",
+          "record_label": "v1-planes-a3-check",
+          "result": "extent=59x38, crossings 0 bridges, 7/7 labels, 0 ambiguous, no warnings",
+          "note": "FINAL: 5 pinned ranks, 12 nodes, 0 crossings, palette corner clear"
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "final_spec": "specs/v2-oob-bus-a2.json",
+      "attempts": [
+        {
+          "spec": "specs/v2-mgmt-a1.json",
+          "spec_sha256": "69c8da5f8e12a21c327e87c2e60f5271192cababcfed221d9007eb82bca0b128",
+          "record_label": "v2-a1-check",
+          "result": "extent=81x28, crossings 10 bridges 6 touching bends, 6/7 labels (1 skipped), overflow at 77 cols",
+          "note": "one merged management plane (oob bus + all five nv-rms API edges, lr, 5 pinned ranks): rejected \u2014 too wide, 10 bridges, one label skipped; physical reachability and controller API calls do not survive in one frame"
+        },
+        {
+          "spec": "specs/v2-oob-bus-a1.json",
+          "spec_sha256": "0f20a4532396a2ee1c7ed4770ac41f3b343c9d6a3b82306609ac897110f65ccc",
+          "record_label": "v2-a1b-check (the earlier record in this label slot, exit 1, is a draft with no edges: the renderer rejected 'the spec needs at least one edge' and those draft bytes were then overwritten by this file)",
+          "result": "extent=52x32, crossings 0, 2/2 labels, 1 ambiguous owner",
+          "note": "tb trunk with label 'physical reach': the label was equidistant from the corridor and a spur -> ambiguous owner; rejected"
+        },
+        {
+          "spec": "specs/v2-oob-bus-a2.json",
+          "spec_sha256": "547d5093bca388160f0178d052fc8852a2001107ef55e75b4be8414b05554893",
+          "record_label": "v2-oob-bus-a2-check",
+          "result": "extent=50x30, crossings 0 bridges, 2/2 labels, 0 ambiguous, no warnings",
+          "note": "FINAL: same structure, trunk label shortened 'physical reach' -> 'reach'; ambiguity cleared, 3 trunk junctions reported"
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "final_spec": "specs/v3-rms-api-a2.json",
+      "attempts": [
+        {
+          "spec": "specs/v3-rms-api-a1.json",
+          "spec_sha256": "ee9a29bc244cd2f22e1de2ce8ba80f4703216590ad0d65ec4b4f2e39d52875d6",
+          "record_label": "v3-rms-api-a1-check",
+          "result": "extent=59x16, crossings 1 bridge, 4/5 labels (1 skipped)",
+          "note": "lr with label_slot on every labelled edge: the second 'Redfish/HTTPS' label had no gutter cell next to nv-rms's fan ports; rejected"
+        },
+        {
+          "spec": "specs/v3-rms-api-a2.json",
+          "spec_sha256": "4073104f3df2eb619ad1c4fdcc8b5ff3f86eba8e4b60d14ece9330f7a3e214bc",
+          "record_label": "v3-rms-api-a2-check",
+          "result": "extent=69x16, crossings 1 bridge, 5/5 labels, 0 ambiguous, no warnings",
+          "note": "FINAL: label_slot dropped, rank gaps widen to the label width so each of the two identical Redfish labels owns its own gap cells"
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "final_spec": "specs/v4-inband-a1.json",
+      "attempts": [
+        {
+          "spec": "specs/v4-inband-a1.json",
+          "spec_sha256": "6c202043bccfe22b5d89a0a9d811444a2b1c287e699b43dfca9fbbab7b087de8",
+          "record_label": "v4-inband-a1-check",
+          "result": "extent=36x36, crossings 0 bridges, 5/5 labels, 0 ambiguous, no warnings",
+          "note": "FINAL on the first attempt"
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "probe": "probes/probe-defaults.json",
+      "record_label": "probe-defaults-check",
+      "finding": "static baseline: no flow => 0 periodic routes, 0 single-dot routes (2 nodes, 1 edge, extent 34x4)"
+    },
+    {
+      "probe": "probes/probe-trunk-lr.json",
+      "record_label": "probe-trunk-lr-check",
+      "finding": "lr trunk with all three branches in the corridor's target rank: renderer exits 1 'no obstacle-safe route for oob -> pwr'. Evidence that a 3-branch trunk needs its own rank row; this killed the lr trunk layouts."
+    },
+    {
+      "probe": "probes/probe-trunk-tb.json",
+      "record_label": "probe-trunk-tb-check",
+      "finding": "tb trunk, auto ranks, label 'physical reach': extent 70x45, 1 bridge, palette corner drew over the Compute BMC box because the graph filled the height. Evidence for pinning ranks and shortening the trunk label."
+    }
+  ],
+  "note": "Every --check run above is recorded in attempts-log.jsonl by scripts/viz-evidence.sh record; raw stdout/stderr and their sha256s are under recorded/."
+}
