@@ -12,20 +12,20 @@ pi agent extensions (job `pi-tests`, gated on `pi/**` + `agents/**`):
 
 | Domain | Suite | Coverage | Runtime |
 |---|---|---|---|
-| Renderer core | tool-call-renderer-public.test.mjs (+ usage, thinking-title, web-fetch, web-search) | stmts 97.2 %, branch 90.4 %; usage.ts 0→99.6 % (real-module import) | 2.5 s |
-| Python tool | python.test.mjs | stmts 96.9 %, funcs 100 % | 2.35 s |
+| Renderer core | tool-call-renderer-public.test.mjs (+ usage, thinking-title, web-fetch, web-search) | see docs/ci-tests/renderer.md | 2.5 s |
+| Python tool | python.test.mjs | see docs/ci-tests/python-tool.md | 2.35 s |
 | No-mistakes | gate / pane / bridge tests | see docs/ci-tests/no-mistakes.md | 9.4 s |
-| Subagents + editor | interactive-subagents.test.mjs, nvim-open.test.mjs | nvim-open 98 %, herdr 99 %, session 93 %, tmux 91 % | 1.1 s |
-| User input | user-input/** (10 files) + quiz/explain/ask | overall 94.2 %; user-input/** 100/100 | 0.48 s |
-| Run-command | run-command.test.mjs | run-command.ts 95.2 %; nvim-terminal 100 % | 1.6 s |
-| Lesson journal | md-log / lesson / focus-buffer tests | 98 / 100 / 97 % | 3.1 s |
-| Practice (problem / conclude) | practice.test.mjs | demand, attempt, commitment, reveal, cancel, session keying, transcript renders | 0.05 s |
-| Mermaid v2 | mermaid.test.mjs | stmts 94.6 %, branch 81.2 %, funcs 100 % | 0.44 s |
-| Tuicr | tuicr.test.mjs | stmts 92.5 % | 1.7 s |
-| Telegram daemon | pi/bin unittest (155 cases) | daemon 75 % (mention gating was 0 %) | 1.1 s |
+| Subagents + editor | interactive-subagents.test.mjs, nvim-open.test.mjs | see docs/ci-tests/subagents.md | 1.1 s |
+| User input | user-input/** (10 files) + quiz/explain/ask | see docs/ci-tests/user-input.md | 0.48 s |
+| Run-command | run-command.test.mjs | see docs/ci-tests/run-command.md | 1.22 s |
+| Lesson journal | md-log / lesson / focus-buffer tests | see docs/ci-tests/journal.md | 3.1 s |
+| Practice (problem / conclude) | practice.test.mjs | see docs/ci-tests/practice.md | 0.05 s |
+| Mermaid v2 | mermaid.test.mjs | see docs/ci-tests/mermaid.md | 0.44 s |
+| Tuicr | tuicr.test.mjs | see docs/ci-tests/tuicr.md | 1.7 s |
+| Telegram daemon | pi/bin unittest (155 cases) | see docs/ci-tests/telegram.md | 1.1 s |
 | Loader | scripts/test-extension-loader.mjs | 26 factories + 23 nested + settings entries | 0.2 s |
 | OpenGateway provider | opengateway.test.mjs | provider registration + model metadata | 0.13 s |
-| Missions | missions/missions.test.mjs + scripts/test-missions.sh | attachment, structured progress, replay, workspace ownership, final settlement | under 30 s warm |
+| Missions | missions/missions.test.mjs + scripts/test-missions.sh | see docs/ci-tests/missions.md | under 30 s warm |
 
 Neovim (job `nvim-tests`, gated on `nvim/**`): offline headless harness
 (`nvim/.config/nvim/tests/ci/`) + ten entries `scripts/test-nvim-*.sh`;
