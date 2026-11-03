@@ -76,3 +76,19 @@ metrics, and no case cleared them all.
    artifact; frame audit gains per-route traversal.
 3. Skill: source-ledger completeness (nv-rms-class control relations,
    qualifier retention under budget pressure).
+
+
+## Addendum - C4 probe (owner-requested, post-aggregate)
+
+Framing: "explain the machine manager using the C4 diagrams." Verdict:
+FAIL (2P/4F/2B + anim BLOCKED), C4 capability PARTIAL. The current
+skill communicates L1 context and L2 container semantics with visible
+strain: semantic fails on two qualifiers living only in the ledger
+(verify-reimage, args), layout fails on the missing divider contract
+(owner round-14 directive closes this), grouping/animation blocked on
+missing whole-canvas color evidence. A dedicated c4 skill is warranted
+for recurring C4 work - it should add level-owned navigation, explicit
+system boundaries and element kinds (system/person/container/external),
+lossless context-to-container coverage, and renderer support for
+boundary bands. Kept out of matrix.json (probe, not dataset); recorded
+here and in state.json.

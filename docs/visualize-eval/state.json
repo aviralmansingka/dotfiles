@@ -2849,10 +2849,11 @@
    "viz-validate.py: leader-tick warning exempted from check_warnings_absent (the r13 ownership rescue was unshippable otherwise)"
   ],
   "c4_probe": {
-   "status": "GENERATED + captain-validated: C4 verdict PARTIAL (L1/L2 clean; 23/23 relations via expansions; gaps: no level-owned multi-diagram concept, no divider contract (owner round-14 directives close 2 of 3), no boundary rendering); judge next",
+   "status": "COMPLETE: judge verdict FAIL (2P/4F/2B + anim BLOCKED); C4 CAPABILITY RULING: PARTIAL - dedicated c4 skill warranted (level-owned navigation, system boundaries + element types, lossless context-to-container coverage; renderer needs boundary/band support)",
    "brief": "rounds/13/c4-probe/brief.md",
    "worker": "viz-ds13-c4",
-   "judge": "spawned"
+   "judge": "spawned",
+   "judge_verdict": "sema F (verify-reimage + args qualifiers only in ledger, not canvas); layo F; navi P; conc+anim BLOCKED (whole-canvas color evidence); work F (budget overrun); arro P (queue ports visible, blind record corrected in stage B); cate P (lifecycle-machines)"
   }
  }
 }
