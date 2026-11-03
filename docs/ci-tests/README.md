@@ -14,7 +14,7 @@ pi agent extensions (job `pi-tests`, gated on `pi/**` + `agents/**`):
 |---|---|---|---|
 | Renderer core | tool-call-renderer-public.test.mjs (+ usage, thinking-title, web-fetch, web-search) | stmts 97.2 %, branch 90.4 %; usage.ts 0→99.6 % (real-module import) | 2.5 s |
 | Python tool | python.test.mjs | stmts 96.9 %, funcs 100 % | 2.35 s |
-| No-mistakes | gate / pane / bridge tests | stmts 93.5 %, branch 79.5 % | 9.4 s |
+| No-mistakes | gate / pane / bridge tests | see docs/ci-tests/no-mistakes.md | 9.4 s |
 | Subagents + editor | interactive-subagents.test.mjs, nvim-open.test.mjs | nvim-open 98 %, herdr 99 %, session 93 %, tmux 91 % | 1.1 s |
 | User input | user-input/** (10 files) + quiz/explain/ask | overall 94.2 %; user-input/** 100/100 | 0.48 s |
 | Run-command | run-command.test.mjs | run-command.ts 95.2 %; nvim-terminal 100 % | 1.6 s |

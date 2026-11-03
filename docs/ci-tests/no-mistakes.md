@@ -36,6 +36,11 @@ bridge suite `no-mistakes-bridge.test.mjs`, and the `pi/bin/nm-herdr-pi.mjs` shi
   the shim's. SIGTERM reaches pi. A worktree without a bridge dir falls back after the wait.
 - **Pane state.** Phase labels go through `pane report-metadata`. The CI phase drives one
   balanced `herdr:blocked` pair. The checks-passed monitor never sets red. Run end clears both.
+- **Args fidelity.** The agent hands the tool one `args` string and the daemon receives exactly
+  that argv: a stub records it through the real tool execute path. `parseArgs` plus the
+  `buildBackgroundScript` wrapper preserve double-quote groups with `\"` escapes and the
+  `'\''` apostrophe idiom, so quote mangling cannot corrupt `--intent` or `--instructions`
+  silently.
 
 ## How to run
 
@@ -60,9 +65,9 @@ the modules. It never touches a live daemon. `NM_HOME` points at a temp dir, nev
 
 c8 over the three suites, includes limited to the domain files:
 
-- Domain total: 93.5% statements, 79.5% branches (baseline 91.3% / 76.2%).
+- Domain total: 93.7% statements, 79.8% branches (baseline 91.3% / 76.2%).
 - `capture.ts` and `orchestrate.ts` 100%; `herdr-report.ts` 99.3% (baseline 83.9%); `gate.ts`
-  92.7%; `pane.ts` 91.4%; `bridge.ts` 92.9%; `status.ts` 97.5%.
+  92.7%; `pane.ts` 92.1%; `bridge.ts` 92.9%; `status.ts` 96.6%.
 
 ## Known gaps
 
