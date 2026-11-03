@@ -11,6 +11,17 @@ user-invocable: true
 the configured push target. You drive it through the `no-mistakes axi` command family, which prints
 machine-readable [TOON](https://toonformat.dev) to stdout and progress to stderr.
 
+## Run it where the captain can see it
+
+In a Pi session with the `no_mistakes` tool (the `no-mistakes-pane` extension),
+call that tool for every `no-mistakes` invocation instead of the bash tool.
+Pass the CLI arguments verbatim as `args`, e.g. `args: ["axi", "run",
+"--intent", "..."]`. The command runs in a labeled Herdr pane beside the
+agent pane, so the captain watches the pipeline live; the tool still returns
+the full TOON output, so gate driving, `ask-user` escalation, and outcomes
+are unchanged. Without Herdr the tool runs the same command inline. If the
+tool is not available, use the bash tool as before.
+
 
 ## Active validation-step boundary
 
