@@ -19,8 +19,9 @@ use std::time::{Duration, Instant};
 use anyhow::{Context, Result, anyhow, bail};
 use rataflow::{EventResponse, FlowEvent};
 use rataflow_view::{
-    ANIMATION_STEP_MS, DotStats, FlowEdge, Graph, HEADER_HEIGHT, MIN_DOT_CELLS, Spec,
-    build_flow_with_report, dot_stats, draw, fit_natural, viewport_line, viewport_unknown,
+    ANIMATION_STEP_MS, DotStats, FlowEdge, Graph, HEADER_HEIGHT, MIN_DOT_CELLS, Report,
+    SectionReport, Spec, anchor_origin, build_flow_with_report, dot_stats, draw, draw_canvas,
+    fit_natural, graph_extent, viewport_line, viewport_unknown,
 };
 use ratatui::DefaultTerminal;
 use ratatui::Terminal;
@@ -49,6 +50,10 @@ options:
 spec fields: direction (tb|lr), theme (gruvbox|dark|light),
 nodes (id, label?, group?), edges (from, to, label?, flow?, timing?, duration_ms?, dots?, style?, label_slot?),
 trunks (id, label?, from, to, branches)
+diagrams: a canvas of several named graphs on ONE pannable canvas, each with
+      its title and one-line description drawn above it:
+      diagrams: [{ id, title, description?, direction?, nodes, edges, layers?, trunks? }]
+      A spec declares either edges (one graph) or diagrams (a canvas), not both
 flow: true or a positive rate — animated dots travel from \"from\" to \"to\";
       true runs at the default constant rate (0.5 cells per 100 ms step); a
       number runs at that constant rate instead, so long routes finish later
@@ -127,6 +132,7 @@ fn run() -> Result<()> {
         return write_frames(
             &mut flow,
             &spec,
+            &report,
             &cli.path,
             frames,
             cli.step_ms,
@@ -136,13 +142,13 @@ fn run() -> Result<()> {
 
     let (cols, area_rows) = measured_area();
     let rows = area_rows + HEADER_HEIGHT;
-    let header = header_line(&spec, flow.nodes().count(), &cli.path, cols, rows);
+    let header = header_line(&flow, &spec, &report, &cli.path, cols, rows);
     println!("{}", viewport_line(cols, rows));
 
     let mut terminal = ratatui::try_init().context("initializing the terminal")?;
     let result = (|| {
         execute!(stdout(), EnableMouseCapture)?;
-        let outcome = live(&mut terminal, &mut flow, &header);
+        let outcome = live(&mut terminal, &mut flow, &header, &report.sections);
         execute!(stdout(), DisableMouseCapture)?;
         outcome
     })();
@@ -210,20 +216,53 @@ fn measured_area() -> (u16, u16) {
 }
 
 /// `--check`: the machine-readable summary, no terminal needed.
-fn check(spec: &Spec, flow: &mut Graph, report: &rataflow_view::Report) -> Result<()> {
+fn check(spec: &Spec, flow: &mut Graph, report: &Report) -> Result<()> {
     println!("{}", viewport_unknown());
-    let direction = match spec.direction {
+    let mut direction = match spec.direction {
         rataflow_view::Direction::TopToBottom => "tb",
         rataflow_view::Direction::LeftToRight => "lr",
     };
+    // A canvas whose diagrams flow in different directions says so instead of
+    // claiming one of them.
+    if spec.is_canvas() {
+        let mut directions: Vec<&str> = spec
+            .diagrams
+            .iter()
+            .map(|diagram| match diagram.graph.direction {
+                rataflow_view::Direction::TopToBottom => "tb",
+                rataflow_view::Direction::LeftToRight => "lr",
+            })
+            .collect();
+        directions.sort_unstable();
+        directions.dedup();
+        if directions.len() > 1 {
+            direction = "mixed";
+        } else if let Some(only) = directions.first() {
+            direction = only;
+        }
+    }
     println!(
         "ok: nodes={} edges={} flows={} direction={direction} theme={}",
         flow.nodes().count(),
-        spec.edges.len(),
+        spec.edge_count(),
         spec.flow_count(),
         spec.theme_label(),
     );
-    if !spec.layers.is_empty() {
+    if spec.is_canvas() {
+        // The reader navigates ONE canvas, so every diagram's own extent and
+        // its place on the canvas are reported next to the total: a large
+        // canvas is a size the reader pans, not a failure.
+        println!(
+            "canvas: {} diagrams on one canvas, drawn whole at 100%",
+            report.sections.len()
+        );
+        for section in &report.sections {
+            println!("{}", section_line(section));
+            if let Some(description) = section.description.as_deref() {
+                println!("  description: {description}");
+            }
+        }
+    } else if !spec.layers.is_empty() {
         println!(
             "layers={} ({} pinned, within-rank order automatic)",
             spec.layers.len(),
@@ -242,14 +281,40 @@ fn check(spec: &Spec, flow: &mut Graph, report: &rataflow_view::Report) -> Resul
     for conflict in &report.pins {
         println!("{}", conflict.line());
     }
-    println!("extent={}x{} cells", report.extent.0, report.extent.1);
+    if spec.is_canvas() {
+        println!(
+            "extent={}x{} cells (whole canvas)",
+            report.extent.0, report.extent.1
+        );
+    } else {
+        println!("extent={}x{} cells", report.extent.0, report.extent.1);
+    }
     println!(
         "crossings: {} bridges, {} touching bends",
         report.crossings, report.touching_bends
     );
     // Readability budgets: these do not fail the check, they name the
-    // exact change that makes the pane readable.
-    if report.nodes > 12 || report.edges > 16 {
+    // exact change that makes a diagram readable. On a canvas the budget is
+    // judged per diagram: a large canvas is the point, a crowded section is
+    // not.
+    if spec.is_canvas() {
+        for section in &report.sections {
+            if section.nodes > 12 || section.edges > 16 {
+                println!(
+                    "warning: diagram {} has {} nodes / {} edges, above the readable budget \
+                     (12/16); split it into another described diagram",
+                    section.diagram, section.nodes, section.edges
+                );
+            }
+            if section.description.is_none() {
+                println!(
+                    "warning: diagram {} has no \"description\"; a reader cannot tell what \
+                     the section shows",
+                    section.diagram
+                );
+            }
+        }
+    } else if report.nodes > 12 || report.edges > 16 {
         println!(
             "warning: {} nodes / {} edges is above the readable budget (12/16); \
              split it into an overview and detail graphs",
@@ -268,14 +333,48 @@ fn check(spec: &Spec, flow: &mut Graph, report: &rataflow_view::Report) -> Resul
             report.labels_skipped
         );
     }
+    // A route that runs inside the margin of a node it does not serve reads as
+    // a relation to that node (the round-13 gb300 defect). The total is named
+    // first so a reader can quote one number, then every offending pair.
+    let bus_cells: usize = report
+        .near_misses
+        .iter()
+        .filter(|miss| miss.bus)
+        .map(|miss| miss.cells)
+        .sum();
     println!(
-        "labels: {}/{} placed, {} on route cells, {} skipped, {} ambiguous owners",
+        "near-misses: {} cell(s) inside the {}-cell margin of a node the route does not serve \
+         ({} on trunk buses)",
+        report.passes_near_unrelated_node,
+        rataflow_view::router::NEAR_NODE_MARGIN,
+        bus_cells
+    );
+    println!(
+        "passes-near-unrelated-node: {}",
+        report.passes_near_unrelated_node
+    );
+    for miss in &report.near_misses {
+        println!("{}", miss.line());
+    }
+    if report.passes_near_unrelated_node > 0 {
+        println!(
+            "warning: {} route cell(s) hug a node their relation does not serve; move the \
+             affected relations or let them route around",
+            report.passes_near_unrelated_node
+        );
+    }
+    println!(
+        "labels: {}/{} placed, {} leader-ticked, {} on route, {} skipped, {} ambiguous owners",
         report.labels_placed,
         report.labels_total,
+        report.labels_leadered,
         report.labels_on_route,
         report.labels_skipped,
         report.labels_ambiguous
     );
+    for (route, label) in &report.ambiguous_labels {
+        println!("unowned label: {route} \"{label}\"");
+    }
     if report.labels_on_route > 0 {
         println!(
             "warning: {} label(s) sit on a route cell; the label search lost the guard rail",
@@ -287,6 +386,13 @@ fn check(spec: &Spec, flow: &mut Graph, report: &rataflow_view::Report) -> Resul
             "warning: {} label(s) have an ambiguous owner: another route is as close to the \
              text as its own edge",
             report.labels_ambiguous
+        );
+    }
+    if report.labels_leadered > 0 {
+        println!(
+            "warning: {} label(s) needed a leader tick: no cell beside the run held the text \
+             unambiguously",
+            report.labels_leadered
         );
     }
     println!("groups:{}", list_suffix(&counted(&report.groups)));
@@ -301,6 +407,7 @@ fn check(spec: &Spec, flow: &mut Graph, report: &rataflow_view::Report) -> Resul
     }
     let stats = dot_stats(flow, report.extent, DOT_CHECK_FRAMES);
     println!("{}", dot_line(&stats));
+    println!("{}", dot_hue_line(report));
     println!("{}", origin_line(&stats));
     println!("{}", arrival_line(&stats));
     Ok(())
@@ -324,6 +431,38 @@ fn trunk_list(report: &rataflow_view::Report) -> Vec<String> {
             )
         })
         .collect()
+}
+
+/// One diagram of a canvas, as `--check` reports it: where it sits on the
+/// canvas and how big its own drawing is.
+fn section_line(section: &SectionReport) -> String {
+    format!(
+        "diagram {} \"{}\" at {},{}: extent={}x{} nodes={} edges={} routes={}",
+        section.diagram,
+        section.title,
+        section.origin.0,
+        section.origin.1,
+        section.extent.0,
+        section.extent.1,
+        section.nodes,
+        section.edges,
+        section.routes,
+    )
+}
+
+/// The dot hue proof: how many routes took their source end's hue, how many
+/// their destination's, and how many routes still share one hue. The two
+/// whole-graph counts say why the choice was made.
+fn dot_hue_line(report: &Report) -> String {
+    format!(
+        "dot hues: {} by source, {} by destination, {} shared-hue pair(s) \
+         (source-only {}, destination-only {})",
+        report.dot_hues.by_source,
+        report.dot_hues.by_destination,
+        report.dot_hues.conflicts,
+        report.dot_hues.source_conflicts,
+        report.dot_hues.destination_conflicts,
+    )
 }
 
 fn list_suffix(items: &[String]) -> String {
@@ -372,6 +511,7 @@ fn arrival_line(stats: &DotStats) -> String {
 fn write_frames(
     flow: &mut Graph,
     spec: &Spec,
+    report: &Report,
     path: &str,
     frames: usize,
     step_ms: u64,
@@ -381,9 +521,10 @@ fn write_frames(
     let (cols, area_rows) = measured_area();
     let rows = area_rows + HEADER_HEIGHT;
     println!("{}", viewport_line(cols, rows));
-    let header = header_line(spec, flow.nodes().count(), path, cols, rows);
+    let header = header_line(flow, spec, report, path, cols, rows);
     let mut terminal = Terminal::new(TestBackend::new(cols, area_rows + HEADER_HEIGHT))
         .context("creating the offscreen frame buffer")?;
+    let mut anchor_pending = true;
     for frame_index in 0..frames {
         for (_, content) in flow.edges_content_mut() {
             content.set_phase(frame_index);
@@ -392,8 +533,30 @@ fn write_frames(
             flow.select_all_nodes();
         }
         terminal
-            .draw(|frame| draw(frame, flow, &header))
+            .draw(|frame| {
+                if report.sections.is_empty() {
+                    draw(frame, flow, &header)
+                } else {
+                    draw_canvas(frame, flow, &header, &report.sections)
+                }
+            })
             .context("drawing a frame")?;
+        if anchor_pending {
+            // One anchored redraw: a drawing too large for the pane starts at
+            // its first cell, in reading order.
+            anchor_pending = false;
+            if anchor_origin(flow) {
+                terminal
+                    .draw(|frame| {
+                        if report.sections.is_empty() {
+                            draw(frame, flow, &header)
+                        } else {
+                            draw_canvas(frame, flow, &header, &report.sections)
+                        }
+                    })
+                    .context("drawing a frame")?;
+            }
+        }
         let buffer = terminal.backend().buffer();
         println!("frame {frame_index} at {}ms", frame_index as u64 * step_ms);
         let width = buffer.area.width as usize;
@@ -423,8 +586,16 @@ fn write_frames(
 /// natural size. Zooming below 1 shrinks a box under its label width and
 /// truncates the text, which is worse than letting the human pan. An
 /// overflowing graph gets a badge instead.
-fn live(terminal: &mut DefaultTerminal, flow: &mut Graph, header: &str) -> Result<()> {
+fn live(
+    terminal: &mut DefaultTerminal,
+    flow: &mut Graph,
+    header: &str,
+    sections: &[SectionReport],
+) -> Result<()> {
     fit_natural(flow);
+    // A canvas too large for the pane opens at its first cell, so the reader
+    // lands on a heading instead of the middle of a drawing.
+    let mut anchor_pending = true;
     let mut last_tick = Instant::now();
     let mut anim_leftover_ms: u64 = 0;
     let mut anim_phase: usize = 0;
@@ -445,7 +616,17 @@ fn live(terminal: &mut DefaultTerminal, flow: &mut Graph, header: &str) -> Resul
             content.set_phase(anim_phase);
         }
 
-        terminal.draw(|frame| draw(frame, flow, header))?;
+        terminal.draw(|frame| {
+            if sections.is_empty() {
+                draw(frame, flow, header)
+            } else {
+                draw_canvas(frame, flow, header, sections)
+            }
+        })?;
+        if anchor_pending {
+            anchor_pending = false;
+            anchor_origin(flow);
+        }
 
         if !event::poll(Duration::from_millis(16))? {
             continue;
@@ -486,6 +667,7 @@ fn live(terminal: &mut DefaultTerminal, flow: &mut Graph, header: &str) -> Resul
                     // A resize usually means the human changed the layout:
                     // refit so the whole graph stays visible.
                     fit_natural(flow);
+                    anchor_pending = true;
                 }
                 _ => {}
             }
@@ -500,13 +682,39 @@ fn live(terminal: &mut DefaultTerminal, flow: &mut Graph, header: &str) -> Resul
 /// The header carries the measured terminal viewport and the fixed zoom, so a
 /// pane capture proves both. The startup `viewport:` line is erased by the
 /// alternate screen, so the proof must live in the header too.
-fn header_line(spec: &Spec, node_count: usize, path: &str, cols: u16, rows: u16) -> String {
+fn header_line(
+    flow: &Graph,
+    spec: &Spec,
+    report: &Report,
+    path: &str,
+    cols: u16,
+    rows: u16,
+) -> String {
     let name = std::path::Path::new(path)
         .file_name()
         .and_then(|name| name.to_str())
         .unwrap_or("spec");
+    // A drawing larger than the pane reports its own extent beside the pane
+    // size: it is a navigable size, not a failure, and the reader sees both
+    // numbers at a glance. A drawing that fits keeps the header unchanged.
+    let (canvas_w, canvas_h) = if report.sections.is_empty() {
+        graph_extent(flow)
+    } else {
+        // A canvas extent covers its heading bands too.
+        rataflow_view::sections_extent(&report.sections)
+    };
+    let overflows = canvas_w > cols as i32 || canvas_h > rows.saturating_sub(HEADER_HEIGHT) as i32;
+    let extent = if overflows {
+        format!(" · canvas {canvas_w}x{canvas_h}")
+    } else {
+        String::new()
+    };
+    // The diagram count stays in `--check`: the header is one line on a narrow
+    // pane, and every section already carries its own title.
+    let node_count = flow.nodes().count();
     format!(
-        " rataflow-view · {cols}x{rows} @100% · {name} · {node_count} nodes · {} edges · q quit",
-        spec.edges.len(),
+        " rataflow-view · {cols}x{rows} @100%{extent} · {name} · {node_count} nodes \
+         · {} edges · q quit",
+        spec.edge_count(),
     )
 }

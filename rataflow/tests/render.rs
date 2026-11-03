@@ -6,11 +6,11 @@
 
 use rataflow::FitViewOptions;
 use rataflow_view::flow_edge::edge_stroke;
-use rataflow_view::{Graph, Spec, build_flow_with_report, draw, node_border};
-use ratatui::Terminal;
+use rataflow_view::{build_flow_with_report, draw, node_border, Graph, Spec};
 use ratatui::backend::TestBackend;
 use ratatui::buffer::Cell;
 use ratatui::style::Color;
+use ratatui::Terminal;
 
 const WIDTH: u16 = 90;
 const HEIGHT: u16 = 40;
@@ -177,8 +177,7 @@ fn flow_dots_ride_a_solid_line_in_theme_colors() {
                   "layers":[["a"],["b"],["c"],["d"]],
                   "edges":[{"from":"a","to":"d","flow":1},
                            {"from":"b","to":"c"}]}"#;
-    let cells = render(spec, 0);
-    let palette = rataflow_view::gruvbox_theme().palette();
+    let (cells, flow) = render_full(spec, 0);
 
     let line_cells = cells
         .iter()
@@ -190,12 +189,26 @@ fn flow_dots_ride_a_solid_line_in_theme_colors() {
         !moving_dot_positions(spec).is_empty(),
         "flow edge shows no moving dots"
     );
-    assert!(
-        cells
-            .iter()
-            .any(|cell| cell.symbol() == "●" && cell.fg == palette.accent),
-        "dots must use the accent color"
-    );
+    // Round-13 owner directive (rounds/12/human-review/feedback.md item 2):
+    // a dot inherits the hue of its route's source OR destination node,
+    // whichever end leaves fewer routes sharing one hue (see `dot_hue_plan`).
+    // The accent is therefore no longer the dot color — it stays the
+    // selection color — and every dot must carry a node's border hue.
+    let hues: Vec<Color> = dot_positions(&cells)
+        .into_iter()
+        .map(|(_, _, fg)| fg)
+        .collect();
+    assert!(!hues.is_empty(), "no dot cells to check");
+    let node_hues: Vec<Color> = flow
+        .nodes()
+        .filter_map(|node| node.content.border_style.and_then(|style| style.fg))
+        .collect();
+    for hue in hues {
+        assert!(
+            node_hues.contains(&hue),
+            "dot hue {hue:?} belongs to no node; node hues are {node_hues:?}"
+        );
+    }
 }
 
 #[test]
@@ -532,11 +545,10 @@ fn modal_lifecycle_preserves_relationships_ports_heads_labels_and_borders() {
                 "crossing must not imply connection"
             );
         }
-        assert!(
-            !buf.content
-                .iter()
-                .any(|c| matches!(c.symbol(), "┼" | "┬" | "┴" | "├" | "┤"))
-        );
+        assert!(!buf
+            .content
+            .iter()
+            .any(|c| matches!(c.symbol(), "┼" | "┬" | "┴" | "├" | "┤")));
         if !selected && std::env::var_os("RATAFLOW_CAPTURE").is_some() {
             let text = buf
                 .content
@@ -614,7 +626,7 @@ fn fanout_same_layer_and_return_edges_work_on_both_axes() {
 // ---------------------------------------------------------------------------
 
 use rataflow::Position;
-use rataflow_view::{Report, dot_stats};
+use rataflow_view::{dot_stats, Report};
 use ratatui::style::Modifier;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::process::Command;
@@ -1222,7 +1234,11 @@ fn check_output_starts_with_the_measured_viewport_line() {
         "check mode cannot measure a terminal, but must still prove the zoom"
     );
     for line in [
-        "labels: 0/0 placed, 0 on route cells, 0 skipped",
+        // Round 13 restated the labels line as
+        // `labels: N/N placed, X leader-ticked, Y on route, Z skipped,
+        // W ambiguous owners` (the harness parses that shape), so the old
+        // "on route cells" wording this test pinned is gone.
+        "labels: 0/0 placed, 0 leader-ticked, 0 on route, 0 skipped",
         "groups:",
         "trunks:",
         "dots: 0 single-dot routes, 0 periodic routes, 0 violations",
@@ -1350,7 +1366,7 @@ fn select_all_is_accepted_with_check_and_with_frames() {
 // Same-arrival dots, dot origins, crossing-aware routing, --check lines
 // ---------------------------------------------------------------------------
 
-use rataflow_view::{DEFAULT_DURATION_MS, DEFAULT_FLOW_RATE, MIN_DOT_CELLS, Timing, dot_index};
+use rataflow_view::{dot_index, Timing, DEFAULT_DURATION_MS, DEFAULT_FLOW_RATE, MIN_DOT_CELLS};
 
 /// A five-layer chain: one route spans four layer gaps, one spans a single
 /// one. Both opt into the shared arrival time, so both must arrive together;
@@ -2850,4 +2866,295 @@ fn a_one_rank_return_hops_inside_and_a_far_one_still_uses_the_outer_rail() {
         far.src, far.tgt,
         "an outer rail leaves and re-enters the same side"
     );
+}
+
+// ---------------------------------------------------------------------------
+// Round 13: ambiguity-free routing and label ownership
+//
+// The owner's primary round-13 rule: a route must not pass near, hug, or
+// overlap a node that is neither its source nor its destination, and a label
+// must have one visible owner. Both are measured here from the drawn gear —
+// node boxes and planned route cells — so these tests fail on what a reader
+// actually sees, not on a count that can drift away from it.
+// ---------------------------------------------------------------------------
+
+/// The view the round-12 review named as the routing defect: `in-band` and
+/// `nvos -> nmxc` hugging OOB LAN until it read as connected.
+const GB300_A3: &str =
+    include_str!("../../docs/visualize-eval/rounds/11/gb300-rack-software/specs/v1-planes-a3.json");
+
+/// The OOB bus view whose trunk label had no owner for three rounds.
+const GB300_OOB_BUS: &str = include_str!(
+    "../../docs/visualize-eval/rounds/11/gb300-rack-software/specs/v2-oob-bus-a1.json"
+);
+
+/// Round-13 margins, mirrored from `router.rs` (`NEAR_NODE_MARGIN`, the label
+/// reaches). A render test cannot see the router's private constants, and
+/// these are the reader-facing contract, so they are restated here.
+const NEAR_MARGIN: i32 = 2;
+const LABEL_OWN_REACH: i32 = 2;
+const LABEL_FOREIGN_REACH: i32 = 3;
+
+/// Chebyshev ring of a cell around a node box: 0 inside, 1 on the ring that
+/// touches the border, outward from there.
+fn box_ring(b: (i32, i32, i32, i32), cell: (i32, i32)) -> i32 {
+    let (x, y, w, h) = b;
+    let dx = if cell.0 < x {
+        x - cell.0
+    } else if cell.0 > x + w - 1 {
+        cell.0 - (x + w - 1)
+    } else {
+        0
+    };
+    let dy = if cell.1 < y {
+        y - cell.1
+    } else if cell.1 > y + h - 1 {
+        cell.1 - (y + h - 1)
+    } else {
+        0
+    };
+    dx.max(dy)
+}
+
+/// `(cells, smallest ring)` of one route against one node box.
+fn route_ring(route: &[(i32, i32)], b: (i32, i32, i32, i32)) -> (usize, i32) {
+    let mut cells = 0;
+    let mut best = i32::MAX;
+    for &cell in route {
+        let ring = box_ring(b, cell);
+        if ring >= 1 && ring <= NEAR_MARGIN {
+            cells += 1;
+            best = best.min(ring);
+        }
+    }
+    (cells, best)
+}
+
+/// Route cells that run inside the margin of a node box the route does not
+/// serve, summed over every drawn route.
+fn near_unrelated_cells(flow: &Graph, ids: &[&str]) -> Vec<(String, i32, usize, i32)> {
+    let boxes: Vec<(&str, (i32, i32, i32, i32))> =
+        ids.iter().map(|id| (*id, box_of(flow, id))).collect();
+    let mut out = Vec::new();
+    for edge in flow.edges() {
+        let Some(route) = edge.content.planned() else {
+            continue;
+        };
+        let cells = route_cells(route);
+        for (id, b) in &boxes {
+            if *id == edge.source.as_str() || *id == edge.target.as_str() {
+                continue;
+            }
+            let (hits, ring) = route_ring(&cells, *b);
+            if hits > 0 {
+                out.push((
+                    format!("{}->{}", edge.source, edge.target),
+                    hits as i32,
+                    hits,
+                    ring,
+                ));
+            }
+        }
+    }
+    out
+}
+
+#[test]
+fn gb300_a3_routes_keep_clear_of_nodes_they_do_not_serve() {
+    let ids = [
+        "rms", "oob", "bmc_c", "bmc_s", "pwr", "nvos", "k8s", "gpuop", "dcgm", "drvk", "fm", "nmxc",
+    ];
+    let (flow, report) = build(GB300_A3);
+
+    // Round 12's baseline for this view: 70 route cells inside the 2-cell
+    // margin of an unrelated box, all of them long parallel runs beside a
+    // rank. Round 13 prices those cells, so the runs move out.
+    let misses = near_unrelated_cells(&flow, &ids);
+    let total: i32 = misses.iter().map(|(_, cells, _, _)| *cells).sum();
+
+    // The three relations the review named as reading connected to nodes they
+    // do not touch are clean now.
+    for relation in ["k8s->gpuop", "gpuop->dcgm", "nvos->nmxc"] {
+        let hits: i32 = misses
+            .iter()
+            .filter(|(route, ..)| route == relation)
+            .map(|(_, cells, ..)| *cells)
+            .sum();
+        assert_eq!(
+            hits, 0,
+            "{relation} still hugs an unrelated box: {misses:?}"
+        );
+    }
+    // The bus keeps its own corridor geometry (one relation drawn as one bus),
+    // so the remaining margin cells are the bus's: what must not grow is the
+    // plain-edge share, and the total must beat the round-12 baseline.
+    let plain: i32 = misses
+        .iter()
+        .filter(|(route, ..)| !route.starts_with("oob->"))
+        .map(|(_, cells, ..)| *cells)
+        .sum();
+    assert_eq!(plain, 0, "plain edges still hug: {misses:?}");
+    assert!(
+        total <= 46,
+        "round 12 drew 70 margin cells here; got {total}: {misses:?}"
+    );
+
+    // Nothing was traded for it: same extent, and still no bridge.
+    assert_eq!(
+        report.crossings, 0,
+        "no bridge may be traded in: {report:?}"
+    );
+    assert_eq!(
+        report.extent,
+        (59, 38),
+        "the view must not grow: {report:?}"
+    );
+    assert_eq!(
+        report.labels_placed, 7,
+        "every label still places: {report:?}"
+    );
+    assert_eq!(
+        report.labels_ambiguous, 0,
+        "owners stay certain: {report:?}"
+    );
+}
+
+#[test]
+fn oob_bus_labels_have_one_visible_owner() {
+    let (flow, report) = build(GB300_OOB_BUS);
+    // Round 12: 1 of the 2 labels had no owner. Both are owned now. The
+    // extent grew one cell each way: the trunk label's owned cell became a
+    // reserved band, and `Plan::extent` must cover a band (the canvas sizes
+    // its section from it), where round 12 let the text hang off the edge.
+    assert_eq!(report.extent, (53, 33), "{report:?}");
+    assert_eq!(report.labels_placed, 2, "{report:?}");
+    assert_eq!(
+        report.labels_ambiguous, 0,
+        "every label must have one owner: {report:?}"
+    );
+
+    // ...and the reader can see it: each label sits within the reading reach
+    // of its own run, with no other route inside the reading band.
+    let labelled = [
+        ("rms", "oob", "client on LAN".len() as i32),
+        ("oob", "nvos", "physical reach".len() as i32),
+    ];
+    for (from, to, len) in labelled {
+        let route = route_of(&flow, from, to);
+        let anchor = cell(route.label.expect("the label is placed"));
+        let lo = anchor.0 - len / 2;
+        let span = (lo, lo + len - 1);
+        let own: Vec<(i32, i32)> = route_cells(route);
+        let mut best_own = i32::MAX;
+        let mut best_other = i32::MAX;
+        for edge in flow.edges() {
+            let Some(other) = edge.content.planned() else {
+                continue;
+            };
+            let mine = edge.source == from && edge.target == to;
+            for cell in route_cells(other) {
+                let dx = if cell.0 < span.0 {
+                    span.0 - cell.0
+                } else if cell.0 > span.1 {
+                    cell.0 - span.1
+                } else {
+                    0
+                };
+                let d = dx.max((cell.1 - anchor.1).abs());
+                if mine {
+                    best_own = best_own.min(d);
+                } else {
+                    best_other = best_other.min(d);
+                }
+            }
+        }
+        assert!(
+            best_other >= LABEL_FOREIGN_REACH,
+            "{from}->{to} label at {anchor:?} has a foreign route {best_other} cells away"
+        );
+        assert!(
+            best_own <= LABEL_FOREIGN_REACH,
+            "{from}->{to} label at {anchor:?} floats {best_own} cells off its own run"
+        );
+        assert!(
+            best_own < best_other,
+            "{from}->{to} label at {anchor:?} is closer to another route \
+             (own {best_own}, other {best_other})"
+        );
+        let _ = (own, LABEL_OWN_REACH);
+    }
+}
+
+/// The round-13 checker contract, as the evidence harness parses it: a
+/// `near-miss:` line per offending `(route, node)` pair in the documented
+/// shape, a `near-misses:` total, a `passes-near-unrelated-node:` total, and
+/// the labels line carrying the leader-ticked count.
+#[test]
+fn check_names_every_route_that_hugs_an_unrelated_node() {
+    let path = write_spec("near-miss", GB300_A3);
+    let out = Command::new(env!("CARGO_BIN_EXE_rataflow-view"))
+        .arg("--check")
+        .arg(&path)
+        .output()
+        .expect("run the binary");
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let lines: Vec<&str> = stdout.lines().collect();
+    let total = lines
+        .iter()
+        .find_map(|line| line.strip_prefix("near-misses: "))
+        .expect("a near-misses total");
+    let cells: usize = total
+        .split_whitespace()
+        .next()
+        .and_then(|cell| cell.parse().ok())
+        .expect("the total starts with a cell count");
+    let token = lines
+        .iter()
+        .find_map(|line| line.strip_prefix("passes-near-unrelated-node: "))
+        .expect("the round-13 token line");
+    assert_eq!(
+        token.trim().parse::<usize>().expect("a number"),
+        cells,
+        "the token and the summary must report the same count"
+    );
+    // Every reported miss is one line in the documented shape, and they add
+    // up to the total.
+    let mut summed = 0;
+    let mut named = 0;
+    for line in &lines {
+        let Some(rest) = line.strip_prefix("near-miss: route e") else {
+            continue;
+        };
+        named += 1;
+        // `eN passes <c> cell(s) at ring <r> of node '<id>' (nearest cell x,y)`
+        let mut parts = rest.splitn(2, " passes ");
+        parts.next().expect("the route id");
+        let rest = parts.next().unwrap_or_else(|| panic!("shape: {line}"));
+        let count: usize = rest
+            .split_whitespace()
+            .next()
+            .and_then(|cell| cell.parse().ok())
+            .unwrap_or_else(|| panic!("count: {line}"));
+        summed += count;
+        assert!(rest.contains(" cell(s) at ring "), "ring: {line}");
+        assert!(rest.contains(" of node '"), "node: {line}");
+        assert!(rest.contains(" (nearest cell "), "site: {line}");
+    }
+    assert_eq!(summed, cells, "the lines must add up to the total");
+    assert!(
+        named > 0,
+        "gb300 a3's trunk bus holds margin cells, so the checker must name them:\n{stdout}"
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line.starts_with("labels: 7/7 placed, 0 leader-ticked, 0 on route,")),
+        "the labels line must carry the leader-ticked field:\n{stdout}"
+    );
+    std::fs::remove_file(path).ok();
 }

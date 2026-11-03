@@ -1,0 +1,39 @@
+{
+ "round": 13,
+ "status": "frozen",
+ "skill_sha256": "65d826f0f1f9e61ddfd806628cb162827b0e6cf6d7df2490c9d75e6cbe485d2a",
+ "binary_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+ "binary_path": "/tmp/visualize-eval/round-13/bin/rataflow-view",
+ "rubric_sha256": "6bfd3733c8d08b66af9a92e71985a20846f954d7916eaf9685f86c8d2f96bcb8",
+ "dataset_sha256": "e69179e59a3d36985cd7e8672b319b566701f88caef385c9cbde76d060c92d05",
+ "generator_model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+ "reviewer_model": "openai/gpt-6.1-terra:high",
+ "target": {
+  "columns": 77,
+  "rows": 47,
+  "zoom": 1.0
+ },
+ "worker_labels": {
+  "pipeline": "viz-ds13-1",
+  "network": "viz-ds13-2",
+  "server-nic-layout": "viz-ds13-3",
+  "homelab-nic-trace": "viz-ds13-4",
+  "modal-machine-manager": "viz-ds13-5",
+  "modal-runtime": "viz-ds13-6",
+  "gb300-rack-software": "viz-ds13-7",
+  "datacenter-redundancy": "viz-ds13-8"
+ },
+ "execution_model": "per-case parallel pipelines: generate -> validate -> judge (blind/reveal/verdict) -> own review tab; aggregate when all 8 land",
+ "engine_changes": "r13: near-node proximity cost + near-miss checker (eng13-a); reader-calibrated label ownership + leader ticks (eng13-a, captain-wired render); multi-diagram canvas + descriptions + oversized nav (eng13-b); case-wide hue + dot hue binding (eng13-b)",
+ "briefs": "rounds/13/briefs/<case>.md - eight varied request framings (owner: mix up the asks, explore breadth)",
+ "cases": [
+  "pipeline",
+  "network",
+  "server-nic-layout",
+  "homelab-nic-trace",
+  "modal-machine-manager",
+  "modal-runtime",
+  "gb300-rack-software",
+  "datacenter-redundancy"
+ ]
+}

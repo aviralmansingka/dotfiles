@@ -19,6 +19,10 @@
 //! (`timing: "same-arrival"` + `flow: true`): every route starts at phase 0
 //! and reaches its arrowhead after the shared [`DEFAULT_DURATION_MS`],
 //! whatever its length.
+//!
+//! A dot's color is the hue of the route's source or destination node, chosen
+//! per graph by [`crate::dot_hue_plan`]; the theme accent is the fallback when
+//! an end has no hue, and stays the selection color.
 
 use crate::ANIMATION_STEP_MS;
 use rataflow::{EdgeContent, EdgePathContext, EdgeRenderContext, Path, Position, StepEdge};
@@ -76,6 +80,10 @@ pub struct Route {
     /// True for a trunk spur, whose first point floats on the corridor
     /// instead of sitting on the source node's border.
     pub detached_src: bool,
+    /// Cells of a short leader tick tying the label to this route: set only
+    /// when no reader-visible cell unambiguously owns the label, so the tick
+    /// itself is the ownership proof.
+    pub label_leader: Vec<(f64, f64)>,
 }
 
 impl Route {
@@ -93,6 +101,7 @@ impl Route {
             junctions: Vec::new(),
             dot_cells: Vec::new(),
             detached_src: false,
+            label_leader: Vec::new(),
         }
     }
 
@@ -112,6 +121,49 @@ impl Route {
     pub fn with_detached_src(mut self, detached: bool) -> Self {
         self.detached_src = detached;
         self
+    }
+
+    /// Sets the leader-tick cells that tie the label to this route.
+    pub fn with_label_leader(mut self, cells: Vec<(f64, f64)>) -> Self {
+        self.label_leader = cells;
+        self
+    }
+
+    /// Moves every cell of the plan by `(dx, dy)` world cells. Used when one
+    /// graph is placed as a section of a larger multi-diagram canvas: the
+    /// router plans in the section's own cell space, and the section is then
+    /// stacked onto the canvas.
+    pub fn translate(&mut self, dx: f64, dy: f64) {
+        let shift = |cell: &mut (f64, f64)| {
+            cell.0 += dx;
+            cell.1 += dy;
+        };
+        self.points.iter_mut().for_each(shift);
+        self.junctions.iter_mut().for_each(shift);
+        self.dot_cells.iter_mut().for_each(shift);
+        self.label_leader.iter_mut().for_each(shift);
+        if let Some(label) = self.label.as_mut() {
+            shift(label);
+        }
+    }
+
+    /// The route's outermost drawn cells, as `(min_x, min_y, max_x, max_y)`,
+    /// or `None` when the plan is empty. Label cells count: they are drawn.
+    pub fn bounds(&self) -> Option<(f64, f64, f64, f64)> {
+        let mut bounds: Option<(f64, f64, f64, f64)> = None;
+        let mut grow = |x: f64, y: f64| {
+            bounds = Some(match bounds {
+                None => (x, y, x, y),
+                Some((x0, y0, x1, y1)) => (x0.min(x), y0.min(y), x1.max(x), y1.max(y)),
+            });
+        };
+        for &(x, y) in self.points.iter().chain(self.dot_cells.iter()) {
+            grow(x, y);
+        }
+        if let Some((x, y)) = self.label {
+            grow(x, y);
+        }
+        bounds
     }
 
     /// The route's first drawn cell — see [`origin_cell`].
@@ -266,6 +318,10 @@ pub struct FlowEdge {
     route: Option<Route>,
     dots: DotMode,
     dashed: bool,
+    /// The hue this route's dots take, when the spec's graph assigned one.
+    /// `None` keeps the accent: dots are chrome, and an accent dot is the
+    /// fallback when no node hue is available.
+    dot_color: Option<Color>,
 }
 
 impl FlowEdge {
@@ -308,6 +364,24 @@ impl FlowEdge {
     pub fn with_dashed(mut self, dashed: bool) -> Self {
         self.dashed = dashed;
         self
+    }
+
+    /// Colors this route's dots with the hue of one of its ends (see
+    /// [`crate::dot_hue_plan`]): the reader can bind the moving dot to the
+    /// node it belongs to instead of reading one accent color everywhere.
+    pub fn with_dot_color(mut self, color: Option<Color>) -> Self {
+        self.dot_color = color;
+        self
+    }
+
+    /// Sets the dot hue in place, after the graph's plan is known.
+    pub fn set_dot_color(&mut self, color: Option<Color>) {
+        self.dot_color = color;
+    }
+
+    /// The dot hue this route was given, if any.
+    pub fn dot_color(&self) -> Option<Color> {
+        self.dot_color
     }
 
     /// How many dots this route draws at once.
@@ -361,6 +435,15 @@ impl FlowEdge {
     pub fn planned(&self) -> Option<&Route> {
         self.route.as_ref()
     }
+
+    /// Moves the whole plan by `(dx, dy)` world cells: one graph placed as a
+    /// section of a larger multi-diagram canvas carries its own routing with
+    /// it, so no route crosses into another section.
+    pub fn translate(&mut self, dx: f64, dy: f64) {
+        if let Some(route) = self.route.as_mut() {
+            route.translate(dx, dy);
+        }
+    }
 }
 
 impl EdgeContent for FlowEdge {
@@ -404,7 +487,10 @@ impl EdgeContent for FlowEdge {
         draw_line(&path, stroke, self.dashed, &junctions, buf);
 
         let arrow = arrow_cell(&path).filter(|&(cell, _)| in_area(buf.area, cell));
-        let dot_style = Style::default().fg(palette.accent);
+        // Dots carry a hue when the graph assigned one (the source or
+        // destination node's border hue, least-conflict end). The accent
+        // stays the fallback and the selection color.
+        let dot_style = Style::default().fg(self.dot_color.unwrap_or(palette.accent));
         // One span, one origin: it starts on the route's first drawn cell,
         // measured through the same helper the check uses, so a single dot
         // and a same-arrival train both begin where the pixels begin.
@@ -458,6 +544,22 @@ impl EdgeContent for FlowEdge {
         }
 
         if let Some(anchor) = self.label_cell() {
+            // A leadered label carries its own tie to the route: short dots
+            // in the muted edge stroke, painted before the text so the word
+            // never sits on its own tick.
+            let leader = self
+                .route
+                .as_ref()
+                .map(|r| r.label_leader.clone())
+                .unwrap_or_default();
+            for &(cx, cy) in &leader {
+                let (tx, ty) = ctx.world_to_terminal(Position::new(cx, cy));
+                if in_area(buf.area, (tx, ty)) {
+                    buf[(tx as u16, ty as u16)]
+                        .set_char('·')
+                        .set_style(stroke);
+                }
+            }
             let (lx, ly) = ctx.world_to_terminal(Position::new(anchor.0, anchor.1));
             if let Some(label) = ctx.label {
                 draw_label(

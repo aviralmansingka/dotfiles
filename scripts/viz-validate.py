@@ -85,15 +85,16 @@ def parse_check(text: str) -> dict[str, object]:
     for line in text.splitlines():
         stripped = line.strip()
         if m := re.match(
-            r"^labels:\s+(\d+)/(\d+) placed,\s+(\d+) on route cells,\s+(\d+) skipped(?:,\s+(\d+) ambiguous owners)?",
+            r"^labels:\s+(\d+)/(\d+) placed,(?:\s+(\d+) leader-ticked,)?\s+(\d+) on route(?: cells|),(?:\s+(\d+) skipped)?(?:,\s+(\d+) ambiguous owners)?",
             stripped,
         ):
             facts["labels_placed"] = int(m.group(1))
             facts["labels_total"] = int(m.group(2))
-            facts["labels_on_route"] = int(m.group(3))
-            facts["labels_skipped"] = int(m.group(4))
-            if m.group(5) is not None:
-                facts["labels_ambiguous"] = int(m.group(5))
+            facts["labels_leadered"] = int(m.group(3) or 0)
+            facts["labels_on_route"] = int(m.group(4))
+            facts["labels_skipped"] = int(m.group(5) or 0)
+            if m.group(6) is not None:
+                facts["labels_ambiguous"] = int(m.group(6))
         elif m := re.match(
             r"^dots:\s+(\d+) single-dot routes,\s+(\d+) periodic routes,\s+(\d+) violations"
             r"(?:,\s+(\d+) synchronized at (\d+)ms)?"

@@ -171,6 +171,9 @@ pub struct Planned {
     pub dot_cells: Vec<(i32, i32)>,
     /// True for a spur: the route starts on the corridor, not on a node.
     pub detached_src: bool,
+    /// Cells of a short leader tick that ties the label to this route, when
+    /// the text could not sit unambiguously beside the run.
+    pub label_leader: Vec<(i32, i32)>,
 }
 
 /// A routed trunk: one corridor, one spur per branch, and the cells where
@@ -216,10 +219,64 @@ pub struct Plan {
     /// Placed labels another route is at least as close to as its own: 0
     /// when every edge owns a reserved slot.
     pub labels_ambiguous: usize,
+    /// Labels tied to their route by a short leader tick because no cell
+    /// beside the run could hold the text unambiguously.
+    pub labels_leadered: usize,
+    /// `(route index, label)` for every placed label whose owner a reader
+    /// cannot settle: another route's cells reach into the label's ring.
+    pub ambiguous_labels: Vec<(usize, String)>,
+    /// Route cells that run inside [`NEAR_NODE_MARGIN`] of a node box that is
+    /// neither their source nor their destination. Zero is the round-13
+    /// contract; a non-zero count names a false relation the renderer draws.
+    pub passes_near_unrelated_node: usize,
+    /// One entry per `(route, unrelated node)` pair that has route cells in
+    /// that margin, with the closest ring and the offending cell.
+    pub near_misses: Vec<NearMiss>,
     /// Indexed by trunk index; empty for a spec without trunks.
     pub trunks: Vec<TrunkRoute>,
     /// Every junction cell in the plan.
     pub junctions: Vec<(i32, i32)>,
+}
+
+/// One route that runs closer than [`NEAR_NODE_MARGIN`] cells to a node box
+/// that is neither its source nor its destination.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NearMiss {
+    /// Route index, as `--check` names it (`e<index>`; trunk corridors and
+    /// spurs carry the indexes the router gave them).
+    pub route: usize,
+    /// Diagram id when the plan belongs to one diagram of a canvas: two
+    /// diagrams may both have an `e0`.
+    pub diagram: Option<String>,
+    /// Id of the node the route came too close to.
+    pub node: String,
+    /// Smallest ring the route reaches: 1 means it runs in the ring that
+    /// touches the box, which a reader reads as connection.
+    pub ring: i32,
+    /// True when the route is part of a trunk bus: one relation drawn as a
+    /// corridor plus arms. A bus hugging a node is one bus reading as one
+    /// shape, still reported, but it is not two relations fusing.
+    pub bus: bool,
+    /// Route cells inside the margin.
+    pub cells: usize,
+    /// The offending cell that comes closest to the box.
+    pub site: (i32, i32),
+}
+
+impl NearMiss {
+    /// One `--check` line naming the relation that reads wrong. The shape is
+    /// fixed by the round-13 evidence contract, so the harness parses it.
+    pub fn line(&self) -> String {
+        let diagram = self
+            .diagram
+            .as_deref()
+            .map(|diagram| format!("{diagram}:"))
+            .unwrap_or_default();
+        format!(
+            "near-miss: route {diagram}e{} passes {} cell(s) at ring {} of node '{}' (nearest cell {},{})",
+            self.route, self.cells, self.ring, self.node, self.site.0, self.site.1
+        )
+    }
 }
 
 const DIRS: [(i32, i32); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
@@ -227,6 +284,70 @@ const DIRS: [(i32, i32); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
 /// A reservation owner that matches no route: cells marked with it are off
 /// limits to every edge (a label's own cells).
 const NOBODY: usize = usize::MAX;
+
+/// Chebyshev ring of a cell around a node box: 0 inside the box, 1 on the
+/// ring that touches its border, and so on outward.
+pub fn ring_of(node: &NodeBox, x: i32, y: i32) -> i32 {
+    let dx = if x < node.x {
+        node.x - x
+    } else if x > node.x + node.w - 1 {
+        x - (node.x + node.w - 1)
+    } else {
+        0
+    };
+    let dy = if y < node.y {
+        node.y - y
+    } else if y > node.y + node.h - 1 {
+        y - (node.y + node.h - 1)
+    } else {
+        0
+    };
+    dx.max(dy)
+}
+
+/// One node box whose margin a grid cell sits in.
+#[derive(Debug, Clone, Copy)]
+struct NearBox {
+    node: usize,
+    /// Chebyshev ring: 1 touches the border.
+    ring: i32,
+    /// Cell offset from the box's span on each axis, 0 while inside it.
+    dx: i32,
+    dy: i32,
+}
+
+impl NearBox {
+    /// True when a step in direction `dir` runs ALONG this box's edge
+    /// instead of crossing the margin. A run alongside a node reads as a
+    /// relation to it; a step that passes over the margin perpendicular only
+    /// crosses it, and no reader mistakes that for a connection, so only the
+    /// along-edge runs pay the price.
+    fn runs_along(&self, dir: usize) -> bool {
+        // DIRS is up, right, down, left: odd indexes travel horizontally.
+        let horizontal = !dir.is_multiple_of(2);
+        if horizontal { self.dy != 0 } else { self.dx != 0 }
+    }
+}
+
+/// Offset of a cell from a node box's span: 0 while inside that span, the
+/// outward distance otherwise.
+fn box_offset(node: &NodeBox, x: i32, y: i32) -> (i32, i32) {
+    let dx = if x < node.x {
+        node.x - x
+    } else if x > node.x + node.w - 1 {
+        x - (node.x + node.w - 1)
+    } else {
+        0
+    };
+    let dy = if y < node.y {
+        node.y - y
+    } else if y > node.y + node.h - 1 {
+        y - (node.y + node.h - 1)
+    } else {
+        0
+    };
+    (dx, dy)
+}
 
 fn edge_forward(src: &NodeBox, tgt: &NodeBox, axis: FlowAxis) -> bool {
     match axis {
@@ -267,6 +388,25 @@ const HUG_COST: i64 = 6;
 /// mirror image. Priced above a turn, below a crossing.
 const AGAINST_FLOW_COST: i64 = 90;
 
+/// How many cells of clear canvas a route keeps from a node box that is
+/// neither its source nor its destination. A route that runs in this margin
+/// reads as touching that node, which is a false relation — the round-13
+/// gb300 a3 defect (nvos->nmxc and in-band hugging OOB LAN).
+pub const NEAR_NODE_MARGIN: i32 = 2;
+
+/// Cost of one route cell in the first ring outside an unrelated node box.
+/// Ring 1 is already closed to routes (only a port may sit there), so this
+/// price mostly guards the endpoint cells; the working cost is
+/// [`NEAR_BAND_COST`].
+const NEAR_NODE_COST: i64 = 12;
+
+/// Cost of one route cell inside [`NEAR_NODE_MARGIN`] of an unrelated box —
+/// the ring that hugs it. Priced at four and a half steps, so a parallel run
+/// of any length pays more for hugging a rank than for moving out of it or
+/// bending around it, and only a corridor the drawing genuinely blocks
+/// keeps the near lane.
+const NEAR_BAND_COST: i64 = 8;
+
 /// Cost per cell of a sideways run one lane away from the lane the fan gave
 /// this edge. Small enough that a blocked or longer lane still wins when it
 /// has to, large enough to end the A* tie that used to let a fan bridge
@@ -294,25 +434,134 @@ pub enum FlowAxis {
 /// drops that band and re-plans, so the label falls back to the in-gap
 /// placement instead of costing a route. Only when no band is left to drop
 /// is an edge reported unrouted.
+///
+/// Label ownership is a lever, not a hope: a label the reader cannot tie to
+/// one route gets a gutter band synthesised for it — its own cells off limits
+/// to every route, the ring around them reserved for its own route — and the
+/// whole drawing is re-planned around that band. Ownership then rests on
+/// geometry (nothing else may come near the text) instead of on a guess, and
+/// the fallback for a band the drawing cannot afford is a short leader tick.
 pub fn plan(nodes: &[NodeBox], edges: &[EdgeSpec], axis: FlowAxis) -> Plan {
-    let mut active: HashSet<usize> = edges
+    let declared: HashMap<usize, LabelSlot> = edges
         .iter()
         .enumerate()
-        .filter(|(_, edge)| edge.label_slot.is_some())
-        .map(|(index, _)| index)
+        .filter_map(|(index, edge)| edge.label_slot.map(|slot| (index, slot)))
         .collect();
-    let mut plan = best_pass(nodes, edges, axis, &active);
-    while !plan.unrouted.is_empty() && !active.is_empty() {
+    let mut slots = declared;
+    let mut plan = routed_passes(nodes, edges, axis, &slots);
+    for _ in 0..LABEL_REFINEMENT_ROUNDS {
+        let wanted = synthesized_slots(edges, &plan, &slots);
+        if wanted.is_empty() {
+            break;
+        }
+        let mut next = slots.clone();
+        next.extend(wanted);
+        let candidate = routed_passes(nodes, edges, axis, &next);
+        if ownership_score(&candidate) >= ownership_score(&plan) {
+            break;
+        }
+        slots = next;
+        plan = candidate;
+    }
+    plan
+}
+
+/// How many times a drawing is re-planned to give an unowned label its own
+/// gutter band. Each round is a full routing pass, and one round is enough
+/// to turn a guess into a reservation; the second only helps when the first
+/// band had to be given back for a route that could not get past it.
+const LABEL_REFINEMENT_ROUNDS: usize = 2;
+
+/// What a plan is judged on, worst first: routes that could not be drawn,
+/// labels a reader cannot own, and finally labels that needed a leader tick
+/// to stay readable. A candidate plan replaces the current one only when it
+/// is strictly better on that order.
+fn ownership_score(plan: &Plan) -> (usize, usize, usize) {
+    (
+        plan.unrouted.len(),
+        plan.labels_ambiguous + plan.labels_skipped + plan.labels_on_route,
+        plan.labels_leadered,
+    )
+}
+
+/// Gutter bands for the labels the last pass could not settle: the cell the
+/// label already sits on becomes its reserved band, so every other route is
+/// planned around the text instead of beside it.
+fn synthesized_slots(
+    edges: &[EdgeSpec],
+    plan: &Plan,
+    slots: &HashMap<usize, LabelSlot>,
+) -> HashMap<usize, LabelSlot> {
+    let mut out: HashMap<usize, LabelSlot> = HashMap::new();
+    for &(index, _) in &plan.ambiguous_labels {
+        let Some(label) = edges[index].label.as_deref() else {
+            continue;
+        };
+        let Some(anchor) = plan.routes[index].as_ref().and_then(|route| route.label) else {
+            continue;
+        };
+        // A band the layout declared is re-anchored, not kept, when the text
+        // could not sit in it: the fallback cell the label actually took is
+        // the home worth reserving.
+        if slots.get(&index).is_some_and(|slot| slot.anchor == anchor) {
+            continue;
+        }
+        out.insert(
+            index,
+            LabelSlot {
+                anchor,
+                width: label.chars().count() as i32,
+            },
+        );
+    }
+    out
+}
+
+/// One plan with the drop-loop applied: bands that wall a route in are given
+/// back until every route either draws or no band is left to blame.
+///
+/// The near-node price is a readability preference, never a reason to lose a
+/// relation, so a drawing that cannot route every edge with it on is planned
+/// again with it off and the version that draws more routes wins.
+fn routed_passes(
+    nodes: &[NodeBox],
+    edges: &[EdgeSpec],
+    axis: FlowAxis,
+    slots: &HashMap<usize, LabelSlot>,
+) -> Plan {
+    let plan = drop_loop(nodes, edges, axis, slots, true);
+    if plan.unrouted.is_empty() {
+        return plan;
+    }
+    let relaxed = drop_loop(nodes, edges, axis, slots, false);
+    if relaxed.unrouted.len() < plan.unrouted.len() {
+        relaxed
+    } else {
+        plan
+    }
+}
+
+/// One plan with the drop-loop applied and the near-node price as asked.
+fn drop_loop(
+    nodes: &[NodeBox],
+    edges: &[EdgeSpec],
+    axis: FlowAxis,
+    slots: &HashMap<usize, LabelSlot>,
+    price_near: bool,
+) -> Plan {
+    let mut slots = slots.clone();
+    let mut plan = best_pass(nodes, edges, axis, &slots, price_near);
+    while !plan.unrouted.is_empty() && !slots.is_empty() {
         // Give back the bands that stand in the way of a route that failed:
         // the ones whose cells fall inside the area that edge had to cross.
-        let blocked = obstructing_slots(nodes, edges, &plan.unrouted, &active);
+        let blocked = obstructing_slots(nodes, edges, &plan.unrouted, &slots);
         if blocked.is_empty() {
             break;
         }
         for index in blocked {
-            active.remove(&index);
+            slots.remove(&index);
         }
-        plan = best_pass(nodes, edges, axis, &active);
+        plan = best_pass(nodes, edges, axis, &slots, price_near);
     }
     plan
 }
@@ -327,13 +576,14 @@ fn best_pass(
     nodes: &[NodeBox],
     edges: &[EdgeSpec],
     axis: FlowAxis,
-    active: &HashSet<usize>,
+    slots: &HashMap<usize, LabelSlot>,
+    price_near: bool,
 ) -> Plan {
-    let plain = plan_with_slots(nodes, edges, axis, active, false);
+    let plain = plan_with_slots(nodes, edges, axis, slots, false, price_near);
     if plain.unrouted.is_empty() && plain.crossings == 0 {
         return plain;
     }
-    let laned = plan_with_slots(nodes, edges, axis, active, true);
+    let laned = plan_with_slots(nodes, edges, axis, slots, true, price_near);
     if (laned.unrouted.len(), laned.crossings) < (plain.unrouted.len(), plain.crossings) {
         laned
     } else {
@@ -341,14 +591,14 @@ fn best_pass(
     }
 }
 
-/// The `label_slot` bands that sit inside the travel area of an unrouted
+/// The reserved label bands that sit inside the travel area of an unrouted
 /// edge: from its source box to its target box, one cell out, which is the
 /// box a route between those two ranks cannot leave.
 fn obstructing_slots(
     nodes: &[NodeBox],
     edges: &[EdgeSpec],
     unrouted: &[usize],
-    active: &HashSet<usize>,
+    slots: &HashMap<usize, LabelSlot>,
 ) -> Vec<usize> {
     let mut drop: Vec<usize> = Vec::new();
     for &index in unrouted {
@@ -357,14 +607,11 @@ fn obstructing_slots(
         let hi_x = (from.x + from.w).max(to.x + to.w) + 1;
         let lo_y = from.y.min(to.y) - 1;
         let hi_y = (from.y + from.h).max(to.y + to.h) + 1;
-        for &owner in active {
+        for (&owner, slot) in slots.iter() {
             // The edge's own band is the last thing to give up.
             if owner == index {
                 continue;
             }
-            let Some(slot) = edges[owner].label_slot.as_ref() else {
-                continue;
-            };
             let inside = slot
                 .cells()
                 .iter()
@@ -378,7 +625,7 @@ fn obstructing_slots(
         // Nothing else stood in the way: the failing edge's own band may be
         // the one that boxed it in.
         for &index in unrouted {
-            if active.contains(&index) && !drop.contains(&index) {
+            if slots.contains_key(&index) && !drop.contains(&index) {
                 drop.push(index);
             }
         }
@@ -391,13 +638,15 @@ fn plan_with_slots(
     nodes: &[NodeBox],
     edges: &[EdgeSpec],
     axis: FlowAxis,
-    active: &HashSet<usize>,
+    slots: &HashMap<usize, LabelSlot>,
     give_lanes: bool,
+    price_near: bool,
 ) -> Plan {
     if nodes.is_empty() {
         return Plan::default();
     }
     let mut grid = Grid::new(nodes, edges.len() as i32 + 3);
+    grid.price_near = price_near;
     let (ports, mut used) = assign_ports(nodes, edges, axis);
     // Fans are the one shape where spec order stacks its lanes in the wrong
     // order; the laned pass gives each member its own.
@@ -412,10 +661,8 @@ fn plan_with_slots(
     // INCLUDING the stems reserved below: reserving slots first means a
     // port stem can never squat the label's own row (the round-10 lifecycle
     // fixture lost two labels to exactly that).
-    for (index, edge) in edges.iter().enumerate() {
-        if let Some(slot) = edge.label_slot.as_ref().filter(|_| active.contains(&index)) {
-            reserve_label_slot(&mut grid, index, slot);
-        }
+    for (&index, slot) in slots {
+        reserve_label_slot(&mut grid, index, slot);
     }
     // Reserve every endpoint and its outward stem AFTER the label slots.
     // Otherwise an early route can steal a later edge's departure or head.
@@ -550,8 +797,13 @@ fn plan_with_slots(
         }
     }
     // Hold the primary tap of every spur for that spur before plain edges
-    // route, so a passing edge cannot sit down on it.
-    for job in &spur_jobs {
+    // route, so a passing edge cannot sit down on it. The hold is a loan: a
+    // spur that ends up leaving from another tap gives it back, or a stale
+    // hold would keep every other spur off a tap nobody uses (round 13: one
+    // shifted corridor bend left a hold behind and the bus wrapped around the
+    // whole rank).
+    let mut held: Vec<Option<(i32, i32)>> = vec![None; spur_jobs.len()];
+    for (job_index, job) in spur_jobs.iter().enumerate() {
         if let Some(&(tap, across)) = job.taps.first()
             && grid.tap_ready(tap, job.index)
         {
@@ -560,6 +812,7 @@ fn plan_with_slots(
             if let Some(cell) = grid.index(tap.0 + DIRS[dir].0, tap.1 + DIRS[dir].1) {
                 grid.reserved[cell].push(job.index);
             }
+            held[job_index] = Some(tap);
         }
     }
 
@@ -615,7 +868,7 @@ fn plan_with_slots(
     // one claims its cells exclusively so two spurs never share a run. A
     // spur that cannot leave a tap tries the next tap, then the next side of
     // its branch, before it is reported unrouted.
-    for job in spur_jobs {
+    for (job_index, job) in spur_jobs.iter().enumerate() {
         let branch = &nodes[job.branch];
         let mut routed = false;
         'taps: for &(tap, across) in &job.taps {
@@ -641,6 +894,8 @@ fn plan_with_slots(
                         straight_stem: true,
                         lane: None,
                         vertical: false,
+                        own: [Some(edges[job.index].from), Some(edges[job.index].to)],
+                        price_nodes: true,
                     };
                     let attempt = grid
                         .route(tap, dir, port, arrive, search, job.index)
@@ -687,6 +942,23 @@ fn plan_with_slots(
         }
         if !routed {
             unrouted.push(job.index);
+        }
+        // Give back a primary-tap hold the spur did not use: the tap is open
+        // canvas again for whoever else can reach it.
+        if let Some(tap) = held[job_index] {
+            let used = routes[job.index]
+                .as_ref()
+                .and_then(|route| route.points.first().copied());
+            if used != Some(tap) {
+                let across = job.taps[0].1;
+                let dir = departure(across, tap, branch.center());
+                if let Some(cell) = grid.index(tap.0, tap.1) {
+                    grid.reserved[cell].retain(|&id| id != job.index);
+                }
+                if let Some(cell) = grid.index(tap.0 + DIRS[dir].0, tap.1 + DIRS[dir].1) {
+                    grid.reserved[cell].retain(|&id| id != job.index);
+                }
+            }
         }
     }
     // Junction cells belong to the corridor and to the spur that leaves it:
@@ -752,9 +1024,18 @@ fn plan_with_slots(
     // A label slot the layout reserved is part of the drawing: its text sits
     // beyond the last route cell when the gutter band reaches outward, so the
     // extent must cover it or `clear` would reject a label that fits.
+    //
+    // The extent also covers the gutter the LAYOUT reserved, even when this
+    // pass had to give that band back: the node placement spent the space, and
+    // a canvas section sizes its band from `Plan::extent`. Dropping a band
+    // must not shrink the drawing under its own label.
     let mut extent = (extent.0 - min_x, extent.1 - min_y);
-    for edge in edges {
-        let (Some(slot), Some(label)) = (edge.label_slot.as_ref(), edge.label.as_deref()) else {
+    let declared = edges
+        .iter()
+        .enumerate()
+        .filter_map(|(index, edge)| edge.label_slot.map(|slot| (index, slot)));
+    for (index, slot) in declared.chain(slots.iter().map(|(&index, &slot)| (index, slot))) {
+        let Some(label) = edges[index].label.as_deref() else {
             continue;
         };
         let width = label.chars().count() as i32;
@@ -776,6 +1057,8 @@ fn plan_with_slots(
     let mut labels: Vec<(i32, i32, i32)> = Vec::new();
     let (mut labels_placed, mut labels_total, mut labels_skipped) = (0, 0, 0);
     let mut labels_ambiguous = 0;
+    let mut labels_leadered = 0;
+    let mut ambiguous_labels: Vec<(usize, String)> = Vec::new();
     let mut skipped_labels: Vec<(usize, String)> = Vec::new();
     for index in 0..edges.len() {
         let Some(label) = edges[index].label.as_deref() else {
@@ -791,10 +1074,7 @@ fn plan_with_slots(
         // A reserved slot is the label's own space: the layout sized it, no
         // other route may enter it, and the owner's route runs beside it, so
         // ownership is structural rather than guessed.
-        if let Some(slot) = edges[index]
-            .label_slot
-            .as_ref()
-            .filter(|_| active.contains(&index))
+        if let Some(slot) = slots.get(&index)
             && clear(
                 nodes,
                 &drawn,
@@ -826,12 +1106,27 @@ fn plan_with_slots(
             len,
             extent,
         ) {
-            Some((anchor, ambiguous)) => {
+            Some((anchor, ownership)) => {
                 labels.push((anchor.0, anchor.1, len));
                 route.label = Some(anchor);
                 labels_placed += 1;
-                if ambiguous {
-                    labels_ambiguous += 1;
+                match ownership {
+                    Ownership::Own => {}
+                    Ownership::Leadered(tick) => {
+                        // A tick only counts when it really joins the text to
+                        // its own run: drop one that no renderer can draw.
+                        if tick.is_empty() {
+                            labels_ambiguous += 1;
+                            ambiguous_labels.push((index, label.to_string()));
+                        } else {
+                            route.label_leader = tick;
+                            labels_leadered += 1;
+                        }
+                    }
+                    Ownership::Ambiguous => {
+                        labels_ambiguous += 1;
+                        ambiguous_labels.push((index, label.to_string()));
+                    }
                 }
             }
             None => {
@@ -866,6 +1161,7 @@ fn plan_with_slots(
 
     let shared_run = longest_shared_run(&axes);
     let (crossings, touching_bends) = count_crossings(&axes, &junction_set);
+    let (passes_near_unrelated_node, near_misses) = measure_near_misses(nodes, edges, &routes);
 
     Plan {
         routes,
@@ -877,12 +1173,63 @@ fn plan_with_slots(
         labels_total,
         labels_on_route,
         labels_ambiguous,
+        labels_leadered,
+        ambiguous_labels,
+        passes_near_unrelated_node,
+        near_misses,
         skipped_labels,
         unrouted,
         extent,
         trunks,
         junctions,
     }
+}
+
+/// The checker's ambiguity count: for every route, the route cells that run
+/// inside [`NEAR_NODE_MARGIN`] of a node box that is neither its source nor
+/// its destination. One entry per `(route, node)` pair, so `--check` can name
+/// the false relation instead of only counting it.
+fn measure_near_misses(
+    nodes: &[NodeBox],
+    edges: &[EdgeSpec],
+    routes: &[Option<Planned>],
+) -> (usize, Vec<NearMiss>) {
+    let mut total = 0;
+    let mut out: Vec<NearMiss> = Vec::new();
+    for (index, route) in routes.iter().enumerate() {
+        let Some(route) = route else { continue };
+        let edge = &edges[index];
+        for (node_index, node) in nodes.iter().enumerate() {
+            if node_index == edge.from || node_index == edge.to {
+                continue;
+            }
+            let mut cells = 0;
+            let mut closest: Option<(i32, (i32, i32))> = None;
+            for cell in route_cells(&route.points) {
+                let ring = ring_of(node, cell.0, cell.1);
+                if ring < 1 || ring > NEAR_NODE_MARGIN {
+                    continue;
+                }
+                cells += 1;
+                if closest.is_none_or(|(best, _)| ring < best) {
+                    closest = Some((ring, cell));
+                }
+            }
+            if let Some((ring, site)) = closest {
+                total += cells;
+                out.push(NearMiss {
+                    route: index,
+                    diagram: None,
+                    node: node.id.clone(),
+                    bus: !matches!(edge.role, Role::Edge),
+                    ring,
+                    cells,
+                    site,
+                });
+            }
+        }
+    }
+    (total, out)
 }
 
 /// How many corridor cells a trunk tries as its single split point.
@@ -993,7 +1340,15 @@ fn try_hub(
         let mut ok = true;
         for &index in spur_edges {
             let owner = edges.len() + 1 + index;
-            match route_spur(grid, nodes, &junction, edges[index].to, owner, used) {
+            match route_spur(
+                grid,
+                nodes,
+                &junction,
+                edges[index].to,
+                [Some(edges[index].from), Some(edges[index].to)],
+                owner,
+                used,
+            ) {
                 Some(spur) => {
                     bordered.push((spur.port, spur.side, owner));
                     placed.push(PlacedSpur {
@@ -1067,6 +1422,7 @@ fn route_spur(
     nodes: &[NodeBox],
     junction: &(i32, i32),
     branch: usize,
+    own: [Option<usize>; 2],
     owner: usize,
     used: &mut SlotUse,
 ) -> Option<SpurRoute> {
@@ -1093,7 +1449,20 @@ fn route_spur(
             }
             reserve_stem(grid, port, side, owner);
             let arrive = (side.dir() + 2) % 4;
-            let points = grid.route(*junction, dir, port, arrive, Search::default(), owner);
+            let points = grid.route(
+                *junction,
+                dir,
+                port,
+                arrive,
+                Search {
+                    own,
+                    // An arm is a route like any other: it keeps its lane off
+                    // nodes the bus does not serve.
+                    price_nodes: true,
+                    ..Search::default()
+                },
+                owner,
+            );
             release_stem(grid, port, side, owner);
             let Some(points) = points else {
                 continue;
@@ -1249,6 +1618,8 @@ fn route_edge(
         straight_stem: true,
         lane,
         vertical: matches!(axis, FlowAxis::TopToBottom),
+        own: [Some(edge.from), Some(edge.to)],
+        price_nodes: matches!(edge.role, Role::Edge),
     };
     grid.route(start, src.dir(), (tx, ty), arrive, search, index)
         .or_else(|| {
@@ -1827,7 +2198,35 @@ fn count_crossings(
 /// only taken when nothing better exists.
 ///
 /// One straight run of a route, as start, end, and length in cells.
+/// One polyline segment of a route: its two ends and its length in cells.
 type Segment = ((i32, i32), (i32, i32), i32);
+
+/// How well a placed label is tied to its own route.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Ownership {
+    /// The text touches its own run (one cell away) and no other route
+    /// reaches the ring around the text: a reader cannot read it as anything
+    /// else.
+    Own,
+    /// The text sits further out or shares its ring: these cells draw a short
+    /// straight tick from the text to the nearest cell of its own route.
+    Leadered(Vec<(i32, i32)>),
+    /// Nothing ties the text to one route.
+    Ambiguous,
+}
+
+/// How far from the text its own run may be and still read as the label's
+/// line: two cells is a blank cell plus the gap the side attachments leave.
+const OWN_REACH: i32 = 2;
+
+/// How close a foreign route may come to the text and still leave the owner
+/// obvious: two cells is one blank cell between the line and the word. Closer
+/// than that, or as close as the label's own run, and the reader is guessing.
+const FOREIGN_REACH: i32 = 2;
+
+/// How many cells a leader tick may span. Longer than this is a line, not a
+/// tie, and reads as another route.
+const LEADER_MAX: i32 = 3;
 
 #[allow(clippy::too_many_arguments)]
 fn place_label(
@@ -1839,7 +2238,7 @@ fn place_label(
     other_cells: &[(i32, i32)],
     len: i32,
     extent: (i32, i32),
-) -> Option<((i32, i32), bool)> {
+) -> Option<((i32, i32), Ownership)> {
     if len <= 0 {
         return None;
     }
@@ -1884,28 +2283,138 @@ fn place_label(
         }
     }
 
-    let candidates: Vec<(i32, i32)> = anchors
-        .into_iter()
-        .filter(|&(cx, cy)| clear(nodes, drawn, labels, cx, cy, len, extent))
-        .collect();
-    let unambiguous = candidates
-        .iter()
-        .copied()
-        .find(|&(cx, cy)| nearest(own_cells, cx, cy) < nearest(other_cells, cx, cy));
-    match unambiguous {
-        Some(anchor) => Some((anchor, false)),
-        None => candidates.first().map(|&anchor| (anchor, true)),
+    // Every clear candidate is judged on the whole WORD, not on its centre: a
+    // wide text touches many cells, and a foreign route that runs into the
+    // ring at either end of the word owns it just as much as one beside the
+    // middle (the round-10..12 blindness: the checker only measured the
+    // centre and reported 0 while readers saw uncertain owners).
+    let mut fallback: Option<((i32, i32), Ownership)> = None;
+    for (cx, cy) in anchors {
+        if !clear(nodes, drawn, labels, cx, cy, len, extent) {
+            continue;
+        }
+        let lo = cx - len / 2;
+        let hi = lo + len - 1;
+        let own_d = span_distance(lo, hi, cy, own_cells);
+        let other_d = span_distance(lo, hi, cy, other_cells);
+        // Ownership is judged on the whole WORD, not on its centre: every
+        // character must sit within the reading reach of its own run, and no
+        // other route may come as close to the word as that run does (nor
+        // closer than one blank cell). A word whose far end touches another
+        // line is a word with two candidate owners, whatever its centre says.
+        let clear_of_others = other_d >= FOREIGN_REACH && other_d > own_d;
+        let verdict = if own_d <= OWN_REACH && clear_of_others {
+            Ownership::Own
+        } else if own_d > OWN_REACH && own_d <= LEADER_MAX && clear_of_others {
+            let tick = leader_tick(lo, hi, cy, own_cells, drawn);
+            if tick.is_empty() {
+                Ownership::Ambiguous
+            } else {
+                Ownership::Leadered(tick)
+            }
+        } else {
+            Ownership::Ambiguous
+        };
+        match verdict {
+            Ownership::Own => return Some(((cx, cy), Ownership::Own)),
+            other => {
+                if fallback.is_none() {
+                    fallback = Some(((cx, cy), other));
+                }
+            }
+        }
     }
+    // No candidate is owned outright: take the first one (a leadered cell
+    // still reads better than a dropped label) so the text is never lost.
+    fallback
 }
 
-/// Manhattan distance from `(cx, cy)` to the nearest cell in `cells`, or
-/// `i32::MAX` when the list is empty.
-fn nearest(cells: &[(i32, i32)], cx: i32, cy: i32) -> i32 {
+/// Chebyshev distance from the label's text span — columns `lo..=hi` on row
+/// `cy` — to the nearest cell of a route. Text beside a vertical run is one
+/// cell away for every character, which is what a reader sees; the old
+/// centre-only Manhattan distance could not express that.
+fn span_distance(lo: i32, hi: i32, cy: i32, cells: &[(i32, i32)]) -> i32 {
     cells
         .iter()
-        .map(|&(x, y)| (x - cx).abs() + (y - cy).abs())
+        .map(|&(x, y)| {
+            let dx = if x < lo {
+                lo - x
+            } else if x > hi {
+                x - hi
+            } else {
+                0
+            };
+            dx.max((y - cy).abs())
+        })
         .min()
         .unwrap_or(i32::MAX)
+}
+
+/// The free cells of a straight leader tick from the label's text to the
+/// nearest cell of its own route. Empty when the two do not share a row or a
+/// column with free cells between them — a bent tick reads as another route.
+fn leader_tick(
+    lo: i32,
+    hi: i32,
+    cy: i32,
+    own: &[(i32, i32)],
+    drawn: &HashSet<(i32, i32)>,
+) -> Vec<(i32, i32)> {
+    // Nearest own cell that lines up with the text, so the tick is straight.
+    let mut best: Option<(i32, (i32, i32))> = None;
+    for &(x, y) in own {
+        let usable = if y == cy {
+            (x < lo && lo - x >= 2) || (x > hi && x - hi >= 2)
+        } else {
+            x >= lo && x <= hi
+        };
+        if !usable {
+            continue;
+        }
+        let distance = if y == cy {
+            if x < lo { lo - x } else { x - hi }
+        } else {
+            (y - cy).abs()
+        };
+        if distance > LEADER_MAX {
+            continue;
+        }
+        if best.is_none_or(|(d, _)| distance < d) {
+            best = Some((distance, (x, y)));
+        }
+    }
+    let Some((_, (x, y))) = best else {
+        return Vec::new();
+    };
+    let mut tick: Vec<(i32, i32)> = Vec::new();
+    if y == cy {
+        // Same row: the tick runs from the text edge to the route cell.
+        let (a, b) = if x < lo {
+            (x + 1, lo - 1)
+        } else {
+            (hi + 1, x - 1)
+        };
+        for cx in a..=b {
+            tick.push((cx, cy));
+        }
+    } else if x >= lo && x <= hi {
+        // Same column: the tick runs from the text row to the route row.
+        let step = if y < cy { -1 } else { 1 };
+        let mut row = cy + step;
+        while row != y {
+            tick.push((x, row));
+            row += step;
+        }
+    } else {
+        return Vec::new();
+    }
+    if tick.is_empty() || tick.iter().any(|cell| drawn.contains(cell)) {
+        return Vec::new();
+    }
+    if tick.len() as i32 > LEADER_MAX - 1 {
+        return Vec::new();
+    }
+    tick
 }
 
 /// True when a label of `len` cells centred on `(cx, cy)` covers nothing
@@ -1948,6 +2457,19 @@ struct Search {
     lane: Option<LanePlan>,
     /// True for a top-to-bottom flow, whose lanes are rows.
     vertical: bool,
+    /// The node boxes this route belongs to (its source and destination; a
+    /// trunk spur names its branch only). A cell inside the margin of any
+    /// OTHER box costs extra, so no route hugs or brushes a node it does not
+    /// serve.
+    own: [Option<usize>; 2],
+    /// True when the near-node price applies. A trunk CORRIDOR is exempt: the
+    /// corridor and its arms are one relation whose geometry is negotiated as
+    /// a whole (one hub cell, one arm per branch, taps reserved before
+    /// anything else runs), so pricing the corridor cell by cell moves a bend,
+    /// re-picks the taps, and the bus stops reading as one bus. Its arms are
+    /// priced like any other route, and the checker reports every margin cell
+    /// the bus still holds.
+    price_nodes: bool,
 }
 
 /// The character grid, with the occupancy and direction state the router
@@ -1961,6 +2483,15 @@ struct Grid {
     count: Vec<u16>,
     dirs: Vec<u8>,
     reserved: Vec<Vec<usize>>,
+    /// False when the near-node price is off: the readability preference is
+    /// never allowed to cost a route, so the planner gives it back and
+    /// re-plans when a route cannot be drawn.
+    price_near: bool,
+    /// For every cell, the node boxes whose margin it sits in: the box, the
+    /// Chebyshev ring (1 = the ring that touches the box), and the cell's
+    /// offset from the box (0 where the cell is inside the box's span on that
+    /// axis). The planner prices a cell by the boxes it is NOT routed for.
+    near: Vec<Vec<NearBox>>,
 }
 
 impl Grid {
@@ -1973,10 +2504,32 @@ impl Grid {
         let h = max_y - min_y + 1;
         let mut blocked = vec![false; (w * h) as usize];
         let mut border_band = blocked.clone();
-        for node in nodes {
+        let mut near: Vec<Vec<NearBox>> = vec![Vec::new(); (w * h) as usize];
+        for (node_index, node) in nodes.iter().enumerate() {
             for y in node.y - 1..=node.y + node.h {
                 for x in node.x - 1..=node.x + node.w {
                     border_band[Grid::index_of(min_x, min_y, w, x, y)] = true;
+                }
+            }
+            // The margin band around the box: every cell whose Chebyshev ring
+            // is 1..=NEAR_NODE_MARGIN, so the planner can price a route that
+            // runs beside a node it does not belong to.
+            for y in node.y - NEAR_NODE_MARGIN..=node.y + node.h - 1 + NEAR_NODE_MARGIN {
+                for x in node.x - NEAR_NODE_MARGIN..=node.x + node.w - 1 + NEAR_NODE_MARGIN {
+                    if x < min_x || y < min_y || x >= min_x + w || y >= min_y + h {
+                        continue;
+                    }
+                    let ring = ring_of(node, x, y);
+                    if ring < 1 || ring > NEAR_NODE_MARGIN {
+                        continue;
+                    }
+                    let (dx, dy) = box_offset(node, x, y);
+                    near[Grid::index_of(min_x, min_y, w, x, y)].push(NearBox {
+                        node: node_index,
+                        ring,
+                        dx,
+                        dy,
+                    });
                 }
             }
             for y in node.y..node.y + node.h {
@@ -1994,6 +2547,8 @@ impl Grid {
             count: vec![0; (w * h) as usize],
             dirs: vec![0; (w * h) as usize],
             reserved: vec![Vec::new(); (w * h) as usize],
+            price_near: true,
+            near,
         }
     }
 
@@ -2117,7 +2672,11 @@ impl Grid {
         let y = self.min.1 + (cell as i32 / self.w);
         let mut penalty = 0;
         // A fan member's sideways run stays on the lane it was given: the
-        // route takes its own row instead of crossing a neighbour's.
+        // route takes its own row instead of crossing a neighbour's. Inside
+        // that band the drawing has already traded node margins for lanes, so
+        // the near-node price is off: it would only nudge a member off its
+        // lane and joggle the fan.
+        let mut in_lane_band = false;
         if let Some((anchor, lo, hi)) = search.lane {
             let sideways = if search.vertical {
                 !dir.is_multiple_of(2)
@@ -2125,7 +2684,8 @@ impl Grid {
                 dir.is_multiple_of(2)
             };
             let across = if search.vertical { y } else { x };
-            if sideways && across >= lo && across <= hi {
+            in_lane_band = across >= lo && across <= hi;
+            if sideways && in_lane_band {
                 penalty += LANE_DRIFT_COST * (across - anchor).unsigned_abs() as i64;
             }
         }
@@ -2152,6 +2712,31 @@ impl Grid {
             {
                 penalty += HUG_COST;
             }
+        }
+        // Do not brush a node this route does not serve: a corridor that runs
+        // in the margin of an unrelated box reads as a connection to it (the
+        // round-13 gb300 a3 defect). Priced above every other step penalty, so
+        // A* takes any detour it can and only hugs when nothing else exists.
+        if let Some(boxes) = self
+            .near
+            .get(cell)
+            .filter(|_| self.price_near && !in_lane_band)
+        {
+            let mut worst = 0;
+            for near in boxes {
+                if search.own.contains(&Some(near.node)) || !near.runs_along(dir) {
+                    continue;
+                }
+                let cost = if !search.price_nodes {
+                    0
+                } else if near.ring <= 1 {
+                    NEAR_NODE_COST
+                } else {
+                    NEAR_BAND_COST
+                };
+                worst = worst.max(cost);
+            }
+            penalty += worst;
         }
         penalty
     }
@@ -2502,5 +3087,247 @@ mod tests {
                 assert!(!node.contains(x, anchor.1), "label covers a node");
             }
         }
+    }
+
+    // -- round 13: ambiguity-free routing -----------------------------------
+    //
+    // The `--check` violation is "a route cell inside NEAR_NODE_MARGIN of a
+    // node box that is neither the route's source nor its destination": the
+    // gb300 a3 defect, where other relations' routes hugged OOB LAN until
+    // they read as connected to it.
+
+    /// A cell's Chebyshev ring around a box, for the assertions below.
+    fn ring(node: &NodeBox, cell: (i32, i32)) -> i32 {
+        ring_of(node, cell.0, cell.1)
+    }
+
+    #[test]
+    fn a_long_run_moves_out_of_an_unrelated_box_margin() {
+        // `a -> b` runs 27 rows down the left edge. `c` sits three columns
+        // right of the corridor's port lane, so the straight run would hug
+        // `c` at ring 2 for two dozen cells — the exact hug a reader reads as
+        // a relation. The near-node price must move the run one lane out.
+        let nodes = vec![
+            node("a", 0, 0, 6, 0),
+            node("b", 0, 30, 6, 1),
+            node("c", 3, 8, 10, 1),
+        ];
+        let edges = vec![EdgeSpec::new(0, 1)];
+        let plan = plan(&nodes, &edges, FlowAxis::TopToBottom);
+        assert!(plan.unrouted.is_empty(), "{:?}", plan.unrouted);
+        assert_eq!(
+            plan.passes_near_unrelated_node, 0,
+            "the run still hugs c: {:?}",
+            plan.near_misses
+        );
+        assert!(plan.near_misses.is_empty());
+        let points = &plan.routes[0].as_ref().expect("route").points;
+        assert!(
+            points.iter().any(|&(x, _)| x == 0),
+            "expected the corridor to step out to the free lane: {points:?}"
+        );
+    }
+
+    #[test]
+    fn a_hug_with_no_way_past_is_named_not_hidden() {
+        // Hand-built plan: one route running one cell beside `c` for three
+        // cells. No re-plan can fix it, so the checker must name the pair
+        // instead of reporting a clean drawing.
+        let nodes = vec![node("a", 0, 0, 4, 0), node("b", 0, 12, 4, 1), node("c", 5, 4, 9, 1)];
+        let edges = vec![EdgeSpec::new(0, 1)];
+        let mut routes: Vec<Option<Planned>> = vec![None];
+        routes[0] = Some(Planned {
+            points: vec![(3, 3), (3, 10)],
+            ..Planned::default()
+        });
+        for cell in [(3, 3), (3, 4), (3, 5)] {
+            assert_eq!(ring(&nodes[2], cell), 2, "the fixture must hug at ring 2");
+        }
+        let (total, misses) = measure_near_misses(&nodes, &edges, &routes);
+        assert_eq!(total, 6, "{misses:?}");
+        assert_eq!(misses.len(), 1);
+        assert_eq!(misses[0].node, "c");
+        assert_eq!(misses[0].ring, 2);
+        assert!(!misses[0].bus, "a plain edge is not a trunk bus");
+        let line = misses[0].line();
+        assert!(line.starts_with("near-miss: route e0"), "{line}");
+        assert!(line.contains("node 'c'"), "{line}");
+    }
+
+    #[test]
+    fn a_route_may_run_alongside_its_own_boxes() {
+        // The source and destination never count, however close the run is.
+        let nodes = vec![node("a", 0, 0, 6, 0), node("b", 0, 10, 6, 1)];
+        let edges = vec![EdgeSpec::new(0, 1)];
+        let plan = plan(&nodes, &edges, FlowAxis::TopToBottom);
+        assert_eq!(plan.passes_near_unrelated_node, 0);
+        assert!(plan.near_misses.is_empty());
+    }
+
+    // -- round 13: label ownership -----------------------------------------
+
+    #[test]
+    fn a_fallen_back_label_gets_a_gutter_at_the_cell_it_took() {
+        // The ownership lever: a label the reader cannot settle turns the cell
+        // it actually took into a reserved band, so the next pass plans every
+        // other route around the text instead of beside it.
+        let nodes = vec![node("a", 0, 0, 6, 0), node("b", 0, 10, 6, 1)];
+        let edges = vec![EdgeSpec::new(0, 1).with_label("wide label")];
+        let mut plan = Plan {
+            ambiguous_labels: vec![(0, "wide label".to_string())],
+            routes: vec![Some(Planned {
+                label: Some((12, 5)),
+                ..Planned::default()
+            })],
+            ..Plan::default()
+        };
+        let slots: HashMap<usize, LabelSlot> = HashMap::new();
+        let wanted = synthesized_slots(&edges, &plan, &slots);
+        assert_eq!(
+            wanted.get(&0),
+            Some(&LabelSlot {
+                anchor: (12, 5),
+                width: 10
+            }),
+            "the band must reserve the cell the text took"
+        );
+        // A band the layout already reserved exactly there is not duplicated.
+        assert!(synthesized_slots(&edges, &plan, &wanted).is_empty());
+        // A band whose anchor the text could not use is re-anchored, not kept:
+        // the dead gutter is what forced the fallback in the first place.
+        let stale: HashMap<usize, LabelSlot> = HashMap::from([(
+            0,
+            LabelSlot {
+                anchor: (2, 2),
+                width: 10,
+            },
+        )]);
+        assert_eq!(
+            synthesized_slots(&edges, &plan, &stale)
+                .get(&0)
+                .map(|slot| slot.anchor),
+            Some((12, 5))
+        );
+        // A plan whose labels are settled asks for nothing.
+        plan.ambiguous_labels.clear();
+        assert!(synthesized_slots(&edges, &plan, &slots).is_empty());
+    }
+
+    #[test]
+    fn an_undrawn_route_outranks_an_unowned_label() {
+        let owned = Plan {
+            labels_placed: 1,
+            labels_total: 1,
+            ..Plan::default()
+        };
+        let unowned = Plan {
+            labels_placed: 1,
+            labels_total: 1,
+            labels_ambiguous: 1,
+            labels_leadered: 1,
+            ..Plan::default()
+        };
+        let unrouted = Plan {
+            unrouted: vec![0],
+            ..Plan::default()
+        };
+        assert!(ownership_score(&owned) < ownership_score(&unowned));
+        assert!(ownership_score(&unowned) < ownership_score(&unrouted));
+    }
+
+    #[test]
+    fn span_distance_measures_every_character_not_the_centre() {
+        // A twelve-cell label centred on (6, 4) spans columns 0..=11. A
+        // foreign route cell at (11, 5) touches the LAST character, one cell
+        // away: a reader sees the line run into the word. The old metric
+        // measured the centre only (Manhattan 5 + 1 = 6) and called it owned.
+        let span = (0, 11, 4);
+        let touching = [(11, 5)];
+        assert_eq!(span_distance(span.0, span.1, span.2, &touching), 1);
+        // A vertical run under the whole word is one cell away everywhere.
+        let under: Vec<(i32, i32)> = (0..=11).map(|x| (x, 5)).collect();
+        assert_eq!(span_distance(span.0, span.1, span.2, &under), 1);
+        // The old centre-only measure for the same cells.
+        assert_eq!(nearest_centre(&touching, 6, 4), 6);
+        // Nothing in reach.
+        assert_eq!(span_distance(span.0, span.1, span.2, &[(40, 40)]), 36);
+    }
+
+    /// The pre-round-13 measure, kept here so the blindness it had stays
+    /// visible: Manhattan distance from the label's CENTRE cell.
+    fn nearest_centre(cells: &[(i32, i32)], cx: i32, cy: i32) -> i32 {
+        cells
+            .iter()
+            .map(|&(x, y)| (x - cx).abs() + (y - cy).abs())
+            .min()
+            .unwrap_or(i32::MAX)
+    }
+
+    #[test]
+    fn a_leader_tick_joins_the_text_to_its_run_or_stays_empty() {
+        let none: HashSet<(i32, i32)> = HashSet::new();
+        // Text on row 4 spanning 0..=11, own run two rows below at (5, 6):
+        // the tick is the one cell between them.
+        let tick = leader_tick(0, 11, 4, &[(5, 6)], &none);
+        assert_eq!(tick, vec![(5, 5)]);
+        // The same run on the row itself, one column past the word: a
+        // horizontal tick closes the gap.
+        let tick = leader_tick(0, 11, 4, &[(13, 4)], &none);
+        assert_eq!(tick, vec![(12, 4)]);
+        // A cell diagonally off both the row and the span cannot be joined by
+        // a straight tick, so no tick is claimed.
+        assert!(leader_tick(0, 11, 4, &[(14, 6)], &none).is_empty());
+        // A tick may not cross drawn canvas: another route owns that cell.
+        let mut drawn: HashSet<(i32, i32)> = HashSet::new();
+        drawn.insert((5, 5));
+        assert!(leader_tick(0, 11, 4, &[(5, 6)], &drawn).is_empty());
+    }
+
+    #[test]
+    fn a_label_keeps_out_of_a_foreign_routes_ring() {
+        // Two parallel relations four columns apart. The label of `a -> b`
+        // sits beside its own run; the far end of the word must not come
+        // within the ring of `c -> d`, or the reader cannot say which line
+        // owns it.
+        let nodes = vec![
+            node("a", 0, 0, 6, 0),
+            node("b", 0, 14, 6, 1),
+            node("c", 16, 0, 6, 0),
+            node("d", 16, 14, 6, 1),
+        ];
+        let edges = vec![
+            EdgeSpec::new(0, 1).with_label("one story"),
+            EdgeSpec::new(2, 3),
+        ];
+        let plan = plan(&nodes, &edges, FlowAxis::TopToBottom);
+        assert_eq!(plan.labels_placed, 1, "{:?}", plan.skipped_labels);
+        assert_eq!(
+            plan.labels_ambiguous, 0,
+            "an owned label: {:?}",
+            plan.ambiguous_labels
+        );
+        let anchor = plan.routes[0].as_ref().and_then(|route| route.label).unwrap();
+        let len = "one story".chars().count() as i32;
+        let lo = anchor.0 - len / 2;
+        let own: Vec<(i32, i32)> = plan.routes[0].as_ref().map(|r| route_cells(&r.points)).unwrap_or_default();
+        let others: Vec<(i32, i32)> = plan
+            .routes
+            .iter()
+            .skip(1)
+            .flatten()
+            .flat_map(|route| route_cells(&route.points))
+            .collect();
+        // The text sits inside its own run's reading reach...
+        let own_d = span_distance(lo, lo + len - 1, anchor.1, &own);
+        assert!(
+            own_d <= OWN_REACH,
+            "the text must sit within {OWN_REACH} cells of own run, got {own_d}"
+        );
+        // ...and no other route comes close enough to be mistaken for it.
+        let other_d = span_distance(lo, lo + len - 1, anchor.1, &others);
+        assert!(
+            other_d >= FOREIGN_REACH,
+            "a foreign route reaches the text's reading band: {other_d}"
+        );
     }
 }
