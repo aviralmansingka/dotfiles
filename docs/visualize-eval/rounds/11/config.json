@@ -4,7 +4,7 @@
  "skill_sha256": "fb975dbe337bee801dc098f58695e0068cb1b2d7d79f34c0e473e24a1626cd4e",
  "binary_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
  "binary_path": "/tmp/visualize-eval/round-10/bin/rataflow-view",
- "rubric_sha256": "7d9906be07332637e3149457abfda458cc250bc89d2b6d5e857885c92d2b16c6",
+ "rubric_sha256": "5e09b9be9078ab5b46a82d0faf7bc986bf3d38a2d4cbb2f6745dd3fb9f0f54d7",
  "dataset_sha256": "e69179e59a3d36985cd7e8672b319b566701f88caef385c9cbde76d060c92d05",
  "renderer_source_sha256": "0efb3117939b5f1dbce6228a74c4c115a35681d1ace97cc81942febfb6a40ada",
  "generator_model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
