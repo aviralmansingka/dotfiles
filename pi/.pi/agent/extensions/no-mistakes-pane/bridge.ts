@@ -508,7 +508,14 @@ function realPiPath(): string {
  *    - nvim-open — captain-side editor, not a step tool;
  *    - image-drop, mobile-mode, md-log, user-input — not applicable here.
  *  A file that is missing is skipped, so a leaner install degrades to a
- *  leaner step agent instead of failing the launch. */
+ *  leaner step agent instead of failing the launch.
+ *
+ *  This curated set is the deliberate exception, not the house rule: ordinary
+ *  subagents inherit the parent's tool set, and the mission-worker profile
+ *  names no `tools:` list so a mission keeps full parity with its captain.
+ *  A no-mistakes step agent is different — it runs inside the pipeline that
+ *  owns it, so its tools stay closed and curated. Do not widen this set to
+ *  match mission parity. */
 export const STEP_AGENT_EXTENSIONS: readonly string[] = [
 	"herdr-agent-state.ts",
 	"herdr-prompt-state.ts",
