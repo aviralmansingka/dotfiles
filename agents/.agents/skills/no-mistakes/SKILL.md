@@ -13,14 +13,22 @@ machine-readable [TOON](https://toonformat.dev) to stdout and progress to stderr
 
 ## Run it where the captain can see it
 
-In a Pi session with the `no_mistakes` tool (the `no-mistakes-pane` extension),
-call that tool for every `no-mistakes` invocation instead of the bash tool.
-Pass the CLI arguments verbatim as `args`, e.g. `args: ["axi", "run",
-"--intent", "..."]`. The command runs in a labeled Herdr pane beside the
-agent pane, so the captain watches the pipeline live; the tool still returns
-the full TOON output, so gate driving, `ask-user` escalation, and outcomes
-are unchanged. Without Herdr the tool runs the same command inline. If the
-tool is not available, use the bash tool as before.
+In a Pi session with the `no-mistakes-pane` extension, drive every
+`no-mistakes axi` call (run/respond/status/logs/answer/abort/sync) through
+the `no_mistakes_axi` tool instead of the bash tool. The tool is deferred,
+so load it with `tool_search` first. Pass `args` as a single string holding
+everything after `no-mistakes axi` - e.g. `run --intent "ship the feature"`
+or `status` - never an array, never with the `axi` prefix. The call returns
+an immediate ack; the structured TOON result arrives later as a
+`no_mistakes_axi_result` steer message that starts a new turn. Under this
+tool the flow is ack-then-steer, not the blocking return the bash path
+below teaches. `run`/`respond` show the pipeline live in a labeled Herdr
+pane beside the agent pane; from a Herdr captain session, `run` is
+delegated to the nm-orchestrator subagent tab, which owns that pane and the
+gates and steers its final summary back. Without Herdr the call still runs
+detached in the background, headless. Keep non-axi commands such as
+`no-mistakes rerun` and `no-mistakes doctor` in the bash tool. If the tool
+is not available, use the bash tool as before.
 
 
 ## Active validation-step boundary
