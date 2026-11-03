@@ -49,8 +49,10 @@ ALLOWED_TOP = {"direction", "theme", "nodes", "edges", "layers", "trunks", "diag
 # drawn as sections of one canvas (`diagrams` replaces the top-level graph).
 ALLOWED_DIAGRAM = {
     "id", "title", "description", "direction", "nodes", "edges", "layers", "trunks",
+    "containers",
 }
-ALLOWED_NODE = {"id", "label", "group"}
+ALLOWED_NODE = {"id", "label", "group", "focus"}
+ALLOWED_CONTAINER = {"label", "members"}
 ALLOWED_EDGE = {"from", "to", "label", "flow", "dots", "style", "duration_ms", "timing", "label_slot"}
 ALLOWED_TRUNK = {"id", "label", "from", "to", "branches"}
 DIRECTIONS = {"tb", "lr"}
@@ -112,7 +114,47 @@ def validate_spec(doc):
         description = diagram.get("description")
         if description is not None and not str(description).strip():
             problems.append(f"{where} description is empty")
+        problems += [
+            f"{where}: {problem}"
+            for problem in validate_containers(diagram, diagram.get("nodes", []))
+        ]
         problems += [f"{where}: {problem}" for problem in validate_graph(diagram)]
+    return problems
+
+
+def validate_containers(diagram, nodes):
+    """Check a diagram's container boxes against its own node ids.
+
+    Nodes are optional in the spec (every edge endpoint becomes a node), so a
+    member may name an endpoint that was never declared.
+    """
+    containers = diagram.get("containers")
+    if containers is None:
+        return []
+    if not isinstance(containers, list) or not containers:
+        return ["containers must be a non-empty list"]
+    node_ids = {
+        node.get("id") for node in nodes if isinstance(node, dict) and "id" in node
+    }
+    for edge in diagram.get("edges") or []:
+        if isinstance(edge, dict):
+            node_ids |= {edge.get("from"), edge.get("to")}
+    problems = []
+    for index, container in enumerate(containers):
+        if not isinstance(container, dict) or set(container) - ALLOWED_CONTAINER:
+            problems.append(f"container {index} is malformed")
+            continue
+        if not str(container.get("label", "")).strip():
+            problems.append(f"container {index} has an empty label")
+        members = container.get("members")
+        if not isinstance(members, list) or not members:
+            problems.append(f"container {index} needs at least one member")
+            continue
+        for member in members:
+            if member not in node_ids:
+                problems.append(
+                    f"container {index} member {member} is not a node of this diagram"
+                )
     return problems
 
 
@@ -137,6 +179,9 @@ def validate_graph(doc):
         group = node.get("group")
         if group is not None and (not isinstance(group, str) or not group.strip()):
             problems.append(f"node {index} group must be a non-empty string")
+        focus = node.get("focus")
+        if focus is not None and not isinstance(focus, bool):
+            problems.append(f"node {index} focus must be true or false")
         if node["id"] in seen:
             problems.append(f"duplicate node id {node['id']}")
         seen.add(node["id"])
@@ -260,25 +305,28 @@ def check_example_spec():
     return (not problems), problems
 
 
-def skill_spec_block():
-    """Extract the first ```json spec block from the skill's SKILL.md."""
+def skill_spec_blocks():
+    """Extract every ```json spec block from the skill's SKILL.md."""
     rel = "agents/.agents/skills/visualize/SKILL.md"
     text = (REPO / rel).read_text()
-    match = re.search(r"```json\n(.*?)```", text, re.DOTALL)
-    if not match:
-        return None, f"{rel}: no ```json spec block found"
-    return match.group(1), None
+    blocks = re.findall(r"```json\n(.*?)```", text, re.DOTALL)
+    if not blocks:
+        return [], f"{rel}: no ```json spec block found"
+    return blocks, None
 
 
 def check_skill_spec_block():
-    block, error = skill_spec_block()
+    blocks, error = skill_spec_blocks()
     if error:
         return False, [error]
-    try:
-        doc = json.loads(block)
-    except Exception as exc:  # noqa: BLE001
-        return False, [f"skill spec block does not parse as JSON: {exc}"]
-    problems = [f"skill spec block: {p}" for p in validate_spec(doc)]
+    problems = []
+    for index, block in enumerate(blocks):
+        try:
+            doc = json.loads(block)
+        except Exception as exc:  # noqa: BLE001
+            problems.append(f"skill spec block {index} does not parse as JSON: {exc}")
+            continue
+        problems += [f"skill spec block {index}: {p}" for p in validate_spec(doc)]
     return (not problems), problems
 
 

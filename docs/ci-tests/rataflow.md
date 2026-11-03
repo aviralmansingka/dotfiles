@@ -27,10 +27,13 @@ requests to it by default and builds single-file HTML for everything else.
   endpoints, at least one edge, `flow` (when present) equal to `true`
   or a positive number, `dots` in `{0, 1}`, `style` in `{solid, dashed}`,
   a non-empty `group` string, and `trunks` entries with distinct
-  non-endpoint `branches` that name real nodes.
-- Skill spec block. The `json` block documented in the `visualize` skill's
-  SKILL.md validates against the same schema, so the docs cannot drift
-  from the format the binary accepts.
+  non-endpoint `branches` that name real nodes, and canvas diagrams whose
+  `containers` name non-empty labels and members that exist in that diagram
+  (`focus` must be a boolean).
+- Skill spec blocks. Every `json` block documented in the `visualize` skill's
+  SKILL.md — the single graph and the described canvas — validates against
+  the same schema, so the docs cannot drift from the format the binary
+  accepts.
 - Skill frontmatter. `name: visualize` and a non-empty description.
 - Manifest. `Cargo.toml` parses; package `rataflow-view`; dependencies
   rataflow, ratatui, serde, serde_json, anyhow; edition 2024.

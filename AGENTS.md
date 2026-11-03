@@ -141,8 +141,9 @@ A*-planned corridor (no shared runs), `group` gives related concepts a hue famil
 (geometry never groups), declared `trunks` draw one bus that splits, `dots: 1` keeps one live
 dot per route, `style: "dashed"` marks an unconfirmed link, edges stay muted, and the accent
 is reserved for selection and flow dots, the fit never zooms below 100% (an oversize graph says so instead
-of clipping labels), and `--check` reports extent, shared corridors, dropped labels, label cells
-on routes, group/trunk membership, and dot violations.
+of clipping labels), a `diagrams` canvas stacks described sections on one pannable view, `containers`
+boxes wrap a zoom parent, and `--check` reports extent, shared corridors, dropped labels, label cells on
+routes, group/trunk membership, dot violations, and enclosure boxes/entrances.
 Chat replies use the mermaid tool; static ANSI and PNG belong to the mermaid skill. Open
 panes through the herdr CLI, never raw tmux, and never paste pane art into chat.
 The eval harness binds claims to code: `scripts/viz-evidence.sh` captures one view (binary hash,
