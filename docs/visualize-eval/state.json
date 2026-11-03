@@ -2840,10 +2840,10 @@
     "triage": "9 provoked (4 annex + 4 framing + 1 own judgment: 4 ISP nodes not folded into MUX labels); canvas settled by measurement (60x82 probe)",
     "form": "CANVAS 3 described diagrams (uplinks 49x30, security 45x33, fabric 66x30 = 71x106); redundant-fabrics; 28/28 relations, 24/24 labels clean, no trunks",
     "validation": "38 PASS / 2 FAIL: 29 near-miss cells on 4 routes (structural: ACROSS_GAP_TB=3 makes crossings ring-2 by construction) + 14 bridges on the cross-connects",
-    "judge": "spawning"
+    "judge": "VERDICT FAIL (6F + 2B + anim PASS): 29 near-miss cells on 4 routes; ECMP pairing not independently established from captures (r10 history repeats); evidence gaps (lower-diagram ANSI/pan); one triage attribution error (ISP answer credited to brief, not source)"
    }
   },
-  "status": "7 verdicts in; datacenter stage B in flight; aggregate+decision+tabs when it lands",
+  "status": "ALL VERDCTS IN: 0/8 green expected; aggregating",
   "digest_correction": "rounds 10-13 carried dataset sha e69179e5\u2026e8672b\u2026 \u2014 a transcription typo; actual cases.json is e69179e5\u2026e8692b\u2026. All 7 rounds of judge digest-mismatch flags trace to this captain-side typo. Per-file case_hashes (identical since r09) were always the true proof. Corrected everywhere.",
   "harness_fixes_midround": [
    "viz-validate.py: leader-tick warning exempted from check_warnings_absent (the r13 ownership rescue was unshippable otherwise)"

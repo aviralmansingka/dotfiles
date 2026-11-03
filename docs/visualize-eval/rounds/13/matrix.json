@@ -1,0 +1,277 @@
+{
+ "round": 13,
+ "rubric_sha256": "6bfd3733c8d08b66af9a92e71985a20846f954d7916eaf9685f86c8d2f96bcb8",
+ "metrics": {
+  "green_cases": 0,
+  "total_cases": 8,
+  "passed_applicable_categories": 24,
+  "failed_applicable_categories": 33,
+  "blocked_applicable_categories": 11,
+  "applicable_categories": 68,
+  "finding_severities": {
+   "critical": 5,
+   "high": 21,
+   "medium": 13,
+   "low": 3
+  },
+  "violations": {
+   "passes_near_unrelated_node": 48
+  }
+ },
+ "green_cases": [],
+ "cases": {
+  "pipeline": {
+   "categories": {
+    "semantic_fidelity": "pass",
+    "arrow_traceability": "pass",
+    "layout_fit": "pass",
+    "navigation_clarity": "pass",
+    "conceptual_grouping_color": "pass",
+    "category_fit": "pass",
+    "border_integrity": "blocked",
+    "workflow_evidence": "fail",
+    "animation": "pass"
+   },
+   "overall": "fail",
+   "findings": 3,
+   "severities": {
+    "critical": 0,
+    "high": 2,
+    "medium": 0,
+    "low": 1
+   },
+   "violations": {
+    "passes_near_unrelated_node": 0
+   },
+   "violation_sources": [],
+   "edges_total": 6,
+   "edges_pass": 6,
+   "blockers": 1,
+   "report": "docs/visualize-eval/rounds/13/reviews/pipeline/reviewer-result.json",
+   "report_sha256": "e920c71e51f31caeda3dcfbd5f1e73948677146ba96543f05c41aced4b719265",
+   "blind_observation_sha256": null
+  },
+  "network": {
+   "categories": {
+    "semantic_fidelity": "pass",
+    "arrow_traceability": "pass",
+    "layout_fit": "pass",
+    "navigation_clarity": "pass",
+    "conceptual_grouping_color": "pass",
+    "category_fit": "pass",
+    "border_integrity": "pass",
+    "workflow_evidence": "fail",
+    "animation": "fail"
+   },
+   "overall": "fail",
+   "findings": 4,
+   "severities": {
+    "critical": 0,
+    "high": 1,
+    "medium": 2,
+    "low": 1
+   },
+   "violations": {
+    "passes_near_unrelated_node": 0
+   },
+   "violation_sources": [],
+   "edges_total": 7,
+   "edges_pass": 7,
+   "blockers": 0,
+   "report": "docs/visualize-eval/rounds/13/reviews/network/reviewer-result.json",
+   "report_sha256": "8a99196683ff6a26ec468b8bed2bcc07d8a1b12cfb5a51793d8a7752d58f55cc",
+   "blind_observation_sha256": null
+  },
+  "homelab-nic-trace": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "pass",
+    "layout_fit": "fail",
+    "navigation_clarity": "fail",
+    "conceptual_grouping_color": "fail",
+    "category_fit": "fail",
+    "border_integrity": "fail",
+    "workflow_evidence": "blocked",
+    "animation": "na"
+   },
+   "overall": "fail",
+   "findings": 7,
+   "severities": {
+    "critical": 1,
+    "high": 4,
+    "medium": 2,
+    "low": 0
+   },
+   "violations": {
+    "passes_near_unrelated_node": 0
+   },
+   "violation_sources": [],
+   "edges_total": 14,
+   "edges_pass": 14,
+   "blockers": 2,
+   "report": "docs/visualize-eval/rounds/13/reviews/homelab-nic-trace/reviewer-result.json",
+   "report_sha256": "70940955018a69010d3883a17fed53c1cffd1d09c50dbdaeb30911b98c443369",
+   "blind_observation_sha256": null
+  },
+  "server-nic-layout": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "pass",
+    "layout_fit": "fail",
+    "navigation_clarity": "fail",
+    "conceptual_grouping_color": "blocked",
+    "category_fit": "fail",
+    "border_integrity": "blocked",
+    "workflow_evidence": "fail",
+    "animation": "na"
+   },
+   "overall": "fail",
+   "findings": 8,
+   "severities": {
+    "critical": 3,
+    "high": 1,
+    "medium": 3,
+    "low": 1
+   },
+   "violations": {
+    "passes_near_unrelated_node": 0
+   },
+   "violation_sources": [],
+   "edges_total": 8,
+   "edges_pass": 6,
+   "blockers": 3,
+   "report": "docs/visualize-eval/rounds/13/reviews/server-nic-layout/reviewer-result.json",
+   "report_sha256": "9ea48a70e170b20066c3f226211722e9451beb176aa3818cdaecec8525ff6906",
+   "blind_observation_sha256": null
+  },
+  "datacenter-redundancy": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "fail",
+    "layout_fit": "fail",
+    "navigation_clarity": "fail",
+    "conceptual_grouping_color": "blocked",
+    "category_fit": "fail",
+    "border_integrity": "fail",
+    "workflow_evidence": "fail",
+    "animation": "pass"
+   },
+   "overall": "fail",
+   "findings": 8,
+   "severities": {
+    "critical": 0,
+    "high": 6,
+    "medium": 2,
+    "low": 0
+   },
+   "violations": {
+    "passes_near_unrelated_node": 29
+   },
+   "violation_sources": [
+    "visualize-eval/rounds/13/datacenter-redundancy/evidence/v1/check.txt"
+   ],
+   "edges_total": 28,
+   "edges_pass": 18,
+   "blockers": 2,
+   "report": "docs/visualize-eval/rounds/13/reviews/datacenter-redundancy/reviewer-result.json",
+   "report_sha256": "16e821bc7a297d0848f4b12d6d997816f38882eca09fc67d9c4e65e121ad16d4",
+   "blind_observation_sha256": null
+  },
+  "modal-machine-manager": {
+   "categories": {
+    "semantic_fidelity": "pass",
+    "arrow_traceability": "pass",
+    "layout_fit": "pass",
+    "navigation_clarity": "fail",
+    "conceptual_grouping_color": "blocked",
+    "category_fit": "pass",
+    "border_integrity": "fail",
+    "workflow_evidence": "pass",
+    "animation": "blocked"
+   },
+   "overall": "fail",
+   "findings": 2,
+   "severities": {
+    "critical": 0,
+    "high": 1,
+    "medium": 1,
+    "low": 0
+   },
+   "violations": {
+    "passes_near_unrelated_node": 0
+   },
+   "violation_sources": [],
+   "edges_total": 23,
+   "edges_pass": 23,
+   "blockers": 2,
+   "report": "docs/visualize-eval/rounds/13/reviews/modal-machine-manager/reviewer-result.json",
+   "report_sha256": "4c9c365a582d029f991c01f22b366d21a1650a0304f057e0b98284ac70b362eb",
+   "blind_observation_sha256": null
+  },
+  "modal-runtime": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "pass",
+    "layout_fit": "blocked",
+    "navigation_clarity": "fail",
+    "conceptual_grouping_color": "blocked",
+    "category_fit": "pass",
+    "border_integrity": "fail",
+    "workflow_evidence": "fail",
+    "animation": "na"
+   },
+   "overall": "fail",
+   "findings": 4,
+   "severities": {
+    "critical": 0,
+    "high": 3,
+    "medium": 1,
+    "low": 0
+   },
+   "violations": {
+    "passes_near_unrelated_node": 0
+   },
+   "violation_sources": [],
+   "edges_total": 8,
+   "edges_pass": 7,
+   "blockers": 2,
+   "report": "docs/visualize-eval/rounds/13/reviews/modal-runtime/reviewer-result.json",
+   "report_sha256": "d075df2877c58bcf3974674b316f1c8052e9ba0498891e244894525449283df4",
+   "blind_observation_sha256": null
+  },
+  "gb300-rack-software": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "fail",
+    "layout_fit": "fail",
+    "navigation_clarity": "fail",
+    "conceptual_grouping_color": "blocked",
+    "category_fit": "blocked",
+    "border_integrity": "fail",
+    "workflow_evidence": "fail",
+    "animation": "na"
+   },
+   "overall": "fail",
+   "findings": 6,
+   "severities": {
+    "critical": 1,
+    "high": 3,
+    "medium": 2,
+    "low": 0
+   },
+   "violations": {
+    "passes_near_unrelated_node": 19
+   },
+   "violation_sources": [
+    "visualize-eval/rounds/13/gb300-rack-software/evidence/canvas/check.txt"
+   ],
+   "edges_total": 13,
+   "edges_pass": 2,
+   "blockers": 3,
+   "report": "docs/visualize-eval/rounds/13/reviews/gb300-rack-software/reviewer-result.json",
+   "report_sha256": "7dcbb01325f2dfc0d727395100eaebb9be312bbe2652e1e5ce166e45f66ec23e",
+   "blind_observation_sha256": null
+  }
+ },
+ "problems": []
+}
