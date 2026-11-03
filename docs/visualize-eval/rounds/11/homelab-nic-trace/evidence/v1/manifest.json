@@ -3,20 +3,20 @@
   "spec_sha256": "9735dde6a5340d0a96915c4d2006ba79f7b5fccac33064f45f9b3c7d6b34fe61",
   "binary_path": "/tmp/visualize-eval/round-10/bin/rataflow-view",
   "binary_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
-  "pane_id": "w7E:pVW",
+  "pane_id": "w7E:pWY",
   "pane_rect": null,
   "pane_cols": null,
   "pane_rows": 51,
   "viewport_line": null,
-  "viewport_token": null,
+  "viewport_token": "82x51 @100%",
   "check_exit": 0,
   "check_window": [
-    "2026-11-03T00:28:43Z",
-    "2026-11-03T00:28:43Z"
+    "2026-11-03T00:32:07Z",
+    "2026-11-03T00:32:07Z"
   ],
   "capture_window": [
-    "2026-11-03T00:28:46Z",
-    "2026-11-03T00:28:54Z"
+    "2026-11-03T00:32:07Z",
+    "2026-11-03T00:32:13Z"
   ],
   "cleanup": "confirmed_closed",
   "select_all_frame": true,
@@ -25,10 +25,10 @@
   "artifacts": {
     "bin.sha256": "d70e8ea3bb8149f3dc64e07eee15048aec287592055089d0c6f2dbedeebc37d9",
     "check.txt": "f58bd71fbb72476781c9da5401fe478cf25514d2f95509e627fdc953ee0c9ca0",
-    "v1-ansi.ansi": "84fa8bae6db699779780324de8ab7a40f624ff6973ba2b7bdd385582909ca36d",
-    "v1-frames.ansi": "ab5292c4d8ce12d909997eb49db8d7ba9ec7b8939819451752c65962dda53b51",
-    "v1-frames.txt": "d4eaade0aae0f5b2679d724cc260b9e764aed82441e49ce102ab45deee32f533",
-    "v1-selected.ansi": "bb3cf2925de24ac5a30211cb148b3e5b13452c4d353ba69bded1175023708973",
-    "v1-text.txt": "76354692a1d3577bea60dcc24a73e5349a762f5f62cb181db127195b76b1bf0f"
+    "v1-ansi.ansi": "3a3dcb48ac374131f10daf516da30ddb3da15fb5ed44122e977a0240f04252a5",
+    "v1-frames.ansi": "1552d724c646ba0107a866566ec6a7e077550fc371af42996c2deed9b5220da8",
+    "v1-frames.txt": "e70d9a884596af54ae2e4b0316bb049d7ac73286c0c9c0711d0f331995654174",
+    "v1-selected.ansi": "9ab0fe2d31e8a2ba114055672eef1f71cd1624edd3d94bbbd036b34e1e8db6f2",
+    "v1-text.txt": "693effcf9ed1f4cfeef952f02717797ff8d8b1f28a3b63b8ce82eb5a40646417"
   }
 }

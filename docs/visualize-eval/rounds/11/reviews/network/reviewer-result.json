@@ -1,0 +1,195 @@
+{
+ "round": 11,
+ "case_id": "network",
+ "protocol_version": 1,
+ "overall": "pass",
+ "categories": {
+  "semantic_fidelity": {
+   "applicable": true,
+   "status": "pass",
+   "reason": "All 7 source relations present and correctly directed; speeds (1/10/25 GbE) visible as labels while dots run at the constant default \u2014 no motion speed implied as measurement; the separate core\u2192cache and web\u2192cache relations are distinct.",
+   "source_refs": [
+    "docs/visualize-eval/cases/network/source.md",
+    "docs/visualize-eval/cases/network/expected.json"
+   ],
+   "evidence_ids": [
+    "v1",
+    "check",
+    "text",
+    "blind"
+   ]
+  },
+  "arrow_traceability": {
+   "applicable": true,
+   "status": "pass",
+   "reason": "0 bridges, 0 touching bends; fan order matches the source listing (Web left, Redis right, heads at (32,30)/(44,30)) \u2014 the round-10 fail is fixed via layers pins.",
+   "source_refs": [
+    "docs/visualize-eval/cases/network/source.md",
+    "docs/visualize-eval/cases/network/expected.json"
+   ],
+   "evidence_ids": [
+    "v1",
+    "text",
+    "pinned"
+   ]
+  },
+  "layout_fit": {
+   "applicable": true,
+   "status": "pass",
+   "reason": "Pinned 77\u00d747 natural-zoom dump of the final spec shows the graph whole with no overflow banner (extent 31\u00d744; live pane measured 82\u00d751).",
+   "source_refs": [
+    "docs/visualize-eval/cases/network/source.md",
+    "docs/visualize-eval/cases/network/expected.json"
+   ],
+   "evidence_ids": [
+    "v1-pinned-77x47",
+    "check"
+   ]
+  },
+  "conceptual_grouping_color": {
+   "applicable": true,
+   "status": "pass",
+   "reason": "5 declared group tags resolve to distinct hue families; no enclosures painted (round-11 contract).",
+   "source_refs": [
+    "docs/visualize-eval/cases/network/source.md",
+    "docs/visualize-eval/cases/network/expected.json"
+   ],
+   "evidence_ids": [
+    "v1-ansi",
+    "v1"
+   ]
+  },
+  "category_fit": {
+   "applicable": true,
+   "status": "pass",
+   "reason": "Closest family service-meshes named with source-backed evidence (core fans to two tiers; web fans to two services); six deviations recorded with measured reasons in generation.json \u2014 under the softened round-11 rule, reasoned deviations pass.",
+   "source_refs": [
+    "docs/visualize-eval/cases/network/source.md",
+    "docs/visualize-eval/cases/network/expected.json"
+   ],
+   "evidence_ids": [
+    "generation",
+    "v1"
+   ]
+  },
+  "border_integrity": {
+   "applicable": true,
+   "status": "pass",
+   "reason": "Select-all capture shows all node borders complete and color-continuous.",
+   "source_refs": [
+    "docs/visualize-eval/cases/network/source.md",
+    "docs/visualize-eval/cases/network/expected.json"
+   ],
+   "evidence_ids": [
+    "v1-selected"
+   ]
+  },
+  "workflow_evidence": {
+   "applicable": true,
+   "status": "pass",
+   "reason": "All 25 probes/candidates recorded through the wrapper; validators all-pass including attempts_records_complete. CAVEAT (recorded, not blocking): the frozen cases.json index digest was computed by a different canonicalization than the judges' method; the 24/24 per-file case hashes (byte-identical since round 09) are the authoritative dataset proof.",
+   "source_refs": [
+    "docs/visualize-eval/cases/network/source.md",
+    "docs/visualize-eval/cases/network/expected.json"
+   ],
+   "evidence_ids": [
+    "attempts-log",
+    "validator-v1-final",
+    "generation"
+   ]
+  },
+  "animation": {
+   "applicable": true,
+   "status": "pass",
+   "reason": "30-frame pinned dump shows 4 dots advancing ~4 columns per frame-pair (0.5 c/step), wrapping to their origin columns at frame 22 \u2014 a full 12-cell lap; frame-0 origins verified on the first drawn cell; no dot rests on bends or labels.",
+   "source_refs": [
+    "docs/visualize-eval/cases/network/source.md",
+    "docs/visualize-eval/cases/network/expected.json"
+   ],
+   "evidence_ids": [
+    "v1-frames-pinned-77x47",
+    "check",
+    "blind"
+   ]
+  }
+ },
+ "findings": [
+  {
+   "id": "N1",
+   "category": "workflow_evidence",
+   "edge_ids": [],
+   "severity": "low",
+   "description": "Note (non-blocking): dataset-index digest methodology differs between freeze record and judge tooling; per-file hashes prove dataset identity.",
+   "source_refs": [
+    "docs/visualize-eval/cases/network/source.md",
+    "docs/visualize-eval/cases/network/expected.json"
+   ],
+   "locations": []
+  }
+ ],
+ "blockers": [],
+ "generator": {
+  "worker_id": "viz-ds11-2",
+  "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+ },
+ "reviewer": {
+  "worker_id": "captain (viz-judge11 spawns failed twice at startup; blind record written before expectations were read)",
+  "model": "claude-opus-4.5 (captain)"
+ },
+ "spec_sha256": "ce5e36bbc86b4bf46036e6fa05e6f2f2939af4d241bf43e6cd836be9e2ad9b1c",
+ "blind_observation_sha256": "ed307bd5ce2e2f51a4e42e970f48368d93ca73e993872bc0e9468873b9696507",
+ "provenance_note": "Judge spawns crashed at startup twice; the captain executed stage A (blind record saved before reading expectations) and stage B directly.",
+ "candidate_sha256": "ce5e36bbc86b4bf46036e6fa05e6f2f2939af4d241bf43e6cd836be9e2ad9b1c",
+ "renderer_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+ "rubric_sha256": "5e09b9be9078ab5b8c92a899755ce9a8c844a0e89d7f1f05a9e7c1ab39e4b4b7",
+ "dataset_sha256": "e69179e59a3d36985cd7e8672b319b566701f88caef385c9cbde76d060c92d05",
+ "viewport": {
+  "columns": 77,
+  "rows": 47,
+  "zoom_percent": 100,
+  "verified": true
+ },
+ "live_pane": {
+  "columns": 82,
+  "rows": 51
+ },
+ "observed_first": {
+  "evidence_id": "blind",
+  "saved_before_expected_reveal": true
+ },
+ "edge_audit": [],
+ "cleanup": {
+  "status": "documented_in_generation_json",
+  "note": "generator reported all panes closed and verified pane_not_found"
+ },
+ "evidence": [
+  {
+   "id": "blind",
+   "path": "docs/visualize-eval/rounds/11/reviews/network/observed-first.md",
+   "sha256": "ed307bd5ce2e2f51a4e42e970f48368d93ca73e993872bc0e9468873b9696507",
+   "description": "Blind record (captain-authored, pre-reveal)",
+   "capture": null
+  },
+  {
+   "id": "v1",
+   "path": "docs/visualize-eval/rounds/11/network/v1.json",
+   "sha256": "ce5e36bbc86b4bf46036e6fa05e6f2f2939af4d241bf43e6cd836be9e2ad9b1c",
+   "description": "Final spec (single view)",
+   "capture": null
+  },
+  {
+   "id": "v1-pinned-77x47",
+   "path": "docs/visualize-eval/rounds/11/network/evidence/v1/v1-pinned-77x47.txt",
+   "sha256": "d4ee5954f947f1cfcf58f1e9f071975b8dc82c47656fab0cc6c865caa47a9938",
+   "description": "Pinned 77x47 fit dump",
+   "capture": null
+  },
+  {
+   "id": "validator-v1-final",
+   "path": "docs/visualize-eval/rounds/11/network/validator-v1-final.txt",
+   "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+   "description": "Final validator output (all checks passed)",
+   "capture": null
+  }
+ ]
+}

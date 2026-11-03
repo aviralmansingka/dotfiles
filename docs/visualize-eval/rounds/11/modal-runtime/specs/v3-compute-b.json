@@ -1,0 +1,17 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "engine", "label": "Task engine", "group": "control" },
+    { "id": "backend", "label": "Container backend", "group": "compute" },
+    { "id": "filesystem", "label": "Filesystem + volumes", "group": "volumes" },
+    { "id": "container", "label": "Task container", "group": "compute" },
+    { "id": "blobnet", "label": "Blobnet", "group": "volumes" }
+  ],
+  "edges": [
+    { "from": "engine", "to": "backend", "label": "starts / manages", "label_slot": true },
+    { "from": "engine", "to": "filesystem", "label": "mounts / snapshots", "label_slot": true },
+    { "from": "backend", "to": "container", "label": "runs user process", "label_slot": true },
+    { "from": "filesystem", "to": "blobnet", "label": "image + volume data", "label_slot": true }
+  ]
+}

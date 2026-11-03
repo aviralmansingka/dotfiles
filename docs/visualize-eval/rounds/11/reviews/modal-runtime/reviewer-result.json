@@ -1,0 +1,1061 @@
+{
+  "protocol_version": 1,
+  "round": 11,
+  "case_id": "modal-runtime",
+  "candidate_sha256": "fb975dbe337bee801dc098f58695e0068cb1b2d7d79f34c0e473e24a1626cd4e",
+  "renderer_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+  "rubric_sha256": "5e09b9be9078ab5b46a82d0faf7bc986bf3d38a2d4cbb2f6745dd3fb9f0f54d7",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "3de5ff572658a0a075d66d29311e206141edeab80cc465c2c2b8781bc31e5e97",
+  "generator": {
+    "worker_id": "viz-ds11-7",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge11-modal-runtime",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 82,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/11/reviews/modal-runtime/observed-first.md",
+      "sha256": "86ae44045f51ff5d5ccfbe6b2577f0c20d54437f629c431075a923792bca0573",
+      "description": "blind",
+      "capture": null
+    },
+    {
+      "id": "spec_manifest",
+      "path": "docs/visualize-eval/rounds/11/reviews/modal-runtime/spec-manifest.json",
+      "sha256": "3de5ff572658a0a075d66d29311e206141edeab80cc465c2c2b8781bc31e5e97",
+      "description": "spec manifest",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/11/metadata.json",
+      "sha256": "e3f15d22d65108f47b33ad7517103f554c8401e24051549812c783a5b6964626",
+      "description": "metadata",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/11/rubric.json",
+      "sha256": "5e09b9be9078ab5b46a82d0faf7bc986bf3d38a2d4cbb2f6745dd3fb9f0f54d7",
+      "description": "rubric",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "dataset",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/modal-runtime/source.md",
+      "sha256": "c6e4552d5842347bc9472e53a2351897c3624c92b5a14541aaa3c28216dc4a0d",
+      "description": "source",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/modal-runtime/expected.json",
+      "sha256": "fd3963e207e9c433b7e5825c8a1691766bb13d5df7322ac97a05e379d2cbba99",
+      "description": "expected",
+      "capture": null
+    },
+    {
+      "id": "variants",
+      "path": "docs/visualize-eval/cases/modal-runtime/historical-variants.json",
+      "sha256": "1e5a6add0f9d62670f8c884a2f4df679112e233df8539b3983d80c122bdcf8e7",
+      "description": "variants",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/11/SKILL.md",
+      "sha256": "fb975dbe337bee801dc098f58695e0068cb1b2d7d79f34c0e473e24a1626cd4e",
+      "description": "skill",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/generation.json",
+      "sha256": "7b9dd966b49a19a8939b4b36e9f24a79b63ea033f02e300421f7ea820c211c0d",
+      "description": "generation",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/attempts.json",
+      "sha256": "1718e5d233cf8d88c7d75ceef2157e0db16ebdf9cbe2e42ea63672eaf206368c",
+      "description": "attempts",
+      "capture": null
+    },
+    {
+      "id": "records",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/attempts-log.jsonl",
+      "sha256": "0f0c5c8ee1cb87ebf8febbf321ccca751aab99e0dcaa0a9543cf8e769e6bcf0d",
+      "description": "records",
+      "capture": null
+    },
+    {
+      "id": "validator",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/VALIDATOR.txt",
+      "sha256": "1739fda1526c2088b4bbd2eba7077c4a56b8f511b3df339c000f7978df436b01",
+      "description": "validator",
+      "capture": null
+    },
+    {
+      "id": "spec1",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/specs/v1-seam-pair.json",
+      "sha256": "c6f862668fd62dce263ee5e65a1c9967bc5c42f486dadebc139e2b9f00ff694a",
+      "description": "final spec",
+      "capture": null
+    },
+    {
+      "id": "spec2",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/specs/v2-fan-final.json",
+      "sha256": "690df5a26d49ba85ea374f16bbd6e6e2b22a3d2f91f7e9487f99333743e42d6f",
+      "description": "final spec",
+      "capture": null
+    },
+    {
+      "id": "spec3",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/specs/v3-compute-final.json",
+      "sha256": "10f9f9ab32b0d440ee52c13d246287478d4aa15545aab1577136e4dd194ba50c",
+      "description": "final spec",
+      "capture": null
+    },
+    {
+      "id": "v1manifest",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v1/manifest.json",
+      "sha256": "6d38d957b6f14f9a2409caa5563d294bdbdc474c034c74172ec7f28b42fba622",
+      "description": "capture manifest and cleanup",
+      "capture": null
+    },
+    {
+      "id": "v1check",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v1/check.txt",
+      "sha256": "9ad2499e3e13dadf2ddf59863f00717953c87708f2dd3e7ffe80c38461f0943f",
+      "description": "check output",
+      "capture": null
+    },
+    {
+      "id": "v1pinned",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v1/v1-77x47-pinned.stdout",
+      "sha256": "c0faca876c4cc737e757d86247f77c3e36f5f02e9fcffea4d009eab72cc0ff2b",
+      "description": "pinned final-spec dump",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0-4",
+        "timestamp": "0-400ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1text",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v1/v1-text.txt",
+      "sha256": "a99da942ea1ceae6d5ee9bab2f01a6a986aae75f09f6e392e56a2250ab269a43",
+      "description": "captured normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0",
+        "timestamp": "capture",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1ansi",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v1/v1-ansi.ansi",
+      "sha256": "20209d15664058c78da2aa9c01cd4d35dffcb0e417d60d5b64a87d2cb8cc0051",
+      "description": "captured normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0",
+        "timestamp": "capture",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1selected",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v1/v1-selected.ansi",
+      "sha256": "a482b17632a8aa732553961152a95819453a22e80feb08daba2d8d3bcabfe8f8",
+      "description": "captured select-all",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0",
+        "timestamp": "capture",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1frames",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v1/v1-frames.txt",
+      "sha256": "a704e946763f60733a58a4a4929e50c157c1740e6b3ecd85206c7313a5e76cb7",
+      "description": "captured frames",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0-4",
+        "timestamp": "0-400ms",
+        "state": "frames",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1frames",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v1/v1-frames.ansi",
+      "sha256": "7275fffba842a843a6eaea688b783f86b6fc4f8d9c2b417fe0d5e39296bd58d2",
+      "description": "captured frames",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0-4",
+        "timestamp": "0-400ms",
+        "state": "frames",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2manifest",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v2/manifest.json",
+      "sha256": "956977ca4d59d0d2033ee0b143c957ac499fdf677745104f3d43c00d6c4e61dc",
+      "description": "capture manifest and cleanup",
+      "capture": null
+    },
+    {
+      "id": "v2check",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v2/check.txt",
+      "sha256": "7e2d85ea09e1c2b1f8c81dff214d8525cc333efbeb378e142a178b98f5a328a8",
+      "description": "check output",
+      "capture": null
+    },
+    {
+      "id": "v2pinned",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v2/v2-77x47-pinned.stdout",
+      "sha256": "7395ee86fa0096566b64c2a5005eedbc5ec3e5a91906f5e58ebdf50a933cd2cf",
+      "description": "pinned final-spec dump",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0-4",
+        "timestamp": "0-400ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2text",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v2/v2-text.txt",
+      "sha256": "9a80b0b244b146ab9c3dc834d5e8a6b35aa45b46c1c06984de3a494bfe9763a3",
+      "description": "captured normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "0",
+        "timestamp": "capture",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2ansi",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v2/v2-ansi.ansi",
+      "sha256": "b8437698e8272d848d4d4d41dd6d2813c2a17c5dcdd574156c40084ce04f6a5d",
+      "description": "captured normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "0",
+        "timestamp": "capture",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2selected",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v2/v2-selected.ansi",
+      "sha256": "82e69b62c321f7103668f57a125924e789e7270f841bec8548c3c0555ca82820",
+      "description": "captured select-all",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "0",
+        "timestamp": "capture",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2frames",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v2/v2-frames.txt",
+      "sha256": "4e167a3bddf7031cef5de02287f629b7bd8dbfc28aba89db7c0e87af7b44289a",
+      "description": "captured frames",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "0-4",
+        "timestamp": "0-400ms",
+        "state": "frames",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2frames",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v2/v2-frames.ansi",
+      "sha256": "42f39da4da90e01526fbbcdf831949992de4e260a57b277d421f61098ba6723a",
+      "description": "captured frames",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "0-4",
+        "timestamp": "0-400ms",
+        "state": "frames",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3manifest",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v3/manifest.json",
+      "sha256": "3f8399bb686ccc7f5d92c3264e5932bfd0f614910c3802dc0a9bafb410577846",
+      "description": "capture manifest and cleanup",
+      "capture": null
+    },
+    {
+      "id": "v3check",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v3/check.txt",
+      "sha256": "6ae895a4f50ba10b4e98a98049f0ededf8307a22e709364b72aa6dc39ca4edab",
+      "description": "check output",
+      "capture": null
+    },
+    {
+      "id": "v3pinned",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v3/v3-77x47-pinned-b.stdout",
+      "sha256": "c64e3618c6a7d8eda75e30acab612ce1ee2800c7f0ba4f0e095b84d553de4f39",
+      "description": "pinned final-spec dump",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "0-4",
+        "timestamp": "0-400ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3text",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v3/v3-text.txt",
+      "sha256": "46d5f2f01b57742a2d22ff9e1b2b356247d951da17977d23c5627735e3559039",
+      "description": "captured normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "0",
+        "timestamp": "capture",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3ansi",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v3/v3-ansi.ansi",
+      "sha256": "1e7ce08a868b0118bfb8132276634059d0384168c68dab58f8b242015515c06a",
+      "description": "captured normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "0",
+        "timestamp": "capture",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3selected",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v3/v3-selected.ansi",
+      "sha256": "6819c1bc7086defe2866d87ff4a926b04ea3e17e9322162e622f2c89dd2bb5b3",
+      "description": "captured select-all",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "0",
+        "timestamp": "capture",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3frames",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v3/v3-frames.txt",
+      "sha256": "ef8219b2b879e91eed2d498ffeac93537675f1a7217743344cafe5bf3a1d5da3",
+      "description": "captured frames",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "0-4",
+        "timestamp": "0-400ms",
+        "state": "frames",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3frames",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v3/v3-frames.ansi",
+      "sha256": "2e5c339077c3638893d7e08a6ff7a7024e6331584853bd1cba7e63d1ea266ede",
+      "description": "captured frames",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "0-4",
+        "timestamp": "0-400ms",
+        "state": "frames",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "raw-v1-draft1",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/recorded/v1-draft1.stdout",
+      "sha256": "d30b8e15c67d6f37aeed31692c6ec7afb95cd48583575899ce9be4cb77fdc9a6",
+      "description": "recorded probe output",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-a",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/recorded/v1-a.stdout",
+      "sha256": "9eddfd1120d91b28d38242e9989499bad926217651a2f83153b3349803c6a748",
+      "description": "recorded probe output",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-b",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/recorded/v1-b.stdout",
+      "sha256": "7659ec1b0d38ff24432252295668749f2453a7479acfd802c23e46e1231b9a47",
+      "description": "recorded probe output",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-c",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/recorded/v1-c.stdout",
+      "sha256": "722eacb9b2f652d6d55ad5bcb47bb978deb68a040f366ef7a009a58c0afcb7fa",
+      "description": "recorded probe output",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-pair-c",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/recorded/v1-pair-c.stdout",
+      "sha256": "38dd2da82f21feda9115921a4e39ae849c5434f1e5689230bee95d1684b8b535",
+      "description": "recorded probe output",
+      "capture": null
+    },
+    {
+      "id": "raw-v2-fan-b",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/recorded/v2-fan-b.stdout",
+      "sha256": "7e2d85ea09e1c2b1f8c81dff214d8525cc333efbeb378e142a178b98f5a328a8",
+      "description": "recorded probe output",
+      "capture": null
+    },
+    {
+      "id": "raw-v2-fan-c",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/recorded/v2-fan-c.stdout",
+      "sha256": "0b087477ef4092d41565b5cc5b27ae6d11eeb70376387980e252fc5081e806e3",
+      "description": "recorded probe output",
+      "capture": null
+    },
+    {
+      "id": "raw-v2-b",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/recorded/v2-b.stdout",
+      "sha256": "42cd96fcb2db6339572d457acce845370d12177288f921f532cf981eccfee63f",
+      "description": "recorded probe output",
+      "capture": null
+    },
+    {
+      "id": "superseded-storage",
+      "path": "docs/visualize-eval/rounds/11/modal-runtime/evidence/v3/v3-77x47-pinned.stdout",
+      "sha256": "5e0932ea9fe857ec07a477530ef3f22e0d2349456513d82438cb13cfe9da52f5",
+      "description": "superseded storage-tag pinned dump; plain text only",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3 superseded",
+        "frame": "0-4",
+        "timestamp": "0-400ms",
+        "state": "normal",
+        "format": "text"
+      }
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 8 names and routes are present but the fixed worker gRPC qualifier is absent; the two pair labels and two upper v3 labels have ambiguous visual owners.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "evidence_ids": [
+        "v1pinned",
+        "v2pinned",
+        "v3pinned",
+        "generation"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All eight independent stems and arrowheads are continuous with correct direction and no visible junctions, bridges or excessive detours; uncertain label assignment is assessed under semantic fidelity.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "evidence_ids": [
+        "v1pinned",
+        "v2pinned",
+        "v3pinned"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All three final graphs fit 77x47 natural, but required complete readable coverage is not met: the gRPC qualifier is absent and four shared-gutter label owners are uncertain.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "evidence_ids": [
+        "v1pinned",
+        "v2pinned",
+        "v3pinned"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Final related concepts share four distinct hue families, no group box is painted, and no source-defined tier is lost. v2 listing reversal is disclosed but source lists relations rather than specifying a semantic tier order.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "evidence_ids": [
+        "v1ansi",
+        "v2ansi",
+        "v3ansi",
+        "v2pinned",
+        "generation"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "10/10 complete node borders in normal ANSI and selected-all ANSI with continuous per-node color; selection was simultaneous, not individual.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "evidence_ids": [
+        "v1ansi",
+        "v2ansi",
+        "v3ansi",
+        "v1selected",
+        "v2selected",
+        "v3selected"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "The actual cases.json SHA-256 e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05 differs from frozen metadata cases_sha256 e69179e59a3d36985cd7e8672b319b566701f88caef385c9cbde76d060c92d05; frozen dataset identity cannot be verified. Case-specific source/expected/variants hashes match. All 28 log raw hashes and capture-manifest artifacts match; offline validators pass.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "evidence_ids": [
+        "dataset",
+        "metadata",
+        "blind",
+        "records",
+        "validator",
+        "v1manifest",
+        "v2manifest",
+        "v3manifest",
+        "spec_manifest"
+      ]
+    },
+    "animation": {
+      "applicable": false,
+      "status": null,
+      "reason": "Animation is optional in the frozen case manifest and expected.json; no source requests motion. Frames show no dots.",
+      "source_refs": [
+        "dataset",
+        "expected",
+        "source"
+      ],
+      "evidence_ids": [
+        "v1pinned",
+        "v2pinned",
+        "v3pinned"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Correct closest family and stated family: service-meshes. Evidence line: modal-runtime is the core of a 3-branch RPC fan (worker e1/e2, task engine e3, modal-daemon e8) and the source states an explicit anti-parallel pair between the same two boxes: worker -> runtime \"task input + control RPCs\" and runtime -> worker \"events + management RPCs\". Observed: runtime has three distinct targets across views, two distinct co-viewed opposite arrows; e3/e8 ordering is reversed but disclosed with measured reason; fan split and secondary flow-chain recipe are stated with recorded attempted shapes and visible short ranks. Under round-11 softened rule recorded deviations do not by themselves fail this category."
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "worker → runtime: task input + control RPCs; worker seam gRPC",
+      "observed": "Worker right stem → leftward ◀ [38,23] into runtime; task input + ctrl RPCs in common gutter, lacks gRPC; owner not obvious. No crossing or shared junction.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1pinned",
+          "region": [
+            23,
+            23,
+            33,
+            6
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1",
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "runtime → worker: events + management RPCs; worker seam gRPC",
+      "observed": "Runtime left stem → rightward ▶ [41,25] into worker; events + mgmt RPCs in common gutter, lacks gRPC; owner not obvious. No crossing or shared junction.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1pinned",
+          "region": [
+            23,
+            23,
+            33,
+            6
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1",
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "runtime → task engine: dispatches tasks",
+      "observed": "Runtime right stem bends down → ▶ [49,26] into engine; dispatches tasks adjacent. No crossing or shared junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2pinned",
+          "region": [
+            15,
+            24,
+            48,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "task engine → container backend: starts / manages",
+      "observed": "Engine left port runs down and left → ▼ [26,22] into backend; starts / manages stacked in shared gutter before split; owner ambiguous. No crossing or shared junction.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3pinned",
+          "region": [
+            17,
+            18,
+            24,
+            9
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "container backend → task container: runs user process",
+      "observed": "Backend bottom stem bends right → ▼ [32,30] into task container; runs user process adjacent. No crossing or shared junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3pinned",
+          "region": [
+            17,
+            24,
+            28,
+            11
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "task engine → filesystem + volumes: mounts / snapshots",
+      "observed": "Engine right port runs down and right → ▼ [49,22] into filesystem; mounts / snapshots stacked in shared gutter before split; owner ambiguous. No crossing or shared junction.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3pinned",
+          "region": [
+            19,
+            18,
+            42,
+            9
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "filesystem + volumes → Blobnet: image + volume data",
+      "observed": "Filesystem bottom stem bends left → ▼ [48,30] into Blobnet; image + volume data adjacent. No crossing or shared junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3pinned",
+          "region": [
+            39,
+            24,
+            31,
+            11
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "runtime → modal-daemon: filesystem HTTP over UDS",
+      "observed": "Runtime right stem bends up → ▶ [48,21] into daemon; fs HTTP over UDS adjacent, preserves HTTP over Unix-domain socket abbreviation. No crossing or shared junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2pinned",
+          "region": [
+            15,
+            20,
+            48,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e1",
+        "e2"
+      ],
+      "severity": "critical",
+      "description": "Fixed constraint requires worker gRPC distinct from filesystem HTTP over UDS. RPCs is a generic family and does not convey gRPC; the contrast cannot be inferred from the visible label.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1pinned",
+          "region": [
+            29,
+            27,
+            22,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v2pinned",
+          "region": [
+            30,
+            22,
+            16,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e1",
+        "e2"
+      ],
+      "severity": "high",
+      "description": "Both pair labels are in the same below-route gutter; proximity cannot assign either to its direction. Attempts establish that tested vertical labels were skipped and un-slotted horizontal dropped one, not that no unambiguous placement exists.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1pinned",
+          "region": [
+            29,
+            23,
+            22,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e4",
+        "e6"
+      ],
+      "severity": "high",
+      "description": "Engine labels are stacked on one side of both adjacent stems before the routes separate; the upper label refers to the right branch, the lower to the left. Neither owner is reliably resolved by proximity. No unambiguous alternative was proved impossible.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3pinned",
+          "region": [
+            19,
+            19,
+            31,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Evidence gap: frozen metadata dataset hash disagrees with actual cases.json. Case-specific files match their frozen per-file hashes, but the manifest identity is unverified.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "locations": []
+    },
+    {
+      "id": "F5",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "Evidence gap: storage and agents collision is reported, but available superseded storage dump is plain text; final ANSI proves agents green and volumes purple, not the claimed discarded storage hue.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "locations": [
+        {
+          "evidence_id": "superseded-storage",
+          "region": [
+            17,
+            23,
+            44,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F6",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "low",
+      "description": "Evidence gap: control and management are abbreviated despite label_slot; no recorded candidate tests full wording in the shipped pair geometry, so whether full wording fits the renderer cannot be established.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1pinned",
+          "region": [
+            29,
+            27,
+            22,
+            2
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "Frozen dataset manifest SHA-256 disagrees with the current cases.json bytes; verify or restore the frozen manifest without changing this review.",
+    "No captured ANSI for the superseded storage-tag candidate; its alleged hue collision remains unverified.",
+    "No measured unambiguous alternative for v3 shared-gutter ownership, and full wording was not tested in the shipped v1 geometry."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pTB",
+      "w7E:pWN",
+      "w7E:pX7",
+      "w7E:pT4",
+      "w7E:pT5",
+      "w7E:pV3",
+      "w7E:pV6",
+      "w7E:pV8",
+      "w7E:pVA",
+      "w7E:pVD",
+      "w7E:pVF",
+      "w7E:pVH"
+    ],
+    "closed_pane_ids": [
+      "w7E:pTB",
+      "w7E:pWN",
+      "w7E:pX7",
+      "w7E:pT4",
+      "w7E:pT5",
+      "w7E:pV3",
+      "w7E:pV6",
+      "w7E:pV8",
+      "w7E:pVA",
+      "w7E:pVD",
+      "w7E:pVF",
+      "w7E:pVH"
+    ],
+    "status": "done",
+    "reason": "Three evidence manifests confirm captured pane closures; generation.json reports manual probe closures and no leftovers. No panes were opened by reviewer."
+  },
+  "overall": "fail"
+}

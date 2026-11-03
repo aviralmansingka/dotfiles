@@ -1,29 +1,291 @@
 /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
 iles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/v2-fan-
 final.json
-
-[0m[1m[38;5;6mfix-visualize-skill[0m on [0m[1m[38;5;5m fix/visualize-skill[0m [0m[1m[38;5;1m[$][0m on [0m[1m[38;5;3m☁️  (ap-south-1) [0mon [0m[1m[38;5;4m☁️  aviral[0m
-[0m[1m[38;5;4mmansingka@gmail.com[0m 
-[0m[1m[38;5;1m󰂄 5%[0m [0m[1m[38;5;2m❯[0m [0m[38;5;2m/tmp/visualize-eval/round-10/bin/rataflow-view[0m [0m[4m/Users/aviral/.herdr/worktre[0m
-[0m[4mes/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/[0m
-[0m[4mv2-fan-final.json[0m
-viewport: 82x51 zoom: 1.00 natural
-/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
-iles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/v2-fan-
-final.json --select-all
-
-[0m[1m[38;5;6mfix-visualize-skill[0m on [0m[1m[38;5;5m fix/visualize-skill[0m [0m[1m[38;5;1m[$!?][0m on [0m[1m[38;5;3m☁️  (ap-south-1) [0mon [0m[1m[38;5;4m☁️  avir[0m
-[0m[1m[38;5;4malmansingka@gmail.com[0m took [0m[1m[38;5;3m2s[0m 
-[0m[1m[38;5;1m󰂄 5%[0m [0m[1m[38;5;2m❯[0m [0m[38;5;2m/tmp/visualize-eval/round-10/bin/rataflow-view[0m [0m[4m/Users/aviral/.herdr/worktre[0m
-[0m[4mes/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/[0m
-[0m[4mv2-fan-final.json[0m --select-all
-viewport: 82x51 zoom: 1.00 natural
-/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
-iles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/v2-fan-
-final.json --frames 5 --step-ms 100
+[[0m[38;5;3mWARN[0m] - (starship::context): Scanning current directory timed out.               
+[[0m[38;5;3mWARN[0m] - (starship::context): You can set scan_timeout in your config to a higher 
+value to allow longer-running scans to keep executing.
 
 [0m[1m[38;5;6mfix-visualize-skill[0m on [0m[1m[38;5;5m fix/visualize-skill[0m [0m[1m[38;5;1m[$!?][0m on [0m[1m[38;5;3m☁️  (ap-south-1) [0mon [0m[1m[38;5;4m☁️  avir[0m
 [0m[1m[38;5;4malmansingka@gmail.com[0m 
-[0m[1m[38;5;1m󰂄 5%[0m [0m[1m[38;5;2m❯[0m /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
-es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/
-v2-fan-final.json --fra
+[0m[1m[38;5;1m󰂄 7%[0m [0m[1m[38;5;2m❯[0m [0m[38;5;2m/tmp/visualize-eval/round-10/bin/rataflow-view[0m [0m[4m/Users/aviral/.herdr/worktre[0m
+[0m[4mes/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/[0m
+[0m[4mv2-fan-final.json[0m
+viewport: 82x51 zoom: 1.00 natural
+
+[0m[1m[38;5;6mfix-visualize-skill[0m on [0m[1m[38;5;5m fix/visualize-skill[0m [0m[1m[38;5;1m[$!?][0m on [0m[1m[38;5;3m☁️  (ap-south-1) [0mon [0m[1m[38;5;4m☁️  avir[0m
+[0m[1m[38;5;4malmansingka@gmail.com[0m 
+[0m[1m[38;5;1m󰂄 7%[0m [0m[1m[38;5;2m❯[0m [0m[38;5;2m/tmp/visualize-eval/round-10/bin/rataflow-view[0m [0m[4m/Users/aviral/.herdr/worktre[0m
+[0m[4mes/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/[0m
+[0m[4mv2-fan-final.json[0m --select-all
+viewport: 82x51 zoom: 1.00 natural
+
+[0m[1m[38;5;6mfix-visualize-skill[0m on [0m[1m[38;5;5m fix/visualize-skill[0m [0m[1m[38;5;1m[$!?][0m on [0m[1m[38;5;3m☁️  (ap-south-1) [0mon [0m[1m[38;5;4m☁️  avir[0m
+[0m[1m[38;5;4malmansingka@gmail.com[0m 
+[0m[1m[38;5;1m󰂄 7%[0m [0m[1m[38;5;2m❯[0m [0m[38;5;2m/tmp/visualize-eval/round-10/bin/rataflow-view[0m [0m[4m/Users/aviral/.herdr/worktre[0m
+[0m[4mes/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/[0m
+[0m[4mv2-fan-final.json[0m --frames 5 --step-ms 100
+viewport: 82x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 82x51 @100% · v2-fan-final.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                   ╭────────────╮
+                                                 ╭▶│modal-daemon│
+                 ╭─────────────╮fs HTTP over UDS │ │            │
+                 │             │─────────────────╯ ╰────────────╯
+                 │modal-runtime│
+                 │             │──────────────────╮ ╭───────────╮
+                 ╰─────────────╯ dispatches tasks ╰▶│Task engine│
+                                                    │           │
+                                                    ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 82x51 @100% · v2-fan-final.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                   ╭────────────╮
+                                                 ╭▶│modal-daemon│
+                 ╭─────────────╮fs HTTP over UDS │ │            │
+                 │             │─────────────────╯ ╰────────────╯
+                 │modal-runtime│
+                 │             │──────────────────╮ ╭───────────╮
+                 ╰─────────────╯ dispatches tasks ╰▶│Task engine│
+                                                    │           │
+                                                    ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 82x51 @100% · v2-fan-final.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                   ╭────────────╮
+                                                 ╭▶│modal-daemon│
+                 ╭─────────────╮fs HTTP over UDS │ │            │
+                 │             │─────────────────╯ ╰────────────╯
+                 │modal-runtime│
+                 │             │──────────────────╮ ╭───────────╮
+                 ╰─────────────╯ dispatches tasks ╰▶│Task engine│
+                                                    │           │
+                                                    ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 82x51 @100% · v2-fan-final.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                   ╭────────────╮
+                                                 ╭▶│modal-daemon│
+                 ╭─────────────╮fs HTTP over UDS │ │            │
+                 │             │─────────────────╯ ╰────────────╯
+                 │modal-runtime│
+                 │             │──────────────────╮ ╭───────────╮
+                 ╰─────────────╯ dispatches tasks ╰▶│Task engine│
+                                                    │           │
+                                                    ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 82x51 @100% · v2-fan-final.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                   ╭────────────╮
+                                                 ╭▶│modal-daemon│
+                 ╭─────────────╮fs HTTP over UDS │ │            │
+                 │             │─────────────────╯ ╰────────────╯
+                 │modal-runtime│
+                 │             │──────────────────╮ ╭───────────╮
+                 ╰─────────────╯ dispatches tasks ╰▶│Task engine│
+                                                    │           │
+                                                    ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+[0m[1m[38;5;6mfix-visualize-skill[0m on [0m[1m[38;5;5m fix/visualize-skill[0m [0m[1m[38;5;1m[$!?][0m on [0m[1m[38;5;3m☁️  (ap-south-1) [0mon [0m[1m[38;5;4m☁️  avir[0m
+[0m[1m[38;5;4malmansingka@gmail.com[0m 
+[0m[1m[38;5;1m󰂄 7%[0m [0m[1m[38;5;2m❯[0m 

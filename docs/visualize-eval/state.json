@@ -2565,7 +2565,7 @@
   }
  },
  "round_11": {
-  "status": "generating: 6 recipe-impacted reruns launched; pipeline PASS + datacenter FAIL carried from round 10",
+  "status": "GENERATION COMPLETE: 6/6 landed; 5 verdicts in; network judge launching - final verdict pending",
   "skill": {
    "proposal": "10",
    "sha256": "fb975dbe337bee801dc098f58695e0068cb1b2d7d79f34c0e473e24a1626cd4e",
@@ -2591,6 +2591,179 @@
   "carried_verdicts": {
    "pipeline": "pass",
    "datacenter-redundancy": "fail (non-recipe grounds: ECMP attribution)"
+  },
+  "arrivals": {
+   "server-nic-layout": {
+    "worker": "viz-ds11-4",
+    "family_hint": "identity-probe-maps + mesh fan-order habits",
+    "views": 3,
+    "captain_validation": "all views pass incl. records (8)",
+    "highlights": "round-10 semantic misses carried (no cable seen, MAC-OUI caveat, 80% hop-loss); deviations recorded with reasons (hint-not-cage contract working)",
+    "defects": [
+     "AS132717 on access node (disclosed)",
+     "inferred hop anchoring, per-view gateway wording, thin v2 margins"
+    ],
+    "judge": "spawn next"
+   },
+   "gb300-rack-software": {
+    "worker": "viz-ds11-8",
+    "family_hint": "placement-planes + mesh/chain habits",
+    "views": 4,
+    "captain_validation": "all views pass (33 each); pane captures recovered after harness fix",
+    "highlights": "round-10 API-relation loss FIXED and pixel-verified in pinned/v3; deviations recorded with reasons (3-junction trunk disclosed as engine limit); 4 bundles with real frames at 82x51",
+    "defects": [
+     "v3 1 bridge (NMX-C gRPC vs fan column)",
+     "trunk reports 3 junctions not 1 (engine caps spurs)",
+     "v1 device row spans both column bands"
+    ],
+    "coverage_gap": "CDU controller + PDUs dropped - one-trunk demand caps spurs at 3; structural tension to note for the judge",
+    "judge": "spawn next"
+   },
+   "modal-machine-manager": {
+    "worker": "viz-ds11-6",
+    "family_hint": "lifecycle-machines + mesh pair habits",
+    "views": 4,
+    "captain_validation": "v1/v2 all-pass; v3/v4 fail honestly on ambiguous+warnings (matches disclosure)",
+    "highlights": "17/17 coverage + 23/23 relations held; label_slot saved v1 from 52x93; dot oscillation reproduced and recorded (not chased - engine defect)",
+    "defects": [
+     "dot oscillation on 2-cell routes (round-10 defect, reproduced)",
+     "v3 leftward fan label lands on S3 run (3 attempts)",
+     "v4 gcore-sync ambiguity + 3 bridges"
+    ],
+    "judge": "spawn next"
+   },
+   "modal-runtime": {
+    "worker": "viz-ds11-7",
+    "family_hint": "service-meshes + chain habits",
+    "views": 3,
+    "captain_validation": "all views pass (29 each); records complete (28)",
+    "highlights": "pair co-viewed held; 8/8 coverage; deviations recorded with measurements (fan split justified, callee-order deviation disclosed)",
+    "defects": [
+     "NEW: 'storage' and 'agents' both hash to hue family 1 - a collision DESPITE the r10-hue wheel; round-12 engine item (wheel may collide on this name set)",
+     "pair labels share one gutter band (round-10 residual)",
+     "v2 callee order reversed (no lever for intra-rank sibling order)",
+     "gRPC drawn as RPCs"
+    ],
+    "judge": "spawn next"
+   },
+   "homelab-nic-trace": {
+    "worker": "viz-ds11-3",
+    "family_hint": "identity-probe-maps + plane habits",
+    "views": 3,
+    "captain_validation": "33/33 x3; records complete (10)",
+    "highlights": "14/14 relations + 13/13 nodes (never-drop held); 0 crossings/ambiguous everywhere; hue drift GONE (generator pre-checked group names for collisions - skill workaround for the per-spec engine behavior); round-10 qualifier losses carried",
+    "defects": [
+     "gateway label differs v1<->v2 (61-62 chars, box limit)",
+     "v1 extent 83x20 vs 66 drawn cols (palette band)"
+    ],
+    "judge": "spawn next"
+   },
+   "network": {
+    "worker": "viz-ds11-2 (timed out at 30m; work complete on disk, captain took over)",
+    "family_hint": "service-meshes + chain habits",
+    "views": 1,
+    "captain_validation": "all checks pass; records complete (25)",
+    "highlights": "fan order NOW matches source listing (Web left, Redis right - round-10 fail fixed via layers pins); 0 crossings/ambiguous; full 12-cell lap; deviations D1-D6 recorded with reasons",
+    "judge": "spawn next (final judge)"
+   }
+  },
+  "judges": {
+   "server-nic-layout": {
+    "stage": "complete",
+    "verdict": "fail",
+    "categories": {
+     "semantic": "fail",
+     "arrows": "pass",
+     "fit": "pass",
+     "groups": "pass",
+     "category_fit": "pass",
+     "borders": "pass",
+     "workflow": "blocked",
+     "animation": "na"
+    },
+    "movement_vs_r10": "category_fit F->P (softened criterion working - reasoned deviations pass); 6 of 8 pass",
+    "key_findings": [
+     "semantic FAIL: altered missing-hop caveat, unsupported hop attribution, 'no cable seen' unsupported, AS132717 on gateway box - the attribution cluster persists",
+     "workflow BLOCKED: cases.json hash-comparison quibble again + manual probes without raw records - RECURRING; harness wording needs a round-12 fix"
+    ]
+   },
+   "gb300-rack-software": {
+    "stage": "complete",
+    "verdict": "fail",
+    "categories": {
+     "semantic": "fail",
+     "arrows": "fail",
+     "fit": "fail",
+     "groups": "pass",
+     "category_fit": "pass",
+     "borders": "pass",
+     "workflow": "blocked",
+     "animation": "na"
+    },
+    "movement_vs_r10": "category_fit F->P (softened rule working); API relations now visible; arrows P->F on serves-:9400 ownership",
+    "key_findings": [
+     "CDU controller + PDUs (incl. OOB connections) disclosed but absent - the one-trunk-vs-coverage tension UPHELD by the judge; round-12: second trunk or annotation field",
+     "3 junctions not 1 (engine spur cap; judge confirmed)",
+     "workflow BLOCKED: dataset-hash quibble + one overwritten rejected draft"
+    ]
+   },
+   "modal-machine-manager": {
+    "stage": "complete",
+    "verdict": "fail",
+    "categories": {
+     "semantic": "fail",
+     "arrows": "fail",
+     "fit": "pass",
+     "groups": "fail",
+     "category_fit": "pass",
+     "borders": "pass",
+     "workflow": "fail",
+     "animation": "fail"
+    },
+    "movement_vs_r10": "category_fit F->P (softened rule working, 3rd case); 3 of 8 pass",
+    "key_findings": [
+     "2 relations fail edge audit on ambiguous label owners; 3 v1 dots oscillate (engine defect, recurring)",
+     "dataset-hash quibble recurs 3rd consecutive round; v4 full-lap unproven"
+    ]
+   },
+   "modal-runtime": {
+    "stage": "complete",
+    "verdict": "fail",
+    "categories": {
+     "semantic": "fail",
+     "arrows": "pass",
+     "fit": "fail",
+     "groups": "pass",
+     "category_fit": "pass",
+     "borders": "pass",
+     "workflow": "blocked",
+     "animation": "na"
+    },
+    "movement_vs_r10": "category_fit F->P (softened); 5 of 8; shared-gutter ownership + gRPC qualifier remain",
+    "key_findings": [
+     "missing worker gRPC qualifier (semantic); 4 shared-gutter labels unassignable (fit)",
+     "workflow BLOCKED: dataset-hash quibble 4th consecutive round; needs a canonical-digest ruling"
+    ]
+   },
+   "homelab-nic-trace": {
+    "stage": "complete",
+    "verdict": "fail",
+    "categories": {
+     "semantic": "fail",
+     "arrows": "pass",
+     "fit": "fail",
+     "groups": "pass",
+     "category_fit": "pass",
+     "borders": "pass",
+     "workflow": "blocked",
+     "animation": "na"
+    },
+    "movement_vs_r10": "5 of 8 (was 3); arrows F->P, groups F->P (hue stable), router border role now visible; category_fit P (softened rule)",
+    "key_findings": [
+     "wifi failover edge omits metric 600; host latest-run date Oct 11 absent (semantic)",
+     "workflow BLOCKED: dataset-hash quibble 5th round + overwritten draft records"
+    ]
+   }
   }
  }
 }

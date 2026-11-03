@@ -25,6 +25,364 @@
     "pane": "82x51 @100% (the wrapper splits this tab's 168x53 pane in half; the app reports its own header token)",
     "fit_proof": "four pinned direct dumps at exactly COLUMNS=77 LINES=47, natural zoom, no overflow banner (pinned/)"
   },
+  "views": [
+    {
+      "view": "v1",
+      "final": true,
+      "spec": "specs/v1-planes-a3.json",
+      "spec_sha256": "48cfb550e6962dfb3cf881a68a19fca334e3c1204540ec109ad451ef84f7655a",
+      "direction": "tb",
+      "layers": [
+        [
+          "rms",
+          "k8s"
+        ],
+        [
+          "oob",
+          "gpuop"
+        ],
+        [
+          "bmc_c",
+          "bmc_s",
+          "pwr",
+          "dcgm"
+        ],
+        [
+          "nvos",
+          "drvk"
+        ],
+        [
+          "nmxc",
+          "fm"
+        ]
+      ],
+      "trunk": "oob-bus from oob to nvos, branches [bmc_c,bmc_s,pwr], label 'reach'",
+      "nodes": [
+        "rms",
+        "oob",
+        "bmc_c",
+        "bmc_s",
+        "pwr",
+        "nvos",
+        "nmxc",
+        "k8s",
+        "gpuop",
+        "dcgm",
+        "drvk",
+        "fm"
+      ],
+      "edges": [
+        "rms->oob client",
+        "k8s->gpuop in-band",
+        "gpuop->dcgm DaemonSet",
+        "nvos->nmxc hosts",
+        "dcgm->drvk reads NVML",
+        "drvk->fm same host"
+      ],
+      "intent": "placement overview: the two weakly-connected worlds sit side by side (in-band compute on the left rank space, rack management on the right), the OOB bus splits once, and each world's spine is present. API detail is delegated to v3, exporter detail to v4.",
+      "family_recipe": "placement-planes (primary): weakly-connected worlds side by side, spatial separation only, one bus that splits; the source states there is no relation between the worlds at all, so the boundary reads as the empty column band between the two clusters.",
+      "levers": [
+        {
+          "lever": "declared groups (mgmt, oob, bmc, nvsw, k8s, host)",
+          "source_fact": "the task asks to separate off-rack management, OOB hardware control, NVSwitch software and in-band compute software (line 228); each group is one of those worlds"
+        },
+        {
+          "lever": "rank pins (`layers`, 5 ranks)",
+          "source_fact": "the OOB LAN is 'one drop to every BMC in the rack' (line 277): a shared bus needs a rank row of its own so the branch spurs have corridor cells; probe-trunk-lr proved the same 3-branch trunk cannot route when the branches share the corridor target's rank"
+        },
+        {
+          "lever": "trunk oob->nvos, branches [bmc_c,bmc_s,pwr]",
+          "source_fact": "line 284 'one arrow ... split in exactly one spot to split out into three things'; the fourth OOB endpoint is NVOS (historical relation oob->nvos), so the corridor ends there"
+        },
+        {
+          "lever": "`label_slot` on all six labelled edges",
+          "source_fact": "keeps each reserved label gutter at 2-3 rows instead of a rank gap as tall as the label is wide, so the protocol/path labels ('serves :9400', 'reads NVML', 'same host') survive at 77 columns"
+        }
+      ],
+      "evidence": {
+        "check": "evidence/v1/check.txt",
+        "text": "evidence/v1/v1-text.txt",
+        "ansi": "evidence/v1/v1-ansi.ansi",
+        "selected_ansi": "evidence/v1/v1-selected.ansi",
+        "frames_txt": "evidence/v1/v1-frames.txt",
+        "frames_ansi": "evidence/v1/v1-frames.ansi",
+        "manifest": "evidence/v1/manifest.json",
+        "pinned_dump_77x47": "pinned/v1-v1-planes-a3-77x47.txt"
+      },
+      "measured": {
+        "pane_id": "w7E:pWR",
+        "viewport_token": "82x51 @100%",
+        "pane_rows": 51,
+        "pane_cols": null,
+        "pane_rect_note": "null: `herdr pane layout` with no --pane reports the globally focused tab, not this --no-focus pane, so the wrapper cannot resolve the rect; the app's own header token is the accepted measurement and the pinned 77x47 dump is the fit proof",
+        "pinned_dump": "pinned/v1-v1-planes-a3-77x47.txt",
+        "pinned_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "frames_captured": 5,
+        "cleanup": "confirmed_closed",
+        "check_exit": 0,
+        "static_frames_proof": "5 timestamped frames; graph area of frames 0 and 3 identical (0 differing rows); no dot glyphs",
+        "select_all_proof": "evidence/v1/v1-selected.ansi differs from the plain ANSI frame by the selected border style"
+      },
+      "check_summary": {
+        "ok": "ok: nodes=12 edges=6 flows=0 direction=tb theme=gruvbox",
+        "layers": "layers=5 (12 pinned, within-rank order automatic)",
+        "pins": "pins: 12 pinned, 0 conflict(s)",
+        "extent": "extent=59x38 cells",
+        "crossings": "crossings: 0 bridges, 0 touching bends",
+        "labels": "labels: 7/7 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups": "groups: mgmt(1) oob(1) bmc(3) nvsw(2) k8s(2) host(3)",
+        "trunks": "trunks: oob-bus from oob to nvos, 3 branches, 3 junctions",
+        "dots": "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms"
+      },
+      "validator": {
+        "path": "evidence/v1/validator.txt",
+        "pass": 33,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "view": "v2",
+      "final": true,
+      "spec": "specs/v2-oob-bus-a2.json",
+      "spec_sha256": "547d5093bca388160f0178d052fc8852a2001107ef55e75b4be8414b05554893",
+      "direction": "tb",
+      "layers": [
+        [
+          "rms"
+        ],
+        [
+          "oob"
+        ],
+        [
+          "bmc_c",
+          "bmc_s",
+          "pwr"
+        ],
+        [
+          "nvos"
+        ]
+      ],
+      "trunk": "oob-bus from oob to nvos, branches [bmc_c,bmc_s,pwr], label 'reach'",
+      "nodes": [
+        "rms",
+        "oob",
+        "bmc_c",
+        "bmc_s",
+        "pwr",
+        "nvos"
+      ],
+      "edges": [
+        "rms->oob client on LAN"
+      ],
+      "intent": "OOB hardware control alone: the shared wire from the OOB LAN to its device classes, with the bus's own split visible at scale and no controller API edges competing with it.",
+      "family_recipe": "placement-planes: the bus half of the recipe, isolated. One corridor leaves OOB LAN, splits at junction cells and ends at NVOS; the branch endpoints sit in their own rank row.",
+      "levers": [
+        {
+          "lever": "trunk + rank pins",
+          "source_fact": "line 272 lists exactly the three device classes the human confirmed; line 284 demands one arrow splitting in one spot; line 277 calls the OOB LAN the only channel that works when a node is powered off"
+        },
+        {
+          "lever": "declared groups (mgmt, oob, bmc, nvsw)",
+          "source_fact": "the bus's endpoints belong to two concepts: the physical network and its device endpoints (plus the NVSwitch tray software it also reaches)"
+        }
+      ],
+      "evidence": {
+        "check": "evidence/v2/check.txt",
+        "text": "evidence/v2/v2-text.txt",
+        "ansi": "evidence/v2/v2-ansi.ansi",
+        "selected_ansi": "evidence/v2/v2-selected.ansi",
+        "frames_txt": "evidence/v2/v2-frames.txt",
+        "frames_ansi": "evidence/v2/v2-frames.ansi",
+        "manifest": "evidence/v2/manifest.json",
+        "pinned_dump_77x47": "pinned/v2-v2-oob-bus-a2-77x47.txt"
+      },
+      "measured": {
+        "pane_id": "w7E:pWH",
+        "viewport_token": "82x51 @100%",
+        "pane_rows": 51,
+        "pane_cols": null,
+        "pane_rect_note": "null: `herdr pane layout` with no --pane reports the globally focused tab, not this --no-focus pane, so the wrapper cannot resolve the rect; the app's own header token is the accepted measurement and the pinned 77x47 dump is the fit proof",
+        "pinned_dump": "pinned/v2-v2-oob-bus-a2-77x47.txt",
+        "pinned_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "frames_captured": 5,
+        "cleanup": "confirmed_closed",
+        "check_exit": 0,
+        "static_frames_proof": "5 timestamped frames; graph area of frames 0 and 3 identical (0 differing rows); no dot glyphs",
+        "select_all_proof": "evidence/v2/v2-selected.ansi differs from the plain ANSI frame by the selected border style"
+      },
+      "check_summary": {
+        "ok": "ok: nodes=6 edges=1 flows=0 direction=tb theme=gruvbox",
+        "layers": "layers=4 (6 pinned, within-rank order automatic)",
+        "pins": "pins: 6 pinned, 0 conflict(s)",
+        "extent": "extent=50x30 cells",
+        "crossings": "crossings: 0 bridges, 0 touching bends",
+        "labels": "labels: 2/2 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups": "groups: mgmt(1) oob(1) bmc(3) nvsw(1)",
+        "trunks": "trunks: oob-bus from oob to nvos, 3 branches, 3 junctions",
+        "dots": "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms"
+      },
+      "validator": {
+        "path": "evidence/v2/validator.txt",
+        "pass": 33,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "view": "v3",
+      "final": true,
+      "spec": "specs/v3-rms-api-a2.json",
+      "spec_sha256": "4073104f3df2eb619ad1c4fdcc8b5ff3f86eba8e4b60d14ece9330f7a3e214bc",
+      "direction": "lr",
+      "layers": null,
+      "trunk": null,
+      "nodes": [
+        "rms",
+        "bmc_c",
+        "pwr",
+        "nvos",
+        "nmxc"
+      ],
+      "edges": [
+        "rms->bmc_c Redfish/HTTPS",
+        "rms->pwr Redfish/HTTPS",
+        "rms->nvos NVUE REST/SSH",
+        "rms->nmxc NMX-C gRPC",
+        "nvos->nmxc hosts"
+      ],
+      "intent": "off-rack management software: nv-rms as the rack aggregator, one labelled API path per device class, plus NVOS hosting NMX-C/T \u2014 the view the round-10 sample was missing.",
+      "family_recipe": "service-mesh habits borrowed on top of the planes recipe: one core with a stable, source-ordered protocol fan (3 fan ports plus the NVOS-hosted NMX-C path), ports spread symmetrically about the middle by the engine, every hop labelled with its protocol.",
+      "levers": [
+        {
+          "lever": "declared groups (mgmt, bmc, nvsw)",
+          "source_fact": "line 283: one controller over four device types"
+        },
+        {
+          "lever": "stable fan port order = the source's listing order (Compute BMC, Power shelf, NVOS, NMX-C/T)",
+          "source_fact": "line 283's southbound table lists compute BMCs, power-shelf controllers, NVSwitch trays in that order"
+        },
+        {
+          "lever": "no `label_slot`; rank gaps widen to the label width",
+          "source_fact": "two edges carry the identical protocol 'Redfish/HTTPS', so each needs its own cells; the measured attempt with label_slot skipped the second copy"
+        }
+      ],
+      "evidence": {
+        "check": "evidence/v3/check.txt",
+        "text": "evidence/v3/v3-text.txt",
+        "ansi": "evidence/v3/v3-ansi.ansi",
+        "selected_ansi": "evidence/v3/v3-selected.ansi",
+        "frames_txt": "evidence/v3/v3-frames.txt",
+        "frames_ansi": "evidence/v3/v3-frames.ansi",
+        "manifest": "evidence/v3/manifest.json",
+        "pinned_dump_77x47": "pinned/v3-v3-rms-api-a2-77x47.txt"
+      },
+      "measured": {
+        "pane_id": "w7E:pWS",
+        "viewport_token": "82x51 @100%",
+        "pane_rows": 51,
+        "pane_cols": null,
+        "pane_rect_note": "null: `herdr pane layout` with no --pane reports the globally focused tab, not this --no-focus pane, so the wrapper cannot resolve the rect; the app's own header token is the accepted measurement and the pinned 77x47 dump is the fit proof",
+        "pinned_dump": "pinned/v3-v3-rms-api-a2-77x47.txt",
+        "pinned_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "frames_captured": 5,
+        "cleanup": "confirmed_closed",
+        "check_exit": 0,
+        "static_frames_proof": "5 timestamped frames; graph area of frames 0 and 3 identical (0 differing rows); no dot glyphs",
+        "select_all_proof": "evidence/v3/v3-selected.ansi differs from the plain ANSI frame by the selected border style"
+      },
+      "check_summary": {
+        "ok": "ok: nodes=5 edges=5 flows=0 direction=lr theme=gruvbox",
+        "extent": "extent=69x16 cells",
+        "crossings": "crossings: 1 bridges, 0 touching bends",
+        "labels": "labels: 5/5 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups": "groups: mgmt(1) bmc(2) nvsw(2)",
+        "trunks": "trunks:",
+        "dots": "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms"
+      },
+      "validator": {
+        "path": "evidence/v3/validator.txt",
+        "pass": 33,
+        "fail": 0,
+        "exit": 0
+      }
+    },
+    {
+      "view": "v4",
+      "final": true,
+      "spec": "specs/v4-inband-a1.json",
+      "spec_sha256": "6c202043bccfe22b5d89a0a9d811444a2b1c287e699b43dfca9fbbab7b087de8",
+      "direction": "tb",
+      "layers": null,
+      "trunk": null,
+      "nodes": [
+        "k8s",
+        "gpuop",
+        "dcgm",
+        "dcgmx",
+        "drvk",
+        "fm"
+      ],
+      "edges": [
+        "k8s->gpuop in-band",
+        "gpuop->dcgm DaemonSet",
+        "dcgm->dcgmx serves :9400",
+        "dcgm->drvk reads NVML",
+        "drvk->fm same host"
+      ],
+      "intent": "in-band compute software and where it runs: Kubernetes and the GPU Operator on the host cluster, DCGM as a DaemonSet, its Prometheus exporter, the driver/PCIe read path, and co-residency with Fabric Manager.",
+      "family_recipe": "flow-chain (secondary, borrowed): E ~= N over six host-resident nodes, shallow, one hop per fact; the plane identity survives through the group tags (k8s vs host).",
+      "levers": [
+        {
+          "lever": "declared groups (k8s, host)",
+          "source_fact": "line 277 calls DCGM 'a host-resident daemon' whose edges are both in-band; the fixed constraint says Driver/CUDA/DCGM/Fabric Manager run on compute hosts, not on the GPU die"
+        },
+        {
+          "lever": "`label_slot` on all five edges",
+          "source_fact": "the protocol/path facts (DaemonSet, :9400, NVML over PCIe, no network) must stay on their own hop inside 77 columns"
+        }
+      ],
+      "evidence": {
+        "check": "evidence/v4/check.txt",
+        "text": "evidence/v4/v4-text.txt",
+        "ansi": "evidence/v4/v4-ansi.ansi",
+        "selected_ansi": "evidence/v4/v4-selected.ansi",
+        "frames_txt": "evidence/v4/v4-frames.txt",
+        "frames_ansi": "evidence/v4/v4-frames.ansi",
+        "manifest": "evidence/v4/manifest.json",
+        "pinned_dump_77x47": "pinned/v4-v4-inband-a1-77x47.txt"
+      },
+      "measured": {
+        "pane_id": "w7E:pWX",
+        "viewport_token": "82x51 @100%",
+        "pane_rows": null,
+        "pane_cols": null,
+        "pane_rect_note": "null: `herdr pane layout` with no --pane reports the globally focused tab, not this --no-focus pane, so the wrapper cannot resolve the rect; the app's own header token is the accepted measurement and the pinned 77x47 dump is the fit proof",
+        "pinned_dump": "pinned/v4-v4-inband-a1-77x47.txt",
+        "pinned_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "frames_captured": 5,
+        "cleanup": "confirmed_closed",
+        "check_exit": 0,
+        "static_frames_proof": "5 timestamped frames; graph area of frames 0 and 3 identical (0 differing rows); no dot glyphs",
+        "select_all_proof": "evidence/v4/v4-selected.ansi differs from the plain ANSI frame by the selected border style"
+      },
+      "check_summary": {
+        "ok": "ok: nodes=6 edges=5 flows=0 direction=tb theme=gruvbox",
+        "extent": "extent=36x36 cells",
+        "crossings": "crossings: 0 bridges, 0 touching bends",
+        "labels": "labels: 5/5 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups": "groups: k8s(2) host(4)",
+        "trunks": "trunks:",
+        "dots": "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms"
+      },
+      "validator": {
+        "path": "evidence/v4/validator.txt",
+        "pass": 33,
+        "fail": 0,
+        "exit": 0
+      }
+    }
+  ],
   "step0": {
     "family": "placement-planes",
     "evidence": "The source is two weakly-connected worlds joined by one shared wire: the OOB LAN is 'a SEPARATE PHYSICAL ETHERNET NETWORK ... usually air-gapped from the data plane' (line 277) that reaches every BMC while the in-band software (GPU Operator -> DCGM -> driver/Fabric Manager) has no link to it at all \u2014 the source explicitly forbids the one edge that would join them ('Never draw OOB -> DCGM', line 277, and 'no line from OOB reaches DCGM'). Inside the first world sits the source-named bus: 'one arrow that's coming out from out-of-band LAN ... split in exactly one spot' (line 284).",
@@ -41,34 +399,34 @@
     {
       "habit": "worlds side by side, spatial separation only, no drawn box or title around members",
       "where": "v1, v2, v3, v4 (group tags only; the engine draws nothing around a group)",
-      "capture": "pinned/v1-planes-a3-77x47.txt rows 6-37"
+      "capture": "pinned/v1-v1-planes-a3-77x47.txt frame 0 rows 6-42 (two column bands, group tags only, nothing drawn around a group)"
     },
     {
       "habit": "cross-plane edges are allowed to be long \u2014 here there are none, and their absence is the plane boundary",
       "where": "v1",
-      "capture": "pinned/v1-planes-a3-77x47.txt: the empty column band between the in-band cluster (x=9-31) and the management cluster (x=33-59)"
+      "capture": "pinned/v1-v1-planes-a3-77x47.txt frame 0: the empty band at cols 43-45 between the in-band boxes (right edge col 42/43/44) and the management boxes (left edge col 46/47/48) in rows 6-20; there is no route crossing it because the source states the two worlds never talk"
     },
     {
       "habit": "the bus splits once, one arrow, never one line per branch",
       "where": "v1, v2",
-      "capture": "pinned/v2-oob-bus-a2-77x47.txt rows 12-31 ('reach' corridor leaving OOB LAN, junction cells, three spurs)"
+      "capture": "pinned/v2-v2-oob-bus-a2-77x47.txt frame 0: OOB LAN box rows 17-20 cols 38-46, one run down, junction at row 24 cols 39-42, spurs to Compute BMC x18 (row 28 cols 14-28), NVSwitch BMC (34-45) and Power shelf (51-61) via row 31-33, corridor ends at NVOS (row 36 cols 40-43)"
     },
     {
       "habit": "stable fan port order for the core's fan (service-mesh habit)",
       "where": "v3",
-      "capture": "pinned/v3-rms-api-a2-77x47.txt rows 16-32: nv-rms's four ports in source listing order"
+      "capture": "pinned/v3-v3-rms-api-a2-77x47.txt frame 0: nv-rms box rows 24-31 cols 9-16 with four ports in source listing order (Compute BMC rows 18, Power shelf rows 28, NVOS rows 23, NMX-C/T rows 25)"
     },
     {
       "habit": "shallow single-stage ranks, one hop per fact (flow-chain habit)",
       "where": "v4",
-      "capture": "pinned/v4-inband-a1-77x47.txt rows 5-35"
+      "capture": "pinned/v4-v4-inband-a1-77x47.txt frame 0 rows 6-42 (one fact per hop)"
     }
   ],
   "deviations": [
     {
       "deviation": "The two worlds are not fully separate areas in one frame: in v1 the in-band column (left) and the management column (right) share one middle rank row, where DCGM sits beside the three device classes.",
       "reason": "DCGM is provisioned onto those same hosts by the GPU Operator ('It is deployed as a DaemonSet by the GPU Operator over Kubernetes'), so the in-band chain genuinely reaches into the rack's device row; the engine orders a rank by neighbour barycenter only and has no spatial-area primitive that could carve out two rectangles.",
-      "capture": "pinned/v1-planes-a3-77x47.txt rows 22-25 (DCGM at x=10-15, then Compute BMC x18 / NVSwitch BMC / Power shelf at x=31-59)"
+      "capture": "pinned/v1-v1-planes-a3-77x47.txt frame 0 rows 23-26: DCGM box cols 9-14 sits on the same rank row as Compute BMC x18 (18-34), NVSwitch BMC (38-51) and Power shelf (55-67); the upper ranks are cleanly split (Kubernetes 31-42 vs nv-rms 46-53, gap cols 43-45)"
     },
     {
       "deviation": "Each plane also gets its own labelled view (v3 management API, v4 in-band) instead of carrying every label in the overview.",
@@ -556,8 +914,27 @@
     }
   ],
   "cleanup": {
-    "wrapper_panes": "every evidence run reported 'confirmed_closed' in its manifest.json; the one manual probe pane (w7E:pT9, w7E:pTF, w7E:pTJ, w7E:pTN) was closed by hand and verified with `herdr pane get` returning an error",
-    "captain_tab": "untouched; every pane was created with --current --no-focus from this session's own pane"
+    "wrapper_panes": "all four evidence runs report cleanup=confirmed_closed in evidence/v*/manifest.json (pane ids w7E:pW7, w7E:pX*, ...)",
+    "manual_probes": "the four hand-made probe panes (w7E:pT9, w7E:pTF, w7E:pTJ, w7E:pTN) were closed and verified gone with `herdr pane get` (error = closed)",
+    "captain_tab": "untouched; every pane came from --current --no-focus on this session's own pane"
   },
-  "validator": {}
+  "validator": {
+    "command": "scripts/viz-validate.py <bundle> --require-select --require-frames --require-records --attempts attempts.json",
+    "result": "33 PASS / 0 FAIL for v1, v2, v3 and v4 (exit 0 each)",
+    "per_view": {
+      "v1": "evidence/v1/validator.txt",
+      "v2": "evidence/v2/validator.txt",
+      "v3": "evidence/v3/validator.txt",
+      "v4": "evidence/v4/validator.txt"
+    },
+    "failures": []
+  },
+  "harness_edit": {
+    "when_utc": "2026-11-03T00:29:50Z",
+    "file": "scripts/viz-evidence.sh",
+    "approved_by": "round captain (option b)",
+    "change": "wait_for_header: replaced the 'rataflow-view' echo match + flat `sleep 1` with a bounded poll (<=60 s, 1 s interval) for the app's own ' rataflow-view \u00b7 ' header line, plus the same poll for the last 'frame N at ...' line in the frames step; both fail loudly instead of writing an empty capture. Everything else (record mode, pinned-dump logic, cleanup proof, manifest fields) is unchanged.",
+    "why": "the old match also matched the command echo that `herdr pane run` types, so the capture read a bare prompt after 1 s and the follow-up `q` was buffered into the tty and killed the viewer at startup; under this round's load every bundle came out empty",
+    "syntax_check": "bash -n scripts/viz-evidence.sh -> ok; verified end-to-end on v2 before capturing v1/v3/v4"
+  }
 }

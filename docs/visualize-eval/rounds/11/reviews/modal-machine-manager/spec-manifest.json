@@ -1,0 +1,18 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/11/modal-machine-manager/specs/v1-provision-att3.json",
+    "sha256": "aa6d9416fdd740b4135db3da97ddfef410214fa3ada5e64df09db0bc023e4fbb"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/11/modal-machine-manager/specs/v2-boot-heartbeat.json",
+    "sha256": "87e4f913e4ae812e17ddba23e19d06876451bd747872b21d4bb51141f2994073"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/11/modal-machine-manager/specs/v3-ops-att3.json",
+    "sha256": "546d31086c6330b0f2f837d9cb1ef3e32fb227aa855148a66bf7690fa03fa776"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/11/modal-machine-manager/specs/v4-humans-reconcile-att2.json",
+    "sha256": "5b650b5c7f6819bda43748e817d77bdfd7ff7a79864712685b9d1db5c177b77c"
+  }
+]

@@ -1,28 +1,288 @@
 /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
 iles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/v3-comp
-ute.json
+ute-final.json
 
 fix-visualize-skill on  fix/visualize-skill [$✘!?] on ☁️  (ap-south-1) on ☁️  avi
 ralmansingka@gmail.com
-󰂄 5% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+󰂄 8% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
 es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/
-v3-compute.json
+v3-compute-final.json
 viewport: 82x51 zoom: 1.00 natural
-/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
-iles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/v3-comp
-ute.json --select-all
 
-fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
-almansingka@gmail.com
-󰂄 5% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+fix-visualize-skill on  fix/visualize-skill [$✘!?] on ☁️  (ap-south-1) on ☁️  avi
+ralmansingka@gmail.com
+󰂄 8% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
 es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/
-v3-compute.json --select-all
+v3-compute-final.json --select-all
 viewport: 82x51 zoom: 1.00 natural
-/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
-iles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/v3-comp
-ute.json --frames 5 --step-ms 100
 
-fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
-almansingka@gmail.com
-󰂄 5% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
-es/dotfiles/fix-visualize-skill/do
+fix-visualize-skill on  fix/visualize-skill [$✘!?] on ☁️  (ap-south-1) on ☁️  avi
+ralmansingka@gmail.com
+󰂄 8% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/
+v3-compute-final.json --frames 5 --step-ms 100
+viewport: 82x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 82x51 @100% · v3-compute-final.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                   ╭───────────╮
+                                   │Task engine│
+                                   │           │
+                                   ╰───────────╯
+                     mounts / snapshots │ │
+                        starts / manages│ │
+                            ╭───────────╯ ╰────────╮
+                            ▼                      ▼
+                   ╭─────────────────╮   ╭────────────────────╮
+                   │Container backend│   │Filesystem + volumes│
+                   │                 │   │                    │
+                   ╰─────────────────╯   ╰────────────────────╯
+                            │                      │
+                            │ runs user process    │ image + volume data
+                            ╰─────╮               ╭╯
+                                  ▼               ▼
+                           ╭──────────────╮   ╭───────╮
+                           │Task container│   │Blobnet│
+                           │              │   │       │
+                           ╰──────────────╯   ╰───────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 82x51 @100% · v3-compute-final.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                   ╭───────────╮
+                                   │Task engine│
+                                   │           │
+                                   ╰───────────╯
+                     mounts / snapshots │ │
+                        starts / manages│ │
+                            ╭───────────╯ ╰────────╮
+                            ▼                      ▼
+                   ╭─────────────────╮   ╭────────────────────╮
+                   │Container backend│   │Filesystem + volumes│
+                   │                 │   │                    │
+                   ╰─────────────────╯   ╰────────────────────╯
+                            │                      │
+                            │ runs user process    │ image + volume data
+                            ╰─────╮               ╭╯
+                                  ▼               ▼
+                           ╭──────────────╮   ╭───────╮
+                           │Task container│   │Blobnet│
+                           │              │   │       │
+                           ╰──────────────╯   ╰───────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 82x51 @100% · v3-compute-final.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                   ╭───────────╮
+                                   │Task engine│
+                                   │           │
+                                   ╰───────────╯
+                     mounts / snapshots │ │
+                        starts / manages│ │
+                            ╭───────────╯ ╰────────╮
+                            ▼                      ▼
+                   ╭─────────────────╮   ╭────────────────────╮
+                   │Container backend│   │Filesystem + volumes│
+                   │                 │   │                    │
+                   ╰─────────────────╯   ╰────────────────────╯
+                            │                      │
+                            │ runs user process    │ image + volume data
+                            ╰─────╮               ╭╯
+                                  ▼               ▼
+                           ╭──────────────╮   ╭───────╮
+                           │Task container│   │Blobnet│
+                           │              │   │       │
+                           ╰──────────────╯   ╰───────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 82x51 @100% · v3-compute-final.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                   ╭───────────╮
+                                   │Task engine│
+                                   │           │
+                                   ╰───────────╯
+                     mounts / snapshots │ │
+                        starts / manages│ │
+                            ╭───────────╯ ╰────────╮
+                            ▼                      ▼
+                   ╭─────────────────╮   ╭────────────────────╮
+                   │Container backend│   │Filesystem + volumes│
+                   │                 │   │                    │
+                   ╰─────────────────╯   ╰────────────────────╯
+                            │                      │
+                            │ runs user process    │ image + volume data
+                            ╰─────╮               ╭╯
+                                  ▼               ▼
+                           ╭──────────────╮   ╭───────╮
+                           │Task container│   │Blobnet│
+                           │              │   │       │
+                           ╰──────────────╯   ╰───────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 82x51 @100% · v3-compute-final.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                   ╭───────────╮
+                                   │Task engine│
+                                   │           │
+                                   ╰───────────╯
+                     mounts / snapshots │ │
+                        starts / manages│ │
+                            ╭───────────╯ ╰────────╮
+                            ▼                      ▼
+                   ╭─────────────────╮   ╭────────────────────╮
+                   │Container backend│   │Filesystem + volumes│
+                   │                 │   │                    │
+                   ╰─────────────────╯   ╰────────────────────╯
+                            │                      │
+                            │ runs user process    │ image + volume data
+                            ╰─────╮               ╭╯
+                                  ▼               ▼
+                           ╭──────────────╮   ╭───────╮
+                           │Task container│   │Blobnet│
+                           │              │   │       │
+                           ╰──────────────╯   ╰───────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$✘!?] on ☁️  (ap-south-1) on ☁️  avi
+ralmansingka@gmail.com
+󰂄 8% ❯

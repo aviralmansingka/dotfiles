@@ -1,0 +1,1060 @@
+{
+  "case_id": "modal-machine-manager",
+  "round": "11",
+  "round_contract_note": "generator-task.md still prints round: \"09\" in its output section; the assigned round is 11 and this bundle is docs/visualize-eval/rounds/11/modal-machine-manager",
+  "generator": {
+    "agent": "viz-ds11-6",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "role": "fresh generator, no prior round artefacts read"
+  },
+  "inputs": {
+    "frozen_binary": {
+      "path": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+      "sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8"
+    },
+    "candidate_skill": {
+      "path": "docs/visualize-eval/rounds/11/SKILL.md",
+      "sha256": "fb975dbe337bee801dc098f58695e0068cb1b2d7d79f34c0e473e24a1626cd4e",
+      "proposal": 10
+    },
+    "case_source": "docs/visualize-eval/cases/modal-machine-manager/source.md"
+  },
+  "step0_classification": {
+    "family": "lifecycle-machines",
+    "evidence": "one machine-manager lifecycle reads in a single phase order (control plane -> private gRPC -> River jobs -> provider registry -> bare-metal providers -> bare-metal machines -> iPXE boot -> machine-agent heartbeat -> Postgres) and the widest fan in the source is five out of one node (River jobs -> reg/db/ssh/s3/jan), with the source asking for one slow dot per live line.",
+    "tie_breakers_considered": [
+      "E=23 > N=17, so not a flow-chain (chain signature is E ~= N).",
+      "An anti-parallel pair exists (machines -> boot server iPXE request, boot server -> machines boot.ipxe + S3 args). That is a service-mesh signature, but the mesh signature also wants a fan of 2-3 around a core; the machines' fan is 3 while the queue's fan is 5, and the source itself narrates phases (provisioning, then boot, then heartbeat, then ops, then reconcile). The wider fan plus the phase narration outranks the single pair.",
+      "No source-named bus between two weakly-connected worlds, so not placement-planes.",
+      "The identifiers here are ordinary component names, not addresses/ports/uncertainty markers, so not an identity-probe map.",
+      "Dots are requested (slow dots, one alive per line) on a wide fan: the skill's own motion tie-breaker lands on lifecycle-machines."
+    ],
+    "secondary_recipe": "service-meshes, borrowed for the one anti-parallel pair: e8 (machines -> boot server, 'iPXE request') and e9 (boot server -> machines, 'boot.ipxe + S3 args') are two distinct edges at two ports in the SAME view (v2), never one bidirectional arrow and never split across views.",
+    "habits_borrowed": {
+      "lifecycle-machines": "rank the source's own phase order; coverage is the goal (all 17 components and all 23 relations are drawn somewhere); one dot per live line, none on residency; side relations (database writes, console, diagnostics, reconcile) get their own named views instead of being folded into the spine.",
+      "reference-shape deviations": "the skill's example spine (one row of phases) is not followed literally: see deviations.deviations list."
+    }
+  },
+  "views": [
+    {
+      "view": "v1",
+      "spec": "specs/v1-provision-att3.json",
+      "spec_sha256": "aa6d9416fdd740b4135db3da97ddfef410214fa3ada5e64df09db0bc023e4fbb",
+      "check": "evidence/v1/check.txt",
+      "text_capture": "evidence/v1/v1-text.txt",
+      "ansi_capture": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi_capture": "evidence/v1/v1-selected.ansi",
+      "frames_capture": "evidence/v1/v1-frames.txt",
+      "frames_ansi_capture": "evidence/v1/v1-frames.ansi",
+      "pinned_77x47_frames_dump": "pinned/v1-77x47.txt",
+      "measured_pane": {
+        "columns": 82,
+        "rows": 51,
+        "measurement": "live pane, herdr rect for the split pane"
+      },
+      "header_token": "82x51 @100%",
+      "viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+      "viewport_line_source": "pinned/v1-77x47.txt line 1 (pinned direct dump of this view's final spec at COLUMNS=77 LINES=47)",
+      "frames_in_pane_capture": 19,
+      "frames_in_pinned_dump": 48,
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=6 edges=5 flows=3 direction=tb theme=gruvbox",
+        "extent=52x44 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 5/5 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: control(3) providers(2) machines(1)",
+        "trunks:",
+        "dots: 3 single-dot routes, 0 periodic routes, 0 violations, 3 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 3/3 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "carries": "provisioning phase axis: control plane -> private gRPC -> River jobs -> provider registry -> bare-metal providers -> bare-metal machines, one node per rank, top to bottom",
+      "cleanup": {
+        "pane_id": "w7E:pWZ",
+        "result": "confirmed_closed"
+      },
+      "binary": {
+        "path": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+        "sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8"
+      }
+    },
+    {
+      "view": "v2",
+      "spec": "specs/v2-boot-heartbeat.json",
+      "spec_sha256": "87e4f913e4ae812e17ddba23e19d06876451bd747872b21d4bb51141f2994073",
+      "check": "evidence/v2/check.txt",
+      "text_capture": "evidence/v2/v2-text.txt",
+      "ansi_capture": "evidence/v2/v2-ansi.ansi",
+      "selected_ansi_capture": "evidence/v2/v2-selected.ansi",
+      "frames_capture": "evidence/v2/v2-frames.txt",
+      "frames_ansi_capture": "evidence/v2/v2-frames.ansi",
+      "pinned_77x47_frames_dump": "pinned/v2-77x47.txt",
+      "measured_pane": {
+        "columns": 82,
+        "rows": 51,
+        "measurement": "live pane, herdr rect for the split pane"
+      },
+      "header_token": "82x51 @100%",
+      "viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+      "viewport_line_source": "pinned/v2-77x47.txt line 1 (pinned direct dump of this view's final spec at COLUMNS=77 LINES=47)",
+      "frames_in_pane_capture": 19,
+      "frames_in_pinned_dump": 48,
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=7 edges=7 flows=6 direction=tb theme=gruvbox",
+        "extent=41x36 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 7/7 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: machines(3) control(2) state(2)",
+        "trunks:",
+        "dots: 6 single-dot routes, 0 periodic routes, 0 violations, 6 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 6/6 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "carries": "boot + heartbeat: machines iPXE-request the boot server and receive boot.ipxe + S3 args (the anti-parallel pair, both edges visible), machines pull the boot image from S3, the machine-agent reports through public gRPC into Postgres, and both private gRPC and the queue write rows there",
+      "cleanup": {
+        "pane_id": "w7E:pX2",
+        "result": "confirmed_closed"
+      },
+      "binary": {
+        "path": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+        "sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8"
+      }
+    },
+    {
+      "view": "v3",
+      "spec": "specs/v3-ops-att3.json",
+      "spec_sha256": "546d31086c6330b0f2f837d9cb1ef3e32fb227aa855148a66bf7690fa03fa776",
+      "check": "evidence/v3/check.txt",
+      "text_capture": "evidence/v3/v3-text.txt",
+      "ansi_capture": "evidence/v3/v3-ansi.ansi",
+      "selected_ansi_capture": "evidence/v3/v3-selected.ansi",
+      "frames_capture": "evidence/v3/v3-frames.txt",
+      "frames_ansi_capture": "evidence/v3/v3-frames.ansi",
+      "pinned_77x47_frames_dump": "pinned/v3-77x47.txt",
+      "measured_pane": {
+        "columns": 82,
+        "rows": 51,
+        "measurement": "live pane, herdr rect for the split pane"
+      },
+      "header_token": "82x51 @100%",
+      "viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+      "viewport_line_source": "pinned/v3-77x47.txt line 1 (pinned direct dump of this view's final spec at COLUMNS=77 LINES=47)",
+      "frames_in_pane_capture": 19,
+      "frames_in_pinned_dump": 48,
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=5 edges=4 flows=4 direction=tb theme=gruvbox",
+        "extent=63x21 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 4/4 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+        "warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge",
+        "groups: control(1) state(1) ops(2) machines(1)",
+        "trunks:",
+        "dots: 4 single-dot routes, 0 periodic routes, 0 violations, 4 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 4/4 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "carries": "slow ops fan off the River queue: audit / verify reimage over SSH + BMC ops into run machine-audit on the machines, diagnose uploads into S3, diagnostic events into the janitor app",
+      "cleanup": {
+        "pane_id": "w7E:pX3",
+        "result": "confirmed_closed"
+      },
+      "binary": {
+        "path": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+        "sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8"
+      }
+    },
+    {
+      "view": "v4",
+      "spec": "specs/v4-humans-reconcile-att2.json",
+      "spec_sha256": "5b650b5c7f6819bda43748e817d77bdfd7ff7a79864712685b9d1db5c177b77c",
+      "check": "evidence/v4/check.txt",
+      "text_capture": "evidence/v4/v4-text.txt",
+      "ansi_capture": "evidence/v4/v4-ansi.ansi",
+      "selected_ansi_capture": "evidence/v4/v4-selected.ansi",
+      "frames_capture": "evidence/v4/v4-frames.txt",
+      "frames_ansi_capture": "evidence/v4/v4-frames.ansi",
+      "pinned_77x47_frames_dump": "pinned/v4-77x47.txt",
+      "measured_pane": {
+        "columns": 82,
+        "rows": 51,
+        "measurement": "live pane, herdr rect for the split pane"
+      },
+      "header_token": "82x51 @100%",
+      "viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+      "viewport_line_source": "pinned/v4-77x47.txt line 1 (pinned direct dump of this view's final spec at COLUMNS=77 LINES=47)",
+      "frames_in_pane_capture": 19,
+      "frames_in_pinned_dump": 48,
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=8 edges=7 flows=7 direction=tb theme=gruvbox",
+        "extent=62x30 cells",
+        "crossings: 3 bridges, 3 touching bends",
+        "labels: 7/7 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+        "warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge",
+        "groups: humans(1) ops(2) control(3) providers(1) state(1)",
+        "trunks:",
+        "dots: 7 single-dot routes, 0 periodic routes, 0 violations, 7 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 7/7 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "carries": "console and reconcile: humans + mmctl -> webapi -> River jobs (reinstall / reprovision), janitor proposals -> webapi -> Slack, job rows into Postgres, and the reconcile loop syncing gcore and cluster state",
+      "cleanup": {
+        "pane_id": "w7E:pX4",
+        "result": "confirmed_closed"
+      },
+      "binary": {
+        "path": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+        "sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8"
+      }
+    }
+  ],
+  "meaning_ledger": [
+    {
+      "fact": "component cp",
+      "kind": "component",
+      "drawn_as": "control plane",
+      "fate": "drawn",
+      "views": [
+        "v1"
+      ]
+    },
+    {
+      "fact": "component web",
+      "kind": "component",
+      "drawn_as": "humans + mmctl",
+      "fate": "drawn",
+      "views": [
+        "v4"
+      ]
+    },
+    {
+      "fact": "component pgrpc",
+      "kind": "component",
+      "drawn_as": "private gRPC",
+      "fate": "drawn",
+      "views": [
+        "v1",
+        "v2"
+      ]
+    },
+    {
+      "fact": "component wapi",
+      "kind": "component",
+      "drawn_as": "webapi",
+      "fate": "drawn",
+      "views": [
+        "v4"
+      ]
+    },
+    {
+      "fact": "component pub",
+      "kind": "component",
+      "drawn_as": "public gRPC",
+      "fate": "drawn",
+      "views": [
+        "v2"
+      ]
+    },
+    {
+      "fact": "component boot",
+      "kind": "component",
+      "drawn_as": "boot server",
+      "fate": "drawn",
+      "views": [
+        "v2"
+      ]
+    },
+    {
+      "fact": "component q",
+      "kind": "component",
+      "drawn_as": "River jobs",
+      "fate": "drawn",
+      "views": [
+        "v1",
+        "v3",
+        "v4"
+      ]
+    },
+    {
+      "fact": "component rec",
+      "kind": "component",
+      "drawn_as": "reconcile loop",
+      "fate": "drawn",
+      "views": [
+        "v4"
+      ]
+    },
+    {
+      "fact": "component ssh",
+      "kind": "component",
+      "drawn_as": "SSH + BMC ops",
+      "fate": "drawn",
+      "views": [
+        "v3"
+      ]
+    },
+    {
+      "fact": "component db",
+      "kind": "component",
+      "drawn_as": "Postgres",
+      "fate": "drawn",
+      "views": [
+        "v2",
+        "v4"
+      ]
+    },
+    {
+      "fact": "component s3",
+      "kind": "component",
+      "drawn_as": "S3 object store",
+      "fate": "drawn",
+      "views": [
+        "v2",
+        "v3"
+      ]
+    },
+    {
+      "fact": "component reg",
+      "kind": "component",
+      "drawn_as": "provider registry",
+      "fate": "drawn",
+      "views": [
+        "v1"
+      ]
+    },
+    {
+      "fact": "component prov",
+      "kind": "component",
+      "drawn_as": "bare-metal providers",
+      "fate": "drawn",
+      "views": [
+        "v1",
+        "v4"
+      ]
+    },
+    {
+      "fact": "component mch",
+      "kind": "component",
+      "drawn_as": "bare-metal machines",
+      "fate": "drawn",
+      "views": [
+        "v1",
+        "v2",
+        "v3"
+      ]
+    },
+    {
+      "fact": "component agent",
+      "kind": "component",
+      "drawn_as": "machine-agent",
+      "fate": "drawn",
+      "views": [
+        "v2"
+      ]
+    },
+    {
+      "fact": "component jan",
+      "kind": "component",
+      "drawn_as": "janitor app",
+      "fate": "drawn",
+      "views": [
+        "v3",
+        "v4"
+      ]
+    },
+    {
+      "fact": "component slack",
+      "kind": "component",
+      "drawn_as": "Slack",
+      "fate": "drawn",
+      "views": [
+        "v4"
+      ]
+    },
+    {
+      "fact": "create / terminate / repair actions on the private gRPC call",
+      "kind": "action verb",
+      "edge_or_node": "e1",
+      "fate": "drawn in full"
+    },
+    {
+      "fact": "reinstall / reprovision actions on webapi -> queue",
+      "kind": "action verb",
+      "edge_or_node": "e4",
+      "fate": "drawn in full (round 10 lost the qualifier; kept whole here)"
+    },
+    {
+      "fact": "audit / verify reimage over the SSH + BMC ops hop",
+      "kind": "action verb",
+      "edge_or_node": "e15",
+      "fate": "drawn in full"
+    },
+    {
+      "fact": "gcore cluster sync on a 1 minute cadence",
+      "kind": "cadence + qualifier",
+      "edge_or_node": "e22",
+      "fate": "abbreviated to 'gcore sync, 1 min' (77-column width); the cluster qualifier survives on e23 'cluster state'"
+    },
+    {
+      "fact": "cluster reconcile loop (source node name)",
+      "kind": "role",
+      "edge_or_node": "rec",
+      "fate": "abbreviated to 'reconcile loop' in v4 (v4 was 75 columns and clipped e4's label with the full name); 'cluster' survives on e23"
+    },
+    {
+      "fact": "Modal control plane",
+      "kind": "role residency",
+      "edge_or_node": "cp",
+      "fate": "abbreviated to 'control plane' (the case is Modal's machine-manager end to end)"
+    },
+    {
+      "fact": "boot.ipxe + S3 args payload",
+      "kind": "payload",
+      "edge_or_node": "e9",
+      "fate": "drawn in full"
+    },
+    {
+      "fact": "River job queue",
+      "kind": "role",
+      "edge_or_node": "q",
+      "fate": "abbreviated to 'River jobs' (its row writes and fan are shown as edges)"
+    },
+    {
+      "fact": "provider registry and machine-agent may be grouped, not dropped",
+      "kind": "constraint",
+      "edge_or_node": "reg / agent",
+      "fate": "both drawn, never grouped away"
+    },
+    {
+      "fact": "both directions machines -> boot server and boot server -> machines",
+      "kind": "constraint",
+      "edge_or_node": "e8 / e9",
+      "fate": "two distinct edges in v2, no bidirectional arrow"
+    },
+    {
+      "fact": "janitor -> webapi proposals are never deleted to fix routing",
+      "kind": "constraint",
+      "edge_or_node": "e20",
+      "fate": "drawn in v4"
+    },
+    {
+      "fact": "River jobs -> S3 diagnostics is separate from providers, janitor and image retrieval",
+      "kind": "constraint",
+      "edge_or_node": "e18",
+      "fate": "drawn on its own label in v3, distinct from e17 and e19"
+    },
+    {
+      "fact": "slow, sparse dots on selected communication edges, never on borders",
+      "kind": "motion instruction",
+      "edge_or_node": "20 routes",
+      "fate": "one dot on each animated route; never on a border cell"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "cp",
+      "to": "pgrpc",
+      "verb_tech": "create / terminate / repair",
+      "label_owner": "e1",
+      "view": "v1"
+    },
+    {
+      "id": "e2",
+      "from": "web",
+      "to": "wapi",
+      "verb_tech": "http",
+      "label_owner": "e2",
+      "view": "v4"
+    },
+    {
+      "id": "e3",
+      "from": "pgrpc",
+      "to": "q",
+      "verb_tech": "enqueue job",
+      "label_owner": "e3",
+      "view": "v1"
+    },
+    {
+      "id": "e4",
+      "from": "wapi",
+      "to": "q",
+      "verb_tech": "reinstall / reprovision",
+      "label_owner": "e4",
+      "view": "v4"
+    },
+    {
+      "id": "e5",
+      "from": "q",
+      "to": "reg",
+      "verb_tech": "provision job",
+      "label_owner": "e5",
+      "view": "v1"
+    },
+    {
+      "id": "e6",
+      "from": "reg",
+      "to": "prov",
+      "verb_tech": "provider API",
+      "label_owner": "e6",
+      "view": "v1"
+    },
+    {
+      "id": "e7",
+      "from": "prov",
+      "to": "mch",
+      "verb_tech": "allocate instance",
+      "label_owner": "e7",
+      "view": "v1"
+    },
+    {
+      "id": "e8",
+      "from": "mch",
+      "to": "boot",
+      "verb_tech": "iPXE request",
+      "label_owner": "e8",
+      "view": "v2"
+    },
+    {
+      "id": "e9",
+      "from": "boot",
+      "to": "mch",
+      "verb_tech": "boot.ipxe + S3 args",
+      "label_owner": "e9",
+      "view": "v2"
+    },
+    {
+      "id": "e10",
+      "from": "mch",
+      "to": "agent",
+      "verb_tech": "runs on host",
+      "label_owner": "e10",
+      "view": "v2"
+    },
+    {
+      "id": "e11",
+      "from": "agent",
+      "to": "pub",
+      "verb_tech": "register + heartbeat",
+      "label_owner": "e11",
+      "view": "v2"
+    },
+    {
+      "id": "e12",
+      "from": "pub",
+      "to": "db",
+      "verb_tech": "machine state",
+      "label_owner": "e12",
+      "view": "v2"
+    },
+    {
+      "id": "e13",
+      "from": "pgrpc",
+      "to": "db",
+      "verb_tech": "machine rows",
+      "label_owner": "e13",
+      "view": "v2"
+    },
+    {
+      "id": "e14",
+      "from": "q",
+      "to": "db",
+      "verb_tech": "job rows",
+      "label_owner": "e14",
+      "view": "v4"
+    },
+    {
+      "id": "e15",
+      "from": "q",
+      "to": "ssh",
+      "verb_tech": "audit / verify reimage",
+      "label_owner": "e15",
+      "view": "v3"
+    },
+    {
+      "id": "e16",
+      "from": "ssh",
+      "to": "mch",
+      "verb_tech": "run machine-audit",
+      "label_owner": "e16",
+      "view": "v3"
+    },
+    {
+      "id": "e17",
+      "from": "mch",
+      "to": "s3",
+      "verb_tech": "pull boot image",
+      "label_owner": "e17",
+      "view": "v2"
+    },
+    {
+      "id": "e18",
+      "from": "q",
+      "to": "s3",
+      "verb_tech": "diagnose uploads",
+      "label_owner": "e18",
+      "view": "v3"
+    },
+    {
+      "id": "e19",
+      "from": "q",
+      "to": "jan",
+      "verb_tech": "diagnostic events",
+      "label_owner": "e19",
+      "view": "v3"
+    },
+    {
+      "id": "e20",
+      "from": "jan",
+      "to": "wapi",
+      "verb_tech": "proposed actions",
+      "label_owner": "e20",
+      "view": "v4"
+    },
+    {
+      "id": "e21",
+      "from": "wapi",
+      "to": "slack",
+      "verb_tech": "confirm + alerts",
+      "label_owner": "e21",
+      "view": "v4"
+    },
+    {
+      "id": "e22",
+      "from": "rec",
+      "to": "prov",
+      "verb_tech": "gcore sync, 1 min",
+      "label_owner": "e22",
+      "view": "v4"
+    },
+    {
+      "id": "e23",
+      "from": "rec",
+      "to": "db",
+      "verb_tech": "cluster state",
+      "label_owner": "e23",
+      "view": "v4"
+    }
+  ],
+  "relationship_mapping": [
+    {
+      "original_relation": "e1: cp -> pgrpc (create / terminate / repair)",
+      "visible_as": "e1 in v1, labelled 'create / terminate / repair'"
+    },
+    {
+      "original_relation": "e2: web -> wapi (http)",
+      "visible_as": "e2 in v4, labelled 'http'"
+    },
+    {
+      "original_relation": "e3: pgrpc -> q (enqueue job)",
+      "visible_as": "e3 in v1, labelled 'enqueue job'"
+    },
+    {
+      "original_relation": "e4: wapi -> q (reinstall / reprovision)",
+      "visible_as": "e4 in v4, labelled 'reinstall / reprovision'"
+    },
+    {
+      "original_relation": "e5: q -> reg (provision job)",
+      "visible_as": "e5 in v1, labelled 'provision job'"
+    },
+    {
+      "original_relation": "e6: reg -> prov (provider API)",
+      "visible_as": "e6 in v1, labelled 'provider API'"
+    },
+    {
+      "original_relation": "e7: prov -> mch (allocate instance)",
+      "visible_as": "e7 in v1, labelled 'allocate instance'"
+    },
+    {
+      "original_relation": "e8: mch -> boot (iPXE request)",
+      "visible_as": "e8 in v2, labelled 'iPXE request'"
+    },
+    {
+      "original_relation": "e9: boot -> mch (boot.ipxe + S3 args)",
+      "visible_as": "e9 in v2, labelled 'boot.ipxe + S3 args'"
+    },
+    {
+      "original_relation": "e10: mch -> agent (runs on host)",
+      "visible_as": "e10 in v2, labelled 'runs on host'"
+    },
+    {
+      "original_relation": "e11: agent -> pub (register + heartbeat)",
+      "visible_as": "e11 in v2, labelled 'register + heartbeat'"
+    },
+    {
+      "original_relation": "e12: pub -> db (machine state)",
+      "visible_as": "e12 in v2, labelled 'machine state'"
+    },
+    {
+      "original_relation": "e13: pgrpc -> db (machine rows)",
+      "visible_as": "e13 in v2, labelled 'machine rows'"
+    },
+    {
+      "original_relation": "e14: q -> db (job rows)",
+      "visible_as": "e14 in v4, labelled 'job rows'"
+    },
+    {
+      "original_relation": "e15: q -> ssh (audit / verify reimage)",
+      "visible_as": "e15 in v3, labelled 'audit / verify reimage'"
+    },
+    {
+      "original_relation": "e16: ssh -> mch (run machine-audit)",
+      "visible_as": "e16 in v3, labelled 'run machine-audit'"
+    },
+    {
+      "original_relation": "e17: mch -> s3 (pull boot image)",
+      "visible_as": "e17 in v2, labelled 'pull boot image'"
+    },
+    {
+      "original_relation": "e18: q -> s3 (diagnose uploads)",
+      "visible_as": "e18 in v3, labelled 'diagnose uploads'"
+    },
+    {
+      "original_relation": "e19: q -> jan (diagnostic events)",
+      "visible_as": "e19 in v3, labelled 'diagnostic events'"
+    },
+    {
+      "original_relation": "e20: jan -> wapi (proposed actions)",
+      "visible_as": "e20 in v4, labelled 'proposed actions'"
+    },
+    {
+      "original_relation": "e21: wapi -> slack (confirm + alerts)",
+      "visible_as": "e21 in v4, labelled 'confirm + alerts'"
+    },
+    {
+      "original_relation": "e22: rec -> prov (gcore sync, 1 min)",
+      "visible_as": "e22 in v4, labelled 'gcore sync, 1 min'"
+    },
+    {
+      "original_relation": "e23: rec -> db (cluster state)",
+      "visible_as": "e23 in v4, labelled 'cluster state'"
+    }
+  ],
+  "groups_declared": {
+    "control": [
+      "cp",
+      "pgrpc",
+      "q",
+      "wapi",
+      "pub",
+      "rec"
+    ],
+    "providers": [
+      "reg",
+      "prov"
+    ],
+    "machines": [
+      "mch",
+      "boot",
+      "agent"
+    ],
+    "state": [
+      "db",
+      "s3"
+    ],
+    "ops": [
+      "ssh",
+      "jan",
+      "slack"
+    ],
+    "humans": [
+      "web"
+    ]
+  },
+  "group_order_rule": "control: cp, pgrpc, q, wapi, pub, rec; providers: reg, prov; machines: mch, boot, agent; state: db, s3; ops: ssh, jan, slack; humans: web. Every view keeps this sibling order; no view shows a pair in the opposite order.",
+  "structural_levers": {
+    "v1": [
+      {
+        "lever": "direction tb",
+        "source_fact": "the provisioning phases are sequential (control plane -> private gRPC -> jobs -> registry -> providers -> machines)",
+        "why": "a six-rank spine reads top to bottom in one direction; lr was measured at 123 cells wide (probe-lr-6chain) and cannot fit 77 columns"
+      },
+      {
+        "lever": "label_slot on all five edges",
+        "source_fact": "'create / terminate / repair' is a 26-character action list the source states verbatim",
+        "why": "without label_slot the rank gaps grow to label length and the same spec measured 52x93 (attempts 1 and 2)"
+      },
+      {
+        "lever": "group tags {control, providers, machines}",
+        "source_fact": "control plane services, provider registry + bare-metal providers, bare-metal machines",
+        "why": "colour families carry the tiers; nothing is drawn around members"
+      },
+      {
+        "lever": "dots: 1 on e1, e5, e7",
+        "source_fact": "'use way less dots. keep one dot alive per line'",
+        "why": "the three named action hops move; the two structural handoffs (e3, e6) stay static so the spine carries three travelling dots, not five"
+      }
+    ],
+    "v2": [
+      {
+        "lever": "direction tb with the boot pair as one inside-hop back edge",
+        "source_fact": "machines iPXE-boot from the boot server, and the boot server answers with boot.ipxe + S3 args",
+        "why": "the anti-parallel pair sits in one capture as two edges with distinct ports"
+      },
+      {
+        "lever": "label_slot on all seven edges",
+        "source_fact": "'register + heartbeat' and 'boot.ipxe + S3 args' are long source labels",
+        "why": "keeps 4 ranks inside 37 rows"
+      },
+      {
+        "lever": "dots: 1 on e8, e9, e11, e12, e13, e17; none on e10",
+        "source_fact": "'runs on host' is residency, not traffic; the source states no motion for it",
+        "why": "one dot per live line, no dot on a residency fact"
+      },
+      {
+        "lever": "group tags {machines, control, state}",
+        "source_fact": "machines/boot/agent, gRPC endpoints, Postgres + S3",
+        "why": "tiers stay readable as colour families"
+      }
+    ],
+    "v3": [
+      {
+        "lever": "direction tb, queue fan with target-aligned port order",
+        "source_fact": "the ops path: jobs SSH into machines for audits, jobs post diagnostics to the janitor app, jobs upload diagnostics to S3",
+        "why": "one fan of three from River jobs, each hop labelled"
+      },
+      {
+        "lever": "declaration order = ascending label width (S3, janitor, SSH)",
+        "source_fact": "the source's three ops destinations",
+        "why": "puts the 21-character 'audit / verify reimage' route on the rightmost port where its label has free space; measured in attempt 3"
+      },
+      {
+        "lever": "label_slot on all four edges",
+        "source_fact": "long action labels ('audit / verify reimage', 'run machine-audit')",
+        "why": "21 rows instead of 60"
+      },
+      {
+        "lever": "dots: 1 on all four routes",
+        "source_fact": "'slow dots flowing through it'",
+        "why": "the ops path is the slow path the source names"
+      }
+    ],
+    "v4": [
+      {
+        "lever": "direction tb, three sources (humans, janitor, reconcile) into one console/state rank",
+        "source_fact": "web -> webapi http; janitor -> webapi proposals; webapi -> Slack confirmations; reconcile -> providers and Postgres",
+        "why": "keeps the console flow readable while the reconcile loop sits beside it"
+      },
+      {
+        "lever": "label_slot on all seven edges",
+        "source_fact": "'reinstall / reprovision', 'proposed actions', 'confirm + alerts', 'gcore sync, 1 min'",
+        "why": "30 rows at 62 columns"
+      },
+      {
+        "lever": "dots: 1 on all seven routes",
+        "source_fact": "'slow dots flowing through it'",
+        "why": "one dot per line"
+      }
+    ],
+    "trunks": "none: the source names no shared bus that splits, and the two candidate split points (private gRPC to db, queue to db) are independent relations the fixed constraints keep separately traceable.",
+    "minlen": "none: no corridor is described by the source, and the engine's lane-aware rank gaps were enough in every shipped view."
+  },
+  "deviations": [
+    {
+      "deviation": "the lifecycle spine is split into v1 (provisioning) and v2 (boot + heartbeat) instead of one phase row",
+      "reason": "a single spine of 10 ranks does not fit: the 6-rank v1 alone measures 52x44 (extra ranks pushed it past 46 rows), and the same spine in lr measures 123 cells (probe-lr-6chain). The split keeps the phase order readable in one direction inside each view, and the spine order is stated in the coverage map.",
+      "evidence_capture": "pinned/v1-77x47.txt (6 ranks, 44 rows), evidence/v1/check.txt 'extent=52x44'; attempts 1 and 2 of v1 at 52x93 show the same spine without label_slot"
+    },
+    {
+      "deviation": "side relations get three of the four views rather than sitting beside the spine",
+      "reason": "database writes (v2, v4), console/proposals (v4) and diagnostics (v3) cannot fit beside a 6- and 4-rank spine at 77x47; the skill's lifecycle habit explicitly allows a side relation its own named view",
+      "evidence_capture": "evidence/v2/v2-text.txt rows 37-42 (machine state and machine rows landing on Postgres) and rows 13-16 (the iPXE request/boot.ipxe pair), evidence/v4/v4-text.txt rows 12-38"
+    },
+    {
+      "deviation": "v3 keeps one ambiguous-owner label",
+      "reason": "the engine writes a leftward fan branch's label to the right of its route; with the janitor branch second from the left the 17-character 'diagnostic events' label lands on the S3 route. Three attempts (4 targets, 3 targets, re-ordered targets) all reproduce it; the budget stopped there.",
+      "evidence_capture": "evidence/v3/v3-text.txt row 24 ('diagnostic events' ends at the S3 port column), evidence/v3/check.txt 'warning: 1 label(s) ... ambiguous owner'"
+    },
+    {
+      "deviation": "v4 keeps three bridges and one ambiguous label",
+      "reason": "'gcore sync, 1 min' runs beside 'cluster state' from the same source node, so the two routes are one column apart and the engine's label gutter sits between them; the crossing count rose to 3 when job rows (q -> db) was added, but the alternative (job rows in v2) left v4 at 75 columns with 'reinstall / reprovision' clipped at the 77-column edge, which loses a source qualifier.",
+      "evidence_capture": "evidence/v4/v4-text.txt row 17 ('gcore sync, 1 min' sits between the two reconcile routes), evidence/v4/check.txt 'crossings: 3 bridges, 3 touching bends'"
+    }
+  ],
+  "recipe_yield": [
+    {
+      "demand": "one lifecycle spine whose phase order reads in one direction of the page",
+      "measured_attempts": [
+        "probe-lr-6chain: 123x7 (lr, six ranks, label_slot everywhere)",
+        "v1 attempt 1: 52x93 (tb, six ranks, label_slot on one edge)",
+        "v1 attempt 2: 52x93 (same, two dots removed, proving the dots were not the cause)",
+        "v1 attempt 3: 52x44 (label_slot on every edge)"
+      ],
+      "yield": "the spine is drawn in one direction per view (v1 provisioning top-to-bottom, v2 boot->heartbeat top-to-bottom, v4 console->queue top-to-bottom) and the source's phase order across views is carried by the coverage map; a 10-rank single spine is impossible at 77x47 in either orientation"
+    },
+    {
+      "demand": "one dot per live transition, slow, sparse, never on borders",
+      "measured_attempts": [
+        "v1 attempt 1: 5 dots",
+        "v1 attempt 2: 3 dots",
+        "v1 attempt 3: 3 dots (shipped)"
+      ],
+      "yield": "20 of 23 routes carry exactly one dot; e3 and e6 (structural handoffs) and e10 (residency) are static so the source's 'way less dots' instruction is honoured"
+    }
+  ],
+  "motion": {
+    "mode": "constant (default, 0.5 cells per 100 ms step); no rate override and no same-arrival anywhere",
+    "dots": {
+      "animated_routes": 20,
+      "static_routes": 3,
+      "origins": {
+        "v1": "3/3",
+        "v2": "6/6",
+        "v3": "4/4",
+        "v4": "7/7"
+      }
+    },
+    "proof": {
+      "uniform_advance": "two well-spaced frames per view: v1 frame 0 dots at (7,38)/(23,37)/(39,37) and frame 2 at (8,38)/(24,37)/(40,37) = every dot +1 cell per 2 steps; v2 frame 0 (11,39)(14,37)(19,39)(27,28)(35,30)(35,46) -> frame 2 (12,39)(13,37)(20,39)(28,28)(36,30)(36,46); v3 frame 0 (18,36)(18,38)(18,40)(27,56) -> frame 2 (19,36)(19,38)(19,40)(28,56); v4 frame 0 seven dots -> frame 2 each +1 row. Source: pinned/<view>-77x47.txt frames 0 and 2.",
+      "full_lap": "48-frame pinned dumps per view; the longest routes lap and restart inside the window (v3 frame 0 (18,36) walks to (21,20) by the last frames; v4's console route walks 20 cells). The in-pane frames capture is truncated at 19 frames by the pane snapshot lag (see blockers) and is not the lap proof.",
+      "engine_defect": "v1's routes are 2 cells long after label_slot compression, so each dot cycles between its first two cells instead of travelling (frames 0-3: (7,38),(7,38),(8,38),(8,38) then back). This is the round-10 v1 oscillation, reproduced; recorded, not chased. In v2 the same effect appears only on the 2-cell boot pair ports (11,39)/(12,39) and (14,37)/(13,37)."
+    }
+  },
+  "coverage_map": {
+    "v1": "cp, pgrpc, q, reg, prov, mch; e1, e3, e5, e6, e7",
+    "v2": "mch, boot, agent, pgrpc, pub, db, s3; e8, e9, e10, e11, e12, e13, e17",
+    "v3": "q, ssh, jan, s3, mch; e15, e16, e18, e19",
+    "v4": "web, jan, wapi, q, rec, prov, db; e2, e4, e14, e20, e21, e22, e23",
+    "totals": "17/17 components, 23/23 relations, each relation drawn exactly once"
+  },
+  "abbreviations": [
+    {
+      "source": "Modal control plane",
+      "drawn": "control plane",
+      "why": "the case is Modal's machine-manager end to end; the vendor name would cost 6 columns in the widest rank"
+    },
+    {
+      "source": "River job queue",
+      "drawn": "River jobs",
+      "why": "the fan and row writes are drawn as edges; 'queue' is what q is"
+    },
+    {
+      "source": "cluster reconcile loop",
+      "drawn": "reconcile loop",
+      "why": "with the full name v4 measured 75 columns and clipped e4's label at the 77-column edge; 'cluster' survives on e23 'cluster state'"
+    },
+    {
+      "source": "reconcile loop syncs gcore clusters every minute",
+      "drawn": "gcore sync, 1 min",
+      "why": "keeps the cadence qualifier and the gcore target; 'cluster' survives on e23"
+    },
+    {
+      "source": "boot.ipxe + S3 args",
+      "drawn": "boot.ipxe + S3 args",
+      "why": "unchanged (the source's own wording)"
+    }
+  ],
+  "deliberate_drops": [
+    {
+      "fact": "the source's original grouping 'River jobs -> S3 diagnostics is separate from providers, janitor and machine image retrieval'",
+      "status": "kept as four distinct edges (e17, e18, e19 on their own labels), not dropped"
+    },
+    {
+      "fact": "none",
+      "status": "no source relationship, component, action verb, protocol or cadence was dropped; the only losses are the two width abbreviations above, each with its qualifier preserved elsewhere in the same view"
+    }
+  ],
+  "known_defects": [
+    {
+      "view": "v1",
+      "defect": "every dot cycles between its first two cells instead of completing a visible traverse (engine behaviour on 2-cell routes; the round-10 v1 oscillation)",
+      "capture": "pinned/v1-77x47.txt frames 0-3; also evidence/v1/v1-frames.txt"
+    },
+    {
+      "view": "v3",
+      "defect": "1 ambiguous-owner label ('diagnostic events' sits as close the S3 route as its own janitor route)",
+      "capture": "evidence/v3/check.txt; evidence/v3/v3-text.txt row 24"
+    },
+    {
+      "view": "v4",
+      "defect": "'gcore sync, 1 min' has an ambiguous owner (its own route and 'cluster state' run one column apart)",
+      "capture": "evidence/v4/check.txt; evidence/v4/v4-text.txt row 17"
+    },
+    {
+      "view": "v4",
+      "defect": "3 bridges and 3 touching bends between the three sources and the console rank",
+      "capture": "evidence/v4/check.txt 'crossings: 3 bridges, 3 touching bends'; evidence/v4/v4-text.txt rows 19-31"
+    },
+    {
+      "view": "all",
+      "defect": "the in-pane frames capture stops at 19 of 48 frames",
+      "capture": "evidence/v1..v4/*-frames.txt"
+    }
+  ],
+  "blockers": [
+    {
+      "blocker": "pane capture latency",
+      "detail": "herdr panes only surface rendered output ~1.5 s after launch (and ~6-8 s while the tab is unfocused), while scripts/viz-evidence.sh waits 1 s for the header. The first four captures came back as shell echoes. Captures were re-run with this generator's own tab focused (herdr tab focus w7E:tAN), and focus was returned to the captain tab w7E:t1 afterwards; the script itself was not modified.",
+      "impact": "capture-only; specs and --check results are unaffected"
+    },
+    {
+      "blocker": "pane frames snapshot lag",
+      "detail": "the same lag truncates the in-pane --frames capture at 19 of 48 frames (the app writes all 48 in 0.11 s; the pane snapshot only carries ~19). The full 48-frame motion proof is the pinned 77x47 direct dump per view.",
+      "impact": "in-pane frames artifact is short; pinned dumps carry the lap proof"
+    },
+    {
+      "blocker": "live pane measures 82x51, not 77x47",
+      "detail": "this tab is 168x53, so the split pane is 82x51. Fit at the target is proven by the pinned direct dump of each view's final spec at COLUMNS=77 LINES=47 natural zoom with no overflow banner.",
+      "impact": "recorded, not relabelled"
+    },
+    {
+      "blocker": "label placement for leftward fan branches",
+      "detail": "the engine places a leftward branch's label to the right of its route, on top of the next branch's run; no lever (targets, ordering, count) removed it inside the three-attempt budget.",
+      "impact": "v3 and v4 each carry one ambiguous owner"
+    }
+  ],
+  "cleanup": {
+    "panes": [
+      {
+        "view": "v1",
+        "pane_id": "w7E:pWZ",
+        "result": "confirmed_closed"
+      },
+      {
+        "view": "v2",
+        "pane_id": "w7E:pX2",
+        "result": "confirmed_closed"
+      },
+      {
+        "view": "v3",
+        "pane_id": "w7E:pX3",
+        "result": "confirmed_closed"
+      },
+      {
+        "view": "v4",
+        "pane_id": "w7E:pX4",
+        "result": "confirmed_closed"
+      }
+    ],
+    "probe_panes": "every probe pane was closed with herdr pane close and printed 'closed' in the transcript",
+    "tab_focus": "focused w7E:tAN for the captures, then returned focus to w7E:t1; the frozen binary, the skill, the renderer, the scripts and the validator were not modified"
+  },
+  "commands": [
+    "scripts/viz-evidence.sh record --to <case>/attempts-log.jsonl --label <label> -- /tmp/visualize-eval/round-10/bin/rataflow-view --check <spec>",
+    "COLUMNS=77 LINES=47 /tmp/visualize-eval/round-10/bin/rataflow-view --frames 48 <spec> > pinned/<view>-77x47.txt",
+    "scripts/viz-evidence.sh --spec <spec> --bin /tmp/visualize-eval/round-10/bin/rataflow-view --out <case>/evidence/<view> --label <view> --frames 48",
+    "scripts/viz-validate.py <case>/evidence/<view> --require-select --require-frames --require-records --attempts <case>/attempts.json",
+    "herdr tab focus w7E:tAN (before captures) ; herdr tab focus w7E:t1 (after captures)"
+  ],
+  "validator": {
+    "run_at": "after generation.json was written (the pinned-dump fallback reads it)",
+    "failing_checks": {
+      "v1": [],
+      "v2": [],
+      "v3": [
+        "check_warnings_absent",
+        "labels_ownership_clear"
+      ],
+      "v4": [
+        "check_warnings_absent",
+        "labels_ownership_clear"
+      ]
+    },
+    "raw": "validator-output.txt"
+  },
+  "attempts": "attempts.json (three spec candidates per view, every probe in attempts-log.jsonl)",
+  "not_claimed": "no independent review ran (the captain starts a separate terra judge); this bundle is not marked green"
+}

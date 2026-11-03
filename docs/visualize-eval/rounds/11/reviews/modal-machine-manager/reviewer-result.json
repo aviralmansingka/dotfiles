@@ -1,0 +1,1948 @@
+{
+  "protocol_version": 1,
+  "round": 11,
+  "case_id": "modal-machine-manager",
+  "candidate_sha256": "fb975dbe337bee801dc098f58695e0068cb1b2d7d79f34c0e473e24a1626cd4e",
+  "renderer_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+  "rubric_sha256": "5e09b9be9078ab5b46a82d0faf7bc986bf3d38a2d4cbb2f6745dd3fb9f0f54d7",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "3b2425d5dbc040d6e17df33a80d42b4e6d856de4f77050b183953dfe43a903f3",
+  "generator": {
+    "worker_id": "viz-ds11-6",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge11-machine-manager",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 82,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "spec1",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/specs/v1-provision-att3.json",
+      "sha256": "aa6d9416fdd740b4135db3da97ddfef410214fa3ada5e64df09db0bc023e4fbb",
+      "description": "Final view spec",
+      "capture": null
+    },
+    {
+      "id": "spec2",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/specs/v2-boot-heartbeat.json",
+      "sha256": "87e4f913e4ae812e17ddba23e19d06876451bd747872b21d4bb51141f2994073",
+      "description": "Final view spec",
+      "capture": null
+    },
+    {
+      "id": "spec3",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/specs/v3-ops-att3.json",
+      "sha256": "546d31086c6330b0f2f837d9cb1ef3e32fb227aa855148a66bf7690fa03fa776",
+      "description": "Final view spec",
+      "capture": null
+    },
+    {
+      "id": "spec4",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/specs/v4-humans-reconcile-att2.json",
+      "sha256": "5b650b5c7f6819bda43748e817d77bdfd7ff7a79864712685b9d1db5c177b77c",
+      "description": "Final view spec",
+      "capture": null
+    },
+    {
+      "id": "v1text",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v1/v1-text.txt",
+      "sha256": "3448f06e5bcec1ff7c50f35aed97972d980332b9c8c95a74204cf393a6159eeb",
+      "description": "View 1 text capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "still",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1ansi",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v1/v1-ansi.ansi",
+      "sha256": "b921b1fd2657830c96b882701de703e336d95e1bc4fa7c1210c47c805c9f6ba1",
+      "description": "View 1 ansi capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "still",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1selected",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v1/v1-selected.ansi",
+      "sha256": "33d99a1852e07ea15e613a443d84ea55c83dad01fd0e18cdde2054537ffbbed1",
+      "description": "View 1 selected capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "still",
+        "timestamp": "capture window in manifest",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1frames",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v1/v1-frames.txt",
+      "sha256": "324d2146fbba5c751e5afab63638a0043e8651c1077c0c6a547dc2a962fc5053",
+      "description": "View 1 frames capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "partial timestamped sequence",
+        "timestamp": "capture window in manifest",
+        "state": "animated frames",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1framesansi",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v1/v1-frames.ansi",
+      "sha256": "f9f7d206714c8c8e88d027e3b474b7e46d612a66a23a9561e30a58aee235143b",
+      "description": "View 1 framesansi capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "partial timestamped sequence",
+        "timestamp": "capture window in manifest",
+        "state": "animated frames",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1pinned",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/pinned/v1-77x47.txt",
+      "sha256": "97359eb0c55ce902a517bade2ba9ccc88bff73b255151abf93f230a9185162a5",
+      "description": "Final-spec pinned target-size 48-frame dump",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0–47",
+        "timestamp": "0–4700ms",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1check",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v1/check.txt",
+      "sha256": "986fbd54f85572e6a618e7dbc8a3bfdc3e9798d690cdeca97973ad3cafa40628",
+      "description": "Captured checker output",
+      "capture": null
+    },
+    {
+      "id": "v1manifest",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v1/manifest.json",
+      "sha256": "82c0ea3c00bf76b003e3a22a57d32301bf6956f476d5a0faf8749e3796b366cc",
+      "description": "Capture manifest and cleanup record",
+      "capture": null
+    },
+    {
+      "id": "v2text",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v2/v2-text.txt",
+      "sha256": "f809433fb5f23a157b603632e24383bd96065f298e3e0798ee3eca8c71e23794",
+      "description": "View 2 text capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "still",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2ansi",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v2/v2-ansi.ansi",
+      "sha256": "68569ea1e4789e1e58de988bb3d4581b0bc4e681c7b66394eb185ffd9bfcbaf4",
+      "description": "View 2 ansi capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "still",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2selected",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v2/v2-selected.ansi",
+      "sha256": "a88f5096879e40f4749bd633aa4bbe671da8f57b1a225f7742e444c4963d9685",
+      "description": "View 2 selected capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "still",
+        "timestamp": "capture window in manifest",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2frames",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v2/v2-frames.txt",
+      "sha256": "0618b5c4a962149e2b53a3493fd5cc612543561f37f58f19415449b14dca5199",
+      "description": "View 2 frames capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "partial timestamped sequence",
+        "timestamp": "capture window in manifest",
+        "state": "animated frames",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2framesansi",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v2/v2-frames.ansi",
+      "sha256": "611a39a4ae2a77ea939568c50725bb92c0e3d426692c956716cb6cb62a8f8dcd",
+      "description": "View 2 framesansi capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "partial timestamped sequence",
+        "timestamp": "capture window in manifest",
+        "state": "animated frames",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2pinned",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/pinned/v2-77x47.txt",
+      "sha256": "7a90d6045dec6c7b29b507c51c716847ead0066fda1f2ed9a48e32d790870dae",
+      "description": "Final-spec pinned target-size 48-frame dump",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0–47",
+        "timestamp": "0–4700ms",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2check",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v2/check.txt",
+      "sha256": "ad99dd74e7aab7767ab34b4d2ea69f316ab57993e7d0cee6dbd6e92a1edda201",
+      "description": "Captured checker output",
+      "capture": null
+    },
+    {
+      "id": "v2manifest",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v2/manifest.json",
+      "sha256": "6c713df1319b33c100ba84c49cc251988b8e22fa2b0a83b9c752eb2ad68b62eb",
+      "description": "Capture manifest and cleanup record",
+      "capture": null
+    },
+    {
+      "id": "v3text",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v3/v3-text.txt",
+      "sha256": "be2a5081c127d24f5d6756ebfa7979d4c9327324332f2a0d9e7cc33a64adf044",
+      "description": "View 3 text capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "still",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3ansi",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v3/v3-ansi.ansi",
+      "sha256": "29e873821c64b86c31ff33e9892b35f9cf0c4e42fc443d35e8f6f09d23f10ad9",
+      "description": "View 3 ansi capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "still",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3selected",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v3/v3-selected.ansi",
+      "sha256": "5e62523788fa94b3f313085566ba4430a9d868abcd9da21684ee0f7684dccd01",
+      "description": "View 3 selected capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "still",
+        "timestamp": "capture window in manifest",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3frames",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v3/v3-frames.txt",
+      "sha256": "5843ae56f0aabb9dae767f152cf082d047c458a5e8cfe0478480cdb8bb24ba93",
+      "description": "View 3 frames capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "partial timestamped sequence",
+        "timestamp": "capture window in manifest",
+        "state": "animated frames",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3framesansi",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v3/v3-frames.ansi",
+      "sha256": "648f8e24ecb9a9c3b632ed0ae04bbb38c29573d399f32f2cc55fde0616362e6c",
+      "description": "View 3 framesansi capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "partial timestamped sequence",
+        "timestamp": "capture window in manifest",
+        "state": "animated frames",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3pinned",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/pinned/v3-77x47.txt",
+      "sha256": "f24b623ee566efb3ef418ff3c7b5439f628f6687c721dc740d6bf2de3aec1c9b",
+      "description": "Final-spec pinned target-size 48-frame dump",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "0–47",
+        "timestamp": "0–4700ms",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3check",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v3/check.txt",
+      "sha256": "54acb8add5dc658f8627e367f865023d5917f6d5995c29527bc1beca06c4c9c0",
+      "description": "Captured checker output",
+      "capture": null
+    },
+    {
+      "id": "v3manifest",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v3/manifest.json",
+      "sha256": "75773af9afb704b0c9c684217d3a6d0a5ae1a2f44e4f4ab1218a2cf4f6f3f344",
+      "description": "Capture manifest and cleanup record",
+      "capture": null
+    },
+    {
+      "id": "v4text",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v4/v4-text.txt",
+      "sha256": "4444af384392950cf208eb81df169bed1217062374f0ade297710d1b66da31fc",
+      "description": "View 4 text capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "still",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4ansi",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v4/v4-ansi.ansi",
+      "sha256": "4d5fdc04a7cdcddc55b221f104d768badd8957e4eb4976ee997f0932d0a36e79",
+      "description": "View 4 ansi capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "still",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4selected",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v4/v4-selected.ansi",
+      "sha256": "7670a7ef9ca6b5534a420ce1da33fd2b3720b6ce531b89921a2436d3f2025006",
+      "description": "View 4 selected capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "still",
+        "timestamp": "capture window in manifest",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4frames",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v4/v4-frames.txt",
+      "sha256": "a0824025797bc279e95b2140c3322cf864e1b9ecd70a3b519667a41ea145af33",
+      "description": "View 4 frames capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "partial timestamped sequence",
+        "timestamp": "capture window in manifest",
+        "state": "animated frames",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4framesansi",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v4/v4-frames.ansi",
+      "sha256": "ec9a7c0cf2bd23d3eef9b99dbc9dc60356a660d4a1ac6cdf92fc70aa71883152",
+      "description": "View 4 framesansi capture",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "partial timestamped sequence",
+        "timestamp": "capture window in manifest",
+        "state": "animated frames",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4pinned",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/pinned/v4-77x47.txt",
+      "sha256": "19526f652ed661685198e3dacf8333acfae7883c5505c606df2d37c93419ba52",
+      "description": "Final-spec pinned target-size 48-frame dump",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "0–47",
+        "timestamp": "0–4700ms",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4check",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v4/check.txt",
+      "sha256": "c0a888f2c0893ea04dc4ee272ac8bdaaf76ad6453aa0b770eb3439aeb2e3fdd0",
+      "description": "Captured checker output",
+      "capture": null
+    },
+    {
+      "id": "v4manifest",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/evidence/v4/manifest.json",
+      "sha256": "7cf88cbac73798491bc5dce0b50d82bcfce4810ec58100b5242c386947fe1ce4",
+      "description": "Capture manifest and cleanup record",
+      "capture": null
+    },
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/11/reviews/modal-machine-manager/observed-first.md",
+      "sha256": "b3b69ee523c01b186c94ee3fef384ef946c594ff7dfdfa50fc23b619f466fb56",
+      "description": "blind frozen review evidence",
+      "capture": null
+    },
+    {
+      "id": "specmanifest",
+      "path": "docs/visualize-eval/rounds/11/reviews/modal-machine-manager/spec-manifest.json",
+      "sha256": "3b2425d5dbc040d6e17df33a80d42b4e6d856de4f77050b183953dfe43a903f3",
+      "description": "specmanifest frozen review evidence",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/source.md",
+      "sha256": "a41065d9ceca1ed035bfd6282f0e937abbd0034ad497a33637a76f2d8a9ebab3",
+      "description": "source frozen review evidence",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/expected.json",
+      "sha256": "c6d14814bcfa0f41e7401df3b57ea1400e15050b9fb4db3d2e12980d6fde9764",
+      "description": "expected frozen review evidence",
+      "capture": null
+    },
+    {
+      "id": "history",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/historical-variants.json",
+      "sha256": "22f00c085b50f218115610ed1580e89f4c0a94d39f8ecf83c80d6712116a06b2",
+      "description": "history frozen review evidence",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/11/metadata.json",
+      "sha256": "e3f15d22d65108f47b33ad7517103f554c8401e24051549812c783a5b6964626",
+      "description": "metadata frozen review evidence",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/11/rubric.json",
+      "sha256": "5e09b9be9078ab5b46a82d0faf7bc986bf3d38a2d4cbb2f6745dd3fb9f0f54d7",
+      "description": "rubric frozen review evidence",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "dataset frozen review evidence",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/11/SKILL.md",
+      "sha256": "fb975dbe337bee801dc098f58695e0068cb1b2d7d79f34c0e473e24a1626cd4e",
+      "description": "skill frozen review evidence",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/generation.json",
+      "sha256": "8d02f6443d48da21d404cab926a7a33beff6bd455925aadee59400564c545e12",
+      "description": "generation frozen review evidence",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/attempts.json",
+      "sha256": "037e664d04890875d21bc145422f3dfa13f5829861448008f27f679f9ac7c226",
+      "description": "attempts frozen review evidence",
+      "capture": null
+    },
+    {
+      "id": "records",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/attempts-log.jsonl",
+      "sha256": "86977def46f86fbc44deb98567ba7ec93f33650592c7070a61f55ccd81e7e945",
+      "description": "records frozen review evidence",
+      "capture": null
+    },
+    {
+      "id": "validator",
+      "path": "docs/visualize-eval/rounds/11/modal-machine-manager/validator-output.txt",
+      "sha256": "1d5003a9f9d87754247b5149b648756038fc90bc1e494d43ed803ccd7fed0ffa",
+      "description": "validator frozen review evidence",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 17 components and 23 directed endpoints exist in captures, including both boot directions; e19 and e22 labels cannot reliably be assigned to their actual routes, so required relation meaning is not fully readable.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "evidence_ids": [
+        "v1text",
+        "v2text",
+        "v3text",
+        "v4text",
+        "v1check",
+        "v2check",
+        "v3check",
+        "v4check"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 23 stems and arrowheads exist, but two route labels have ambiguous owners; the three v4 bridge crossings are distinct from junctions and no evidence proves all are unavoidable.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "evidence_ids": [
+        "v1text",
+        "v2text",
+        "v3text",
+        "v4text",
+        "v1check",
+        "v2check",
+        "v3check",
+        "v4check",
+        "attempts"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Four final-spec direct dumps establish 77x47 natural fit with complete graph content, and no overflow. Live panes are 82x51. v4 truncates only UI title; 3 bridges are reported, not established avoidable by available candidates.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "evidence_ids": [
+        "v1pinned",
+        "v2pinned",
+        "v3pinned",
+        "v4pinned",
+        "v1check",
+        "v2check",
+        "v3check",
+        "v4check"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Related concepts have related colors and no enclosing group box; however the generator explicitly declares ops sibling order SSH before janitor while v3 renders janitor left of SSH, opposite its stated order and source listing.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "evidence_ids": [
+        "v3text",
+        "v3ansi",
+        "generation"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Normal ANSI and select-all ANSI show complete continuous node borders for 26 occurrences. Select-all does not establish exclusive individual selection.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "evidence_ids": [
+        "v1ansi",
+        "v1selected",
+        "v2ansi",
+        "v2selected",
+        "v3ansi",
+        "v3selected",
+        "v4ansi",
+        "v4selected"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Metadata cases_sha256 does not match the actual cases.json (e867 vs e869). Full-lap proof also fails for long v4 janitor route, which has not reached webapi by frame 47. Fourteen recorded commands and raw outputs hash correctly; validator records check passes but v3/v4 validator has owner failures.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "dataset",
+        "records",
+        "attempts",
+        "validator",
+        "blind",
+        "v1pinned",
+        "v2pinned",
+        "v3pinned",
+        "v4pinned"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Three provisioning dots oscillate between two cells instead of traversing. The v2 boot pair instead visits three cells in the correct direction then wraps; the generator claim of two-cell oscillation there is not supported by the pinned frames. The original e3/e6 communication lines were animated but final spec makes them static despite the later one-live-dot-per-line correction. Longest v4 route has no complete target-size lap in the capture.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "evidence_ids": [
+        "v1pinned",
+        "v2pinned",
+        "v3pinned",
+        "v4pinned",
+        "history",
+        "generation"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "The closest lifecycle-machines classification is supported by the source phase sequence and widest five-edge queue fan. v1 shows the provisioning chain, v2 the separate labelled boot anti-parallel pair and subsequent heartbeat, with ops/reconcile in later views. The spine is split and the boot request moves up then response down, so a single downward time sequence is not literally visible; the generator records these deviations and fit reasons. Softened round-11 family criterion accepts them, without excusing independent semantic or motion defects.",
+      "judged_family": "lifecycle-machines",
+      "generator_family": "lifecycle-machines",
+      "evidence_line": "one machine-manager lifecycle reads in a single phase order (control plane -> private gRPC -> River jobs -> provider registry -> bare-metal providers -> bare-metal machines -> iPXE boot -> machine-agent heartbeat -> Postgres) and the widest fan in the source is five out of one node (River jobs -> reg/db/ssh/s3/jan), with the source asking for one slow dot per live line.",
+      "recipe_facts_verified": [
+        "v1 six top-to-bottom provisioning nodes",
+        "v2 two separate labelled boot directions and machine-agent to Postgres",
+        "v3 three-way fan, with two further queue edges in v1/v4",
+        "v4 console and reconcile",
+        "one visible dot on each of 20 specified animated routes, but traversal fails on short routes",
+        "recorded split and static handoff deviations; secondary service-mesh pair co-viewed"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "cp → pgrpc: create / terminate / repair",
+      "observed": "v1: cp → pgrpc, down with lateral routing as drawn, label 'create / terminate / repair'. Stem and separate downward ▼ target arrowhead visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1text",
+          "region": [
+            36,
+            6,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1text",
+          "region": [
+            44,
+            9,
+            27,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1text",
+          "region": [
+            36,
+            14,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "web → wapi: http",
+      "observed": "v4: web → wapi, down with lateral routing as drawn, label 'http'. Stem and separate downward ▼ target arrowhead visible. Three bridge glyphs in the view separate crossings; no junction asserted.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4text",
+          "region": [
+            52,
+            13,
+            14,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4text",
+          "region": [
+            61,
+            16,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4text",
+          "region": [
+            49,
+            22,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "pgrpc → q: enqueue job",
+      "observed": "v1: pgrpc → q, down with lateral routing as drawn, label 'enqueue job'. Stem and separate downward ▼ target arrowhead visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1text",
+          "region": [
+            36,
+            14,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1text",
+          "region": [
+            44,
+            17,
+            11,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1text",
+          "region": [
+            37,
+            22,
+            10,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "wapi → q: reinstall / reprovision",
+      "observed": "v4: wapi → q, down with lateral routing as drawn, label 'reinstall / reprovision'. Stem and separate downward ▼ target arrowhead visible. Three bridge glyphs in the view separate crossings; no junction asserted.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4text",
+          "region": [
+            49,
+            22,
+            6,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4text",
+          "region": [
+            23,
+            26,
+            23,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4text",
+          "region": [
+            30,
+            31,
+            10,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "q → reg: provision job",
+      "observed": "v1: q → reg, down with lateral routing as drawn, label 'provision job'. Stem and separate downward ▼ target arrowhead visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1text",
+          "region": [
+            37,
+            22,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1text",
+          "region": [
+            44,
+            25,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1text",
+          "region": [
+            34,
+            30,
+            17,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "reg → prov: provider API",
+      "observed": "v1: reg → prov, down with lateral routing as drawn, label 'provider API'. Stem and separate downward ▼ target arrowhead visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1text",
+          "region": [
+            34,
+            30,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1text",
+          "region": [
+            44,
+            33,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1text",
+          "region": [
+            32,
+            38,
+            20,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "prov → mch: allocate instance",
+      "observed": "v1: prov → mch, down with lateral routing as drawn, label 'allocate instance'. Stem and separate downward ▼ target arrowhead visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1text",
+          "region": [
+            32,
+            38,
+            20,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1text",
+          "region": [
+            44,
+            41,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1text",
+          "region": [
+            33,
+            46,
+            19,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "mch → boot: iPXE request",
+      "observed": "v2: mch → boot, up, label 'iPXE request'. Stem and separate upward ▲ target arrowhead visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2text",
+          "region": [
+            32,
+            18,
+            19,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2text",
+          "region": [
+            27,
+            15,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2text",
+          "region": [
+            36,
+            10,
+            11,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e9",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "boot → mch: boot.ipxe + S3 args",
+      "observed": "v2: boot → mch, down with lateral routing as drawn, label 'boot.ipxe + S3 args'. Stem and separate downward ▼ target arrowhead visible. Response is a separate adjacent path from the reverse iPXE request; exact boot.ipxe + S3 args label visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2text",
+          "region": [
+            36,
+            10,
+            11,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2text",
+          "region": [
+            43,
+            14,
+            19,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2text",
+          "region": [
+            32,
+            18,
+            19,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e10",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "mch → agent: runs on host",
+      "observed": "v2: mch → agent, down with lateral routing as drawn, label 'runs on host'. Stem and separate downward ▼ target arrowhead visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2text",
+          "region": [
+            32,
+            18,
+            19,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2text",
+          "region": [
+            28,
+            22,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2text",
+          "region": [
+            25,
+            26,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e11",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "agent → pub: register + heartbeat",
+      "observed": "v2: agent → pub, down with lateral routing as drawn, label 'register + heartbeat'. Stem and separate downward ▼ target arrowhead visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2text",
+          "region": [
+            25,
+            26,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2text",
+          "region": [
+            33,
+            29,
+            20,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2text",
+          "region": [
+            28,
+            34,
+            11,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e12",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "pub → db: machine state",
+      "observed": "v2: pub → db, down with lateral routing as drawn, label 'machine state'. Stem and separate downward ▼ target arrowhead visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2text",
+          "region": [
+            28,
+            34,
+            11,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2text",
+          "region": [
+            35,
+            37,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2text",
+          "region": [
+            38,
+            42,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e13",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "pgrpc → db: machine rows",
+      "observed": "v2: pgrpc → db, down with lateral routing as drawn, label 'machine rows'. Stem and separate downward ▼ target arrowhead visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2text",
+          "region": [
+            44,
+            34,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2text",
+          "region": [
+            52,
+            37,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2text",
+          "region": [
+            38,
+            42,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e14",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "q → db: job rows",
+      "observed": "v4: q → db, down with lateral routing as drawn, label 'job rows'. Stem and separate downward ▼ target arrowhead visible. Three bridge glyphs in the view separate crossings; no junction asserted.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4text",
+          "region": [
+            30,
+            31,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4text",
+          "region": [
+            32,
+            37,
+            8,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4text",
+          "region": [
+            38,
+            39,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e15",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "q → ssh: audit / verify reimage",
+      "observed": "v3: q → ssh, down with lateral routing as drawn, label 'audit / verify reimage'. Stem and separate downward ▼ target arrowhead visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3text",
+          "region": [
+            37,
+            17,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3text",
+          "region": [
+            44,
+            22,
+            22,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3text",
+          "region": [
+            53,
+            26,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e16",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "ssh → mch: run machine-audit",
+      "observed": "v3: ssh → mch, down with lateral routing as drawn, label 'run machine-audit'. Stem and separate downward ▼ target arrowhead visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3text",
+          "region": [
+            53,
+            26,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3text",
+          "region": [
+            42,
+            30,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3text",
+          "region": [
+            32,
+            34,
+            19,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e17",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "mch → s3: pull boot image",
+      "observed": "v2: mch → s3, down with lateral routing as drawn, label 'pull boot image'. Stem and separate downward ▼ target arrowhead visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2text",
+          "region": [
+            32,
+            18,
+            19,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2text",
+          "region": [
+            35,
+            24,
+            15,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2text",
+          "region": [
+            43,
+            26,
+            15,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e18",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "q → s3: diagnose uploads",
+      "observed": "v3: q → s3, down with lateral routing as drawn, label 'diagnose uploads'. Stem and separate downward ▼ target arrowhead visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3text",
+          "region": [
+            37,
+            17,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3text",
+          "region": [
+            42,
+            24,
+            16,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3text",
+          "region": [
+            33,
+            26,
+            15,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e19",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "q → jan: diagnostic events",
+      "observed": "v3: q → jan, down with lateral routing as drawn, label 'diagnostic events'. Stem and separate downward ▼ target arrowhead visible. Its leftward route reaches janitor, but diagnostic events lies adjacent to the S3 arrowhead; owner is uncertain.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3text",
+          "region": [
+            37,
+            17,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3text",
+          "region": [
+            23,
+            24,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3text",
+          "region": [
+            17,
+            26,
+            11,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F-owner-v3"
+      ]
+    },
+    {
+      "edge_id": "e20",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "jan → wapi: proposed actions",
+      "observed": "v4: jan → wapi, down with lateral routing as drawn, label 'proposed actions'. Stem and separate downward ▼ target arrowhead visible. Three bridge glyphs in the view separate crossings; no junction asserted.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4text",
+          "region": [
+            17,
+            13,
+            11,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4text",
+          "region": [
+            17,
+            19,
+            16,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4text",
+          "region": [
+            49,
+            22,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e21",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "wapi → slack: confirm + alerts",
+      "observed": "v4: wapi → slack, down with lateral routing as drawn, label 'confirm + alerts'. Stem and separate downward ▼ target arrowhead visible. Three bridge glyphs in the view separate crossings; no junction asserted.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4text",
+          "region": [
+            49,
+            22,
+            6,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4text",
+          "region": [
+            54,
+            26,
+            16,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4text",
+          "region": [
+            45,
+            31,
+            5,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e22",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "rec → prov: gcore sync, 1 min",
+      "observed": "v4: rec → prov, down with lateral routing as drawn, label 'gcore sync, 1 min'. Stem and separate downward ▼ target arrowhead visible. Its leftward route reaches providers; gcore sync label is adjacent to the other reconcile route, so owner is uncertain. Three bridge glyphs in the view separate crossings; no junction asserted.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4text",
+          "region": [
+            33,
+            13,
+            14,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4text",
+          "region": [
+            41,
+            17,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4text",
+          "region": [
+            24,
+            22,
+            20,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F-owner-v4"
+      ]
+    },
+    {
+      "edge_id": "e23",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "expected": "rec → db: cluster state",
+      "observed": "v4: rec → db, down with lateral routing as drawn, label 'cluster state'. Stem and separate downward ▼ target arrowhead visible. Three bridge glyphs in the view separate crossings; no junction asserted.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4text",
+          "region": [
+            33,
+            13,
+            14,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4text",
+          "region": [
+            44,
+            37,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4text",
+          "region": [
+            38,
+            39,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-owner-v3",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e19",
+        "e18"
+      ],
+      "severity": "high",
+      "description": "Defect: diagnostic events text is adjacent to S3 rather than clearly owned by its janitor route. Three attempts retain a warning, but do not establish no other unambiguous arrangement exists.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3text",
+          "region": [
+            23,
+            24,
+            17,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F-owner-v4",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e22",
+        "e23"
+      ],
+      "severity": "high",
+      "description": "Defect: gcore sync text sits next to the other reconcile output; target relation is ambiguous. Attempts record tradeoffs but do not prove all unambiguous layouts impossible.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v4text",
+          "region": [
+            41,
+            17,
+            17,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F-animation-oscillation",
+      "category": "animation",
+      "edge_ids": [
+        "e1",
+        "e5",
+        "e7"
+      ],
+      "severity": "high",
+      "description": "Renderer defect: target frames demonstrate three v1 routes oscillate in two cells, not moving along their full drawn arrows; checker nevertheless reports zero violations.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1pinned",
+          "region": [
+            38,
+            7,
+            2,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F-static-handoffs",
+      "category": "animation",
+      "edge_ids": [
+        "e3",
+        "e6"
+      ],
+      "severity": "medium",
+      "description": "Defect: enqueue job and provider API were live communication edges in historical animated spec, but final v1 makes both static despite the later one-live-dot-per-line correction.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1text",
+          "region": [
+            40,
+            17,
+            15,
+            17
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F-group-order",
+      "category": "conceptual_grouping_color",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "Defect: v3 places janitor left of SSH while generation declares SSH before janitor, also opposite the source ops listing.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3text",
+          "region": [
+            16,
+            25,
+            51,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F-full-lap",
+      "category": "workflow_evidence",
+      "edge_ids": [
+        "e20"
+      ],
+      "severity": "high",
+      "description": "Evidence gap: v4 target-sized 48 frames end while the long janitor-to-webapi dot is at row 16 column 44, before reaching its target, so a complete lap is not established; live-pane sequences are shorter.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v4pinned",
+          "region": [
+            20,
+            14,
+            30,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F-crossings",
+      "category": "layout_fit",
+      "edge_ids": [],
+      "severity": "low",
+      "description": "Observation, not a category failure: v4 has three visible bridge glyphs and three reported touching bends; comparison attempts do not establish that all three are avoidable while preserving fit and relations.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v4text",
+          "region": [
+            32,
+            18,
+            20,
+            11
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F-title",
+      "category": "layout_fit",
+      "edge_ids": [],
+      "severity": "low",
+      "description": "Observation, not a graph-fit failure: v4 UI title is truncated; node and edge labels fit.",
+      "source_refs": [
+        "source",
+        "expected"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v4text",
+          "region": [
+            1,
+            1,
+            82,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F-freeze-hash",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Evidence defect: frozen metadata cases_sha256 is e69179e59a3d36985cd7e8672b319b566701f88caef385c9cbde76d060c92d05 but independently computed actual cases.json SHA-256 is e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05. A mismatch blocks frozen dataset identity; do not substitute either silently.",
+      "source_refs": [
+        "metadata",
+        "dataset"
+      ],
+      "locations": []
+    }
+  ],
+  "blockers": [
+    "Frozen metadata cases.json hash differs from actual dataset manifest; resolve provenance before treating dataset identity as verified.",
+    "Captured target-size v4 longest route does not complete a lap; no full-cycle proof for that route.",
+    "Renderer short-route animation oscillates and checker does not detect it; v1 has three affected routes. The claimed two-cell v2 oscillation is not supported by the captured three-cell progression.",
+    "Renderer ambiguous leftward fan/adjacent-route label placement remains in v3/v4; three v3 attempts do not prove impossibility of all alternatives."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pWZ",
+      "w7E:pX2",
+      "w7E:pX3",
+      "w7E:pX4"
+    ],
+    "closed_pane_ids": [
+      "w7E:pWZ",
+      "w7E:pX2",
+      "w7E:pX3",
+      "w7E:pX4"
+    ],
+    "status": "done",
+    "reason": "Each per-view manifest and generation record says confirmed_closed; no new viewer pane was opened by this reviewer."
+  },
+  "overall": "fail"
+}

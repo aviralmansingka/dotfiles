@@ -1,0 +1,288 @@
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/11/gb300-rack-software/specs/v
+4-inband-a1.json
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+󰂄 7% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/gb300-rack-software/
+specs/v4-inband-a1.json
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$✘!?] on ☁️  (ap-south-1) on ☁️  avi
+ralmansingka@gmail.com
+󰂄 7% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/gb300-rack-software/
+specs/v4-inband-a1.json --select-all
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$✘!?] on ☁️  (ap-south-1) on ☁️  avi
+ralmansingka@gmail.com
+󰂄 7% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/gb300-rack-software/
+specs/v4-inband-a1.json --frames 5 --step-ms 100
+viewport: 82x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 82x51 @100% · v4-inband-a1.json · 6 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+                                   ╭──────────╮
+                                   │Kubernetes│
+                                   │          │
+                                   ╰──────────╯
+                                        │  in-band
+                                        │
+                                        │
+                                        ▼
+                                  ╭────────────╮
+                                  │GPU Operator│
+                                  │            │
+                                  ╰────────────╯
+                                        │  DaemonSet
+                                        │
+                                        │
+                                        ▼
+                                      ╭────╮
+                                      │DCGM│
+                                      │    │
+                                      ╰────╯
+                                       │ │ serves :9400
+                                       │ │
+                                ╭──────╯ ╰───────╮
+                                ▼      reads NVML▼
+                         ╭─────────────╮   ╭───────────╮
+                         │dcgm-exporter│   │Driver+CUDA│
+                         │             │   │           │
+                         ╰─────────────╯   ╰───────────╯
+                                                 │ same host
+                                                 │
+                                        ╭────────╯
+                                        ▼
+                                   ╭──────────╮
+                                   │Fabric Mgr│
+                                   │          │
+                                   ╰──────────╯
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 82x51 @100% · v4-inband-a1.json · 6 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+                                   ╭──────────╮
+                                   │Kubernetes│
+                                   │          │
+                                   ╰──────────╯
+                                        │  in-band
+                                        │
+                                        │
+                                        ▼
+                                  ╭────────────╮
+                                  │GPU Operator│
+                                  │            │
+                                  ╰────────────╯
+                                        │  DaemonSet
+                                        │
+                                        │
+                                        ▼
+                                      ╭────╮
+                                      │DCGM│
+                                      │    │
+                                      ╰────╯
+                                       │ │ serves :9400
+                                       │ │
+                                ╭──────╯ ╰───────╮
+                                ▼      reads NVML▼
+                         ╭─────────────╮   ╭───────────╮
+                         │dcgm-exporter│   │Driver+CUDA│
+                         │             │   │           │
+                         ╰─────────────╯   ╰───────────╯
+                                                 │ same host
+                                                 │
+                                        ╭────────╯
+                                        ▼
+                                   ╭──────────╮
+                                   │Fabric Mgr│
+                                   │          │
+                                   ╰──────────╯
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 82x51 @100% · v4-inband-a1.json · 6 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+                                   ╭──────────╮
+                                   │Kubernetes│
+                                   │          │
+                                   ╰──────────╯
+                                        │  in-band
+                                        │
+                                        │
+                                        ▼
+                                  ╭────────────╮
+                                  │GPU Operator│
+                                  │            │
+                                  ╰────────────╯
+                                        │  DaemonSet
+                                        │
+                                        │
+                                        ▼
+                                      ╭────╮
+                                      │DCGM│
+                                      │    │
+                                      ╰────╯
+                                       │ │ serves :9400
+                                       │ │
+                                ╭──────╯ ╰───────╮
+                                ▼      reads NVML▼
+                         ╭─────────────╮   ╭───────────╮
+                         │dcgm-exporter│   │Driver+CUDA│
+                         │             │   │           │
+                         ╰─────────────╯   ╰───────────╯
+                                                 │ same host
+                                                 │
+                                        ╭────────╯
+                                        ▼
+                                   ╭──────────╮
+                                   │Fabric Mgr│
+                                   │          │
+                                   ╰──────────╯
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 82x51 @100% · v4-inband-a1.json · 6 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+                                   ╭──────────╮
+                                   │Kubernetes│
+                                   │          │
+                                   ╰──────────╯
+                                        │  in-band
+                                        │
+                                        │
+                                        ▼
+                                  ╭────────────╮
+                                  │GPU Operator│
+                                  │            │
+                                  ╰────────────╯
+                                        │  DaemonSet
+                                        │
+                                        │
+                                        ▼
+                                      ╭────╮
+                                      │DCGM│
+                                      │    │
+                                      ╰────╯
+                                       │ │ serves :9400
+                                       │ │
+                                ╭──────╯ ╰───────╮
+                                ▼      reads NVML▼
+                         ╭─────────────╮   ╭───────────╮
+                         │dcgm-exporter│   │Driver+CUDA│
+                         │             │   │           │
+                         ╰─────────────╯   ╰───────────╯
+                                                 │ same host
+                                                 │
+                                        ╭────────╯
+                                        ▼
+                                   ╭──────────╮
+                                   │Fabric Mgr│
+                                   │          │
+                                   ╰──────────╯
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 82x51 @100% · v4-inband-a1.json · 6 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+                                   ╭──────────╮
+                                   │Kubernetes│
+                                   │          │
+                                   ╰──────────╯
+                                        │  in-band
+                                        │
+                                        │
+                                        ▼
+                                  ╭────────────╮
+                                  │GPU Operator│
+                                  │            │
+                                  ╰────────────╯
+                                        │  DaemonSet
+                                        │
+                                        │
+                                        ▼
+                                      ╭────╮
+                                      │DCGM│
+                                      │    │
+                                      ╰────╯
+                                       │ │ serves :9400
+                                       │ │
+                                ╭──────╯ ╰───────╮
+                                ▼      reads NVML▼
+                         ╭─────────────╮   ╭───────────╮
+                         │dcgm-exporter│   │Driver+CUDA│
+                         │             │   │           │
+                         ╰─────────────╯   ╰───────────╯
+                                                 │ same host
+                                                 │
+                                        ╭────────╯
+                                        ▼
+                                   ╭──────────╮
+                                   │Fabric Mgr│
+                                   │          │
+                                   ╰──────────╯
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$✘!?] on ☁️  (ap-south-1) on ☁️  avi
+ralmansingka@gmail.com
+󰂄 7% ❯

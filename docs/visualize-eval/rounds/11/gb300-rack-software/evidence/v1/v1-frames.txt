@@ -2,19 +2,287 @@
 iles/fix-visualize-skill/docs/visualize-eval/rounds/11/gb300-rack-software/specs/v
 1-planes-a3.json
 
-fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
-lmansingka@gmail.com
-󰂃 3% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+fix-visualize-skill on  fix/visualize-skill [$✘!?] on ☁️  (ap-south-1) on ☁️  avi
+ralmansingka@gmail.com
+󰂄 7% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
 es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/gb300-rack-software/
 specs/v1-planes-a3.json
 viewport: 82x51 zoom: 1.00 natural
-q/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
-files/fix-visualize-skill/docs/visualize-eval/rounds/11/gb300-rack-software/specs/
-v1-planes-a3.json --frames 5 --step-ms 100
-[WARN] - (starship::utils): Executing command "/usr/bin/git" timed out.
-[WARN] - (starship::utils): You can set command_timeout in your config to a higher
- value to allow longer-running commands to keep executing.
 
-fix-visualize-skill on  fix/visualize-skill [$] on ☁️  (ap-south-1) on ☁️  aviral
-mansingka@gmail.com
-󰂃 3% ❯ q/tmp/visualize-eva
+fix-visualize-skill on  fix/visualize-skill [$✘!?] on ☁️  (ap-south-1) on ☁️  avi
+ralmansingka@gmail.com
+󰂄 7% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/gb300-rack-software/
+specs/v1-planes-a3.json --select-all
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$✘!?] on ☁️  (ap-south-1) on ☁️  avi
+ralmansingka@gmail.com
+󰂄 7% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/gb300-rack-software/
+specs/v1-planes-a3.json --frames 5 --step-ms 100
+viewport: 82x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 82x51 @100% · v1-planes-a3.json · 12 nodes · 6 edges · q quit
+
+
+
+
+
+
+                                 ╭──────────╮   ╭──────╮
+                                 │Kubernetes│   │nv-rms│
+                                 │          │   │      │
+                                 ╰──────────╯   ╰──────╯
+                                      │  in-band   │  client
+                                      │            │
+                                      │            ╰─╮
+                                      ▼              ▼
+                                ╭────────────╮   ╭───────╮
+                                │GPU Operator│   │OOB LAN│
+                                │            │   │       │
+                                ╰────────────╯   ╰───────╯
+                                      │  DaemonSet   │
+                                      │              │
+                                      │              │
+                                      │       ╭──────┤
+             ╭────────────────────────╯       │      ╰─╮
+             ▼                                ▼        │ reach
+           ╭────╮   ╭───────────────╮   ╭────────────╮ │ ╭───────────╮
+           │DCGM│   │Compute BMC x18│◀╮ │NVSwitch BMC│ │ │Power shelf│
+           │    │   │               │ │ │            │ │ │           │
+           ╰────╯   ╰───────────────╯ │ ╰────────────╯ │ ╰───────────╯
+             │  reads NVML            │                │       ▲
+             │                        ╰──────────────╮ ├───────╯
+             ╰──────────────────────────╮           ╭┴─╯
+                                        ▼           ▼
+                                  ╭───────────╮   ╭────╮
+                                  │Driver+CUDA│   │NVOS│
+                                  │           │   │    │
+                                  ╰───────────╯   ╰────╯
+                                        │ same host │  hosts
+                                        │           │
+                                      ╭─╯           │
+                                      ▼             ▼
+                                 ╭──────────╮   ╭───────╮
+                                 │Fabric Mgr│   │NMX-C/T│
+                                 │          │   │       │
+ ┌───────┐                       ╰──────────╯   ╰───────╯
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 82x51 @100% · v1-planes-a3.json · 12 nodes · 6 edges · q quit
+
+
+
+
+
+
+                                 ╭──────────╮   ╭──────╮
+                                 │Kubernetes│   │nv-rms│
+                                 │          │   │      │
+                                 ╰──────────╯   ╰──────╯
+                                      │  in-band   │  client
+                                      │            │
+                                      │            ╰─╮
+                                      ▼              ▼
+                                ╭────────────╮   ╭───────╮
+                                │GPU Operator│   │OOB LAN│
+                                │            │   │       │
+                                ╰────────────╯   ╰───────╯
+                                      │  DaemonSet   │
+                                      │              │
+                                      │              │
+                                      │       ╭──────┤
+             ╭────────────────────────╯       │      ╰─╮
+             ▼                                ▼        │ reach
+           ╭────╮   ╭───────────────╮   ╭────────────╮ │ ╭───────────╮
+           │DCGM│   │Compute BMC x18│◀╮ │NVSwitch BMC│ │ │Power shelf│
+           │    │   │               │ │ │            │ │ │           │
+           ╰────╯   ╰───────────────╯ │ ╰────────────╯ │ ╰───────────╯
+             │  reads NVML            │                │       ▲
+             │                        ╰──────────────╮ ├───────╯
+             ╰──────────────────────────╮           ╭┴─╯
+                                        ▼           ▼
+                                  ╭───────────╮   ╭────╮
+                                  │Driver+CUDA│   │NVOS│
+                                  │           │   │    │
+                                  ╰───────────╯   ╰────╯
+                                        │ same host │  hosts
+                                        │           │
+                                      ╭─╯           │
+                                      ▼             ▼
+                                 ╭──────────╮   ╭───────╮
+                                 │Fabric Mgr│   │NMX-C/T│
+                                 │          │   │       │
+ ┌───────┐                       ╰──────────╯   ╰───────╯
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 82x51 @100% · v1-planes-a3.json · 12 nodes · 6 edges · q quit
+
+
+
+
+
+
+                                 ╭──────────╮   ╭──────╮
+                                 │Kubernetes│   │nv-rms│
+                                 │          │   │      │
+                                 ╰──────────╯   ╰──────╯
+                                      │  in-band   │  client
+                                      │            │
+                                      │            ╰─╮
+                                      ▼              ▼
+                                ╭────────────╮   ╭───────╮
+                                │GPU Operator│   │OOB LAN│
+                                │            │   │       │
+                                ╰────────────╯   ╰───────╯
+                                      │  DaemonSet   │
+                                      │              │
+                                      │              │
+                                      │       ╭──────┤
+             ╭────────────────────────╯       │      ╰─╮
+             ▼                                ▼        │ reach
+           ╭────╮   ╭───────────────╮   ╭────────────╮ │ ╭───────────╮
+           │DCGM│   │Compute BMC x18│◀╮ │NVSwitch BMC│ │ │Power shelf│
+           │    │   │               │ │ │            │ │ │           │
+           ╰────╯   ╰───────────────╯ │ ╰────────────╯ │ ╰───────────╯
+             │  reads NVML            │                │       ▲
+             │                        ╰──────────────╮ ├───────╯
+             ╰──────────────────────────╮           ╭┴─╯
+                                        ▼           ▼
+                                  ╭───────────╮   ╭────╮
+                                  │Driver+CUDA│   │NVOS│
+                                  │           │   │    │
+                                  ╰───────────╯   ╰────╯
+                                        │ same host │  hosts
+                                        │           │
+                                      ╭─╯           │
+                                      ▼             ▼
+                                 ╭──────────╮   ╭───────╮
+                                 │Fabric Mgr│   │NMX-C/T│
+                                 │          │   │       │
+ ┌───────┐                       ╰──────────╯   ╰───────╯
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 82x51 @100% · v1-planes-a3.json · 12 nodes · 6 edges · q quit
+
+
+
+
+
+
+                                 ╭──────────╮   ╭──────╮
+                                 │Kubernetes│   │nv-rms│
+                                 │          │   │      │
+                                 ╰──────────╯   ╰──────╯
+                                      │  in-band   │  client
+                                      │            │
+                                      │            ╰─╮
+                                      ▼              ▼
+                                ╭────────────╮   ╭───────╮
+                                │GPU Operator│   │OOB LAN│
+                                │            │   │       │
+                                ╰────────────╯   ╰───────╯
+                                      │  DaemonSet   │
+                                      │              │
+                                      │              │
+                                      │       ╭──────┤
+             ╭────────────────────────╯       │      ╰─╮
+             ▼                                ▼        │ reach
+           ╭────╮   ╭───────────────╮   ╭────────────╮ │ ╭───────────╮
+           │DCGM│   │Compute BMC x18│◀╮ │NVSwitch BMC│ │ │Power shelf│
+           │    │   │               │ │ │            │ │ │           │
+           ╰────╯   ╰───────────────╯ │ ╰────────────╯ │ ╰───────────╯
+             │  reads NVML            │                │       ▲
+             │                        ╰──────────────╮ ├───────╯
+             ╰──────────────────────────╮           ╭┴─╯
+                                        ▼           ▼
+                                  ╭───────────╮   ╭────╮
+                                  │Driver+CUDA│   │NVOS│
+                                  │           │   │    │
+                                  ╰───────────╯   ╰────╯
+                                        │ same host │  hosts
+                                        │           │
+                                      ╭─╯           │
+                                      ▼             ▼
+                                 ╭──────────╮   ╭───────╮
+                                 │Fabric Mgr│   │NMX-C/T│
+                                 │          │   │       │
+ ┌───────┐                       ╰──────────╯   ╰───────╯
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 82x51 @100% · v1-planes-a3.json · 12 nodes · 6 edges · q quit
+
+
+
+
+
+
+                                 ╭──────────╮   ╭──────╮
+                                 │Kubernetes│   │nv-rms│
+                                 │          │   │      │
+                                 ╰──────────╯   ╰──────╯
+                                      │  in-band   │  client
+                                      │            │
+                                      │            ╰─╮
+                                      ▼              ▼
+                                ╭────────────╮   ╭───────╮
+                                │GPU Operator│   │OOB LAN│
+                                │            │   │       │
+                                ╰────────────╯   ╰───────╯
+                                      │  DaemonSet   │
+                                      │              │
+                                      │              │
+                                      │       ╭──────┤
+             ╭────────────────────────╯       │      ╰─╮
+             ▼                                ▼        │ reach
+           ╭────╮   ╭───────────────╮   ╭────────────╮ │ ╭───────────╮
+           │DCGM│   │Compute BMC x18│◀╮ │NVSwitch BMC│ │ │Power shelf│
+           │    │   │               │ │ │            │ │ │           │
+           ╰────╯   ╰───────────────╯ │ ╰────────────╯ │ ╰───────────╯
+             │  reads NVML            │                │       ▲
+             │                        ╰──────────────╮ ├───────╯
+             ╰──────────────────────────╮           ╭┴─╯
+                                        ▼           ▼
+                                  ╭───────────╮   ╭────╮
+                                  │Driver+CUDA│   │NVOS│
+                                  │           │   │    │
+                                  ╰───────────╯   ╰────╯
+                                        │ same host │  hosts
+                                        │           │
+                                      ╭─╯           │
+                                      ▼             ▼
+                                 ╭──────────╮   ╭───────╮
+                                 │Fabric Mgr│   │NMX-C/T│
+                                 │          │   │       │
+ ┌───────┐                       ╰──────────╯   ╰───────╯
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$✘!?] on ☁️  (ap-south-1) on ☁️  avi
+ralmansingka@gmail.com
+󰂄 7% ❯
