@@ -2887,6 +2887,11 @@
    "deferred": "the PAINTED dotted boundary: its world-to-screen mapping does not track the library's node transform, so a painted box drifts from the cells it names. Gated behind 'enclosure_outline' (off by default) so no case ships a misaligned box.",
    "evidence": "four attempts (build-time rects, centre->corner, node.bounds(), draw-time) each measured against the capture; all drifted. Needs a focused renderer task that shares the library's transform.",
    "c4_ruling": "PARTIAL - dedicated c4 skill still warranted (level-owned navigation, boundary rendering with correct transform, element kinds)."
+  },
+  "c4_containers": {
+   "binary": "80d36c42dc5d7edc105b0f2843be51012a645bcc7682d29c1811850531d55c0b",
+   "skill": "086394bd1bb4423007fd4704d694c2e7da69a07c54c958d1817aa6c5184b91c4",
+   "status": "full run launching (containers replace the dotted boundary)"
   }
  }
 }
