@@ -2956,6 +2956,11 @@ fn draw_frame(
     frame
         .buffer_mut()
         .set_style(canvas, Style::default().bg(palette.canvas_bg));
+    // Enclosures first: a dotted boundary is scenery. Painted after the
+    // flow it would cover labels and hide the dots that cross it.
+    if !sections.is_empty() {
+        draw_enclosures(frame, flow, canvas, sections);
+    }
     frame.render_widget(&mut *flow, canvas);
     // Section headings belong to the canvas, not to the chrome: they are
     // painted in world rows reserved above each diagram, so panning brings
@@ -3039,11 +3044,20 @@ fn draw_sections(frame: &mut Frame, flow: &Graph, canvas: Rect, sections: &[Sect
                 background.fg(palette.subtle),
             );
         }
+    }
+    draw_double_borders(frame, flow, canvas, sections, palette.text);
+}
+
+/// Paints every dotted enclosure BEFORE the flow is drawn, so the boundary
+/// never covers a node border, a label, or a dot riding through it. Drawn
+/// after the flow it would occlude exactly the things it must not hide.
+fn draw_enclosures(frame: &mut Frame, flow: &Graph, canvas: Rect, sections: &[SectionReport]) {
+    let palette = flow.theme.palette();
+    for section in sections {
         if let Some((fx, fy, fw, fh)) = section.frame {
             draw_dotted_frame(frame, flow, canvas, fx, fy, fw, fh, palette.subtle);
         }
     }
-    draw_double_borders(frame, flow, canvas, sections, palette.text);
 }
 
 /// Paints a dotted rectangle: the boundary of a zoomed-in component's
