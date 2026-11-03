@@ -122,11 +122,11 @@ L2 · Inside — <slice A>  relations between members, container on them
 L2b · Inside — <slice B> the same depth, the other slice
 ```
 
-That is the ladder. A five-section canvas is the deliverable; more sections
-is a defect unless Step 3's splitting discipline is satisfied, with numbers.
+That is the ladder: a five-section canvas is the deliverable. More sections
+is a defect unless the splitting discipline below is satisfied, with numbers.
 
-This is the checklist. Draw each level only after the one above it exists,
-and give each one its description before moving on.
+Draw each level only after the one above it exists, and give each one its
+description before moving on.
 
 | Level | Draws | Box behaviour |
 |---|---|---|
