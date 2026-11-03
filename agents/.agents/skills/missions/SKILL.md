@@ -1,6 +1,6 @@
 ---
 name: missions
-description: Create, launch, attach, or work on vault-backed missions with the mission CLI and Pi extension. Use for persistent multi-step repository work, structured progress, checks, and human checkpoints. Ordinary untracked edits do not need a mission.
+description: Create, launch, attach, or work on vault-backed missions with the mission CLI and Pi extension. Groom steps with ask_user_question before creating. Use for persistent multi-step repository work, structured progress, checks, and human checkpoints. Ordinary untracked edits do not need a mission.
 ---
 
 # Missions
@@ -14,6 +14,7 @@ execution evidence. Credentials are private local transport state, outside the v
 ## Create and refine
 
 Register a repository checkout once. Each mission belongs to one repository.
+Groom the steps with the next section before you create the mission.
 
 ```sh
 mission --json repo add dotfiles --checkout /Users/aviral/dotfiles
@@ -33,6 +34,35 @@ lists actual verifier presets; do not claim a prose acceptance statement is an
 automated check. Add human checkpoints at creation with
 `--checkpoint "S02:Review the attachment behavior"`. Use `--from` for a full brief.
 Do not reset started steps or weaken checks without a user decision.
+
+## Groom the mission first
+
+Never invent the steps alone. Groom the brief with `ask_user_question` before
+`mission new`. Each question, option, and description is the text the human
+reads: write it at full ASD-STE100. Ask exactly one question per call, put the
+recommended option first, and offer three or four concrete options.
+
+Ask only about gaps the human has not answered. When the human already names the
+steps, confirm them instead of asking again. Stop when an answer stops changing
+the brief.
+
+Cover these six, in this order:
+
+1. **End state.** What is true when this mission ships? Give candidate results,
+   not a restatement of the goal.
+2. **Shape.** One large step, or three small ones? Name the trade: fewer
+   checkpoints against a long blind stretch.
+3. **Step acceptance.** For each step, the one fact that proves it done.
+4. **Checks.** Show the real presets from `mission checks`. Ask which steps prove
+   themselves with a command, and which need only a written artifact.
+5. **Checkpoints.** The step, and the decision where the human takes over.
+6. **Scope fence.** What this mission must not change.
+
+Then write the answers into a brief and create the mission with
+`mission new REPO/SLUG --from brief.md`, or pass `--step` and `--checkpoint`
+directly. Print `mission --json steps` and stop. Do not call `start` until the
+human accepts the steps: a brief the agent wrote alone is not groomed. Reread
+`steps` after any `mission step edit`, before a launch.
 
 ## Launch or attach in Pi
 
