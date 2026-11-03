@@ -1,0 +1,45 @@
+agent,task,agent_rc,verify_rc,agent_seconds,grade_seconds,tokens_in,tokens_out,tokens_cached,cost_usd,commits,diff,worktree
+pi,dotfiles-opengateway-provider,0,0,105,0,173352,12546,588236,0.070590,0,"5 files changed, 155 insertions(+), 1 deletion(-)",/tmp/rollout/run-20261103-031539/wt/pi/dotfiles-opengateway-provider
+pi,dotfiles-mermaid-minimal-trim,0,0,126,0,248817,16283,1573990,0.103629,1,"5 files changed, 309 insertions(+), 77 deletions(-)",/tmp/rollout/run-20261103-031539/wt/pi/dotfiles-mermaid-minimal-trim
+codex,dotfiles-ghdash-hunk-shortcut,0,0,146,0,703075,4884,642560,0.234126,0,"4 files changed, 25 insertions(+), 6 deletions(-)",/tmp/rollout/run-20261103-031539/wt/codex/dotfiles-ghdash-hunk-shortcut
+codex,dotfiles-fast-mode-openai,0,0,161,0,1295631,5266,1232384,0.302392,0,"2 files changed, 119 insertions(+)",/tmp/rollout/run-20261103-031539/wt/codex/dotfiles-fast-mode-openai
+codex,dotfiles-opengateway-provider,0,0,169,0,1598974,9920,1499392,0.448303,0,"10 files changed, 276 insertions(+), 1 deletion(-)",/tmp/rollout/run-20261103-031539/wt/codex/dotfiles-opengateway-provider
+pi,dotfiles-fast-mode-openai,0,0,200,0,248412,11088,473660,0.090671,1,"2 files changed, 139 insertions(+)",/tmp/rollout/run-20261103-031539/wt/pi/dotfiles-fast-mode-openai
+pi,dotfiles-fast-command,0,0,203,0,201731,9427,531526,0.075021,1,"2 files changed, 272 insertions(+), 35 deletions(-)",/tmp/rollout/run-20261103-031539/wt/pi/dotfiles-fast-command
+pi,dotfiles-ghdash-hunk-shortcut,0,0,226,0,350796,11944,1204084,0.126796,0,"4 files changed, 25 insertions(+), 9 deletions(-)",/tmp/rollout/run-20261103-031539/wt/pi/dotfiles-ghdash-hunk-shortcut
+codex,dotfiles-mermaid-minimal-trim,0,1,239,0,1137980,9729,1063296,0.352988,0,"5 files changed, 202 insertions(+), 63 deletions(-)",/tmp/rollout/run-20261103-031539/wt/codex/dotfiles-mermaid-minimal-trim
+codex,dotfiles-fast-command,0,0,330,0,1636028,13256,1571328,0.419093,0,"2 files changed, 232 insertions(+), 32 deletions(-)",/tmp/rollout/run-20261103-031539/wt/codex/dotfiles-fast-command
+codex,dotfiles-hunk-gruvbox-theme,0,0,370,0,2646425,14349,2557952,0.576231,0,"3 files changed, 253 insertions(+), 1 deletion(-)",/tmp/rollout/run-20261103-031539/wt/codex/dotfiles-hunk-gruvbox-theme
+pi,dotfiles-revise-practice,0,0,243,0,163925,17905,3677252,0.092727,1,"9 files changed, 1668 insertions(+), 6 deletions(-)",/tmp/rollout/run-20261103-031539/wt/pi/dotfiles-revise-practice
+pi,rack-bench-datapath-cache,0,0,57,0,129534,7743,382640,0.050448,1,"7 files changed, 237 insertions(+), 19 deletions(-)",/tmp/rollout/run-20261103-031539/wt/pi/rack-bench-datapath-cache
+codex,dotfiles-quiz-thinking,0,1,393,0,4488667,15247,4377472,0.812607,0,"8 files changed, 284 insertions(+), 25 deletions(-)",/tmp/rollout/run-20261103-031539/wt/codex/dotfiles-quiz-thinking
+pi,dotfiles-remove-fix-code-remote,0,0,383,0,253751,14312,764918,0.097889,1,"7 files changed, 9 insertions(+), 625 deletions(-)",/tmp/rollout/run-20261103-031539/wt/pi/dotfiles-remove-fix-code-remote
+codex,dotfiles-thinking-hidden-row,0,1,311,0,2056850,11882,1970432,0.488699,1,"3 files changed, 32 insertions(+), 8 deletions(-)",/tmp/rollout/run-20261103-031539/wt/codex/dotfiles-thinking-hidden-row
+pi,dotfiles-quiz-thinking,0,1,505,0,252926,41369,5980080,0.161401,1,"8 files changed, 333 insertions(+), 20 deletions(-)",/tmp/rollout/run-20261103-031539/wt/pi/dotfiles-quiz-thinking
+pi,dotfiles-hunk-gruvbox-theme,0,0,657,0,280482,50697,6462420,0.183756,0,"2 files changed, 170 insertions(+)",/tmp/rollout/run-20261103-031539/wt/pi/dotfiles-hunk-gruvbox-theme
+codex,dotfiles-remove-fix-code-remote,0,0,500,0,3647319,11634,3519872,0.723221,1,"7 files changed, 7 insertions(+), 623 deletions(-)",/tmp/rollout/run-20261103-031539/wt/codex/dotfiles-remove-fix-code-remote
+codex,dotfiles-revise-practice,0,1,508,0,2410255,20227,2320384,0.614050,0,"8 files changed, 1005 insertions(+), 4 deletions(-)",/tmp/rollout/run-20261103-031539/wt/codex/dotfiles-revise-practice
+pi,rack-bench-gcs-provider,0,0,358,0,274453,41778,12444612,0.207137,6,"16 files changed, 369 insertions(+), 76 deletions(-)",/tmp/rollout/run-20261103-031539/wt/pi/rack-bench-gcs-provider
+codex,rack-bench-blob-profiling,0,1,457,0,2491675,22292,2402560,0.641406,3,"11 files changed, 680 insertions(+), 26 deletions(-)",/tmp/rollout/run-20261103-031539/wt/codex/rack-bench-blob-profiling
+pi,rack-bench-part-size,0,1,207,0,190981,30015,2624246,0.109058,1,"9 files changed, 154 insertions(+), 17 deletions(-)",/tmp/rollout/run-20261103-031539/wt/pi/rack-bench-part-size
+pi,rack-bench-multi-bucket,0,1,307,0,253782,48531,4219246,0.159687,3,"11 files changed, 383 insertions(+), 74 deletions(-)",/tmp/rollout/run-20261103-031539/wt/pi/rack-bench-multi-bucket
+pi,rack-bench-blob-profiling,0,1,622,0,166012,84672,6742528,0.191865,4,"10 files changed, 723 insertions(+), 21 deletions(-)",/tmp/rollout/run-20261103-031539/wt/pi/rack-bench-blob-profiling
+codex,rack-bench-part-size,0,0,248,0,1426656,12040,1345664,0.416950,1,"10 files changed, 173 insertions(+), 20 deletions(-)",/tmp/rollout/run-20261103-031539/wt/codex/rack-bench-part-size
+pi,dotfiles-thinking-hidden-row,0,0,870,0,233966,55658,5991432,0.172928,1,"5 files changed, 394 insertions(+), 82 deletions(-)",/tmp/rollout/run-20261103-031539/wt/pi/dotfiles-thinking-hidden-row
+codex,rack-bench-multi-bucket,0,1,529,0,2724808,24208,2625280,0.703664,3,"13 files changed, 422 insertions(+), 130 deletions(-)",/tmp/rollout/run-20261103-031539/wt/codex/rack-bench-multi-bucket
+codex,rack-bench-datapath-cache,0,1,718,0,1793911,18704,1564288,0.802715,0,"9 files changed, 191 insertions(+), 27 deletions(-)",/tmp/rollout/run-20261103-031539/wt/codex/rack-bench-datapath-cache
+codex,rack-bench-gcs-provider,0,1,673,0,4799434,29849,4637056,1.086952,0,"18 files changed, 607 insertions(+), 64 deletions(-)",/tmp/rollout/run-20261103-031539/wt/codex/rack-bench-gcs-provider
+codex,rack-bench-process-pool,0,1,589,0,1929216,25092,1844480,0.604840,0,"8 files changed, 673 insertions(+), 79 deletions(-)",/tmp/rollout/run-20261103-031539/wt/codex/rack-bench-process-pool
+pi,rack-bench-putobject-upload,0,1,556,0,258067,71748,11650392,0.233420,3,"8 files changed, 324 insertions(+), 48 deletions(-)",/tmp/rollout/run-20261103-031539/wt/pi/rack-bench-putobject-upload
+codex,rack-bench-putobject-upload,0,0,681,0,4080564,29313,3969920,0.911410,0,"9 files changed, 406 insertions(+), 42 deletions(-)",/tmp/rollout/run-20261103-031539/wt/codex/rack-bench-putobject-upload
+pi,rack-bench-process-pool,0,1,832,0,263884,118582,9141330,0.276312,1,"7 files changed, 630 insertions(+), 111 deletions(-)",/tmp/rollout/run-20261103-031539/wt/pi/rack-bench-process-pool
+pi,rack-bench-quick-object-size,0,0,99,0,237392,14129,721032,0.092499,0,"5 files changed, 39 insertions(+), 14 deletions(-)",/tmp/rollout/rb4-20261103-035640/wt/pi/rack-bench-quick-object-size
+pi,rack-bench-checksum-signing,0,0,138,0,174662,21129,793070,0.082512,0,"5 files changed, 104 insertions(+), 24 deletions(-)",/tmp/rollout/rb4-20261103-035640/wt/pi/rack-bench-checksum-signing
+codex,rack-bench-quick-object-size,0,0,140,0,459662,5336,407552,0.198335,0,"5 files changed, 25 insertions(+), 12 deletions(-)",/tmp/rollout/rb4-20261103-035640/wt/codex/rack-bench-quick-object-size
+codex,rack-bench-checksum-signing,0,0,258,0,973336,9468,856832,0.413371,0,"4 files changed, 90 insertions(+), 19 deletions(-)",/tmp/rollout/rb4-20261103-035640/wt/codex/rack-bench-checksum-signing
+codex,rack-bench-keepalive-pooling,1,0,366,0,796723,10993,709376,0.355562,0,"10 files changed, 394 insertions(+), 32 deletions(-)",/tmp/rollout/rb4-20261103-035640/wt/codex/rack-bench-keepalive-pooling
+codex,rack-bench-cloud-lab-runbook,0,0,423,0,867010,15979,784640,0.402994,0,"2 files changed, 644 insertions(+)",/tmp/rollout/rb4-20261103-035640/wt/codex/rack-bench-cloud-lab-runbook
+pi,rack-bench-cloud-lab-runbook,0,0,605,0,370341,103714,14556410,0.322898,0,"2 files changed, 846 insertions(+)",/tmp/rollout/rb4-20261103-035640/wt/pi/rack-bench-cloud-lab-runbook
+pi,rack-bench-keepalive-pooling,0,0,716,0,334715,103838,12980552,0.302903,0,"12 files changed, 489 insertions(+), 122 deletions(-)",/tmp/rollout/rb4-20261103-035640/wt/pi/rack-bench-keepalive-pooling
+pi,rack-bench-quick-object-size,0,0,158,0,290282,24598,1457926,0.125350,0,"6 files changed, 72 insertions(+), 21 deletions(-)",/tmp/rollout/qs2-040145/wt/pi/rack-bench-quick-object-size
+codex,rack-bench-quick-object-size,0,0,164,0,603412,5279,464768,0.376555,0,"6 files changed, 55 insertions(+), 11 deletions(-)",/tmp/rollout/qs2-040145/wt/codex/rack-bench-quick-object-size
