@@ -44,6 +44,22 @@ RATES = {
 }
 
 
+def rates_for(model: str) -> dict:
+    """Resolve a price row: exact id, then a family match, then gpt-6.1-sol."""
+    if not model:
+        return RATES["gpt-6.1-sol"]
+    key = model.split("[")[0]
+    if key in RATES:
+        return RATES[key]
+    low = key.lower()
+    for family in ("deepseek", "glm", "kimi"):
+        if family in low:
+            for name, row in RATES.items():
+                if family in name.lower():
+                    return row
+    return RATES["gpt-6.1-sol"]
+
+
 def _empty(source: str) -> dict:
     return {"tokens_in": 0, "tokens_out": 0, "tokens_cached": 0,
             "tokens_cache_write": 0, "cost_usd": 0.0, "source": source}
@@ -124,7 +140,7 @@ def codex_usage(worktree: str, run_dir: str | None, model: str) -> dict:
     out["tokens_out"] = int(total.get("output_tokens") or 0)
     out["tokens_cached"] = int(total.get("cached_input_tokens") or 0)
     out["tokens_cache_write"] = int(total.get("cache_write_input_tokens") or 0)
-    rates = RATES.get(model) or RATES["gpt-6.1-sol"]
+    rates = rates_for(model)
     fresh = max(out["tokens_in"] - out["tokens_cached"], 0)
     out["cost_usd"] = round(
         fresh / 1e6 * rates["input"]
@@ -158,7 +174,7 @@ def claude_usage(config_dir: str, model: str = "") -> dict:
             out["tokens_out"] += int(usage.get("output_tokens") or 0)
             out["tokens_cached"] += int(usage.get("cache_read_input_tokens") or 0)
             out["tokens_cache_write"] += int(usage.get("cache_creation_input_tokens") or 0)
-    rates = RATES.get(seen_model.split("[")[0]) or RATES.get("gpt-6.1-sol")
+    rates = rates_for(model or seen_model)
     out["cost_usd"] = round(
         out["tokens_in"] / 1e6 * rates["input"]
         + out["tokens_cached"] / 1e6 * rates["cache_read"]

@@ -63,6 +63,11 @@ header() {
   echo "agent,task,agent_rc,verify_rc,agent_seconds,grade_seconds,tokens_in,tokens_out,tokens_cached,cost_usd,commits,diff,worktree"
 }
 
+already_done() {
+  [ -f "$ROLL/results.csv" ] || return 1
+  awk -F, -v a="$1" -v t="$2" 'NR>1 && $1==a && $2==t && $4!="" {found=1} END{exit !found}' "$ROLL/results.csv"
+}
+
 run_one() {
   local task=$1 agent=$2
   local repo base wt logs log final rc grade rc_agent rc_verify seconds grade_seconds
@@ -72,6 +77,11 @@ run_one() {
   logs="$ROLL/logs"; mkdir -p "$logs" "$ROLL/sessions"
   log="$logs/$agent-$task.log"
   final="$logs/$agent-$task.final.md"
+
+  if already_done "$agent" "$task"; then
+    echo "[skip] $agent $task already graded"
+    return 0
+  fi
 
   if [ ! -d "$wt" ]; then
     mkdir -p "$(dirname "$wt")"
