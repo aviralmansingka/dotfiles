@@ -64,6 +64,10 @@ checks the branch name with `git check-ref-format --branch`; the base commit is
 recorded. An existing branch must carry this mission's ownership marker to be
 reused.
 The same path and branch remain bound across steps, retries, and revisions.
+If the Herdr workspace or the checkout is deleted but the `mission/<slug>` branch
+remains, `start` recreates the checkout at the recorded path and re-registers it
+with `herdr worktree open`. It never creates a second branch or checkout. A
+branch checked out elsewhere is reported, not duplicated.
 Ownership is single-host and exclusive across missions in that vault. Unrelated
 vaults do not share a lock or ownership index.
 

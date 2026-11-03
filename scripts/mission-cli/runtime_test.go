@@ -160,3 +160,71 @@ func TestMissionWorkspaceOwnsMissionSlugBranch(t *testing.T) {
 	_, e = s.workspace(second.Handle, "", "main", filepath.Join(root, "worktrees"))
 	wantCode(t, e, "unowned_branch")
 }
+
+func TestMissionWorkspaceRevivesDeletedCheckout(t *testing.T) {
+	root := t.TempDir()
+	s, e := openStore(t.TempDir())
+	must(t, e)
+	repo := filepath.Join(root, "dotfiles")
+	must(t, os.MkdirAll(repo, 0700))
+	git := func(dir string, args ...string) string {
+		t.Helper()
+		out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %s %v", args, out, err)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	git(repo, "init", "-b", "main")
+	git(repo, "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false", "commit", "--allow-empty", "-m", "fixture")
+	_, e = s.addRepo("dotfiles", repo, "")
+	must(t, e)
+	m := Mission{Repo: "dotfiles", Slug: "revive-checkout", Title: "Revive a deleted checkout", Goal: "Recover the mission worktree", Kind: "implementation", Steps: []Step{{Title: "Inspect", Output: "result.md"}}}
+	r, e := s.create(m)
+	must(t, e)
+	worktrees := filepath.Join(root, "worktrees")
+	w, e := s.workspace(r.Handle, "", "main", worktrees)
+	must(t, e)
+	b := w.State.Runtime
+
+	// The user removed the checkout (Herdr worktree remove, or a manual delete).
+	// Git still lists it as prunable, so the revive must prune before adding.
+	must(t, os.RemoveAll(b.Cwd))
+	revived, e := s.workspace(r.Handle, "", "main", worktrees)
+	must(t, e)
+	if revived.State.Runtime.Cwd != b.Cwd || revived.State.Runtime.Branch != b.Branch {
+		t.Fatalf("revive changed the binding: %+v", revived.State.Runtime)
+	}
+	if head := git(revived.State.Runtime.Cwd, "rev-parse", "--abbrev-ref", "HEAD"); head != b.Branch {
+		t.Fatalf("revived HEAD = %q, want %q", head, b.Branch)
+	}
+	if list := git(repo, "worktree", "list"); strings.Contains(list, "prunable") {
+		t.Fatalf("revive left a prunable registration: %s", list)
+	}
+
+	// A leftover empty directory is replaced by the checkout.
+	must(t, os.RemoveAll(b.Cwd))
+	must(t, os.MkdirAll(b.Cwd, 0700))
+	revived, e = s.workspace(r.Handle, "", "main", worktrees)
+	must(t, e)
+	if head := git(revived.State.Runtime.Cwd, "rev-parse", "--abbrev-ref", "HEAD"); head != b.Branch {
+		t.Fatalf("empty-directory revive HEAD = %q, want %q", head, b.Branch)
+	}
+
+	// Foreign content at the path is never deleted.
+	must(t, os.RemoveAll(b.Cwd))
+	must(t, os.MkdirAll(b.Cwd, 0700))
+	must(t, os.WriteFile(filepath.Join(b.Cwd, "notes.txt"), []byte("keep me"), 0600))
+	_, e = s.workspace(r.Handle, "", "main", worktrees)
+	wantCode(t, e, "worktree_invalid")
+	must(t, os.RemoveAll(b.Cwd))
+
+	// The branch checked out elsewhere is reported, never duplicated.
+	revived, e = s.workspace(r.Handle, "", "main", worktrees)
+	must(t, e)
+	git(repo, "worktree", "remove", "--force", revived.State.Runtime.Cwd)
+	other := filepath.Join(root, "other-checkout")
+	git(repo, "worktree", "add", other, b.Branch)
+	_, e = s.workspace(r.Handle, "", "main", worktrees)
+	wantCode(t, e, "worktree_in_use")
+}

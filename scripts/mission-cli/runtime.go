@@ -96,13 +96,70 @@ func (s *Store) checkBinding(r Record, cwd, branch string) (string, error) {
 // durable, user-visible identity that other tooling matches on.
 func missionBranch(slug string) string { return "mission/" + slug }
 
+// ensureWorktree revives the mission checkout on its branch. A checkout that
+// was removed from Herdr or deleted on disk stays registered in Git until a
+// prune, and a plain add then fails with "missing but already registered
+// worktree". The branch stays the mission's identity: never create a second
+// branch or a second checkout here.
+func ensureWorktree(checkout, cwd, branch string) error {
+	if _, e := os.Stat(cwd); e == nil {
+		top, te := gitText(cwd, "rev-parse", "--show-toplevel")
+		real, re := filepath.EvalSymlinks(cwd)
+		if te == nil && re == nil {
+			if t, e := filepath.EvalSymlinks(top); e == nil && t == real {
+				return nil
+			}
+		}
+		// A leftover empty directory is safe to replace. Anything else may be
+		// the user's data, so refuse to delete it.
+		entries, e := os.ReadDir(cwd)
+		if e != nil {
+			return e
+		}
+		if len(entries) > 0 {
+			return problem("worktree_invalid", "%s exists and is not the mission checkout; move it aside first", cwd)
+		}
+		if e = os.RemoveAll(cwd); e != nil {
+			return e
+		}
+	} else if !os.IsNotExist(e) {
+		return e
+	}
+	if _, e := gitText(checkout, "worktree", "prune"); e != nil {
+		return e
+	}
+	if e := os.MkdirAll(filepath.Dir(cwd), 0700); e != nil {
+		return e
+	}
+	if _, e := gitText(checkout, "worktree", "add", cwd, branch); e != nil {
+		if strings.Contains(e.Error(), "already checked out") {
+			return problem("worktree_in_use", "branch %s is checked out in another worktree; inspect that checkout instead of adding a second one", branch)
+		}
+		return e
+	}
+	return nil
+}
+
 // A mission keeps its worktree across steps, retries, and checkpoint revisions.
 // Existing sessions can adopt their current linked worktree with --cwd.
 func (s *Store) workspace(h, cwd, base, root string) (Record, error) {
 	return s.mutate(h, func(r *Record) error {
+		repo, e := s.repo(r.Mission.Repo)
+		if e != nil {
+			return e
+		}
+		checkout := repo.Bindings[machine()]
+		if checkout == "" {
+			return problem("no_checkout", "register this machine's repository checkout")
+		}
 		if b := r.State.Runtime; b != nil {
 			if b.Machine != machine() {
 				return problem("wrong_machine", "worktree is bound on %s", b.Machine)
+			}
+			// A closed Herdr workspace or a deleted checkout revives on the
+			// recorded branch instead of failing the relaunch.
+			if e = ensureWorktree(checkout, b.Cwd, b.Branch); e != nil {
+				return e
 			}
 			if cwd != "" {
 				p, e := filepath.EvalSymlinks(cwd)
@@ -122,14 +179,6 @@ func (s *Store) workspace(h, cwd, base, root string) (Record, error) {
 			}
 			_, e = s.checkBinding(*r, b.Cwd, branch)
 			return e
-		}
-		repo, e := s.repo(r.Mission.Repo)
-		if e != nil {
-			return e
-		}
-		checkout := repo.Bindings[machine()]
-		if checkout == "" {
-			return problem("no_checkout", "register this machine's repository checkout")
 		}
 		branch, baseCommit := "", ""
 		if cwd == "" {
@@ -177,14 +226,7 @@ func (s *Store) workspace(h, cwd, base, root string) (Record, error) {
 					return e
 				}
 			}
-			if _, e = os.Stat(cwd); os.IsNotExist(e) {
-				if e = os.MkdirAll(root, 0700); e != nil {
-					return e
-				}
-				if _, e = gitText(checkout, "worktree", "add", cwd, branch); e != nil {
-					return e
-				}
-			} else if e != nil {
+			if e = ensureWorktree(checkout, cwd, branch); e != nil {
 				return e
 			}
 		}

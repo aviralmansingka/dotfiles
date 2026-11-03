@@ -82,6 +82,13 @@ Discover the deferred `mission` tool through `tool_search`. Humans can use
 - `mission {action:"next"}` claims the next eligible step in the same session and
   worktree. Resume the owning Pi session rather than opening a second owner.
 
+Revive a deleted worktree. If the Herdr workspace or the checkout is gone but the
+`mission/<slug>` branch remains, `start` recreates the checkout at the recorded
+path and registers it again with `herdr worktree open`. Never create a second
+branch or checkout; a branch checked out elsewhere is reported, not duplicated.
+If an owner session is recorded, resume it. If the step failed, run
+`mission retry`, then `next`.
+
 A started mission-worker receives a continuation prompt after each verified step
 when no checkpoint is pending. An attached existing session uses explicit `next`
 and does not automatically start more work. At a checkpoint, wait for the user to
