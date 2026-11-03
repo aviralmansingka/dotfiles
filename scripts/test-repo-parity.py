@@ -146,6 +146,7 @@ def check_skills_store(root: Path, tracked: set):
 # else. Remove an entry here in the same change that makes it a package.
 NON_PACKAGE_DIRS = {
     "docs": "documentation tree, not a stow package",
+    "evals": "eval harness and task fixtures, not a stow package",
     "ops": "ops tooling (terraform/packer/stt), not a stow package",
     "rataflow": "Rust crate built by install.sh (cargo install --path), not a stow package",
     "scripts": "repo scripts and test suites, not a stow package",
