@@ -752,10 +752,14 @@ process.env.PATH = `${binDir}:${process.env.PATH}`;
 process.env.TUICR_SKILL_DIR = skillDir;
 process.env.TUICR_FAKE_DIR = stateDir;
 process.env.HERDR_ENV = "1"; // selects the (fake) herdr wrapper
-// ms-scale timers so the watcher loop is deterministic and fast
+// ms-scale timers so the watcher loop is deterministic and fast. The
+// launch wait stays well above real detached-spawn latency (suite load can
+// push a /bin/sh spawn past 90ms, which flaked the pr-launch slug assert)
+// while 3x this value must stay under the until() default timeout (3s) the
+// watcher give-up scenario polls with.
 process.env.TUICR_BG_POLL_MS = "20";
 process.env.TUICR_BG_COALESCE_MS = "40";
-process.env.TUICR_BG_LAUNCH_WAIT_MS = "90";
+process.env.TUICR_BG_LAUNCH_WAIT_MS = "500";
 
 function restoreEnv() {
 	for (const key of Object.keys(process.env)) {
