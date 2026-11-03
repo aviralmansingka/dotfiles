@@ -866,6 +866,32 @@ try {
 		upperRun.herdrCalls.some(c => c[1] === "close" && c[2] === "P-UPPER"),
 		"the uppercase-R run still owns and closes its pane",
 	);
+	assert.match(
+		upperRun.result.content[0].text,
+		/User pressed R; Pi ran the command/,
+		"the agent-facing result text names R",
+	);
+
+	// Adversarial boundary: `R` is a shortcut only while the output field is
+	// unfocused. With the field focused (after Tab), pressing `R` must type
+	// into the field instead of launching a Neovim run — adding the key must
+	// not hijack typing an uppercase R into pasted output.
+	const focusedTyped = await driveAuto({
+		keys: ["\t", "R", "\r"],
+		command: "printf 'never launched\\n'",
+		setup: () => ({
+			scenario: {
+				current: { result: { pane: { tab_id: "T1" } } },
+				list: { result: { panes: [] } },
+				split: { result: { pane: { pane_id: "P-NEVER" } } },
+			},
+		}),
+	});
+	assert.equal(focusedTyped.result.details.status, "answered");
+	assert.notEqual(focusedTyped.result.details.autoRun, true, "focused R must not auto-run");
+	assert.equal(focusedTyped.result.details.output, "R", "focused R is typed as output text");
+	assert.equal(focusedTyped.exprs.length, 0, "no nvim RPC when R is typed into the focused field");
+	assert.equal(focusedTyped.herdrCalls.length, 0, "no pane is split or closed when R is typed");
 
 	// C3: an nvim without --listen falls back to the pid-based default socket
 	// under XDG_RUNTIME_DIR.
