@@ -53,6 +53,8 @@ branch, or with a pull request that has already merged.
   pull request lives in exactly one section.
 - GitHub: the **Mergify Merge Queue** check run on the pull request, which
   reports its queue state, plus Mergify's status comments.
+- Labels: Mergify adds `queued` while the pull request sits in the queue, and
+  `dequeued` for the moment before the drop rule clears it with `queue`.
 - Dashboard: <https://dashboard.mergify.com> shows the queue, its position,
   and its CI history.
 
