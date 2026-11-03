@@ -132,7 +132,10 @@ func ensureWorktree(checkout, cwd, branch string) error {
 		return e
 	}
 	if _, e := gitText(checkout, "worktree", "add", cwd, branch); e != nil {
-		if strings.Contains(e.Error(), "already checked out") {
+		// Git versions phrase this two ways: "already checked out" and
+		// "is already used by worktree". Both mean the branch has an owner.
+		msg := e.Error()
+		if strings.Contains(msg, "already checked out") || strings.Contains(msg, "already used by worktree") {
 			return problem("worktree_in_use", "branch %s is checked out in another worktree; inspect that checkout instead of adding a second one", branch)
 		}
 		return e
