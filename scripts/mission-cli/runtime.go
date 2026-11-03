@@ -96,19 +96,110 @@ func (s *Store) checkBinding(r Record, cwd, branch string) (string, error) {
 // durable, user-visible identity that other tooling matches on.
 func missionBranch(slug string) string { return "mission/" + slug }
 
-// ensureWorktree revives the mission checkout on its branch. A checkout that
-// was removed from Herdr or deleted on disk stays registered in Git until a
-// prune, and a plain add then fails with "missing but already registered
-// worktree". The branch stays the mission's identity: never create a second
-// branch or a second checkout here.
+// checkoutBranch reports the branch checked out at cwd when cwd is the root of
+// its own Git checkout. A detached HEAD reports "", and an error means cwd is
+// not a checkout at all.
+func checkoutBranch(cwd string) (string, error) {
+	top, e := gitText(cwd, "rev-parse", "--show-toplevel")
+	if e != nil {
+		return "", e
+	}
+	real, e := filepath.EvalSymlinks(cwd)
+	if e != nil {
+		return "", e
+	}
+	t, e := filepath.EvalSymlinks(top)
+	if e != nil {
+		return "", e
+	}
+	if t != real {
+		return "", problem("worktree_invalid", "%s is not the root of its own checkout", cwd)
+	}
+	return gitText(cwd, "branch", "--show-current")
+}
+
+// branchWorktree reports the checkout that has branch checked out, and "" when
+// the branch is free. A branch has at most one worktree; a second checkout
+// would mean a second writer, so callers report it instead of creating one.
+func branchWorktree(checkout, branch string) (string, error) {
+	out, e := gitText(checkout, "worktree", "list", "--porcelain")
+	if e != nil {
+		return "", e
+	}
+	dir := ""
+	for _, line := range strings.Split(out, "\n") {
+		if p, ok := strings.CutPrefix(line, "worktree "); ok {
+			dir = p
+			continue
+		}
+		if dir != "" && line == "branch refs/heads/"+branch {
+			return dir, nil
+		}
+	}
+	return "", nil
+}
+
+// How an existing path relates to the mission branch.
+const (
+	checkoutNone     = ""         // not a checkout at this path
+	checkoutSame     = "same"     // already on the mission branch
+	checkoutDetached = "detached" // clean detached HEAD at the branch tip
+	checkoutDirty    = "dirty"    // detached HEAD with local changes
+	checkoutOther    = "other"    // a checkout on another branch or commit
+)
+
+// checkoutState classifies an existing path against the mission branch without
+// touching the working tree.
+func checkoutState(cwd, branch string) string {
+	head, e := checkoutBranch(cwd)
+	if e != nil {
+		return checkoutNone
+	}
+	if head != "" {
+		if head == branch {
+			return checkoutSame
+		}
+		return checkoutOther
+	}
+	tip, e := gitText(cwd, "rev-parse", "--verify", "refs/heads/"+branch)
+	if e != nil {
+		return checkoutOther
+	}
+	at, e := gitText(cwd, "rev-parse", "HEAD")
+	if e != nil || at != tip {
+		return checkoutOther
+	}
+	dirty, e := gitText(cwd, "status", "--porcelain")
+	if e != nil {
+		return checkoutOther
+	}
+	if dirty != "" {
+		return checkoutDirty
+	}
+	return checkoutDetached
+}
+
+// ensureWorktree keeps an existing mission checkout, or revives a deleted one.
+// A checkout that was removed from Herdr or deleted on disk stays registered in
+// Git until a prune, and a plain add then fails with "missing but already
+// registered worktree". The branch stays the mission's identity: never create a
+// second branch or a second checkout, and never switch a checkout that carries
+// someone else's work.
 func ensureWorktree(checkout, cwd, branch string) error {
 	if _, e := os.Stat(cwd); e == nil {
-		top, te := gitText(cwd, "rev-parse", "--show-toplevel")
-		real, re := filepath.EvalSymlinks(cwd)
-		if te == nil && re == nil {
-			if t, e := filepath.EvalSymlinks(top); e == nil && t == real {
-				return nil
-			}
+		switch checkoutState(cwd, branch) {
+		case checkoutSame:
+			return nil
+		case checkoutDetached:
+			// The detached HEAD already is the branch tip, so carrying the
+			// checkout over to its branch moves no work.
+			_, e := gitText(cwd, "checkout", branch)
+			return e
+		case checkoutDirty:
+			return problem("worktree_dirty", "%s has a detached HEAD with uncommitted changes; commit or stash them before adopting %s", cwd, branch)
+		case checkoutOther:
+			head, _ := checkoutBranch(cwd)
+			return problem("worktree_mismatch", "%s is on branch %s, not %s; move it aside first", cwd, fallback(head, "a detached HEAD"), branch)
 		}
 		// A leftover empty directory is safe to replace. Anything else may be
 		// the user's data, so refuse to delete it.
@@ -211,11 +302,34 @@ func (s *Store) workspace(h, cwd, base, root string) (Record, error) {
 			cwd = filepath.Join(root, "mission-"+r.Mission.Slug)
 			owner := s.Vault + ":" + h
 			key := "branch." + branch + ".missionOwner"
-			_, exists := gitText(checkout, "rev-parse", "--verify", "refs/heads/"+branch)
-			if exists == nil {
+			claim := false // the branch is ours but its marker still needs writing
+			if _, exists := gitText(checkout, "rev-parse", "--verify", "refs/heads/"+branch); exists == nil {
 				mark, _ := gitText(checkout, "config", "--get", key)
 				if mark != owner {
-					return problem("unowned_branch", "branch %s already exists without this mission's ownership marker", branch)
+					// The checkout already sitting at the mission path is this
+					// mission's work in practice: adopt it and record the marker a
+					// fresh binding would have written instead of refusing.
+					switch checkoutState(cwd, branch) {
+					case checkoutSame, checkoutDetached:
+						claim = true
+					case checkoutDirty:
+						return problem("worktree_dirty", "%s has a detached HEAD with uncommitted changes; commit or stash them before adopting %s", cwd, branch)
+					case checkoutOther:
+						head, _ := checkoutBranch(cwd)
+						return problem("worktree_mismatch", "%s is on branch %s, not %s; move it aside first", cwd, fallback(head, "a detached HEAD"), branch)
+					default:
+						other, e := branchWorktree(checkout, branch)
+						if e != nil {
+							return e
+						}
+						if other != "" {
+							return problem("worktree_in_use", "branch %s is checked out at %s; inspect that checkout instead of adding a second one", branch, other)
+						}
+						if _, e := os.Stat(cwd); e == nil {
+							return problem("worktree_invalid", "%s exists and is not the mission checkout; move it aside first", cwd)
+						}
+						return problem("unowned_branch", "branch %s already exists without this mission's ownership marker", branch)
+					}
 				}
 				baseCommit, e = gitText(checkout, "rev-parse", "refs/heads/"+branch)
 				if e != nil {
@@ -231,6 +345,11 @@ func (s *Store) workspace(h, cwd, base, root string) (Record, error) {
 			}
 			if e = ensureWorktree(checkout, cwd, branch); e != nil {
 				return e
+			}
+			if claim {
+				if _, e = gitText(checkout, "config", key, owner); e != nil {
+					return e
+				}
 			}
 		}
 		cwd, e = filepath.Abs(cwd)
