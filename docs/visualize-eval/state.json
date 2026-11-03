@@ -2819,7 +2819,7 @@
     "triage": "7 provoked, 4 annex + 1 framing + 2 own judgment; converged after 4 answers",
     "form": "rung-1 single tb view 34x41 (a1-a4 iterated to clean); service-meshes",
     "validation": "captain rerun: 36 PASS incl. frame audit; near-misses 0; labels 7/7, 0 ambiguous; dots 4 by destination hue",
-    "judge": "spawned (delayed by digest fix turn)"
+    "judge": "VERDICT FAIL (7P/2F): drawing fully clean (sema/arro/layo/navi/conc/cate/bord PASS; fan order held); anim F - dot cycling on short routes CONFIRMED AT VERDICT LEVEL (captures contradict the audit's constant-rate pass); work F - 4 candidates vs 3-cap (disclosed but non-compliant) + triage summary/record mismatch (5 claimed annex vs 4 recorded). Digest verified correct (typo fix confirmed working)"
    },
    "modal-machine-manager": {
     "worker": "viz-ds13-5 (8m14s)",
@@ -2829,7 +2829,7 @@
     "judge": "VERDICT FAIL (5P/2F/2B): sema/arro/layo-B/cate/work PASS (23/23 relations clean, triage honest); navi F (controls+minimap obscure nav text; controls overwrite a node border); conc+anim BLOCKED (whole-canvas color evidence insufficient for cross-diagram hues + dot binding)"
    }
   },
-  "status": "4 verdicts in (mm FAIL 5P/2F/2B); network+runtime in stage B; gb300+datacenter generating",
+  "status": "5 verdicts in (network FAIL 7P/2F - lost its r11 green to dot cycling + cap overrun); runtime in stage B; gb300+datacenter generating",
   "digest_correction": "rounds 10-13 carried dataset sha e69179e5\u2026e8672b\u2026 \u2014 a transcription typo; actual cases.json is e69179e5\u2026e8692b\u2026. All 7 rounds of judge digest-mismatch flags trace to this captain-side typo. Per-file case_hashes (identical since r09) were always the true proof. Corrected everywhere.",
   "harness_fixes_midround": [
    "viz-validate.py: leader-tick warning exempted from check_warnings_absent (the r13 ownership rescue was unshippable otherwise)"
