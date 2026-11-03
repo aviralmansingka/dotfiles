@@ -1,0 +1,50 @@
+ rataflow-view · 82x51 @100% · v2.json · 6 nodes · 6 edges · q quit
+
+
+
+
+
+
+
+
+
+
+                                   ╭───────────╮
+                                   │River queue│
+                                   │           │
+                                   ╰───────────╯
+                                         │ provision job
+                                         │
+                               ╭────────●╯
+                               ▼
+                      ╭─────────────────╮   ╭──────────────╮
+                      │provider registry│   │reconcile loop│
+                      │                 │   │              │
+                      ╰─────────────────╯   ╰──────────────╯
+                               │ provider API      │  gcore sync 1min
+                               │                   │
+                               ● ╭────────────────●╯
+                               ▼ ▼
+                      ╭────────────────────╮   ╭───────────╮
+                      │bare-metal providers│   │boot server│
+                      │                    │   │           │
+                      ╰────────────────────╯   ╰───────────╯
+                                │       iPXE request▲ │
+               allocate instance│        ╭──────────╯ │
+                                ●        ●            ●
+                                ╰──────╮ │ ╭──────────╯
+                                       ▼ │ ▼boot.ipxe + S3 args
+                               ╭───────────────────╮
+                               │bare-metal machines│
+                               │                   │
+                               ╰───────────────────╯
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘

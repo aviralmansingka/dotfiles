@@ -1,0 +1,65 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "dark",
+      "label": "7 NICs dark",
+      "group": "ports"
+    },
+    {
+      "id": "s1",
+      "label": "server1 R7725 .58",
+      "group": "hosts"
+    },
+    {
+      "id": "nic",
+      "label": "eno16595np0 25G",
+      "group": "ports"
+    },
+    {
+      "id": "s2",
+      "label": "server2 R7725 .59",
+      "group": "hosts"
+    },
+    {
+      "id": "spare",
+      "label": "spare .60-.62",
+      "group": "pool"
+    },
+    {
+      "id": "gw",
+      "label": "gw .57 Arista? 0.1ms",
+      "group": "plant"
+    }
+  ],
+  "edges": [
+    {
+      "from": "dark",
+      "to": "s1",
+      "label": "no cable seen",
+      "style": "dashed"
+    },
+    {
+      "from": "s1",
+      "to": "nic",
+      "label": "only uplink"
+    },
+    {
+      "from": "nic",
+      "to": "gw",
+      "label": "no NAT no v6"
+    },
+    {
+      "from": "s2",
+      "to": "gw",
+      "label": "same /29"
+    },
+    {
+      "from": "spare",
+      "to": "gw",
+      "label": "free? unprobed",
+      "style": "dashed"
+    }
+  ]
+}

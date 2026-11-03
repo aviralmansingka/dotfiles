@@ -1,0 +1,56 @@
+{
+  "case_id": "network",
+  "round": "10",
+  "views": [
+    {
+      "view": "v1",
+      "spec": "specs/v1.json",
+      "recipe": "service-meshes: transit chain plus the core fan (core->web, core->cache) in one view, fan ports ordered web-then-cache as the source lists them",
+      "attempts": [
+        {
+          "spec_sha256": "b928319e9c4ea2639f4534bb438effcf85fcf6a9701732f0c669cbaa92962e6d",
+          "record_label": "v1-1",
+          "note": "5 nodes, 4 edges, lr, label_slot on fw->core, core->web, core->cache. extent 65x9, crossings 0/0, labels 4/4, ambiguous 0, origins 4/4. Rejected on a visual reading the checker cannot make: the '25 GbE' gutter label sat on the row exactly between the two fan routes (core->Redis one row above, core->Web one row below), so a reader could pair it with either fan edge."
+        },
+        {
+          "spec_sha256": "1503a71fd98001e5ce89502f6905560de425ccbab43f8c341ec3889b85b916ba",
+          "record_label": "v1-2",
+          "note": "Shipped. Same structure with label_slot removed: the engine places '25 GbE' one row above the up-fan route and '10 GbE' on the down-fan approach row, so each label is unambiguously nearer its own edge. extent 75x9 (fits 77x47), crossings 0/0, labels 4/4, ambiguous 0, origins 4/4, 0 dot violations. Copied byte-identically to specs/v1.json (same sha256)."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "spec": "specs/v2.json",
+      "recipe": "service-meshes application relations: web/cache/db triangle plus the repeat of core->cache, so the separate core-to-cache and web-to-cache relations are countable in one capture",
+      "attempts": [
+        {
+          "spec_sha256": "5cdec6d982ff0f380d182ee989abacdc60b44a3fbd3391e1b1a907e7b2907959",
+          "record_label": "v2-1",
+          "note": "Shipped and only attempt. 4 nodes, 4 edges, tb, label_slot only on core->cache. extent 37x29, crossings 0/0, labels 4/4, ambiguous 0, origins 4/4, 0 dot violations. Every label sits on its own route's column (session off web->cache by 1 cell, queries off web->db by 1 cell, fill off cache->db by 1 cell, 25 GbE off core->cache by 2 cells). Copied byte-identically to specs/v2.json."
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "shape": "single view, all 6 nodes and 7 edges, lr (no layers pin)",
+      "record_label": "v1-a",
+      "spec": "specs/v1-a.json",
+      "result": "extent 100x8 at natural zoom — 23 columns wider than the 77-column target, so the graph would overflow. Also 1 ambiguous label owner (two '10 GbE' labels in adjacent corridors). Not shipped."
+    },
+    {
+      "shape": "single view, all 6 nodes and 7 edges, tb (no layers pin)",
+      "record_label": "v1-b",
+      "spec": "specs/v1-b.json",
+      "result": "extent 30x57 — 10 rows taller than the 47-row target. Labels clean (0 ambiguous) but the height overflows. Not shipped."
+    },
+    {
+      "shape": "single view, all 6 nodes and 7 edges, lr with layers pinning web+cache to one rank",
+      "record_label": "v1-c",
+      "spec": "specs/v1-c.json",
+      "result": "rejected by the renderer: 'no obstacle-safe route for web -> cache; increase node/layer spacing'. Pinning web and cache to the same rank puts the web->cache edge inside one rank, which the router cannot draw. Not shipped."
+    }
+  ],
+  "probe_budget_note": "Three single-view shapes (v1-a, v1-b, v1-c) measured before any split; when the one-view shape failed on extent and on the same-rank router rejection, the case was split into v1 (transit + core fan) and v2 (application relations), each with its own candidate budget (v1: 2 of 3 used, v2: 1 of 3 used)."
+}

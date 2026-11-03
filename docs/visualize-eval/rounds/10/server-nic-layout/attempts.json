@@ -1,0 +1,85 @@
+{
+  "case_id": "server-nic-layout",
+  "round": "10",
+  "binary": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+  "binary_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+  "records_log": "attempts-log.jsonl",
+  "views": [
+    {
+      "view": "v1",
+      "label": "box + ports",
+      "final_spec": "specs/v1.json",
+      "final_spec_sha256": "1b8c431c260e32e40e76396c0ccf9c31a4a47803be85b426553631325a1ad1fa",
+      "attempts": [
+        {
+          "spec_sha256": "be9d72ceb7d1273b95a313814808f4d997f4ac3dac79b12be7f3a49e493f48ae",
+          "spec_path": "specs/v1.json (first bytes; superseded)",
+          "record_label": "v1-a1-tb-slots",
+          "note": "3-node tb chain dark->s1->nic, every label in a label_slot gutter so no rank gap grows to a label width. extent 41x20, 0 crossings, 2/2 labels placed, 0 ambiguous owners. Superseded only by spelling the full stated address 103.19.91.58 on server1."
+        },
+        {
+          "spec_sha256": "1b8c431c260e32e40e76396c0ccf9c31a4a47803be85b426553631325a1ad1fa",
+          "spec_path": "specs/v1.json",
+          "record_label": "v1-a2-full-addr",
+          "note": "same shape, s1 label widened to 'server1 R7725 103.19.91.58'. extent 41x20, still 0 crossings, 0 ambiguous owners. Chosen: keeps Dell R7725 AND the full /29 host address visible in this family that is graded on identifier coverage."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "label": "/29 peers",
+      "final_spec": "specs/v2.json",
+      "final_spec_sha256": "194c1baf3c3ca9b4ace3752d8007505e70d81675887b5a17a680951c608094be",
+      "attempts": [
+        {
+          "spec_sha256": "194c1baf3c3ca9b4ace3752d8007505e70d81675887b5a17a680951c608094be",
+          "spec_path": "specs/v2.json",
+          "record_label": "v2-a1-tb-slots",
+          "note": "3-port fan (nic, server2, spare) into the gateway, all labels in gutters. extent 66x13 at tb, 0 crossings, 3/3 labels placed, 0 ambiguous owners. First candidate fit; kept. 66 columns is the widest shipped view and still inside 77."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "label": "egress path + trace caveat",
+      "final_spec": "specs/v3.json",
+      "final_spec_sha256": "cc12a2aed5f4936e1e05ed14251c16985ecc13ca14e51e85dec0e15a53b30916",
+      "attempts": [
+        {
+          "spec_sha256": "d7cbe7ce0f39b0844a8cec260d481d3ac0c2104209282450203f4746ccde89f1",
+          "spec_path": "specs/v3-candidate1.json",
+          "record_label": "v2-a1-tb",
+          "note": "5-rank tb chain with label_slot on the two fabric/caveat edges only; '7.1 ms' and '8.3-8.6 ms' stayed rank-row labels and each stretched its gap to label width + 3. extent 44x50, i.e. 3 rows taller than the 47-row target: rejected on fit, not on meaning."
+        },
+        {
+          "spec_sha256": "5b480f5f11eb13ef4916fb30793be0bcf37c2c2fb7e78c4d722a470c468bf0fd",
+          "spec_path": "specs/v3.json (label '1.8 ms, not L2' on silent->airtel)",
+          "record_label": "v3-a1-tb-slots",
+          "note": "all four labels moved into label_slot gutters. extent 44x36 (14 rows shorter), 0 crossings, 4/4 labels placed, 0 ambiguous owners. Meaning unchanged."
+        },
+        {
+          "spec_sha256": "cc12a2aed5f4936e1e05ed14251c16985ecc13ca14e51e85dec0e15a53b30916",
+          "spec_path": "specs/v3.json",
+          "record_label": "v3-a3-no-l2-proof",
+          "note": "only wording changed: '1.8 ms, not L2' -> '1.8 ms, no L2 proof', so the mandatory missing-hop caveat states the source's claim ('a missing hop proves nothing about Layer 2') instead of a bare 'not L2'. Same extent 44x36, same check counts."
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "shape": "6-node single-view draft: 7 NICs dark -> server1 -> eno16595np0, server2 and spare -> gw, direction tb",
+      "spec": "specs/abandoned-6node-tb.json",
+      "spec_sha256": "0d60ea2685ff2f92bf5d58d36a62e196965c8c1233b3aa0bb262a28e32b328a0",
+      "record_labels": ["v1-a1-tb", "probe-v1-tb-dump"],
+      "note": "The first draft merged the port cluster and the /29 fan. --check: extent 57x63, 0 crossings, 5/5 labels placed, 0 ambiguous owners. A pinned COLUMNS=77 LINES=47 --frames dump showed 'graph overflows - drag to pan': in tb a rank gap grows to label width + 3, and four ranks pushed the drawing 16 rows past the target. Rejected on fit and rewritten as the v1/v2 split."
+    },
+    {
+      "shape": "same 6-node draft, direction lr",
+      "spec": "specs/abandoned-6node-lr.json",
+      "spec_sha256": "a9dbd874fa4a7a694070c2df517675c71fb7b01d18852c5d69aeaee673e272c6",
+      "record_labels": ["v1-a2-lr"],
+      "note": "--check: extent 120x14, 0 crossings, 5/5 labels placed. 43 columns past the 77-column target, because in lr each rank gap is max(lanes, label width + 4). This is the measured evidence behind the recipe yield recorded in generation.json."
+    }
+  ]
+}

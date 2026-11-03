@@ -1,0 +1,566 @@
+{
+  "case_id": "server-nic-layout",
+  "round": "10",
+  "round_field_note": "The round-10 generator-task template still prints `round: \"09\"` in its Output section; this sample belongs to round 10 and the field is recorded as such.",
+  "generator": {
+    "id": "viz-ds10-4",
+    "role": "fresh generator for visualization eval round 10 (deepseek)",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "judges_spawned": 0,
+    "note": "No reviewer was spawned; the candidate skill's Step 9 review section is superseded by the round task, and the captain runs a separate terra judge."
+  },
+  "frozen_inputs": {
+    "candidate_skill": {
+      "path": "docs/visualize-eval/rounds/10/SKILL.md",
+      "sha256": "9c1256791069e27207db2e5138527e45587e7096955f5ed4f86c79d46f77e56d"
+    },
+    "renderer": {
+      "path": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+      "sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8"
+    },
+    "source": "docs/visualize-eval/cases/server-nic-layout/source.md",
+    "target_viewport": "77x47 cells, natural 100% zoom"
+  },
+  "step0_classification": {
+    "family": "identity-probe-maps",
+    "evidence": "The source is an identifier inventory, not a topology: one host's 29-bit address plan (103.19.91.58/29, gateway .57, .60-.62 free), a named NIC (eno16595np0 25 GbE), two Dell R7725 boxes, a ToR whose vendor comes only from a MAC OUI, and a probe caveat (hops 3 and 6 silent, hop 5 80% loss, 'a missing hop proves nothing about Layer 2').",
+    "tie_breakers_considered": [
+      "1. Density: E ~= N (9 stated relations, 9 entities) points at flow-chains; rejected because tie-breaker 3 outranks shape here.",
+      "2. Bus with disconnected worlds: no such bus; the /29 is a star through the gateway, not a bus between separate worlds, so placement-planes was rejected.",
+      "3. Identifier/qualifier content: addresses, AS numbers, device names, inactive-port and free-address qualifiers dominate. This tie-breaker decides the family.",
+      "4. Motion: the source shows no motion at all, so no dots anywhere (static case, as the captain's brief states)."
+    ],
+    "secondary_recipe_applied": "none. The graph is chain-like in shape, but no flow-chain lever (per-hop corridor width, one dot per animated hop) was applied because nothing animates and coverage, not rhythm, is the failure mode here."
+  },
+  "views": [
+    {
+      "view": "v1",
+      "label": "box + ports (7 dark NICs, the one 25 GbE uplink)",
+      "spec": "specs/v1.json",
+      "spec_sha256": "1b8c431c260e32e40e76396c0ccf9c31a4a47803be85b426553631325a1ad1fa",
+      "evidence_dir": "evidence/v1",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "check": "evidence/v1/check.txt",
+      "frames": "evidence/v1/v1-frames.txt",
+      "frames_ansi": "evidence/v1/v1-frames.ansi",
+      "manifest": "evidence/v1/manifest.json",
+      "pinned_77x47_dump": "pinned/v1-final-77x47.txt",
+      "measured_pane": "82x51 @100% (pane token), pane id w7E:pQX",
+      "measured_extent": "41x20 cells",
+      "viewport_line": "viewport: 77x47 zoom: 1.00 natural (pinned dump of THIS view's final spec, no overflow banner)",
+      "check_summary": "nodes=3 edges=2 flows=0 direction=tb, crossings: 0 bridges 0 touching bends, labels 2/2 placed 0 on route 0 skipped 0 ambiguous owners, dots 0/0 violations, origins 0/0, no warnings"
+    },
+    {
+      "view": "v2",
+      "label": "/29 peers (server2, the free .60-.62 pool, the gateway they share)",
+      "spec": "specs/v2.json",
+      "spec_sha256": "194c1baf3c3ca9b4ace3752d8007505e70d81675887b5a17a680951c608094be",
+      "evidence_dir": "evidence/v2",
+      "text": "evidence/v2/v2-text.txt",
+      "ansi": "evidence/v2/v2-ansi.ansi",
+      "selected_ansi": "evidence/v2/v2-selected.ansi",
+      "check": "evidence/v2/check.txt",
+      "frames": "evidence/v2/v2-frames.txt",
+      "frames_ansi": "evidence/v2/v2-frames.ansi",
+      "manifest": "evidence/v2/manifest.json",
+      "pinned_77x47_dump": "pinned/v2-final-77x47.txt",
+      "measured_pane": "82x51 @100% (pane token), pane id w7E:pQT",
+      "measured_extent": "66x13 cells",
+      "viewport_line": "viewport: 77x47 zoom: 1.00 natural (pinned dump of THIS view's final spec, no overflow banner)",
+      "check_summary": "nodes=4 edges=3 flows=0 direction=tb, crossings: 0 bridges 0 touching bends, labels 3/3 placed 0 on route 0 skipped 0 ambiguous owners, dots 0/0 violations, origins 0/0, no warnings"
+    },
+    {
+      "view": "v3",
+      "label": "egress path + the trace caveat (one visible ISP, the ICMP-blind fabric hop)",
+      "spec": "specs/v3.json",
+      "spec_sha256": "cc12a2aed5f4936e1e05ed14251c16985ecc13ca14e51e85dec0e15a53b30916",
+      "evidence_dir": "evidence/v3",
+      "text": "evidence/v3/v3-text.txt",
+      "ansi": "evidence/v3/v3-ansi.ansi",
+      "selected_ansi": "evidence/v3/v3-selected.ansi",
+      "check": "evidence/v3/check.txt",
+      "frames": "evidence/v3/v3-frames.txt",
+      "frames_ansi": "evidence/v3/v3-frames.ansi",
+      "manifest": "evidence/v3/manifest.json",
+      "pinned_77x47_dump": "pinned/v3-final-77x47.txt",
+      "measured_pane": "82x51 @100% (pane token), pane id w7E:pQW",
+      "measured_extent": "44x36 cells",
+      "viewport_line": "viewport: 77x47 zoom: 1.00 natural (pinned dump of THIS view's final spec, no overflow banner)",
+      "check_summary": "nodes=5 edges=4 flows=0 direction=tb, crossings: 0 bridges 0 touching bends, labels 4/4 placed 0 on route 0 skipped 0 ambiguous owners, dots 0/0 violations, origins 0/0, no warnings"
+    }
+  ],
+  "family_recipe_per_view": [
+    {
+      "view": "v1",
+      "recipe": "identity-probe-maps: a coverage row per fact, folded into node/edge text on a shallow tb chain; no geometry spent while a fact is missing.",
+      "levers": "group tags (ports, hosts); label_slot on both edges; dashed style for the inferred 'no cable'.",
+      "claims_with_coordinates": [
+        "pinned/v1-final-77x47.txt frame 0: 'server1 R7725 103.19.91.58' at line 26, column 26 inside its box (rows 25-27) \u2014 Dell model + full /29 host address in one label.",
+        "pinned/v1-final-77x47.txt frame 0: '7 NICs dark' at line 18, column 34, with the dashed route ('\u254e' at line 21, column 39) labelled 'no cable seen' at line 21, column 41 \u2014 the dark ports and the qualified inference are both visible.",
+        "pinned/v1-final-77x47.txt frame 0: 'eno16595np0 25G' at line 34, column 32, reached by 'only uplink' at line 29, column 41 with its arrowhead at line 33.",
+        "Static proof: frames at lines 2/50/98 ('frame 0/1/2 at 0/100/200ms') are byte-identical, and check.txt reports 0 single-dot routes."
+      ]
+    },
+    {
+      "view": "v2",
+      "recipe": "identity-probe-maps: the /29 as a membership cluster \u2014 one gateway port per member, port order fixed by group (ports, hosts, pool, plant) so the three peers never interleave.",
+      "levers": "group tags (ports, hosts, pool, plant); label_slot on all three edges; dashed style for the unproven free-pool claim.",
+      "claims_with_coordinates": [
+        "pinned/v2-final-77x47.txt frame 0: the fan reads left to right as 'eno16595np0 25G' (line 21, col 12), 'server2 R7725 .59' (line 21, col 32), 'spare .60-.62' (line 21, col 54) \u2014 ports, host, pool order is stable and matches the group declaration.",
+        "pinned/v2-final-77x47.txt frame 0: all three arrows land on the single 'gw .57 Arista? 0.1ms' box at line 30, column 30 with its three arrowheads on line 29.",
+        "pinned/v2-final-77x47.txt frame 0: 'no NAT no v6' (line 24, col 21) and 'same /29' (line 24, col 42) are solid-route labels; 'free? unprobed' (line 24, col 62) sits on the dashed route shown by '\u254c' at line 27, col 42.",
+        "Static proof: frames 0/1/2 identical; check.txt reports 0 crossings and 0 dot routes."
+      ]
+    },
+    {
+      "view": "v3",
+      "recipe": "identity-probe-maps: one direction of the egress chain, latency and AS identifiers on the edges, the unproven fabric hop drawn as a dashed span instead of an invented switch.",
+      "levers": "group tags (plant, transit, internet); the 'silent' marker node deliberately has NO group (the source gives it no owner); label_slot on all four edges; dashed style on both halves of the unproven span.",
+      "claims_with_coordinates": [
+        "pinned/v3-final-77x47.txt frame 0: 'gw .57 Arista? 0.1ms' (line 10, col 29) \u2192 '3,6 silent, 5 lossy' (line 18, col 30) \u2192 'Airtel 14.143.x' (line 26, col 32), the last two hops drawn dashed ('\u254e' at line 13, col 38 and line 21, col 39).",
+        "pinned/v3-final-77x47.txt frame 0: 'NxtGen AS132717 BLR' at line 13, col 41 names the AS and the site on the dashed span; '1.8 ms, no L2 proof' at line 21, col 41 carries the measured Airtel RTT and the missing-hop caveat.",
+        "pinned/v3-final-77x47.txt frame 0: '7.1 ms' (line 29, col 41) between 'AirtelBB 14.141' (line 34, col 32) and '8.3-8.6 ms' (line 37, col 41) into 'CF 1.1.1.1 AS13335' (line 42, col 30).",
+        "Static proof: frames 0/1/2 identical; check.txt reports 0 crossings, 4/4 labels placed, 0 ambiguous owners."
+      ]
+    }
+  ],
+  "meaning_ledger": [
+    {
+      "fact": "server1 = 103.19.91.58",
+      "kind": "address",
+      "fate": "drawn",
+      "where": "v1 node label, pinned/v1-final-77x47.txt L26 C26"
+    },
+    {
+      "fact": "server2 = 103.19.91.59",
+      "kind": "address",
+      "fate": "drawn",
+      "where": "v2 node label, pinned/v2-final-77x47.txt L21 C32"
+    },
+    {
+      "fact": "both boxes are Dell PowerEdge R7725",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "v1 ('server1 R7725 ...') and v2 ('server2 R7725 .59')"
+    },
+    {
+      "fact": "bare metal, at NxtGen Cloud (AS132717), Bengaluru",
+      "kind": "identifier + residency",
+      "fate": "drawn",
+      "where": "v3 edge label 'NxtGen AS132717 BLR', pinned/v3-final-77x47.txt L13 C41; 'bare metal' folded into the R7725 host labels"
+    },
+    {
+      "fact": "8 physical NICs, one active",
+      "kind": "count",
+      "fate": "drawn",
+      "where": "v1 '7 NICs dark' (L18 C34) + 'eno16595np0 25G' (L34 C32) = 7 + 1"
+    },
+    {
+      "fact": "eno16595np0, 25 GbE",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "v1 L34 C32, v2 L21 C12"
+    },
+    {
+      "fact": "public 103.19.91.58/29 on the NIC",
+      "kind": "address",
+      "fate": "drawn",
+      "where": "v1 s1 label spells 103.19.91.58; the /29 is named on v2's 'same /29' (L24 C42), so the .59/.60-.62 shorthand has its key in the same case"
+    },
+    {
+      "fact": "seven ports dark",
+      "kind": "qualifier",
+      "fate": "drawn",
+      "where": "v1 node '7 NICs dark' + dashed 'no cable seen' (L21 C41)"
+    },
+    {
+      "fact": "gateway .57 (default gw), 0.1 ms",
+      "kind": "role + address + measurement",
+      "fate": "drawn",
+      "where": "gw node 'gw .57 Arista? 0.1ms' in v2 (L30 C30) and v3 (L10 C29)"
+    },
+    {
+      "fact": ".57 gateway, .58 server1, .59 server2, .60-.62 free",
+      "kind": "address plan",
+      "fate": "drawn",
+      "where": "v1 (.58) + v2 (.59, .60-.62 free pool, 'same /29')"
+    },
+    {
+      "fact": "no NAT, no IPv6, public L3 straight to the host",
+      "kind": "qualifier",
+      "fate": "drawn",
+      "where": "v2 edge label 'no NAT no v6', pinned/v2-final-77x47.txt L24 C21; 'public L3 straight to the host' is the same handoff, spelled 'no NAT'"
+    },
+    {
+      "fact": "MAC OUI is Arista Networks; NxtGen's access layer is Arista",
+      "kind": "identifier + inference",
+      "fate": "drawn",
+      "where": "gw label 'Arista?' \u2014 the '?' keeps the OUI inference visible instead of promoting it to a proven ToR role"
+    },
+    {
+      "fact": "Airtel 14.143.x, 1.8 ms",
+      "kind": "address + measurement",
+      "fate": "drawn",
+      "where": "v3 node L26 C32 + edge label '1.8 ms, no L2 proof' L21 C41"
+    },
+    {
+      "fact": "Airtel backbone 14.141.x, 7.1 ms",
+      "kind": "address + measurement",
+      "fate": "drawn",
+      "where": "v3 node L34 C32 + '7.1 ms' L29 C41"
+    },
+    {
+      "fact": "Cloudflare 1.1.1.1 AS13335",
+      "kind": "address + AS",
+      "fate": "drawn",
+      "where": "v3 node L42 C30"
+    },
+    {
+      "fact": "Cloudflare at 8.6 ms (line 120) while the last-hop relation says 8.3 ms",
+      "kind": "measurement + discrepancy",
+      "fate": "drawn as a range",
+      "where": "v3 label '8.3-8.6 ms', L37 C41; the discrepancy is recorded here rather than silently resolved"
+    },
+    {
+      "fact": "hops 3 and 6 answered nothing; hop 5 lost 80%",
+      "kind": "qualifier / evidence",
+      "fate": "drawn",
+      "where": "v3 node '3,6 silent, 5 lossy', L18 C30"
+    },
+    {
+      "fact": "a missing hop proves nothing about Layer 2",
+      "kind": "qualifier / caveat (mandatory)",
+      "fate": "drawn",
+      "where": "v3 edge label '1.8 ms, no L2 proof' (L21 C41) on the dashed span through the silent-hop marker"
+    },
+    {
+      "fact": "between .57 and Airtel the NxtGen fabric may bridge, tunnel, or stay silent; spines and other transits are invisible from the host",
+      "kind": "qualifier (mandatory)",
+      "fate": "drawn as an unproven span, never as a switch",
+      "where": "v3 dashed edges gw->silent->airtel (L13/L21), no spine or leaf node invented"
+    },
+    {
+      "fact": "one uplink, one visible ISP: no ECMP from this box",
+      "kind": "qualifier",
+      "fate": "abbreviated",
+      "where": "v3 shows exactly one transit chain; there is no ECMP branch in the source to draw"
+    },
+    {
+      "fact": "no NAT, no proxy, no v6 is the clean handoff a bench host wants",
+      "kind": "judgement",
+      "fate": "abbreviated",
+      "where": "folded into v2's 'no NAT no v6'; the opinion clause is not drawn"
+    },
+    {
+      "fact": "MAC OUI does not prove a ToR role; inactive interfaces do not prove no cable; unresponsive addresses do not prove free",
+      "kind": "qualification constraints (mandatory)",
+      "fate": "drawn",
+      "where": "'Arista?' on the gw label, dashed 'no cable seen' on v1's dark edge, dashed 'free? unprobed' on v2's pool edge"
+    },
+    {
+      "fact": "fresh handoff: no GPUs, no rack-bench installed, up 1.5 days",
+      "kind": "host state",
+      "fate": "dropped",
+      "reason": "not an entity or relation in the audited NIC/egress graph; no node or edge carries host runtime state, and adding a state node would invent a relationship the source never states"
+    },
+    {
+      "fact": "specs on disk at /tmp/server1-network-layout.json and /tmp/homelab-network-layout.json",
+      "kind": "artifact pointer",
+      "fate": "dropped",
+      "reason": "file paths, not topology"
+    },
+    {
+      "fact": "the user's follow-up question about whether invisible switches are Layer 2",
+      "kind": "question",
+      "fate": "dropped",
+      "reason": "a question, not a fact; its answer is the mandatory caveat row carried in v3"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "dark",
+      "to": "s1",
+      "verb": "no cable (observation, inference marked)",
+      "label_owner": "e1",
+      "view": "v1",
+      "style": "dashed"
+    },
+    {
+      "id": "e2",
+      "from": "s1",
+      "to": "nic",
+      "verb": "only uplink (the 25 GbE port)",
+      "label_owner": "e2",
+      "view": "v1"
+    },
+    {
+      "id": "e3",
+      "from": "nic",
+      "to": "gw",
+      "verb": "L3 handoff: no NAT, no IPv6, 0.1 ms",
+      "label_owner": "e3",
+      "view": "v2"
+    },
+    {
+      "id": "e4",
+      "from": "s2",
+      "to": "gw",
+      "verb": "same /29",
+      "label_owner": "e4",
+      "view": "v2"
+    },
+    {
+      "id": "e5",
+      "from": "spare",
+      "to": "gw",
+      "verb": "free in /29 (unprobed)",
+      "label_owner": "e5",
+      "view": "v2",
+      "style": "dashed"
+    },
+    {
+      "id": "e6",
+      "from": "gw",
+      "to": "airtel",
+      "verb": "transit 1.8 ms through an ICMP-blind fabric hop",
+      "label_owner": "e6 (split as e6a/e6b, both dashed)",
+      "view": "v3"
+    },
+    {
+      "id": "e7",
+      "from": "airtel",
+      "to": "airtelbb",
+      "verb": "7.1 ms",
+      "label_owner": "e7",
+      "view": "v3"
+    },
+    {
+      "id": "e8",
+      "from": "airtelbb",
+      "to": "cf",
+      "verb": "8.3-8.6 ms",
+      "label_owner": "e8",
+      "view": "v3"
+    },
+    {
+      "id": "e6a",
+      "from": "gw",
+      "to": "silent",
+      "verb": "derived: the unproven span out of the ToR (NxtGen AS132717 BLR)",
+      "label_owner": "e6a",
+      "view": "v3",
+      "style": "dashed",
+      "derived": "split of e6 so the silent hops are visible without inventing a switch"
+    },
+    {
+      "id": "e6b",
+      "from": "silent",
+      "to": "airtel",
+      "verb": "derived: arrival at Airtel, 1.8 ms, no L2 proof",
+      "label_owner": "e6b",
+      "view": "v3",
+      "style": "dashed",
+      "derived": "split of e6"
+    }
+  ],
+  "relationship_mapping": [
+    {
+      "source_relation": "dark -> s1: no cable",
+      "visible": "v1 e1, dashed, label 'no cable seen'"
+    },
+    {
+      "source_relation": "s1 -> nic: only uplink",
+      "visible": "v1 e2, label 'only uplink'"
+    },
+    {
+      "source_relation": "nic -> gw: default gw 0.1 ms",
+      "visible": "v2 e3 ('no NAT no v6') plus the same gateway node label carrying '0.1ms'"
+    },
+    {
+      "source_relation": "s2 -> gw: same /29",
+      "visible": "v2 e4, label 'same /29'"
+    },
+    {
+      "source_relation": "spare -> gw: free in /29",
+      "visible": "v2 e5, dashed, label 'free? unprobed' on node 'spare .60-.62'"
+    },
+    {
+      "source_relation": "gw -> airtel: transit 1.8 ms",
+      "visible": "v3 e6a + e6b (dashed span through '3,6 silent, 5 lossy'), label '1.8 ms, no L2 proof' on the arrival half"
+    },
+    {
+      "source_relation": "airtel -> airtelbb: 7.1 ms",
+      "visible": "v3 e7, label '7.1 ms'"
+    },
+    {
+      "source_relation": "airtelbb -> cf: 8.3 ms (source also says 8.6 ms to Cloudflare)",
+      "visible": "v3 e8, label '8.3-8.6 ms'"
+    }
+  ],
+  "structural_levers": {
+    "groups_declared": [
+      {
+        "group": "ports",
+        "members": [
+          "dark",
+          "nic"
+        ],
+        "source_fact": "eight physical NIC ports, one cabled"
+      },
+      {
+        "group": "hosts",
+        "members": [
+          "s1",
+          "s2"
+        ],
+        "source_fact": "both Dell PowerEdge R7725 boxes"
+      },
+      {
+        "group": "pool",
+        "members": [
+          "spare"
+        ],
+        "source_fact": "the free .60-.62 addresses of the /29"
+      },
+      {
+        "group": "plant",
+        "members": [
+          "gw"
+        ],
+        "source_fact": "the ToR/gateway that routes the /29"
+      },
+      {
+        "group": "transit",
+        "members": [
+          "airtel",
+          "airtelbb"
+        ],
+        "source_fact": "the single visible ISP and its backbone"
+      },
+      {
+        "group": "internet",
+        "members": [
+          "cf"
+        ],
+        "source_fact": "Cloudflare 1.1.1.1 as the probe's far end"
+      },
+      {
+        "group": null,
+        "members": [
+          "silent"
+        ],
+        "source_fact": "the silent hops have no owner in the source, so the node carries no group"
+      }
+    ],
+    "sibling_order": "ports: dark, nic; hosts: s1, s2; transit: airtel, airtelbb; single-member groups trivially fixed. The same order is used in every view that shows the group.",
+    "rank_pins": "none. No view needed source tiers pinned; automatic ranking already placed each fan in one rank with 0 crossings.",
+    "minlen": "none. The source describes no corridor that needs a reserved rank gap.",
+    "trunks": "none. The /29 is a star through the gateway, not one bus that splits once; trunking it would collapse the per-peer labels ('same /29' vs 'free? unprobed') into one trunk label and lose ownership.",
+    "label_slot": "set on every labelled edge in all three views. In this build a rank gap grows to label width + 3, so a 19-character label cost 22 rows in tb; the gutter band is what made a 5-rank chain fit 36 rows.",
+    "dots": "none anywhere: the source shows no motion and the captain's brief freezes this case static. check.txt reports 0 single-dot routes / 0 periodic routes / 0 violations for all three views."
+  },
+  "recipe_yield": {
+    "demand": "identity-probe-maps says the finished layout is a deep lr chain.",
+    "measured_attempts": [
+      "6-node single view, tb: extent 57x63 (record v1-a1-tb; pinned dump record probe-v1-tb-dump) \u2014 'graph overflows \u00b7 drag to pan' at COLUMNS=77 LINES=47, 16 rows over.",
+      "6-node single view, lr: extent 120x14 (record v1-a2-lr) \u2014 43 columns over, because in lr each rank gap is max(lanes, label width + 4)."
+    ],
+    "yield": "Both directions were measured as impossible for a single deep view of this content at 77x47, so the coverage was re-split into three fact clusters rather than shortened. The shipped views use tb (41x20, 66x13, 44x36) \u2014 every one inside 77x47 at natural 100% zoom, each verified by a pinned dump of that view's final spec. Direction is the yielded element; no fact was dropped to earn the fit.",
+    "close_but_not_equal": "v2 is the widest at 66 of 77 columns; the labels could not grow further without crossing the target width."
+  },
+  "source_pointers": [
+    "source.md 'Original line 120 (assistant)' \u2014 the box section, the /29, the ToR, the upstream chain, the fresh-handoff state",
+    "source.md 'Original line 121 (user)' \u2014 the L2 question that the caveat answers",
+    "source.md 'Original line 125 (assistant)' \u2014 tunneling, ICMP suppression, not-on-path, and 'a missing hop proves nothing about Layer 2'",
+    "source.md 'Relationship facts from the historical attempt' \u2014 the nine relations and their latencies",
+    "source.md 'Fixed constraints' \u2014 the qualification rules, the no-invention rule for invisible switches, and the access prohibitions"
+  ],
+  "abbreviations": [
+    "'R7725' = Dell PowerEdge R7725 (both boxes)",
+    "'BLR' = Bengaluru",
+    "'.57/.58/.59/.60-.62' = the source's own shorthand for 103.19.91.57/58/59/60-62 inside 103.19.91.58/29; the full address is spelled on server1 in v1 and the /29 is named on v2's 'same /29' edge, so the shorthand has its key in the same case",
+    "'CF' = Cloudflare 1.1.1.1",
+    "'gw' = the ToR/default gateway .57",
+    "'no v6' = no IPv6 on the handoff"
+  ],
+  "deliberate_drops": [
+    "host runtime state (no GPUs, no rack-bench installed, 1.5 days uptime) \u2014 no relation in the audit; a state node would invent an edge",
+    "the on-disk spec paths /tmp/server1-network-layout.json and /tmp/homelab-network-layout.json \u2014 artifact pointers, not topology",
+    "'no proxy' inside the clean-handoff sentence \u2014 subsumed by 'no NAT no v6' on the same edge",
+    "the 'modern reality' paragraphs (routed p2p links, BGP everywhere, EVPN-VXLAN) \u2014 general background, not this host's topology; the caveat they support is carried rather than the essay"
+  ],
+  "known_defects": [
+    "v1 is the thinnest view (3 nodes, 2 edges). It was kept separate because merging the port cluster with the /29 fan measured 57x63 in tb and 120x14 in lr (see abandoned_shapes).",
+    "v3's '1.8 ms' sits on the arrival half of the split transit edge, so the reader has to read it as Airtel's cumulative RTT rather than a per-hop delta; the source gives cumulative values only.",
+    "The gateway label carries four facts ('gw', '.57', 'Arista?', '0.1ms') because this renderer has no qualifier/badge field. It is dense but each token is a ledger row.",
+    "Server2's model is spelled in v2 while v1 spells server1's full address; the two boxes therefore show different aspects of the same hardware fact across views."
+  ],
+  "blockers": [
+    "None that block the case. Capability gaps recorded for the judge: no per-node qualifier or badge field (qualifiers ride inside labels, e.g. 'Arista?'), single-line labels only, and no way to draw a 'group' boundary even when a reader would want one (correct per the skill, noted here so it is not mistaken for an omission)."
+  ],
+  "cleanup": {
+    "status": "all capture panes confirmed closed",
+    "panes": [
+      {
+        "pane": "w7E:pQS",
+        "view": "v1 first capture (superseded by the full-address capture)",
+        "result": "confirmed_closed"
+      },
+      {
+        "pane": "w7E:pQT",
+        "view": "v2 capture",
+        "result": "confirmed_closed"
+      },
+      {
+        "pane": "w7E:pQV",
+        "view": "v3 first capture (superseded by the caveat-wording capture)",
+        "result": "confirmed_closed"
+      },
+      {
+        "pane": "w7E:pQX",
+        "view": "v1 final capture",
+        "result": "confirmed_closed (evidence/v1/manifest.json)"
+      },
+      {
+        "pane": "w7E:pQW",
+        "view": "v3 final capture",
+        "result": "confirmed_closed (evidence/v3/manifest.json)"
+      },
+      {
+        "pane": "w7E:pQT",
+        "view": "v2 final capture (same pane id reused by the harness)",
+        "result": "confirmed_closed (evidence/v2/manifest.json)"
+      }
+    ],
+    "pinned_dumps": "run headless with COLUMNS=77 LINES=47 through the record wrapper; no pane opened",
+    "failures": "none"
+  },
+  "evidence_integrity_notes": [
+    "Record v1-a1-tb / probe-v1-tb-dump / v1-a2-lr hashed drafts that were later renamed: the exact bytes are preserved as specs/abandoned-6node-tb.json (0d60ea26...) and specs/abandoned-6node-lr.json (a9dbd874...), while the record's spec_path still shows the working filename it ran under.",
+    "pinned/v3-77x47.stdout was accidentally removed after its record was written; it was restored from the recorded spec bytes (specs/v3 candidate 2, sha256 5b480f5f...) and re-dumped with the same pinned command, and the restored file hashes to the record's stdout sha256 5ccf71d7... exactly.",
+    "pinned/*-77x47.stdout (and -1 variants) are the record-wrapper raw dumps; pinned/v{1,2,3}-final-77x47.txt are copies of the FINAL spec dumps and are the fit proofs cited above."
+  ],
+  "validator_output": {
+    "command": "scripts/viz-validate.py docs/visualize-eval/rounds/10/server-nic-layout/evidence/<view> --require-select --require-frames --require-records --attempts docs/visualize-eval/rounds/10/server-nic-layout/attempts.json",
+    "final_run": "v1, v2 and v3 all exit 0 with 'all checks passed' (34 checks each). Full text: validator/v1.txt, validator/v2.txt, validator/v3.txt.",
+    "transient_failures_before_the_final_run": [
+      "viewport_matches_target FAIL \u2014 measured pane 82x51 against the 77x47 target with no pinned dump yet: the pinned-dump lookup reads generation.json, which did not exist at that point. Fixed by writing generation.json and pinning a 77x47 dump of each final spec.",
+      "attempts_records_complete FAIL \u2014 the record wrapper's raw stdout for one pinned dump had been deleted after the record was written. Fixed by restoring that file byte-for-byte from the recorded spec (see evidence_integrity_notes); the restored sha256 equals the record's stdout sha256."
+    ],
+    "defects_remaining_in_the_captures": "none reported by any check line in any view"
+  },
+  "figures": {
+    "views_shipped": 3,
+    "spec_candidates_total": 6,
+    "spec_candidates_per_view": {
+      "v1": 2,
+      "v2": 1,
+      "v3": 3
+    },
+    "abandoned_shapes": 2,
+    "recorded_commands": 14
+  }
+}

@@ -1,0 +1,48 @@
+viewport: 90x46 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 90x46 @100% · v4-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+
+                                     ╭───────────╮
+                                     │River queue│
+                                     │           │
+                                     ╰───────────╯
+                                        ● ● ● ●
+                          audit / verify│ │ │ │  job rows
+                              ╭─────────╯ │ │ ╰──────────────╮
+                              │           │ │ diagnostics    │
+                              │        ╭──╯ ╰──╮             │
+                              ▼        │       ▼             ▼
+                       ╭─────────────╮ │ ╭───────────╮   ╭────────╮
+                       │SSH + BMC ops│ │ │janitor app│   │Postgres│
+                       │             │ │ │           │   │        │
+                       ╰─────────────╯ │ ╰───────────╯   ╰────────╯
+                              ●        │       ●
+                              │        │       │proposals
+                              │        │       ╰─────────╮
+                              ╰─────╮  ╰────────╮        │
+                           run audit▼           │        ▼
+                          ╭───────────────────╮ │ ╭─────────────╮
+                          │bare-metal machines│ │ │webapi server│
+                          │                   │ │ │             │
+                          ╰───────────────────╯ │ ╰─────────────╯
+                                    ●           │        ● confirm+alerts
+                         pull image │           │        │
+                                    │           │        │
+                                    ╰╮ ╭────────╯    ╭───╯
+                                     ▼ ▼diag uploads ▼
+                              ╭───────────────╮   ╭─────╮
+                              │S3 object store│   │Slack│
+                              │               │   │     │
+                              ╰───────────────╯   ╰─────╯
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+

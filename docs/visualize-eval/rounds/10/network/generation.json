@@ -1,0 +1,419 @@
+{
+  "case_id": "network",
+  "round": "10",
+  "round_note": "generator-task.md still prints `round: \"09\"` in its Output section (stale copy of the round-09 template); this sample is round 10 per config.json/metadata.json.",
+  "generator": {
+    "worker": "viz-ds10-2",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "independent_review": "not run \u2014 the round-10 contract forbids spawning a judge; the captain starts a separate terra judge"
+  },
+  "candidate_skill": {
+    "path": "docs/visualize-eval/rounds/10/SKILL.md",
+    "sha256": "9c1256791069e27207db2e5138527e45587e7096955f5ed4f86c79d46f77e56d"
+  },
+  "renderer": {
+    "path": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+    "sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8"
+  },
+  "target": "77 columns x 47 rows, natural 100% zoom",
+  "step0_classification": {
+    "family": "service-meshes",
+    "evidence": "The core switch fans two links into the application tier (core->web 10 GbE, core->cache 25 GbE) and the three application nodes close a triangle (web->cache session, web->db queries, cache->db fill), so the graph is a fan around a core with mesh relations, not a chain (density: 7 relations over 6 nodes) and not a fabric (no redundant parallel links, no double arrowheads).",
+    "tie_breakers_considered": [
+      "Density wins over depth: 7 edges > 6 nodes, so not flow-chains even though wan->fw->core is a straight run.",
+      "No disconnected worlds and no source-named bus, so not placement-planes.",
+      "No addresses, ports or qualifier markers, so not identity-probe-maps.",
+      "Motion is a signature, not a tie-breaker: the source asks for live flowing dots, but the fan shape (2 out of core, in-source order web then cache) is what decides the family."
+    ],
+    "secondary_recipe": "flow-chains only for the transit hop inside v1 (wan->fw->core kept as one short 4-rank lr run with one stage per rank, so each hop label owns its own corridor).",
+    "anti_parallel_pair": "none exists in the source: all 7 relations are one-directional (wen->fw 1 GbE, fw->core 10 GbE, core->web 10 GbE, core->cache 25 GbE, web->cache session, web->db queries, cache->db fill). The mesh recipe's pair clause was therefore not triggered; no reverse edge was invented to satisfy it."
+  },
+  "views": [
+    {
+      "view": "v1",
+      "carries": "transit path + core fan + all three link speeds (wan, fw, core, web, cache; 4 edges)",
+      "family_recipe": "service-meshes: the core's fan (core->web, core->cache) lives in this one view with the source's own fan order (web listed before cache), each fan edge on its own port and its own label; the transit hop before it is kept one node per rank so no hop's label enters another hop's corridor.",
+      "recipe_capture": "evidence/v1/v1-text.txt rows 22-28 (82x51 pane) and evidence/v1/v1-77x47.txt (pinned target dump): core's box at rows 24-26 spans the two fan ports on its right side, the up route leaves at the row above the box middle and the down route at the row below it, both visible in one frame.",
+      "spec": "specs/v1.json",
+      "spec_sha256": "1503a71fd98001e5ce89502f6905560de425ccbab43f8c341ec3889b85b916ba",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "check": "evidence/v1/check.txt",
+      "frames_pane": "evidence/v1/v1-frames.txt",
+      "frames_ansi_pane": "evidence/v1/v1-frames.ansi",
+      "pinned_target_dump": "evidence/v1/v1-77x47.txt",
+      "pinned_full_lap_frames": "evidence/v1/v1-frames-77x47.txt",
+      "measured_dimensions": "pane header token 82x51 @100%; pinned dump viewport: 77x47 zoom: 1.00 natural",
+      "viewport_line": "viewport: 77x47 zoom: 1.00 natural (pinned dump evidence/v1/v1-77x47.txt line 1); the live pane measured 82x51 @100% (manifest viewport_token)",
+      "extent": "75x9 cells (fits 77x47 with 2 columns of margin)",
+      "structural_levers": {
+        "groups": "network (wan, fw, core), app (web), state (cache) \u2014 the source names WAN, firewall, core switch and the web tier; Redis is the state tier",
+        "direction": "lr \u2014 the transit path is 4 ranks deep, so width is cheaper than height",
+        "rank_pins": "none; the engine's longest-path ranking already yields wan|fw|core|{web,cache}",
+        "minlen": "none declared",
+        "trunks": "none \u2014 the source names no shared bus, and core's two links are independent (10 GbE vs 25 GbE), so trunking them would merge two different relations",
+        "label_slot": "attempt v1-1 used label_slot on fw->core, core->web and core->cache; the shipped v1-2 drops it because the gutter band put '25 GbE' exactly between the two fan routes (see attempts.json)",
+        "dots": "dots: 1 on all 4 routes, flow: true (constant 0.5 cells/100 ms) \u2014 the source asks for live dots flowing along the lines, direction = traffic, slow and sparse"
+      }
+    },
+    {
+      "view": "v2",
+      "carries": "application relations (web, cache, db) plus the repeat of core->cache so the separate core-to-cache and web-to-cache relations are countable in one capture (4 edges)",
+      "family_recipe": "service-meshes: the application triangle around the two state nodes, each relation on its own port; core->cache is repeated here so the fixed constraint 'separate core-to-cache and web-to-cache' is visible in a single frame.",
+      "recipe_capture": "evidence/v2/v2-text.txt rows 9-37 (82x51 pane) and evidence/v2/v2-77x47.txt (pinned target dump): core's lone edge leaves the middle column of its bottom side, web's two edges leave at two ports symmetric about its middle, and Redis/DB each receive two separate arrowheads from two separate routes.",
+      "spec": "specs/v2.json",
+      "spec_sha256": "5cdec6d982ff0f380d182ee989abacdc60b44a3fbd3391e1b1a907e7b2907959",
+      "text": "evidence/v2/v2-text.txt",
+      "ansi": "evidence/v2/v2-ansi.ansi",
+      "selected_ansi": "evidence/v2/v2-selected.ansi",
+      "check": "evidence/v2/check.txt",
+      "frames_pane": "evidence/v2/v2-frames.txt",
+      "frames_ansi_pane": "evidence/v2/v2-frames.ansi",
+      "pinned_target_dump": "evidence/v2/v2-77x47.txt",
+      "pinned_full_lap_frames": "evidence/v2/v2-frames-77x47.txt",
+      "measured_dimensions": "pane header token 82x51 @100%; pinned dump viewport: 77x47 zoom: 1.00 natural",
+      "viewport_line": "viewport: 77x47 zoom: 1.00 natural (pinned dump evidence/v2/v2-77x47.txt line 1); the live pane measured 82x51 @100% (manifest viewport_token)",
+      "extent": "37x29 cells (fits 77x47 with wide margins)",
+      "structural_levers": {
+        "groups": "network (core), app (web), state (cache, db) \u2014 same group names and same sibling order as v1 (state keeps cache before db)",
+        "direction": "tb \u2014 three ranks (core/web, cache, db), so height is the cheaper axis",
+        "rank_pins": "none; longest path core->cache->db and web->cache->db give the same three ranks",
+        "minlen": "none declared",
+        "trunks": "none \u2014 a trunk would bundle web->cache and core->cache into one corridor and destroy the constraint that they are separate relations",
+        "label_slot": "label_slot on core->cache only; the three application labels sit on their own route's column (default placement)",
+        "dots": "dots: 1 on all 4 routes, flow: true (constant) \u2014 same source request, same sparse slow motion as v1"
+      }
+    }
+  ],
+  "meaning_ledger": [
+    {
+      "fact": "Node wan = WAN ingress",
+      "kind": "role",
+      "fate": "drawn",
+      "view": "v1"
+    },
+    {
+      "fact": "Node fw = Firewall",
+      "kind": "role",
+      "fate": "drawn",
+      "view": "v1"
+    },
+    {
+      "fact": "Node core = Core switch (fan origin)",
+      "kind": "role",
+      "fate": "drawn",
+      "view": "v1, v2"
+    },
+    {
+      "fact": "Node web = Web tier",
+      "kind": "role",
+      "fate": "drawn",
+      "view": "v1, v2"
+    },
+    {
+      "fact": "Node cache = Redis",
+      "kind": "role",
+      "fate": "drawn",
+      "view": "v1, v2"
+    },
+    {
+      "fact": "Node db = DB tier",
+      "kind": "role",
+      "fate": "drawn",
+      "view": "v2"
+    },
+    {
+      "fact": "wan->fw = 1 GbE",
+      "kind": "link speed",
+      "fate": "drawn",
+      "view": "v1"
+    },
+    {
+      "fact": "fw->core = 10 GbE",
+      "kind": "link speed",
+      "fate": "drawn",
+      "view": "v1"
+    },
+    {
+      "fact": "core->web = 10 GbE",
+      "kind": "link speed",
+      "fate": "drawn",
+      "view": "v1"
+    },
+    {
+      "fact": "core->cache = 25 GbE",
+      "kind": "link speed",
+      "fate": "drawn",
+      "view": "v1, v2"
+    },
+    {
+      "fact": "web->cache = session",
+      "kind": "application relation",
+      "fate": "drawn",
+      "view": "v2"
+    },
+    {
+      "fact": "web->db = queries",
+      "kind": "application relation",
+      "fate": "drawn",
+      "view": "v2"
+    },
+    {
+      "fact": "cache->db = fill",
+      "kind": "application relation",
+      "fate": "drawn",
+      "view": "v2"
+    },
+    {
+      "fact": "core-to-cache and web-to-cache must stay separate relations (fixed constraint)",
+      "kind": "constraint",
+      "fate": "drawn",
+      "view": "v2 (both routes enter Redis's top side at two separate ports, two arrowheads)"
+    },
+    {
+      "fact": "speeds must stay visible but motion speed must not be a measurement (fixed constraint)",
+      "kind": "constraint",
+      "fate": "drawn",
+      "view": "v1, v2 \u2014 all 7 routes run at the single constant rate 0.5 cells/100 ms (`dots: 7 single-dot routes ... 7 constant at 0.5c/step`); the numbers 1/10/25 GbE live only in label text"
+    },
+    {
+      "fact": "live dots flowing along the lines; direction = traffic flow; slow, sparse motion (user request)",
+      "kind": "motion",
+      "fate": "drawn",
+      "view": "v1, v2 \u2014 one dot per route, constant default rate, no dot on a static route (there is no static route in the source)"
+    },
+    {
+      "fact": "gruvbox palette, one uniform background behind the boxes (style request)",
+      "kind": "style",
+      "fate": "drawn",
+      "view": "v1, v2 \u2014 theme gruvbox; every cell in both ANSI captures carries bg rgb(40,40,40)"
+    },
+    {
+      "fact": "Historical claims, not live commands",
+      "kind": "qualifier",
+      "fate": "not marked dashed \u2014 the brief says the relationship facts are historical claims about one past attempt but states no uncertainty about any individual link, so a dashed link would invent doubt the source does not express",
+      "view": "n/a"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from_to": "wan -> fw",
+      "verb_tech": "1 GbE uplink",
+      "label_owner": "e1",
+      "view": "v1"
+    },
+    {
+      "id": "e2",
+      "from_to": "fw -> core",
+      "verb_tech": "10 GbE",
+      "label_owner": "e2",
+      "view": "v1"
+    },
+    {
+      "id": "e3",
+      "from_to": "core -> web",
+      "verb_tech": "10 GbE",
+      "label_owner": "e3",
+      "view": "v1"
+    },
+    {
+      "id": "e4",
+      "from_to": "core -> cache",
+      "verb_tech": "25 GbE",
+      "label_owner": "e4",
+      "view": "v1, v2"
+    },
+    {
+      "id": "e5",
+      "from_to": "web -> cache",
+      "verb_tech": "session",
+      "label_owner": "e5",
+      "view": "v2"
+    },
+    {
+      "id": "e6",
+      "from_to": "web -> db",
+      "verb_tech": "queries",
+      "label_owner": "e6",
+      "view": "v2"
+    },
+    {
+      "id": "e7",
+      "from_to": "cache -> db",
+      "verb_tech": "fill",
+      "label_owner": "e7",
+      "view": "v2"
+    }
+  ],
+  "coverage_map": [
+    {
+      "view": "v1",
+      "carries": "nodes wan/fw/core/web/cache, groups, e1, e2, e3, e4, all three speeds"
+    },
+    {
+      "view": "v2",
+      "carries": "nodes core/web/cache/db, groups, e4 (repeat, so the separate core-to-cache vs web-to-cache relation is visible beside e5), e5, e6, e7"
+    }
+  ],
+  "relationship_mapping": [
+    {
+      "source_relation": "wan -> fw 1 GbE",
+      "visible_as": "v1 arrow wan->fw labelled '1 GbE', arrowhead into Firewall's left border"
+    },
+    {
+      "source_relation": "fw -> core 10 GbE",
+      "visible_as": "v1 arrow fw->core labelled '10 GbE', arrowhead into Core switch's left border"
+    },
+    {
+      "source_relation": "core -> web 10 GbE",
+      "visible_as": "v1 arrow core->web labelled '10 GbE' (the lower fan port), arrowhead into Web tier's left border"
+    },
+    {
+      "source_relation": "core -> cache 25 GbE",
+      "visible_as": "v1 upper fan arrow core->cache labelled '25 GbE' plus the same relation again in v2 (core bottom port -> Redis top port)"
+    },
+    {
+      "source_relation": "web -> cache session",
+      "visible_as": "v2 arrow web->cache labelled 'session', left turn at the cache rank, arrowhead into Redis's top side"
+    },
+    {
+      "source_relation": "web -> db queries",
+      "visible_as": "v2 arrow web->db labelled 'queries', straight column into DB tier's top side"
+    },
+    {
+      "source_relation": "cache -> db fill",
+      "visible_as": "v2 arrow cache->db labelled 'fill', from Redis's bottom port into DB tier's top side"
+    }
+  ],
+  "recipe_yield": {
+    "demand": "one view holding the whole 6-node / 7-edge graph at 77x47",
+    "measured_attempts": [
+      {
+        "label": "v1-a",
+        "shape": "lr, no rank pins",
+        "extent": "100x8",
+        "why_it_failed": "23 columns wider than the 77-column target; also 1 ambiguous label between the two '10 GbE' corridors"
+      },
+      {
+        "label": "v1-b",
+        "shape": "tb, no rank pins",
+        "extent": "30x57",
+        "why_it_failed": "10 rows taller than the 47-row target"
+      },
+      {
+        "label": "v1-c",
+        "shape": "lr with layers pinning web+cache to one rank",
+        "extent": "rejected",
+        "why_it_failed": "renderer: 'no obstacle-safe route for web -> cache; increase node/layer spacing' \u2014 the web->cache edge is inside one rank"
+      }
+    ],
+    "yield": "the one-view shape yields; the case ships as two views. Every relation is still traceable and no relation was reversed or merged: the transit path and the whole core fan stay in v1, and v2 repeats core->cache beside web->cache so the 'separate relations' constraint is provable in a single capture.",
+    "how_close": "v1 is 75 of 77 columns wide at 9 rows, so the one-view graph missed the target by roughly one rank gap of width; no renderer feature is missing."
+  },
+  "provenance_and_abbreviations": {
+    "source": "docs/visualize-eval/cases/network/source.md (read only; expected.json and historical-variants.json deliberately not opened)",
+    "historical_origin": "session 2026-10-13T05-35-27-649Z_01a133c2\u2026 line 180, call chatcmpl-tool-bfad145e3b78162e5 (per case brief; not re-read)",
+    "abbreviations": "node ids wan/fw/core/web/cache/db are short ids only; every visible label is the source's own word (WAN, Firewall, Core switch, Web tier, Redis, DB tier). 'Redis' keeps the source's product name for the cache tier; 'DB tier' keeps the source's tier name. No fact was abbreviated away."
+  },
+  "deliberate_drops": [
+    {
+      "fact": "core->cache is drawn twice (v1 and v2)",
+      "reason": "coverage, not a drop: the repeat is what proves the separate core-to-cache and web-to-cache relations in one capture"
+    },
+    {
+      "fact": "no dashed edge anywhere",
+      "reason": "the source states no per-link uncertainty, so dashing would add a qualifier the source does not carry"
+    },
+    {
+      "fact": "no trunks",
+      "reason": "the source names no shared bus; its two core links carry different speeds (10 GbE vs 25 GbE) and are independent relations, so bundling them would lose meaning"
+    }
+  ],
+  "known_defects": [
+    "In-pane frames are truncated by the pane scrollback: evidence/v1/v1-frames.txt holds 19 of the 41 frames and evidence/v2/v2-frames.txt holds 19 of the 61 (the harness reads at most ~1000 recent lines \u2248 19 frames at 51 lines each). Full-lap proof therefore comes from the pinned target dumps of the same final specs: v1-frames-77x47.txt (41 frames) and v2-frames-77x47.txt (61 frames).",
+    "The live pane measured 82x51, not the 77x47 target, because the worker tab is 168 columns wide and the harness splits it 50/50. Fit at the target is proven by the pinned 77x47 dumps of each FINAL spec (v1-77x47.txt, v2-77x47.txt; no overflow banner).",
+    "manifest pane_cols is null for both bundles: the harness's `herdr pane layout` rect lookup returned no rect object in these runs, so the column count is taken from the app's own header token (82x51) instead of the pane rect. Recorded as measured, not relabelled.",
+    "v1 is 75 of 77 target columns: it fits with 2 columns to spare, so a pane narrower than 75 columns shows the overflow banner (the 82x51 pane did not).",
+    "Mid-side attachment, measured: the core switch (5-row box) attaches its fan at the two rows adjacent to its middle row (symmetric, correct). A target box of even height (Redis and Web tier are 4 rows) takes its lone arrowhead on the upper of the two middle cells rather than exactly centred \u2014 measured in evidence/v1/v1-77x47.txt, identical for both even-height targets, so the engine is consistent rather than erratic; reported as measured behaviour.",
+    "v2 draws web->cache with a left turn at the cache rank (the route runs down col 44 and turns left along the rank gap); that is the only long horizontal run in either view and it is not a loop."
+  ],
+  "blockers": [],
+  "cleanup": {
+    "panes": [
+      {
+        "view": "v1",
+        "pane_id": "w7E:pQQ",
+        "result": "confirmed_closed (manifest.cleanup)"
+      },
+      {
+        "view": "v2",
+        "pane_id": "w7E:pQR",
+        "result": "confirmed_closed (manifest.cleanup)"
+      }
+    ],
+    "note": "both panes were created by scripts/viz-evidence.sh in this worker's own Herdr tab and closed by the harness; the captain's tab was never touched. The pinned 77x47 dumps run headless (`--frames`) and create no pane."
+  },
+  "checks": {
+    "v1": {
+      "command": "/tmp/visualize-eval/round-10/bin/rataflow-view --check docs/visualize-eval/rounds/10/network/specs/v1.json",
+      "output": "viewport: unknown zoom: 1.00 natural\nok: nodes=5 edges=4 flows=4 direction=lr theme=gruvbox\nextent=75x9 cells\ncrossings: 0 bridges, 0 touching bends\nlabels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners\ngroups: network(3) app(1) state(1)\ntrunks:\ndots: 4 single-dot routes, 0 periodic routes, 0 violations, 4 constant at 0.5c/step, 0 same-arrival at 2000ms\norigins: 4/4 routes start at their arrow origin\narrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+    },
+    "v2": {
+      "command": "/tmp/visualize-eval/round-10/bin/rataflow-view --check docs/visualize-eval/rounds/10/network/specs/v2.json",
+      "output": "viewport: unknown zoom: 1.00 natural\nok: nodes=4 edges=4 flows=4 direction=tb theme=gruvbox\nextent=37x29 cells\ncrossings: 0 bridges, 0 touching bends\nlabels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners\ngroups: network(1) app(1) state(2)\ntrunks:\ndots: 4 single-dot routes, 0 periodic routes, 0 violations, 4 constant at 0.5c/step, 0 same-arrival at 2000ms\norigins: 4/4 routes start at their arrow origin\narrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+    }
+  },
+  "validator": {
+    "command": "uv run --quiet python3 scripts/viz-validate.py <bundle> --require-select --require-frames --require-records --attempts docs/visualize-eval/rounds/10/network/attempts.json",
+    "v1": "PASS manifest_readable\nPASS binary_path_absolute\nPASS binary_hash_recorded\nPASS artifact_hashes\nPASS check_output_present\nPASS check_exit_zero\nPASS check_warnings_absent\nPASS labels_parsed\nPASS labels_complete\nPASS labels_off_routes\nPASS labels_not_skipped\nPASS dots_parsed\nPASS dots_no_violations\nPASS origins_reported\nPASS origins_complete\nPASS dots_sync_reported\nPASS arrivals_reported\nPASS arrivals_complete\nPASS labels_ownership_reported\nPASS labels_ownership_clear\nPASS crossings_reported\nPASS viewport_proven\nPASS viewport_proven_measurable\nPASS viewport_matches_target\nPASS cleanup_confirmed\nPASS select_all_frame\nPASS select_all_artifact\nPASS frames_artifact\nPASS frames_timestamped\nPASS attempts_readable\nPASS attempts_view_budget\nPASS attempts_spec_budget\nPASS attempts_records_complete\n\nall checks passed\n",
+    "v2": "PASS manifest_readable\nPASS binary_path_absolute\nPASS binary_hash_recorded\nPASS artifact_hashes\nPASS check_output_present\nPASS check_exit_zero\nPASS check_warnings_absent\nPASS labels_parsed\nPASS labels_complete\nPASS labels_off_routes\nPASS labels_not_skipped\nPASS dots_parsed\nPASS dots_no_violations\nPASS origins_reported\nPASS origins_complete\nPASS dots_sync_reported\nPASS arrivals_reported\nPASS arrivals_complete\nPASS labels_ownership_reported\nPASS labels_ownership_clear\nPASS crossings_reported\nPASS viewport_proven\nPASS viewport_proven_measurable\nPASS viewport_matches_target\nPASS cleanup_confirmed\nPASS select_all_frame\nPASS select_all_artifact\nPASS frames_artifact\nPASS frames_timestamped\nPASS attempts_readable\nPASS attempts_view_budget\nPASS attempts_spec_budget\nPASS attempts_records_complete\n\nall checks passed\n",
+    "v1_exit": "0 (all checks passed)",
+    "v2_exit": "0 (all checks passed)"
+  },
+  "claims_with_captures": [
+    {
+      "claim": "the two groups other than network render in distinct hue families (no collision)",
+      "proof": "evidence/v1/v1-ansi.ansi: Redis border cells (21,65)-(22,65) fg rgb(206,161,115) orange (hue 30\u00b0); Web tier border cells (26,63)-(27,63) fg rgb(206,115,206) magenta (hue 300\u00b0); WAN/Firewall/Core borders (24,9),(24,22),(24,41) fg rgb(115,206,183) / rgb(153,219,203) / rgb(78,193,164) \u2014 three shades of the one aqua family (hue \u2248168\u00b0). Three groups, three families."
+    },
+    {
+      "claim": "mid-side attachment, both ends",
+      "proof": "evidence/v1/v1-77x47.txt row 23: the wan->fw route leaves WAN's right border (col 10) at row 23, the upper of that 4-row side's two middle cells, and enters Firewall's left border (col 19) at the same row 23; the fw->core route enters Core switch's left border (col 38) at row 23, which is the exact middle row of Core's 5-row box (rows 21-25)."
+    },
+    {
+      "claim": "the core fan spreads symmetrically about the middle with target-aligned port order",
+      "proof": "evidence/v1/v1-77x47.txt rows 22 and 24: the two fan dots sit on Core switch's right border at rows 22 and 24 \u2014 the rows immediately above and below its middle row 23 \u2014 and both routes run out to the target rank without interleaving; the up route (row 22) serves Redis, the down route (row 24) serves Web tier, matching the source's own listing order (web then cache in the fan's target order)."
+    },
+    {
+      "claim": "no bridges (round-09's single bridge at (32,34) is gone)",
+      "proof": "crossings: 0 bridges, 0 touching bends in both check files, and no bridge glyph (\u256c \u2550 \u256b) appears anywhere in evidence/v1/v1-text.txt, evidence/v2/v2-text.txt, or either pinned 77x47 dump."
+    },
+    {
+      "claim": "the separate core-to-cache and web-to-cache relations are countable in one capture",
+      "proof": "evidence/v2/v2-77x47.txt rows 12-22: core's dot starts at (13,31) and web's dots at (13,44) and (13,46); the col-31 route descends to Redis's top port at (22,32) and the col-44 route turns left at the cache rank into Redis's top port at (22,34) \u2014 two independent routes, two arrowheads (\u25bc at row 22 cols 32 and 34)."
+    },
+    {
+      "claim": "every dot starts at the start of its own arrow",
+      "proof": "evidence/v1/v1-frames-77x47.txt frame 0 dots = (22,51) [core right border col 50], (23,11) [WAN right border col 10], (23,29) [Firewall right border col 28], (24,51); evidence/v2/v2-frames-77x47.txt frame 0 dots = (13,31) [core bottom mid], (13,44) and (13,46) [web's two symmetric ports], (27,33) [Redis bottom port]."
+    },
+    {
+      "claim": "constant slow motion, identical advance on every dot",
+      "proof": "evidence/v1/v1-frames-77x47.txt frames 20\u219226 (2000ms\u21922600ms): each of the 4 dots advances exactly 3 cells; evidence/v2/v2-frames-77x47.txt frames 18\u219224 (1800ms\u21922400ms): each of the 4 dots advances exactly 3 cells. 3 cells / 600 ms = 0.5 cells per 100 ms."
+    },
+    {
+      "claim": "a full lap of the longest route at the target size",
+      "proof": "v1: the longest route is core->cache, 11 drawn cells before the arrowhead \u2014 (22,51)\u2026(22,59), corner (22,60), then (21,60); the dot is back at its origin (22,51) in frame 20 of evidence/v1/v1-frames-77x47.txt, i.e. a 22-frame lap inside the 41-frame window. v2: the longest route is web->db, 28 drawn cells \u2014 col 46 from (13,46) to (31,46), then the rank-gap run to (32,39); its dot reaches (32,40) by frame 48, wraps, and in frame 60 sits at (18,46), 5 cells into a second lap inside the 61-frame window."
+    },
+    {
+      "claim": "labels sit unambiguously nearer their own route",
+      "proof": "evidence/v1/v1-77x47.txt: '1 GbE' at row 22 cols 12-16 sits one row above its own run (row 23 cols 11-18) and its nearest other route is 12 free columns away; '10 GbE' (fw->core) at row 22 cols 30-35 sits one row above its own run (row 23 cols 29-37) and its nearest other route is the 1 GbE run, 11 columns away; '25 GbE' at row 21 cols 52-57 sits one row above the up-fan route (row 22) with the down-fan route 3 rows below (the rejected v1-1 draft put this label exactly between the two fan routes); '10 GbE' (core->web) at row 25 cols 51-56 sits on the down-fan approach row, one row under its own run (row 24 cols 51-57). evidence/v2/v2-77x47.txt: session (row 20, ends col 42) is 1 free column from its own line at col 44 and 4 columns from the col-31 route; queries (row 26, ends col 45) is 1 free column from its own line at col 46; fill (row 29, ends col 38) is 1 free column from its own line at col 33; 25 GbE (row 13, cols 33-38) is 2 cells from core->cache's column 31 with the next route 8 columns away."
+    },
+    {
+      "claim": "no dot rests on a corner, bridge, junction or label",
+      "proof": "dots: 0 violations in both check files, and in every frame of both pinned lap dumps (4 dots per frame, all on \u2500 \u2502 \u25cf cells) no dot cell coincides with a corner glyph or with a label cell."
+    }
+  ],
+  "attempt_log": "attempts-log.jsonl (10 records: v1-a, v1-b, v1-c, v1-1, v1-2, v2-1, plus the four pinned target dumps v1-pinned-77x47, v1-lap-77x47, v2-pinned-77x47, v2-lap-77x47); raw stdout/stderr under recorded/",
+  "attempts_file": "attempts.json"
+}

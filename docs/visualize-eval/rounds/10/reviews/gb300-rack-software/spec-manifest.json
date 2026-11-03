@@ -1,0 +1,14 @@
+[
+ {
+  "path": "docs/visualize-eval/rounds/10/gb300-rack-software/spec-v1.json",
+  "sha256": "fc9618173b3070474f19d47817d272e66c76ee7b1e1262781ee317228267c2c1"
+ },
+ {
+  "path": "docs/visualize-eval/rounds/10/gb300-rack-software/spec-v2.json",
+  "sha256": "2026351a4125f57c9cf637e694e7b43a881a69fc1dbdaf60cd6728d14190923e"
+ },
+ {
+  "path": "docs/visualize-eval/rounds/10/gb300-rack-software/spec-v3.json",
+  "sha256": "d98426a8ef06ce1d5e5fdbc750b52d35737b3f5e6f8081a373c806d4dda7330d"
+ }
+]

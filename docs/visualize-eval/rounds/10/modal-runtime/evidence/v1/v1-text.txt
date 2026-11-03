@@ -1,0 +1,50 @@
+ rataflow-view · 82x51 @100% · v1-seams.json · 4 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  ╭────────────╮
+                                  │modal-worker│
+                                  │            │
+                                  ╰────────────╯
+                                       │ ▲ task in + ctrl gRPC
+                                       │ │ events + mgmt gRPC
+                                       ╰╮╰╮
+                                        ▼ │
+                                  ╭─────────────╮
+                                  │modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                        │ │dispatch tasks
+                        fs HTTP over UDS│ │
+                                ╭───────╯ ╰──────╮
+                                ▼                ▼
+                          ╭────────────╮   ╭───────────╮
+                          │modal-daemon│   │Task engine│
+                          │            │   │           │
+                          ╰────────────╯   ╰───────────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘

@@ -1,0 +1,52 @@
+viewport: 100x50 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 100x50 @100% · v2.json · 7 nodes · 7 edges · q quit
+
+
+
+
+
+
+
+
+
+                                  ╭───────────╮   ╭──────────────╮
+                                  │River queue│   │reconcile loop│
+                                  │           │   │              │
+                                  ╰───────────╯   ╰──────────────╯
+                                        ● provision job ● ● gcore sync 1min
+                                        │               │ │ cluster state
+                             ╭──────────⌒───────────────╯ │
+                             │          ╰╮                │
+                             │           ▼                ▼
+                             │  ╭─────────────────╮   ╭────────╮
+                             │  │provider registry│   │Postgres│
+                             │  │                 │   │        │
+                             │  ╰─────────────────╯   ╰────────╯
+                             │           ● provider API
+                             │           │
+                             │          ╭╯╭───────────╮
+                             │          ▼ ▼           │iPXE request
+                             │ ╭────────────────────╮ │ ╭───────────╮
+                             │ │bare-metal providers│ │ │boot server│
+                             │ │                    │ │ │           │
+                             │ ╰────────────────────╯ │ ╰───────────╯
+                             │           ●            │      ▲ ●
+                             │           │        ╭───⌒──────╯ │
+                             ╰───────────⌒────────⌒───╯        │
+                        allocate instance╰──────╮ │ ╭──────────╯
+                                                ▼ ● ▼boot.ipxe + S3 args
+                                        ╭───────────────────╮
+                                        │bare-metal machines│
+                                        │                   │
+                                        ╰───────────────────╯
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+

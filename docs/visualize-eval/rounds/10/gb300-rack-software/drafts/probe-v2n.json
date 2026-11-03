@@ -1,0 +1,24 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "rms",
+      "label": "nv-rms",
+      "group": "management"
+    },
+    {
+      "id": "bmc_c",
+      "label": "Compute BMC",
+      "group": "devices"
+    }
+  ],
+  "edges": [
+    {
+      "from": "rms",
+      "to": "bmc_c",
+      "label": "Redfish/HTTPS",
+      "label_slot": true
+    }
+  ]
+}

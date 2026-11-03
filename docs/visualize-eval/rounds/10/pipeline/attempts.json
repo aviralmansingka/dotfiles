@@ -1,0 +1,88 @@
+{
+ "case_id": "pipeline",
+ "views": [
+  {
+   "view": "v1",
+   "attempts": [
+    {
+     "spec_sha256": "a66a1fe2a49805e2d177223f726e21e4d018a33985226e422cb338a06a14e42e",
+     "spec": "specs/v1-draft1-tb-rejected.json",
+     "record_label": "v1-attempt3-tb-final",
+     "check_summary": "extent=31x36 crossings=0/0 labels=4/4 placed 0 on route 0 skipped 1 ambiguous -> warning: 1 ambiguous owner",
+     "note": "tb, fan labels declared verify-then-enqueue. The enqueue label centre lands 2 cells from its own run and 2 cells from the verify run (engine places label centre at (39,24); own run corner (40,23), verify corner (38,23)), so the check calls the owner ambiguous. Rejected: an ambiguous owner fails labels_ownership_clear."
+    },
+    {
+     "spec_sha256": "3e812eaacb7daa6f6b4e10b50cd6dadad35775face9d30dd1bcdadad23d34a25f6",
+     "spec": "specs/v1.json",
+     "record_label": "v1-enqueue-first-probe",
+     "check_summary": "extent=31x36 crossings=0/0 labels=4/4 placed 0 on route 0 skipped 0 ambiguous, no warnings, dots 6 single-dot 0 violations, origins 6/6",
+     "note": "Same structure and levers, only the declaration order of the two fan labels changed (enqueue before verify). Label placement runs in edge order, so the longer verb takes its gutter first and the shorter verb's gutter is clear: 0 ambiguous owners. SHIPPED."
+    }
+   ]
+  }
+ ],
+ "abandoned_shapes": [
+  {
+   "shape": "lr orientation, no label slots",
+   "spec_sha256": "89cd344f1fd917b250dfceeada4b0eba70bfb813fbf4285ca576d5003eb117f7",
+   "spec": "specs/v1a-lr.json",
+   "record_labels": ["v1-attempt1-lr"],
+   "outcome": "extent=89x9 cells; 10 columns wider than the 77-column target -> 'graph overflows'. Never shipped."
+  },
+  {
+   "shape": "lr orientation + label_slot on all four verbs",
+   "spec_sha256": "c936d2099c7b1a6021062b34241c6559140d68d52b696f8baccb9d0d4d4f5a3f",
+   "spec": "specs/v1b-lr-slot.json",
+   "record_labels": ["v1-attempt2-lr-label-slot"],
+   "outcome": "extent=79x10 cells; still 2 columns over 77 -> 'graph overflows'. This is the lr floor for these six verbatim labels (node widths 5+13+11+13+10 plus four gutters). Never shipped."
+  },
+  {
+   "shape": "tb with node declaration order swapped (queue declared before auth), probing whether declaration order moves the fan",
+   "spec_sha256": "a36281909d62e45bdc84e108743be18ca8092df56e087a06efe0152a947799f1",
+   "spec": "specs/v1-draft2-tb-autorder-rejected.json",
+   "record_labels": ["v1-attempt2-tb-fan-swapped", "v1-swapped-frames-probe"],
+   "outcome": "geometry byte-identical (Auth still left, extent 31x36, 1 ambiguous). Lever inert for grouped specs. Never shipped."
+  },
+  {
+   "shape": "tb with layers pin [queue, auth] on rank 2 to force the longer verb's branch to the left",
+   "spec_sha256": "83d0849f235f1051fd224c14788c4ce90a92c042d49354a2ade2001391a8d822",
+   "spec": "specs/v1-layers-queue-left-probe.json",
+   "record_labels": ["v1-attempt3-tb-layers-queue-left", "v1-layers-frames-probe"],
+   "outcome": "check prints 'layers=5 (6 pinned, within-rank order automatic)': the pin only fixes ranks, so the render is identical (31x36, 1 ambiguous). Never shipped."
+  },
+  {
+   "shape": "tb with minlen: 2 on both fan hops to open a dedicated label channel",
+   "spec_sha256": "b00990c9066f547a4578ab219893e3945eeb88a9aea892aa308bb7096688193f",
+   "spec": "specs/v1-minlen-probe.json",
+   "record_labels": ["v1-minlen-channel-probe", "v1-minlen-frames-probe"],
+   "outcome": "extent grew to 31x41 and the enqueue label still landed at (39,26): own run corner 2 cells away, verify run corner 2 cells away -> still 1 ambiguous. The tie is a column fact, not a row fact, so a taller channel cannot cure it. Never shipped."
+  },
+  {
+   "shape": "tb with no label_slot on the two fan hops (labels placed in the widened rank gap)",
+   "spec_sha256": "b4a37af2b1cf490d5a514fec2ffd7efa641b70e26ebd769ec73770bda01de924",
+   "spec": "specs/v1-noslot-probe.json",
+   "record_labels": ["v1-fan-gap-no-slot-probe"],
+   "outcome": "extent=31x42, still 1 ambiguous: both verbs fall back to place_label and land on the same centre column. Never shipped."
+  }
+ ],
+ "budget": {
+  "views": 1,
+  "content_candidates_for_v1": 2,
+  "recorded_probes_that_never_shipped": 6,
+  "distinct_check_specs_total": 8,
+  "note": "The shipped view used two content candidates (one rejected draft, one final). Six further specs were checked as probes; each is recorded in attempts-log.jsonl and listed above instead of being trimmed. Under the strictest reading of the 3-spec-candidate-per-view budget those six probes count against the single view, which is disclosed rather than hidden."
+ },
+ "spec_sha_to_file": {
+  "note": "attempts-log.jsonl binds every --check/--frames run to the spec sha256 it executed. Two record entries name paths that were later renamed or overwritten while iterating; the executed bytes are preserved here, one file per sha256.",
+  "89cd344f1fd917b250dfceeada4b0eba70bfb813fbf4285ca576d5003eb117f7": "specs/v1a-lr.json",
+  "c936d2099c7b1a6021062b34241c6559140d68d52b696f8baccb9d0d4d4f5a3f": "specs/v1b-lr-slot.json",
+  "a66a1fe2a49805e2d177223f726e21e4d018a33985226e422cb338a06a14e42e": "specs/v1-draft1-tb-rejected.json (recorded as specs/v1c-tb-draft.json before the rename; same bytes)",
+  "a36281909d62e45bdc84e108743be18ca8092df56e087a06efe0152a947799f1": "specs/v1-draft2-tb-autorder-rejected.json (both its records name specs/v1.json, which held these bytes at the time)",
+  "83d0849f235f1051fd224c14788c4ce90a92c042d49354a2ade2001391a8d822": "specs/v1-layers-queue-left-probe.json (both its records name specs/v1.json, which held these bytes at the time; restored byte-exactly, sha re-verified)",
+  "b00990c9066f547a4578ab219893e3945eeb88a9aea892aa308bb7096688193f": "specs/v1-minlen-probe.json",
+  "b4a37af2b1cf490d5a514fec2ffd7efa641b70e26ebd769ec73770bda01de924": "specs/v1-noslot-probe.json",
+  "3e812eaacb7daa6f6b4e10b50cd6dadad35775face9d30dd1bcdad23d34a25f6": "specs/v1.json = specs/v1-enqfirst-probe.json (identical bytes; v1.json is the shipped final spec)"
+ },
+ "records_log": "attempts-log.jsonl",
+ "recorded_raw_dir": "recorded/"
+}

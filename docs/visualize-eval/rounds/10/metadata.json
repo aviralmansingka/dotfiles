@@ -10,7 +10,7 @@
  "renderer_source_git_commit": "749db37cafde8a62014f51710e1da634ade5bc02",
  "rubric_revision": 9,
  "rubric_sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
- "cases_sha256": "e69179e59a3d36985cd7e8672b319b566701f88caef385c9cbde76d060c92d05",
+ "cases_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
  "case_hashes": {
   "pipeline": {
    "source_sha256": "68aa197fdc597c3a22d1b8ca88a3ebee861dcda34684da15ae69b6946b741e58",
@@ -53,7 +53,7 @@
    "variants_sha256": "fd9892244406ec1b2b09ee2cc7adb2af5534ebb52ede5036664f238b776eff31"
   }
  },
- "dataset_verification": "inherited from round 09: 24/24 case files byte-identical (verified 2026-11-02); unchanged since",
+ "dataset_verification": "CORRECTED post-judge: individual case files (24/24) match round-09 hashes; the cases.json INDEX digest differs from the inherited round-09 value (index-only edit after the round-09 freeze; case content byte-identical). The per-file case_hashes are the authoritative dataset proof.",
  "generator_model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
  "reviewer_model": "openai/gpt-6.1-terra:high",
  "gates": "merged tree 749db37c: 108 tests, clippy -D warnings clean, fmt clean, release clean, test-rataflow.py 9/9",

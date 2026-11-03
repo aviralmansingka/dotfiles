@@ -1,0 +1,167 @@
+{
+  "case_id": "homelab-nic-trace",
+  "round": "10",
+  "budget": { "views_max": 4, "spec_candidates_per_view_max": 3 },
+  "binary": {
+    "path": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+    "sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8"
+  },
+  "record_log": "attempts-log.jsonl",
+  "views": [
+    {
+      "view": "v1",
+      "spec": "specs/v1-host-virtuals.json",
+      "attempts": [
+        {
+          "label": "v1-host-virtuals-a3",
+          "record_label": "v1-host-virtuals-a3",
+          "spec": "attempts/v1-a3-3rank-nodockerip.json",
+          "spec_sha256": "da1c4768c0fefb83dd6d538ac8e9a9a7fc2c22c8e481f77be92f01a11ae7529b",
+          "check": "extent=51x20 cells; crossings: 0 bridges, 0 touching bends; labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+          "decision": "rejected",
+          "note": "3-rank tb split was clean, but the docker0 node label dropped the source identifier 172.18.2.1 (bridge address). Re-cut the same split with the identifier added instead of dropping it."
+        },
+        {
+          "label": "v1-host-virtuals-a4",
+          "record_label": "v1-host-virtuals-a4",
+          "spec": "specs/v1-host-virtuals.json",
+          "spec_sha256": "a15623e23256044f1dd266bd08b9e79e1ef99bb870c04cf6b73a46c41248b40b",
+          "check": "extent=54x20 cells; crossings: 0 bridges, 0 touching bends; labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+          "decision": "shipped",
+          "note": "virtual nets: libvirt NAT and docker bridge drawn as two separate paths into the host; both subnet labels and the bridge address are on the view."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "spec": "specs/v2-overlay-uplinks.json",
+      "attempts": [
+        {
+          "label": "v2-overlay-uplinks-a3",
+          "record_label": "v2-overlay-uplinks-a3",
+          "spec": "specs/v2-overlay-uplinks.json",
+          "spec_sha256": "ac511f635f630100aeb7daeca28627f0c4cbda91ce3a9ec24f72f3a43693dc4d",
+          "check": "extent=57x21 cells; crossings: 0 bridges, 0 touching bends; labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+          "decision": "shipped",
+          "note": "first and only candidate for this view: overlay encapsulation (tailscale0 -> host, tailscale0 -> bond0) plus the two host uplink relations."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "spec": "specs/v3-lan-gateway.json",
+      "attempts": [
+        {
+          "label": "v2-lan-gateway-a1",
+          "record_label": "v2-lan-gateway-a1",
+          "spec": "attempts/v3-a1-lan-gateway-4edge.json",
+          "spec_sha256": "221b2573943ed3a4179ec2f47d6736c4fb03e7d7c624f66891a28551071eca00",
+          "check": "extent=79x31 cells; crossings: 0 bridges, 0 touching bends; labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+          "decision": "rejected",
+          "note": "this view's earlier, wider split (host + both uplinks + gateway in one view, long edge labels in gutters): 79 columns, over the 77-column target."
+        },
+        {
+          "label": "v2-lan-gateway-a2",
+          "record_label": "v2-lan-gateway-a2",
+          "spec": "attempts/v3-a2-lan-gateway-4edge-slot.json",
+          "spec_sha256": "8682e93d9b925add9f5ff3935d6c337913abd59d9562da7bb3b2656d703121b1",
+          "check": "extent=70x20 cells; crossings: 0 bridges, 0 touching bends; labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+          "decision": "rejected",
+          "note": "shortened labels fixed the width, but the split duplicated the host uplink relations that v2 already owns; re-split to the gateway pair only."
+        },
+        {
+          "label": "v3-lan-gateway-a3",
+          "record_label": "v3-lan-gateway-a3",
+          "spec": "specs/v3-lan-gateway.json",
+          "spec_sha256": "1439e2d086e7eb027b964a426a8fff27fdd05a9236ba8af1c4cf2735b902e90e",
+          "check": "extent=73x12 cells; crossings: 0 bridges, 0 touching bends; labels: 2/2 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+          "decision": "shipped",
+          "note": "bond0 and wlp8s0 as two separate ports into the Fios router; the wired default gateway and the Wi-Fi metric-600 failover path stay two distinct edges."
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "spec": "specs/v4-egress-chain.json",
+      "attempts": [
+        {
+          "label": "v3-egress-chain-a1",
+          "record_label": "v3-egress-chain-a1",
+          "spec": "attempts/v4-a1-egress-draft.json",
+          "spec_sha256": "dd4d447129d7c3cfe5c85da25b7c7f2eba82240797cc555c1a1231fe02f74596",
+          "check": "extent=59x36 cells; crossings: 0 bridges, 0 touching bends; labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+          "decision": "rejected",
+          "note": "clean, but '1 ISP, 1 path' had been folded into the ONT label (wrong owner) and the router's collapsed-fabric role was split away from its address line; label ownership re-cut."
+        },
+        {
+          "label": "v3-egress-chain-a2",
+          "record_label": "v3-egress-chain-a2",
+          "spec": "attempts/v4-a2-egress-draft.json",
+          "spec_sha256": "b07c3277219daab13188c12df920922db43b459e50a28c8e20e3e2636e82ebb9",
+          "check": "extent=65x36 cells; crossings: 0 bridges, 0 touching bends; labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+          "decision": "rejected",
+          "note": "same shape with one label still short of the source wording ('1 home' for the shared pool IP). Wording fixed in the shipped candidate."
+        },
+        {
+          "label": "v4-egress-chain-a3",
+          "record_label": "v4-egress-chain-a3",
+          "spec": "specs/v4-egress-chain.json",
+          "spec_sha256": "e8907659668ae98fdd4a173d869b3bdb4c92cdcdd68da5a13618a8aa9e62f0db",
+          "check": "extent=65x36 cells; crossings: 0 bridges, 0 touching bends; labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+          "decision": "shipped",
+          "note": "rtr -> ONT -> vzagg -> vzbb -> cf in source order; the three traceroute hops are dashed and marked (hist.); the NAT hop carries the shared pool IP."
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "label": "v1-host-virtuals-a1",
+      "spec": "attempts/v1-a1-4rank-noslot.json",
+      "spec_sha256": "b878b2caffe8f8fc4e61442447c8ab750aecb6c62e33484d77d582c0da1914b",
+      "why": "shape experiment: host virtuals + overlay in one 4-rank tb view with plain edge labels. Each rank gap is sized to the label text, so the drawing became 58x44 with 13-row corridors."
+    },
+    {
+      "label": "v1-host-virtuals-a2",
+      "spec": "attempts/v1-a2-4rank-ambiguous.json",
+      "spec_sha256": "894cfe8c8e59dd902baf0984eb4d57077abc26e591aa3ebca97b687ecd6a79ed",
+      "why": "same 4-rank shape with label_slot gutters: compact (60x22) but reported 1 ambiguous label owner (docker bridge beside the tailscale route). Shape abandoned, split changed instead of reordering groups."
+    },
+    {
+      "label": "probe-static-mini",
+      "spec": "probes/probe-static-mini.json",
+      "spec_sha256": "baff63c2c55687da68f372fb01558d9c44d9f754038d0318e5e337082bd9874b",
+      "why": "capability calibration only: confirmed a dot-free spec still prints the 'dots:' and 'origins/arrivals 0/0' lines the evidence contract needs."
+    },
+    {
+      "label": "probe-longlabel",
+      "spec": "probes/probe-longlabel.json",
+      "spec_sha256": "5c5c94c411ad42ef53c154d68ddb71cd2d6281ffc8573070f1900b95d8879260",
+      "why": "capability calibration: no hard edge-label length limit; label_slot accepts long text."
+    },
+    {
+      "label": "probe-multiline",
+      "spec": "probes/probe-multiline.json",
+      "spec_sha256": "b8ad803f295fdd34f55818901f1e4cbed858e06b28b8d5912046fad5a168f28c",
+      "why": "rejected lever: a node label containing a newline passes --check (extent 47x4) but draws nothing in the pane. Multi-line node labels are not usable; all node labels stay single-line."
+    },
+    {
+      "label": "probe-multiline-frames",
+      "spec": "probes/probe-multiline.json",
+      "spec_sha256": "b8ad803f295fdd34f55818901f1e4cbed858e06b28b8d5912046fad5a168f28c",
+      "why": "the pinned 77x47 dump of that probe: header and viewport line only, no art. Evidence for the same rejection."
+    },
+    {
+      "label": "probe-slot",
+      "spec": "probes/probe-slot.json",
+      "spec_sha256": "6ae3edc5d38d1ea87d301d9d415b6175722327579a11255694e834bfafc89dbf",
+      "why": "rejected lever: label_slot in an lr fan skipped one of two labels ('no free slot'). Gutter bands do not stack reliably on an lr fan."
+    },
+    {
+      "label": "probe-tb-slot",
+      "spec": "probes/probe-tb-slot.json",
+      "spec_sha256": "ca72491d1cc1f98eb37ddbb1fc9b61e836f1c90994f08c9a474cdeed9f250dc6",
+      "why": "adopted lever: label_slot in a tb chain puts each label beside its vertical run, so a 4-rank address-labelled chain stays 38x28 instead of 17 rows per hop. All shipped views use it."
+    }
+  ]
+}

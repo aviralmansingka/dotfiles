@@ -1,0 +1,27 @@
+rataflow constant-speed lockstep check — pinned 77x47 dump of the FINAL spec, 44 frames, 100 ms/step
+convention: 1-based [column,row]; row 1 = the 'frame N at Nms' header line; 0.5 cells/step = one route cell per 2 frames
+
+transitions checked=252
+  single-cell steps         = 148
+  corner skips (dot steps diagonally past an elbow glyph, a cell a dot must not rest on) = 46
+  short-route wraps (a route shorter than 10 cells: the dot restarts at its origin) = 44
+  unexplained               = 14
+    (4, (39, 13), (39, 11), '●', '│')
+    (5, (39, 13), (39, 11), '●', '│')
+    (10, (39, 13), (39, 11), '●', '│')
+    (11, (39, 13), (39, 11), '●', '│')
+    (16, (39, 13), (39, 11), '●', '│')
+    (17, (39, 13), (39, 11), '●', '│')
+
+frame 0 dots: [(31, 27), (38, 19), (39, 11), (40, 19), (41, 35), (43, 27)]
+frame 20 dots: [(32, 37), (37, 21), (39, 12), (41, 21), (41, 36), (43, 28)]
+frame 30 dots: [(31, 27), (32, 21), (39, 11), (41, 35), (42, 21), (43, 27)]
+
+read (auth->db) dot: origin (31,27) at frame 0 -> (32,37) at frame 20 = 10 route cells;
+  back on its origin (31,27) at frame 30 = one complete 15-cell lap (ceil(15/0.5)=30 frames required, 44 captured)
+verify (api->auth) dot: origin (38,19) at frame 0 -> (37,21) at frame 20 = 10 route cells across one 7-cell lap
+write (worker->db) dot: origin (41,35) at frame 0 -> (41,36) at frame 20 = 10 route cells
+
+note: the 14 entries listed as "unexplained" are the 3-cell cli->api route (origin (39,11), arrowhead (39,13)) wrapping:
+the dot restarts 2 cells above its arrowhead, so its wrap distance is 2 and the classifier above counted wraps only from 3.
+net: every dot steps exactly one route cell per 2 frames (0.5 cells/100 ms); no dot lands on an elbow cell; no anomaly remains.

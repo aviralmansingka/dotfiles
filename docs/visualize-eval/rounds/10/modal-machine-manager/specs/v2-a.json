@@ -1,0 +1,22 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "q", "label": "River queue", "group": "control" },
+    { "id": "sync", "label": "reconcile loop", "group": "control" },
+    { "id": "catalog", "label": "provider registry", "group": "metal" },
+    { "id": "state", "label": "Postgres", "group": "state" },
+    { "id": "prov", "label": "bare-metal providers", "group": "metal" },
+    { "id": "mch", "label": "bare-metal machines", "group": "metal" },
+    { "id": "boot", "label": "boot server", "group": "metal" }
+  ],
+  "edges": [
+    { "from": "q", "to": "catalog", "label": "provision job", "label_slot": true, "dots": 1, "flow": true },
+    { "from": "catalog", "to": "prov", "label": "provider API", "label_slot": true, "dots": 1, "flow": true },
+    { "from": "sync", "to": "prov", "label": "gcore sync 1min", "label_slot": true, "dots": 1, "flow": true },
+    { "from": "sync", "to": "state", "label": "cluster state", "label_slot": true, "dots": 1, "flow": true },
+    { "from": "prov", "to": "mch", "label": "allocate instance", "label_slot": true, "dots": 1, "flow": true },
+    { "from": "mch", "to": "boot", "label": "iPXE request", "label_slot": true, "dots": 1, "flow": true },
+    { "from": "boot", "to": "mch", "label": "boot.ipxe + S3 args", "label_slot": true, "dots": 1, "flow": true }
+  ]
+}

@@ -1,0 +1,2971 @@
+{
+  "protocol_version": 1,
+  "round": 10,
+  "case_id": "modal-machine-manager",
+  "candidate_sha256": "9c1256791069e27207db2e5138527e45587e7096955f5ed4f86c79d46f77e56d",
+  "renderer_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+  "rubric_sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "bb1120099757c98e34ad5e54b473a61febc9db2ca7b727daf5764bcbfb08be1d",
+  "generator": {
+    "worker_id": "viz-ds10-6",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge10-machine-manager",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 82,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/10/reviews/modal-machine-manager/observed-first.md",
+      "sha256": "b8b6f4b6663b38921090175749efe24f833a33fbb8c1e1efcb55220c6146c528",
+      "description": "Blind record saved before reveal",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/10/reviews/modal-machine-manager/spec-manifest.json",
+      "sha256": "bb1120099757c98e34ad5e54b473a61febc9db2ca7b727daf5764bcbfb08be1d",
+      "description": "Sorted actual spec paths and hashes",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/source.md",
+      "sha256": "a41065d9ceca1ed035bfd6282f0e937abbd0034ad497a33637a76f2d8a9ebab3",
+      "description": "source",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/expected.json",
+      "sha256": "c6d14814bcfa0f41e7401df3b57ea1400e15050b9fb4db3d2e12980d6fde9764",
+      "description": "expected",
+      "capture": null
+    },
+    {
+      "id": "history",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/historical-variants.json",
+      "sha256": "22f00c085b50f218115610ed1580e89f4c0a94d39f8ecf83c80d6712116a06b2",
+      "description": "history",
+      "capture": null
+    },
+    {
+      "id": "index",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "index",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/10/metadata.json",
+      "sha256": "0ad93b431a5d91320b90787734b3adef1d3606920d5c16e9336dad299a6ab0f4",
+      "description": "metadata",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/10/rubric.json",
+      "sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+      "description": "rubric",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/10/SKILL.md",
+      "sha256": "9c1256791069e27207db2e5138527e45587e7096955f5ed4f86c79d46f77e56d",
+      "description": "skill",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/generation.json",
+      "sha256": "9a76cc307a9eaa2a6d096343d3e39334b494069edfbf23113ba3321b5f482dd2",
+      "description": "generation",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/attempts.json",
+      "sha256": "69193d005bcb7f24acddf3918f641158b45445c65e2c9bac27513ad691f99e81",
+      "description": "attempts",
+      "capture": null
+    },
+    {
+      "id": "attempt-log",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/attempts-log.jsonl",
+      "sha256": "0fa1a5e37ad840e4a11b5b945ef6bc90e9f4320aa2a6ba8d835a74035e84a723",
+      "description": "attempt-log",
+      "capture": null
+    },
+    {
+      "id": "spec-v1",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/specs/v1.json",
+      "sha256": "c84e1609aefa9b1f45f877e8b71bd2bde85194752f57992d7405e99acdb6648b",
+      "description": "final spec",
+      "capture": null
+    },
+    {
+      "id": "pinned-v1",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/pinned/v1-77x47.txt",
+      "sha256": "71f19fdb4412ccb0667f372b80ad9b1830700b9d8a4c646ad2bba36614c395fe",
+      "description": "pinned final-spec frames including frame 0",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frames 0 onward",
+        "timestamp": "100ms steps",
+        "state": "animated natural",
+        "format": "text"
+      }
+    },
+    {
+      "id": "text-text-v1",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v1/v1-text.txt",
+      "sha256": "0b8464d6505effe44d3a8b5dde9b12428675e22500e55b1d699d06584f757e1c",
+      "description": "pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "captured frame",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi-ansi-v1",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v1/v1-ansi.ansi",
+      "sha256": "764dd3832b2af7a3e3c091a72d28a343a59da731cfc5fc6974261af1f9e47d11",
+      "description": "pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "captured frame",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected-ansi-v1",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v1/v1-selected.ansi",
+      "sha256": "94054f8bff78c98c1adad20512227818cc4c7039a331e6c2271b617f22b8891d",
+      "description": "pane select all",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "captured frame",
+        "timestamp": "capture window in manifest",
+        "state": "select all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "frames-text-v1",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v1/v1-frames.txt",
+      "sha256": "60482706ac3ecc9301706412d3d8bae438bedcc3805976c299390fdf6e0d6ff2",
+      "description": "pane animated",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "frames retained",
+        "timestamp": "100ms steps",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "frames-ansi-v1",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v1/v1-frames.ansi",
+      "sha256": "3a5647b807603053d8b481e971698c164cd110b61a19abe1afe175dcbaea7dd2",
+      "description": "pane animated",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "frames retained",
+        "timestamp": "100ms steps",
+        "state": "animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "manifest.json-v1",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v1/manifest.json",
+      "sha256": "ff05f2d543fd24426b59fc352cf2018af7f129839e932064ca99c5313c219f47",
+      "description": "manifest.json",
+      "capture": null
+    },
+    {
+      "id": "check.txt-v1",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v1/check.txt",
+      "sha256": "328f991854de929e8e203a85026cb4e9547566af7e82ae78ed6b812772907cc0",
+      "description": "check.txt",
+      "capture": null
+    },
+    {
+      "id": "bin.sha256-v1",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v1/bin.sha256",
+      "sha256": "d70e8ea3bb8149f3dc64e07eee15048aec287592055089d0c6f2dbedeebc37d9",
+      "description": "bin.sha256",
+      "capture": null
+    },
+    {
+      "id": "validator-v1",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/validator/v1.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "frozen validator output",
+      "capture": null
+    },
+    {
+      "id": "spec-v2",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/specs/v2.json",
+      "sha256": "7245373d5e38442bb46357e00d7095640ff0c6e3629999725f58c74abdc707e3",
+      "description": "final spec",
+      "capture": null
+    },
+    {
+      "id": "pinned-v2",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/pinned/v2-77x47.txt",
+      "sha256": "772233ec9abc267265376fca4a76bfa8e9fb3d38f11ad267e610b6f2e311ae87",
+      "description": "pinned final-spec frames including frame 0",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "frames 0 onward",
+        "timestamp": "100ms steps",
+        "state": "animated natural",
+        "format": "text"
+      }
+    },
+    {
+      "id": "text-text-v2",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v2/v2-text.txt",
+      "sha256": "019c780cad0fd04004f3ca3b2b4a7e4a266ca286e17517a0bd24da1d916b9aa9",
+      "description": "pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "captured frame",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi-ansi-v2",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v2/v2-ansi.ansi",
+      "sha256": "38cc0ed27953c059365b9fcb7deb9eb7844db06286015628208d4c74b9c65cd1",
+      "description": "pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "captured frame",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected-ansi-v2",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v2/v2-selected.ansi",
+      "sha256": "5d95e1af8f1814209e284745bb91206a6570624306d18addbab62541b7361cb0",
+      "description": "pane select all",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "captured frame",
+        "timestamp": "capture window in manifest",
+        "state": "select all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "frames-text-v2",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v2/v2-frames.txt",
+      "sha256": "b324cd8eeef6b15789a746df6bd3e6c45d61e2bd5564cc851a1e8d9e68da1cfd",
+      "description": "pane animated",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "frames retained",
+        "timestamp": "100ms steps",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "frames-ansi-v2",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v2/v2-frames.ansi",
+      "sha256": "ea94c12c8e54717dadfe46aaabc56e1ad422838603c2cbac6e8b771c0bb4d1ca",
+      "description": "pane animated",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "frames retained",
+        "timestamp": "100ms steps",
+        "state": "animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "manifest.json-v2",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v2/manifest.json",
+      "sha256": "7e77d52decaedb4068ff455bf42f5601f28a08ed7a218efdafd44e6ef28ba3ab",
+      "description": "manifest.json",
+      "capture": null
+    },
+    {
+      "id": "check.txt-v2",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v2/check.txt",
+      "sha256": "ddd09200bd70735afacdb8775e76a315342961e57499da5113cebdc4ed2d50f6",
+      "description": "check.txt",
+      "capture": null
+    },
+    {
+      "id": "bin.sha256-v2",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v2/bin.sha256",
+      "sha256": "d70e8ea3bb8149f3dc64e07eee15048aec287592055089d0c6f2dbedeebc37d9",
+      "description": "bin.sha256",
+      "capture": null
+    },
+    {
+      "id": "validator-v2",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/validator/v2.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "frozen validator output",
+      "capture": null
+    },
+    {
+      "id": "spec-v3",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/specs/v3.json",
+      "sha256": "a7bab030e711df85db0c37717cb5876652b09bc78aa4ede63981eefc38609958",
+      "description": "final spec",
+      "capture": null
+    },
+    {
+      "id": "pinned-v3",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/pinned/v3-77x47.txt",
+      "sha256": "6a69803869882dcce496e72ed498c4a648e7b7a0609297282545bd59ddce92ef",
+      "description": "pinned final-spec frames including frame 0",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "frames 0 onward",
+        "timestamp": "100ms steps",
+        "state": "animated natural",
+        "format": "text"
+      }
+    },
+    {
+      "id": "text-text-v3",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v3/v3-text.txt",
+      "sha256": "9ccf9fa8631ee8af566d90780fab83dfd2785f861357f59268ed1086c5a996ca",
+      "description": "pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "captured frame",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi-ansi-v3",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v3/v3-ansi.ansi",
+      "sha256": "b16058a33dbbe536ad894f99e51467526c6da5593a166ec27c71a2f9b07ee288",
+      "description": "pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "captured frame",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected-ansi-v3",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v3/v3-selected.ansi",
+      "sha256": "f01c4b830539da4b8386cdf7b80768410f541620198e5c86e2a99f8ff4bed797",
+      "description": "pane select all",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "captured frame",
+        "timestamp": "capture window in manifest",
+        "state": "select all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "frames-text-v3",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v3/v3-frames.txt",
+      "sha256": "eb651169a3e10f5c7afb16df87f58c62a41d0c74793b1617715904c167c27864",
+      "description": "pane animated",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "frames retained",
+        "timestamp": "100ms steps",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "frames-ansi-v3",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v3/v3-frames.ansi",
+      "sha256": "2dce4a9e1a31f7bd8d67c2920ea0a6dd27fb5d9ec3f98dff72c10910c64dd751",
+      "description": "pane animated",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "frames retained",
+        "timestamp": "100ms steps",
+        "state": "animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "manifest.json-v3",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v3/manifest.json",
+      "sha256": "5f71ea413d280edf7b4095da9d6e0f6e7011873ba84aa7dcc993e08ad22f1c8b",
+      "description": "manifest.json",
+      "capture": null
+    },
+    {
+      "id": "check.txt-v3",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v3/check.txt",
+      "sha256": "78e8bc9caaabc2e12f8b7c3efa7fe7da30c07efa9376809c8e888863c4b3f601",
+      "description": "check.txt",
+      "capture": null
+    },
+    {
+      "id": "bin.sha256-v3",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v3/bin.sha256",
+      "sha256": "d70e8ea3bb8149f3dc64e07eee15048aec287592055089d0c6f2dbedeebc37d9",
+      "description": "bin.sha256",
+      "capture": null
+    },
+    {
+      "id": "validator-v3",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/validator/v3.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "frozen validator output",
+      "capture": null
+    },
+    {
+      "id": "spec-v4",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/specs/v4.json",
+      "sha256": "717d2f6900382b26b540fb325de478bc01377d6dbecaba230891d6485e1101fe",
+      "description": "final spec",
+      "capture": null
+    },
+    {
+      "id": "pinned-v4",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/pinned/v4-77x47.txt",
+      "sha256": "277c72258d85ddc109ec7b09fcfef8525ee3183aea342cf390f8966ba45ada33",
+      "description": "pinned final-spec frames including frame 0",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "frames 0 onward",
+        "timestamp": "100ms steps",
+        "state": "animated natural",
+        "format": "text"
+      }
+    },
+    {
+      "id": "text-text-v4",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v4/v4-text.txt",
+      "sha256": "cada113ab06aed3843ca620c3c5e4a1f89d01073ca6425be92b3a9d9d6dab90a",
+      "description": "pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "captured frame",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi-ansi-v4",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v4/v4-ansi.ansi",
+      "sha256": "f7fad43f0c02f83b200e120d4710c7936373591f8ee4fe818edb58a58b77be6e",
+      "description": "pane normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "captured frame",
+        "timestamp": "capture window in manifest",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected-ansi-v4",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v4/v4-selected.ansi",
+      "sha256": "5c5171ceaa4dbec17713ddbcd48c0d316c05507700812c646022816bcb5c9d13",
+      "description": "pane select all",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "captured frame",
+        "timestamp": "capture window in manifest",
+        "state": "select all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "frames-text-v4",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v4/v4-frames.txt",
+      "sha256": "23de1893369e5386a3df0ff47f97507b778bf06ce1f8f9ec93d2d1ffdf18cba2",
+      "description": "pane animated",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "frames retained",
+        "timestamp": "100ms steps",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "frames-ansi-v4",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v4/v4-frames.ansi",
+      "sha256": "f5c6bc8d97a6390b6c3c8dec5a3d92b3556b7b39669f78a6cf93b5d0a0d7577f",
+      "description": "pane animated",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "frames retained",
+        "timestamp": "100ms steps",
+        "state": "animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "manifest.json-v4",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v4/manifest.json",
+      "sha256": "e7cf8c7e06a3e20e8e836c76128db1c5a90b7a3c115956567f17516c60c9b1e6",
+      "description": "manifest.json",
+      "capture": null
+    },
+    {
+      "id": "check.txt-v4",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v4/check.txt",
+      "sha256": "c0cb470aaaeb85902534284d8d4fbd76f492056ffa1b665cba6b6f6b77a585bc",
+      "description": "check.txt",
+      "capture": null
+    },
+    {
+      "id": "bin.sha256-v4",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/evidence/v4/bin.sha256",
+      "sha256": "d70e8ea3bb8149f3dc64e07eee15048aec287592055089d0c6f2dbedeebc37d9",
+      "description": "bin.sha256",
+      "capture": null
+    },
+    {
+      "id": "validator-v4",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/validator/v4.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "frozen validator output",
+      "capture": null
+    },
+    {
+      "id": "raw-lap-v1.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/lap-v1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-lap-v1.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/lap-v1.stdout",
+      "sha256": "c9bd0add620bd8b3bb8eaa4b52d66ee7c8905c9d9633bc8c2557b27a9f0391d8",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-lap-v2.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/lap-v2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-lap-v2.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/lap-v2.stdout",
+      "sha256": "2a80d88a382c406b3b82b0da60ca82ae185b95554386fa4b6a54dde8803aa28f",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-lap-v3.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/lap-v3.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-lap-v3.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/lap-v3.stdout",
+      "sha256": "3e06f139bc383ad686c3bb01ad3241cf4db91c3d15048c3dbad5c8896b9d137a",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-lap-v4.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/lap-v4.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-lap-v4.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/lap-v4.stdout",
+      "sha256": "2ea95eda303ca56df020eaa09001ebac4147148279eaebed1c523ef65a269f17",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-full-v1-52.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-full-v1-52.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-full-v1-52.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-full-v1-52.stdout",
+      "sha256": "71f19fdb4412ccb0667f372b80ad9b1830700b9d8a4c646ad2bba36614c395fe",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-full-v1.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-full-v1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-full-v1.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-full-v1.stdout",
+      "sha256": "1a13e1d77b055985c4505b99ad93bb94b17db629df108c27b69bc4546af45825",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-full-v2-52.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-full-v2-52.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-full-v2-52.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-full-v2-52.stdout",
+      "sha256": "772233ec9abc267265376fca4a76bfa8e9fb3d38f11ad267e610b6f2e311ae87",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-full-v2.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-full-v2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-full-v2.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-full-v2.stdout",
+      "sha256": "57e93121237f62fb134c3e0e2f6b98608af7d17e757b13d17194a9dab4939a19",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-full-v3.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-full-v3.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-full-v3.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-full-v3.stdout",
+      "sha256": "6a69803869882dcce496e72ed498c4a648e7b7a0609297282545bd59ddce92ef",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-full-v4.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-full-v4.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-full-v4.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-full-v4.stdout",
+      "sha256": "277c72258d85ddc109ec7b09fcfef8525ee3183aea342cf390f8966ba45ada33",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-v1-1.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-v1-1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-v1-1.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-v1-1.stdout",
+      "sha256": "5c1c8e98061b14e8a9374b1722445fb67d625d935580150341290c3c4c8784cf",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-v1.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-v1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-v1.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-v1.stdout",
+      "sha256": "44a62344e4b2391bcb31f9995817fb96a823f81bd9368a25b1967a69f5a0dcc4",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-v2.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-v2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-v2.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-v2.stdout",
+      "sha256": "57e93121237f62fb134c3e0e2f6b98608af7d17e757b13d17194a9dab4939a19",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-v3.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-v3.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-v3.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-v3.stdout",
+      "sha256": "33baa39f4b7ae35d4136ec309e391823eaaf1097c00360716b46940725592350",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-v4.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-v4.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-pinned-v4.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/pinned-v4.stdout",
+      "sha256": "e2937c059e8837f65fadfb09cba9d6c50449455950ca5e490b1f4606027526b3",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-chain3.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-chain3.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-chain3.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-chain3.stdout",
+      "sha256": "b201a6b967889a78de6c2eecefa3ba0fb787b9abc4c1319e7a7ede89bff9e727",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-chain3lbl.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-chain3lbl.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-chain3lbl.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-chain3lbl.stdout",
+      "sha256": "17b0fe20df4b0039b86fcd79da7e678e70335b9540a31a3c7e7e080bbff3106b",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-l2l13.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-l2l13.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-l2l13.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-l2l13.stdout",
+      "sha256": "2e7e9f84765a53c6a2466e3133b0cbdb9ffd6a94f7d5b27abefd3204a16f032a",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-l2n.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-l2n.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-l2n.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-l2n.stdout",
+      "sha256": "8b9feca74a9c1b5237807bce7ad29bfcec85b2e566551805ff666cd53e3727f8",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-l3l6.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-l3l6.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-l3l6.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-l3l6.stdout",
+      "sha256": "7561343e9969017c3b3d04aa96a29b2ecd592c15ef19bd78589da8f30043f3d8",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-l5l6.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-l5l6.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-l5l6.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-l5l6.stdout",
+      "sha256": "f9a3907926b059a354762defbba35453718d72f65a78cd3587c31169cfac250d",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-motion1.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-motion1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-motion1.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-motion1.stdout",
+      "sha256": "a5c88e842b7240831e17a10719527b82a8b444861a9be4e39baacb20c4c8c60f",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-motion2.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-motion2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-motion2.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-motion2.stdout",
+      "sha256": "ff940813c28c28b8c012686ae6a38862c4a63f753b95720c3085a39d5435eb4a",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-motion3.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-motion3.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-motion3.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-motion3.stdout",
+      "sha256": "b4e4d82b681950583d2dc6304282b7044299c3bc8ef47ceb16148fd0122a2e8d",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-motion4.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-motion4.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-motion4.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-motion4.stdout",
+      "sha256": "d73d0c39e9e033f7a882ebfd2fd855aab2fbef62f1d3d4ba5ed789e1b7dbad8c",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-p2l13.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-p2l13.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-p2l13.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-p2l13.stdout",
+      "sha256": "36d819e2e5a275eabedb58b3fc1674d701b13c5421e22ef103f124143801cbb1",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-p2l13slot.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-p2l13slot.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-p2l13slot.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-p2l13slot.stdout",
+      "sha256": "ff6dc051aff0497f7508a26c568844515faae0672a7cfdcf1f703dc393f357c0",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-p2l2.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-p2l2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-p2l2.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-p2l2.stdout",
+      "sha256": "7ce9e2b59e586d94f0b31091a5b7cc1a4cf5bb8a18f42bafa1dde7dbacf2e9f1",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-p2n.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-p2n.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-p2n.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-p2n.stdout",
+      "sha256": "aeae17ac1044eb44d37a1e77cf27e2211b2c87c3ccd6750aaf9d037c2ab9d9a6",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-p3l2.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-p3l2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-p3l2.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-p3l2.stdout",
+      "sha256": "ccb5e2e9b1508439fa17a8793b5c54f9a89ae9d046ca52538f1ab48f7af08ff7",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q2l23.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q2l23.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q2l23.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q2l23.stdout",
+      "sha256": "684fa49d1ee329a4b46df8f9faabb5d8038885ad94686328ec09694b879a1284",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-console-15.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-console-15.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-console-15.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-console-15.stdout",
+      "sha256": "74105a642aabb9265128e99cd0dfef30932f1beb6527952d49fc3349d2479535",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-console-16.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-console-16.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-console-16.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-console-16.stdout",
+      "sha256": "cf94088d9e50634e918bef2712faf304b08a46e4ea247d3f04700888fd9b9ff3",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-e3-short.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-e3-short.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-e3-short.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-e3-short.stdout",
+      "sha256": "7c4c8c5697b5966518a702bbdb1149aa5a65ba7fcee80409e5b48b75e54d3ed2",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-e4-14.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-e4-14.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-e4-14.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-e4-14.stdout",
+      "sha256": "368ea2c14ed68d7ac299340045fbc61274901d7380756312d8ea3bf2d6cae390",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-e4-15.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-e4-15.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-e4-15.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-e4-15.stdout",
+      "sha256": "368ea2c14ed68d7ac299340045fbc61274901d7380756312d8ea3bf2d6cae390",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-e4-16b.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-e4-16b.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-e4-16b.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-e4-16b.stdout",
+      "sha256": "7c4c8c5697b5966518a702bbdb1149aa5a65ba7fcee80409e5b48b75e54d3ed2",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-e4-short11.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-e4-short11.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-e4-short11.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-e4-short11.stdout",
+      "sha256": "368ea2c14ed68d7ac299340045fbc61274901d7380756312d8ea3bf2d6cae390",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-e4-short13.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-e4-short13.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-e4-short13.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-e4-short13.stdout",
+      "sha256": "368ea2c14ed68d7ac299340045fbc61274901d7380756312d8ea3bf2d6cae390",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-e4-short9.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-e4-short9.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-e4-short9.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-e4-short9.stdout",
+      "sha256": "368ea2c14ed68d7ac299340045fbc61274901d7380756312d8ea3bf2d6cae390",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-grouporder.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-grouporder.stderr",
+      "sha256": "739ceef9ed515a088d2730e21ad8a97455d6f53f3285b56a63784198965311d2",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-grouporder.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-grouporder.stdout",
+      "sha256": "9dd27ba724991cf01819b56d7d4baf31d8387f8c8b7cc1b052dc9a8abbcefa2e",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-idsort-B.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-idsort-B.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-idsort-B.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-idsort-B.stdout",
+      "sha256": "372d806482a1d40798d9a5984470cb0b793eecd2a1f53b0c43bf1ec27d9ad8e5",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-idsort-C.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-idsort-C.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-idsort-C.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-idsort-C.stdout",
+      "sha256": "9f2ea9ad3f070cacb0d4dd7fd825fcb3923e940db89c8f0bb2a7cba093d29315",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-idsort-D.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-idsort-D.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-idsort-D.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-idsort-D.stdout",
+      "sha256": "0b87d1a249b56d7b5783ca7a3f639d2e0d5a2be4ff0056d3aecf0b354244fe4a",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-idsort.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-idsort.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-idsort.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-idsort.stdout",
+      "sha256": "7c4c8c5697b5966518a702bbdb1149aa5a65ba7fcee80409e5b48b75e54d3ed2",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-layers.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-layers.stderr",
+      "sha256": "739ceef9ed515a088d2730e21ad8a97455d6f53f3285b56a63784198965311d2",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-layers.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-layers.stdout",
+      "sha256": "29aa42e02440eb0301297205fc2b3580116d04f4fd47cb4030e0573733fd6164",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-no-0.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-no-0.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-no-0.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-no-0.stdout",
+      "sha256": "a218e93801e5cacf6f6fb8eaa6d6459efbeb46495dfc92fa4dfe08d0a053104c",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-no-1.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-no-1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-no-1.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-no-1.stdout",
+      "sha256": "78217b2de34d2758055fe14d195fe4a847cecbf8a5def76ea0e6d4e40e048972",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-no-2.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-no-2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-no-2.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-no-2.stdout",
+      "sha256": "78217b2de34d2758055fe14d195fe4a847cecbf8a5def76ea0e6d4e40e048972",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-no-3.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-no-3.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-no-3.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-no-3.stdout",
+      "sha256": "4880af882af2ab643d79ba51ade0feb67b248e6f1d69d931b3d9eb1f6d11d5f6",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-noslot-http.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-noslot-http.stderr",
+      "sha256": "739ceef9ed515a088d2730e21ad8a97455d6f53f3285b56a63784198965311d2",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-noslot-http.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-noslot-http.stdout",
+      "sha256": "5214e79a331de165cb97d3363f20eecc05dd80c982478923256239f0cc08c5e5",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-short-edges.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-short-edges.stderr",
+      "sha256": "739ceef9ed515a088d2730e21ad8a97455d6f53f3285b56a63784198965311d2",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-short-edges.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-short-edges.stdout",
+      "sha256": "2ab24a42a43b765b6057055c73bebd2e8eac57c49698dedc05865bcbc4baaf1a",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-short18.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-short18.stderr",
+      "sha256": "1a7e2a57b675af6ce0a67edf5a4d423b7d36f1dffa1e1470f7a72402db22c5a8",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan-short18.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan-short18.stdout",
+      "sha256": "6f47e2710b5b97756227b7e11e9be73205efda3538106ac0e87fe5910901ee4d",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan.stderr",
+      "sha256": "739ceef9ed515a088d2730e21ad8a97455d6f53f3285b56a63784198965311d2",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-q4fan.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-q4fan.stdout",
+      "sha256": "6f47e2710b5b97756227b7e11e9be73205efda3538106ac0e87fe5910901ee4d",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-t5slots.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-t5slots.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-t5slots.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-t5slots.stdout",
+      "sha256": "9f90ca7182e35e17c925c0cd2ab7a48992362c29c7894a9085c32f2cbb6eb2a7",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v1-noslot-top-frames.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v1-noslot-top-frames.stderr",
+      "sha256": "739ceef9ed515a088d2730e21ad8a97455d6f53f3285b56a63784198965311d2",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v1-noslot-top-frames.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v1-noslot-top-frames.stdout",
+      "sha256": "8191bb4c4c22e224f5b17c346f1d7eeb7ac1015449d9c90ea5a1f6dfa9fab4e0",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v1-noslot-top.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v1-noslot-top.stderr",
+      "sha256": "739ceef9ed515a088d2730e21ad8a97455d6f53f3285b56a63784198965311d2",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v1-noslot-top.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v1-noslot-top.stdout",
+      "sha256": "b82e6a3a6b4246fd7593d7c98baee1dd30bee5cd8a3b490c226bd474fe16da2a",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v1-noslot-top18-frames.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v1-noslot-top18-frames.stderr",
+      "sha256": "1a7e2a57b675af6ce0a67edf5a4d423b7d36f1dffa1e1470f7a72402db22c5a8",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v1-noslot-top18-frames.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v1-noslot-top18-frames.stdout",
+      "sha256": "811396c64214aff1c91b0ebd68459de806ea0ed20c78a5c570b9b535fe707ec0",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v1-noslot-top18.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v1-noslot-top18.stderr",
+      "sha256": "1a7e2a57b675af6ce0a67edf5a4d423b7d36f1dffa1e1470f7a72402db22c5a8",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v1-noslot-top18.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v1-noslot-top18.stdout",
+      "sha256": "490bf9e289d3f324b0fd82527dea402ad46dd19299dc0015d1c7c1f9a32e3618",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v1-with-slack.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v1-with-slack.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v1-with-slack.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v1-with-slack.stdout",
+      "sha256": "328f991854de929e8e203a85026cb4e9547566af7e82ae78ed6b812772907cc0",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v3-with-q.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v3-with-q.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v3-with-q.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v3-with-q.stdout",
+      "sha256": "78e8bc9caaabc2e12f8b7c3efa7fe7da30c07efa9376809c8e888863c4b3f601",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-both.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-both.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-both.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-both.stdout",
+      "sha256": "e132c17116cfaa224967a243889f7a9ba7e657c1f91bc1b1fb0b82312d302392",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-c-dbmid.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-c-dbmid.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-c-dbmid.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-c-dbmid.stdout",
+      "sha256": "a4703e3119e7a575cacf0557874ad6800076ea01bd4e488e7b1f45e4c2eac6df",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-d-dbright.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-d-dbright.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-d-dbright.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-d-dbright.stdout",
+      "sha256": "cf10590384a90c431bf14412664dcff2c3e1655e51d5250e747d661d137b255e",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-drop0.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-drop0.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-drop0.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-drop0.stdout",
+      "sha256": "bf4a966c9a4de515f1ad2b91c76db64c32199621693e121e937761b8050118af",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-drop1.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-drop1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-drop1.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-drop1.stdout",
+      "sha256": "ec92a974790b6ae76fbfef15af3945dac803f8e2b86243b307e4e74908d2a301",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-drop2.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-drop2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-drop2.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-drop2.stdout",
+      "sha256": "4741e5e922fb005a1f9dfe4c7b03fec6245d6b4655105fc6cc86e71ca35cd946",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-drop3.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-drop3.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-drop3.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-drop3.stdout",
+      "sha256": "4741e5e922fb005a1f9dfe4c7b03fec6245d6b4655105fc6cc86e71ca35cd946",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-drop4.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-drop4.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-drop4.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-drop4.stdout",
+      "sha256": "4741e5e922fb005a1f9dfe4c7b03fec6245d6b4655105fc6cc86e71ca35cd946",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-drop5.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-drop5.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-drop5.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-drop5.stdout",
+      "sha256": "4741e5e922fb005a1f9dfe4c7b03fec6245d6b4655105fc6cc86e71ca35cd946",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-drop6.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-drop6.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-drop6.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-drop6.stdout",
+      "sha256": "4741e5e922fb005a1f9dfe4c7b03fec6245d6b4655105fc6cc86e71ca35cd946",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-drop7.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-drop7.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-drop7.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-drop7.stdout",
+      "sha256": "62d18c15f0bb779f88a85f1f4335f1ec7af6ea7b472d3c6cd20a4c1759604d76",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-e-noslot-jobrows.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-e-noslot-jobrows.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-e-noslot-jobrows.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-e-noslot-jobrows.stdout",
+      "sha256": "8c03d8533d6f5fdd172afd3216f132f96bc58747efc2ac584c11b069a5aa697d",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-f-noslot-diag.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-f-noslot-diag.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-f-noslot-diag.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-f-noslot-diag.stdout",
+      "sha256": "7c49680b1b40c7d9b84a00c87d4933dc42a3c5905e08184b1f588a70e50f660f",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-g-jobrows-short.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-g-jobrows-short.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-g-jobrows-short.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-g-jobrows-short.stdout",
+      "sha256": "e132c17116cfaa224967a243889f7a9ba7e657c1f91bc1b1fb0b82312d302392",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-h-s3rank1.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-h-s3rank1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-h-s3rank1.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-h-s3rank1.stdout",
+      "sha256": "450da4a08daf5c3e2a915dd1dab49f9dbc99f6c02109eddd5f87db97ca139e3d",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-i-s3rank2.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-i-s3rank2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-i-s3rank2.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-i-s3rank2.stdout",
+      "sha256": "429297237f7f5edcaafd884daf16aee9c9566459b79103cabc4e956e37a0f789",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-j-no-slack.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-j-no-slack.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-j-no-slack.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-j-no-slack.stdout",
+      "sha256": "c0cb470aaaeb85902534284d8d4fbd76f492056ffa1b665cba6b6f6b77a585bc",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-lbl16.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-lbl16.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-lbl16.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-lbl16.stdout",
+      "sha256": "08dff9cb05b30fddb1d9cd7fff66b43ebb4d22aaaa004c42155e78ecf887a84a",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-lbl7.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-lbl7.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-lbl7.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-lbl7.stdout",
+      "sha256": "e132c17116cfaa224967a243889f7a9ba7e657c1f91bc1b1fb0b82312d302392",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-no-state.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-no-state.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-no-state.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-no-state.stdout",
+      "sha256": "148748d196dacaee2c8826104de32fc6fb6c6d681f0de275fce1d1b2c6ec0259",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-pull13.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-pull13.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-probe-v4-pull13.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/probe-v4-pull13.stdout",
+      "sha256": "e132c17116cfaa224967a243889f7a9ba7e657c1f91bc1b1fb0b82312d302392",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-q2l23-art.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/q2l23-art.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-q2l23-art.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/q2l23-art.stdout",
+      "sha256": "f6aec99527d2fb7aef84ac63c9579b05effddf2febbec0044721cbf9a9c8a7c7",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-q4fan-art.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/q4fan-art.stderr",
+      "sha256": "739ceef9ed515a088d2730e21ad8a97455d6f53f3285b56a63784198965311d2",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-q4fan-art.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/q4fan-art.stdout",
+      "sha256": "6e19bd0808c361049da404ba290b68b77209fd67cf3733fd72deab919a5c1772",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-q4fan-grouporder-art.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/q4fan-grouporder-art.stderr",
+      "sha256": "739ceef9ed515a088d2730e21ad8a97455d6f53f3285b56a63784198965311d2",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-q4fan-grouporder-art.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/q4fan-grouporder-art.stdout",
+      "sha256": "c74ad1128b605b4edf690966091a4b991c10131f8c07d22749a27528e3c93d0e",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-q4fan-idsort-art.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/q4fan-idsort-art.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-q4fan-idsort-art.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/q4fan-idsort-art.stdout",
+      "sha256": "7e8e1b1a77d5b0f00e5f695c67a89d8471f39c31fcece0b23c8c10662d92f968",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-a-1.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v1-a-1.stderr",
+      "sha256": "307a431746e6c91e9f9222358ce66d7b5bbef62ce5eda45c780671eb8a14ac87",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-a-1.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v1-a-1.stdout",
+      "sha256": "c5a8389d29220a8fe9914881e8abb52196ebb54edfdb9ec45a7f7e05d4da26eb",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-a-art.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v1-a-art.stderr",
+      "sha256": "739ceef9ed515a088d2730e21ad8a97455d6f53f3285b56a63784198965311d2",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-a-art.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v1-a-art.stdout",
+      "sha256": "a93d2e478cc059d25177225bd45e5ae61cfa0eb769c31cdc9f364084ba4df892",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-a-art200.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v1-a-art200.stderr",
+      "sha256": "739ceef9ed515a088d2730e21ad8a97455d6f53f3285b56a63784198965311d2",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-a-art200.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v1-a-art200.stdout",
+      "sha256": "1c46a8a36531bfa393906185e67d6a7366c8a785eccdd43ed0919109f6aef97f",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-a.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v1-a.stderr",
+      "sha256": "739ceef9ed515a088d2730e21ad8a97455d6f53f3285b56a63784198965311d2",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-a.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v1-a.stdout",
+      "sha256": "69211aff01bbec56f253d80ea6a012b0bf023326754203c28c370711840ffa38",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-b.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v1-b.stderr",
+      "sha256": "307a431746e6c91e9f9222358ce66d7b5bbef62ce5eda45c780671eb8a14ac87",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-b.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v1-b.stdout",
+      "sha256": "c5a8389d29220a8fe9914881e8abb52196ebb54edfdb9ec45a7f7e05d4da26eb",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v1a-art.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v1a-art.stderr",
+      "sha256": "307a431746e6c91e9f9222358ce66d7b5bbef62ce5eda45c780671eb8a14ac87",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v1a-art.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v1a-art.stdout",
+      "sha256": "33e65cf91852266987018c61e400decd0dcd10d931d65e765cb6b58ca22df4ae",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v2-a.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v2-a.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v2-a.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v2-a.stdout",
+      "sha256": "4dbb6191e3b0be85378565bd33e23e6590b960758945dfdf8c590443a91c78ab",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v2-b-a.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v2-b-a.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v2-b-a.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v2-b-a.stdout",
+      "sha256": "ddd09200bd70735afacdb8775e76a315342961e57499da5113cebdc4ed2d50f6",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v2a-art.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v2a-art.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v2a-art.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v2a-art.stdout",
+      "sha256": "72272e6e0263f7298ac04c3c07e3882fd105d55c14b301d5ff662fc805bb082c",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v3-a.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v3-a.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v3-a.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v3-a.stdout",
+      "sha256": "f751dcad77810f349e20edcd7d5004b866c8b9d9ef96d6da04bfcbb438742c50",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v4-a.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v4-a.stderr",
+      "sha256": "938da1da671403e98e2b0328650fb843774fe69eed5d54a92383dbd56eeb71e1",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v4-a.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v4-a.stdout",
+      "sha256": "e318aca0b4793e869e0ddb39c760c7adfc678e747cd78f4a076240bc80412a63",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v4-b.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v4-b.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v4-b.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v4-b.stdout",
+      "sha256": "e132c17116cfaa224967a243889f7a9ba7e657c1f91bc1b1fb0b82312d302392",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v4a-art.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v4a-art.stderr",
+      "sha256": "938da1da671403e98e2b0328650fb843774fe69eed5d54a92383dbd56eeb71e1",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v4a-art.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v4a-art.stdout",
+      "sha256": "41564862e5d1950354a57fa59207b6ca3a9ee664c03a0609186062058c5b2fbc",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v4b-art.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v4b-art.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v4b-art.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v4b-art.stdout",
+      "sha256": "41eb84d2447ce1db82516e497e17446bf39a9464ed9d3b6460f47b5f30e83d50",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v4i-art.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v4i-art.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v4i-art.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v4i-art.stdout",
+      "sha256": "9cacced00f98b6c10121a66ef46d9593e2c9690f7b3493f079ec0b211765af80",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v4j-art.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v4j-art.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v4j-art.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v4j-art.stdout",
+      "sha256": "2a1c0cb620ce5352703aff4c7c73813ca3de417a2bb66be9fa5ab7c83a1d60e8",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v4nostate-art.stderr",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v4nostate-art.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "recorded raw command output",
+      "capture": null
+    },
+    {
+      "id": "raw-v4nostate-art.stdout",
+      "path": "docs/visualize-eval/rounds/10/modal-machine-manager/recorded/v4nostate-art.stdout",
+      "sha256": "79035b04b3957a1c5ecdac4ca4e43f2cd8fb21bde4a62dac64d047c5ea878b58",
+      "description": "recorded raw command output",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 17 components and 23 directions are present, but audit / verify omits reimage, run audit drops machine-audit identity, pull image omits boot; v3 cluster state clipped and boot sits above machines rather than subsequent down-page phase.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "pinned-v1",
+        "pinned-v2",
+        "pinned-v3",
+        "pinned-v4"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 23 distinct stems reach correctly directed heads. The v4 S3 detour avoids webapi and its box, no crossing or fake junction; both boot directions independently visible.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "pinned-v1",
+        "pinned-v2",
+        "pinned-v3",
+        "pinned-v4"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Each final-spec pinned dump supplies the 77x47 natural viewport, but cluster state is clipped to cluster stat in v3 at the right margin; 82x51 shows it complete.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "pinned-v3",
+        "text-text-v3"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Related logical source roles share pink, purple, teal and orange families; humans and state reuse teal but occur in separate views, so no within-view collision. No group boxes; v4 pins honor meaningful ops grouping, not lifecycle phase encoding.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "ansi-ansi-v1",
+        "ansi-ansi-v2",
+        "ansi-ansi-v3",
+        "ansi-ansi-v4"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Inspected every complete four-sided box and corner in normal and select-all ANSI; each border uniform RGB and no palette overlap. 25/25 simultaneous select-all occurrences, not individual selection sequences.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "ansi-ansi-v1",
+        "ansi-ansi-v2",
+        "ansi-ansi-v3",
+        "ansi-ansi-v4",
+        "selected-ansi-v1",
+        "selected-ansi-v2",
+        "selected-ansi-v3",
+        "selected-ansi-v4"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Frozen inputs, identities, 103 paired raw command hashes, four successful recorded validators, pane dimensions and cleanup recorded. Target-size dumps have 52/52/78/90 frames, but v1 two dots demonstrably never complete a lap, so an actual full-lap animation capture for every route is unavailable; no independent new session was run.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "spec-manifest",
+        "metadata",
+        "attempt-log",
+        "validator-v1",
+        "validator-v2",
+        "validator-v3",
+        "validator-v4",
+        "pinned-v1",
+        "pinned-v2",
+        "pinned-v3",
+        "pinned-v4"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Every pinned frame contains one dot per route, but v1 entry dots oscillate at (29,18)/(29,19) and (48,18)/(48,19), never traversing; check falsely asserts constant speed. The full timestamp evidence cannot prove all route laps.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "pinned-v1",
+        "check.txt-v1",
+        "pinned-v2",
+        "pinned-v3",
+        "pinned-v4"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Correct dominant lifecycle-machines family and source-backed line; queue has five destinations across views and separate labelled boot request and response are co-viewed. Recipe is not fully applied: v2 boot is above machines so request goes up, and no single top-to-bottom provisioning→boot→heartbeat→reconcile phase sequence exists across views; two live transitions do not traverse. No measured impossibility/yield in generation.json addresses the phase order.",
+      "correct_family": "lifecycle-machines",
+      "generator_family": "lifecycle-machines",
+      "generator_evidence_line": "one queue fans to five phase destinations (provider registry, SSH ops, S3, janitor, Postgres) and the source gives an ordered machine life - provisioning -> boot -> heartbeat -> reconcile - with every transition live, which the human's last correction renders as exactly one dot per line.",
+      "secondary_recipe": "service-meshes' anti-parallel rule applied to machines <-> boot server (iPXE request and boot.ipxe + S3 args response): both directions are drawn in v2 as two separate edges with distinct labels and ports, never merged into one bidirectional arrow",
+      "verified_recipe_facts": [
+        "five queue destinations across views",
+        "two labelled anti-parallel boot links in v2",
+        "v2 boot above machines, iPXE arrow points up",
+        "v3 heartbeat and reconcile placed in separate view without full phase order",
+        "two v1 routes do not traverse"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "cp → pgrpc: create / terminate / repair",
+      "observed": "control plane → private gRPC: create/terminate/repair. Distinct stem to correct arrowhead, no crossing or shared junction visible. Dot oscillates on the first two route cells, so animated traversal fails.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pinned-v1",
+          "region": [
+            50,
+            18,
+            23,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F-motion"
+      ]
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "web → wapi: http",
+      "observed": "humans + mmctl → webapi server: http. Distinct stem to correct arrowhead, no crossing or shared junction visible. Dot oscillates on the first two route cells, so animated traversal fails.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pinned-v1",
+          "region": [
+            32,
+            18,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F-motion"
+      ]
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "pgrpc → q: enqueue job",
+      "observed": "private gRPC → River queue: enqueue job. Distinct stem to correct arrowhead, no crossing or shared junction visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned-v1",
+          "region": [
+            49,
+            27,
+            11,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "wapi → q: reinstall / reprovision",
+      "observed": "webapi server → River queue: reinstall/repro. Distinct stem to correct arrowhead, no crossing or shared junction visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned-v1",
+          "region": [
+            32,
+            27,
+            15,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "q → reg: provision job",
+      "observed": "River queue → provider registry: provision job. Distinct stem to correct arrowhead, no crossing or shared junction visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned-v2",
+          "region": [
+            41,
+            14,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "reg → prov: provider API",
+      "observed": "provider registry → bare-metal providers: provider API. Distinct stem to correct arrowhead, no crossing or shared junction visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned-v2",
+          "region": [
+            31,
+            22,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "prov → mch: allocate instance",
+      "observed": "bare-metal providers → bare-metal machines: allocate instance. Distinct stem to correct arrowhead, no crossing or shared junction visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned-v2",
+          "region": [
+            13,
+            31,
+            17,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "mch → boot: iPXE request",
+      "observed": "bare-metal machines → boot server: iPXE request. Distinct stem to correct arrowhead, no crossing or shared junction visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned-v2",
+          "region": [
+            38,
+            30,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e9",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "boot → mch: boot.ipxe + S3 args",
+      "observed": "boot server → bare-metal machines: boot.ipxe + S3 args. Distinct stem to correct arrowhead, no crossing or shared junction visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned-v2",
+          "region": [
+            42,
+            34,
+            19,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e10",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "mch → agent: runs on host",
+      "observed": "bare-metal machines → machine-agent: runs on host. Distinct stem to correct arrowhead, no crossing or shared junction visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned-v3",
+          "region": [
+            41,
+            14,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e11",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "agent → pub: register + heartbeat",
+      "observed": "machine-agent → public gRPC: register+heartbeat. Distinct stem to correct arrowhead, no crossing or shared junction visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned-v3",
+          "region": [
+            41,
+            22,
+            18,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e12",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "pub → db: machine state",
+      "observed": "public gRPC → Postgres: machine state. Distinct stem to correct arrowhead, no crossing or shared junction visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned-v3",
+          "region": [
+            15,
+            30,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e13",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "pgrpc → db: machine rows",
+      "observed": "private gRPC → Postgres: machine rows. Distinct stem to correct arrowhead, no crossing or shared junction visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned-v3",
+          "region": [
+            32,
+            30,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e14",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "q → db: job rows",
+      "observed": "River queue → Postgres: job rows. Distinct stem to correct arrowhead, no crossing or shared junction visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned-v3",
+          "region": [
+            48,
+            30,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e15",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "q → ssh: audit / verify reimage",
+      "observed": "River queue → SSH + BMC ops: audit / verify. Distinct stem to correct arrowhead, no crossing or shared junction visible. Reimage qualifier is absent.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pinned-v4",
+          "region": [
+            23,
+            20,
+            14,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F-qualifiers"
+      ]
+    },
+    {
+      "edge_id": "e16",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "ssh → mch: run machine-audit",
+      "observed": "SSH + BMC ops → bare-metal machines: run audit. Distinct stem to correct arrowhead, no crossing or shared junction visible. Machine-audit name is shortened to audit.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pinned-v4",
+          "region": [
+            21,
+            31,
+            9,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F-qualifiers"
+      ]
+    },
+    {
+      "edge_id": "e17",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "mch → s3: pull boot image",
+      "observed": "bare-metal machines → S3 object store: pull image. Distinct stem to correct arrowhead, no crossing or shared junction visible. Boot qualifier is absent; route detours below webapi to a right-facing arrowhead.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pinned-v4",
+          "region": [
+            36,
+            36,
+            10,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F-qualifiers"
+      ]
+    },
+    {
+      "edge_id": "e18",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "q → s3: diagnose uploads",
+      "observed": "River queue → S3 object store: diag uploads. Distinct stem to correct arrowhead, no crossing or shared junction visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned-v4",
+          "region": [
+            44,
+            19,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e19",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "q → jan: diagnostic events",
+      "observed": "River queue → janitor app: diagnostics. Distinct stem to correct arrowhead, no crossing or shared junction visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned-v4",
+          "region": [
+            35,
+            22,
+            11,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e20",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "jan → wapi: proposed actions",
+      "observed": "janitor app → webapi server: proposals. Distinct stem to correct arrowhead, no crossing or shared junction visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned-v4",
+          "region": [
+            42,
+            31,
+            9,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e21",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "wapi → slack: confirm + alerts",
+      "observed": "webapi server → Slack: confirm+alerts. Distinct stem to correct arrowhead, no crossing or shared junction visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned-v1",
+          "region": [
+            14,
+            27,
+            14,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e22",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "rec → prov: gcore sync, 1 min",
+      "observed": "reconcile loop → bare-metal providers: gcore sync 1min. Distinct stem to correct arrowhead, no crossing or shared junction visible.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned-v2",
+          "region": [
+            52,
+            22,
+            15,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e23",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md: Relationship facts",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json: historical_reference.edges"
+      ],
+      "expected": "rec → db: cluster state",
+      "observed": "reconcile loop → Postgres: cluster stat (last e clipped at 77). Distinct stem to correct arrowhead, no crossing or shared junction visible. Last character of label is clipped at target size.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pinned-v3",
+          "region": [
+            66,
+            30,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F-clip"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-motion",
+      "category": "animation",
+      "edge_ids": [
+        "e1",
+        "e2"
+      ],
+      "severity": "high",
+      "description": "Defect: pinned frames 0/4/20 show dots at (29,18),(48,18); 2/10/30/51 at (29,19),(48,19). They cycle backwards and never reach their arrows; check reports zero violations and constant speed incorrectly.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned-v1",
+          "region": [
+            29,
+            18,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "pinned-v1",
+          "region": [
+            48,
+            18,
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F-clip",
+      "category": "layout_fit",
+      "edge_ids": [
+        "e23"
+      ],
+      "severity": "high",
+      "description": "Defect: v3 77x47 shows cluster stat, omitting the last e of cluster state; larger live pane is not the pinned fit gate.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned-v3",
+          "region": [
+            66,
+            30,
+            12,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F-qualifiers",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e15",
+        "e16",
+        "e17"
+      ],
+      "severity": "high",
+      "description": "Defect: audit / verify drops reimage, run audit loses the machine-audit identifier, and pull image drops boot qualifier; none appears elsewhere in v4. All are slotted, but no recorded evidence demonstrates complete wording impossible.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned-v4",
+          "region": [
+            23,
+            20,
+            14,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pinned-v4",
+          "region": [
+            21,
+            31,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pinned-v4",
+          "region": [
+            36,
+            36,
+            10,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F-phase",
+      "category": "category_fit",
+      "edge_ids": [
+        "e7",
+        "e8",
+        "e9"
+      ],
+      "severity": "medium",
+      "description": "Defect: in v2 boot server is in the providers rank above machines, with iPXE travelling upward, so source provisioning to boot is not top-down. Cross-view ordering does not show a single boot→heartbeat→reconcile rank sequence; no evidenced structural-impossibility yield addresses this.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned-v2",
+          "region": [
+            20,
+            26,
+            38,
+            12
+          ]
+        },
+        {
+          "evidence_id": "pinned-v3",
+          "region": [
+            7,
+            10,
+            65,
+            28
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F-lap",
+      "category": "workflow_evidence",
+      "edge_ids": [
+        "e1",
+        "e2"
+      ],
+      "severity": "high",
+      "description": "Evidence gap: 77x47 pinned frame files span nominal full-lap budgets, but two v1 dots never complete their routes; live pane frames retain only a subset. A full actual lap for every route is not established.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned-v1",
+          "region": [
+            29,
+            18,
+            20,
+            3
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "Full-lap target-size evidence for v1 entry routes is unavailable because the captured renderer oscillates; correcting and recapturing requires a renderer change or a different layout and a new run.",
+    "Generator reports one-sided label-slot gutter and no minlen; neither is demonstrated to make phase order impossible.",
+    "Pane recent scrollback retained only a subset of requested frames; pinned direct dumps supply target-size frame sequences but do not cure the oscillation."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pS5",
+      "w7E:pS6",
+      "w7E:pS7",
+      "w7E:pS8"
+    ],
+    "closed_pane_ids": [
+      "w7E:pS5",
+      "w7E:pS6",
+      "w7E:pS7",
+      "w7E:pS8"
+    ],
+    "status": "done",
+    "reason": "Each evidence manifest reports confirmed_closed; no reviewer pane was opened."
+  },
+  "overall": "fail"
+}

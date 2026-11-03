@@ -1,0 +1,22 @@
+viewport: 100x20 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 100x20 @100% · q2l23.json · 2 nodes · 1 edges · q quit
+
+
+
+                                          ╭─────────────╮
+                                          │control plane│
+                                          │             │
+                                          ╰─────────────╯
+                                                 │ create/terminate/repair
+                                                 │
+                                                 │
+                                                 ▼
+                                           ╭────────────╮
+ ┌───────┐                                 │private gRPC│
+ │ + [+] │                                 │            │
+ │ − [-] │                                 ╰────────────╯
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+

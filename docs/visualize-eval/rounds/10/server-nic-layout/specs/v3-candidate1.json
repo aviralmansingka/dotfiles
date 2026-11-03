@@ -1,0 +1,19 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "gw", "label": "gw .57 Arista? 0.1ms", "group": "plant" },
+    { "id": "silent", "label": "3,6 silent, 5 lossy" },
+    { "id": "airtel", "label": "Airtel 14.143.x", "group": "transit" },
+    { "id": "airtelbb", "label": "AirtelBB 14.141", "group": "transit" },
+    { "id": "cf", "label": "CF 1.1.1.1 AS13335", "group": "internet" }
+  ],
+  "edges": [
+    { "from": "gw", "to": "silent", "label": "NxtGen AS132717 BLR",
+      "style": "dashed", "label_slot": true },
+    { "from": "silent", "to": "airtel", "label": "1.8 ms, not L2",
+      "style": "dashed", "label_slot": true },
+    { "from": "airtel", "to": "airtelbb", "label": "7.1 ms" },
+    { "from": "airtelbb", "to": "cf", "label": "8.3-8.6 ms" }
+  ]
+}

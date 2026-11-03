@@ -1,0 +1,12 @@
+{ "direction": "tb", "theme": "gruvbox",
+  "nodes": [
+    { "id": "n1", "label": "ONT 169.254.3.1", "group": "e" },
+    { "id": "n2", "label": "vzagg 100.41.x", "group": "e" },
+    { "id": "n3", "label": "vzbb AS701", "group": "e" },
+    { "id": "n4", "label": "cf 1.1.1.1 AS13335", "group": "e" }
+  ],
+  "edges": [
+    { "from": "n1", "to": "n2", "label": "4.5 ms (hist.)", "label_slot": true, "style": "dashed" },
+    { "from": "n2", "to": "n3", "label": "6.6 ms (hist.)", "label_slot": true, "style": "dashed" },
+    { "from": "n3", "to": "n4", "label": "6-9 ms (hist.)", "label_slot": true, "style": "dashed" }
+  ] }

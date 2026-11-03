@@ -1,0 +1,36 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "dark",
+      "label": "7 NICs dark",
+      "group": "ports"
+    },
+    {
+      "id": "s1",
+      "label": "server1 R7725 103.19.91.58",
+      "group": "hosts"
+    },
+    {
+      "id": "nic",
+      "label": "eno16595np0 25G",
+      "group": "ports"
+    }
+  ],
+  "edges": [
+    {
+      "from": "dark",
+      "to": "s1",
+      "label": "no cable seen",
+      "style": "dashed",
+      "label_slot": true
+    },
+    {
+      "from": "s1",
+      "to": "nic",
+      "label": "only uplink",
+      "label_slot": true
+    }
+  ]
+}

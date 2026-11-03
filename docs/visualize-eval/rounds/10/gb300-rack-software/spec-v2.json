@@ -1,0 +1,57 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "rms",
+      "label": "nv-rms",
+      "group": "management"
+    },
+    {
+      "id": "oob",
+      "label": "OOB LAN",
+      "group": "plant"
+    },
+    {
+      "id": "bmc_c",
+      "label": "Compute BMC x18",
+      "group": "devices"
+    },
+    {
+      "id": "bmc_s",
+      "label": "NVSwitch BMC",
+      "group": "devices"
+    },
+    {
+      "id": "pwr",
+      "label": "Power shelf",
+      "group": "devices"
+    }
+  ],
+  "edges": [
+    {
+      "from": "rms",
+      "to": "oob",
+      "label": "client on",
+      "label_slot": true
+    },
+    {
+      "from": "rms",
+      "to": "bmc_c",
+      "label": "Redfish/HTTPS",
+      "label_slot": true
+    },
+    {
+      "from": "rms",
+      "to": "bmc_s",
+      "label": "Redfish power",
+      "label_slot": true
+    },
+    {
+      "from": "rms",
+      "to": "pwr",
+      "label": "Redfish pshelf",
+      "label_slot": true
+    }
+  ]
+}

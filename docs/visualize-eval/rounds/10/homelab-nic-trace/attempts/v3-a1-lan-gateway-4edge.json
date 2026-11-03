@@ -1,0 +1,16 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "box", "label": "homelab ASUS Linux 7.0 · no committed rate", "group": "host" },
+    { "id": "bond0", "label": "bond0 192.168.1.197", "group": "wired" },
+    { "id": "wlp", "label": "wlp8s0 .213", "group": "wifi" },
+    { "id": "rtr", "label": "Fios rtr 192.168.1.1 · NAT+DHCP · WNC (hist.)", "group": "egress" }
+  ],
+  "edges": [
+    { "from": "box", "to": "bond0", "label": "eno1 2.5 GbE" },
+    { "from": "box", "to": "wlp", "label": "Wi-Fi backup" },
+    { "from": "bond0", "to": "rtr", "label": "LAN 192.168.1.0/24 · gw 0.5 ms", "label_slot": true },
+    { "from": "wlp", "to": "rtr", "label": "metric 600 · failover, no ECMP", "label_slot": true }
+  ]
+}

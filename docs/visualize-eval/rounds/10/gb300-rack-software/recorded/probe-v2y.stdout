@@ -1,0 +1,11 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=5 edges=4 flows=0 direction=lr theme=gruvbox
+extent=38x19 cells
+crossings: 0 bridges, 0 touching bends
+labels: 4/4 placed, 0 on route cells, 0 skipped, 1 ambiguous owners
+warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge
+groups: management(1) plant(1) devices(3)
+trunks:
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

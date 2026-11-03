@@ -1,0 +1,50 @@
+ rataflow-view · 82x51 @100% · v1.json · 6 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        ╭──────────────╮   ╭─────────────╮
+                        │humans + mmctl│   │control plane│
+                        │              │   │             │
+                        ╰──────────────╯   ╰─────────────╯
+                               ●  http            ● create/terminate/repair
+                               │                  │
+                               ╰╮                ╭╯
+                                ▼                ▼
+                         ╭─────────────╮   ╭────────────╮
+                         │webapi server│   │private gRPC│
+                         │             │   │            │
+                         ╰─────────────╯   ╰────────────╯
+                               │ │               │
+                confirm+alerts │ │reinstall/repro│ enqueue job
+                               ● ╰●──────────╮   ●
+                               ╰─╮           │ ╭─╯
+                                 ▼           ▼ ▼
+                              ╭─────╮   ╭───────────╮
+                              │Slack│   │River queue│
+                              │     │   │           │
+                              ╰─────╯   ╰───────────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘

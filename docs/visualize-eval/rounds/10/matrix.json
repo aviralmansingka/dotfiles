@@ -1,0 +1,235 @@
+{
+ "round": 10,
+ "rubric_sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+ "metrics": {
+  "green_cases": 1,
+  "total_cases": 8,
+  "passed_applicable_categories": 34,
+  "failed_applicable_categories": 22,
+  "blocked_applicable_categories": 4,
+  "applicable_categories": 60,
+  "finding_severities": {
+   "critical": 4,
+   "high": 16,
+   "medium": 6,
+   "low": 1
+  }
+ },
+ "green_cases": [
+  "pipeline"
+ ],
+ "cases": {
+  "pipeline": {
+   "categories": {
+    "semantic_fidelity": "pass",
+    "arrow_traceability": "pass",
+    "layout_fit": "pass",
+    "conceptual_grouping_color": "pass",
+    "category_fit": "pass",
+    "border_integrity": "pass",
+    "workflow_evidence": "pass",
+    "animation": "pass"
+   },
+   "overall": "pass",
+   "findings": 0,
+   "severities": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0
+   },
+   "edges_total": 6,
+   "edges_pass": 6,
+   "blockers": 0,
+   "report": "docs/visualize-eval/rounds/10/reviews/pipeline/reviewer-result.json",
+   "report_sha256": "1f32a3c481e67fc3f8b95988b32d7ee8f9ffc32ae6cd78f4145fb3123cc99df0",
+   "blind_observation_sha256": null
+  },
+  "network": {
+   "categories": {
+    "semantic_fidelity": "pass",
+    "arrow_traceability": "pass",
+    "layout_fit": "pass",
+    "conceptual_grouping_color": "pass",
+    "category_fit": "fail",
+    "border_integrity": "pass",
+    "workflow_evidence": "fail",
+    "animation": "pass"
+   },
+   "overall": "fail",
+   "findings": 3,
+   "severities": {
+    "critical": 0,
+    "high": 1,
+    "medium": 1,
+    "low": 1
+   },
+   "edges_total": 7,
+   "edges_pass": 7,
+   "blockers": 1,
+   "report": "docs/visualize-eval/rounds/10/reviews/network/reviewer-result.json",
+   "report_sha256": "f7fdab233953db3cf5950b7290b4167d42bf742a94fb2cacdc12f5f37f1d38de",
+   "blind_observation_sha256": null
+  },
+  "homelab-nic-trace": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "fail",
+    "layout_fit": "fail",
+    "conceptual_grouping_color": "fail",
+    "category_fit": "fail",
+    "border_integrity": "pass",
+    "workflow_evidence": "blocked",
+    "animation": "na"
+   },
+   "overall": "fail",
+   "findings": 6,
+   "severities": {
+    "critical": 1,
+    "high": 2,
+    "medium": 3,
+    "low": 0
+   },
+   "edges_total": 14,
+   "edges_pass": 12,
+   "blockers": 1,
+   "report": "docs/visualize-eval/rounds/10/reviews/homelab-nic-trace/reviewer-result.json",
+   "report_sha256": "9239fbb509c3a2c4640adf1f06e7c140d338f0ec816cd53a232084656c4b40a8",
+   "blind_observation_sha256": null
+  },
+  "server-nic-layout": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "pass",
+    "layout_fit": "fail",
+    "conceptual_grouping_color": "pass",
+    "category_fit": "fail",
+    "border_integrity": "pass",
+    "workflow_evidence": "pass",
+    "animation": "na"
+   },
+   "overall": "fail",
+   "findings": 5,
+   "severities": {
+    "critical": 1,
+    "high": 4,
+    "medium": 0,
+    "low": 0
+   },
+   "edges_total": 9,
+   "edges_pass": 8,
+   "blockers": 0,
+   "report": "docs/visualize-eval/rounds/10/reviews/server-nic-layout/reviewer-result.json",
+   "report_sha256": "bc18c3075833eaa425f97dbe6a3d82e694373100025f330ccae56681d3f4f4ac",
+   "blind_observation_sha256": null
+  },
+  "datacenter-redundancy": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "pass",
+    "layout_fit": "pass",
+    "conceptual_grouping_color": "pass",
+    "category_fit": "pass",
+    "border_integrity": "pass",
+    "workflow_evidence": "fail",
+    "animation": "pass"
+   },
+   "overall": "fail",
+   "findings": 2,
+   "severities": {
+    "critical": 1,
+    "high": 1,
+    "medium": 0,
+    "low": 0
+   },
+   "edges_total": 28,
+   "edges_pass": 22,
+   "blockers": 1,
+   "report": "docs/visualize-eval/rounds/10/reviews/datacenter-redundancy/reviewer-result.json",
+   "report_sha256": "d5bccbddaaa452ae31b8aac5c7233026102a8e51353165db4aba5ae1c57d4754",
+   "blind_observation_sha256": null
+  },
+  "modal-machine-manager": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "pass",
+    "layout_fit": "fail",
+    "conceptual_grouping_color": "pass",
+    "category_fit": "fail",
+    "border_integrity": "pass",
+    "workflow_evidence": "blocked",
+    "animation": "fail"
+   },
+   "overall": "fail",
+   "findings": 5,
+   "severities": {
+    "critical": 0,
+    "high": 4,
+    "medium": 1,
+    "low": 0
+   },
+   "edges_total": 23,
+   "edges_pass": 17,
+   "blockers": 3,
+   "report": "docs/visualize-eval/rounds/10/reviews/modal-machine-manager/reviewer-result.json",
+   "report_sha256": "b68680f04f3b652f41367615cf8856745d67e3cdc4d9faf7a9b6e2a673db34f0",
+   "blind_observation_sha256": null
+  },
+  "modal-runtime": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "fail",
+    "layout_fit": "pass",
+    "conceptual_grouping_color": "pass",
+    "category_fit": "fail",
+    "border_integrity": "pass",
+    "workflow_evidence": "blocked",
+    "animation": "na"
+   },
+   "overall": "fail",
+   "findings": 4,
+   "severities": {
+    "critical": 0,
+    "high": 3,
+    "medium": 1,
+    "low": 0
+   },
+   "edges_total": 8,
+   "edges_pass": 5,
+   "blockers": 2,
+   "report": "docs/visualize-eval/rounds/10/reviews/modal-runtime/reviewer-result.json",
+   "report_sha256": "366a1d09526b2eaa3e9e1e3d8d627581b7427a55b69a7a6ae5979e68284f7b43",
+   "blind_observation_sha256": null
+  },
+  "gb300-rack-software": {
+   "categories": {
+    "semantic_fidelity": "fail",
+    "arrow_traceability": "pass",
+    "layout_fit": "fail",
+    "conceptual_grouping_color": "pass",
+    "category_fit": "fail",
+    "border_integrity": "pass",
+    "workflow_evidence": "blocked",
+    "animation": "na"
+   },
+   "overall": "fail",
+   "findings": 2,
+   "severities": {
+    "critical": 1,
+    "high": 1,
+    "medium": 0,
+    "low": 0
+   },
+   "edges_total": 0,
+   "edges_pass": 0,
+   "blockers": 1,
+   "report": "docs/visualize-eval/rounds/10/reviews/gb300-rack-software/reviewer-result.json",
+   "report_sha256": "6f6190b4e5ed614787a0a44cc4329e20dae0273c0a8b1b9ebdd7e2386cb97bef",
+   "blind_observation_sha256": null
+  }
+ },
+ "problems": [
+  "network: evidence hash mismatch: docs/visualize-eval/rounds/10/metadata.json",
+  "server-nic-layout: evidence hash mismatch: docs/visualize-eval/rounds/10/metadata.json"
+ ]
+}

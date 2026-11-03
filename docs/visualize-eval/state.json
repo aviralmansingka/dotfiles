@@ -2307,7 +2307,7 @@
  ],
  "phases_ran": [],
  "round_10": {
-  "status": "FROZEN: binary db70722b, skill 9c125679 (proposal 09), rubric rev 9, dataset unchanged; task files written; launching 8 generators",
+  "status": "verdicts 6/8: pipeline PASS (first green since r02); network/server/datacenter/runtime/homelab FAIL-improved; machine-manager verdict pending",
   "skill": {
    "proposal": "09",
    "sha256": "9c1256791069e27207db2e5138527e45587e7096955f5ed4f86c79d46f77e56d",
@@ -2334,6 +2334,234 @@
    "merge 3 engine worktrees -> full gates -> freeze round 10",
    "round-10 task files (generator + judge) with full-lap formula + new skill digest",
    "generation + terra judging + aggregate + review tabs"
-  ]
+  ],
+  "arrivals": {
+   "network": {
+    "worker": "viz-ds10-2",
+    "family": "service-meshes",
+    "views": 2,
+    "captain_validation": "both views all-checks pass incl. records",
+    "highlights": "0 crossings/ambiguous/violations both views; round-09 bridge at (32,34) GONE (coordinates cited); hue collision GONE (aqua/magenta/orange distinct); full-lap pinned dumps 41/61 frames (formula fix worked); 3-attempt exploration honestly under abandoned_shapes",
+    "defects": [
+     "in-pane frames truncated by scrollback (19/41, 19/61) - pinned dumps carry lap proof",
+     "82x51 pane, pinned 77x47 proof",
+     "4-row box upper-middle-cell attachment (consistent)"
+    ],
+    "judge": "spawn next"
+   },
+   "server-nic-layout": {
+    "worker": "viz-ds10-4",
+    "family": "identity-probe-maps",
+    "views": 3,
+    "captain_validation": "all views pass incl. records (14)",
+    "highlights": "round-09 semantic misses carried: gateway role, Dell+NxtGen identifiers, missing-hop caveat; label_slot on every labelled edge; dashed for 3 unproven links; measured yield (deep lr impossible: 57x63 tb, 120x14 lr)",
+    "defects": [
+     "v1 thin (3n/2e) by measurement",
+     "v3 1.8ms cumulative (no per-hop delta in source)",
+     "gw label packs 4 facts (no qualifier field)"
+    ],
+    "judge": "spawn next"
+   },
+   "datacenter-redundancy": {
+    "worker": "viz-ds10-5",
+    "family": "redundant-fabrics",
+    "views": 4,
+    "captain_validation": "all views pass, 33 checks each, records complete (21)",
+    "highlights": "28/28 relations + 18/18 nodes (round-09 coverage fixed); zero dots 3rd round; BL->spine inside hop landed (v3 bridges 15->6); tier-qualifier dedup yield measured (10 probes)",
+    "defects": [
+     "bridges kept as structural (K2,2 crosses + inside-hop BL fan): 1/2/6/1 per view"
+    ],
+    "judge": "spawn next"
+   },
+   "homelab-nic-trace": {
+    "worker": "viz-ds10-3",
+    "family": "identity-probe-maps",
+    "views": 4,
+    "captain_validation": "33/33 x4, records complete (17)",
+    "highlights": "all 14 relations kept (never-drop rule held after round-09's 3 dropped facts); 0 crossings/ambiguous/skipped everywhere; complementary-label split v3/v4 with coverage map",
+    "defects": [
+     "NEW round-11 item: wifi group hue DRIFTS across views (magenta v2, orange v3) - per-spec family resolution shifts shared names when view name-sets differ; fix = resolve from the case-wide name union"
+    ],
+    "judge": "spawn next"
+   },
+   "modal-runtime": {
+    "worker": "viz-ds10-7",
+    "family": "service-meshes",
+    "views": 2,
+    "captain_validation": "33/33 both views; records complete (13)",
+    "highlights": "anti-parallel pair co-viewed again (label_slot, 4 pins 0 conflicts); 8/8 nodes+edges; 5 abandoned shapes honestly listed",
+    "defects": [
+     "shared-gutter pair labels: first label nearer e2's lane by cell distance (checker-vs-eye persists in this shape)",
+     "v2 'user process' label between two lanes",
+     "callee sibling order engine-chosen, not source-listing"
+    ],
+    "blockers": [
+     "harness nit: pane_rect/pane_cols null - 'herdr pane layout' needs --current to resolve the focused workspace; fix as round-11 harness item"
+    ],
+    "judge": "spawn next"
+   },
+   "gb300-rack-software": {
+    "worker": "viz-ds10-8",
+    "family": "placement-planes",
+    "views": 3,
+    "captain_validation": "v3 all-pass; v1/v2 fail honestly on known items (trunk-junction warning, 1 ambiguous)",
+    "highlights": "round-09 semantic loss FIXED: direct nv-rms Redfish/HTTPS API edges to BMCs+power shelf in v2; ONE trunk one junction held; 50 records, 44 drafts preserved",
+    "defects": [
+     "v2 1 ambiguous label structural (20 probes: >=2 lanes never reach 0 ambiguous - the gutter-ownership cluster again)",
+     "trunk shared-cell warning (known checker item)",
+     "no all-worlds view fits (81x77, 55x48 both over target)"
+    ],
+    "judge": "spawn next"
+   },
+   "pipeline": {
+    "worker": "viz-ds10-1",
+    "family": "flow-chains",
+    "views": 1,
+    "captain_validation": "all 34 checks pass; records complete (13)",
+    "highlights": "full-lap formula working (44 frames, dot back at origin at frame 30); lr yield measured (89x9/79x10); zero defects across the board",
+    "defects": [
+     "declaration-order-sensitive fan ownership (enqueue-first -> 0 ambiguous, documented for reproducibility)"
+    ],
+    "judge": "spawn next"
+   },
+   "modal-machine-manager": {
+    "worker": "viz-ds10-6",
+    "family": "lifecycle-machines",
+    "views": 4,
+    "captain_validation": "all views pass; records complete (103)",
+    "highlights": "round-09 coverage losses ALL fixed (17/17 components, 23/23 relations, humans/mmctl + 3 relations drawn); 0 crossings/ambiguous everywhere; full-lap frames 52/78/90",
+    "defects": [
+     "NEW: v1 dots oscillate between first two cells instead of traversing (fan+label_slot geometry-specific; isolated probes traverse fine) - round-11 engine item"
+    ],
+    "blockers": [
+     "no per-edge gutter-side choice (band extends right only)",
+     "minlen reportedly absent from r10 schema (verify)",
+     "1000-line pane scrollback cap"
+    ],
+    "judge": "spawn next (last one)"
+   }
+  },
+  "judges": {
+   "network": {
+    "stage": "complete",
+    "verdict": "fail",
+    "categories": {
+     "semantic": "pass",
+     "arrows": "pass",
+     "fit": "pass",
+     "groups": "pass",
+     "category_fit": "fail",
+     "borders": "pass",
+     "workflow": "fail",
+     "animation": "pass"
+    },
+    "movement_vs_09": "6 of 8 pass (was: semantic F, arrows F, fit F, groups F, catfit F, workflow B, animation B) - all engine fixes landed",
+    "key_findings": [
+     "category_fit FAIL: fan order Core->Redis above Core->Web vs source listing order; no yield recorded - skill rule gap (record fan-order yields too, or obey listing order)",
+     "workflow FAIL: captain freeze error - cases.json index digest stale vs inherited round-09 value (per-file hashes verified identical); corrected in metadata post-judge",
+     "first case with animation PASS at verdict level (round-09 was blocked on full-lap)"
+    ]
+   },
+   "server-nic-layout": {
+    "stage": "complete",
+    "verdict": "fail",
+    "categories": {
+     "semantic": "fail",
+     "arrows": "pass",
+     "fit": "fail",
+     "groups": "pass",
+     "category_fit": "fail",
+     "borders": "pass",
+     "workflow": "pass",
+     "animation": "na"
+    },
+    "movement_vs_09": "5 of 8 (was 4/8 with workflow F): grouping F->P (hue fix held), workflow F->P (records fix held), semantic F->F (NEW qualifier losses), arrows P held",
+    "key_findings": [
+     "semantic FAIL: 'no cable seen' observation unsupported, MAC-OUI basis for Arista attribution missing, 80% hop-loss value omitted - never-drop rule violated AGAIN despite round-10 skill text",
+     "fit/category_fit FAIL: split-view coverage incomplete (Dell/bare-metal identity + no-proxy qualification not explicitly preserved across views)"
+    ],
+    "note": "cases.json digest re-verified: matches frozen e69179e5 - network judge's mismatch claim traced to comparing the wrong field; round-10 metadata now carries the verified digest"
+   },
+   "datacenter-redundancy": {
+    "stage": "complete",
+    "verdict": "fail",
+    "categories": {
+     "semantic": "fail",
+     "arrows": "pass",
+     "fit": "pass",
+     "groups": "pass",
+     "category_fit": "pass",
+     "borders": "pass",
+     "workflow": "fail",
+     "animation": "pass"
+    },
+    "movement_vs_09": "6 of 8 (was 3/8): arrows F->P, groups F->P, animation P held; semantic F persists (ECMP attribution)",
+    "key_findings": [
+     "semantic FAIL: ECMP not visibly attributed to BL->spine or Spine2->leaf fans (generator's probes show placement difficulty; visibility ruling went against it)",
+     "workflow FAIL on cases.json digest AGAIN despite captain's raw-byte verification matching e69179e5 - judge likely canonicalized; per-file hashes (24/24 identical to round-09) remain the authoritative dataset proof; no further captain action"
+    ],
+    "note": "category_fit PASSES for the first time for datacenter (fabric recipe met)"
+   },
+   "modal-runtime": {
+    "stage": "complete",
+    "verdict": "fail",
+    "categories": {
+     "semantic": "fail",
+     "arrows": "fail",
+     "fit": "pass",
+     "groups": "pass",
+     "category_fit": "fail",
+     "borders": "pass",
+     "workflow": "blocked",
+     "animation": "na"
+    },
+    "movement_vs_09": "5 of 8 with fit+groups+borders passing (was 3/8); semantic F persists (missing 'runs' verb); arrows P->F on gutter ownership",
+    "key_findings": [
+     "shared-gutter pair labels defeat direction identification (checker's 0-ambiguous refuted by eyes) - the recurring ownership cluster",
+     "callee order reverses source listing (mesh recipe) - category_fit fail",
+     "workflow BLOCKED: manual measurement probes + discarded cold-start capture lack wrapper records - generator disclosed but didn't record them; task-file wording tightening needed for r11"
+    ]
+   },
+   "homelab-nic-trace": {
+    "stage": "complete",
+    "verdict": "fail",
+    "categories": {
+     "semantic": "fail",
+     "arrows": "fail",
+     "fit": "fail",
+     "groups": "fail",
+     "category_fit": "fail",
+     "borders": "pass",
+     "workflow": "blocked",
+     "animation": "na"
+    },
+    "movement_vs_09": "3/8 (r09 had arrows P + workflow P) - regressed on those; router border role NOW visible (r09 miss fixed)",
+    "key_findings": [
+     "Fios router without explicit historical/claimed qualifier (r09's miss persists in new form); ULA-only + 4-ISP/2-MMR omissions",
+     "Tailscale address label nearer wrong route (ownership cluster, 4th case)",
+     "wifi hue drift cross-view (groups F)",
+     "workflow BLOCKED: one shell-wrapped frame probe lacks execution-time binary hash"
+    ]
+   },
+   "pipeline": {
+    "stage": "complete",
+    "verdict": "pass",
+    "categories": {
+     "semantic": "pass",
+     "arrows": "pass",
+     "fit": "pass",
+     "groups": "pass",
+     "category_fit": "pass",
+     "borders": "pass",
+     "workflow": "pass",
+     "animation": "pass"
+    },
+    "milestone": "FIRST FULLY GREEN CASE since round-02 runtime - full stack (engine+skill+harness) carries a case end-to-end",
+    "notes": [
+     "verify route has 8 eligible dot positions vs generator's stated 7 (frames still prove shared rate)",
+     "generator's dataset digest transcription mismatch reconciled against frozen metadata"
+    ]
+   }
+  }
  }
 }

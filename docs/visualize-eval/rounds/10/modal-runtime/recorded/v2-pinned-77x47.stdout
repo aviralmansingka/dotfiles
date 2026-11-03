@@ -1,0 +1,145 @@
+viewport: 77x47 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 77x47 @100% · v2-exec-storage.json · 5 nodes · 4 edges · q q
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            ╭─────────────────╮     ╭──────────────╮
+           starts/manages ╭▶│Container backend│────▶│Task container│
+         ╭───────────╮    │ │                 │     │              │
+         │           │────╯ ╰─────────────────╯     ╰──────────────╯
+         │Task engine│                     user process
+         │           │──╮ ╭────────────────────╮        ╭───────╮
+         ╰───────────╯  ╰▶│Filesystem + volumes│───────▶│Blobnet│
+                          │                    │        │       │
+                          ╰────────────────────╯        ╰───────╯
+                 mount+snapshot            image+volume
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 77x47 @100% · v2-exec-storage.json · 5 nodes · 4 edges · q q
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            ╭─────────────────╮     ╭──────────────╮
+           starts/manages ╭▶│Container backend│────▶│Task container│
+         ╭───────────╮    │ │                 │     │              │
+         │           │────╯ ╰─────────────────╯     ╰──────────────╯
+         │Task engine│                     user process
+         │           │──╮ ╭────────────────────╮        ╭───────╮
+         ╰───────────╯  ╰▶│Filesystem + volumes│───────▶│Blobnet│
+                          │                    │        │       │
+                          ╰────────────────────╯        ╰───────╯
+                 mount+snapshot            image+volume
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 77x47 @100% · v2-exec-storage.json · 5 nodes · 4 edges · q q
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            ╭─────────────────╮     ╭──────────────╮
+           starts/manages ╭▶│Container backend│────▶│Task container│
+         ╭───────────╮    │ │                 │     │              │
+         │           │────╯ ╰─────────────────╯     ╰──────────────╯
+         │Task engine│                     user process
+         │           │──╮ ╭────────────────────╮        ╭───────╮
+         ╰───────────╯  ╰▶│Filesystem + volumes│───────▶│Blobnet│
+                          │                    │        │       │
+                          ╰────────────────────╯        ╰───────╯
+                 mount+snapshot            image+volume
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
