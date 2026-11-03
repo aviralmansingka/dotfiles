@@ -843,6 +843,30 @@ try {
 	);
 	assert.ok(!splitRun.cleanup.includes("nvim_win_close"), "no float cleanup on the split path");
 
+	// The captain's requested uppercase `R` drives the same auto-capture path
+	// as `r` (lowercase stays accepted for one-handed habit), and the panel's
+	// shortcut hint names `R`.
+	const upperRun = await driveAuto({
+		keys: ["R"],
+		command: "printf 'upper ok\\n'",
+		setup: () => ({
+			scenario: {
+				current: { result: { pane: { tab_id: "T1" } } },
+				list: { result: { panes: [] } },
+				split: { result: { pane: { pane_id: "P-UPPER" } } },
+			},
+		}),
+	});
+	assert.equal(upperRun.result.details.status, "answered");
+	assert.equal(upperRun.result.details.autoRun, true);
+	assert.equal(upperRun.result.details.output, "upper ok");
+	assert.match(upperRun.renders[0], /R — run in Neovim :term dm and auto-capture/, "the hint names the R shortcut");
+	assert.match(upperRun.renders[1], /Esc cancels/, "the running banner follows uppercase R too");
+	assert.ok(
+		upperRun.herdrCalls.some(c => c[1] === "close" && c[2] === "P-UPPER"),
+		"the uppercase-R run still owns and closes its pane",
+	);
+
 	// C3: an nvim without --listen falls back to the pid-based default socket
 	// under XDG_RUNTIME_DIR.
 	const pidRun = await driveAuto({
