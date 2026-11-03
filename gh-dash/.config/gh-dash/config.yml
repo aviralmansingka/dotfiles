@@ -1,8 +1,8 @@
 prSections:
     - title: My Pull Requests
-      filters: is:open author:@me
+      filters: is:open author:@me -label:queue
     - title: Merge Queue
-      filters: is:open is:queued
+      filters: is:open label:queue
     - title: Needs My Review
       filters: is:open review-requested:@me
     - title: Involved

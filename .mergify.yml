@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=https://docs.mergify.com/mergify-configuration-schema.json
+#
+# Merge queue on main. Flow, submit path, and the native fallback:
+# docs/merge-queue.md.
+#
+# Submission is explicit on purpose. `gh-dash-enqueue-pr` adds the `queue`
+# label, and the rule below queues the pull request when that label appears.
+# Mergify's auto-merge (`merge_protections_settings.auto_merge_conditions`)
+# stays unset, so an approval alone never submits.
+
+pull_request_rules:
+  - name: queue a labelled pull request
+    conditions:
+      - base = main
+      - label = queue
+      # Mergify marks a dropped attempt with the `dequeued` label and leaves
+      # `queue` in place. This guard keeps a red entry from requeueing itself
+      # in a loop; the submit clears the mark when a human asks again.
+      - label != dequeued
+    actions:
+      queue:
+        name: main
+
+queue_rules:
+  - name: main
+    queue_conditions:
+      - base = main
+      - label = queue
+    merge_method: squash
+    batch_size: 1
+    # Drop an entry whose checks stay pending this long.
+    checks_timeout: 60 minutes
