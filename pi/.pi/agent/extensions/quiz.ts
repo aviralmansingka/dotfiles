@@ -13,7 +13,13 @@ import { Type } from "typebox";
 import { openEditor } from "./nvim-open";
 import { openJournalInEditor, openNodeView } from "./md-log";
 import { contextFileHint, lessonFileHint, normalizeContextFiles } from "./user-input/context-files";
-import { type InputMode, inputModeLabel, nextInputMode } from "./user-input/input-modes";
+import {
+	type InputMode,
+	inputModeHint,
+	inputModeLabel,
+	isInputBoxMode,
+	nextInputMode,
+} from "./user-input/input-modes";
 import {
 	joinHints,
 	NAVIGATION_HINT,
@@ -61,7 +67,8 @@ interface QuizResponse {
 	tooHard?: boolean; // Ctrl+P: pause so the agent teaches and retries at a simpler level
 	answers: OptionAnswer[];
 	thinking?: string; // optional learner reasoning, entered between select and feedback
-	followUp?: string; // set when the captain submits Steering guidance instead of answering
+	note?: string; // optional free-text note typed in note mode; rides with the answer
+	followUp?: string; // set when the captain submits follow-up guidance instead of answering
 }
 
 type QuizStatus = "answered" | "cancelled" | "unavailable" | "follow-up" | "too-hard";
@@ -83,7 +90,7 @@ interface QuizResultDetails {
 	options?: DisplayedOption[]; // full option list in display order, for the transcript
 	correct?: boolean;
 	dontKnow?: boolean; // user selected the ungraded Other option instead of guessing
-	note?: string; // retained when rendering results from older sessions
+	note?: string; // free text typed in note mode; rides with the answer or with a follow-up/too-hard result
 	followUp?: string; // set when the captain sent a follow-up instead of answering
 	thinking?: string; // the learner's optional reasoning, verbatim
 	explanation?: string;
@@ -334,9 +341,11 @@ function tooHardResult(
 	correctIndices: number[],
 	context?: string,
 	title?: string,
+	note?: string,
 ) {
-	const message =
+	let message =
 		"User passed with Ctrl+P because the question was too hard. Explain the prerequisite more simply, then ask an easier quiz question. Do not grade this as wrong or reveal the original answer.";
+	if (note) message += `\nUser's note: ${note}`;
 	return {
 		content: [{ type: "text" as const, text: message }],
 		details: buildStructuredResult({
@@ -347,13 +356,14 @@ function tooHardResult(
 			mode,
 			answers: [],
 			correctIndices,
+			note,
 			message,
 		}),
 	};
 }
 
-// Steering mode lets the captain replace or pause the question. Submitting it
-// ends this quiz and returns the guidance to the agent.
+// Follow-up mode lets the captain replace or pause the question. Submitting
+// it ends this quiz and returns the guidance to the agent.
 function followUpResult(
 	question: string,
 	mode: QuizMode,
@@ -361,8 +371,10 @@ function followUpResult(
 	correctIndices: number[],
 	context?: string,
 	title?: string,
+	note?: string,
 ) {
-	const message = `User steered instead of answering: ${followUp}`;
+	let message = `User sent a follow-up instead of answering: ${followUp}`;
+	if (note) message += `\nUser's note: ${note}`;
 	return {
 		content: [{ type: "text" as const, text: message }],
 		details: buildStructuredResult({
@@ -374,6 +386,7 @@ function followUpResult(
 			answers: [],
 			correctIndices,
 			followUp,
+			note,
 			message,
 		}),
 	};
@@ -396,6 +409,7 @@ function buildResult(
 ) {
 	const { dontKnow, answers } = response;
 	const thinking = response.thinking?.trim() || undefined;
+	const note = response.note?.trim() || undefined;
 	const selectedIndices = answers.map((a) => a.index);
 	// Other is ungraded and never counted as correct.
 	const correct = dontKnow ? false : isCorrect(selectedIndices, correctIndices);
@@ -416,6 +430,7 @@ function buildResult(
 	// The learner's own reasoning, when they wrote any. It rides its own line so
 	// the agent reads the model behind the answer, not just the verdict.
 	if (thinking) text += `\nThinking: ${thinking}`;
+	if (note) text += `\nUser's note: ${note}`;
 	if (explanation) text += `\nExplanation: ${explanation}`;
 
 	return {
@@ -432,6 +447,7 @@ function buildResult(
 			correct,
 			dontKnow,
 			thinking,
+			note,
 			explanation,
 		}),
 	};
@@ -577,13 +593,24 @@ function editorInnerLines(editor: Editor, width: number): string[] {
 		.filter((l) => !/^─+$/.test(stripAnsi(l)) && !/^─── [↑↓] \d+ more /.test(stripAnsi(l)));
 }
 
-function pushPromptLine(lines: string[], theme: any, width: number, mode: InputMode, editor: Editor): void {
+function pushPromptLine(
+	lines: string[],
+	theme: any,
+	width: number,
+	mode: InputMode,
+	editor: Editor,
+	confirmation: string | undefined,
+): void {
 	if (mode === "answer") {
 		lines.push(truncateToWidth(theme.fg("accent", "› answer"), width));
-		return;
+	} else {
+		for (const [index, line] of editorInnerLines(editor, Math.max(1, width - 2)).entries()) {
+			lines.push(`${index === 0 ? "› " : "  "}${line}`);
+		}
 	}
-	for (const [index, line] of editorInnerLines(editor, Math.max(1, width - 2)).entries()) {
-		lines.push(`${index === 0 ? "› " : "  "}${line}`);
+	// A sent steer is confirmed in-panel so it never happens silently.
+	if (confirmation) {
+		lines.push(truncateToWidth(theme.fg("success", ` ✓ ${confirmation}`), width));
 	}
 }
 
@@ -611,6 +638,7 @@ function modeIndicator(theme: any, mode: InputMode): string {
 
 async function askSingleChoice(
 	ctx: any,
+	pi: ExtensionAPI,
 	signal: AbortSignal | undefined,
 	question: string,
 	context: string | undefined,
@@ -636,7 +664,13 @@ async function askSingleChoice(
 			let dontKnow = false;
 			let thinking = "";
 			let panelFocused = false;
+			let sentConfirmation: string | undefined;
+			// One editor per input mode: the note persists until the answer is
+			// submitted, while steering and follow-up text never leak into it or
+			// into each other.
 			const steeringEditor = makeSteeringEditor(tui, theme);
+			const noteEditor = makeSteeringEditor(tui, theme);
+			const followUpEditor = makeSteeringEditor(tui, theme);
 			const thinkingEditor = makeSteeringEditor(tui, theme);
 			let cachedLines: string[] | undefined;
 			let cachedWidth = -1;
@@ -646,9 +680,42 @@ async function askSingleChoice(
 				tui.requestRender();
 			}
 
+			function activeEditor(): Editor {
+				if (mode === "note") return noteEditor;
+				if (mode === "follow-up") return followUpEditor;
+				return steeringEditor;
+			}
+
 			function setMode(next: InputMode) {
 				mode = next;
 				steeringEditor.focused = panelFocused && mode === "steering";
+				noteEditor.focused = panelFocused && mode === "note";
+				followUpEditor.focused = panelFocused && mode === "follow-up";
+				refresh();
+			}
+
+			function noteText(): string | undefined {
+				const t = noteEditor.getText().trim();
+				return t.length ? t : undefined;
+			}
+
+			// Steering sends the box text to the agent as a live steer. The quiz
+			// stays open and the question stays visible; the send is confirmed
+			// in-panel so it never happens silently.
+			function sendSteer() {
+				const text = steeringEditor.getText().trim();
+				if (!text) {
+					setMode("answer");
+					return;
+				}
+				try {
+					pi.sendUserMessage(text, { deliverAs: "steer" });
+					sentConfirmation = "Steer sent — the quiz stays open";
+					steeringEditor.setText("");
+				} catch (error) {
+					sentConfirmation = undefined;
+					ctx?.ui?.notify?.(`Could not send steer: ${error}`, "warning");
+				}
 				refresh();
 			}
 
@@ -671,7 +738,9 @@ async function askSingleChoice(
 				const base: QuizResponse = dontKnow
 					? { dontKnow: true, answers: [] }
 					: { dontKnow: false, answers: chosen ? [chosen] : [] };
-				return thinking ? { ...base, thinking } : base;
+				const note = noteText();
+				const withNote = note ? { ...base, note } : base;
+				return thinking ? { ...withNote, thinking } : withNote;
 			}
 
 			function handleInput(data: string) {
@@ -694,26 +763,69 @@ async function askSingleChoice(
 					return;
 				}
 
+				// Any further interaction dismisses the last steer confirmation.
+				sentConfirmation = undefined;
+
 				if (matchesKey(data, Key.ctrl("p"))) {
-					done({ dontKnow: false, tooHard: true, answers: [] });
+					const note = noteText();
+					done({ dontKnow: false, tooHard: true, answers: [], ...(note ? { note } : {}) });
 					return;
 				}
+				// Tab cycles answer → steering → note → follow-up. Only follow-up
+				// ends the quiz; steering and note keep it open.
 				if (matchesKey(data, Key.tab)) {
 					setMode(nextInputMode(mode));
 					return;
 				}
 
-				if (mode === "steering") {
-					if (matchesKey(data, Key.enter)) {
-						const text = steeringEditor.getText().trim();
-						if (text) done({ dontKnow: false, answers: [], followUp: text });
-						return;
-					}
+				if (isInputBoxMode(mode)) {
+					// Esc returns to answer mode, keeping whatever was typed.
 					if (matchesKey(data, Key.escape)) {
 						setMode("answer");
 						return;
 					}
-					steeringEditor.handleInput(data);
+					if (mode === "steering") {
+						if (matchesKey(data, Key.enter)) {
+							sendSteer();
+							return;
+						}
+						// With an empty buffer, `o` still opens the context files —
+						// steering must never cost the captain the question.
+						if (matchesKey(data, "o") && contextFiles.length > 0 && steeringEditor.getText().trim().length === 0) {
+							void openContextFiles(ctx, contextFiles).catch((error) =>
+								ctx?.ui?.notify?.(`Could not open context files: ${error}`, "warning"),
+							);
+							return;
+						}
+						steeringEditor.handleInput(data);
+						tui.requestRender();
+						return;
+					}
+					if (mode === "note") {
+						// Enter keeps the note and returns to the options. (The
+						// editor's own submit would clear the buffer; Ctrl+J still
+						// reaches it as a newline.)
+						if (matchesKey(data, Key.enter)) {
+							setMode("answer");
+							return;
+						}
+						noteEditor.handleInput(data);
+						tui.requestRender();
+						return;
+					}
+					// mode === "follow-up": submitting ends the quiz and returns
+					// the guidance to the agent — the only mode that closes it.
+					if (matchesKey(data, Key.enter)) {
+						const text = followUpEditor.getText().trim();
+						if (text) {
+							const note = noteText();
+							done({ dontKnow: false, answers: [], followUp: text, ...(note ? { note } : {}) });
+						} else {
+							setMode("answer");
+						}
+						return;
+					}
+					followUpEditor.handleInput(data);
 					tui.requestRender();
 					return;
 				}
@@ -831,12 +943,12 @@ async function askSingleChoice(
 					addWrapped(
 						top,
 						theme.fg("dim", mode === "answer"
-							? joinHints(modeIndicator(theme, mode), "Ctrl+P pause", NAVIGATION_HINT, numberShortcutHint(allOptions.length, "select"), "Enter feedback", "Tab steering", contextFileHint(contextFiles), lessonFileHint(), "Esc cancel")
-							: joinHints(modeIndicator(theme, mode), "type guidance", "Enter send", "Tab answer", "Esc answer")),
+							? joinHints(modeIndicator(theme, mode), "Ctrl+P pause", NAVIGATION_HINT, numberShortcutHint(allOptions.length, "select"), "Enter feedback", `Tab ${inputModeLabel(nextInputMode(mode)).toLowerCase()}`, contextFileHint(contextFiles), lessonFileHint(), "Esc cancel")
+							: joinHints(modeIndicator(theme, mode), inputModeHint(mode, contextFiles.length > 0))),
 						tw,
 						" ",
 					);
-					pushPromptLine(bottom, theme, bw, mode, steeringEditor);
+					pushPromptLine(bottom, theme, bw, mode, activeEditor(), sentConfirmation);
 				}
 				const framed = frameMerged(top, bottom, width, theme);
 				if (mode === "answer" && phase === "select") {
@@ -851,12 +963,16 @@ async function askSingleChoice(
 				set focused(value: boolean) {
 					panelFocused = value;
 					steeringEditor.focused = value && mode === "steering";
+					noteEditor.focused = value && mode === "note";
+					followUpEditor.focused = value && mode === "follow-up";
 					thinkingEditor.focused = value && phase === "thinking";
 				},
 				render,
 				invalidate: () => {
 					cachedLines = undefined;
 					steeringEditor.invalidate();
+					noteEditor.invalidate();
+					followUpEditor.invalidate();
 					thinkingEditor.invalidate();
 				},
 				handleInput,
@@ -867,6 +983,7 @@ async function askSingleChoice(
 
 async function askMultiChoice(
 	ctx: any,
+	pi: ExtensionAPI,
 	signal: AbortSignal | undefined,
 	question: string,
 	context: string | undefined,
@@ -897,7 +1014,13 @@ async function askMultiChoice(
 			let mode: InputMode = "answer";
 			let thinking = "";
 			let panelFocused = false;
+			let sentConfirmation: string | undefined;
+			// One editor per input mode: the note persists until the answer is
+			// submitted, while steering and follow-up text never leak into it or
+			// into each other.
 			const steeringEditor = makeSteeringEditor(tui, theme);
+			const noteEditor = makeSteeringEditor(tui, theme);
+			const followUpEditor = makeSteeringEditor(tui, theme);
 			const thinkingEditor = makeSteeringEditor(tui, theme);
 			let cachedLines: string[] | undefined;
 			let cachedWidth = -1;
@@ -908,9 +1031,42 @@ async function askMultiChoice(
 				tui.requestRender();
 			}
 
+			function activeEditor(): Editor {
+				if (mode === "note") return noteEditor;
+				if (mode === "follow-up") return followUpEditor;
+				return steeringEditor;
+			}
+
 			function setMode(next: InputMode) {
 				mode = next;
 				steeringEditor.focused = panelFocused && mode === "steering";
+				noteEditor.focused = panelFocused && mode === "note";
+				followUpEditor.focused = panelFocused && mode === "follow-up";
+				refresh();
+			}
+
+			function noteText(): string | undefined {
+				const t = noteEditor.getText().trim();
+				return t.length ? t : undefined;
+			}
+
+			// Steering sends the box text to the agent as a live steer. The quiz
+			// stays open and the question stays visible; the send is confirmed
+			// in-panel so it never happens silently.
+			function sendSteer() {
+				const text = steeringEditor.getText().trim();
+				if (!text) {
+					setMode("answer");
+					return;
+				}
+				try {
+					pi.sendUserMessage(text, { deliverAs: "steer" });
+					sentConfirmation = "Steer sent — the quiz stays open";
+					steeringEditor.setText("");
+				} catch (error) {
+					sentConfirmation = undefined;
+					ctx?.ui?.notify?.(`Could not send steer: ${error}`, "warning");
+				}
 				refresh();
 			}
 
@@ -922,7 +1078,9 @@ async function askMultiChoice(
 				const base: QuizResponse = choseDontKnow()
 					? { dontKnow: true, answers: [] }
 					: { dontKnow: false, answers: realAnswers() };
-				return thinking ? { ...base, thinking } : base;
+				const note = noteText();
+				const withNote = note ? { ...base, note } : base;
+				return thinking ? { ...withNote, thinking } : withNote;
 			}
 
 			// Select → thinking → feedback. The thinking editor owns the keyboard for
@@ -986,26 +1144,69 @@ async function askMultiChoice(
 					return;
 				}
 
+				// Any further interaction dismisses the last steer confirmation.
+				sentConfirmation = undefined;
+
 				if (matchesKey(data, Key.ctrl("p"))) {
-					done({ dontKnow: false, tooHard: true, answers: [] });
+					const note = noteText();
+					done({ dontKnow: false, tooHard: true, answers: [], ...(note ? { note } : {}) });
 					return;
 				}
+				// Tab cycles answer → steering → note → follow-up. Only follow-up
+				// ends the quiz; steering and note keep it open.
 				if (matchesKey(data, Key.tab)) {
 					setMode(nextInputMode(mode));
 					return;
 				}
 
-				if (mode === "steering") {
-					if (matchesKey(data, Key.enter)) {
-						const text = steeringEditor.getText().trim();
-						if (text) done({ dontKnow: false, answers: [], followUp: text });
-						return;
-					}
+				if (isInputBoxMode(mode)) {
+					// Esc returns to answer mode, keeping whatever was typed.
 					if (matchesKey(data, Key.escape)) {
 						setMode("answer");
 						return;
 					}
-					steeringEditor.handleInput(data);
+					if (mode === "steering") {
+						if (matchesKey(data, Key.enter)) {
+							sendSteer();
+							return;
+						}
+						// With an empty buffer, `o` still opens the context files —
+						// steering must never cost the captain the question.
+						if (matchesKey(data, "o") && contextFiles.length > 0 && steeringEditor.getText().trim().length === 0) {
+							void openContextFiles(ctx, contextFiles).catch((error) =>
+								ctx?.ui?.notify?.(`Could not open context files: ${error}`, "warning"),
+							);
+							return;
+						}
+						steeringEditor.handleInput(data);
+						tui.requestRender();
+						return;
+					}
+					if (mode === "note") {
+						// Enter keeps the note and returns to the options. (The
+						// editor's own submit would clear the buffer; Ctrl+J still
+						// reaches it as a newline.)
+						if (matchesKey(data, Key.enter)) {
+							setMode("answer");
+							return;
+						}
+						noteEditor.handleInput(data);
+						tui.requestRender();
+						return;
+					}
+					// mode === "follow-up": submitting ends the quiz and returns
+					// the guidance to the agent — the only mode that closes it.
+					if (matchesKey(data, Key.enter)) {
+						const text = followUpEditor.getText().trim();
+						if (text) {
+							const note = noteText();
+							done({ dontKnow: false, answers: [], followUp: text, ...(note ? { note } : {}) });
+						} else {
+							setMode("answer");
+						}
+						return;
+					}
+					followUpEditor.handleInput(data);
 					tui.requestRender();
 					return;
 				}
@@ -1127,12 +1328,12 @@ async function askMultiChoice(
 					addWrapped(
 						top,
 						theme.fg("dim", mode === "answer"
-							? joinHints(modeIndicator(theme, mode), "Ctrl+P pause", NAVIGATION_HINT, numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter feedback", "Tab steering", contextFileHint(contextFiles), lessonFileHint(), "Esc cancel")
-							: joinHints(modeIndicator(theme, mode), "type guidance", "Enter send", "Tab answer", "Esc answer")),
+							? joinHints(modeIndicator(theme, mode), "Ctrl+P pause", NAVIGATION_HINT, numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter feedback", `Tab ${inputModeLabel(nextInputMode(mode)).toLowerCase()}`, contextFileHint(contextFiles), lessonFileHint(), "Esc cancel")
+							: joinHints(modeIndicator(theme, mode), inputModeHint(mode, contextFiles.length > 0))),
 						tw,
 						" ",
 					);
-					pushPromptLine(bottom, theme, bw, mode, steeringEditor);
+					pushPromptLine(bottom, theme, bw, mode, activeEditor(), sentConfirmation);
 				}
 				const framed = frameMerged(top, bottom, width, theme);
 				if (mode === "answer" && phase === "select") {
@@ -1147,12 +1348,16 @@ async function askMultiChoice(
 				set focused(value: boolean) {
 					panelFocused = value;
 					steeringEditor.focused = value && mode === "steering";
+					noteEditor.focused = value && mode === "note";
+					followUpEditor.focused = value && mode === "follow-up";
 					thinkingEditor.focused = value && phase === "thinking";
 				},
 				render,
 				invalidate: () => {
 					cachedLines = undefined;
 					steeringEditor.invalidate();
+					noteEditor.invalidate();
+					followUpEditor.invalidate();
 					thinkingEditor.invalidate();
 				},
 				handleInput,
@@ -1198,7 +1403,7 @@ export default function quiz(pi: ExtensionAPI) {
 		label: "quiz",
 		exposure: "deferred",
 		description:
-			"Ask the user a graded question. The question must have a known correct answer. The tool grades the answer and shows feedback. Answer mode: number shortcuts and j/k navigation. Enter opens the thinking step, where the user may type their reasoning. Enter again shows feedback, Esc skips the thinking step. Other is always the last choice. It reports an honest knowledge gap, not a guess. Tab opens steering mode. There the user types guidance. It ends the quiz and returns as `followUp`. Ctrl+P marks the quiz as too hard. It does not show the answer. There is no free-text answer mode. For a question without a correct answer, use ask_user_question.",
+			"Ask the user a graded question. The question must have a known correct answer. The tool grades the answer and shows feedback. Answer mode: number shortcuts and j/k navigation. Enter opens the thinking step, where the user may type their reasoning. Enter again shows feedback, Esc skips the thinking step. Other is always the last choice. It reports an honest knowledge gap, not a guess. Tab cycles the input modes: answer, steering, note, follow-up. Steering sends the text to you as a live steer and keeps the quiz open. Note attaches free text to the answer. Follow-up ends the quiz and returns the text as `followUp`. Ctrl+P marks the quiz as too hard. It does not show the answer. There is no free-text answer mode. For a question without a correct answer, use ask_user_question.",
 		promptSnippet:
 			"Use quiz to test the user with a graded multiple-choice or multi-select question. Supply the correct answer and an explanation. For a question without a correct answer, use ask_user_question.",
 		promptGuidelines: [
@@ -1212,7 +1417,9 @@ export default function quiz(pi: ExtensionAPI) {
 			"Multi-select grading is an exact-set match. The user is correct only when they select every correct option and no incorrect one.",
 			"The tool adds an ungraded Other choice at the bottom. Supply only the real, gradable options. A dontKnow result means the user did not guess. Treat it as a genuine knowledge gap.",
 			"A `too-hard` status means the user pressed Ctrl+P. The question was above their level. Do not grade it. Do not reveal the original answer. Teach the prerequisite in simpler words, then ask an easier question.",
-			"A result with `followUp` set means the captain steered the quiz. Answer that guidance directly. Do not grade it.",
+			"A result with `followUp` set means the captain ended the quiz from follow-up mode. Answer that guidance directly. Do not grade it.",
+			"An answer may carry a `note` field: free text the user typed in note mode and attached to the answer, including Other. A `followUp` or `too-hard` result may carry one too. It shows what they were thinking or unsure about. Read it and let it steer your follow-up.",
+			"While a quiz is open, the user can send you a steer from steering mode. It arrives as an ordinary user message and does not close the quiz. If one arrives while a quiz is pending, the quiz is still awaiting its answer.",
 			"Treat each distractor as a diagnostic probe, not filler. Make it a specific mistake the user might hold: a common misconception, or an easily confused concept. The distractor the user picks tells you which gap to teach next. It also tells you what the explanation must address.",
 			"Guardrail: each distractor must be clearly wrong on the intended reading. Make it tempting, but a real error. Do not write a defensible alternative. Do not write a trick question.",
 			"Do not let the correct answer stand out by form. Keep the options similar in length, detail, and phrasing. The user must not pick the answer from shape alone.",
@@ -1287,16 +1494,16 @@ export default function quiz(pi: ExtensionAPI) {
 			return withUILock(async () => {
 				const response =
 					mode === "single-select"
-						? await askSingleChoice(ctx, signal, params.question, context, contextFiles, options, correctIndices, explanation, title)
-						: await askMultiChoice(ctx, signal, params.question, context, contextFiles, options, correctIndices, explanation, title);
+						? await askSingleChoice(ctx, pi, signal, params.question, context, contextFiles, options, correctIndices, explanation, title)
+						: await askMultiChoice(ctx, pi, signal, params.question, context, contextFiles, options, correctIndices, explanation, title);
 				if (!response) {
 					return cancelledResult(params.question, mode, correctIndices, context, title);
 				}
 				if (response.followUp) {
-					return followUpResult(params.question, mode, response.followUp, correctIndices, context, title);
+					return followUpResult(params.question, mode, response.followUp, correctIndices, context, title, response.note);
 				}
 				if (response.tooHard) {
-					return tooHardResult(params.question, mode, correctIndices, context, title);
+					return tooHardResult(params.question, mode, correctIndices, context, title, response.note);
 				}
 				return buildResult(params.question, context, mode, options, response, correctIndices, explanation, title);
 			});
@@ -1344,11 +1551,15 @@ export default function quiz(pi: ExtensionAPI) {
 				return new Text(theme.fg("warning", details.message || "quiz unavailable"), 0, 0);
 			}
 			if (details.status === "follow-up") {
-				const body = details.followUp ? `Steering: ${details.followUp}` : (details.message || "Steering");
-				return new Text(theme.fg("accent", body), 0, 0);
+				const body = details.followUp ? `Follow-up: ${details.followUp}` : (details.message || "Follow-up");
+				const lines = [theme.fg("accent", body)];
+				if (details.note) lines.push(theme.fg("muted", `Note: ${details.note}`));
+				return new Text(lines.join("\n"), 0, 0);
 			}
 			if (details.status === "too-hard") {
-				return new Text(theme.fg("warning", "Passed — question was too hard; simplifying next"), 0, 0);
+				const lines = [theme.fg("warning", "Passed — question was too hard; simplifying next")];
+				if (details.note) lines.push(theme.fg("muted", `Note: ${details.note}`));
+				return new Text(lines.join("\n"), 0, 0);
 			}
 
 			const correctSet = new Set(details.correctIndices);

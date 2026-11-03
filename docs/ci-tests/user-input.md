@@ -13,10 +13,15 @@ fake modules only. No test touches a real editor, pane, or network.
   digit key selects; Enter submits. `j` and `k` move the cursor, in plain
   and Kitty CSI-u form. Literal `j` and `k` stay as text in every editor
   mode. All four panels show the number and navigation hints.
-- **U2 Input modes.** Tab cycles Answer and Steering. The question stays
-  visible in Steering. Enter on an empty steering buffer does nothing. A
-  steering submit ends the quiz with a visible `follow-up` result. The
-  steering editor keeps its text on Enter. Ctrl+P works from both modes.
+- **U2 Input modes.** Tab cycles Answer, Steering, Note, and Follow-up.
+  The question stays visible in every mode. Steering Enter sends the text
+  to the agent as a live steer; the quiz stays open and the send is
+  confirmed in-panel. With an empty steering buffer, `o` still opens the
+  context files. Note text rides with the eventual answer (and with a
+  follow-up or too-hard result). Follow-up Enter ends the quiz with a
+  visible `follow-up` result. Enter on an empty input buffer returns to
+  Answer mode. Each input-box mode has its own editor, so texts never
+  leak between modes. Ctrl+P works from every mode.
 - **U3 Explain key routing.** Bare `h` opens the node view only when the
   answer field is empty or in the verdict phase. Once the learner composes
   text, every `h` is text; this state is sticky. `H` (Shift+H) opens the
@@ -73,8 +78,6 @@ module through two jiti instances loses attribution.
 - The plan row U3 names `alt+h`. The current design routes `H` (Shift+H)
   instead, because the window manager owns the Alt key. The suite pins the
   current design: Alt goes to the editor as text.
-- The plan row U2 names a note mode. The quiz has Answer and Steering
-  modes only. The suite pins the current two-mode cycle.
 - `explain.ts` keeps some uncovered render branches with no new logic.
 - The real `matchesKey` lives in pi-tui. The tests use a faithful fake.
   Its extra modifier branches belong to pi-tui, not to these extensions.

@@ -52,7 +52,10 @@ const jiti = createJiti(import.meta.url, {
 
 const { default: registerQuiz } = jiti("./quiz.ts");
 let quizTool;
-registerQuiz({ registerTool(tool) { quizTool = tool; } });
+registerQuiz({
+	registerTool(tool) { quizTool = tool; },
+	sendUserMessage() {},
+});
 assert.equal(quizTool?.name, "quiz");
 
 const theme = { fg: (_color, text) => text, bold: (text) => text };
@@ -139,18 +142,19 @@ assert.equal(cancelled.details.status, "cancelled");
 assert.deepEqual(cancelled.details.answers, []);
 assert.match(cancelled.content[0].text, /User cancelled the quiz/);
 
-// follow-up: steering guidance ends the quiz as its own visible status.
+// follow-up: guidance typed in follow-up mode (Tab x3) ends the quiz as its
+// own visible status.
 const followUp = await quizTool.execute(
 	"follow-up-result",
 	params,
 	signal,
 	undefined,
-	contextFor(["tab", "w", "a", "i", "t", "enter"]),
+	contextFor(["tab", "tab", "tab", "w", "a", "i", "t", "enter"]),
 );
 assert.equal(followUp.details.status, "follow-up");
 assert.equal(followUp.details.followUp, "wait");
 assert.deepEqual(followUp.details.answers, []);
-assert.match(followUp.content[0].text, /User steered instead of answering: wait/);
+assert.match(followUp.content[0].text, /User sent a follow-up instead of answering: wait/);
 
 // Every status renders a distinct, visible transcript row.
 const identityTheme = { fg: (_color, text) => text, bold: (text) => text };
@@ -161,7 +165,7 @@ assert.match(render(dontKnow), /Other — I don't know/);
 assert.match(render(dontKnow), /✓ 1\. First/);
 assert.doesNotMatch(render(dontKnow), /✗/, "dontKnow never shows a wrong mark");
 assert.match(render(cancelled), /User cancelled the quiz/);
-assert.match(render(followUp), /Steering: wait/);
+assert.match(render(followUp), /Follow-up: wait/);
 
 // The thinking phase sits between select and feedback: select-Enter opens it,
 // Enter submits the learner's optional reasoning, and the verdict comes after.

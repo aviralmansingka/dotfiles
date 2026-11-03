@@ -60,7 +60,11 @@ exports.wrapTextWithAnsi = (text, width) => {
 		},
 	});
 	const tools = {};
-	const registry = { registerTool(tool) { tools[tool.name] = tool; } };
+	const sentSteers = [];
+	const registry = {
+		registerTool(tool) { tools[tool.name] = tool; },
+		sendUserMessage(text, options) { sentSteers.push({ text, options }); },
+	};
 	jiti("../ask-user-question.ts").default(registry);
 	jiti("../explain.ts").default(registry);
 	jiti("../quiz.ts").default(registry);
@@ -281,6 +285,8 @@ exports.wrapTextWithAnsi = (text, width) => {
 	assert.equal(quizMultiExclusive.details.dontKnow, false);
 	assert.deepEqual(quizMultiExclusive.details.answers.map((answer) => answer.value), ["alpha"]);
 
+	// Steering mode: Enter sends a live steer and the quiz stays open — the
+	// send is confirmed in-panel and the captain can still answer or cancel.
 	const quizSteer = await execute(tools.quiz, quizParams, [
 		{ data: "tab", selected: /Mode: Steering[\s\S]*\n│ › █/ },
 		{ data: "p" },
@@ -288,10 +294,28 @@ exports.wrapTextWithAnsi = (text, width) => {
 		{ data: "u" },
 		{ data: "s" },
 		{ data: "e" },
+		{ data: "enter", selected: /✓ Steer sent — the quiz stays open/ },
+		{ data: "escape", selected: /Mode: Answer/ },
+		{ data: "escape" },
+	]);
+	assert.equal(quizSteer.details.status, "cancelled");
+	assert.deepEqual(sentSteers, [{ text: "pause", options: { deliverAs: "steer" } }]);
+
+	// Follow-up mode (Tab x3): Enter ends the quiz with the guidance as a
+	// visible follow-up result.
+	const quizFollowUp = await execute(tools.quiz, quizParams, [
+		{ data: "tab" },
+		{ data: "tab" },
+		{ data: "tab", selected: /Mode: Follow-up[\s\S]*\n│ › █/ },
+		{ data: "p" },
+		{ data: "a" },
+		{ data: "u" },
+		{ data: "s" },
+		{ data: "e" },
 		{ data: "enter" },
 	]);
-	assert.equal(quizSteer.details.status, "follow-up");
-	assert.equal(quizSteer.details.followUp, "pause");
+	assert.equal(quizFollowUp.details.status, "follow-up");
+	assert.equal(quizFollowUp.details.followUp, "pause");
 
 	// Ask multi-select: Esc from the Other editor returns to the option list
 	// and the custom text is discarded (single-select ask).
