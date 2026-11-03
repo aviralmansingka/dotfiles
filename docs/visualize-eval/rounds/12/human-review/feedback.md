@@ -45,6 +45,23 @@ Reviewer: the owner. Tabs (round 11 left vs round 12 right):
    Rubric impact: layout_fit judges fit OR navigable-large-canvas with
    descriptions; a new clarity/navigation category consideration.
 
+   OWNER ADDITION (same day): "if you feel that having a larger canvas is
+   going to help with clarity, then go ahead and do that. Ask the user if
+   they want multiple panes or a single pane with everything. Feel free
+   to triage their requirements as part of this skill to generate the
+   best visualization for their usecase."
+
+   SKILL TRIAGE STEP (proposal 12, step 0):
+   - Read the request's complexity and the reader's job (side-by-side
+     reference vs navigate-and-explore).
+   - Agent judgment rules: use a larger canvas whenever it helps
+     clarity; split into described concept-diagrams when concepts
+     separate cleanly; never water down.
+   - When the panes-vs-canvas choice materially changes the result, ASK
+     the user one concrete question (multiple panes, or one pane with
+     everything) before generating.
+   - Triage is part of the skill's contract, not an optional nicety.
+
 2. (owner, 2026-11-03, on gb300 a3 ambiguity) "in cases where the arrows
    can have so many ambiguous paths, it would be good to use dots and
    have the dots have either the color of their src or dest, depending
