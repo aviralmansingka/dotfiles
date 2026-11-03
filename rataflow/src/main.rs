@@ -261,7 +261,7 @@ fn check(spec: &Spec, flow: &mut Graph, report: &Report) -> Result<()> {
             if let Some(description) = section.description.as_deref() {
                 println!("  description: {description}");
             }
-            if let Some((fx, fy, fw, fh)) = section.frame {
+            for (fx, fy, fw, fh) in &section.frames {
                 println!("  enclosed: dotted box={fw}x{fh} at {fx},{fy} (contents of a zoomed-in component)");
             }
             if !section.focus.is_empty() {

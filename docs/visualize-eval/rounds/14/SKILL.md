@@ -325,6 +325,11 @@ draw the zoom chain instead of repeating the same box everywhere:
   misreads as the wrong ownership boundary. (`"enclosed": true` still
   wraps the whole band; use it only when everything in the section
   really is inside the component.)
+- **Non-contiguous members get their own box.** When a nested service
+  sits between two externals, one rectangle cannot hold it without
+  swallowing them. Use `"enclosures": [[...], [...]]` - one dotted box per
+  contiguous group - instead of leaving that service outside the
+  boundary. A service of the component always reads as inside SOME box.
 - **Relations may enter the box, never travel along its edge.** The
   engine keeps one cell of clearance and reports
   `enclosure-entrances:` (normal: a relation joins an outside element to
