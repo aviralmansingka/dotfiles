@@ -70,22 +70,34 @@ Discover the deferred `mission` tool through `tool_search`. Humans can use
 `/missions` to select a mission, or `/mission start REPO/SLUG`.
 
 - `mission {action:"start", handle:"REPO/SLUG"}` reserves a launch, creates or
-  reuses the mission's worktree, and launches the durable mission-worker through
-  interactive-subagents in the repository's existing Herdr workspace.
+  reuses the mission's `mission/<slug>` worktree, registers it as a Herdr worktree
+  workspace (linked under the repository), and launches the durable mission-worker
+  through interactive-subagents in that workspace.
 - `mission {action:"attach", handle:"REPO/SLUG"}` adopts the current existing Pi
   session. It must already run at the root of an unowned non-main linked worktree,
-  in the repository's primary Herdr workspace. It cannot move a live session's cwd.
+  inside the mission's worktree workspace or, for missions bound before worktree
+  workspaces, the repository's primary Herdr workspace. It cannot move a live
+  session's cwd.
 - `mission {action:"status", handle:"REPO/SLUG"}` and `action:"steps"` inspect work.
 - `mission {action:"next"}` claims the next eligible step in the same session and
   worktree. Resume the owning Pi session rather than opening a second owner.
+
+Revive a deleted worktree. If the Herdr workspace or the checkout is gone but the
+`mission/<slug>` branch remains, `start` recreates the checkout at the recorded
+path and registers it again with `herdr worktree open`. Never create a second
+branch or checkout; a branch checked out elsewhere is reported, not duplicated.
+If an owner session is recorded, resume it. If the step failed, run
+`mission retry`, then `next`.
 
 A started mission-worker receives a continuation prompt after each verified step
 when no checkpoint is pending. An attached existing session uses explicit `next`
 and does not automatically start more work. At a checkpoint, wait for the user to
 accept it and direct continuation.
 
-One repository owns one Herdr workspace. One mission owns one persistent linked
-worktree and one durable Pi owner. Attempts belong to steps, not to new worktrees.
+One repository owns one Herdr workspace, plus one linked worktree workspace per
+registered worktree; a mission's checkout owns its own. One mission owns one
+persistent linked worktree and one durable Pi owner. Attempts belong to steps, not
+to new worktrees.
 Do not remove a worktree after a step. Never bypass a pending launch by spawning
 again: a crash may have launched the first session. Inspect its recorded session
 file and Herdr pane, then attach that session using the pending launch_id.

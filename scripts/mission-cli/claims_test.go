@@ -129,7 +129,7 @@ func TestWorkspaceReuseAndSessionHeaderValidation(t *testing.T) {
 	wantCode(t, e, "invalid_session")
 }
 
-func TestMissionsShareWorkspaceButKeepDifferentWorktrees(t *testing.T) {
+func TestMissionsKeepPerWorktreeWorkspaces(t *testing.T) {
 	s, h, p := piFixture(t)
 	_, e := s.attach(h, p)
 	must(t, e)
@@ -145,15 +145,35 @@ func TestMissionsShareWorkspaceButKeepDifferentWorktrees(t *testing.T) {
 	other.Cwd = second.State.Runtime.Cwd
 	other.SessionID = "second-session"
 	other.SessionFile = filepath.Join(t.TempDir(), "pi.jsonl")
-	other.Workspace = "wrong-workspace"
+	// Each mission worktree owns its own Herdr worktree workspace.
+	other.Workspace = "mission-workspace"
+	other.Pane = "mission-workspace:p1"
 	piHeader(t, other)
-	_, e = s.attach(second.Handle, other)
-	wantCode(t, e, "workspace_mismatch")
-	other.Workspace = p.Workspace
-	other.Pane = "repo-workspace:p2"
 	c, e := s.attach(second.Handle, other)
 	must(t, e)
 	if c.Attempt.Cwd == p.Cwd {
 		t.Fatal("missions share a worktree")
+	}
+	r, e = s.load(h)
+	must(t, e)
+	second, e = s.load(second.Handle)
+	must(t, e)
+	if r.State.Runtime.Workspace == second.State.Runtime.Workspace {
+		t.Fatal("missions share a worktree workspace")
+	}
+	// Missions bound before the worktree-workspace change still share the
+	// repository's primary workspace; a later attach must not refuse them.
+	m.Slug = "legacy-mission"
+	legacy, e := s.create(m)
+	must(t, e)
+	legacy, e = s.workspace(legacy.Handle, "", "main", t.TempDir())
+	must(t, e)
+	old := p
+	old.Cwd = legacy.State.Runtime.Cwd
+	old.SessionID = "legacy-session"
+	old.SessionFile = filepath.Join(t.TempDir(), "legacy.jsonl")
+	piHeader(t, old)
+	if _, e = s.attach(legacy.Handle, old); e != nil {
+		t.Fatalf("legacy primary-workspace mission refused: %v", e)
 	}
 }

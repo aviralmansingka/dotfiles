@@ -90,13 +90,79 @@ func (s *Store) checkBinding(r Record, cwd, branch string) (string, error) {
 	return common, nil
 }
 
+// missionBranch is the mission's branch. Slugs are validated as
+// [a-z0-9]+(-[a-z0-9]+)*, so the name is a legal ref component; callers still
+// confirm it with `git check-ref-format --branch` because the branch name is a
+// durable, user-visible identity that other tooling matches on.
+func missionBranch(slug string) string { return "mission/" + slug }
+
+// ensureWorktree revives the mission checkout on its branch. A checkout that
+// was removed from Herdr or deleted on disk stays registered in Git until a
+// prune, and a plain add then fails with "missing but already registered
+// worktree". The branch stays the mission's identity: never create a second
+// branch or a second checkout here.
+func ensureWorktree(checkout, cwd, branch string) error {
+	if _, e := os.Stat(cwd); e == nil {
+		top, te := gitText(cwd, "rev-parse", "--show-toplevel")
+		real, re := filepath.EvalSymlinks(cwd)
+		if te == nil && re == nil {
+			if t, e := filepath.EvalSymlinks(top); e == nil && t == real {
+				return nil
+			}
+		}
+		// A leftover empty directory is safe to replace. Anything else may be
+		// the user's data, so refuse to delete it.
+		entries, e := os.ReadDir(cwd)
+		if e != nil {
+			return e
+		}
+		if len(entries) > 0 {
+			return problem("worktree_invalid", "%s exists and is not the mission checkout; move it aside first", cwd)
+		}
+		if e = os.RemoveAll(cwd); e != nil {
+			return e
+		}
+	} else if !os.IsNotExist(e) {
+		return e
+	}
+	if _, e := gitText(checkout, "worktree", "prune"); e != nil {
+		return e
+	}
+	if e := os.MkdirAll(filepath.Dir(cwd), 0700); e != nil {
+		return e
+	}
+	if _, e := gitText(checkout, "worktree", "add", cwd, branch); e != nil {
+		// Git versions phrase this two ways: "already checked out" and
+		// "is already used by worktree". Both mean the branch has an owner.
+		msg := e.Error()
+		if strings.Contains(msg, "already checked out") || strings.Contains(msg, "already used by worktree") {
+			return problem("worktree_in_use", "branch %s is checked out in another worktree; inspect that checkout instead of adding a second one", branch)
+		}
+		return e
+	}
+	return nil
+}
+
 // A mission keeps its worktree across steps, retries, and checkpoint revisions.
 // Existing sessions can adopt their current linked worktree with --cwd.
 func (s *Store) workspace(h, cwd, base, root string) (Record, error) {
 	return s.mutate(h, func(r *Record) error {
+		repo, e := s.repo(r.Mission.Repo)
+		if e != nil {
+			return e
+		}
+		checkout := repo.Bindings[machine()]
+		if checkout == "" {
+			return problem("no_checkout", "register this machine's repository checkout")
+		}
 		if b := r.State.Runtime; b != nil {
 			if b.Machine != machine() {
 				return problem("wrong_machine", "worktree is bound on %s", b.Machine)
+			}
+			// A closed Herdr workspace or a deleted checkout revives on the
+			// recorded branch instead of failing the relaunch.
+			if e = ensureWorktree(checkout, b.Cwd, b.Branch); e != nil {
+				return e
 			}
 			if cwd != "" {
 				p, e := filepath.EvalSymlinks(cwd)
@@ -117,14 +183,6 @@ func (s *Store) workspace(h, cwd, base, root string) (Record, error) {
 			_, e = s.checkBinding(*r, b.Cwd, branch)
 			return e
 		}
-		repo, e := s.repo(r.Mission.Repo)
-		if e != nil {
-			return e
-		}
-		checkout := repo.Bindings[machine()]
-		if checkout == "" {
-			return problem("no_checkout", "register this machine's repository checkout")
-		}
 		branch, baseCommit := "", ""
 		if cwd == "" {
 			base = fallback(base, "main")
@@ -135,7 +193,13 @@ func (s *Store) workspace(h, cwd, base, root string) (Record, error) {
 			if e != nil {
 				return e
 			}
-			branch = "task/mission-" + r.Mission.Slug
+			// Missions own mission/<slug>. The checkout lives in the shared Herdr
+			// worktree root so the Herdr worktree registration (done by the Pi
+			// extension) finds an existing linked worktree instead of creating one.
+			branch = missionBranch(r.Mission.Slug)
+			if _, e = gitText(checkout, "check-ref-format", "--branch", branch); e != nil {
+				return problem("invalid_branch", "%s is not a valid git branch name for mission slug %s", branch, r.Mission.Slug)
+			}
 			if root == "" {
 				home, _ := os.UserHomeDir()
 				root = filepath.Join(home, ".herdr", "worktrees", r.Mission.Repo)
@@ -165,14 +229,7 @@ func (s *Store) workspace(h, cwd, base, root string) (Record, error) {
 					return e
 				}
 			}
-			if _, e = os.Stat(cwd); os.IsNotExist(e) {
-				if e = os.MkdirAll(root, 0700); e != nil {
-					return e
-				}
-				if _, e = gitText(checkout, "worktree", "add", cwd, branch); e != nil {
-					return e
-				}
-			} else if e != nil {
+			if e = ensureWorktree(checkout, cwd, branch); e != nil {
 				return e
 			}
 		}
@@ -223,16 +280,13 @@ func (s *Store) attachBinding(r *Record, p PiAttachment, cwd, branch string) err
 	if b.SessionFile != "" && b.SessionFile != p.SessionFile {
 		return problem("session_owned", "mission already records a different session file")
 	}
-	// One repository workspace, even when its worktrees have different sessions.
-	all, e := s.list()
-	if e != nil {
-		return e
-	}
-	for _, other := range all {
-		if ob := other.State.Runtime; ob != nil && ob.Common == common && ob.Machine == machine() && ob.Workspace != "" && ob.Workspace != p.Workspace {
-			return problem("workspace_mismatch", "repository missions share Herdr workspace %s", ob.Workspace)
-		}
-	}
+	// Workspace identity is per mission worktree, not per repository: the Pi
+	// extension registers each mission checkout as its own Herdr worktree
+	// workspace, so two missions bound in one repository legitimately record
+	// different workspaces. Missions recorded before that change still share the
+	// repository's primary workspace, so the CLI accepts both shapes. The pane
+	// cwd remains the real binding: checkBinding already refuses a worktree two
+	// missions would share.
 	b.SessionID, b.SessionFile, b.Workspace, b.Pane = p.SessionID, p.SessionFile, p.Workspace, p.Pane
 	return nil
 }

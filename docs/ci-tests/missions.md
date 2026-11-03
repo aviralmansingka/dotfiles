@@ -13,6 +13,11 @@ attachment, launch intent deduplication, structured progress and evidence hashes
 hook retries, transcript copies, checkpoint pauses, and verified completion.
 They check that a normal turn without a completion report keeps its owner.
 They also check that an interrupted turn cannot settle a completion report.
+One Go case pins the mission identity: branch `mission/<slug>`, a linked checkout
+under the worktree root, the `branch.<name>.missionOwner` marker, reuse on reland,
+and refusal of an unmarked `mission/<slug>` branch. The extension cases stub
+`herdr` and pin the `herdr worktree open` registration plus the workspace the
+mission-worker tab lands in; no Herdr call is made.
 
 The extension test file also runs in the Pi test job. Without MISSION_TEST_BIN,
 it runs only the pure adapter tests and marks CLI integration cases as skipped.

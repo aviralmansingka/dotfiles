@@ -48,27 +48,41 @@ are `list`, `create`, `steps`, `edit`, `status`, `start`, `attach`, `next`, `pro
 
 ## Workspace and ownership
 
-A repository keeps its existing primary Herdr workspace. `start` resolves it by
-Git common directory and creates a background tab there. It does not call Herdr's
-worktree create/open commands, which can create a separate workspace on the
-installed version. If the primary workspace is absent or ambiguous, start refuses.
+A repository keeps its existing primary Herdr workspace. `start` registers the
+mission checkout as a Herdr **worktree workspace** with
+`herdr worktree open --cwd <primary checkout> --path <mission worktree> --no-focus`.
+That call is idempotent: it returns the workspace Herdr already links to the
+repository, and creates one on first launch. The mission-worker runs in that
+workspace's first tab, or in a new tab there when the workspace is already open
+(the previous session may still be parked on that pane). Herdr groups per-worktree
+workspaces under the repository, so one repository still owns one repository
+workspace plus its linked worktree workspaces.
 
 Each mission gets `~/.herdr/worktrees/<repo>/mission-<slug>` on
-`task/mission-<slug>`, initially from local `main`. The CLI records the base commit.
-An existing branch must carry this mission's ownership marker to be reused.
+`mission/<slug>`, initially from local `main`. The CLI creates the checkout and
+checks the branch name with `git check-ref-format --branch`; the base commit is
+recorded. An existing branch must carry this mission's ownership marker to be
+reused.
 The same path and branch remain bound across steps, retries, and revisions.
+If the Herdr workspace or the checkout is deleted but the `mission/<slug>` branch
+remains, `start` recreates the checkout at the recorded path and re-registers it
+with `herdr worktree open`. It never creates a second branch or checkout. A
+branch checked out elsewhere is reported, not duplicated.
 Ownership is single-host and exclusive across missions in that vault. Unrelated
 vaults do not share a lock or ownership index.
 
 For an already running Pi session, use `/mission attach REPO/SLUG` from the root
-of its non-main linked worktree in the repository's primary workspace. The CLI
+of its non-main linked worktree in one of the repository's Herdr workspaces — the
+mission's own worktree workspace, or the repository's primary workspace for a
+mission bound before worktree workspaces existed. The CLI
 checks the Pi session header, repository identity, cwd, durable owner, and active
 attempt. It adopts that worktree without copying code or moving the session.
 Attachment to main, a second mission in the same worktree, or a different owning
 session is refused. Herdr remains responsible for preventing duplicate live
 attachments to the same Pi session file.
 
-`start` persists a launch intent before opening a tab. The mission-worker first
+`start` persists a launch intent before registering the Herdr worktree and
+opening the worker tab. The mission-worker first
 attaches through the tool using that intent. A launch receipt stores its session
 file. Repeating start returns the recorded runtime instead of spawning again.
 An uncertain launch remains reserved for inspection; it is never timed out into a
