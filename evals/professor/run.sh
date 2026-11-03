@@ -16,7 +16,7 @@
 #   sessions/      the pi session file
 #   meta.json      model, skill hash, git commit, date
 #
-# Three "continue" follow-ups follow the opening prompt. The skill parks for
+# Six "continue" follow-ups follow the opening prompt. The skill parks for
 # the learner after the probe report and after the plan; without them a headless
 # run ends at the first park with no teaching.
 #   score.json     metrics from score.mjs
@@ -138,7 +138,7 @@ timeout "${EVAL_TIMEOUT:-900}" pi --print \
 	--tools read,bash,grep,find,ls,write,edit,quiz,explain,lesson,ask_user_question,run-command \
 	--session-dir "$out/sessions" \
 	--no-approve --no-mcp --model "$model" \
-	-- "$prompt" "continue" "continue" "continue" >"$out/stdout.txt" 2>"$out/stderr.txt"
+	-- "$prompt" "continue" "continue" "continue" "continue" "continue" "continue" >"$out/stdout.txt" 2>"$out/stderr.txt"
 status=$?
 
 node "$here/score.mjs" "$out" | tee "$out/score.txt"
