@@ -7,7 +7,7 @@ import { mkdtempSync, writeFileSync, readFileSync, readdirSync, statSync, realpa
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { MissionBridge, repositoryWorkspaces, quiescent } from "./core.mjs";
+import { MissionBridge, missionContinues, missionToolBlock, repositoryWorkspaces, quiescent } from "./core.mjs";
 import { missionLaunchConfig } from "../interactive-subagents/pi-extension/subagents/mission-launch.mjs";
 
 const exec = promisify(execFile);
@@ -35,6 +35,35 @@ test("workspace lookup keeps every workspace of one repository lineage", () => {
   assert.deepEqual(repositoryWorkspaces(records,"/git/repo").map(w=>w.workspace_id),["repo","mission-a"]);
   assert.deepEqual(repositoryWorkspaces(records,"/git/absent"),[]);
   assert.deepEqual(repositoryWorkspaces(undefined,"/git/repo"),[]);
+});
+
+test("mission tool gate follows status and never blocks inspection", () => {
+  const at = (status, attempt) => ({ record: { state: { status } }, attempt });
+  for (const status of ["waiting", "review", "done", "failed"])
+    for (const toolName of ["bash", "write", "edit"])
+      assert.equal(missionToolBlock({ toolName, current: at(status) }), undefined, `${status} allows ${toolName}`);
+  assert.equal(missionToolBlock({ toolName: "bash", current: at("running", { id: "attempt-1" }) }), undefined);
+  assert.match(missionToolBlock({ toolName: "bash", current: at("ready") }), /No active mission step/);
+  assert.match(missionToolBlock({ toolName: "write", current: null }), /No active mission step/);
+  assert.match(missionToolBlock({ toolName: "write", tracked: false, expectedAttachment: true }), /Restore/);
+  assert.equal(missionToolBlock({ toolName: "write", tracked: false }), undefined);
+  for (const toolName of ["read", "grep", "find", "ls", "tool_search", "mission"]) {
+    assert.equal(missionToolBlock({ toolName, current: at("ready") }), undefined, `${toolName} inspects a ready mission`);
+    assert.equal(missionToolBlock({ toolName, current: null }), undefined, `${toolName} inspects without a step`);
+    assert.equal(missionToolBlock({ toolName, tracked: false, expectedAttachment: true }), undefined, `${toolName} inspects a broken cache`);
+  }
+});
+
+test("next-step continuation follows status and pending steps", () => {
+  const steps = { S01: { status: "passed" }, S02: { status: "pending" } };
+  assert.equal(missionContinues({ status: "ready", steps }), true);
+  assert.equal(missionContinues({ status: "ready", steps: { S01: { status: "needs_changes" } } }), true);
+  assert.equal(missionContinues({ status: "ready", steps: { S01: { status: "passed" } } }), false);
+  assert.equal(missionContinues({ status: "ready", steps, pending_checkpoint: "C01" }), false);
+  for (const status of ["done", "failed", "waiting", "review", "running", undefined]) {
+    assert.equal(missionContinues({ status, steps }), false, `${status} never continues`);
+  }
+  assert.equal(missionContinues(undefined), false);
 });
 
 test("internal mission launch config forwards only non-secret paths", () => {
@@ -212,17 +241,20 @@ test("ambiguous launch failure is durable and never retried as a new worker",nee
   } finally {delete globalThis.__pi_interactive_subagents}
 });
 
+/** Load the missions extension factory through jiti, exactly as pi does. */
+async function loadFactory() {
+  const {createRequire,default:Module}=await import("node:module");
+  const {resolveJiti}=await import("../test-lib/jiti.mjs");const {jitiPath,nodePath}=resolveJiti();
+  process.env.NODE_PATH=nodePath;Module._initPaths();
+  const {createJiti}=createRequire(import.meta.url)(jitiPath);
+  const imported=createJiti(import.meta.url,{interopDefault:true})("./index.ts");
+  return imported.default || imported;
+}
+
 test("Pi factory callbacks use final settlement and block changes at a checkpoint",needsCLI,async t=>{
   const f=await fixture(t,true);
   f.env.PI_SUBAGENT_AGENT="mission-worker";
-  const {createRequire}=await import("node:module");
-  const {resolveJiti}=await import("../test-lib/jiti.mjs");
-  const {jitiPath,nodePath}=resolveJiti();
-  process.env.NODE_PATH=nodePath;
-  const {default:Module}=await import("node:module");Module._initPaths();
-  const {createJiti}=createRequire(import.meta.url)(jitiPath);
-  const imported=createJiti(import.meta.url,{interopDefault:true})("./index.ts");
-  const factory=imported.default || imported;
+  const factory=await loadFactory();
   const events={},tools={},commands={},notifications=[],statuses=new Map();
   const pi={on:(name,fn)=>{events[name]=fn},registerTool:t=>{tools[t.name]=t},registerCommand:(name,c)=>{commands[name]=c},sendMessage:()=>{throw Error("Checkpoint must not continue automatically")}};
   const ctx={...f.ctx,hasUI:true,ui:{notify:(s)=>notifications.push(s),setStatus:(k,v)=>statuses.set(k,v),select:async(_title,options)=>options[0]}};
@@ -243,8 +275,12 @@ test("Pi factory callbacks use final settlement and block changes at a checkpoin
   await events.agent_before_settle({outcome:"completed"},ctx);
   await events.agent_settled({aborted:false},ctx);
   const r=await f.bridge.call(["show",f.handle]);assert.equal(r.state.pending_checkpoint,"C01");assert.equal(r.state.attempts[0].settled,true);
-  assert.equal((await events.tool_call({toolName:"bash"},ctx)).block,true);
+  // A pending checkpoint holds the mission for a human. Status decides, not the
+  // active attempt: no attempt is active, yet every tool still passes.
+  assert.equal(await events.tool_call({toolName:"bash"},ctx),undefined);
+  assert.equal(await events.tool_call({toolName:"write"},ctx),undefined);
   assert.equal(await events.tool_call({toolName:"mission"},ctx),undefined);
+  assert.equal(await events.tool_call({toolName:"grep"},ctx),undefined);
   await commands.missions.handler("",ctx);assert.ok(notifications.some(n=>n.includes("pending_checkpoint")));
   await events.session_shutdown({},ctx);
   assert.ok(statuses.get("mission").includes("waiting"));
@@ -268,11 +304,7 @@ test("preview launcher preserves this checkout's config and skill without global
 });
 
 test("started mission owners continue eligible steps; attached sessions remain explicit",needsCLI,async t=>{
-  const {createRequire,default:Module}=await import("node:module");
-  const {resolveJiti}=await import("../test-lib/jiti.mjs");const {jitiPath,nodePath}=resolveJiti();
-  process.env.NODE_PATH=nodePath;Module._initPaths();
-  const {createJiti}=createRequire(import.meta.url)(jitiPath);
-  const imported=createJiti(import.meta.url,{interopDefault:true})("./index.ts");const factory=imported.default || imported;
+  const factory=await loadFactory();
   for(const started of [false,true]) {
     const f=await fixture(t);delete f.env.PI_SUBAGENT_AGENT;if(started)f.env.PI_SUBAGENT_AGENT="mission-worker";
     const events={},tools={},messages=[];
@@ -287,4 +319,47 @@ test("started mission owners continue eligible steps; attached sessions remain e
     if(started){assert.equal(messages[0].message.customType,"mission-next");assert.equal(messages[0].options.triggerTurn,true);}
     assert.equal((await f.bridge.call(["show",f.handle])).state.status,"ready");
   }
+});
+
+test("finished missions release every tool and stop the next-step prompt",needsCLI,async t=>{
+  const factory=await loadFactory();
+  const drive=async()=>{
+    const f=await fixture(t);f.env.PI_SUBAGENT_AGENT="mission-worker";
+    const events={},tools={},messages=[];
+    factory({on:(k,v)=>events[k]=v,registerTool:v=>tools[v.name]=v,registerCommand:()=>{},sendMessage:(message,options)=>messages.push({message,options})},{env:f.env,run:f.run});
+    const ctx={...f.ctx,ui:{notify:()=>{},setStatus:()=>{}}};
+    return {f,events,tools,messages,ctx};
+  };
+  // A settled step leaves the mission "ready": changes wait for the next step.
+  const a=await drive();
+  const first=await a.tools.mission.execute("attach",{action:"attach",handle:a.f.handle},null,null,a.ctx);
+  writeFileSync(first.details.artifact,"Step one evidence");
+  await a.tools.mission.execute("finish",{action:"finish"},null,null,a.ctx);
+  await a.events.agent_before_settle({outcome:"completed"},a.ctx);
+  await a.events.agent_settled({aborted:false},a.ctx);
+  assert.equal((await a.f.bridge.call(["show",a.f.handle])).state.status,"ready");
+  assert.equal(a.messages.length,1);
+  assert.match((await a.events.tool_call({toolName:"bash"},a.ctx)).reason,/No active mission step/);
+  assert.equal(await a.events.tool_call({toolName:"grep"},a.ctx),undefined);
+  // Picking up the next step authorizes changes again.
+  const second=await a.tools.mission.execute("next",{action:"next"},null,null,a.ctx);
+  assert.equal(await a.events.tool_call({toolName:"bash"},a.ctx),undefined);
+  writeFileSync(second.details.artifact,"Step two evidence");
+  await a.tools.mission.execute("finish",{action:"finish"},null,null,a.ctx);
+  await a.events.agent_before_settle({outcome:"completed"},a.ctx);
+  await a.events.agent_settled({aborted:false},a.ctx);
+  // The last step ends the mission: every tool passes and nothing continues.
+  assert.equal((await a.f.bridge.call(["show",a.f.handle])).state.status,"done");
+  assert.equal(a.messages.length,1);
+  assert.equal(await a.events.tool_call({toolName:"bash"},a.ctx),undefined);
+  assert.equal(await a.events.tool_call({toolName:"write"},a.ctx),undefined);
+  // A failed mission releases the gate the same way.
+  const b=await drive();
+  await b.tools.mission.execute("attach",{action:"attach",handle:b.f.handle},null,null,b.ctx);
+  await b.tools.mission.execute("fail",{action:"fail",summary:"Blocked"},null,null,b.ctx);
+  await b.events.agent_before_settle({outcome:"completed"},b.ctx);
+  await b.events.agent_settled({aborted:false},b.ctx);
+  assert.equal((await b.f.bridge.call(["show",b.f.handle])).state.status,"failed");
+  assert.equal(b.messages.length,0);
+  assert.equal(await b.events.tool_call({toolName:"bash"},b.ctx),undefined);
 });

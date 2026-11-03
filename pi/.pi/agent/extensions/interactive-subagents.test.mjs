@@ -651,6 +651,17 @@ try {
 	assert.deepEqual(professor.subagentAgents, ["researcher", "tuicr-review"]);
 	assert.equal(professor.skills, "professor");
 	assert.equal(professor.autoExit, false);
+
+	// A mission worker inherits the parent's full tool set, so its profile must
+	// not narrow it: no `tools:` list means no `--tools` flag reaches the child.
+	const missionWorker = loadAgentDefaultsFromPaths("mission-worker", {
+		cwd: profileRoot,
+		configDir: join(profileRoot, "global-agent-config"),
+		bundledDir: bundledAgentsDir,
+	});
+	assert.equal(missionWorker.tools, undefined);
+	assert.equal(missionWorker.agentDir, "parent");
+	assert.equal(missionWorker.autoExit, false);
 } finally {
 	rmSync(profileRoot, { recursive: true, force: true });
 }
@@ -1338,8 +1349,16 @@ assert.equal(
 			file.replace(/\.md$/, ""),
 		);
 		assert.ok(parsed, `${file} has parseable frontmatter`);
-		assert.ok(parsed.tools, `${file} declares a tools list`);
-		for (const tool of parsed.tools.split(",").map((tool) => tool.trim()).filter(Boolean)) {
+		// mission-worker declares no tools list on purpose: it inherits the
+		// parent's full tool set, so no --tools flag narrows the child. Every
+		// other bundled profile narrows its tools, and each named tool resolves.
+		const inheritsParentTools = file === "mission-worker.md";
+		assert.equal(
+			Boolean(parsed.tools),
+			!inheritsParentTools,
+			`${file} ${inheritsParentTools ? "must inherit the parent's tools (no tools list)" : "declares a tools list"}`,
+		);
+		for (const tool of (parsed.tools ?? "").split(",").map((tool) => tool.trim()).filter(Boolean)) {
 			assert.notEqual(
 				tool,
 				"safe_bash",

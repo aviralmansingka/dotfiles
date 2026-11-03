@@ -25,6 +25,42 @@ export function quiescent(event, ctx) {
     pendingCount("pi-subagents/running-children-count") === 0 && pendingCount("pi-subagents/keep-open-count") === 0;
 }
 
+/** Tools that only inspect: they never change the worktree or the vault, so the
+ *  mission gate always passes them. `mission` stays available in every state so
+ *  a held session can inspect its record, report progress, or pick up a step. */
+export const INSPECTION_TOOLS = new Set(["read", "grep", "find", "ls", "tool_search", "mission"]);
+
+/** Mission statuses that hold no agent write authority: "waiting" and "review"
+ *  wait on a human checkpoint decision, while "done" and "failed" already
+ *  ended the mission. Status alone decides, never the active attempt — a closed
+ *  mission has no attempt left, and blocking its tools would leave the session
+ *  unable to report, clean up, or answer the human. */
+export const CLOSED_MISSION_STATUSES = new Set(["waiting", "review", "done", "failed"]);
+
+/** Step statuses the CLI still advances to (nextStep in scripts/mission-cli). */
+const CONTINUABLE_STEP_STATUSES = new Set(["pending", "needs_changes"]);
+
+/** Gate one tool call by mission status. Returns a block reason, or undefined
+ *  when the call may proceed. Inspection tools always pass. A closed mission
+ *  passes every tool. An open mission authorizes changes only while one of its
+ *  attempts is active; "ready" means the session must pick up a step first. */
+export function missionToolBlock({ toolName, current = null, tracked = true, expectedAttachment = false }) {
+  if (INSPECTION_TOOLS.has(toolName)) return undefined;
+  if (!tracked) return expectedAttachment ? "Restore the mission credential cache before changing repository files." : undefined;
+  const status = current?.record?.state?.status;
+  if (CLOSED_MISSION_STATUSES.has(status)) return undefined;
+  if (current?.attempt) return undefined;
+  return "No active mission step. Inspect the checkpoint or explicitly pick up next.";
+}
+
+/** True only when a settled mission can start another step. Terminal
+ *  ("done"/"failed") and human-facing ("waiting"/"review") statuses never
+ *  continue, so the extension does not inject action=next after the end. */
+export function missionContinues(state) {
+  if (state?.status !== "ready" || state.pending_checkpoint) return false;
+  return Object.values(state.steps ?? {}).some(step => CONTINUABLE_STEP_STATUSES.has(step.status));
+}
+
 /** Credentials and an unacknowledged hook outbox are local transport state.
  * Canonical mission facts, transcripts, and attempts live only in the CLI vault.
  * No credentials are put in a prompt, tool result, or a child's environment.
