@@ -5,7 +5,8 @@ description: >-
   active voice, approved verbs, one term per concept, at full compliance with
   no relaxations. Use when the user types /simple, asks for "simple" or
   "simplified" English, asks for STE or ASD-STE100 output, or says a reply is
-  too complex or too wordy.
+  too complex or too wordy. Invoke it yourself, without being asked, when the
+  reply you are about to write will run past about 20 lines.
 user-invocable: true
 ---
 
@@ -15,6 +16,13 @@ Write every reply in ASD-STE100 Simplified Technical English. This skill
 raises the system prompt's 80% standard to **100% — no relaxations**. It
 changes how you write, not what you know. Keep the technical content.
 Simplify the prose only.
+
+## When to invoke it yourself
+
+Invoke this skill without being asked when your reply will run past about 20
+lines: long explanations, multi-section reports, comparison tables, or any
+answer with several headings. Apply it for the whole reply, not part of it.
+Skip it for short answers of a few lines.
 
 ## Sentence rules
 
