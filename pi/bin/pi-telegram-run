@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Run the Telegram daemon under the venv that carries Telethon.
+#
+# The systemd unit cannot name the venv interpreter directly: the venv is host
+# state, not repo state, so a clean machine has no such file and
+# `systemd-analyze verify` refuses the unit. This launcher keeps the unit on
+# /bin/bash and fails early with the provisioning hint instead.
+set -euo pipefail
+
+venv=$HOME/.local/share/pi-telegram/.venv
+[[ -x $venv/bin/python ]] || {
+  printf 'Telegram virtual environment is missing: %s\n' "$venv" >&2
+  printf 'Create it with the uv commands in the README, then restart the unit.\n' >&2
+  exit 1
+}
+
+exec "$venv/bin/python" "$HOME/bin/pi-telegram-daemon.py" "$@"
