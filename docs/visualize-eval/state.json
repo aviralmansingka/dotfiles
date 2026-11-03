@@ -2563,5 +2563,34 @@
     ]
    }
   }
+ },
+ "round_11": {
+  "status": "generating: 6 recipe-impacted reruns launched; pipeline PASS + datacenter FAIL carried from round 10",
+  "skill": {
+   "proposal": "10",
+   "sha256": "fb975dbe337bee801dc098f58695e0068cb1b2d7d79f34c0e473e24a1626cd4e",
+   "change": "family classification demoted to hint - patterns are reference shapes, deviations pass with recorded reason"
+  },
+  "rubric": {
+   "revision": 10,
+   "sha256": "5e09b9be9078ab5b",
+   "change": "category_fit softened to match the skill"
+  },
+  "engine": "unchanged from round 10 (db70722b) - isolates the skill change",
+  "worker_labels": {
+   "network": "viz-ds11-1",
+   "homelab-nic-trace": "viz-ds11-2",
+   "server-nic-layout": "viz-ds11-3",
+   "modal-machine-manager": "viz-ds11-4",
+   "modal-runtime": "viz-ds11-5",
+   "gb300-rack-software": "viz-ds11-6"
+  },
+  "harness_fixes_midround": [
+   "20261102: viz-evidence.sh wait_for_header now polls for the app's own header token (bounded 60s) instead of matching the command echo + sleep 1 - pane captures failed entirely under load ~300 (captain-approved worker fix, disclosed)"
+  ],
+  "carried_verdicts": {
+   "pipeline": "pass",
+   "datacenter-redundancy": "fail (non-recipe grounds: ECMP attribution)"
+  }
  }
 }

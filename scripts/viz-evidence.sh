@@ -193,7 +193,25 @@ fi
 # 5. Timestamped animation frames (deterministic, no alias ambiguity).
 if [ -n "$frames" ]; then
   herdr pane run "$pane" "$bin" "$spec_abs" --frames "$frames" --step-ms "$step_ms" >/dev/null
-  sleep 1
+  # Same paint-latency bug as wait_for_header: a flat second is not enough for
+  # the viewer to start and print its last frame, so poll for that line too.
+  last_frame=$((frames - 1))
+  want_frame="frame $last_frame at $((last_frame * step_ms))ms"
+  waited=0
+  while [ "$waited" -lt 60 ]; do
+    if herdr pane read "$pane" --source recent --lines 4000 --format text 2>/dev/null \
+        | grep -qF "$want_frame"; then
+      sleep 0.3
+      break
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+  if [ "$waited" -ge 60 ]; then
+    printf 'viz-evidence: frames never printed in pane %s after %ss (wanted "%s"); refusing an empty frames capture\n' \
+      "$pane" "$waited" "$want_frame" >&2
+    exit 1
+  fi
   herdr pane read "$pane" --source recent --lines 4000 --format text \
     > "$out_abs/$label-frames.txt"
   herdr pane read "$pane" --source recent --lines 4000 --format ansi \
