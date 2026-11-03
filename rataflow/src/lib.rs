@@ -1509,8 +1509,11 @@ pub struct SectionReport {
     pub diagram: String,
     /// The section heading.
     pub title: String,
-    /// The one-line description under the heading.
+    /// The description under the heading, wrapped onto consecutive rows so a
+    /// section can explain itself in more than one short line.
     pub description: Option<String>,
+    /// The description wrapped to the section's width, one row per line.
+    pub description_lines: Vec<String>,
     /// The diagram's own drawing extent, in cells (width, height).
     pub extent: (i32, i32),
     /// Where the diagram's top-left corner sits on the canvas.
@@ -2057,6 +2060,44 @@ fn node_rect(node: &Node<TextContent>) -> (i32, i32, i32, i32) {
     )
 }
 
+/// Width a section description wraps at, and how many rows it may take.
+const WRAP_WIDTH: usize = 96;
+const WRAP_MAX_LINES: usize = 3;
+
+/// Wraps `text` on word boundaries to at most `width` columns and at most
+/// `max_lines` rows; the last row is ellipsised when the text is longer.
+fn wrap_text(text: &str, width: usize, max_lines: usize) -> Vec<String> {
+    let mut lines: Vec<String> = Vec::new();
+    let mut current = String::new();
+    for word in text.split_whitespace() {
+        let extra = if current.is_empty() { word.chars().count() } else { 1 + word.chars().count() };
+        if !current.is_empty() && current.chars().count() + extra > width {
+            lines.push(std::mem::take(&mut current));
+            if lines.len() == max_lines {
+                break;
+            }
+        }
+        if !current.is_empty() {
+            current.push(' ');
+        }
+        current.push_str(word);
+    }
+    if lines.len() < max_lines && !current.is_empty() {
+        lines.push(current);
+    }
+    if lines.len() == max_lines {
+        if let Some(last) = lines.last().cloned() {
+            if last.chars().count() > width {
+                let cut: String = last.chars().take(width.saturating_sub(1)).collect();
+                if let Some(slot) = lines.last_mut() {
+                    *slot = format!("{cut}\u{2026}");
+                }
+            }
+        }
+    }
+    lines
+}
+
 fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report)> {
     let mut nodes: Vec<Node<TextContent>> = Vec::new();
     let mut edges: Vec<Edge<FlowEdge>> = Vec::new();
@@ -2123,17 +2164,26 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
         let rule = Some(cursor + 1);
         let mut top = cursor + 2;
         let title_row = top;
-        let description_rows = i32::from(diagram.description.is_some());
+        // A description wraps onto as many rows as it needs (up to three), so a
+        // section can say what it shows instead of being cut to one line.
+        let description_lines: Vec<String> = diagram
+            .description
+            .as_deref()
+            .map(|text| wrap_text(text, WRAP_WIDTH, 3))
+            .unwrap_or_default();
+        let description_rows = description_lines.len() as i32;
         // One blank row keeps the heading off the top node border.
         top = title_row + 1 + description_rows + 1;
         top += enclosure_rows;
-        let section_width = width.max(diagram.title.chars().count() as i32).max(
-            diagram
-                .description
-                .as_deref()
-                .map(|line| line.chars().count() as i32)
-                .unwrap_or(0),
-        );
+        let section_width = width
+            .max(diagram.title.chars().count() as i32)
+            .max(
+                description_lines
+                    .iter()
+                    .map(|line| line.chars().count() as i32)
+                    .max()
+                    .unwrap_or(0),
+            );
 
         let dx = -min_x + pad as f64;
         let dy = top as f64 - min_y + pad as f64;
@@ -2193,6 +2243,7 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
             diagram: diagram.id.clone(),
             title: diagram.title.clone(),
             description: diagram.description.clone(),
+            description_lines: description_lines.clone(),
             extent: (width, height),
             origin: (0, top),
             header: (0, title_row),
@@ -3189,14 +3240,14 @@ fn draw_sections(frame: &mut Frame, flow: &Graph, canvas: Rect, sections: &[Sect
             &section.title,
             background.fg(palette.text),
         );
-        if let Some(description) = section.description.as_deref() {
+        for (row, line) in section.description_lines.iter().enumerate() {
             put_world_text(
                 frame,
                 flow,
                 canvas,
                 section.header.0,
-                section.header.1 + 1,
-                description,
+                section.header.1 + 1 + row as i32,
+                line,
                 background.fg(palette.subtle),
             );
         }
