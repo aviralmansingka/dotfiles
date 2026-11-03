@@ -48,11 +48,13 @@ Scripts, configs, infra (job `scripts-tests` + `ops-tests`):
 | Terraform invariants | test-terraform.sh | 17 (19 w/ TF_VALIDATE=1) | 0.1–12.7 s |
 | systemd + launchd units | test-service-units.py | 47 | ~0.5 s |
 | CI meta (structure, routing, gate matching, discovery) | test-ci-self.mjs | 20 synthetic gate cases | — |
+| Merge queue submit helper | test-gh-dash-enqueue-pr.sh | 8, fake gh boundary | 0.1 s |
 | rataflow-view + visualize/artifact skills | test-rataflow.py | 9 offline + 16 cargo (opt-in) | 0.05 s |
 
 Existing wired suites (pre-wave): auto-git-sync, gh-dash-open-pr,
 herdr-clean-handoff, herdr-flash-copy, herdr-annotate-install,
-pi-live-config, pi-hidden-thinking.
+pi-live-config, pi-hidden-thinking. The merge-queue helper joins them; its
+flow is `docs/merge-queue.md`.
 
 ## Totals
 

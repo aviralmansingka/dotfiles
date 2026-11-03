@@ -19,6 +19,15 @@ This document explains the CI workflow, `.github/workflows/ci.yml`.
 A `ci.yml` change starts every area job; an undeclared `*.md` change
 starts none (declared paths beat the strip; no trigger filter, PR #175).
 
+The workflow triggers on `push` (main), `pull_request` (main), and
+`merge_group`. The last one is load-bearing: a merge-queue entry runs on
+the synthetic `gh-readonly-queue/main/pr-<n>` commit, and the required
+`CI result` check must report on that ref or the entry waits until the
+queue times out. The `changes` job reads `merge_group.base_sha` as its
+diff base, because a queue entry has an empty `base_ref` and a null
+`before`. `scripts/test-ci-self.mjs` guards the trigger. Queue behavior
+and the one-time activation: `docs/merge-queue.md`.
+
 ## Discovery and exclusions
 
 CI discovers test files with `git ls-files` globs, never a written list

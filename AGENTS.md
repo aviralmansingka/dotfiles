@@ -205,6 +205,18 @@ the no-mistakes runbook (commands, skip-vs-fail semantics, how to add coverage) 
 `docs/ci-tests/no-mistakes-ci.md`. A new suite is a `scripts/test-<name>.*` entry with a
 `# Paths:` header (`// Paths:` for .mjs) plus a `/simple` doc in `docs/ci-tests/`.
 
+## Merge queue
+
+`main` lands through GitHub's merge queue. Submit with `M` in gh-dash, or
+`gh-dash-enqueue-pr <owner>/<repo> <pr>` from a shell; both end in a merge with no
+further watching. When a no-mistakes run reaches `outcome: checks-passed`, the PR is
+green already, so submit it before you report the outcome — that is the closeout step.
+
+`merge_group` in `.github/workflows/ci.yml` is load-bearing: without it the required
+`CI result` check never reports on a queue entry and every entry times out. Do not add
+a trigger `paths:` filter. Full flow, ruleset settings, and the one-time activation:
+`docs/merge-queue.md`.
+
 ## CUDA LSP host invariant
 
 NVIDIA ships no CUDA Toolkit for macOS Apple Silicon. `.cu` files get
