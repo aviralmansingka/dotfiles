@@ -61,8 +61,16 @@ workspace plus its linked worktree workspaces.
 Each mission gets `~/.herdr/worktrees/<repo>/mission-<slug>` on
 `mission/<slug>`, initially from local `main`. The CLI creates the checkout and
 checks the branch name with `git check-ref-format --branch`; the base commit is
-recorded. An existing branch must carry this mission's ownership marker to be
-reused.
+recorded.
+An existing checkout at that path is adopted rather than recreated: one already
+on `mission/<slug>`, or holding a clean detached HEAD at the branch tip (carried
+onto the branch in place), becomes the mission's worktree, and a missing
+ownership marker is then written. A checkout on another branch is reported as
+`worktree_mismatch`, a detached HEAD with uncommitted work as `worktree_dirty`,
+and neither is ever switched over local changes. A non-empty path that is not a
+checkout is reported as `worktree_invalid` and never deleted. An existing branch
+with no marker and no checkout at the path is reported as `unowned_branch`; a
+branch checked out in another worktree as `worktree_in_use`.
 The same path and branch remain bound across steps, retries, and revisions.
 If the Herdr workspace or the checkout is deleted but the `mission/<slug>` branch
 remains, `start` recreates the checkout at the recorded path and re-registers it

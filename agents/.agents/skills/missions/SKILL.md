@@ -84,8 +84,11 @@ Discover the deferred `mission` tool through `tool_search`. Humans can use
 
 Revive a deleted worktree. If the Herdr workspace or the checkout is gone but the
 `mission/<slug>` branch remains, `start` recreates the checkout at the recorded
-path and registers it again with `herdr worktree open`. Never create a second
-branch or checkout; a branch checked out elsewhere is reported, not duplicated.
+path and registers it again with `herdr worktree open`. An existing checkout at
+that path is adopted in place when it is already on `mission/<slug>` or holds a
+clean detached HEAD at the branch tip; it is never recreated. Never create a
+second branch or checkout; a branch checked out elsewhere is reported, not
+duplicated.
 If an owner session is recorded, resume it. If the step failed, run
 `mission retry`, then `next`.
 
