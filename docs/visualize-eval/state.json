@@ -2767,7 +2767,7 @@
   }
  },
  "round_12": {
-  "status": "GENERATION COMPLETE: 2/2 rerun cases landed (mm resumed after 429; runtime clean); judges next",
+  "status": "1 of 2 verdicts in (runtime FAIL - label ownership + cross-view hue); mm judge in stage B",
   "skill": "proposal 11 44935981\u2026 (budget as hint; coverage overrides)",
   "engine": "db70722b\u2026 (unchanged r10 binary)",
   "rubric": "rev 10 5e09b9be\u2026",
@@ -2778,7 +2778,7 @@
     "views": "2: v1 3n/3e pair+dispatch (57x11 lr); v2 7n/5e seams+chains (58x21 tb)",
     "validation": "captain rerun: 33 PASS / 0 FAIL both views (worker reported same)",
     "highlights": "v2 holds 5 edges (r10 reference held 4; r11 shipped 2-edge views); 8/8 relations+nodes; 0 ambiguous/bridges; one-view merge measured 11x, every variant ambiguous-or-overflow -> recorded recipe_yield; abbreviations disclosed; no blockers",
-    "judge": "spawn after mm lands"
+    "judge": "VERDICT FAIL (terra, blind-first): sema F / arro P / layo P / conc F / cate F / bord P / work P / anim NA. (1) gRPC pair labels nearer other routes than their own - eye-vs-checker gap confirmed 3rd consecutive round (r10/r11/r12); (2) NEW DEFECT CLASS: worker-plane group green in v1, orange in v2 - cross-view hue inconsistency for shared group tags (per-view hue wheel); (3) merge-split upheld: 11 measured attempts justify the split, coverage rule satisfied; (4) dataset digest quibble 6th round - judged non-blocking, actual digest recorded"
    },
    "modal-machine-manager": {
     "worker": "viz-ds12-6c (died at 429 16m37s mid-noleak-campaign; resumed cleanly, finished 7m14s)",

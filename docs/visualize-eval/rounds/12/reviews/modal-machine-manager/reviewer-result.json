@@ -1,0 +1,1010 @@
+{
+  "protocol_version": 1,
+  "round": 12,
+  "case_id": "modal-machine-manager",
+  "candidate_sha256": "ec5e3a206a5e9c26f549cfb02624360693b88750a530a0b0cf515dec9b91ed18",
+  "renderer_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+  "rubric_sha256": "5e09b9be9078ab5b46a82d0faf7bc986bf3d38a2d4cbb2f6745dd3fb9f0f54d7",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "ec5e3a206a5e9c26f549cfb02624360693b88750a530a0b0cf515dec9b91ed18",
+  "generator": {
+    "worker_id": "viz-ds12-6c",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge12-mm",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 83,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/12/reviews/modal-machine-manager/observed-first.md",
+      "sha256": "3342be86e1c4516607bb560cd2de352c1e2d9aec42cf75b5333fc38aa12358a7",
+      "description": "Blind observation saved before reveal",
+      "capture": null
+    },
+    {
+      "id": "spec1",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/spec-v1-final.json",
+      "sha256": "5d0f361759d4b9fb016303f431e79294070c73a1c64c79bfef513e629a3c3064",
+      "description": "Final v1 spec",
+      "capture": null
+    },
+    {
+      "id": "spec2",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/spec-v2-final.json",
+      "sha256": "ec5e3a206a5e9c26f549cfb02624360693b88750a530a0b0cf515dec9b91ed18",
+      "description": "Final v2 spec",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/generation.json",
+      "sha256": "3e2a5e42e45fe81481ade1261b4f1a956b67675000c12a2c60ac45aa55884bcd",
+      "description": "Generation classification and measured yields",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/attempts.json",
+      "sha256": "c41a188b250aa9185c6f2604a16e9feaa6fb4d2faf5c622e75822acb68ad0266",
+      "description": "Attempt summary",
+      "capture": null
+    },
+    {
+      "id": "log",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/attempts-log.jsonl",
+      "sha256": "bee470486235928cae02b2073b1ee41971e91531c34381d9b98a48ec4b10ff65",
+      "description": "225 raw-record references and hashes",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/source.md",
+      "sha256": "a41065d9ceca1ed035bfd6282f0e937abbd0034ad497a33637a76f2d8a9ebab3",
+      "description": "Source and human corrections",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/expected.json",
+      "sha256": "c6d14814bcfa0f41e7401df3b57ea1400e15050b9fb4db3d2e12980d6fde9764",
+      "description": "Source-derived relationship ledger",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/12/rubric.json",
+      "sha256": "5e09b9be9078ab5b46a82d0faf7bc986bf3d38a2d4cbb2f6745dd3fb9f0f54d7",
+      "description": "Frozen rubric",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen dataset manifest",
+      "capture": null
+    },
+    {
+      "id": "pin1",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/evidence/v1/v1-77x47-frames.txt",
+      "sha256": "449d46a8a1df7d6b0cec4778037f0bdb5958ec33073e441fc181d4f68bc77631",
+      "description": "Pinned final-spec frames, 77x47",
+      "capture": null
+    },
+    {
+      "id": "lap1",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/evidence/v1/v1-77x47-lap.txt",
+      "sha256": "f4e86b5fe09e382ee1c971d2f198ba2b3681004f0b9d0f941961837d459dfb21",
+      "description": "Pinned 120-frame lap",
+      "capture": null
+    },
+    {
+      "id": "select1",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/evidence/v1/v1-77x47-select-all.txt",
+      "sha256": "5416f40fae48397d5e8825a9df0370cc8807bb71d3874282c5b6f0f63292e544",
+      "description": "Pinned selection text",
+      "capture": null
+    },
+    {
+      "id": "ansi1",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/evidence/v1/v1-ansi.ansi",
+      "sha256": "192fef7209b08f760bd5c433d41c0a4cb0820b78fbebeb7cdeb2b59a524a66ec",
+      "description": "Live normal ANSI",
+      "capture": null
+    },
+    {
+      "id": "selected1",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/evidence/v1/v1-selected.ansi",
+      "sha256": "24b62a007edc9e3444b927ea9cabfbf76597c2c675750458e887df2a9c041af2",
+      "description": "Live selected ANSI",
+      "capture": null
+    },
+    {
+      "id": "check1",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/evidence/v1/check.txt",
+      "sha256": "3a165d945a3442a9472b8ece4c3f6a8e9585928d68d166bb5fa261e3d0b25e2f",
+      "description": "Renderer check",
+      "capture": null
+    },
+    {
+      "id": "manifest1",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/evidence/v1/manifest.json",
+      "sha256": "c11d92ac237a19abacb45a76e720bbfee54000f4f3406bc840db899f3d2ca14f",
+      "description": "Capture manifest and cleanup",
+      "capture": null
+    },
+    {
+      "id": "validator1",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/validator-v1.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "Saved validator output",
+      "capture": null
+    },
+    {
+      "id": "pin2",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/evidence/v2/v2-77x47-frames.txt",
+      "sha256": "91ef1d22d973ef87ff31d9b36d67d44391d899d1839b88b6b67673749bb00fff",
+      "description": "Pinned final-spec frames, 77x47",
+      "capture": null
+    },
+    {
+      "id": "lap2",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/evidence/v2/v2-77x47-lap.txt",
+      "sha256": "12c4d3b5836f118fe1be334c80bf656c01a4c68edbe7bf659905954bec575e44",
+      "description": "Pinned 120-frame lap",
+      "capture": null
+    },
+    {
+      "id": "select2",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/evidence/v2/v2-77x47-select-all.txt",
+      "sha256": "792207910c3fbd99383ef435b362dac7e2c3c71d67538f865da82b2ea3a0b00d",
+      "description": "Pinned selection text",
+      "capture": null
+    },
+    {
+      "id": "ansi2",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/evidence/v2/v2-ansi.ansi",
+      "sha256": "f90fb17673668616674afe9a30ae258700384fa4c51e9deb702147ec6d69cd7d",
+      "description": "Live normal ANSI",
+      "capture": null
+    },
+    {
+      "id": "selected2",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/evidence/v2/v2-selected.ansi",
+      "sha256": "3f30ed4fb04115f0ca9fe56458d374d9de7419a788053fb80f0003552f85fe0d",
+      "description": "Live selected ANSI",
+      "capture": null
+    },
+    {
+      "id": "check2",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/evidence/v2/check.txt",
+      "sha256": "c0935119cca36cc1b426aa5952ab9e42fd07b581ae5f6cb5d71fb02903e69858",
+      "description": "Renderer check",
+      "capture": null
+    },
+    {
+      "id": "manifest2",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/evidence/v2/manifest.json",
+      "sha256": "1437c1b4afe794d35710602249f38ce250e585fb49c2b82974a5dfbc1c7b3a87",
+      "description": "Capture manifest and cleanup",
+      "capture": null
+    },
+    {
+      "id": "validator2",
+      "path": "docs/visualize-eval/rounds/12/modal-machine-manager/validator-v2.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "Saved validator output",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 17 components and all 23 source-directed relations occur once across two views, but four v2 labels are misleadingly positioned closer to or beside other routes, including diagnostic events and iPXE request. Checker says zero ambiguous owners; direct capture does not establish reliable label ownership. The minlen corridor also moves the boot request against the phase reading order. The abbreviated terms are recoverable with source context, but proposals loses explicit actions.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "pin1",
+        "pin2",
+        "spec1",
+        "spec2"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 23 strokes have distinct ports and arrowheads and can be followed with care; v1 has six bridges and v2 two, no fake junctions. The separately assessed label-owner failure remains. The long reverse iPXE path uses the measured corridor, and no stronger evidence proves an avoidable obstacle-free detour.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "lap1",
+        "lap2",
+        "check1",
+        "check2"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Both pinned final-spec dumps show viewport 77x47 zoom 1.00 natural, complete graph, no overflow; live headers are 83x51. Bridge tradeoff is documented; no demonstrated better equivalent two-view layout preserves every label. Header text alone is truncated.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "pin1",
+        "pin2",
+        "manifest1",
+        "manifest2",
+        "attempts"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Five source-supported hue families, complete related color shades, no group enclosure or invented tier. Some same-family nodes sit apart because of ranks, but shared hues retain associations; cross-view node shades need not match.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "ansi1",
+        "ansi2",
+        "spec1",
+        "spec2",
+        "blind"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Correct and claimed family lifecycle-machines: request/job/provisioning/boot/heartbeat stages, live dots, widest fans. Secondary mesh habit keeps two boot directions co-viewed. Whole graph measured 101x136; the split, duplicated public gRPC, minlen corridor and abbreviations are explicitly reasoned. Boot request reads upward, not in phase order; this deviation is recorded and does not by itself fail the softened recipe.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "generation",
+        "attempts",
+        "log",
+        "pin1",
+        "pin2"
+      ],
+      "blind_observation_sha256": "3342be86e1c4516607bb560cd2de352c1e2d9aec42cf75b5333fc38aa12358a7"
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "ANSI confirms complete continuous normal and selected sides/corners on 22/22 occurrences; select-all is simultaneous, not individual selection interaction.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "ansi1",
+        "ansi2",
+        "selected1",
+        "selected2",
+        "blind"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "225 log rows have intact stdout/stderr bytes, and final checks and current final specs match their manifests. However at least three probe spec byte hashes are unavailable in bundled JSON; two overwritten probe paths and one captain v2 exploratory record cannot be reproduced from current inputs. The captain record claims 803be2e6… while the shipped v2 hash is ec5e3a20…. Saved validators say complete but did not establish this. Actual dataset hash differs from the hash specified in the stage-B request.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "log",
+        "attempts",
+        "manifest1",
+        "manifest2",
+        "validator1",
+        "validator2",
+        "dataset"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "120 pinned frames show 12 and 11 dots per frame and the checks report one dot per route, origins and constant 0.5 cells/step. Frame 0 to frame 2 advances all dots along routes, with the v2 corner skipped visually. Independent well-spaced frame-to-frame route-by-route equal-distance tracking including wraps and hidden corner positions was not established; the check alone cannot substitute for that required proof. Same-arrival is not required.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "lap1",
+        "lap2",
+        "check1",
+        "check2",
+        "blind"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "cp -> pgrpc: create / terminate / repair",
+      "observed": "present v1; direction cp -> pgrpc; separate stem to its arrowhead; displayed label 'create/term/repair' corresponds to 'create / terminate / repair'; owner clear on close tracing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pin1",
+          "region": [
+            29,
+            8,
+            18,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "web -> wapi: http",
+      "observed": "present v1; direction web -> wapi; separate stem to its arrowhead; displayed label 'http' corresponds to 'http'; owner clear on close tracing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pin1",
+          "region": [
+            51,
+            8,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "pgrpc -> q: enqueue job",
+      "observed": "present v1; direction pgrpc -> q; separate stem to its arrowhead; displayed label 'enqueue job' corresponds to 'enqueue job'; owner clear on close tracing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pin1",
+          "region": [
+            30,
+            16,
+            11,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "wapi -> q: reinstall / reprovision",
+      "observed": "present v1; direction wapi -> q; separate stem and arrowhead; trace across bridge with care; displayed label 'reinstall/reprovision' corresponds to 'reinstall / reprovision'; owner clear on close tracing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pin1",
+          "region": [
+            47,
+            16,
+            21,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "q -> reg: provision job",
+      "observed": "present v1; direction q -> reg; separate stem to its arrowhead; displayed label 'provision job' corresponds to 'provision job'; owner clear on close tracing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pin1",
+          "region": [
+            12,
+            32,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "reg -> prov: provider API",
+      "observed": "present v1; direction reg -> prov; separate stem to its arrowhead; displayed label 'provider API' corresponds to 'provider API'; owner clear on close tracing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pin1",
+          "region": [
+            23,
+            40,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "prov -> mch: allocate instance",
+      "observed": "present v2; direction prov -> mch; separate stem to its arrowhead; displayed label 'allocate inst' corresponds to 'allocate instance'; owner clear on close tracing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pin2",
+          "region": [
+            49,
+            23,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "mch -> boot: iPXE request",
+      "observed": "present v2; direction mch -> boot; separate stem and arrowhead; trace across bridge with care; displayed label 'iPXE request' corresponds to 'iPXE request'; owner visually uncertain: near another route or detached from its route.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pin2",
+          "region": [
+            13,
+            29,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "e9",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "boot -> mch: boot.ipxe + S3 args",
+      "observed": "present v2; direction boot -> mch; separate stem and arrowhead; trace across bridge with care; displayed label 'boot.ipxe+S3 args' corresponds to 'boot.ipxe + S3 args'; owner clear on close tracing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pin2",
+          "region": [
+            26,
+            22,
+            17,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e10",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "mch -> agent: runs on host",
+      "observed": "present v2; direction mch -> agent; separate stem to its arrowhead; displayed label 'runs on host' corresponds to 'runs on host'; owner visually uncertain: near another route or detached from its route.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pin2",
+          "region": [
+            39,
+            37,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "e11",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "agent -> pub: register + heartbeat",
+      "observed": "present v2; direction agent -> pub; separate stem to its arrowhead; displayed label 'reg + heartbeat' corresponds to 'register + heartbeat'; owner clear on close tracing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pin2",
+          "region": [
+            39,
+            39,
+            15,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e12",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "pub -> db: machine state",
+      "observed": "present v1; direction pub -> db; separate stem and arrowhead; trace across bridge with care; displayed label 'machine state' corresponds to 'machine state'; owner clear on close tracing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pin1",
+          "region": [
+            42,
+            25,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e13",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "pgrpc -> db: machine rows",
+      "observed": "present v1; direction pgrpc -> db; separate stem and arrowhead; trace across bridge with care; displayed label 'machine rows' corresponds to 'machine rows'; owner clear on close tracing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pin1",
+          "region": [
+            32,
+            29,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e14",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "q -> db: job rows",
+      "observed": "present v1; direction q -> db; separate stem and arrowhead; trace across bridge with care; displayed label 'job rows' corresponds to 'job rows'; owner clear on close tracing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pin1",
+          "region": [
+            40,
+            26,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e15",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "q -> ssh: audit / verify reimage",
+      "observed": "present v2; direction q -> ssh; separate stem to its arrowhead; displayed label 'audit/verify reimage' corresponds to 'audit / verify reimage'; owner clear on close tracing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pin2",
+          "region": [
+            35,
+            13,
+            20,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e16",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "ssh -> mch: run machine-audit",
+      "observed": "present v2; direction ssh -> mch; separate stem to its arrowhead; displayed label 'run machine-audit' corresponds to 'run machine-audit'; owner clear on close tracing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pin2",
+          "region": [
+            35,
+            19,
+            17,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e17",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "mch -> s3: pull boot image",
+      "observed": "present v2; direction mch -> s3; separate stem to its arrowhead; displayed label 'pull boot image' corresponds to 'pull boot image'; owner clear on close tracing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pin2",
+          "region": [
+            49,
+            30,
+            15,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e18",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "q -> s3: diagnose uploads",
+      "observed": "present v1; direction q -> s3; separate stem to its arrowhead; displayed label 'diag uploads' corresponds to 'diagnose uploads'; owner clear on close tracing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pin1",
+          "region": [
+            27,
+            32,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e19",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "q -> jan: diagnostic events",
+      "observed": "present v2; direction q -> jan; separate stem and arrowhead; trace across bridge with care; displayed label 'diagnostic events' corresponds to 'diagnostic events'; owner visually uncertain: near another route or detached from its route.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pin2",
+          "region": [
+            10,
+            10,
+            17,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "e20",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "jan -> wapi: proposed actions",
+      "observed": "present v2; direction jan -> wapi; separate stem to its arrowhead; displayed label 'proposals' corresponds to 'proposed actions'; owner clear on close tracing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pin2",
+          "region": [
+            16,
+            23,
+            9,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e21",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "wapi -> slack: confirm + alerts",
+      "observed": "present v2; direction wapi -> slack; separate stem and arrowhead; trace across bridge with care; displayed label 'confirm + alerts' corresponds to 'confirm + alerts'; owner visually uncertain: near another route or detached from its route.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pin2",
+          "region": [
+            17,
+            37,
+            16,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "e22",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "rec -> prov: gcore sync, 1 min",
+      "observed": "present v1; direction rec -> prov; separate stem and arrowhead; trace across bridge with care; displayed label 'gcore sync, 1 min' corresponds to 'gcore sync, 1 min'; owner clear on close tracing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pin1",
+          "region": [
+            59,
+            25,
+            17,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e23",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "expected": "rec -> db: cluster state",
+      "observed": "present v1; direction rec -> db; separate stem and arrowhead; trace across bridge with care; displayed label 'cluster state' corresponds to 'cluster state'; owner clear on close tracing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pin1",
+          "region": [
+            59,
+            28,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e8",
+        "e10",
+        "e19",
+        "e21"
+      ],
+      "severity": "high",
+      "description": "Four labels in v2 appear beside another route or detached from their own: iPXE request, runs on host, diagnostic events and confirm + alerts. They cannot reliably be assigned without spec knowledge; check reports zero ambiguity. Measured probes for the boot pair do not establish that no unambiguous placement exists for all four labels in the shipped split.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pin2",
+          "region": [
+            13,
+            29,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pin2",
+          "region": [
+            39,
+            37,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pin2",
+          "region": [
+            10,
+            10,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pin2",
+          "region": [
+            17,
+            37,
+            16,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Recorded evidence-final-v2 input hash 803be2e6276f0136d4c4f3b59fd21bd165f8a3724cddf201e8891fd6007269d7 differs from shipped ec5e3a206a5e9c26f549cfb02624360693b88750a530a0b0cf515dec9b91ed18. attempt-v2-final d9734885… and calib-probe-v2V-regheartbeat 98125540… likewise have no matching bundled JSON; another missing path and changed probe do have matching copies elsewhere. All 450 raw stdout/stderr hashes verify. The actual final captures and final checks are separately bound to shipped specs; captain authorship alone is not a defect.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "locations": []
+    },
+    {
+      "id": "F3",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "Stage-B supplied dataset hash ends in ...e867... but actual cases.json and frozen metadata contain ...e869...; report the verified actual hash rather than the supplied value.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "locations": []
+    },
+    {
+      "id": "F4",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e8",
+        "e9"
+      ],
+      "severity": "medium",
+      "description": "The minlen=2 corridor lifts boot server to the first rank and sends request upward along the left; response descends. This pushes the request out of phase reading order, a structural defect despite the documented recipe tradeoff.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pin2",
+          "region": [
+            9,
+            5,
+            35,
+            27
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "Independent equal-distance route-by-route verification of well-spaced motion frames, including wrap and skipped corners, not completed.",
+    "Recorded probe input bytes for hashes 803be2e6…, d9734885… and 98125540… not found among bundled JSON files."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pYB",
+      "w7E:pYC"
+    ],
+    "closed_pane_ids": [
+      "w7E:pYB",
+      "w7E:pYC"
+    ],
+    "status": "done",
+    "reason": "Both final manifests record cleanup confirmed_closed."
+  },
+  "overall": "fail"
+}
