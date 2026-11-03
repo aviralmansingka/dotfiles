@@ -2855,5 +2855,18 @@
    "judge": "spawned",
    "judge_verdict": "sema F (verify-reimage + args qualifiers only in ledger, not canvas); layo F; navi P; conc+anim BLOCKED (whole-canvas color evidence); work F (budget overrun); arro P (queue ports visible, blind record corrected in stage B); cate P (lifecycle-machines)"
   }
+ },
+ "round_14": {
+  "status": "C4 retry COMPLETE + captain-validated (all checks passed); judge next",
+  "engine": "binary 2b1dd353 (node focus -> double border; diagram enclosed -> dotted box + clearance + enclosure-crossings; uniform dividers + top rule)",
+  "skill": "proposal 13 86b72df4 (Zoom-in views C4-style section)",
+  "c4_retry": {
+   "worker": "viz-ds13-c4 resumed (5m42s; a cold worker stalled 38m writing nothing)",
+   "structure": "l1 context 98x16 with focus node l1:mm (double border); l2a enclosed dotted 244x18; l2b enclosed dotted 214x13; canvas 244x62, one direction lr, three uniform 250-cell rules incl. top",
+   "fixed_from_r13": "verify reimage + boot.ipxe/S3 args now ON canvas; dividers uniform + top rule; dotted enclosures render",
+   "check": "29/29 labels 0 ambiguous; near-misses 0; 11 dots 0 violations; frame audit PASS; enclosure crossings 0 (scan-verified, line absent at 0)",
+   "blockers": "one-diagram L2 still impossible at lr (no obstacle-safe route wapi->q) - measured split, engine item for round 14",
+   "judge": "spawning"
+  }
  }
 }

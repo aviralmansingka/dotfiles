@@ -1,0 +1,28 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=17 edges=23 flows=0 direction=tb theme=gruvbox
+canvas: 1 diagrams on one canvas, drawn whole at 100%
+diagram l2-one-tb "L2 · Containers — all 17 containers in one diagram" at 0,5: extent=105x171 nodes=17 edges=23 routes=23
+  description: Probe: the whole C4 container level drawn as ONE section, to measure the engine's readable budget.
+extent=105x176 cells (whole canvas)
+crossings: 23 bridges, 1 touching bends
+warning: diagram l2-one-tb has 17 nodes / 23 edges, above the readable budget (12/16); split it into another described diagram
+warning: 1 edge label(s) had no free slot; shorten the labels or split the graph
+near-misses: 73 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)
+passes-near-unrelated-node: 73
+near-miss: route l2-one-tb:e3 passes 9 cell(s) at ring 2 of node 'prov' (nearest cell 50,84)
+near-miss: route l2-one-tb:e3 passes 8 cell(s) at ring 2 of node 'ssh' (nearest cell 86,68)
+near-miss: route l2-one-tb:e3 passes 8 cell(s) at ring 2 of node 'web' (nearest cell 86,68)
+near-miss: route l2-one-tb:e12 passes 8 cell(s) at ring 2 of node 'jan' (nearest cell 27,61)
+near-miss: route l2-one-tb:e12 passes 8 cell(s) at ring 2 of node 'reg' (nearest cell 27,61)
+near-miss: route l2-one-tb:e13 passes 8 cell(s) at ring 2 of node 'rec' (nearest cell 68,61)
+near-miss: route l2-one-tb:e13 passes 8 cell(s) at ring 2 of node 'ssh' (nearest cell 68,61)
+near-miss: route l2-one-tb:e17 passes 8 cell(s) at ring 2 of node 'rec' (nearest cell 49,61)
+near-miss: route l2-one-tb:e17 passes 8 cell(s) at ring 2 of node 'reg' (nearest cell 49,61)
+warning: 73 route cell(s) hug a node their relation does not serve; move the affected relations or let them route around
+labels: 22/23 placed, 0 leader-ticked, 0 on route, 1 skipped, 0 ambiguous owners
+groups: humans(1) control(4) async(3) hostops(3) state(1) ops(1) external(4)
+trunks:
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 0 by source, 0 by destination, 0 shared-hue pair(s) (source-only 0, destination-only 0)
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

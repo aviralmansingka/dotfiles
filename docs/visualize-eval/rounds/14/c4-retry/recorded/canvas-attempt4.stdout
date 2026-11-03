@@ -1,0 +1,24 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=28 edges=29 flows=11 direction=lr theme=gruvbox
+canvas: 3 diagrams on one canvas, drawn whole at 100%
+diagram l1 "L1 · System context — the machine manager" at 0,5: extent=121x18 nodes=6 edges=6 routes=6
+  description: The manager as one double-bordered box that the next section opens; callers, providers, machines, S3 and Slack around it.
+  double border: 1 zoom parent(s) - l1:mm
+diagram l2a "L2 · Containers — request, provisioning and boot" at 0,28: extent=244x18 nodes=12 edges=14 routes=14
+  description: Enclosed in the dotted box: API actions become a River job, a provider allocation and a boot; the reconcile loop syncs gcore each minute.
+  enclosed: dotted box=244x18 at 0,27 (contents of a zoomed-in component)
+diagram l2b "L2 · Containers — heartbeat, audits and diagnostics" at 0,51: extent=214x13 nodes=10 edges=9 routes=9
+  description: Also inside the dotted box: agent heartbeat, slow audit and diagnose jobs, janitor proposals and the Slack alerts they raise.
+  enclosed: dotted box=214x13 at 0,50 (contents of a zoomed-in component)
+pins: 28 pinned, 0 conflict(s)
+extent=244x64 cells (whole canvas)
+crossings: 2 bridges, 1 touching bends
+near-misses: 0 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)
+passes-near-unrelated-node: 0
+labels: 29/29 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners
+groups: humans(2) external(10) control(5) async(4) hostops(3) state(2) ops(1)
+trunks:
+dots: 11 single-dot routes, 0 periodic routes, 0 violations, 11 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 8 by source, 3 by destination, 0 shared-hue pair(s) (source-only 1, destination-only 1)
+origins: 11/11 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step
