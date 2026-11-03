@@ -2827,9 +2827,23 @@
     "form": "CANVAS 260x64, 3 described diagrams (request 260x11, heartbeat 118x15, ops 132x25); 17 components, all 23 relations, 22 animated",
     "validation": "captain rerun: 41 PASS; labels 23/23 0 ambiguous (beats r12 4 uncertain); near-misses 0; frame audit 88 frames PASS",
     "judge": "VERDICT FAIL (5P/2F/2B): sema/arro/layo-B/cate/work PASS (23/23 relations clean, triage honest); navi F (controls+minimap obscure nav text; controls overwrite a node border); conc+anim BLOCKED (whole-canvas color evidence insufficient for cross-diagram hues + dot binding)"
+   },
+   "gb300-rack-software": {
+    "worker": "viz-ds13-7 (15m6s)",
+    "triage": "6 questions (4 annex verbatim + 2 own judgment: OOB boundary stub for the cross-plane relation; labels only where the source states them)",
+    "form": "CANVAS 2 described diagrams (oob 58x38 + inband 32x49 = 64x95); placement-planes; one trunk splitting once",
+    "validation": "38 PASS / 2 FAIL: trunk junction warning (checker semantics, standing item) + 19 arm near-misses (structural, 6 layouts measured); CORRIDOR clean, inband 0 - r11 hug defect GONE",
+    "judge": "VERDICT FAIL (4F/2B + anim NA): r11 OOB-hug defect GONE but 19 trunk-arm near-miss cells still fail the zero-margin rule (measured difficulty does not waive the gate); missing panned in-band capture = principal evidence blocker; NEW: nv-rms control path to NVOS/NMX missing from spec (LAN reachability is not the control relation); triage honest, digest OK"
+   },
+   "datacenter-redundancy": {
+    "worker": "viz-ds13-8 (16m6s, last of 8)",
+    "triage": "9 provoked (4 annex + 4 framing + 1 own judgment: 4 ISP nodes not folded into MUX labels); canvas settled by measurement (60x82 probe)",
+    "form": "CANVAS 3 described diagrams (uplinks 49x30, security 45x33, fabric 66x30 = 71x106); redundant-fabrics; 28/28 relations, 24/24 labels clean, no trunks",
+    "validation": "38 PASS / 2 FAIL: 29 near-miss cells on 4 routes (structural: ACROSS_GAP_TB=3 makes crossings ring-2 by construction) + 14 bridges on the cross-connects",
+    "judge": "spawning"
    }
   },
-  "status": "5 verdicts in (network FAIL 7P/2F - lost its r11 green to dot cycling + cap overrun); runtime in stage B; gb300+datacenter generating",
+  "status": "7 verdicts in; datacenter stage B in flight; aggregate+decision+tabs when it lands",
   "digest_correction": "rounds 10-13 carried dataset sha e69179e5\u2026e8672b\u2026 \u2014 a transcription typo; actual cases.json is e69179e5\u2026e8692b\u2026. All 7 rounds of judge digest-mismatch flags trace to this captain-side typo. Per-file case_hashes (identical since r09) were always the true proof. Corrected everywhere.",
   "harness_fixes_midround": [
    "viz-validate.py: leader-tick warning exempted from check_warnings_absent (the r13 ownership rescue was unshippable otherwise)"
