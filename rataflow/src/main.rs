@@ -49,9 +49,11 @@ options:
   --frames-ansi    print the frames WITH colour escapes (whole-canvas colour proof)
 
 spec fields: direction (tb|lr), theme (gruvbox|dark|light),
-nodes (id, label?, group?), edges (from, to, label?, flow?, timing?, duration_ms?, dots?, style?, label_slot?),
+nodes (id, label?, group?, focus?), edges (from, to, label?, flow?, timing?, duration_ms?, dots?, style?, label_slot?),
 trunks (id, label?, from, to, branches)
 diagrams: a canvas of several named graphs on ONE pannable canvas, each with
+      an optional containers list (label + member ids: a labelled double-bordered box
+      grown around those nodes), each with
       its title and one-line description drawn above it:
       diagrams: [{ id, title, description?, direction?, nodes, edges, layers?, trunks? }]
       A spec declares either edges (one graph) or diagrams (a canvas), not both

@@ -764,8 +764,8 @@ impl Spec {
                     }
                     if text.contains('\n') {
                         bail!(
-                            "diagram \"{id}\" has a multi-line \"description\"; it renders on \
-                             ONE line under the title"
+                            "diagram \"{id}\" has a line break inside \"description\"; write one \
+                             paragraph and it wraps to at most three rows of 96 columns"
                         );
                     }
                     Some(text)
@@ -3824,7 +3824,7 @@ mod tests {
             // empty description
             r#"{"diagrams":[{"id":"v","title":"t","description":" ",
                              "edges":[{"from":"a","to":"b"}]}]}"#,
-            // multi-line description: it renders on ONE line
+            // a hard line break in the description is rejected; the renderer wraps
             r#"{"diagrams":[{"id":"v","title":"t","description":"one\ntwo",
                              "edges":[{"from":"a","to":"b"}]}]}"#,
             // a diagram still needs an edge
