@@ -17,18 +17,33 @@ Reviewer: the owner. Tabs (round 11 left vs round 12 right):
    multiple views, I'd prefer to have a single large diagram that lists
    all the relationships that I can full screen and review."
 
-   ROUND-13 VIEW STRATEGY (replaces the split-first habit):
-   a. First preference: one view that fits 77x47 at natural zoom
-      (side-by-side readable with the chat).
-   b. If it does not fit: ONE full-screen diagram carrying ALL
-      relationships - large extent is acceptable; the owner full-screens
-      the pane and pans/zooms to review. Never split into thematic views
-      merely because the graph is large.
-   c. Multiple views remain a last resort, only with a measured reason
-      (e.g. genuinely disconnected subgraphs).
-   Rubric impact: layout_fit gains a dual rule - 77x47 pinned fit OR
-   single-full-screen-all-relations (fit proof: fullscreen pinned dump +
-   all-relations coverage claim).
+   ROUND-13 VIEW STRATEGY (owner refinement, 2026-11-03, supersedes the
+   same-day full-screen-only phrasing): "I actually really like this
+   idea of splitting the multiple views of concepts into different
+   diagrams, but I need some sort of description to understand this. I
+   don't mind them being on the same canvas. A lot of the times, I'm
+   going to ask you to generate really complex visualizations that I
+   need to navigate. In those instances, I don't want to feel constrained
+   by the size of what's required. Remember again, clarity is more
+   important than shaping."
+
+   a. Splitting concepts into separate diagrams is GOOD and stays the
+      habit - each diagram carries one concept/theme.
+   b. Multiple concept-diagrams may share ONE LARGE CANVAS - the owner
+      navigates by pan/zoom; never feel constrained by viewport size.
+   c. Every diagram carries a DESCRIPTION (title + what-it-shows line)
+      so the reader can orient and navigate a complex canvas.
+   d. Preference ladder: single concept that fits 77x47 -> one
+      side-by-side view; multiple concepts or oversize graph -> one
+      large canvas with named, described concept-diagrams; never drop
+      relations; never shrink clarity to fit.
+   e. CLARITY OVER SHAPING: layout serves what the source actually
+      contains; budget/shape preferences never thin the content.
+   Engine implications (round 13): multi-diagram canvas support (several
+   named graphs on one render), per-diagram title + description
+   rendering, oversized-canvas rendering without the fit-floor complaint.
+   Rubric impact: layout_fit judges fit OR navigable-large-canvas with
+   descriptions; a new clarity/navigation category consideration.
 
 2. (owner, 2026-11-03, on gb300 a3 ambiguity) "in cases where the arrows
    can have so many ambiguous paths, it would be good to use dots and
