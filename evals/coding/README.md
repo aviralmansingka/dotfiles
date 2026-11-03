@@ -176,6 +176,22 @@ fireconnect writes the key into `ANTHROPIC_CUSTOM_HEADERS` (the runner passes it
 `$CLAUDE_HOME/.fireconnect/.api-key`). Fireconnect's stored key can be stale — it returned 401 until it was
 re-pointed at the working key with `--api-key`.
 
+#### Comparing harnesses on one model
+
+`compare.py` joins results files and reports time, tokens and cost per run, a per-task delta matrix, and
+harness ratios rolled up by task attribute:
+
+```sh
+uv run python evals/coding/compare.py \
+  --run pi-glm:/tmp/rollout/glm-fast-045307/results.csv \
+  --run codex-glm:/tmp/rollout/codex-glm-050813/results.csv \
+  --per-task glm --by repo,difficulty,kind
+```
+
+Labels follow `<harness>-<model>`; ratios are taken against that model's `pi` run. `lib/toolcalls.py` counts
+assistant turns and tool calls per rollout, which is what explains most cost and latency differences: pi takes
+many small turns (one tool call each) while codex batches several tool calls per turn.
+
 Committed comparison runs live in `results/` (`2026-11-03-pi-codex.csv` plus override CSVs for post-hoc
 re-grades).
 

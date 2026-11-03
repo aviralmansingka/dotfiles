@@ -157,12 +157,21 @@ case "${1:-}" in
     done
     prepare
     echo "run dir: $ROLL (pool $POOL, timeout ${TIMEOUT}s, codex model $MODEL_CODEX)"
-    for agent in $agents; do list_tasks | sed "s/^/$agent,/"; done \
-      | xargs -P "$POOL" -I{} bash -c '
-          IFS=, read -r a t <<< "{}"
-          EVAL_ROLL_DIR="$EVAL_ROLL_DIR" MODEL_CODEX="$MODEL_CODEX" MODEL_PI="$MODEL_PI" \
-            MODEL_CLAUDE="$MODEL_CLAUDE" CODEX_HOME="${CODEX_HOME:-}" CLAUDE_HOME="${CLAUDE_HOME:-}" \
-            CLAUDE_KEY_FILE="$CLAUDE_KEY_FILE" ROLLOUT_TIMEOUT="$ROLLOUT_TIMEOUT" "$0" one "$t" "$a"' "$0"
+    queue="$ROLL/queue.txt"
+    : >"$queue"
+    for agent in $agents; do list_tasks | sed "s/^/$agent /" >>"$queue"; done
+    batch=()
+    flush() {
+      [ ${#batch[@]} -eq 0 ] && return 0
+      for item in "${batch[@]}"; do run_one "${item##* }" "${item%% *}" & done
+      wait
+      batch=()
+    }
+    while read -r agent task; do
+      batch+=("$agent $task")
+      [ ${#batch[@]} -ge "$POOL" ] && flush
+    done <"$queue"
+    flush
     ;;
   *) sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2; exit 2 ;;
 esac
