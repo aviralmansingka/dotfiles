@@ -11,6 +11,27 @@ user-invocable: true
 the configured push target. You drive it through the `no-mistakes axi` command family, which prints
 machine-readable [TOON](https://toonformat.dev) to stdout and progress to stderr.
 
+## Pi: drive it through `no_mistakes_axi`
+
+In Pi, call the `no_mistakes_axi` tool for every AXI command. Do not run
+`no-mistakes axi ...` in the bash tool. The tool submits the same command and
+runs it detached. For `run` and `respond`, it also shows the run in a Herdr
+pane beside the agent.
+
+Pass `args` as one string with everything after `no-mistakes axi`, and quote
+multi-word values:
+
+```json
+{ "args": "run --intent \"add a --json flag to the status command\"" }
+```
+
+The call returns an acknowledgement at once. The TOON result, the gate, and the
+outcome arrive later in a `no_mistakes_axi_result` message. Read every one.
+A `run` from a Herdr captain session is delegated to the nm-orchestrator tab,
+which owns the pane and the gate panels; steer that tab instead of issuing
+`run` or `respond` again. `/no-mistakes` focuses or re-opens the pane. When the
+tool is not available, the commands below still work unchanged.
+
 
 ## Active validation-step boundary
 
