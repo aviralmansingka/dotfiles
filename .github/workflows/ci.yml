@@ -20,6 +20,11 @@ name: CI
 # Area gating happens in the `changes` job instead. Docs-only changes
 # (*.md) never trigger the heavy suites.
 #
+# `merge_group` is mandatory, not optional: a merge-queue entry checks out
+# the synthetic gh-readonly-queue/{base}/pr-{n} merge commit, and the
+# "CI result" required check must report on that ref. Without this trigger
+# a queued PR waits on a check that never arrives.
+#
 # Test files are DISCOVERED by git ls-files globs, never hand-listed
 # (PRs #227, #257, #279: hand-written lists drift silently). Live-env
 # tests are excluded in scripts/ci-tier2-exclusions.txt; the exclusion
@@ -33,6 +38,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  merge_group:
 
 permissions:
   contents: read
@@ -58,8 +64,14 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
           EVENT_BEFORE: ${{ github.event.before }}
+          MERGE_GROUP_BASE: ${{ github.event.merge_group.base_sha }}
         run: |
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+          if [ "$GITHUB_EVENT_NAME" = "merge_group" ]; then
+            # A queue entry has an empty base_ref and a null "before". Its
+            # base_sha is the target tip the synthetic merge commit sits on,
+            # so it is also the merge base: the diff stays the PR's own files.
+            base="$MERGE_GROUP_BASE"
+          elif [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
             base="origin/$BASE_REF"
           elif git cat-file -e "$EVENT_BEFORE" 2>/dev/null; then
             base="$EVENT_BEFORE"

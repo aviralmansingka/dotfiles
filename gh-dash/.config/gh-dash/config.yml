@@ -1,6 +1,8 @@
 prSections:
     - title: My Pull Requests
       filters: is:open author:@me
+    - title: Merge Queue
+      filters: is:open is:queued
     - title: Needs My Review
       filters: is:open review-requested:@me
     - title: Involved
@@ -89,6 +91,9 @@ keybindings:
     - key: O
       name: review PR in Herdr worktree
       command: gh-dash-open-pr "{{.RepoPath}}" "{{.RepoName}}" "{{.PrNumber}}"
+    - key: M
+      name: submit to merge queue
+      command: gh-dash-enqueue-pr "{{.RepoName}}" "{{.PrNumber}}"
 repoPaths:
   ":owner/:repo": /Users/aviral/:repo
 theme:

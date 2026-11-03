@@ -1,0 +1,70 @@
+#!/bin/sh
+set -eu
+
+if [ "$#" -ne 2 ]; then
+  printf 'Usage: gh-dash-enqueue-pr REPO_NAME PR_NUMBER\n' >&2
+  exit 2
+fi
+
+repo_name=$1
+pr=$2
+case "$pr" in
+  ''|*[!0-9]*)
+    printf 'Invalid pull request number: %s\n' "$pr" >&2
+    exit 2
+    ;;
+esac
+case "$repo_name" in
+  */*) ;;
+  *)
+    printf 'Invalid repository name: %s (want owner/repo)\n' "$repo_name" >&2
+    exit 2
+    ;;
+esac
+
+owner=${repo_name%%/*}
+name=${repo_name#*/}
+
+# `gh pr view` has no merge-queue field, so the GraphQL pullRequest type is
+# the source of truth. One token back: closed | queued | auto | open.
+queue_state() {
+  gh api graphql \
+    -f query='query($owner: String!, $name: String!, $pr: Int!) {
+      repository(owner: $owner, name: $name) {
+        pullRequest(number: $pr) { state isInMergeQueue autoMergeRequest { enabledAt } }
+      }
+    }' \
+    -F owner="$owner" -F name="$name" -F pr="$pr" \
+    --jq '.data.repository.pullRequest
+      | if .state != "OPEN" then "closed"
+        elif .isInMergeQueue then "queued"
+        elif .autoMergeRequest != null then "auto"
+        else "open" end'
+}
+
+case "$(queue_state)" in
+  closed)
+    printf '%s#%s is not open\n' "$repo_name" "$pr" >&2
+    exit 1
+    ;;
+  queued)
+    printf '%s#%s is already in the merge queue\n' "$repo_name" "$pr"
+    exit 0
+    ;;
+  auto)
+    printf '%s#%s already has auto-merge enabled\n' "$repo_name" "$pr"
+    exit 0
+    ;;
+esac
+
+# Auto-merge is the portable submit: gh adds the PR to the merge queue when the
+# required checks already passed, and enables auto-merge (which enqueues it
+# later) while they still run. The strategy comes from the queue config.
+gh pr merge --auto --repo "$repo_name" "$pr" >/dev/null
+
+after=$(queue_state)
+case "$after" in
+  queued) printf '%s#%s entered the merge queue\n' "$repo_name" "$pr" ;;
+  auto)   printf '%s#%s enters the merge queue when required checks pass\n' "$repo_name" "$pr" ;;
+  *)      printf '%s#%s merge queue state: %s\n' "$repo_name" "$pr" "$after" ;;
+esac
