@@ -32,6 +32,8 @@ import sys
 RATES = {
     "gpt-6.1-sol": {"input": 2.0, "output": 10.0, "cache_read": 0.1, "cache_write": 2.5},
     "gpt-6-sol": {"input": 2.0, "output": 10.0, "cache_read": 0.2, "cache_write": 2.5},
+    # serverless Fireworks alias used by the codex/claude harnesses
+    "deepseek-flash-latest": {"input": 0.14, "output": 0.28, "cache_read": 0.028, "cache_write": 0.0},
     "glm-fast-latest": {"input": 2.1, "output": 6.6, "cache_read": 0.39, "cache_write": 0.0},
     "kimi-fast-latest": {"input": 4.5, "output": 22.5, "cache_read": 0.45, "cache_write": 0.0},
     "accounts/fireworks/routers/glm-fast-latest": {"input": 2.1, "output": 6.6, "cache_read": 0.39, "cache_write": 0.0},

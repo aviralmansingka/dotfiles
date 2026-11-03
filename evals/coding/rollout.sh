@@ -30,6 +30,7 @@ MODEL_CLAUDE=${MODEL_CLAUDE:-}
 TIMEOUT=${ROLLOUT_TIMEOUT:-3600}
 POOL=${POOL:-8}
 export EVAL_ROLL_DIR=$ROLL MODEL_CODEX MODEL_PI MODEL_CLAUDE ROLLOUT_TIMEOUT=$TIMEOUT
+[ -n "${PI_APPEND_PROMPT:-}" ] && export PI_APPEND_PROMPT
 [ -n "${CODEX_HOME:-}" ] && export CODEX_HOME
 [ -n "${CLAUDE_HOME:-}" ] && export CLAUDE_HOME
 CLAUDE_KEY_FILE=${CLAUDE_KEY_FILE:-${CLAUDE_HOME:-}/.fireconnect/.api-key}
@@ -85,6 +86,7 @@ run_one() {
   if [ "$agent" = pi ]; then
     ( cd "$wt" && timeout "$TIMEOUT" pi -p \
         ${MODEL_PI:+--model "$MODEL_PI"} \
+        ${PI_APPEND_PROMPT:+--append-system-prompt "$(cat "$PI_APPEND_PROMPT")"} \
         --session-dir "$ROLL/sessions/pi-$task" --name "$task-pi" \
         "$(cat "$here/tasks/$task/prompt.md")" ) >>"$log" 2>&1
   elif [ "$agent" = claude ]; then
