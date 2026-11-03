@@ -120,7 +120,7 @@ renderer PR):
 | # | Surface | Key assertions | Evidence |
 |---|---------|----------------|----------|
 | U1 | Option wiring at all 4 consumer sites | digit selects submit (single) vs toggle (multi); j/k incl. Kitty protocol; editor passthrough | #171/#217 |
-| U2 | Input-mode cycling | Answer↔Steering cycling (note mode was removed pre-#266); follow-up ends the quiz visibly; steering editor keeps text on Enter; quiz stays open in steering | #176, corrected by dom-user-input |
+| U2 | Input-mode cycling | Tab cycles Answer→Steering→Note→Follow-up; steering sends a live steer and the quiz stays open; note rides with the answer; follow-up ends the quiz visibly | #176, corrected by dom-user-input |
 | U3 | Explain key-routing state machine | bare `h` only when `!hasComposed` + verdict; `H` (Shift+H — the window manager owns Alt) opens the journal at every phase; legacy + Kitty encodings; failures warn, never throw | #249, #266, corrected by dom-user-input |
 | U4 | Prompt-frame invariants | ≥1 padded content row; merged frames; hints present per mode | #222 |
 | U5 | Context files | normalization; `openContextFiles` failure notifies, never throws | #172 |
