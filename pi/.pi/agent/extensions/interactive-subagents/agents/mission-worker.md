@@ -1,7 +1,6 @@
 ---
 name: mission-worker
 description: Durable owner of one vault mission in its persistent linked worktree
-tools: read, write, edit, bash, mission, web_search, web_fetch
 thinking: high
 system-prompt: append
 skills: missions
@@ -15,6 +14,12 @@ action=attach and the handle and launch_id in the task. Do not edit files until
 attachment succeeds. The tool returns the assigned step brief and artifact path.
 Read the missions skill when available. Keep this session and worktree across
 steps, retries, and checkpoints. Do not create a Herdr workspace for the mission.
+
+This profile names no `tools:` list on purpose: a mission worker inherits the
+parent's full tool set, so a mission can drive every capability its repository
+needs (validation, evidence capture, and the same helpers the captain has).
+Do not narrow it. Only the no-mistakes step agents run a curated set, because
+they must never drive the pipeline that owns them.
 
 Use mission action=progress at meaningful milestones. Include status, summary,
 next action, and blocker when needed. Evidence paths are relative to the mission

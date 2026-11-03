@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { MissionBridge } from "./core.mjs";
+import { MissionBridge, missionContinues, missionToolBlock } from "./core.mjs";
 
 export default function missions(pi: ExtensionAPI, options = {}) {
   const bridge = new MissionBridge(options);
@@ -35,13 +35,15 @@ export default function missions(pi: ExtensionAPI, options = {}) {
     } catch (e: any) { bridge.error = e.message; return { message: { customType: "mission-context", display: false, content: "Mission tracking failed: " + e.message + ". Restore tracking before making changes." } }; }
   });
   pi.on("tool_call", async (event, ctx) => {
-    if (event.toolName === "mission" || event.toolName === "read" || event.toolName === "tool_search") return;
     if (!bridge.hint) {
-      if (bridge.expectedAttachment) return {block:true,reason:"Restore the mission credential cache before changing repository files."};
-      return;
+      const reason = missionToolBlock({ toolName: event.toolName, tracked: false, expectedAttachment: bridge.expectedAttachment });
+      return reason ? { block: true, reason } : undefined;
     }
-    try { await bridge.flush(ctx); const c = await bridge.current(ctx); if (!c?.attempt) return { block: true, reason: "No active mission step. Inspect the checkpoint or explicitly pick up next." }; }
+    let current;
+    try { await bridge.flush(ctx); current = await bridge.current(ctx); }
     catch (e: any) { return { block: true, reason: "Mission tracking must recover before work continues: " + e.message }; }
+    const reason = missionToolBlock({ toolName: event.toolName, current });
+    return reason ? { block: true, reason } : undefined;
   });
   pi.on("agent_start", guarded(async (_e: any, ctx: any) => { await bridge.record(ctx, { type: "agent-start", summary: "Pi turn started" }); }));
   pi.on("agent_end", guarded(async (event: any, ctx: any) => { await bridge.end(ctx, event); await badge(ctx); }));
@@ -53,7 +55,8 @@ export default function missions(pi: ExtensionAPI, options = {}) {
     await badge(ctx);
     // Starting a mission authorizes its eligible steps. Attaching an existing
     // session records its work without silently starting additional steps.
-    if (result?.state.status === "ready" && bridge.hint?.autoContinue && !ctx.hasPendingMessages()) {
+    // A finished or human-held mission never asks for another step.
+    if (missionContinues(result?.state) && bridge.hint?.autoContinue && !ctx.hasPendingMessages()) {
       pi.sendMessage({customType:"mission-next",display:true,
         content:`The previous step of ${bridge.hint.handle} passed its checks. Call mission action=next to pick up the next eligible step in this same worktree. Read its returned brief before editing. Pause at human checkpoints.`},
         {triggerTurn:true,deliverAs:"followUp"});
