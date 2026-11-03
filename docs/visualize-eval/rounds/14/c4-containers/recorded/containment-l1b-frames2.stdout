@@ -1,0 +1,12 @@
+viewport: 60x10 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 60x10 @100% · canvas 128x20 · containment-l
+
+──────────────────────────────────                         ─
+L┌───────┐machine side and the out
+T│ + [+] │ontext from the fleet's               ▗▄▄        o
+ │ − [-] │                         ▄▄▄▄  ▗▄▄    ▄▄▄   ▝▀▀▘
+ │ ⊡ [f] │                                       ▄▖    ▝▀
+ │ □ [i] │
+ └───────┘
+

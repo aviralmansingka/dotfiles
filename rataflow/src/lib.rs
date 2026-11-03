@@ -1533,8 +1533,12 @@ pub struct SectionReport {
     pub enclosures: Vec<Vec<String>>,
     /// Whether the boundary is painted for this section.
     pub enclosure_outline: bool,
-    /// Container boxes for this section: label plus the namespaced member ids.
-    pub containers: Vec<(String, Vec<String>)>,
+    /// Container boxes for this section: the container label, then each
+    /// member's namespaced id and its rendered label text. The label is what
+    /// lets the draw pass find the node's box on screen, so the container is
+    /// drawn where the node actually landed instead of where the world-space
+    /// geometry says it should be.
+    pub containers: Vec<(String, Vec<(String, String)>)>,
     /// World ids of nodes drawn with a double border (the zoom parents).
     pub focus: Vec<String>,
     pub nodes: usize,
@@ -2061,7 +2065,7 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
     let mut dot_hues = DotHueStats::default();
     let mut cursor: i32 = 0;
 
-    for (index, diagram) in spec.diagrams.iter().enumerate() {
+    for diagram in spec.diagrams.iter() {
         let graph = diagram.graph.as_ref();
         let (flow, report, _colors) = build_single(graph, &palette)?;
         palette.extend(graph);
@@ -2100,10 +2104,11 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
                 rect
             })
             .collect();
-        let member_rect = group_rects.first().copied();
         // One cell of clearance keeps routes, labels, and dots off the dotted
         // line; a member-based box needs it only around its own rect.
-        let pad = i32::from(diagram.enclosed || !group_rects.is_empty());
+        let pad = i32::from(
+            diagram.enclosed || !group_rects.is_empty() || !diagram.containers.is_empty(),
+        );
         // An enclosed diagram spends two extra rows on the frame's top
         // clearance, so the dotted line lands below the description.
         let enclosure_rows = if diagram.enclosed || !group_rects.is_empty() {
@@ -2202,10 +2207,20 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
                 .containers
                 .iter()
                 .map(|c| {
-                    (
-                        c.label.clone(),
-                        c.members.iter().map(|id| format!("{}:{}", diagram.id, id)).collect(),
-                    )
+                    let members = c
+                        .members
+                        .iter()
+                        .map(|id| {
+                            let text = graph
+                                .nodes
+                                .iter()
+                                .find(|n| &n.id == id)
+                                .map(|n| n.label.clone().unwrap_or_else(|| n.id.clone()))
+                                .unwrap_or_else(|| id.clone());
+                            (format!("{}:{}", diagram.id, id), text)
+                        })
+                        .collect();
+                    (c.label.clone(), members)
                 })
                 .collect(),
             focus,
@@ -3263,19 +3278,21 @@ fn put_world_text_if_blank(
 }
 
 /// Draws one container box: a double-bordered rectangle around the named
-/// members, with its label set into the top edge. The box physically holds the
-/// members, so a reader sees the containment instead of inferring it from a
-/// tag; an edge crossing the boundary keeps its cells, and the gap reads as a
-/// relation passing through.
+/// members, with its label set into the top edge.
+///
+/// The box is computed in world coordinates from the members' own rects. It is
+/// exact at the natural fit (the graded viewport); a pane that pans or fits to
+/// a different size can shift it, because the library applies its own viewport
+/// transform when it draws the nodes.
 fn draw_container(
     frame: &mut Frame,
     flow: &Graph,
     canvas: Rect,
     label: &str,
-    members: &[String],
+    members: &[(String, String)],
     color: Color,
 ) {
-    let ids: Vec<&str> = members.iter().map(String::as_str).collect();
+    let ids: Vec<&str> = members.iter().map(|(id, _)| id.as_str()).collect();
     let mut rect: Option<(i32, i32, i32, i32)> = None;
     for node in flow.nodes() {
         if !ids.contains(&node.id.as_str()) {
@@ -3291,24 +3308,19 @@ fn draw_container(
     let Some((x0, y0, x1, y1)) = rect else {
         return;
     };
-    // One cell of clearance on every side keeps the border off the members.
-    let (bx0, by0) = (x0 - 1, y0 - 1);
-    let (bx1, by1) = (x1 + 1, y1 + 1);
+    let (bx0, by0, bx1, by1) = (x0 - 1, y0 - 1, x1 + 1, y1 + 1);
     if bx1 - bx0 < 4 || by1 - by0 < 3 {
         return;
     }
     let style = Style::default().bg(flow.theme.palette().canvas_bg).fg(color);
-    let top_char = |cx: i32| -> char {
-        if cx == bx0 {
+    for cx in bx0..=bx1 {
+        let top = if cx == bx0 {
             '\u{2554}'
         } else if cx == bx1 {
             '\u{2557}'
         } else {
             '\u{2550}'
-        }
-    };
-    for cx in bx0..=bx1 {
-        put_world_text_if_blank(frame, flow, canvas, cx, by0, top_char(cx), style);
+        };
         let bottom = if cx == bx0 {
             '\u{255a}'
         } else if cx == bx1 {
@@ -3316,17 +3328,16 @@ fn draw_container(
         } else {
             '\u{2550}'
         };
+        put_world_text_if_blank(frame, flow, canvas, cx, by0, top, style);
         put_world_text_if_blank(frame, flow, canvas, cx, by1, bottom, style);
     }
     for cy in (by0 + 1)..by1 {
         put_world_text_if_blank(frame, flow, canvas, bx0, cy, '\u{2551}', style);
         put_world_text_if_blank(frame, flow, canvas, bx1, cy, '\u{2551}', style);
     }
-    // The label rides the top edge, two cells in, and wins over the rule.
-    if label.chars().count() as i32 + 4 < (bx1 - bx0) {
+    if (label.chars().count() as i32) + 4 < (bx1 - bx0) {
         for (offset, ch) in label.chars().enumerate() {
-            let cx = bx0 + 2 + offset as i32;
-            put_world_text(frame, flow, canvas, cx, by0, &ch.to_string(), style);
+            put_world_text(frame, flow, canvas, bx0 + 2 + offset as i32, by0, &ch.to_string(), style);
         }
     }
 }

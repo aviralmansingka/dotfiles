@@ -1,0 +1,23 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=29 edges=23 flows=10 direction=lr theme=gruvbox
+canvas: 4 diagrams on one canvas, drawn whole at 100%
+diagram l1 "L1 · System context — the machine manager" at 0,5: extent=171x23 nodes=11 edges=9 routes=9
+  description: The manager's boundary services in one box; the control plane, humans, providers, storage and machines stay outside it.
+diagram l2 "L2 · Inside the box — queue and dispatch" at 0,33: extent=145x13 nodes=6 edges=6 routes=6
+  description: The same box opened: requests land on the River queue, which dispatches to the provider registry, the SSH ops path and the janitor.
+diagram l2b "L2b · Inside the box — the writes into Postgres" at 0,51: extent=57x20 nodes=5 edges=4 routes=4
+  description: Every write into the manager's state store: job rows from the queue, machine rows and heartbeats from the API surfaces, cluster state from reconcile.
+diagram l1b "L1b · The machine side and the outward edges" at 0,76: extent=128x15 nodes=7 edges=4 routes=4
+  description: The same context from the fleet's end: heartbeat registration into public gRPC, plus queue-to-S3 uploads and webapi alerts.
+pins: 18 pinned, 0 conflict(s)
+extent=171x91 cells (whole canvas)
+crossings: 0 bridges, 0 touching bends
+near-misses: 0 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)
+passes-near-unrelated-node: 0
+labels: 23/23 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners
+groups: modal(1) operators(1) manager(19) providers(1) machines(3) storage(3) tooling(1)
+trunks:
+dots: 10 single-dot routes, 0 periodic routes, 0 violations, 10 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 5 by source, 5 by destination, 0 shared-hue pair(s) (source-only 3, destination-only 7)
+origins: 10/10 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

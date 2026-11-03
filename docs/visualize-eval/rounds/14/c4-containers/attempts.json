@@ -1,0 +1,132 @@
+{
+  "case_id": "modal-machine-manager",
+  "round": "14",
+  "view_set": "c4-containers",
+  "notes": "One spec, one render, one bundle: a 4-diagram canvas. `views[0].attempts` lists the three renderable candidates of the shipped line, in order. Every other probe, rejected draft and layout experiment of this round is listed under `abandoned_shapes` with its record label in attempts-log.jsonl; nothing is omitted. This round exceeded the nominal 3-candidate budget and says so in generation.json (blockers) — the frozen engine's 12-node readable-budget warning and the container-box placement drift each forced a re-split.",
+  "views": [
+    {
+      "view": "canvas",
+      "surface": "docs/visualize-eval/rounds/14/c4-containers/specs/c4-containers.json",
+      "spec_form": "canvas",
+      "attempts": [
+        {
+          "n": 1,
+          "label": "c1-check",
+          "spec": "2-diagram canvas: L1 context with a 15-node single container, L2 internals with all 9 services in one box",
+          "check_record": "docs/visualize-eval/rounds/14/c4-containers/recorded/c1-check.stdout",
+          "outcome": "rejected",
+          "why": "check printed `warning: diagram l1 has 15 nodes / 13 edges, above the readable budget (12/16)`, 14 near-miss cells and 1 ambiguous label owner (l2:e9). "
+        },
+        {
+          "n": 2,
+          "label": "v2-check",
+          "spec": "3-diagram canvas: L1 (11 nodes), L2 all-internals (9 nodes), L1b machine side (7 nodes)",
+          "check_record": "docs/visualize-eval/rounds/14/c4-containers/recorded/v2-check.stdout",
+          "outcome": "rejected",
+          "why": "node-budget warning cleared and labels became unambiguous, but the 9-node all-internals diagram still converged four routes on Postgres and produced 28 near-miss cells (l2:e7 at pub/rec, l2:e9 at db)."
+        },
+        {
+          "n": 3,
+          "label": "v3-check",
+          "spec": "4-diagram canvas: L1 context, L2 queue+dispatch, L2b writes into Postgres, L1b machine side",
+          "check_record": "docs/visualize-eval/rounds/14/c4-containers/recorded/v3-check.stdout",
+          "outcome": "shipped",
+          "why": "0 crossings, 0 near-miss cells, 23/23 labels placed with 0 ambiguous owners, no warnings, 10 single-dot routes with 10/10 origins and 0 dot violations."
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "label": "c2-check",
+      "spec": "same 2-diagram canvas, L2 pinned with `layers` (col0 pgrpc/wapi/pub/rec, col1 q, col2 '',db,reg,jan,ssh)",
+      "outcome": "rejected by the engine",
+      "why": "`no obstacle-safe route for jan -> wapi; increase node/layer spacing` — the q->jan->wapi cycle has no corridor once every column is pinned.",
+      "record": "c2-check (exit 1)"
+    },
+    {
+      "label": "c2-check-1",
+      "spec": "2-diagram canvas with `label_slot: true` on q->ssh and pgrpc->db",
+      "outcome": "rejected",
+      "why": "label_slot moved the ambiguity to `provision job` and raised near-misses from 14 to 22 and crossings from 4 to 9 (bridges).",
+      "record": "c2-check-1"
+    },
+    {
+      "label": "probe-budget-13nodes",
+      "spec": "13-node, 4-edge chain (synthetic capability probe)",
+      "outcome": "calibration",
+      "why": "proves the readable-budget warning is triggered by node count alone (`13 nodes / 4 edges is above the readable budget (12/16)`), which is what forced the 4-diagram split.",
+      "record": "probe-budget-13nodes"
+    },
+    {
+      "label": "probe-budget-12nodes20edges",
+      "spec": "12 nodes, 20 edges (synthetic)",
+      "outcome": "rejected spec (engine error)",
+      "why": "duplicate edge pair; only the node-count half of the calibration was needed.",
+      "record": "probe-budget-12nodes20edges"
+    },
+    {
+      "label": "probe-enclosed-pad",
+      "spec": "2-node container diagram with the legacy `enclosed: true` field",
+      "outcome": "rejected as a workaround",
+      "why": "the legacy field adds the missing box clearance but makes --check report a `dotted box=...` line, which would claim a dotted boundary this round deliberately does not draw. Not used.",
+      "record": "probe-enclosed-pad"
+    },
+    {
+      "label": "probe-drift-demo2-check / -frames",
+      "spec": "probes/drift-demo2.json — the feature author's own container demo",
+      "outcome": "defect evidence",
+      "why": "the box is drawn at (18,7) while its members sit at rows 13-16: container geometry does not track the rendered node transform.",
+      "record": "probe-drift-demo2-check, probe-drift-demo2-frames"
+    },
+    {
+      "label": "probe-drift-focus-check / -frames",
+      "spec": "probes/drift-focus-and-container.json — one container plus a `focus: true` node",
+      "outcome": "defect evidence",
+      "why": "the focus double border lands exactly on its node, the container box does not land on its members; isolates the defect to the container path.",
+      "record": "probe-drift-focus-check, probe-drift-focus-frames"
+    },
+    {
+      "label": "probe-drift-two-diagrams-check / -frames / -overflow-frames",
+      "spec": "probes/drift-two-diagrams.json — two diagrams, one container each",
+      "outcome": "defect evidence",
+      "why": "both boxes are painted in their own pre-transform space: the second box lands on the first diagram's rows (row 17 for members at row 26).",
+      "record": "probe-drift-two-diagrams-check, probe-drift-two-diagrams-frames, probe-drift-two-diagrams-overflow-frames"
+    },
+    {
+      "label": "probe-drift-overflow-frames",
+      "spec": "probes/drift-overflow-wide.json at 77x20",
+      "outcome": "defect evidence",
+      "why": "box size follows the member span while its position does not follow the members, so the drift is positional, not a size bug.",
+      "record": "probe-drift-overflow-frames"
+    },
+    {
+      "label": "pc3 / pc6 (exploratory, unrecorded)",
+      "spec": "probes/pc3.json (chain with a 3-member box), probes/pc6.json (box around a single member at rank 1..4)",
+      "outcome": "defect evidence, re-run under the wrapper where a claim depends on it",
+      "why": "showed that the box's top-left tracks member ranking (col 8 / col 26) while the drawing is centred 25 cells to the right. These two runs were made before the record wrapper was adopted; the equivalent claims are cited from the recorded drift probes above.",
+      "record": "(none — disclosed as an evidence gap)"
+    },
+    {
+      "label": "containment-l1 / l2 / l2b / l1b -check / -view",
+      "spec": "probes/containment-<id>.json — one diagram per spec, extracted from the shipped spec, rendered at a viewport where it overflows so the box is drawn at pan 0",
+      "outcome": "per-diagram containment evidence",
+      "why": "shows which members each box holds and which externals sit outside; also shows the remaining placement defect in L2b/L1b.",
+      "record": "containment-l1-check, containment-l1-view, containment-l2-check, containment-l2-view, containment-l2b-check, containment-l2b-view, containment-l1b-check, containment-l1b-view"
+    },
+    {
+      "label": "containment-*-frames (exit 1)",
+      "spec": "same four containment specs",
+      "outcome": "rejected wrapper invocation",
+      "why": "the first pass passed an unsupported `--keep-pan` flag to the record wrapper; kept in the log rather than deleted, the superseded run is `containment-*-view`.",
+      "record": "containment-l1-frames, containment-l2-frames, containment-l2b-frames, containment-l1b-frames (all exit 1)"
+    },
+    {
+      "label": "canvas-motion-whole-canvas",
+      "spec": "the shipped spec dumped whole at 171x92 (the canvas extent) for the motion audit",
+      "outcome": "supplementary capture",
+      "why": "at the 77x47 target only the static L1 band is on screen, so the 10 dots of L2/L2b are outside the capture; the whole-canvas dump is the frames capture the animation audit can read. Recorded, and copied into the bundle as canvas-motion-171x92-frames.txt.",
+      "record": "canvas-motion-whole-canvas"
+    }
+  ]
+}

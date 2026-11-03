@@ -1,0 +1,7 @@
+{"direction":"lr","theme":"gruvbox",
+ "diagrams":[
+  {"id":"d","title":"T","description":"D",
+   "containers":[{"label":"BOX","members":["a","b"]}],
+   "nodes":[{"id":"x","label":"x"},{"id":"a","label":"a","focus":true},{"id":"b","label":"b"},{"id":"y","label":"y"}],
+   "edges":[{"from":"x","to":"a","label":"l1"},{"from":"a","to":"b","label":"l2"},{"from":"b","to":"y","label":"l3"}]}
+ ]}

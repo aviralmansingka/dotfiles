@@ -1,0 +1,26 @@
+viewport: 130x24 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 130x24 @100% · drift-demo2.json · 5 nodes · 4 edges · q quit
+
+
+
+                  ╔═Machine manager═══════════════════════════════════════════════════════╗
+                  ║                                                                       ║
+                  ║ ──────────────────────────────────────────────────────────────────────────────────────────────────────
+                  ║ L1 · System context — the machine manager                             ║
+                  ║ The manager box holds its four core services; the operator, providers and Slack sit outside it
+                  ╚═══════════════════════════════════════════════════════════════════════╝
+                    ╭─────────╮        ╭──────╮          ╭───────────╮           ╭─────────╮        ╭────────╮
+                    │Operators│───────▶│webapi│─────────▶│River queue│──────────▶│reconcile│───────▶│Postgres│
+                    │         │ mmctl  │      │ enqueue  │           │ dispatch  │         │ write  │        │
+                    ╰─────────╯        ╰──────╯          ╰───────────╯           ╰─────────╯        ╰────────╯
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+

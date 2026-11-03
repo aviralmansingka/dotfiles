@@ -1,0 +1,101 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "diagrams": [
+    {
+      "id": "l1b",
+      "title": "L1b · The machine side and the outward edges",
+      "description": "The same context from the fleet's end: heartbeat registration into public gRPC, plus queue-to-S3 uploads and webapi alerts.",
+      "containers": [
+        {
+          "label": "Machine manager",
+          "members": [
+            "q",
+            "wapi",
+            "pub"
+          ]
+        }
+      ],
+      "layers": [
+        [
+          "mch"
+        ],
+        [
+          "agent"
+        ],
+        [
+          "q",
+          "wapi",
+          "pub"
+        ],
+        [
+          "s3",
+          "slack"
+        ]
+      ],
+      "nodes": [
+        {
+          "id": "mch",
+          "label": "bare-metal machines",
+          "group": "machines"
+        },
+        {
+          "id": "agent",
+          "label": "machine-agent",
+          "group": "machines"
+        },
+        {
+          "id": "q",
+          "label": "River job queue",
+          "group": "manager"
+        },
+        {
+          "id": "wapi",
+          "label": "webapi",
+          "group": "manager"
+        },
+        {
+          "id": "pub",
+          "label": "public gRPC",
+          "group": "manager"
+        },
+        {
+          "id": "s3",
+          "label": "S3 object store",
+          "group": "storage"
+        },
+        {
+          "id": "slack",
+          "label": "Slack",
+          "group": "tooling"
+        }
+      ],
+      "edges": [
+        {
+          "from": "mch",
+          "to": "agent",
+          "label": "runs on host",
+          "dots": 0
+        },
+        {
+          "from": "agent",
+          "to": "pub",
+          "label": "register + heartbeat",
+          "dots": 0
+        },
+        {
+          "from": "q",
+          "to": "s3",
+          "label": "diagnose uploads",
+          "dots": 0
+        },
+        {
+          "from": "wapi",
+          "to": "slack",
+          "label": "confirm + alerts",
+          "dots": 0
+        }
+      ]
+    }
+  ]
+}

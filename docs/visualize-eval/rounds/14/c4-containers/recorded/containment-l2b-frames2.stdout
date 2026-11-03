@@ -1,0 +1,14 @@
+viewport: 44x12 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 44x12 @100% · canvas 149x25
+
+──────────────────                         ─
+L2b · Inside the b                         g
+Every write into t      ▐███▌
+═┌───────┐anager══      ▗▄▄▄▖     ▄▄▄      ═
+ │ + [+]─│──────╮       ▝▀▀▀▘     ███
+ │ − [-]a│e gRPC│●      █████     ███
+ │ ⊡ [f] │      │       ▄▄▄▄▄▖
+ │ □ [i]─│──────╯       ▀▀▀▀▀▘
+ └───────┘
+   ╭───────────╮                 │ ╭────────

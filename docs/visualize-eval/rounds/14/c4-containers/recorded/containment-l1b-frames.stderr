@@ -1,0 +1,38 @@
+rataflow-view: unknown option --keep-pan
+
+rataflow-view — render a JSON node/edge spec as a live node graph
+
+usage:
+  rataflow-view <spec.json>                       open the live viewer (needs a real terminal pane)
+  rataflow-view --check <spec.json>               validate the spec and print a summary, no terminal needed
+  rataflow-view --frames <n> <spec.json>          print n timestamped plain-text frames, no pane
+  rataflow-view --help                            show this help
+
+options:
+  --step-ms <ms>   milliseconds between rendered frames (default 100)
+  --select-all     mark every node selected before drawing
+  --frames-ansi    print the frames WITH colour escapes (whole-canvas colour proof)
+
+spec fields: direction (tb|lr), theme (gruvbox|dark|light),
+nodes (id, label?, group?), edges (from, to, label?, flow?, timing?, duration_ms?, dots?, style?, label_slot?),
+trunks (id, label?, from, to, branches)
+diagrams: a canvas of several named graphs on ONE pannable canvas, each with
+      its title and one-line description drawn above it:
+      diagrams: [{ id, title, description?, direction?, nodes, edges, layers?, trunks? }]
+      A spec declares either edges (one graph) or diagrams (a canvas), not both
+flow: true or a positive rate — animated dots travel from "from" to "to";
+      true runs at the default constant rate (0.5 cells per 100 ms step); a
+      number runs at that constant rate instead, so long routes finish later
+      than short ones — that is correct, not a defect
+timing: "constant" (default) or "same-arrival". same-arrival makes every
+      such route leave at phase 0 and reach its arrowhead after duration_ms,
+      and needs "flow": true (a numeric flow is rejected)
+duration_ms: positive whole milliseconds of shared arrival time (default
+      2000); valid ONLY with "timing": "same-arrival" and "flow": true
+dots: 0 (no dot) or 1 (exactly one dot on the route); absent keeps the
+      periodic dot spacing
+label_slot: true reserves a horizontal gutter band for this edge's label
+      beside its run, instead of a rank gap as tall as the text is wide
+style: solid (default) or dashed — dashed marks an unconfirmed fact
+trunks: one corridor from "from" to "to" plus one spur per branch node
+

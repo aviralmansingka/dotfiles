@@ -1,0 +1,63 @@
+{
+  "spec_path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/14/c4-containers/specs/c4-containers.json",
+  "spec_sha256": "451683bec4b9937b9aaa02a58ae8bef9254a4d09d234e110e9fc5e17b164d798",
+  "spec_form": "canvas",
+  "diagrams": [
+    {
+      "id": "l1",
+      "title": "L1 · System context — the machine manager",
+      "description": "The manager's boundary services in one box; the control plane, humans, providers, storage and machines stay outside it."
+    },
+    {
+      "id": "l2",
+      "title": "L2 · Inside the box — queue and dispatch",
+      "description": "The same box opened: requests land on the River queue, which dispatches to the provider registry, the SSH ops path and the janitor."
+    },
+    {
+      "id": "l2b",
+      "title": "L2b · Inside the box — the writes into Postgres",
+      "description": "Every write into the manager's state store: job rows from the queue, machine rows and heartbeats from the API surfaces, cluster state from reconcile."
+    },
+    {
+      "id": "l1b",
+      "title": "L1b · The machine side and the outward edges",
+      "description": "The same context from the fleet's end: heartbeat registration into public gRPC, plus queue-to-S3 uploads and webapi alerts."
+    }
+  ],
+  "binary_path": "/tmp/visualize-eval/round-14/bin/rataflow-view",
+  "binary_sha256": "80d36c42dc5d7edc105b0f2843be51012a645bcc7682d29c1811850531d55c0b",
+  "pane_id": "w7E:p12C",
+  "pane_rect": null,
+  "pane_cols": null,
+  "pane_rows": 44,
+  "viewport_line": null,
+  "viewport_token": "68x44 @100%",
+  "check_exit": 0,
+  "check_window": [
+    "2026-11-03T17:57:20Z",
+    "2026-11-03T17:57:20Z"
+  ],
+  "capture_window": [
+    "2026-11-03T17:57:20Z",
+    "2026-11-03T17:57:25Z"
+  ],
+  "cleanup": "confirmed_closed",
+  "select_all_frame": true,
+  "frames": 40,
+  "frame_step_ms": 100,
+  "pinned_frames": {
+    "file": "canvas-77x47-frames.txt",
+    "viewport_line": "viewport: 77x47 zoom: 1.00 natural"
+  },
+  "artifacts": {
+    "bin.sha256": "bc3735ea012e0a105d5ff5808598320f499192a56b2f98d9be59e93002bf2b0c",
+    "canvas-77x47-frames.txt": "3f7ea35d43bfb0b4be6b5785734873332171933515dfaf6de3c388f9a476f919",
+    "canvas-ansi.ansi": "4b5db53a99f52808e26f80dc66bcffe960f586d19fbba958fc031f5ab74ed302",
+    "canvas-frames.ansi": "4556b1e8ee566c788ffcb8840458b5ae25e05f64c851e715351cc4740ac7d042",
+    "canvas-frames.txt": "15c9122e422bee7705e07d88cd66dc08a99b0f79e2884f9cc47720a84a225704",
+    "canvas-pinned.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "canvas-selected.ansi": "e3c2c765be7573ec7ec36d7a02e09b59ea8189fb39a17a155ff5c8c5b762813b",
+    "canvas-text.txt": "939b1783a1c773a022bb2724c57e46bb938c0869f117d9a42a5d940a62491b5a",
+    "check.txt": "cee2885eef5d93b35988f706e7600683ebdacc7c4ff217d7cbf2bba85bc90ec2"
+  }
+}

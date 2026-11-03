@@ -1,0 +1,22 @@
+viewport: 100x20 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 100x20 @100% · canvas 171x28 · containment-l1.json · 11 nodes · 9 edges · q quit
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, humans, providers, storage and machin
+
+                                                                             ╭──────────────────────
+                                                  ╔═Machine manager══════════▼═════════╗
+                                                  ║                    ╭───────────╮   ║
+                                                  ║                    │bo                         ─
+                                                  ║                    │                           i
+                                                  ║                    ╰──
+                                                  ║
+╭┌───────┐──────────╮ create / terminate / repair ║╭────────────╮   ╭───── ▄▄▄   ▗▄▖▟█▌  ▄▄▄   ▄▄▄
+││ + [+]o│trol plane│─────────────────────────────▶│private gRPC│   │clust ▄▄     ▄ ▄▄▖  ▗▄▄   ▀▀▀ ─
+││ − [-] │          │                             ║│            │   │               ▀▀
+╰│ ⊡ [f]─│──────────╯                             ║╰────────────╯   ╰─────
+ │ □ [i] │                                        ║
+ └───────┘────────╮               http            ║   ╭──────╮      ╭─────                         A
+   │humans + mmctl│──────────────────────────────────▶│webapi│      │provider registry│─────────────

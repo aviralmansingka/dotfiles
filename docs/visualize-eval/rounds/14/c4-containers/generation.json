@@ -1,0 +1,887 @@
+{
+  "case_id": "modal-machine-manager",
+  "round": "14",
+  "view_set": "c4-containers",
+  "spec_form": "canvas",
+  "generator": {
+    "agent": "pi worker subagent `viz-c4-containers` (harness: herdr worktree fix-visualize-skill)",
+    "model": "accounts/fireworks/routers/deepseek-flash-latest",
+    "provider": "fireworks",
+    "reasoning_level": "high",
+    "note": "the same model family the round-13 generator task names; no judge was spawned, per the task"
+  },
+  "frozen_inputs": {
+    "skill": {
+      "path": "docs/visualize-eval/proposals/13/SKILL.md",
+      "path_checked": "identical to docs/visualize-eval/rounds/14/SKILL.md",
+      "sha256": "086394bd1bb4423007fd4704d694c2e7da69a07c54c958d1817aa6c5184b91c4",
+      "section_read": "\"Zoom-in views (C4-style, architecture asks)\" — container boxes, contiguity, boundary gaps, one direction, uniform dividers"
+    },
+    "binary": {
+      "path": "/tmp/visualize-eval/round-14/bin/rataflow-view",
+      "sha256": "80d36c42dc5d7edc105b0f2843be51012a645bcc7682d29c1811850531d55c0b",
+      "frozen_sha_prefix_matches_task": true
+    },
+    "facts": {
+      "path": "docs/visualize-eval/cases/modal-machine-manager/source.md",
+      "note": "the only dataset read; no other case, brief, expected.json, earlier round output or rubric was opened"
+    },
+    "rubric": "no round-14 rubric file exists under rounds/14; the round-13 annex names revision 11 and that file was deliberately not read, so no revision is claimed here",
+    "viewport": "77x47 natural, 100% (target); measured pane in the bundle: 68x44 @100%"
+  },
+  "triage": {
+    "annex": "TRIAGE-modal-machine-manager",
+    "questions_provoked": [
+      "Q1 scope: all 23 relations, or only the main paths?",
+      "Q2 shape: one canvas of named diagrams, or several separate panes?",
+      "Q3 motion: which relations carry a dot, and may a dot cross a box border?",
+      "Q4 how many C4 levels does the source support, and does the L1 box hold every manager service?",
+      "Q5 which component set belongs to 'the manager' for the box membership?",
+      "Q6 does a container supersede the zoom parent's `focus` double border?"
+    ],
+    "questions_used": [
+      {
+        "id": "TRIAGE-modal-machine-manager-1",
+        "question": "All 23 relations, or the main paths?",
+        "answer": "All of them. Every relation once. I'd rather navigate a big canvas than lose a path.",
+        "answer_source": "annex answer TRIAGE-modal-machine-manager-1"
+      },
+      {
+        "id": "TRIAGE-modal-machine-manager-2",
+        "question": "One canvas or several separate panes?",
+        "answer": "One canvas with everything, split into named diagrams I can read. Describe each one so I know what I'm looking at.",
+        "answer_source": "annex answer TRIAGE-modal-machine-manager-2"
+      },
+      {
+        "id": "TRIAGE-modal-machine-manager-3",
+        "question": "Motion?",
+        "answer": "Slow, sparse dots — one per live transition. Nothing on the historical ones, and no dot sitting on a border.",
+        "answer_source": "annex answer TRIAGE-modal-machine-manager-3"
+      },
+      {
+        "id": "own-1",
+        "question": "How many C4 levels, and does the L1 box hold every manager service?",
+        "answer": "Four described diagrams: L1 context, L2 queue+dispatch, L2b writes into Postgres, L1b machine side. The frozen engine warns `above the readable budget (12/16)` at 13 nodes, so a 17-component context cannot sit in one diagram; the split keeps the C4 spine (L1 box, then the box opened) and adds one second context slice for the fleet edge.",
+        "answer_source": "own judgment",
+        "reason": "measured: probe-budget-13nodes shows the warning fires on node count alone; v1/v2 checks show 15- and 9-node boxes re-creating routing defects. The annex fixes coverage, not diagram count, and the skill puts the content authority above a budget hint."
+      },
+      {
+        "id": "own-2",
+        "question": "Which relations carry a dot, given 'no dot sitting on a border'?",
+        "answer": "Only the ten relations whose whole route lives inside a container: L2's six and L2b's four. The nine L1 and four L1b relations all cross the box border, so they stay static.",
+        "answer_source": "own judgment",
+        "reason": "the annex forbids a dot on a border; every L1/L1b relation satisfies janitor-style border crossing by construction, so animating them would put a dot on the border for one frame per lap."
+      },
+      {
+        "id": "own-3",
+        "question": "Which components are 'the manager' for box membership?",
+        "answer": "The services the source gives the manager: private gRPC, webapi, River queue, provider registry, reconcile, SSH+BMC ops, boot server, public gRPC, janitor, Postgres. Modal's control plane, humans/mmctl, providers, machines, machine-agent, S3 and Slack stay outside.",
+        "answer_source": "own judgment",
+        "reason": "source line 31 makes cp call INTO private gRPC ('control plane calls private gRPC'), so cp is the caller, not a member; agent is 'runs on host', so it belongs to the machine side."
+      },
+      {
+        "id": "own-4",
+        "question": "Does a container supersede the zoom parent's `focus` double border?",
+        "answer": "Yes — no node carries `focus`; the container is the zoom parent.",
+        "answer_source": "own judgment",
+        "reason": "the skill's C4 section states the container supersedes `focus` for 'the box holds these'."
+      }
+    ],
+    "converged_when": "coverage (all 23 relations, once), the reader's job (navigate one described canvas), the shape (canvas of described diagrams), and the motion split (dots only where no route crosses a box border) were all fixed; the remaining questions were engine-budget arithmetic, decided from measured checks.",
+    "shape_decision": "canvas with 4 described diagrams (L1, L2, L2b, L1b); 27 node boxes across the canvas, 23 relations, one reading direction (lr)"
+  },
+  "classification": {
+    "family": "lifecycle-machines",
+    "evidence": "the source's own line 31 splits one machine's life into three named paths — request/provisioning, heartbeat, and the slow ops path — and every live transition is a dot candidate ('keep on dot alive per line').",
+    "tie_breakers_considered": [
+      "service-meshes: an anti-parallel pair does exist (mch->boot iPXE request and boot->mch boot.ipxe + S3 args), and it is kept in ONE view with distinct labels and distinct ports (l1).",
+      "placement-planes: three weakly-connected worlds do exist (callers, manager, fleet/providers); borrowed as spatial separation only, with no invented bus."
+    ],
+    "secondary_recipe": "service-meshes habit for the anti-parallel boot pair; placement-planes habit for keeping the fleet world apart from the manager world.",
+    "reclassification": "none"
+  },
+  "shape_decision": {
+    "rung": "one large canvas hosting four named, described concept-diagrams (skill view ladder rung 2)",
+    "deciding_facts": [
+      "17 components and 23 relations cannot fit one 77x47 view at natural zoom (clarity-first; measured v3 canvas extent 171x91).",
+      "The frozen engine warns at >12 nodes per diagram, so a single 17-node context diagram is not available.",
+      "Four relations converge on Postgres; a 9-node all-internals diagram (v2) put 28 route cells inside the 2-cell margin of an unrelated node, while splitting the fan into L2b cleared it to 0."
+    ],
+    "rejected_rungs": [
+      {
+        "rung": "single view at 77x47",
+        "reason": "17 components / 23 relations with up to 27-character labels cannot fit 77x47 without dropping source content."
+      },
+      {
+        "rung": "two diagrams (L1 + all internals)",
+        "reason": "measured: c1-check (15-node L1 -> unreadable-budget warning; 9-node internals -> 14 near-miss cells, 1 ambiguous label)."
+      },
+      {
+        "rung": "three diagrams (L1 + internals + fleet)",
+        "reason": "measured: v2-check (9-node internals still 28 near-miss cells)."
+      }
+    ]
+  },
+  "surfaces": [
+    {
+      "view": "canvas",
+      "spec": "docs/visualize-eval/rounds/14/c4-containers/specs/c4-containers.json",
+      "spec_sha256": "451683bec4b9937b9aaa02a58ae8bef9254a4d09d234e110e9fc5e17b164d798",
+      "bundle": "docs/visualize-eval/rounds/14/c4-containers/evidence/canvas",
+      "text": "evidence/canvas/canvas-text.txt",
+      "ansi": "evidence/canvas/canvas-ansi.ansi",
+      "selected_ansi": "evidence/canvas/canvas-selected.ansi",
+      "check": "evidence/canvas/check.txt",
+      "frames": "evidence/canvas/canvas-frames.txt",
+      "pinned_77x47_frames": "evidence/canvas/canvas-77x47-frames.txt",
+      "supplementary_whole_canvas_frames": "evidence/canvas/canvas-motion-171x92-frames.txt",
+      "measured_viewport_line": "viewport: 77x47 zoom: 1.00 natural (pinned dump)",
+      "measured_pane_header_token": "68x44 @100%",
+      "canvas_extent": "171x91 cells (whole canvas)",
+      "diagrams": [
+        {
+          "id": "l1",
+          "title": "L1 · System context — the machine manager",
+          "description": "The manager's boundary services in one box; the control plane, humans, providers, storage and machines stay outside it.",
+          "origin": [
+            0,
+            5
+          ],
+          "extent": [
+            171,
+            23
+          ],
+          "nodes": 11,
+          "edges": 9,
+          "routes": 9,
+          "container": {
+            "label": "Machine manager",
+            "members": [
+              "pgrpc",
+              "wapi",
+              "reg",
+              "rec",
+              "ssh",
+              "boot"
+            ]
+          },
+          "outside_the_box": [
+            "cp",
+            "web",
+            "prov",
+            "s3",
+            "mch"
+          ]
+        },
+        {
+          "id": "l2",
+          "title": "L2 · Inside the box — queue and dispatch",
+          "description": "The same box opened: requests land on the River queue, which dispatches to the provider registry, the SSH ops path and the janitor.",
+          "origin": [
+            0,
+            33
+          ],
+          "extent": [
+            145,
+            13
+          ],
+          "nodes": 6,
+          "edges": 6,
+          "routes": 6,
+          "container": {
+            "label": "Machine manager",
+            "members": [
+              "pgrpc",
+              "wapi",
+              "q",
+              "reg",
+              "ssh",
+              "jan"
+            ]
+          },
+          "outside_the_box": []
+        },
+        {
+          "id": "l2b",
+          "title": "L2b · Inside the box — the writes into Postgres",
+          "description": "Every write into the manager's state store: job rows from the queue, machine rows and heartbeats from the API surfaces, cluster state from reconcile.",
+          "origin": [
+            0,
+            51
+          ],
+          "extent": [
+            57,
+            20
+          ],
+          "nodes": 5,
+          "edges": 4,
+          "routes": 4,
+          "container": {
+            "label": "Machine manager",
+            "members": [
+              "q",
+              "pgrpc",
+              "pub",
+              "rec",
+              "db"
+            ]
+          },
+          "outside_the_box": []
+        },
+        {
+          "id": "l1b",
+          "title": "L1b · The machine side and the outward edges",
+          "description": "The same context from the fleet's end: heartbeat registration into public gRPC, plus queue-to-S3 uploads and webapi alerts.",
+          "origin": [
+            0,
+            76
+          ],
+          "extent": [
+            128,
+            15
+          ],
+          "nodes": 7,
+          "edges": 4,
+          "routes": 4,
+          "container": {
+            "label": "Machine manager",
+            "members": [
+              "q",
+              "wapi",
+              "pub"
+            ]
+          },
+          "outside_the_box": [
+            "mch",
+            "agent",
+            "s3",
+            "slack"
+          ]
+        }
+      ],
+      "totals": {
+        "node_boxes": 29,
+        "edges": 23,
+        "routes": 23,
+        "groups": "modal(1) operators(1) manager(19) providers(1) machines(3) storage(3) tooling(1)"
+      }
+    }
+  ],
+  "containment_verification": {
+    "method": "the frozen renderer's container box is painted in pre-render world space, so containment is only visually true where the canvas is drawn at pan 0; each diagram was re-rendered alone at a viewport its canvas overflows (probes/containment-*.json, records containment-*-check / containment-*-view)",
+    "l1": {
+      "verdict": "correct",
+      "evidence": "evidence/canvas/canvas-77x47-frames.txt rows 9-29 and recorded/containment-l1-view.stdout rows 8-20: box top one row above `boot server`, left border at col 50, and cp/web/prov/s3/mch all outside",
+      "measured": "box top row 9, topmost member row 10 (77x47 pinned dump)"
+    },
+    "l2": {
+      "verdict": "membership correct, left border clipped",
+      "evidence": "recorded/containment-l2-view.stdout rows 6-13: box top one row above webapi; the left border sits at x=-1 and is clipped because no clearance is reserved",
+      "measured": "box left x = -1 (diagram origin), so the ╔ corner never paints"
+    },
+    "l2b": {
+      "verdict": "placement defect",
+      "evidence": "recorded/containment-l2b-view.stdout rows 5-8: box top edge lands on the row of `private gRPC`'s bottom border and the left border is clipped; the label is drawn at col 0",
+      "measured": "box top row 8 vs expected row 4, box left col 0 vs expected col 25"
+    },
+    "l1b": {
+      "verdict": "placement defect",
+      "evidence": "recorded/containment-l1b-view.stdout rows 6-8: only the ╔ corner at col 73 paints; the left border is off-canvas",
+      "measured": "box left border missing from the capture"
+    }
+  },
+  "coverage": {
+    "relations": [
+      {
+        "n": 1,
+        "from": "cp",
+        "to": "pgrpc",
+        "label": "create / terminate / repair",
+        "diagram": "l1"
+      },
+      {
+        "n": 2,
+        "from": "web",
+        "to": "wapi",
+        "label": "http",
+        "diagram": "l1"
+      },
+      {
+        "n": 3,
+        "from": "pgrpc",
+        "to": "q",
+        "label": "enqueue job",
+        "diagram": "l2"
+      },
+      {
+        "n": 4,
+        "from": "wapi",
+        "to": "q",
+        "label": "reinstall / reprovision",
+        "diagram": "l2"
+      },
+      {
+        "n": 5,
+        "from": "q",
+        "to": "reg",
+        "label": "provision job",
+        "diagram": "l2"
+      },
+      {
+        "n": 6,
+        "from": "reg",
+        "to": "prov",
+        "label": "provider API",
+        "diagram": "l1"
+      },
+      {
+        "n": 7,
+        "from": "prov",
+        "to": "mch",
+        "label": "allocate instance",
+        "diagram": "l1"
+      },
+      {
+        "n": 8,
+        "from": "mch",
+        "to": "boot",
+        "label": "iPXE request",
+        "diagram": "l1"
+      },
+      {
+        "n": 9,
+        "from": "boot",
+        "to": "mch",
+        "label": "boot.ipxe + S3 args",
+        "diagram": "l1"
+      },
+      {
+        "n": 10,
+        "from": "mch",
+        "to": "agent",
+        "label": "runs on host",
+        "diagram": "l1b"
+      },
+      {
+        "n": 11,
+        "from": "agent",
+        "to": "pub",
+        "label": "register + heartbeat",
+        "diagram": "l1b"
+      },
+      {
+        "n": 12,
+        "from": "pub",
+        "to": "db",
+        "label": "machine state",
+        "diagram": "l2b"
+      },
+      {
+        "n": 13,
+        "from": "pgrpc",
+        "to": "db",
+        "label": "machine rows",
+        "diagram": "l2b"
+      },
+      {
+        "n": 14,
+        "from": "q",
+        "to": "db",
+        "label": "job rows",
+        "diagram": "l2b"
+      },
+      {
+        "n": 15,
+        "from": "q",
+        "to": "ssh",
+        "label": "audit / verify reimage",
+        "diagram": "l2"
+      },
+      {
+        "n": 16,
+        "from": "ssh",
+        "to": "mch",
+        "label": "run machine-audit",
+        "diagram": "l1"
+      },
+      {
+        "n": 17,
+        "from": "mch",
+        "to": "s3",
+        "label": "pull boot image",
+        "diagram": "l1"
+      },
+      {
+        "n": 18,
+        "from": "q",
+        "to": "s3",
+        "label": "diagnose uploads",
+        "diagram": "l1b"
+      },
+      {
+        "n": 19,
+        "from": "q",
+        "to": "jan",
+        "label": "diagnostic events",
+        "diagram": "l2"
+      },
+      {
+        "n": 20,
+        "from": "jan",
+        "to": "wapi",
+        "label": "proposed actions",
+        "diagram": "l2"
+      },
+      {
+        "n": 21,
+        "from": "wapi",
+        "to": "slack",
+        "label": "confirm + alerts",
+        "diagram": "l1b"
+      },
+      {
+        "n": 22,
+        "from": "rec",
+        "to": "prov",
+        "label": "gcore sync, 1 min",
+        "diagram": "l1"
+      },
+      {
+        "n": 23,
+        "from": "rec",
+        "to": "db",
+        "label": "cluster state",
+        "diagram": "l2b"
+      }
+    ],
+    "relation_count": 23,
+    "components": [
+      {
+        "id": "cp",
+        "label": "Modal control plane",
+        "group": "modal",
+        "diagrams": [
+          "l1"
+        ]
+      },
+      {
+        "id": "web",
+        "label": "humans + mmctl",
+        "group": "operators",
+        "diagrams": [
+          "l1"
+        ]
+      },
+      {
+        "id": "pgrpc",
+        "label": "private gRPC",
+        "group": "manager",
+        "diagrams": [
+          "l1",
+          "l2",
+          "l2b"
+        ]
+      },
+      {
+        "id": "wapi",
+        "label": "webapi",
+        "group": "manager",
+        "diagrams": [
+          "l1",
+          "l2",
+          "l1b"
+        ]
+      },
+      {
+        "id": "q",
+        "label": "River job queue",
+        "group": "manager",
+        "diagrams": [
+          "l2",
+          "l2b",
+          "l1b"
+        ]
+      },
+      {
+        "id": "reg",
+        "label": "provider registry",
+        "group": "manager",
+        "diagrams": [
+          "l1",
+          "l2"
+        ]
+      },
+      {
+        "id": "rec",
+        "label": "cluster reconcile",
+        "group": "manager",
+        "diagrams": [
+          "l1",
+          "l2b"
+        ]
+      },
+      {
+        "id": "ssh",
+        "label": "SSH + BMC ops",
+        "group": "manager",
+        "diagrams": [
+          "l1",
+          "l2"
+        ]
+      },
+      {
+        "id": "boot",
+        "label": "boot server",
+        "group": "manager",
+        "diagrams": [
+          "l1"
+        ]
+      },
+      {
+        "id": "pub",
+        "label": "public gRPC",
+        "group": "manager",
+        "diagrams": [
+          "l2b",
+          "l1b"
+        ]
+      },
+      {
+        "id": "jan",
+        "label": "janitor app",
+        "group": "manager",
+        "diagrams": [
+          "l2"
+        ]
+      },
+      {
+        "id": "db",
+        "label": "Postgres",
+        "group": "storage",
+        "diagrams": [
+          "l2b"
+        ]
+      },
+      {
+        "id": "prov",
+        "label": "bare-metal providers",
+        "group": "providers",
+        "diagrams": [
+          "l1"
+        ]
+      },
+      {
+        "id": "mch",
+        "label": "bare-metal machines",
+        "group": "machines",
+        "diagrams": [
+          "l1",
+          "l1b"
+        ]
+      },
+      {
+        "id": "agent",
+        "label": "machine-agent",
+        "group": "machines",
+        "diagrams": [
+          "l1b"
+        ]
+      },
+      {
+        "id": "s3",
+        "label": "S3 object store",
+        "group": "storage",
+        "diagrams": [
+          "l1",
+          "l1b"
+        ]
+      },
+      {
+        "id": "slack",
+        "label": "Slack",
+        "group": "tooling",
+        "diagrams": [
+          "l1b"
+        ]
+      }
+    ],
+    "components_count": 17,
+    "drops": [],
+    "notes": "Every source relation appears exactly once; every source component appears in at least one diagram. No relation is duplicated across diagrams and none is thinned."
+  },
+  "semantic_fixes_carried": [
+    {
+      "fix": "audit / verify reimage stays on the queue -> SSH relation",
+      "where": "l2, edge q->ssh",
+      "evidence": "canvas-motion-171x92-frames.txt row 39 `audit / verify reimage` between River job queue and SSH + BMC ops"
+    },
+    {
+      "fix": "boot.ipxe + S3 args stays on the boot response",
+      "where": "l1, edge boot->mch",
+      "evidence": "canvas-motion-171x92-frames.txt row 9 `boot.ipxe + S3 args` on the boot server -> bare-metal machines route"
+    }
+  ],
+  "hue_record": {
+    "group_families": {
+      "modal": "control plane",
+      "operators": "humans + mmctl",
+      "manager": "the manager's own services",
+      "providers": "bare-metal providers",
+      "machines": "machines + machine-agent",
+      "storage": "Postgres + S3",
+      "tooling": "Slack"
+    },
+    "case_wide": "one `group` tag keeps one hue family across all four diagrams; the same node keeps the same group in every diagram it appears in",
+    "dot_hues_line": "dot hues: 5 by source, 5 by destination, 0 shared-hue pair(s) (source-only 3, destination-only 7)",
+    "binding_rule": "per route the engine binds the dot to the end (source or destination) that leaves fewer routes sharing one hue; with 10 animated routes it chose the source end 5 times and the destination end 5 times",
+    "reporting_gap": "the frozen binary prints only the aggregate dot-hue line, not a per-route binding, so this record states the rule and the counts rather than inventing a per-route table"
+  },
+  "routing_record": [
+    {
+      "attempt": "c1-check",
+      "near_miss_cells": 14,
+      "passes_near_unrelated_node": 14,
+      "crossings": "4 bridges, 1 touching bends",
+      "relief": "re-split: L1 15->11 nodes, internals 9->6+5"
+    },
+    {
+      "attempt": "c2-check",
+      "outcome": "engine error: no obstacle-safe route for jan -> wapi"
+    },
+    {
+      "attempt": "c2-check-1",
+      "near_miss_cells": 22,
+      "passes_near_unrelated_node": 22,
+      "crossings": "9 bridges, 2 touching bends",
+      "relief": "removed label_slot"
+    },
+    {
+      "attempt": "v2-check",
+      "near_miss_cells": 28,
+      "passes_near_unrelated_node": 28,
+      "crossings": "7 bridges, 3 touching bends",
+      "relief": "re-split: all-internals 9 nodes -> queue+dispatch 6 + writes 4"
+    },
+    {
+      "attempt": "v3-check (shipped)",
+      "near_miss_cells": 0,
+      "passes_near_unrelated_node": 0,
+      "crossings": "0 bridges, 0 touching bends"
+    }
+  ],
+  "structural_levers": [
+    {
+      "lever": "diagrams",
+      "use": "4 described concept diagrams on one canvas",
+      "source_fact": "the source names three paths (provisioning, heartbeat, ops) and a system boundary"
+    },
+    {
+      "lever": "containers",
+      "use": "one 'Machine manager' box per diagram around that diagram's manager services",
+      "source_fact": "the manager is a system with its own services (webapi, River queue, registry, reconcile, SSH ops, boot, public gRPC, janitor, Postgres)"
+    },
+    {
+      "lever": "layers (l1)",
+      "use": "cp/web at rank 0, two complete member ranks 1-2, prov/s3 at rank 3, mch at rank 4",
+      "source_fact": "callers -> manager services -> providers/machines is the source's request-and-ops order; ranks keep the box's columns member-only"
+    },
+    {
+      "lever": "layers (l1b)",
+      "use": "mch, agent, one complete member rank (q/wapi/pub), s3/slack",
+      "source_fact": "runs on host -> register + heartbeat is a two-hop machine path before the public gRPC"
+    },
+    {
+      "lever": "dots: 1 + flow (l2, l2b)",
+      "use": "one dot per live internal transition at the default 0.5 cells/100ms",
+      "source_fact": "'use way less dots. keep on dot alive per line' plus the annex's slow sparse dots"
+    },
+    {
+      "lever": "group",
+      "use": "7 semantic groups",
+      "source_fact": "control plane / humans / manager services / providers / machines / storage / Slack"
+    },
+    {
+      "lever": "not used: focus, trunks, style:dashed, label_slot, minlen",
+      "reason": "the container supersedes focus; no bus exists in the source; no relation is marked uncertain; label_slot regressed the layout (c2-check-1); minlen is not a field of the frozen binary"
+    }
+  ],
+  "dots": {
+    "animated": [
+      {
+        "diagram": "l2",
+        "routes": 6,
+        "mode": "constant 0.5 cells/step"
+      },
+      {
+        "diagram": "l2b",
+        "routes": 4,
+        "mode": "constant 0.5 cells/step"
+      }
+    ],
+    "static": [
+      {
+        "diagram": "l1",
+        "routes": 9,
+        "reason": "every relation crosses the container border; the annex forbids a dot sitting on a border"
+      },
+      {
+        "diagram": "l1b",
+        "routes": 4,
+        "reason": "same: agent->pub enters the box, q->s3 and wapi->slack leave it"
+      }
+    ],
+    "check_lines": {
+      "dots": "dots: 10 single-dot routes, 0 periodic routes, 0 violations, 10 constant at 0.5c/step, 0 same-arrival at 2000ms",
+      "origins": "origins: 10/10 routes start at their arrow origin",
+      "arrivals": "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+    },
+    "frames": "40 frames at 100 ms cover the longest lap (19 cells -> ceil(19/0.5)=38)",
+    "frame_audit": "PASS — 10/10 routes steady, 0.500 cells/frame, equal distance over 29 x 10-frame windows, spread 0"
+  },
+  "deviations": [
+    {
+      "deviation": "`focus: true` not used on any zoom parent",
+      "reason": "the skill states a container supersedes focus for 'the box holds these'; a double border on one node would mislabel one member as the box",
+      "evidence": "all four diagrams; probes/drift-focus-and-container.json records that focus and a container draw at different places"
+    },
+    {
+      "deviation": "L1's box holds 6 of the manager's 10 services, not all 10",
+      "reason": "the frozen engine warns above 12 nodes, so a context diagram cannot carry 10 services plus 7 externals; the other services are boxed in L2/L2b/L1b, and every manager service is inside a box in every diagram it appears in",
+      "evidence": "check line `warning: ... above the readable budget (12/16)` reproduced by probe-budget-13nodes"
+    },
+    {
+      "deviation": "four diagrams rather than the two the task aims for",
+      "reason": "same 12-node budget plus the measured routing regressions; the C4 spine (L1 context, then the box opened) is kept, with the fleet edge as a second context slice",
+      "evidence": "c1-check, v2-check, v3-check"
+    },
+    {
+      "deviation": "second containers entry not needed",
+      "reason": "the task allows several boxes when a service cannot be contiguous; with the 4-diagram split every box's members occupy whole ranks, so one box per diagram suffices",
+      "evidence": "containment probes"
+    }
+  ],
+  "defects": [
+    {
+      "id": "container-placement",
+      "severity": "high",
+      "what": "a container box is painted in the pre-render world space, so it does not follow the node transform (centring offset, pan, zoom). It lands on its members only when the canvas is drawn at pan 0 with no centring slack.",
+      "measurements": [
+        "77x47 pinned dump, L1: box top row 9, topmost member row 10 -> correct",
+        "171x92 whole-canvas dump, L1: box top edge merges with `boot server`'s top border -> 2 rows low",
+        "100x20 L2b-only probe: box top row 8 vs expected row 4; box left col 0 vs expected col 25",
+        "100x16 L1b-only probe: only the top-right corner paints",
+        "130x24 author demo: box at (18,7) for members at rows 13-16"
+      ],
+      "evidence": [
+        "probes/drift-demo2.json",
+        "probes/drift-focus-and-container.json",
+        "probes/drift-two-diagrams.json",
+        "probes/containment-l2b.json",
+        "probes/containment-l1b.json"
+      ],
+      "source_note": "rataflow/src/lib.rs `draw_enclosures` runs before the first `render_widget`, and its own doc comment still says the boundary 'mapping does not yet track the library's node transform'"
+    },
+    {
+      "id": "container-no-clearance",
+      "severity": "medium",
+      "what": "build_canvas reserves padding only for the legacy `enclosed`/`enclosure` fields, not for `containers`, so a container flush with its diagram's left or top edge is drawn at -1 and clipped (L2 and L2b lose their left border).",
+      "evidence": [
+        "recorded/containment-l2-view.stdout",
+        "recorded/containment-l2b-view.stdout",
+        "evidence/canvas/canvas-77x47-frames.txt rows 35-47"
+      ],
+      "workaround_rejected": "`enclosed: true` restores the clearance but makes --check claim a `dotted box=...`, which would misreport this round's replacement"
+    },
+    {
+      "id": "container-label-crossing",
+      "severity": "low",
+      "what": "a relation crossing the box's top edge takes its own cells and can eat a character of the box label (`Machine manager` -> `Machine ▼anager`) when the crossing coincides with the label run.",
+      "evidence": [
+        "recorded/containment-l1-view.stdout row 8",
+        "c1-check-era frames showed the same at 77x47"
+      ],
+      "note": "the shipped spec's L1 crossing lands at the end of the label; the L1-only probe shows the edit when the route lands inside the run"
+    },
+    {
+      "id": "check-does-not-report-containers",
+      "severity": "medium",
+      "what": "--check prints no container membership, no containment violation and no per-route dot-hue binding, so containment cannot be validated mechanically — only from a capture.",
+      "evidence": [
+        "evidence/canvas/check.txt"
+      ]
+    },
+    {
+      "id": "canvas-frames-vs-target",
+      "severity": "low",
+      "what": "at the 77x47 target a 171x91 canvas shows only the static L1 band, so the animation audit cannot see a dot there; the bundle therefore carries a supplementary whole-canvas 171x92 frames dump.",
+      "evidence": [
+        "evidence/canvas/canvas-77x47-frames.txt",
+        "evidence/canvas/canvas-motion-171x92-frames.txt"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "id": "container-geometry",
+      "what": "container boxes cannot be relied on to enclose their members in the frozen binary; the round's mandated feature is only correct at pan 0. The spec declares the containers correctly and the captures show both the correct case (L1 at 77x47) and the defect.",
+      "needs": "renderer fix: resolve container rects after the same transform the flow uses"
+    },
+    {
+      "id": "candidate-budget",
+      "what": "this round ran 5 --check runs on distinct specs of the shipped canvas line (3 renderable candidates plus 2 rejected layout probes) plus 5 recorded capability probes, above the nominal 3-candidate budget.",
+      "why": "the 12-node readable-budget warning and the 28-cell routing regression each forced a re-split; shipping a spec that fails `check_warnings_absent` or `routes_near_unrelated_nodes` was not an option",
+      "disclosure": "every run is in attempts-log.jsonl and in attempts.json (views + abandoned_shapes); nothing is hidden"
+    }
+  ],
+  "evidence_gaps": [
+    "the earliest exploratory probes (pc3, pc6, the 77x47/175x80/130x24 drift frames) were run before the record wrapper was adopted; probes/ keeps their specs and the claims they support are re-cited from the recorded probe-drift-* runs",
+    "the motion capture existed first as an unrecorded `--frames 40` run; the identical command was then run through the record wrapper as `canvas-motion-whole-canvas`, which is the record cited",
+    "the candidate-2 (three-diagram) spec bytes were overwritten in place at specs/c4-containers.json; its check output survives as recorded/v2-check.stdout and its spec sha256 is bound in attempts-log.jsonl. The two two-diagram candidates are kept as specs/c1-two-diagram-canvas.json and specs/c2-two-diagram-canvas-no-label-slot.json."
+  ],
+  "abbreviations": [
+    {
+      "key": "gcore",
+      "means": "the gcore clusters the reconcile loop syncs every minute (kept verbatim from the source)",
+      "on_view": "l1, edge label"
+    },
+    {
+      "key": "mmctl",
+      "means": "the human CLI, drawn as `humans + mmctl`",
+      "on_view": "l1"
+    }
+  ],
+  "cleanup": {
+    "panes": "one pane per capture, each closed by the harness",
+    "result": "confirmed_closed (manifest.cleanup)",
+    "manual_panes": "none"
+  },
+  "validator": {
+    "command": "scripts/viz-validate.py docs/visualize-eval/rounds/14/c4-containers/evidence/canvas --require-select --require-frames --require-records --attempts docs/visualize-eval/rounds/14/c4-containers/attempts.json --frame-audit",
+    "result": "42 PASS / 0 FAIL — evidence/canvas; frame audit PASS (10/10 routes steady at 0.500 c/frame, equal distance over 29 windows, spread 0). Full output: validator.txt"
+  },
+  "not_claimed": "no judge, no independent approval, no commit, no engine/skill/rubric/case edit; the diagram was not marked green.",
+  "evidence": {
+    "final_spec": "specs/c4-containers.json",
+    "final_spec_sha256": "451683bec4b9937b9aaa02a58ae8bef9254a4d09d234e110e9fc5e17b164d798",
+    "bundle": "evidence/canvas",
+    "kept_candidate_specs": [
+      "specs/c1-two-diagram-canvas.json",
+      "specs/c2-two-diagram-canvas-no-label-slot.json"
+    ],
+    "per_diagram_containment_captures": [
+      "evidence/probes/containment-l1-view.txt",
+      "evidence/probes/containment-l2-view.txt",
+      "evidence/probes/containment-l2b-view.txt",
+      "evidence/probes/containment-l1b-view.txt"
+    ],
+    "probe_specs_bundled_in": "probes/",
+    "raw_record_stdout": "recorded/",
+    "recorded_runs": 33,
+    "commands": [
+      "scripts/viz-evidence.sh --spec specs/c4-containers.json --bin /tmp/visualize-eval/round-14/bin/rataflow-view --out evidence/canvas --label canvas --frames 40",
+      "COLUMNS=171 LINES=92 <bin> --frames 40 --step-ms 100 specs/c4-containers.json  (record: canvas-motion-whole-canvas)",
+      "COLUMNS=<overflow> LINES=<overflow> <bin> --frames 1 probes/containment-<id>.json  (records: containment-*-view)",
+      "scripts/viz-validate.py evidence/canvas --require-select --require-frames --require-records --attempts attempts.json --frame-audit"
+    ]
+  }
+}

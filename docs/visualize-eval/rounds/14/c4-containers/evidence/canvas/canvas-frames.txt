@@ -1,0 +1,1000 @@
+││ + [+] │pp│────────●───────╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 18 at 1800ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭────▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│─────────●──────╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 19 at 1900ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭────▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│─────────●──────╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 20 at 2000ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭────▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│──────────●─────╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 21 at 2100ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭────▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│──────────●─────╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 22 at 2200ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭────▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│───────────●────╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 23 at 2300ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭────▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│───────────●────╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 24 at 2400ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭────▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│────────────●───╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 25 at 2500ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭────▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│────────────●───╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 26 at 2600ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭────▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│─────────────●──╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 27 at 2700ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭────▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│─────────────●──╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 28 at 2800ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭────▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│──────────────●─╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 29 at 2900ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭────▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│──────────────●─╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 30 at 3000ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭────▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│───────────────●╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 31 at 3100ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭────▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│───────────────●╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 32 at 3200ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭────▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions●     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│────────────────╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 33 at 3300ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭────▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions●     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│────────────────╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 34 at 3400ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭────▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             ●     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│────────────────╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 35 at 3500ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭────▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             ●     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│────────────────╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 36 at 3600ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭●───▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│────────────────╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 37 at 3700ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭●───▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│────────────────╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 38 at 3800ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭─●──▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│────────────────╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+frame 39 at 3900ms
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭─●──▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│────────────────╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1
+) on ☁️  aviralmansingka@gmail.com
+❯

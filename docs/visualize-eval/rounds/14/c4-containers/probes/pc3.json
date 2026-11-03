@@ -1,0 +1,7 @@
+{"direction":"lr","theme":"gruvbox",
+ "diagrams":[
+  {"id":"l1","title":"L1 context","description":"the system",
+   "containers":[{"label":"Box","members":["a","b","c"]}],
+   "nodes":[{"id":"x","label":"x"},{"id":"a","label":"a"},{"id":"b","label":"b"},{"id":"c","label":"c"},{"id":"y","label":"y"}],
+   "edges":[{"from":"x","to":"a","label":"l1"},{"from":"a","to":"b","label":"l2"},{"from":"b","to":"c","label":"l3"},{"from":"c","to":"y","label":"l4"}]}
+ ]}

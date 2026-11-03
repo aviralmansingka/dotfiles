@@ -1,0 +1,350 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "diagrams": [
+    {
+      "id": "l1",
+      "title": "L1 · System context — the machine manager",
+      "description": "Boundary view: the manager's services sit in one box; callers, providers, machines, S3 and Slack stay outside it.",
+      "containers": [
+        {
+          "label": "Machine manager",
+          "members": [
+            "pgrpc",
+            "wapi",
+            "reg",
+            "rec",
+            "q",
+            "ssh",
+            "boot",
+            "pub"
+          ]
+        }
+      ],
+      "layers": [
+        [
+          "cp",
+          "web"
+        ],
+        [
+          "pgrpc",
+          "wapi",
+          "reg",
+          "rec",
+          "q",
+          "ssh",
+          "pub",
+          "boot"
+        ],
+        [
+          "slack",
+          "s3",
+          "prov"
+        ],
+        [
+          "mch"
+        ],
+        [
+          "agent"
+        ]
+      ],
+      "nodes": [
+        {
+          "id": "cp",
+          "label": "Modal control plane",
+          "group": "modal"
+        },
+        {
+          "id": "web",
+          "label": "humans + mmctl",
+          "group": "operators"
+        },
+        {
+          "id": "pgrpc",
+          "label": "private gRPC",
+          "group": "manager"
+        },
+        {
+          "id": "wapi",
+          "label": "webapi",
+          "group": "manager"
+        },
+        {
+          "id": "q",
+          "label": "River job queue",
+          "group": "manager"
+        },
+        {
+          "id": "reg",
+          "label": "provider registry",
+          "group": "manager"
+        },
+        {
+          "id": "rec",
+          "label": "cluster reconcile",
+          "group": "manager"
+        },
+        {
+          "id": "ssh",
+          "label": "SSH + BMC ops",
+          "group": "manager"
+        },
+        {
+          "id": "boot",
+          "label": "boot server",
+          "group": "manager"
+        },
+        {
+          "id": "pub",
+          "label": "public gRPC",
+          "group": "manager"
+        },
+        {
+          "id": "prov",
+          "label": "bare-metal providers",
+          "group": "providers"
+        },
+        {
+          "id": "mch",
+          "label": "bare-metal machines",
+          "group": "machines"
+        },
+        {
+          "id": "agent",
+          "label": "machine-agent",
+          "group": "machines"
+        },
+        {
+          "id": "s3",
+          "label": "S3 object store",
+          "group": "storage"
+        },
+        {
+          "id": "slack",
+          "label": "Slack",
+          "group": "tooling"
+        }
+      ],
+      "edges": [
+        {
+          "from": "cp",
+          "to": "pgrpc",
+          "label": "create / terminate / repair",
+          "dots": 0
+        },
+        {
+          "from": "web",
+          "to": "wapi",
+          "label": "http",
+          "dots": 0
+        },
+        {
+          "from": "reg",
+          "to": "prov",
+          "label": "provider API",
+          "dots": 0
+        },
+        {
+          "from": "rec",
+          "to": "prov",
+          "label": "gcore sync, 1 min",
+          "dots": 0
+        },
+        {
+          "from": "q",
+          "to": "s3",
+          "label": "diagnose uploads",
+          "dots": 0
+        },
+        {
+          "from": "wapi",
+          "to": "slack",
+          "label": "confirm + alerts",
+          "dots": 0
+        },
+        {
+          "from": "ssh",
+          "to": "mch",
+          "label": "run machine-audit",
+          "dots": 0
+        },
+        {
+          "from": "boot",
+          "to": "mch",
+          "label": "boot.ipxe + S3 args",
+          "dots": 0
+        },
+        {
+          "from": "mch",
+          "to": "boot",
+          "label": "iPXE request",
+          "dots": 0
+        },
+        {
+          "from": "mch",
+          "to": "s3",
+          "label": "pull boot image",
+          "dots": 0
+        },
+        {
+          "from": "mch",
+          "to": "agent",
+          "label": "runs on host",
+          "dots": 0
+        },
+        {
+          "from": "agent",
+          "to": "pub",
+          "label": "register + heartbeat",
+          "dots": 0
+        },
+        {
+          "from": "prov",
+          "to": "mch",
+          "label": "allocate instance",
+          "dots": 0
+        }
+      ]
+    },
+    {
+      "id": "l2",
+      "title": "L2 · Inside the machine manager",
+      "description": "The same box opened: the manager's own services and their internal wiring — enqueue, dispatch, state writes, diagnostics, ops.",
+      "containers": [
+        {
+          "label": "Machine manager",
+          "members": [
+            "pgrpc",
+            "wapi",
+            "q",
+            "reg",
+            "rec",
+            "ssh",
+            "pub",
+            "jan",
+            "db"
+          ]
+        }
+      ],
+      "nodes": [
+        {
+          "id": "pgrpc",
+          "label": "private gRPC",
+          "group": "manager"
+        },
+        {
+          "id": "wapi",
+          "label": "webapi",
+          "group": "manager"
+        },
+        {
+          "id": "q",
+          "label": "River job queue",
+          "group": "manager"
+        },
+        {
+          "id": "reg",
+          "label": "provider registry",
+          "group": "manager"
+        },
+        {
+          "id": "rec",
+          "label": "cluster reconcile",
+          "group": "manager"
+        },
+        {
+          "id": "ssh",
+          "label": "SSH + BMC ops",
+          "group": "manager"
+        },
+        {
+          "id": "pub",
+          "label": "public gRPC",
+          "group": "manager"
+        },
+        {
+          "id": "jan",
+          "label": "janitor app",
+          "group": "manager"
+        },
+        {
+          "id": "db",
+          "label": "Postgres",
+          "group": "storage"
+        }
+      ],
+      "edges": [
+        {
+          "from": "pgrpc",
+          "to": "q",
+          "label": "enqueue job",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "wapi",
+          "to": "q",
+          "label": "reinstall / reprovision",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "q",
+          "to": "reg",
+          "label": "provision job",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "q",
+          "to": "db",
+          "label": "job rows",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "pgrpc",
+          "to": "db",
+          "label": "machine rows",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "pub",
+          "to": "db",
+          "label": "machine state",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "rec",
+          "to": "db",
+          "label": "cluster state",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "q",
+          "to": "jan",
+          "label": "diagnostic events",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "jan",
+          "to": "wapi",
+          "label": "proposed actions",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "q",
+          "to": "ssh",
+          "label": "audit / verify reimage",
+          "flow": true,
+          "dots": 1
+        }
+      ]
+    }
+  ]
+}
