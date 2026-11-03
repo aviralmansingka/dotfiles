@@ -12,13 +12,13 @@ Default behavior is intentionally conservative:
 from __future__ import annotations
 
 import base64
+import hmac
 import html
 import json
 import mimetypes
 import os
 import queue
 import re
-import shlex
 import signal
 import subprocess
 import tempfile
@@ -28,6 +28,7 @@ import urllib.error
 import urllib.request
 import uuid
 from dataclasses import dataclass, field
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Optional
 
@@ -58,6 +59,8 @@ BOT_ID: Optional[int] = None
 BOT_USERNAME: str = ""
 PROCESS_EXISTING = os.environ.get("PI_TELEGRAM_PROCESS_EXISTING", "0") == "1"
 MAX_REPLY_CHARS = int(os.environ.get("PI_TELEGRAM_MAX_REPLY_CHARS", "3900"))
+# Leave room below Telegram's 32,768-character Rich Message limit.
+MAX_RICH_REPLY_CHARS = 32000
 PROMPT_TIMEOUT_SECONDS = int(os.environ.get("PI_TELEGRAM_PROMPT_TIMEOUT_SECONDS", "900"))
 POLL_TIMEOUT_SECONDS = int(os.environ.get("PI_TELEGRAM_POLL_TIMEOUT_SECONDS", "50"))
 SESSIONS_DIR = Path(os.environ.get("PI_TELEGRAM_SESSIONS_DIR", str(HOME / ".pi/agent/sessions")))
@@ -65,8 +68,6 @@ MAX_SESSION_LIST = int(os.environ.get("PI_TELEGRAM_MAX_SESSION_LIST", "12"))
 RETRY_SECONDS = float(os.environ.get("PI_TELEGRAM_RETRY_SECONDS", "5"))
 TYPING_INTERVAL_SECONDS = float(os.environ.get("PI_TELEGRAM_TYPING_INTERVAL_SECONDS", "4"))
 THINKING_STREAM_ENABLED = os.environ.get("PI_TELEGRAM_THINKING_STREAM", "1") == "1"
-MAX_TRACE_CHARS = int(os.environ.get("PI_TELEGRAM_MAX_TRACE_CHARS", "200"))
-GOAL_LABEL_CHARS = int(os.environ.get("PI_TELEGRAM_GOAL_LABEL_CHARS", "20"))
 STATUS_EDIT_INTERVAL = float(os.environ.get("PI_TELEGRAM_STATUS_EDIT_INTERVAL", "1.0"))
 STATUS_FINAL_PAUSE = float(os.environ.get("PI_TELEGRAM_STATUS_FINAL_PAUSE", "0.3"))
 
@@ -78,11 +79,33 @@ VOICE_OPENAI_MODEL = os.environ.get("PI_TELEGRAM_OPENAI_TRANSCRIBE_MODEL", "whis
 MAX_AUDIO_BYTES = int(os.environ.get("PI_TELEGRAM_MAX_AUDIO_BYTES", str(20 * 1024 * 1024)))
 MAX_IMAGE_BYTES = int(os.environ.get("PI_TELEGRAM_MAX_IMAGE_BYTES", str(10 * 1024 * 1024)))
 
+# --- Private iOS Shortcut audio endpoint ---------------------------------
+# The owner's iPhone Action Button shortcut POSTs multipart/form-data with
+# fields `token` (shared secret) and `file` (audio) here, over Tailscale.
+# Enabled only when a token and port are configured.
+SHORTCUT_HOST = os.environ.get("PI_TELEGRAM_SHORTCUT_HOST", "").strip()
+SHORTCUT_PORT = int(os.environ.get("PI_TELEGRAM_SHORTCUT_PORT", "0") or 0)
+SHORTCUT_PATH = os.environ.get("PI_TELEGRAM_SHORTCUT_PATH", "/shortcut-audio").strip() or "/shortcut-audio"
+SHORTCUT_TOKEN = os.environ.get("PI_TELEGRAM_SHORTCUT_TOKEN", "").strip()
+# 1 = post the shortcut voice note itself into the Telegram chat (as a bot
+# voice message), so the chat keeps a visible, playable record of the note.
+SHORTCUT_SEND_TO_TELEGRAM = os.environ.get("PI_TELEGRAM_SHORTCUT_SEND_TELEGRAM_REPLY", "0").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+# Pin the pi session file so daemon restarts continue the same conversation.
+# Without this, each restart starts a fresh session.
+PI_SESSION = os.environ.get("PI_TELEGRAM_SESSION", "").strip()
+
 SYSTEM_PROMPT = """
 You are Pi, running headlessly behind the owner's Telegram bot.
 The Telegram sender is the owner controlling you remotely.
 Telegram replies must be succinct and never a wall of text. Use short answers, compact bullets when useful, and ask before sending long explanations.
-Use lightweight Markdown-style emphasis when helpful: **bold**, `code`, and fenced code blocks; the Telegram bridge renders these as HTML.
+Do not append suggested follow-up questions. Ask questions only when needed or requested.
+Use Markdown when helpful: headings, lists, links, **bold**, `code`, and fenced code blocks. Telegram can render it as a Rich Message.
+For mcpScript or codemode calls, add a leading `//` comment that states the intent without a tool name.
 You may use local tools to help the owner, but do not send Telegram messages to other people or groups unless the owner explicitly asks you to send an exact message to an exact recipient.
 If a requested action is risky or ambiguous, ask a clarifying question instead of guessing.
 """.strip()
@@ -118,28 +141,31 @@ class IncomingMessage:
 
 
 # ---------------------------------------------------------------------------
-# Thinking-trace rendering — mirrors the TUI work-step tree. The internals-
-# based renderer it was ported from (tool-call-renderer.ts) is removed; the
-# current TUI renderer is the public-API tool-call-renderer-public.ts.
+# Trace rendering — one intent title and optional result summary per tool call.
 #
-# The ported tree renders:
+# The chat gets a single live message holding available titles in call order,
+# repeated calls included. Each line leads with the
+# same status glyph as the TUI work tree (◇ running, ◆ success, × failure).
+# A finished call can have one result summary, connected by `└─`. The trace
+# never renders raw commands, arguments, result bodies, or inline buttons.
 #
-#   │  2 steps · 3 calls · 1/2 complete
-#   ├─ ▸ Reading config
-#   │  └─ ◆ settings.json · 1 read · loaded
-#   ├─ ▹ Editing daemon
-#   │  └─ ◇ daemon.py · 3 edits · running 1.2s
-#   └─ ▹ Running tests
-#      └─ ◇ $ npm test · running 0.5s
-#
-# Step titles use triangle glyphs (▸ done, ▹ running, × failed).
-# Tool summaries use diamond glyphs (◆ done, ◇ running, × failed).
-# Thinking bullets use • with tree connectors (├─/└─/│).
-# Telegram HTML only supports <b>, <code>, <i> — no colors — so the
-# glyph shapes carry the status meaning instead of TUI colors.
+# Titles come from a leading intent comment, a stored `intentTitle`, or the
+# TUI renderer's asynchronous title generator. Result summaries use the same
+# session model. Calls without titles stay hidden.
+# The status message is deleted when the reply is ready.
 # ---------------------------------------------------------------------------
 
 TITLE_MAX = 40
+# ponytail: bound the full result line, including its tree prefix.
+SUMMARY_LINE_MAX = 28
+_SUMMARY_PREFIX = "└─ "
+
+# Tool → comment marker for the leading intent line, and the arg that holds
+# the script source.
+_INTENT_MARKERS = {"bash": "#", "powershell": "#", "python": "#", "mcpScript": "//", "codemode": "//"}
+_INTENT_SOURCE_ARG = {"bash": "command", "powershell": "command", "python": "code", "mcpScript": "code", "codemode": "code"}
+_TELEGRAM_TITLE_PREFIX = "pi-telegram:title:"
+_TELEGRAM_RESULT_PREFIX = "pi-telegram:result:"
 
 
 def _first_non_empty_line(value: str) -> Optional[str]:
@@ -172,10 +198,6 @@ def _truncate_title(title: str) -> str:
     return title[:TITLE_MAX].rstrip() + "…"
 
 
-def _plural(count: int, singular: str) -> str:
-    return f"{count} {singular}{'' if count == 1 else 's'}"
-
-
 def _as_str(value: Any) -> Optional[str]:
     return value if isinstance(value, str) else None
 
@@ -186,662 +208,198 @@ def _as_record(value: Any) -> dict[str, Any]:
     return {}
 
 
-def _basename(path: str) -> str:
-    return path.strip().strip("'").strip('"').rsplit("/", 1)[-1]
-
-
-# ---------------------------------------------------------------------------
-# Data model — ported from the removed tool-call-renderer.ts WorkStep / ToolCall.
-# ---------------------------------------------------------------------------
+def _utf16_len(text: str) -> int:
+    """Length in UTF-16 code units — what Telegram counts."""
+    return len(text.encode("utf-16-le")) // 2
 
 
 @dataclass
 class ToolCall:
+    """One executed tool call — its title and settled status."""
+
     id: str
     name: str
     arguments: dict[str, Any] = field(default_factory=dict)
-    started_at: Optional[float] = None
-    completed_at: Optional[float] = None
+    result: Optional[dict[str, Any]] = None
+    generated_title: Optional[str] = None
+    result_summary: Optional[str] = None
+    failed: Optional[bool] = None  # None = still running
 
 
-@dataclass
-class WorkStep:
-    title: str
-    title_locked: bool
-    thinking: list[str] = field(default_factory=list)
-    tool_calls: list[ToolCall] = field(default_factory=list)
-    tool_call_ids: set[str] = field(default_factory=set)
-    completed_tool_call_ids: set[str] = field(default_factory=set)
-    failed: bool = False
-    started_at: Optional[float] = None
-    completed_at: Optional[float] = None
+def _lift_leading_comment(source: str, marker: str, skip: Optional[Any] = None) -> Optional[str]:
+    """First leading comment line of a script — the model's intent title.
 
-
-# ---------------------------------------------------------------------------
-# Title derivation — ported from fallbackTitle / displayToolName / etc.
-# ---------------------------------------------------------------------------
-
-
-def _display_tool_name(tool_call: ToolCall) -> str:
-    if tool_call.name != "mcp":
-        return tool_call.name
-    server = (
-        _as_str(tool_call.arguments.get("server")) or _as_str(tool_call.arguments.get("connect")) or "gateway"
-    )
-    label = (server or "").strip()
-    return f"mcp({label or 'gateway'})"
-
-
-def _group_tools(tool_calls: list[ToolCall]) -> list[str]:
-    counts: dict[str, int] = {}
-    for tc in tool_calls:
-        name = _display_tool_name(tc)
-        counts[name] = counts.get(name, 0) + 1
-    return [f"{name}{' ×' + str(c) if c > 1 else ''}" for name, c in counts.items()]
-
-
-def _tool_target(tool_call: ToolCall) -> Optional[str]:
-    path = _as_str(tool_call.arguments.get("path"))
-    if path:
-        return _basename(path)
-    file = _as_str(tool_call.arguments.get("file"))
-    if file:
-        return _basename(file)
-    return None
-
-
-def _unique_targets(tool_calls: list[ToolCall]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for tc in tool_calls:
-        t = _tool_target(tc)
-        if t and t not in seen:
-            seen.add(t)
-            result.append(t)
-    return result
-
-
-def _format_targets(targets: list[str]) -> Optional[str]:
-    if not targets:
-        return None
-    if len(targets) <= 2:
-        return ", ".join(targets)
-    return _plural(len(targets), "file")
-
-
-def _is_check_command(tool_call: ToolCall) -> bool:
-    if tool_call.name != "bash":
-        return False
-    command = _as_str(tool_call.arguments.get("command")) or ""
-    return bool(re.search(r"(?:^|[\s/.-])(?:test|tests|verify|check|lint|typecheck|tsc)(?:[\s/.-]|$)", command, re.IGNORECASE))
-
-
-_COMMAND_SUMMARIES: dict[str, str] = {
-    "ls": "Listing files", "find": "Finding files", "grep": "Searching text",
-    "rg": "Searching text", "cat": "Reading file", "head": "Reading file",
-    "tail": "Reading file", "wc": "Counting", "diff": "Comparing files",
-    "mkdir": "Creating directory", "rm": "Removing files", "cp": "Copying files",
-    "mv": "Moving files", "ln": "Linking files", "chmod": "Changing permissions",
-    "touch": "Creating file", "tar": "Archiving", "zip": "Compressing",
-    "unzip": "Extracting", "echo": "Printing", "curl": "Fetching URL",
-    "wget": "Downloading", "ssh": "Connecting via SSH", "scp": "Copying via SSH",
-    "rsync": "Syncing files", "ping": "Pinging host", "docker": "Running Docker",
-    "kubectl": "Running kubectl", "systemctl": "Managing service",
-    "journalctl": "Reading logs", "git": "Git operation", "gh": "GitHub operation",
-    "npm": "Running npm", "npx": "Running npx", "yarn": "Running yarn",
-    "pnpm": "Running pnpm", "bun": "Running bun", "node": "Running Node",
-    "python": "Running Python", "python3": "Running Python", "pip": "Running pip",
-    "uv": "Running uv", "pytest": "Running tests", "jest": "Running tests",
-    "vitest": "Running tests", "cargo": "Running Cargo", "go": "Running Go",
-    "make": "Building", "brew": "Running Homebrew", "stow": "Running stow",
-    "nix": "Running Nix", "nixos-rebuild": "Rebuilding NixOS",
-    "apt": "Managing packages", "apt-get": "Managing packages",
-    "ffmpeg": "Processing media", "ps": "Listing processes",
-    "kill": "Killing process", "df": "Checking disk", "du": "Checking disk usage",
-    "free": "Checking memory", "date": "Checking date",
-    "hostname": "Checking hostname", "uname": "Checking system",
-    "whoami": "Checking user", "pwd": "Checking directory",
-    "cd": "Changing directory", "which": "Finding command",
-    "test": "Testing condition", "true": "No-op", "false": "No-op",
-}
-
-_SUBCOMMAND_TOOLS = {"git", "npm", "npx", "yarn", "pnpm", "docker", "kubectl", "systemctl", "service", "apt", "apt-get", "brew", "cargo", "go", "uv", "pip", "pip3", "gh"}
-
-
-def _summarize_command(command: str) -> str:
-    """Describe a bash command's intent for use as a step title."""
-    lines = command.strip().splitlines()
-    if not lines:
-        return "Running command"
-    # Keep heredoc bodies out of the shell heuristic; otherwise newlines are
-    # command boundaries and let us skip setup-only assignment lines.
-    cmd = lines[0].strip() if "<<" in lines[0] else ";".join(lines)
-    try:
-        lexer = shlex.shlex(cmd, posix=True, punctuation_chars=";&|")
-        lexer.whitespace_split = True
-        lexer.commenters = ""
-        tokens = list(lexer)
-    except ValueError:
-        tokens = cmd.split()
-
-    commands: list[list[str]] = []
-    current: list[str] = []
-    for token in tokens:
-        if token and not token.strip(";&|"):
-            if current:
-                commands.append(current)
-                current = []
-        else:
-            current.append(token)
-    if current:
-        commands.append(current)
-
-    best = (0, "Running command")
-    control_starts = {"case", "for", "if", "select", "until", "while"}
-    control_words = {"do", "elif", "else", "then", "!", "(", "{"}
-    control_ends = {"done", "esac", "fi", ")", "}"}
-    prefixes = {"sudo", "env", "time", "nohup", "exec", "bash", "sh", "source"}
-    for parts in commands:
-        if parts[0] in control_starts or parts[0] in control_ends:
+    Port of the TUI's liftLeadingComment: only a comment block that starts
+    the source titles the call, so a `#` inside a heredoc body stays body.
+    A shebang is diagnostics, not intent, so it never titles a call.
+    """
+    strip = re.compile(r"^" + re.escape(marker) + r"+\s*")
+    title: Optional[str] = None
+    for line in (source or "").split("\n"):
+        if not line.strip():
             continue
-        while parts and parts[0] in control_words:
-            parts = parts[1:]
-        while parts and ("=" in parts[0] or parts[0] in prefixes):
-            parts = parts[1:]
-        if not parts:
+        if not line.lstrip().startswith(marker):
+            break
+        text = _sanitize_title(strip.sub("", line.lstrip()))
+        if not text or text.startswith("!") or (skip and skip(text)):
             continue
-        base = parts[0].rsplit("/", 1)[-1].strip("(){}")
-        positional = [a for a in parts[1:] if not a.startswith("-")]
-        summary = _COMMAND_SUMMARIES.get(base)
-        if base in _SUBCOMMAND_TOOLS and positional:
-            title = f"{base} {positional[0]}"[:TITLE_MAX]
-            score = 4
-        elif summary:
-            subject = positional[0].rstrip("/").rsplit("/", 1)[-1] if positional else ""
-            if subject in (".", "*", "—", ""):
-                subject = ""
-            available = TITLE_MAX - len(summary) - 1
-            concise_subject = subject[:available].rstrip(";&|")
-            title = f"{summary} {concise_subject}" if concise_subject and available > 0 else summary
-            score = 3 if concise_subject else 2
-        else:
-            title = base[:TITLE_MAX] or "Running command"
-            score = 1
-        if score > best[0]:
-            best = (score, title)
-    return best[1]
+        if title is None:
+            title = text
+    return title
 
 
-def _fallback_title(tool_calls: list[ToolCall]) -> str:
-    targets = _unique_targets(tool_calls)
-    target = _format_targets(targets)
-    names = [tc.name for tc in tool_calls]
-    bash_calls = [tc for tc in tool_calls if tc.name == "bash"]
-    if all(n in ("edit", "write") for n in names):
-        return f"Updating {target or _plural(len(tool_calls), 'file')}"
-    if all(n == "read" for n in names):
-        return f"Reading {target or _plural(len(tool_calls), 'file')}"
-    if all(_is_check_command(tc) for tc in tool_calls):
-        return "Running checks"
-    if all(n == "bash" for n in names):
-        first_cmd = _as_str(tool_calls[0].arguments.get("command")) or ""
-        return _summarize_command(first_cmd)
-    # Mixed tools: prefer the bash command's intent if present (it's usually
-    # the primary action), falling back to a target-based label.
-    if bash_calls:
-        first_cmd = _as_str(bash_calls[0].arguments.get("command")) or ""
-        return _summarize_command(first_cmd)
-    if target:
-        return f"Working with {target}"
-    return f"Using {', '.join(_group_tools(tool_calls))}"
+def _stored_intent_title(tool_call: ToolCall) -> Optional[str]:
+    """A model/harness title persisted in the call's result details."""
+    details = _as_record(_as_record(tool_call.result).get("details"))
+    return _sanitize_title(_as_str(details.get("intentTitle")))
 
 
-def _title_from_text(content: list[dict[str, Any]]) -> Optional[str]:
-    for item in content:
-        if item.get("type") != "text":
-            continue
-        title = _sanitize_title(_as_str(item.get("text")))
-        if title:
-            return title
-    return None
-
-
-def _thinking_from_content(content: list[dict[str, Any]]) -> list[str]:
-    result: list[str] = []
-    for item in content:
-        if item.get("type") != "thinking":
-            continue
-        sanitized = _sanitize_title(_as_str(item.get("thinking")))
-        if sanitized:
-            result.append(sanitized)
-    return result
-
-
-# ---------------------------------------------------------------------------
-# Tool summary — ported from summaryParts / bashCallSummary / renderParts.
-# Telegram HTML can't do colors, so we use <b> for emphasis and plain text.
-# ---------------------------------------------------------------------------
-
-
-def _format_elapsed(ms: float) -> str:
-    if ms < 1000:
-        return f"{int(ms)}ms"
-    if ms < 60000:
-        return f"{ms / 1000:.1f}s"
-    minutes = int(ms // 60000)
-    seconds = int((ms % 60000) // 1000)
-    return f"{minutes}m{seconds}s"
-
-
-def _step_status(step: WorkStep) -> str:
-    """pending | success | failure — ported from TUI status()."""
-    if step.failed:
-        return "failure"
-    if not step.tool_call_ids or len(step.completed_tool_call_ids) == len(step.tool_call_ids):
-        return "success"
-    return "pending"
-
-
-def _step_outcome(step: WorkStep, now: float, success_text: str) -> str:
-    current = _step_status(step)
-    if current == "pending":
-        if step.started_at is not None:
-            return f"running {_format_elapsed(max(0, now - step.started_at) * 1000)}"
-        return "running"
-    if current == "failure":
-        return "failed"
-    return success_text
-
-
-def _call_outcome(call: ToolCall, step: WorkStep, now: float) -> str:
-    if step.failed and call.id not in step.completed_tool_call_ids:
-        return "failed"
-    if call.id in step.completed_tool_call_ids:
-        return "completed"
-    if call.started_at is not None:
-        return f"running {_format_elapsed(max(0, now - call.started_at) * 1000)}"
-    return "running"
-
-
-def _summary_text(step: WorkStep, now: float) -> str:
-    """Render the tool summary for a step — ported from TUI summaryParts."""
-    calls = step.tool_calls
-    targets = _format_targets(_unique_targets(calls))
-    names = [tc.name for tc in calls]
-    parts: list[str] = []
-
-    def add(text: str) -> None:
-        parts.append(text)
-
-    if targets:
-        add(targets)
-
-    if all(n == "edit" for n in names):
-        edits = sum(
-            len(tc.arguments.get("edits")) if isinstance(tc.arguments.get("edits"), list) else 1
-            for tc in calls
-        )
-        add(_plural(edits, "edit"))
-        add(_step_outcome(step, now, "updated"))
-    elif all(n == "write" for n in names):
-        add(_plural(len(calls), "write"))
-        add(_step_outcome(step, now, "written"))
-    elif all(n == "read" for n in names):
-        add(_plural(len(calls), "read"))
-        add(_step_outcome(step, now, "loaded"))
-    elif len(calls) == 1 and calls[0].name == "bash":
-        command = (_as_str(calls[0].arguments.get("command")) or "").split("\n")[0].strip()
-        if command:
-            add(f"$ {command}")
-        else:
-            add("1 command")
-        add(_step_outcome(step, now, "completed"))
-    elif all(_is_check_command(tc) for tc in calls):
-        add(_plural(len(calls), "check"))
-        add(_step_outcome(step, now, "passed"))
-    elif all(n == "bash" for n in names):
-        add(_plural(len(calls), "command"))
-        add(_step_outcome(step, now, "completed"))
-    else:
-        add(_plural(len(calls), "call"))
-        add(" · ".join(_group_tools(calls)))
-        add(_step_outcome(step, now, "completed"))
-
-    return " · ".join(parts)
-
-
-def _bash_call_text(call: ToolCall, step: WorkStep, now: float) -> str:
-    """Render a single bash call — ported from bashCallSummary."""
-    command = (_as_str(call.arguments.get("command")) or "").split("\n")[0].strip()
-    text = f"$ {command}" if command else "1 command"
-    return f"{text} · {_call_outcome(call, step, now)}"
-
-
-def _try_json_object(raw: str) -> Optional[dict[str, Any]]:
-    """Parse a JSON object, tolerating the partial fragments seen mid-stream."""
-    try:
-        parsed = json.loads(raw)
-    except (ValueError, TypeError):
-        return None
-    return parsed if isinstance(parsed, dict) else None
-
-
-# ---------------------------------------------------------------------------
-# TraceBuilder — accumulates the work-step tree from RPC streaming events.
-# Replaces ThinkingTreeBuilder; mirrors the TUI's updateAssistant / WorkStepRow.
-# ---------------------------------------------------------------------------
+def _call_title(tool_call: ToolCall) -> Optional[str]:
+    """Prefer stored and comment titles, then the live generated title."""
+    title = _stored_intent_title(tool_call)
+    if not title:
+        marker = _INTENT_MARKERS.get(tool_call.name)
+        source = _as_str(tool_call.arguments.get(_INTENT_SOURCE_ARG.get(tool_call.name, "")))
+        if marker and source:
+            skip = (lambda text: text.startswith("@options")) if tool_call.name in {"mcpScript", "codemode"} else None
+            title = _lift_leading_comment(source, marker, skip)
+    title = title or tool_call.generated_title
+    return _truncate_title(title) if title else None
 
 
 class TraceBuilder:
-    """Reassemble the live assistant message from RPC deltas, track work-step
-    lifecycle, and render a compact one-line-per-step trace.
+    """Ordered record of a turn's tool calls, built from RPC execution events.
 
-    Telegram is a mobile-first surface, so the render is deliberately flatter
-    than the TUI tree: only step titles and per-step elapsed time. The model
-    stays faithful to the removed tool-call-renderer.ts tree (kept in the TUI
-    by tool-call-renderer-public.ts in flatter form) so a richer render can be
-    restored without rework.
+    `tool_execution_start` is the authoritative source: it carries the id,
+    the tool name, and the complete args. `tool_execution_end` adds the
+    result, whose details may hold an `intentTitle`. Nothing speculative is
+    tracked, so no partial-argument placeholder or duplicate row can appear.
+    Calls survive `agent_start`: a retry or auto-continue within one prompt
+    keeps every title it already showed.
     """
 
-    def __init__(self, clock: Optional[Any] = None) -> None:
-        self.steps: list[WorkStep] = []
-        self.blocks: dict[int, dict[str, Any]] = {}
-        self.current_step: Optional[WorkStep] = None
-        self.thinking_draft_title: Optional[str] = None
-        self.thinking_draft_thinking: list[str] = []
-        # Injectable so step/tool timestamps line up with render(now) in tests.
-        self.clock = clock or time.monotonic
-        self.start_time: float = self.clock()
+    def __init__(self) -> None:
+        self.calls: list[ToolCall] = []
+        # An instant model response can precede the forwarded tool-start event.
+        self.pending_titles: dict[str, str] = {}
 
-    # -- lifecycle --------------------------------------------------------
-
-    def on_agent_start(self) -> None:
-        self.steps = []
-        self.current_step = None
-        self.thinking_draft_title = None
-        self.thinking_draft_thinking = []
-
-    def on_turn_start(self) -> None:
-        self.blocks = {}
-        self.current_step = None
-        self.thinking_draft_title = None
-        self.thinking_draft_thinking = []
-
-    def on_turn_end(self) -> None:
-        self.current_step = None
-        self.thinking_draft_title = None
-        self.thinking_draft_thinking = []
-
-    def on_agent_end(self) -> None:
-        for step in self.steps:
-            if _step_status(step) == "pending":
-                step.failed = True
-
-    # -- delta assembly (from message_update) -----------------------------
-
-    def on_message_start(self, message: dict[str, Any]) -> None:
-        if (message.get("role") or "assistant") == "assistant":
-            self.blocks = {}
-            # Each assistant message gets its own step — mirrors the TUI
-            # where each AssistantMessageComponent creates a new WorkStep.
-            self.current_step = None
-            self.thinking_draft_title = None
-            self.thinking_draft_thinking = []
-
-    def on_message_end(self, message: dict[str, Any]) -> None:
-        if (message.get("role") or "assistant") != "assistant":
-            return
-        content = message.get("content") or []
-        if not content:
-            return
-        self.blocks = {i: dict(block) for i, block in enumerate(content) if isinstance(block, dict)}
-        self._update_step()
-
-    def _content(self) -> list[dict[str, Any]]:
-        return [self.blocks[i] for i in sorted(self.blocks)]
-
-    def on_assistant_event(self, ame: dict[str, Any]) -> None:
-        et = ame.get("type") or ""
-        idx = ame.get("contentIndex")
-        if not isinstance(idx, int):
-            return
-        if et.startswith("text_"):
-            block = self.blocks.setdefault(idx, {"type": "text", "text": ""})
-            if et == "text_delta":
-                block["text"] = (block.get("text") or "") + (ame.get("delta") or "")
-            elif et == "text_end":
-                block["text"] = ame.get("content") or block.get("text") or ""
-        elif et.startswith("thinking_"):
-            block = self.blocks.setdefault(idx, {"type": "thinking", "thinking": ""})
-            if et == "thinking_delta":
-                block["thinking"] = (block.get("thinking") or "") + (ame.get("delta") or "")
-            elif et == "thinking_end":
-                block["thinking"] = ame.get("content") or block.get("thinking") or ""
-        elif et.startswith("toolcall_"):
-            block = self.blocks.setdefault(idx, {"type": "toolCall", "id": "", "name": "", "arguments": {}, "raw_args": ""})
-            if et == "toolcall_delta":
-                block["raw_args"] = (block.get("raw_args") or "") + (ame.get("delta") or "")
-                parsed = _try_json_object(block["raw_args"])
-                if parsed is not None:
-                    block["arguments"] = parsed
-            elif et == "toolcall_end":
-                call = ame.get("toolCall") or {}
-                block["id"] = call.get("id") or block.get("id") or ""
-                block["name"] = call.get("name") or block.get("name") or ""
-                args = call.get("arguments")
-                if isinstance(args, str):
-                    args = _try_json_object(args)
-                if isinstance(args, dict):
-                    block["arguments"] = args
-        else:
-            return
-        self._update_step()
-
-    # -- step creation/update (mirrors TUI updateAssistant) ---------------
-
-    def _tool_calls_from_content(self) -> list[ToolCall]:
-        result: list[ToolCall] = []
-        for block in self._content():
-            if block.get("type") in ("toolCall", "tool_call"):
-                call_id = _as_str(block.get("id")) or ""
-                name = (_as_str(block.get("name")) or "").strip() or "tool"
-                args = block.get("arguments")
-                if isinstance(args, str):
-                    args = _try_json_object(args)
-                if not isinstance(args, dict):
-                    args = {}
-                result.append(ToolCall(id=call_id, name=name, arguments=args))
-        return result
-
-    def _update_step(self) -> None:
-        content = self._content()
-        tool_calls = self._tool_calls_from_content()
-        explicit_title = _title_from_text(content)
-        thinking = _thinking_from_content(content)
-        has_thinking = any(b.get("type") == "thinking" and (b.get("thinking") or "").strip() for b in content)
-
-        if not tool_calls:
-            # Draft phase — no tools yet.  Show a live indicator so the
-            # Telegram status isn't blank while the agent streams text or
-            # thinking.  This mirrors the TUI's thinking-draft display but
-            # also covers text-only responses (the TUI shows those as native
-            # message content; Telegram has no such inline view).
-            self.thinking_draft_title = explicit_title if (has_thinking or explicit_title) else None
-            self.thinking_draft_thinking = thinking if has_thinking else []
-            return
-
-        # Have tool calls — create or update the step.
-        self.thinking_draft_title = None
-        self.thinking_draft_thinking = []
-
-        step_thinking = thinking if thinking else self.thinking_draft_thinking
-        step_explicit_title = explicit_title or self.thinking_draft_title
-        # Title derivation — adapted for compact mobile render:
-        #   1. explicit text title from model
-        #   2. tool-derived fallback (if tools present)
-        #   3. first sanitized thinking line (if thinking present)
-        #   4. "Thinking" — last resort
-        # The TUI uses "Thinking" as a category label with bullets below;
-        # Telegram shows no bullets, so we surface the thinking content or
-        # tool intent as the title instead.
-        if step_explicit_title:
-            title = step_explicit_title
-        elif tool_calls:
-            title = _fallback_title(tool_calls)
-        elif step_thinking:
-            title = _truncate_title(step_thinking[0])
-        else:
-            title = "Thinking"
-
-        step = self.current_step
-        if step is None:
-            # Dedup: if the last step has the same title, merge into it
-            # instead of showing a duplicate line.
-            if self.steps and self.steps[-1].title == title:
-                step = self.steps[-1]
-                step.completed_at = None  # reopen for new tool calls
-                self.current_step = step
-            else:
-                step = WorkStep(
-                    title=title,
-                    title_locked=bool(step_explicit_title),
-                    thinking=step_thinking,
-                    started_at=self.clock(),
-                )
-                self.steps.append(step)
-                self.current_step = step
-        else:
-            if not step.title_locked and step_explicit_title:
-                step.title = title
-                step.title_locked = True
-            elif not step.title_locked:
-                step.title = title
-
-        step.tool_calls = tool_calls
-        step.tool_call_ids = {tc.id for tc in tool_calls}
-        step.thinking = step_thinking
-
-    # -- tool execution lifecycle ----------------------------------------
+    def _tracked(self, tool_call_id: str) -> Optional[ToolCall]:
+        return next((c for c in reversed(self.calls) if tool_call_id and c.id == tool_call_id), None)
 
     def on_tool_execution_start(self, tool_call_id: str, tool_name: str, args: dict[str, Any]) -> None:
-        step = self.current_step
-        if not step:
-            return
-        tc = next((c for c in step.tool_calls if c.id == tool_call_id), None)
-        if not tc:
-            return
-        now = self.clock()
-        if tc.started_at is None:
-            tc.started_at = now
-        if step.started_at is None or now < step.started_at:
-            step.started_at = now
+        self.calls.append(ToolCall(
+            id=tool_call_id, name=tool_name or "tool", arguments=dict(args or {}),
+            generated_title=self.pending_titles.pop(tool_call_id, None),
+        ))
 
-    def on_tool_execution_end(self, tool_call_id: str, is_error: bool) -> None:
-        step = self.current_step
-        if not step:
-            return
-        tc = next((c for c in step.tool_calls if c.id == tool_call_id), None)
-        if tc and tc.completed_at is None:
-            tc.completed_at = self.clock()
-        step.completed_tool_call_ids.add(tool_call_id)
-        if is_error:
-            step.failed = True
-        if _step_status(step) != "pending" and step.completed_at is None:
-            step.completed_at = (tc.completed_at if tc else None) or self.clock()
+    def on_title(self, tool_call_id: str, value: str) -> bool:
+        title = _sanitize_title(value)
+        if not tool_call_id or not title:
+            return False
+        call = self._tracked(tool_call_id)
+        if call is None:
+            if len(self.pending_titles) < 32:
+                self.pending_titles[tool_call_id] = title
+            return False
+        if call.generated_title == title:
+            return False
+        call.generated_title = title
+        return True
 
-    # -- rendering --------------------------------------------------------
-    # Mobile-first: one line per step, title plus elapsed. Tool summaries and
-    # thinking bullets stay in the model but are not rendered here.
+    def on_summary(self, tool_call_id: str, value: str) -> bool:
+        summary = _sanitize_title(value)
+        call = self._tracked(tool_call_id)
+        if call is None or not summary or call.result_summary == summary:
+            return False
+        if _utf16_len(_SUMMARY_PREFIX + summary) > SUMMARY_LINE_MAX:
+            return False
+        call.result_summary = summary
+        return True
 
-    def _step_line(self, step: WorkStep, now: float) -> str:
-        status = _step_status(step)
-        glyph = "▹" if status == "pending" else ("×" if status == "failure" else "▸")
-        title = html.escape(_truncate_title(step.title))
-        return f"{glyph} <b>{title}</b>"
+    def on_tool_execution_end(
+        self, tool_call_id: str, result: Optional[dict[str, Any]] = None, is_error: bool = False
+    ) -> None:
+        call = self._tracked(tool_call_id)
+        if call is not None:
+            call.result = result
+            call.failed = bool(is_error)
 
-    def render(self, now: float) -> str:
-        elapsed = int(now - self.start_time)
-        minutes, seconds = divmod(elapsed, 60)
-        header = f"thinking · {minutes}:{seconds:02d}"
+    def render(self) -> str:
+        """Render each title and its optional, connected result summary.
 
-        lines: list[str] = [header]
-        for step in self.steps:
-            lines.append(self._step_line(step, now))
-
-        # No step yet (streaming text or thinking before the first tool call).
-        if not self.steps and (self.thinking_draft_title or self.thinking_draft_thinking):
-            draft_title = self.thinking_draft_title
-            if not draft_title and self.thinking_draft_thinking:
-                draft_title = _truncate_title(self.thinking_draft_thinking[0])
-            title = html.escape(draft_title or "Thinking")
-            lines.append(f"▹ <b>{title}</b>")
-
-        text = "\n".join(lines)
-        if len(text) > MAX_REPLY_CHARS:
-            cut = text[:MAX_REPLY_CHARS]
-            last_nl = cut.rfind("\n")
-            text = (cut[:last_nl] + "\n…") if last_nl > len(header) else (cut[:-1] + "…")
-        return text
-
-
-# Kept for backward compatibility with tests and external callers.
-ThinkingTreeBuilder = TraceBuilder
+        The leading glyph matches the TUI work tree: ◇ while the call runs,
+        ◆ when it settled successfully, × when it failed. Only whole lines
+        are kept, so the cut never splits an HTML entity. Telegram measures
+        message length in UTF-16 code units, not characters.
+        """
+        lines: list[str] = []
+        used = 0
+        for call in self.calls:
+            title = _call_title(call)
+            if not title:
+                continue
+            glyph = "×" if call.failed else ("◇" if call.failed is None else "◆")
+            line = f"{glyph} {html.escape(title, quote=False)}"
+            cost = _utf16_len(line) + (1 if lines else 0)
+            if used + cost > MAX_REPLY_CHARS:
+                break
+            lines.append(line)
+            used += cost
+            if call.failed is not None and call.result_summary:
+                line = _SUMMARY_PREFIX + html.escape(call.result_summary, quote=False)
+                cost = _utf16_len(line) + 1
+                if used + cost > MAX_REPLY_CHARS:
+                    break
+                lines.append(line)
+                used += cost
+        return "\n".join(lines)
 
 
 class StatusMessenger:
-    """Manage one live Telegram status message that shows the thinking tree.
+    """One live Telegram message holding the turn's titles and result summaries.
 
-    Created on the first thinking update, edited in place (coalesced to
-    STATUS_EDIT_INTERVAL), and deleted when the agent settles. The final
-    reply is then sent as a separate normal message.
+    Created on the first available title — before that the chat shows only the
+    native typing action — then edited in place (coalesced to
+    STATUS_EDIT_INTERVAL). The message is deleted when the reply is ready.
+    A turn with no tool calls creates no message. The trace never carries
+    reply_parameters, so it never quotes the prompt above the titles.
     """
 
-    def __init__(self, chat_id: str, reply_to: Optional[int] = None) -> None:
+    def __init__(self, chat_id: str) -> None:
         self.chat_id = chat_id
-        self.reply_to = reply_to
         self.message_id: Optional[int] = None
-        self.tree = ThinkingTreeBuilder()
+        self.tree = TraceBuilder()
         self.last_edit = 0.0
         self.dirty = False
-        self.start_time = time.monotonic()
+        self.last_text: Optional[str] = None
 
     def on_event(self, ev: dict[str, Any]) -> None:
         et = ev.get("type")
-        if et == "agent_start":
-            self.tree.on_agent_start()
-            self.dirty = True
-        elif et == "turn_start":
-            self.tree.on_turn_start()
-            self.dirty = True
-        elif et == "message_start":
-            self.tree.on_message_start(ev.get("message") or {})
-        elif et == "message_update":
-            ame = ev.get("assistantMessageEvent") or {}
-            if ame:
-                self.tree.on_assistant_event(ame)
+        if et == "tool_execution_start":
+            # Nested calls (mcpScript children) do not get their own line.
+            if not ev.get("parentToolCallId"):
+                self.tree.on_tool_execution_start(
+                    ev.get("toolCallId") or "",
+                    ev.get("toolName") or "",
+                    ev.get("args") if isinstance(ev.get("args"), dict) else {},
+                )
                 self.dirty = True
-        elif et == "message_end":
-            self.tree.on_message_end(ev.get("message") or {})
-            self.dirty = True
-        elif et == "tool_execution_start":
-            self.tree.on_tool_execution_start(
-                ev.get("toolCallId") or "",
-                ev.get("toolName") or "",
-                ev.get("args") or {},
-            )
-            self.dirty = True
         elif et == "tool_execution_end":
-            self.tree.on_tool_execution_end(
-                ev.get("toolCallId") or "",
-                bool(ev.get("isError")),
-            )
-            self.dirty = True
-        elif et == "turn_end":
-            self.tree.on_turn_end()
-            self.dirty = True
-        elif et == "agent_end":
-            self.tree.on_agent_end()
-            self.dirty = True
+            # Same filter as starts, so a nested call never edits the trace.
+            if not ev.get("parentToolCallId"):
+                self.tree.on_tool_execution_end(
+                    ev.get("toolCallId") or "",
+                    ev.get("result") if isinstance(ev.get("result"), dict) else None,
+                    bool(ev.get("isError")),
+                )
+                self.dirty = True
+        elif et == "extension_ui_request" and ev.get("method") == "setStatus":
+            key = _as_str(ev.get("statusKey")) or ""
+            text = _as_str(ev.get("statusText"))
+            if key.startswith(_TELEGRAM_TITLE_PREFIX) and text is not None:
+                self.dirty |= self.tree.on_title(key[len(_TELEGRAM_TITLE_PREFIX):], text)
+            elif key.startswith(_TELEGRAM_RESULT_PREFIX) and text is not None:
+                self.dirty |= self.tree.on_summary(key[len(_TELEGRAM_RESULT_PREFIX):], text)
         self._maybe_flush()
 
     def flush(self) -> None:
@@ -850,48 +408,58 @@ class StatusMessenger:
     def _maybe_flush(self, force: bool = False) -> None:
         if not self.dirty:
             return
+        text = self.tree.render()
+        if not text:
+            return  # no tool call yet: no status message
         now = time.monotonic()
         if self.message_id is None:
-            self._create()
+            self._create(text)
             self.dirty = False
             self.last_edit = now
             return
         if not force and now - self.last_edit < STATUS_EDIT_INTERVAL:
             return
-        self._edit()
+        self._edit(text)
         self.dirty = False
         self.last_edit = now
 
-    def _create(self) -> None:
-        text = self.tree.render(time.monotonic())
-        payload: dict[str, Any] = {"chat_id": self.chat_id, "text": text, "parse_mode": "HTML"}
-        if self.reply_to is not None:
-            payload["reply_parameters"] = {"message_id": self.reply_to, "allow_sending_without_reply": True}
+    def _create(self, text: str) -> None:
+        payload: dict[str, Any] = {
+            "chat_id": self.chat_id,
+            "text": text,
+            "parse_mode": "HTML",
+            "link_preview_options": {"is_disabled": True},
+        }
         try:
             result = telegram_api("sendMessage", payload, timeout=30)
-            self.message_id = result.get("message_id")
+            self.message_id = _as_record(result).get("message_id")
+            self.last_text = text
         except Exception as e:
             log(f"Status create failed: {e}")
 
-    def _edit(self) -> None:
-        if self.message_id is None:
+    def _edit(self, text: str) -> None:
+        if self.message_id is None or text == self.last_text:
             return
-        text = self.tree.render(time.monotonic())
+        payload: dict[str, Any] = {
+            "chat_id": self.chat_id,
+            "message_id": self.message_id,
+            "text": text,
+            "parse_mode": "HTML",
+            "link_preview_options": {"is_disabled": True},
+        }
         try:
-            telegram_api(
-                "editMessageText",
-                {"chat_id": self.chat_id, "message_id": self.message_id, "text": text, "parse_mode": "HTML"},
-                timeout=30,
-            )
+            telegram_api("editMessageText", payload, timeout=30)
+            self.last_text = text
         except Exception as e:
             log(f"Status edit failed: {e}")
 
     def finalize(self) -> None:
-        if self.dirty:
-            self._edit()
-            self.dirty = False
-        if STATUS_FINAL_PAUSE > 0 and self.message_id is not None:
-            time.sleep(STATUS_FINAL_PAUSE)
+        """Show the final status, then remove the trace when the reply is ready."""
+        if self.message_id is not None:
+            self.flush()
+            if STATUS_FINAL_PAUSE > 0:
+                time.sleep(STATUS_FINAL_PAUSE)
+        self.dirty = False
         self._delete()
 
     def _delete(self) -> None:
@@ -902,9 +470,6 @@ class StatusMessenger:
         except Exception as e:
             log(f"Status delete failed: {e}")
         self.message_id = None
-
-    def _elapsed(self) -> int:
-        return int(time.monotonic() - self.start_time)
 
 
 class PiRPC:
@@ -919,6 +484,7 @@ class PiRPC:
     def start(self) -> None:
         self.stop()
         env = os.environ.copy()
+        env["PI_TELEGRAM_TOOL_TITLES"] = "1" if THINKING_STREAM_ENABLED else "0"
         env["PATH"] = f"{HOME}/.nvm/versions/node/v22.22.3/bin:{HOME}/.local/bin:{HOME}/go/bin:" + env.get("PATH", "")
         args = [
             PI_BIN,
@@ -931,6 +497,10 @@ class PiRPC:
             "--append-system-prompt",
             SYSTEM_PROMPT,
         ]
+        if PI_SESSION:
+            # Sticky session: reopen the pinned session file so restarts
+            # keep the conversation instead of starting a fresh session.
+            args += ["--session", PI_SESSION]
         log(f"Starting pi RPC: {' '.join(args)} (cwd={PI_CWD})")
         self.proc = subprocess.Popen(
             args,
@@ -1022,7 +592,7 @@ class PiRPC:
         with self.lock:
             status: Optional[StatusMessenger] = None
             if chat_id and THINKING_STREAM_ENABLED:
-                status = StatusMessenger(chat_id, reply_to)
+                status = StatusMessenger(chat_id)
             request_id = str(uuid.uuid4())
             cmd: dict[str, Any] = {"id": request_id, "type": "prompt", "message": message}
             if images:
@@ -1042,29 +612,41 @@ class PiRPC:
                         status.flush()
                     continue
                 self._handle_event(ev)
-                if status:
-                    status.on_event(ev)
                 if ev.get("type") == "response" and ev.get("id") == request_id:
                     if not ev.get("success"):
                         if status:
                             status.finalize()
                         raise RuntimeError(ev.get("error", "pi rejected prompt"))
+                    if _as_record(ev.get("data")).get("disposition") == "handled":
+                        if status:
+                            status.finalize()
+                        return "Command handled."
+                    # The prompt's preflight response precedes its run events;
+                    # earlier events belong to an older prompt.
                     accepted = True
-                if accepted and ev.get("type") == "agent_end":
+                    continue
+                if not accepted:
+                    continue
+                if status:
+                    status.on_event(ev)
+                if ev.get("type") == "agent_settled":
+                    # A retry or auto-continue emits another agent_start/agent_end;
+                    # only the settled event ends this prompt.
                     break
             else:
                 if status:
                     status.finalize()
                 raise TimeoutError("Timed out waiting for pi to finish")
 
-            if status:
-                status.finalize()
-
-            response_id = str(uuid.uuid4())
-            self._send({"id": response_id, "type": "get_last_assistant_text"})
-            response = self._wait_response(response_id)
-            text = (response.get("data") or {}).get("text")
-            return text or "(No response.)"
+            try:
+                response_id = str(uuid.uuid4())
+                self._send({"id": response_id, "type": "get_last_assistant_text"})
+                response = self._wait_response(response_id)
+                text = (response.get("data") or {}).get("text")
+                return text or "(No response.)"
+            finally:
+                if status:
+                    status.finalize()
 
     def new_session(self) -> str:
         with self.lock:
@@ -1106,6 +688,12 @@ class PiRPC:
             )
 
 
+class TelegramAPIError(RuntimeError):
+    def __init__(self, message: str, code: Optional[int]) -> None:
+        super().__init__(message)
+        self.code = code
+
+
 def telegram_api(method: str, payload: dict[str, Any], timeout: int = 60) -> Any:
     if not BOT_TOKEN:
         raise RuntimeError("PI_TELEGRAM_BOT_TOKEN is not set")
@@ -1121,11 +709,12 @@ def telegram_api(method: str, payload: dict[str, Any], timeout: int = 60) -> Any
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             raw = resp.read().decode("utf-8", errors="replace")
     except urllib.error.HTTPError as e:
-        raw = e.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"Telegram {method} failed HTTP {e.code}: {raw}") from e
+        e.read()
+        raise TelegramAPIError(f"Telegram {method} failed HTTP {e.code}", e.code) from e
     data = json.loads(raw)
     if not data.get("ok"):
-        raise RuntimeError(f"Telegram {method} failed: {data}")
+        code = data.get("error_code")
+        raise TelegramAPIError(f"Telegram {method} failed: {code}", code)
     return data.get("result")
 
 
@@ -1362,7 +951,7 @@ def save_state(state: dict[str, Any]) -> None:
 def get_latest_update_id() -> int:
     updates = telegram_api(
         "getUpdates",
-        {"timeout": 0, "limit": 100, "allowed_updates": ["message"]},
+        {"timeout": 0, "limit": 100, "allowed_updates": ["message", "callback_query"]},
         timeout=10,
     )
     if not updates:
@@ -1377,7 +966,7 @@ def fetch_updates(after_update_id: int) -> list[dict[str, Any]]:
             "offset": after_update_id + 1,
             "timeout": POLL_TIMEOUT_SECONDS,
             "limit": 20,
-            "allowed_updates": ["message"],
+            "allowed_updates": ["message", "callback_query"],
         },
         timeout=POLL_TIMEOUT_SECONDS + 10,
     )
@@ -1510,18 +1099,81 @@ class ChatActionLoop:
             send_chat_action(self.chat_id, self.action)
 
 
+def strip_suggested_followups(text: str) -> str:
+    """Remove the automatic follow-up section, but keep later sections and code."""
+    heading_re = re.compile(r"^ {0,3}(#{1,6})[ \t]+(.+?)[ \t]*#*[ \t]*$")
+    bold_re = re.compile(r"^ {0,3}\*\*(.+?)\*\*:?[ \t]*$")
+    followup_re = re.compile(r"^suggested[ \t]+follow[-‑ ]?ups?(?:[ \t]+questions)?[ \t]*:?[ \t]*$", re.I)
+    fence_re = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+    out: list[str] = []
+    fence = ""
+    skip_level = 0
+    for line in text.splitlines(keepends=True):
+        raw = line.rstrip("\r\n")
+        marker = fence_re.match(raw)
+        if marker:
+            token = marker.group(1)
+            if not fence:
+                fence = token
+            elif token[0] == fence[0] and len(token) >= len(fence):
+                fence = ""
+        elif not fence:
+            heading = heading_re.match(raw)
+            bold = bold_re.match(raw)
+            title = heading.group(2) if heading else bold.group(1) if bold else ""
+            level = len(heading.group(1)) if heading else 2
+            if followup_re.fullmatch(title):
+                skip_level = level
+                continue
+            if skip_level and (heading or bold) and level <= skip_level:
+                skip_level = 0
+        if not skip_level:
+            out.append(line)
+    return "".join(out).rstrip()
+
+
+def telegram_rich_markdown(text: str) -> Optional[str]:
+    """Disable raw HTML and media without changing literal code."""
+    if "<" not in text and "![" not in text:
+        return text
+    # ponytail: if code might contain markup, use the existing safe renderer.
+    if re.search(r"`|~{3}| {4}|\t", text):
+        return None
+
+    def escape(match: re.Match[str]) -> str:
+        slashes = match.group(1)
+        return slashes + ("" if len(slashes) % 2 else "\\") + match.group(2)
+
+    return re.sub(r"(\\*)(<|!\[)", escape, text)
+
+
 def chunk_reply(text: str) -> list[str]:
-    """Split replies on line boundaries where possible."""
+    """Split standard replies by UTF-16 length, on line boundaries when possible."""
+    # Leave room for the (n/total) prefix and allow at least one emoji.
+    limit = max(2, min(MAX_REPLY_CHARS, 4000))
     chunks: list[str] = []
     current = ""
+    current_size = 0
     for line in text.splitlines(keepends=True):
-        if current and len(current) + len(line) > MAX_REPLY_CHARS:
+        line_size = _utf16_len(line)
+        if current and current_size + line_size > limit:
             chunks.append(current.rstrip())
             current = ""
-        while len(line) > MAX_REPLY_CHARS:
-            chunks.append(line[:MAX_REPLY_CHARS].rstrip())
-            line = line[MAX_REPLY_CHARS:]
+            current_size = 0
+        while line_size > limit:
+            cut = 0
+            used = 0
+            for char in line:
+                size = 2 if ord(char) > 0xFFFF else 1
+                if used + size > limit:
+                    break
+                used += size
+                cut += 1
+            chunks.append(line[:cut].rstrip())
+            line = line[cut:]
+            line_size -= used
         current += line
+        current_size += line_size
     if current.strip() or not chunks:
         chunks.append(current.rstrip())
     return chunks
@@ -1559,19 +1211,101 @@ def telegram_html(text: str) -> str:
     return "\n".join(rendered).strip() or " "
 
 
+def _build_multipart(fields: dict[str, tuple[Optional[str], bytes]]) -> tuple[bytes, str]:
+    """Build a multipart/form-data body. Inverse of parse_multipart."""
+    boundary = f"pi-bridge-{uuid.uuid4().hex}"
+    out = b""
+    for name, (filename, data) in fields.items():
+        out += f"--{boundary}\r\n".encode("utf-8")
+        if filename:
+            out += (
+                f'Content-Disposition: form-data; name="{name}"; filename="{filename}"\r\n'.encode("utf-8")
+                + b"Content-Type: application/octet-stream\r\n"
+            )
+        else:
+            out += f'Content-Disposition: form-data; name="{name}"\r\n'.encode("utf-8")
+        out += b"\r\n" + data + b"\r\n"
+    return out + f"--{boundary}--\r\n".encode("utf-8"), boundary
+
+
+def send_telegram_voice(chat_id: str, audio_path: Path) -> None:
+    """Send an audio file as a playable voice message into a Telegram chat."""
+    if not BOT_TOKEN:
+        raise RuntimeError("PI_TELEGRAM_BOT_TOKEN is not set")
+    data = audio_path.read_bytes()
+    if len(data) > MAX_AUDIO_BYTES:
+        raise RuntimeError(f"audio file exceeds {MAX_AUDIO_BYTES} bytes")
+    body, boundary = _build_multipart(
+        {
+            "chat_id": (None, chat_id.encode("utf-8")),
+            "voice": (audio_path.name, data),
+        }
+    )
+    req = urllib.request.Request(
+        f"{API_BASE}/bot{BOT_TOKEN}/sendVoice",
+        data=body,
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Telegram sendVoice failed HTTP {e.code}: {raw}") from e
+    result = json.loads(raw)
+    if not result.get("ok"):
+        raise RuntimeError(f"Telegram sendVoice failed: {result}")
+
+
 def send_telegram(chat_id: str, text: str, reply_to_message_id: Optional[int] = None) -> None:
+    text = strip_suggested_followups(text) or "(No response.)"
+    reply_parameters = (
+        {"message_id": reply_to_message_id, "allow_sending_without_reply": True}
+        if reply_to_message_id is not None else None
+    )
+    markdown = telegram_rich_markdown(text) if len(text) <= MAX_RICH_REPLY_CHARS else None
+    if markdown is not None and len(markdown) <= MAX_RICH_REPLY_CHARS:
+        payload: dict[str, Any] = {"chat_id": chat_id, "rich_message": {"markdown": markdown}}
+        if reply_parameters is not None:
+            payload["reply_parameters"] = reply_parameters
+        try:
+            telegram_api("sendRichMessage", payload, timeout=60)
+            return
+        except TelegramAPIError as e:
+            # Only a definite rejection is safe to retry in another format.
+            if e.code not in (400, 404):
+                raise
+            log("Telegram rejected the Rich Message; using standard messages")
+
+    # ponytail: long, unsafe-to-escape, or rejected replies use the existing renderer.
     chunks = chunk_reply(text)
     for idx, chunk in enumerate(chunks, 1):
         if len(chunks) > 1:
             chunk = f"({idx}/{len(chunks)})\n{chunk}"
-        payload: dict[str, Any] = {
-            "chat_id": chat_id,
-            "text": telegram_html(chunk),
-            "parse_mode": "HTML",
+        payload = {
+            "chat_id": chat_id, "text": telegram_html(chunk), "parse_mode": "HTML",
+            "link_preview_options": {"is_disabled": True},
         }
-        if reply_to_message_id is not None:
-            payload["reply_parameters"] = {"message_id": reply_to_message_id, "allow_sending_without_reply": True}
-        telegram_api("sendMessage", payload, timeout=60)
+        if reply_parameters is not None:
+            payload["reply_parameters"] = reply_parameters
+        try:
+            telegram_api("sendMessage", payload, timeout=60)
+        except TelegramAPIError as e:
+            if e.code != 400:
+                raise
+            # Telegram can reject nested entities in the small HTML renderer.
+            plain_payload = dict(payload, text=chunk)
+            del plain_payload["parse_mode"]
+            telegram_api("sendMessage", plain_payload, timeout=60)
+
+
+def send_telegram_reply(chat_id: str, text: str, reply_to_message_id: Optional[int] = None) -> None:
+    try:
+        send_telegram(chat_id, text, reply_to_message_id=reply_to_message_id)
+    except Exception as e:
+        # A timeout can mean Telegram delivered the reply. Do not send another message.
+        log(f"Failed to send Telegram reply ({type(e).__name__}); delivery may be unknown")
 
 
 def is_allowed(msg: IncomingMessage) -> bool:
@@ -1605,14 +1339,14 @@ def message_mentions_bot(msg: IncomingMessage) -> bool:
     if BOT_ID is None and not BOT_USERNAME:
         return False
     expected = f"@{BOT_USERNAME}" if BOT_USERNAME else None
-    text = msg.content or ""
+    text = (msg.content or "").encode("utf-16-le", errors="surrogatepass")
     for ent in msg.entities:
         etype = str(ent.get("type", "")).split(".")[-1].lower()
         offset = int(ent.get("offset", -1))
         length = int(ent.get("length", 0))
         if offset < 0 or length <= 0:
             continue
-        span = text[offset:offset + length]
+        span = text[offset * 2:(offset + length) * 2].decode("utf-16-le", errors="replace")
         if etype == "mention" and expected and span.strip().lower() == expected:
             return True
         if etype == "text_mention":
@@ -1699,8 +1433,8 @@ def scan_session(path: Path) -> tuple[str, str]:
                     else:
                         text = ""
                     text = text.strip()
-                    # Drop this daemon's own bridge header from Telegram-originated sessions.
-                    if text.startswith(("Telegram command from chat", "Telegram voice-note transcript", "Telegram image from chat")) and "\n\n" in text:
+                    # Drop this daemon's own bridge header from Telegram and Shortcut sessions.
+                    if text.startswith(("Telegram command from chat", "Telegram voice-note transcript", "Telegram image from chat", "iOS Shortcut voice-note transcript")) and "\n\n" in text:
                         text = text.split("\n\n", 1)[1].strip()
                     if text:
                         return cwd, " ".join(text.split())[:60]
@@ -1765,6 +1499,178 @@ def handle_switch(pi: "PiRPC", arg: str) -> str:
     return f"Switched to: {target[2]} · {Path(target[1]).name if target[1] else '?'} · {format_age(target[3])}"
 
 
+# ---------------------------------------------------------------------------
+# Private iOS Shortcut audio endpoint: Action Button -> record -> POST here.
+# ---------------------------------------------------------------------------
+
+
+def parse_multipart(body: bytes, boundary: str) -> dict[str, tuple[Optional[str], bytes]]:
+    """Parse multipart/form-data into {field name: (filename or None, bytes)}.
+
+    Deliberately small: shortcut posts carry one text field (`token`) and one
+    file field (`file`). The client-chosen random boundary never appears in
+    part data, so a plain split is safe.
+    """
+    delim = b"--" + boundary.encode("utf-8")
+    fields: dict[str, tuple[Optional[str], bytes]] = {}
+    for chunk in body.split(delim)[1:]:
+        if chunk.startswith(b"--"):
+            break  # closing delimiter
+        if chunk.startswith(b"\r\n"):
+            chunk = chunk[2:]
+        if chunk.endswith(b"\r\n"):
+            chunk = chunk[:-2]
+        head, sep, data = chunk.partition(b"\r\n\r\n")
+        if not sep:
+            continue
+        name: Optional[str] = None
+        filename: Optional[str] = None
+        for line in head.split(b"\r\n"):
+            if re.match(rb"(?i)^content-disposition:", line):
+                nm = re.search(rb'name="([^"]*)"', line)
+                fm = re.search(rb'filename="([^"]*)"', line)
+                if nm:
+                    name = nm.group(1).decode("utf-8", "replace")
+                if fm:
+                    filename = fm.group(1).decode("utf-8", "replace") or None
+        if name is not None:
+            fields[name] = (filename, data)
+    return fields
+
+
+def shortcut_target_chat_id() -> str:
+    """Use the only numeric private chat, or refuse an ambiguous target."""
+    # ponytail: require one numeric DM; add an explicit target setting for multiple DMs.
+    private_chats = [c for c in ALLOWED_CHATS if c.isascii() and c.isdigit() and int(c) > 0]
+    return private_chats[0] if len(private_chats) == 1 else ""
+
+
+def handle_shortcut_audio(pi: "PiRPC", filename: Optional[str], data: bytes) -> None:
+    """Transcribe a shortcut voice note, hand it to pi, reply in the chat."""
+    chat_id = shortcut_target_chat_id()
+    if not chat_id:
+        raise RuntimeError("PI_TELEGRAM_ALLOWED_CHATS must contain exactly one numeric private chat id")
+    suffix = Path(filename or "note.m4a").suffix or ".m4a"
+    fd, tmp_name = tempfile.mkstemp(prefix="shortcut-audio-", suffix=suffix)
+    audio_path = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(data)
+        provider = configured_voice_provider()
+        mime_type = mimetypes.guess_type(audio_path.name)[0] or "audio/mp4"
+        if provider == "openai":
+            transcript = transcribe_with_openai(audio_path, mime_type)
+        else:
+            transcript = transcribe_with_command(audio_path, mime_type)
+        if SHORTCUT_SEND_TO_TELEGRAM:
+            try:
+                send_telegram_voice(chat_id, audio_path)
+            except Exception as e:
+                log(f"Failed to post shortcut voice note to Telegram: {e}")
+    finally:
+        audio_path.unlink(missing_ok=True)
+    if not transcript.strip():
+        raise RuntimeError("Transcription came back empty")
+    prompt = (
+        "iOS Shortcut voice-note transcript from the owner "
+        f"at unix timestamp {int(time.time())}:\n\n{transcript}"
+    )
+    with ChatActionLoop(chat_id):
+        reply = pi.ask(prompt, chat_id=chat_id)
+    send_telegram_reply(chat_id, reply)
+
+
+def _run_shortcut_note(pi: "PiRPC", filename: Optional[str], data: bytes) -> None:
+    try:
+        handle_shortcut_audio(pi, filename, data)
+    except Exception as e:
+        log(f"Shortcut audio failed: {e}")
+        chat_id = shortcut_target_chat_id()
+        if chat_id:
+            try:
+                send_telegram(chat_id, f"Pi shortcut note error: {e}")
+            except Exception as send_err:
+                log(f"Also failed to send shortcut error over Telegram: {send_err}")
+
+
+class ShortcutHandler(BaseHTTPRequestHandler):
+    server_version = "PiShortcut/1.0"
+
+    def log_message(self, fmt: str, *args: Any) -> None:
+        log(f"shortcut http: {self.client_address[0]} {fmt % args}")
+
+    def _respond(self, code: int, payload: dict[str, Any]) -> None:
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self) -> None:
+        if self.path == SHORTCUT_PATH:
+            self._respond(200, {"ok": True, "service": "pi-telegram shortcut endpoint"})
+        else:
+            self._respond(404, {"ok": False, "error": "not found"})
+
+    def do_POST(self) -> None:
+        if self.path != SHORTCUT_PATH:
+            self._respond(404, {"ok": False, "error": "not found"})
+            return
+        ctype = self.headers.get("Content-Type", "")
+        m = re.search(r'boundary="?([^";]+)"?', ctype) if "multipart/form-data" in ctype else None
+        if not m:
+            self._respond(400, {"ok": False, "error": "expected multipart/form-data"})
+            return
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            length = 0
+        if length <= 0 or length > MAX_AUDIO_BYTES + 1_000_000:
+            self._respond(413, {"ok": False, "error": "audio too large"})
+            return
+        fields = parse_multipart(self.rfile.read(length), m.group(1))
+        token = (fields.get("token", (None, b""))[1] or b"").decode("utf-8", "replace").strip()
+        if not SHORTCUT_TOKEN or not hmac.compare_digest(token.encode("utf-8"), SHORTCUT_TOKEN.encode("utf-8")):
+            log(f"Shortcut endpoint rejected bad token from {self.client_address[0]}")
+            self._respond(403, {"ok": False, "error": "bad token"})
+            return
+        filename, data = fields.get("file", (None, b""))
+        if not data:
+            self._respond(400, {"ok": False, "error": "missing file field"})
+            return
+        pi = getattr(self.server, "pi", None)
+        if pi is None:
+            self._respond(503, {"ok": False, "error": "agent not ready"})
+            return
+        threading.Thread(target=_run_shortcut_note, args=(pi, filename, data), daemon=True, name="shortcut-note").start()
+        self._respond(200, {"ok": True, "bytes": len(data)})
+
+
+class ShortcutHTTPServer(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def __init__(self, address: tuple[str, int], pi: "PiRPC") -> None:
+        self.pi = pi
+        super().__init__(address, ShortcutHandler)
+
+
+def start_shortcut_listener(pi: "PiRPC") -> Optional[threading.Thread]:
+    """Serve the shortcut audio endpoint. Returns its thread, or None if disabled."""
+    if not (SHORTCUT_TOKEN and SHORTCUT_PORT):
+        log("Shortcut endpoint disabled (PI_TELEGRAM_SHORTCUT_TOKEN/PORT not set)")
+        return None
+    try:
+        httpd = ShortcutHTTPServer((SHORTCUT_HOST or "0.0.0.0", SHORTCUT_PORT), pi)
+    except OSError as e:
+        log(f"Shortcut endpoint failed to bind {SHORTCUT_HOST}:{SHORTCUT_PORT}: {e}")
+        return None
+    t = threading.Thread(target=httpd.serve_forever, daemon=True, name="shortcut-listener")
+    t.start()
+    log(f"Shortcut audio endpoint on http://{SHORTCUT_HOST or '0.0.0.0'}:{SHORTCUT_PORT}{SHORTCUT_PATH}")
+    return t
+
+
 def should_handle(msg: IncomingMessage) -> Optional[str]:
     if msg.sender_is_bot:
         return None
@@ -1797,6 +1703,28 @@ def should_handle(msg: IncomingMessage) -> Optional[str]:
     return prompt
 
 
+def handle_callback_query(update: dict[str, Any]) -> None:
+    """Answer every callback query; old trace buttons are inert but answered."""
+    cb = update.get("callback_query") or {}
+    cb_id = str(cb.get("id") or "")
+    if not cb_id:
+        return
+    data = str(cb.get("data") or "")
+    chat_id = str(((cb.get("message") or {}).get("chat") or {}).get("id") or "")
+    payload: dict[str, Any] = {"callback_query_id": cb_id}
+    if data.startswith(("d:", "h:")):
+        # The Details button is gone; a tap on an old message must not hang.
+        payload["text"] = (
+            "Trace details are no longer available."
+            if chat_id in ALLOWED_CHATS
+            else "Not allowed"
+        )
+    try:
+        telegram_api("answerCallbackQuery", payload, timeout=10)
+    except Exception as e:
+        log(f"Callback answer failed: {e}")
+
+
 def main() -> int:
     if not BOT_TOKEN:
         log("PI_TELEGRAM_BOT_TOKEN is required")
@@ -1813,6 +1741,7 @@ def main() -> int:
         log(f"Initialized last_update_id={state['last_update_id']}")
 
     pi = PiRPC()
+    start_shortcut_listener(pi)
     stop = False
 
     def _stop(_signum: int, _frame: Any) -> None:
@@ -1830,6 +1759,12 @@ def main() -> int:
                 update_id = int(update.get("update_id", 0))
                 state["last_update_id"] = max(int(state.get("last_update_id", 0)), update_id)
                 save_state(state)
+                if update.get("callback_query"):
+                    try:
+                        handle_callback_query(update)
+                    except Exception as e:
+                        log(f"Callback failed: {e}")
+                    continue
                 msg = parse_message(update)
                 if not msg:
                     continue
@@ -1886,7 +1821,7 @@ def main() -> int:
                             # received the base64 payload.
                             if image_path is not None:
                                 image_path.unlink(missing_ok=True)
-                    send_telegram(msg.chat_id, reply, reply_to_message_id=msg.message_id)
+                    send_telegram_reply(msg.chat_id, reply, reply_to_message_id=msg.message_id)
                 except Exception as e:
                     log(f"Command failed: {e}")
                     try:

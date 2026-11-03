@@ -89,6 +89,7 @@ terraform -chdir=ops/devbox destroy \
 | `git`        | Git configuration                                                           |
 | `launchd`    | macOS user LaunchAgents (vault and dotfiles auto-sync)                      |
 | `nvim`       | Neovim with LazyVim                                                         |
+| `rex`        | Rex terminal multiplexer keybindings (`~/.config/rex`)                       |
 | `starship`   | Starship prompt                                                             |
 | `systemd`    | User systemd units (vault/dotfiles auto-sync, Pi/WhatsApp/Telegram bridges) |
 | `pi`         | Pi agent config, packages, themes, and messaging daemons                    |
@@ -196,6 +197,11 @@ launchctl print "gui/$UID/com.aviral.dotfiles-auto-sync"
 ```
 
 ## Pi agent
+
+Vault-backed missions add persistent attempts, structured progress, and one linked
+worktree per mission in the repository's shared workspace. See the
+[Pi missions guide](docs/pi-missions.md) for setup, existing-session attachment,
+and the preview launcher.
 
 Install or upgrade the Pi CLI with npm (the global npm bin directory must be on `PATH`):
 

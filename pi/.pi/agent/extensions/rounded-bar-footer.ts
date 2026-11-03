@@ -15,6 +15,7 @@ import { relative, resolve, sep, isAbsolute } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { CustomEditor } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { fastModeSlot, onFastModeChange } from "./fast-mode-slot.mjs";
 
 // --- small format helpers (mirrors pi's footer so the units match) ---------
 
@@ -141,9 +142,17 @@ function updateTokenSpeed(message: any): void {
 	tokenSpeed.exact = estimate.exact;
 }
 
+/** Prompt-bubble label text: the token rate, prefixed with a bolt while fast
+ *  mode is on. Pure so the bolt prefix is testable without a TUI — the caller
+ *  measures its width with `visibleWidth`, so the bolt (1–2 cells) stays inside
+ *  the border math either way. */
+export function formatSpeedLabel(rate: number | null | undefined, exact: boolean, fast: boolean): string {
+	const speed = rate == null ? "-- tok/s" : `${exact ? "" : "~"}${Math.max(1, Math.round(rate))} tok/s`;
+	return fast ? `⚡ ${speed}` : speed;
+}
+
 function tokenSpeedLabel(): string {
-	if (tokenSpeed.rate == null) return "-- tok/s";
-	return `${tokenSpeed.exact ? "" : "~"}${Math.max(1, Math.round(tokenSpeed.rate))} tok/s`;
+	return formatSpeedLabel(tokenSpeed.rate, tokenSpeed.exact, fastModeSlot().getEnabled());
 }
 
 function computeUsage(entries: Iterable<{ type: string; message?: any; usage?: any }>): UsageTotals {
@@ -212,8 +221,13 @@ export default function (pi: ExtensionAPI) {
 		ctx.ui.setFooter((_tui, theme, footerData) => {
 			requestPromptRender = () => _tui.requestRender();
 			const unsub = footerData.onBranchChange(() => _tui.requestRender());
+			// A mid-session /fast toggle repaints the prompt bubble's bolt now.
+			const unsubFastMode = onFastModeChange(() => requestPromptRender?.());
 			return {
-				dispose: unsub,
+				dispose: () => {
+					unsub();
+					unsubFastMode();
+				},
 				invalidate() {},
 				render(width: number): string[] {
 					const sm = ctx.sessionManager;

@@ -1,0 +1,245 @@
+// Paths: scripts/mission-cli/**, pi/.pi/agent/extensions/missions/**, pi/.pi/agent/extensions/interactive-subagents/**, agents/.agents/skills/missions/**
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { mkdtempSync, writeFileSync, readFileSync, readdirSync, statSync, realpathSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { MissionBridge, repositoryWorkspace, quiescent } from "./core.mjs";
+import { missionLaunchConfig } from "../interactive-subagents/pi-extension/subagents/mission-launch.mjs";
+
+const exec = promisify(execFile);
+const bin = process.env.MISSION_TEST_BIN;
+const needsCLI = { skip: !bin && "Run scripts/test-missions.sh for real CLI integration coverage" };
+const context = (cwd, file, id="existing-pi") => ({ cwd, sessionManager: { getSessionId:()=>id, getSessionFile:()=>file }, hasPendingMessages:()=>false, isIdle:()=>true });
+
+test("normal turn is quiescent only without queued work and registered waits", () => {
+  const ctx=context("/tmp","/tmp/pi");
+  const event={aborted:false,outcome:"completed"};
+  assert.equal(quiescent(event,ctx),true);
+  for(const outcome of ["aborted","error",undefined]) assert.equal(quiescent({aborted:false,outcome},ctx),false);
+  assert.equal(quiescent({aborted:true,outcome:"completed"},ctx),false);
+  assert.equal(quiescent(event,{...ctx,isIdle:()=>false}),false);
+  assert.equal(quiescent(event,{...ctx,hasPendingMessages:()=>true}),false);
+  const key=Symbol.for("pi-subagents/running-children-count");
+  try {
+    globalThis[key]=()=>1;assert.equal(quiescent(event,ctx),false);
+    globalThis[key]=()=>{throw Error("unavailable")};assert.equal(quiescent(event,ctx),false);
+  } finally {delete globalThis[key]}
+});
+
+test("workspace resolution uses the primary repository and refuses ambiguity", () => {
+  const records=[{workspace_id:"repo",worktree:{repo_key:"/git/repo",is_linked_worktree:false}}, {workspace_id:"old-feature",worktree:{repo_key:"/git/repo",is_linked_worktree:true}}];
+  assert.equal(repositoryWorkspace(records,"/git/repo"),"repo");
+  assert.throws(()=>repositoryWorkspace(records,"/other"),/primary/);
+  assert.throws(()=>repositoryWorkspace([...records,records[0]],"/git/repo"),/primary/);
+});
+
+test("internal mission launch config forwards only non-secret paths", () => {
+  const config=missionLaunchConfig({agent:"mission-worker",missionContext:{vault:"/vault",binary:"/bin/mission",stateDir:"/state",MISSION_TOKEN:"secret"}});
+  assert.deepEqual(config,{MISSION_VAULT:"/vault",MISSION_BIN:"/bin/mission",MISSION_STATE_DIR:"/state"});
+  assert.equal(missionLaunchConfig({agent:"worker",missionContext:{}}),undefined);
+  assert.throws(()=>missionLaunchConfig({agent:"mission-worker",missionContext:{vault:"/vault"}}),/Invalid/);
+});
+
+async function fixture(t, checkpoint=false) {
+  const root=realpathSync(mkdtempSync(join(tmpdir(),"pi-mission-integration-")));
+  t.after(()=>rmSync(root,{recursive:true,force:true}));
+  const repo=join(root,"repo"),vault=join(root,"vault"),cache=join(root,"cache"),worktrees=join(root,"worktrees");
+  const {mkdirSync}=await import("node:fs");mkdirSync(repo);
+  const git=async(...args)=>(await exec("git",["-C",repo,...args])).stdout;
+  await git("init","-b","main");
+  await git("-c","user.name=Fixture","-c","user.email=test@example.invalid","-c","commit.gpgsign=false","commit","--allow-empty","-m","Fixture");
+  const env={...process.env, MISSION_BIN:bin,MISSION_VAULT:vault,MISSION_STATE_DIR:cache,HERDR_ENV:"1",HERDR_PANE_ID:"repo:p2",HERDR_WORKSPACE_ID:"repo"};
+  // Parent credentials must not leak into requests or any spawned child.
+  env.MISSION_TOKEN="unrelated-parent-token";env.MISSION_ATTEMPT="unrelated-parent-attempt";
+  const f={ env, hookFailures:0, hookIDs:[], tabs:[], calls:[] };
+  const run=async(binary,args,options={})=>{
+    f.calls.push({binary,args,env:options.env});
+    if(binary==="herdr") {
+      const result=args[0]==="workspace"?{workspaces:[{workspace_id:"repo",worktree:{repo_key:await f.bridge.common(repo),is_linked_worktree:false}}]}:
+        args[0]==="tab"? (f.tabs.push(args),{root_pane:{pane_id:"repo:p3",workspace_id:"repo"}}):
+        {panes:[{pane_id:env.HERDR_PANE_ID,cwd:f.cwd,foreground_cwd:f.cwd}]};
+      return JSON.stringify({result});
+    }
+    if(binary===bin && args.includes("hook")) {
+      f.hookIDs.push(args[args.indexOf("--event-id")+1]);
+      if(f.hookFailures-->0) throw Error("Temporary CLI failure");
+    }
+    return (await exec(binary,args,{encoding:"utf8",...options})).stdout;
+  };
+  f.bridge=new MissionBridge({env,run});
+  await f.bridge.call(["repo","add","dotfiles","--checkout",repo]);
+  const handle="dotfiles/session-progress";
+  const args=["new",handle,"--title","Session progress","--goal","Preserve attempts","--kind","implementation","--step","Inspect hooks","--step","Implement recovery"];
+  if(checkpoint)args.push("--checkpoint","S01:Review the evidence");
+  await f.bridge.call(args);
+  const r=await f.bridge.call(["workspace",handle,"--root",worktrees]);
+  f.cwd=r.state.runtime.cwd;f.file=join(root,"existing.jsonl");
+  writeFileSync(f.file,JSON.stringify({type:"session",id:"existing-pi",cwd:f.cwd})+"\n");
+  f.ctx=context(f.cwd,f.file);f.handle=handle;f.repo=repo;f.run=run;f.vault=vault;f.cache=cache;
+  return f;
+}
+
+test("existing session attaches, reports progress via CLI, and resumes across reload", needsCLI, async t=>{
+  const f=await fixture(t,true), b=f.bridge;
+  const claim=await b.action(f.ctx,{action:"attach",handle:f.handle});
+  assert.ok(claim.artifact.endsWith("step-01.md"));assert.equal(claim.token,undefined);
+  writeFileSync(claim.artifact,"Evidence from existing Pi session\n");
+  const evidence="artifacts/001/step-01.md";
+  await b.action(f.ctx,{action:"progress",status:"working",summary:"Mapped lifecycle hooks",next:"Test resume",evidence:[evidence]},"progress-stable");
+  await b.action(f.ctx,{action:"progress",status:"working",summary:"Mapped lifecycle hooks",next:"Test resume",evidence:[evidence]},"progress-stable");
+  const before=await b.call(["show",f.handle]);
+  assert.equal(before.state.attempts[0].progress.length,1);assert.match(before.state.attempts[0].progress[0].evidence[0].hash,/^sha256:/);
+  await b.end(f.ctx,{messages:[{role:"assistant",stopReason:"stop"}]});
+  assert.equal((await b.current(f.ctx)).attempt.status,"running");
+  await b.action(f.ctx,{action:"finish",summary:"Ready for review"});
+  await b.settled(f.ctx,{aborted:true,outcome:"aborted"});
+  assert.equal((await b.current(f.ctx)).attempt.status,"reported");
+  await b.end(f.ctx,{messages:[{role:"assistant",stopReason:"stop"}]});
+  assert.equal((await b.current(f.ctx)).attempt.status,"reported");
+  await b.settled(f.ctx,{aborted:false,outcome:"completed"});
+  let r=await b.call(["show",f.handle]);
+  assert.equal(r.state.status,"waiting");assert.equal(r.state.pending_checkpoint,"C01");assert.equal(r.state.attempts[0].process_exited,false);
+  assert.equal(readFileSync(join(f.vault,"6_missions",f.handle,r.state.attempts[0].transcript),"utf8"),readFileSync(f.file,"utf8"));
+  await assert.rejects(b.action(f.ctx,{action:"next"}),/checkpoint_pending/);
+  await b.call(["checkpoint",f.handle,"--id","C01","--decision","accept","--human","--actor","fixture-user","--note","Reviewed","--revision",String(r.state.revision)]);
+  const next=await b.action(f.ctx,{action:"next"});assert.equal(next.step.id,"S02");assert.equal(next.cwd,claim.cwd);
+  await b.record(f.ctx,{type:"session-end",summary:"Reload fixture"});
+  const restored=new MissionBridge({env:f.env,run:f.run});
+  await restored.restore(f.ctx);
+  assert.equal(restored.hint.attempt,next.attempt);
+  const replay=await restored.action(f.ctx,{action:"attach"});assert.equal(replay.attempt,next.attempt);
+  const credential=join(f.cache,readdirSync(f.cache)[0]);
+  assert.equal(statSync(credential).mode & 0o777,0o600);
+  assert.ok(!JSON.stringify(claim).includes(restored.hint.token));
+  for(const call of f.calls.filter(c=>c.binary===bin)) {
+    assert.ok(!call.args.includes(restored.hint.token));assert.equal(call.env.MISSION_ATTEMPT,undefined);
+  }
+});
+
+test("unacknowledged lifecycle outbox retries the original ID without duplication", needsCLI,async t=>{
+  const f=await fixture(t);await f.bridge.action(f.ctx,{action:"attach",handle:f.handle});
+  f.hookFailures=1;
+  await assert.rejects(f.bridge.record(f.ctx,{type:"tool-start",tool:"bash",summary:"Call fixture"}),/unavailable/);
+  const failedID=f.hookIDs.at(-1);
+  const restored=new MissionBridge({env:f.env,run:f.run});await restored.restore(f.ctx);
+  const r=await restored.call(["show",f.handle]);
+  assert.equal(r.state.attempts[0].events.filter(e=>e.id===failedID).length,1);assert.equal(f.hookIDs.at(-1),failedID);
+  assert.equal(restored.hint.outbox.length,0);
+  await Promise.all([restored.record(f.ctx,{type:"tool-start",tool:"read",summary:"Call A"}),restored.record(f.ctx,{type:"tool-end",tool:"read",summary:"Call B"})]);
+  const events=(await restored.call(["show",f.handle])).state.attempts[0].events;
+  assert.equal(events.filter(e=>["Call A","Call B"].includes(e.summary)).length,2);
+});
+
+test("failed checks retain ownership and successful correction settles it",needsCLI,async t=>{
+  const f=await fixture(t);const c=await f.bridge.action(f.ctx,{action:"attach",handle:f.handle});
+  await f.bridge.action(f.ctx,{action:"finish"});
+  await assert.rejects(f.bridge.settled(f.ctx,{aborted:false,outcome:"completed"}),/missing_artifact/);
+  assert.equal((await f.bridge.current(f.ctx)).attempt.id,c.attempt);
+  writeFileSync(c.artifact,"Corrected output");
+  await f.bridge.settled(f.ctx,{aborted:false,outcome:"completed"});
+  const r=await f.bridge.call(["show",f.handle]);assert.equal(r.state.attempts[0].status,"succeeded");assert.equal(r.state.status,"ready");
+});
+
+test("mission launch reuses repository workspace and reserves only one worker",needsCLI,async t=>{
+  const f=await fixture(t);const requests=[];
+  globalThis.__pi_interactive_subagents={executeSubagent:async(p)=>{requests.push(p);return {details:{status:"started",sessionFile:f.file}}}};
+  try {
+    const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
+    assert.equal(requests[0].cwd,f.cwd);assert.equal(requests[0].pane,"repo:p3");assert.equal(requests[0].agent,"mission-worker");
+    assert.equal(requests[0].missionContext.vault,f.vault);assert.equal(requests[0].missionContext.binary,bin);
+    assert.equal(JSON.stringify(requests[0]).includes("unrelated-parent-token"),false);
+    assert.deepEqual(f.tabs[0].slice(0,4),["tab","create","--workspace","repo"]);
+    assert.ok(f.tabs[0].includes("--no-focus"));
+    const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,false);assert.equal(requests.length,1);
+  } finally {delete globalThis.__pi_interactive_subagents}
+});
+
+test("ambiguous launch failure is durable and never retried as a new worker",needsCLI,async t=>{
+  const f=await fixture(t);let launches=0;
+  globalThis.__pi_interactive_subagents={executeSubagent:async()=>{launches++;throw Error("Acknowledgement lost")}};
+  try {
+    await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/Acknowledgement lost/);
+    const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,false);assert.equal(launches,1);
+  } finally {delete globalThis.__pi_interactive_subagents}
+});
+
+test("Pi factory callbacks use final settlement and block changes at a checkpoint",needsCLI,async t=>{
+  const f=await fixture(t,true);
+  f.env.PI_SUBAGENT_AGENT="mission-worker";
+  const {createRequire}=await import("node:module");
+  const {resolveJiti}=await import("../test-lib/jiti.mjs");
+  const {jitiPath,nodePath}=resolveJiti();
+  process.env.NODE_PATH=nodePath;
+  const {default:Module}=await import("node:module");Module._initPaths();
+  const {createJiti}=createRequire(import.meta.url)(jitiPath);
+  const imported=createJiti(import.meta.url,{interopDefault:true})("./index.ts");
+  const factory=imported.default || imported;
+  const events={},tools={},commands={},notifications=[],statuses=new Map();
+  const pi={on:(name,fn)=>{events[name]=fn},registerTool:t=>{tools[t.name]=t},registerCommand:(name,c)=>{commands[name]=c},sendMessage:()=>{throw Error("Checkpoint must not continue automatically")}};
+  const ctx={...f.ctx,hasUI:true,ui:{notify:(s)=>notifications.push(s),setStatus:(k,v)=>statuses.set(k,v),select:async(_title,options)=>options[0]}};
+  factory(pi,{env:f.env,run:f.run});
+  assert.equal(tools.mission.exposure,"deferred");assert.ok(commands.missions);assert.ok(commands.mission);
+  await events.session_start({},ctx);
+  const c=await tools.mission.execute("attach-call",{action:"attach",handle:f.handle},null,null,ctx);
+  assert.equal(c.isError,undefined);writeFileSync(c.details.artifact,"Factory integration evidence");
+  const before=await events.before_agent_start({},ctx);
+  assert.ok(before.message.content.includes("Inspect hooks"));
+  assert.ok(!before.message.content.includes(JSON.parse(readFileSync(join(f.cache,readdirSync(f.cache)[0]),"utf8")).token));
+  await events.agent_start({},ctx);
+  await events.tool_execution_start({toolName:"write",toolCallId:"write-call"},ctx);
+  await events.tool_execution_end({toolName:"write",toolCallId:"write-call",isError:false},ctx);
+  await tools.mission.execute("finish-call",{action:"finish",summary:"Ready"},null,null,ctx);
+  await events.agent_end({messages:[{role:"assistant",stopReason:"stop"}]},ctx);
+  assert.equal((await f.bridge.call(["show",f.handle])).state.attempts[0].status,"reported");
+  await events.agent_before_settle({outcome:"completed"},ctx);
+  await events.agent_settled({aborted:false},ctx);
+  const r=await f.bridge.call(["show",f.handle]);assert.equal(r.state.pending_checkpoint,"C01");assert.equal(r.state.attempts[0].settled,true);
+  assert.equal((await events.tool_call({toolName:"bash"},ctx)).block,true);
+  assert.equal(await events.tool_call({toolName:"mission"},ctx),undefined);
+  await commands.missions.handler("",ctx);assert.ok(notifications.some(n=>n.includes("pending_checkpoint")));
+  await events.session_shutdown({},ctx);
+  assert.ok(statuses.get("mission").includes("waiting"));
+  // A corrupted local cache must not silently turn an owned session into an
+  // untracked writer on reload.
+  writeFileSync(join(f.cache,readdirSync(f.cache)[0]),"invalid JSON");
+  await events.session_start({},ctx);
+  assert.equal((await events.tool_call({toolName:"write"},ctx)).block,true);
+});
+
+test("preview launcher preserves this checkout's config and skill without global installation",needsCLI,async t=>{
+  const root=mkdtempSync(join(tmpdir(),"mission-preview-"));t.after(()=>rmSync(root,{recursive:true,force:true}));
+  writeFileSync(join(root,"pi"),"#!/usr/bin/env node\nconsole.log(JSON.stringify({args:process.argv.slice(2),binary:process.env.MISSION_BIN,config:process.env.PI_CODING_AGENT_DIR}))\n",{mode:0o755});
+  const script=fileURLToPath(new URL("../../../../../scripts/pi-missions",import.meta.url));
+  const config=join(root,"private-config");
+  const r=JSON.parse((await exec("bash",[script,"--session","/tmp/existing.jsonl"],{env:{...process.env,PATH:root+":"+process.env.PATH,MISSION_BIN:bin,MISSION_PREVIEW_DIR:config}})).stdout);
+  assert.equal(r.binary,bin);assert.equal(r.config,config);assert.equal(statSync(config).mode&0o777,0o700);
+  assert.ok(realpathSync(join(config,"extensions")).endsWith("/pi/.pi/agent/extensions"));
+  assert.ok(JSON.parse(readFileSync(join(config,"settings.json"),"utf8")).defaultModel);
+  assert.equal(r.args[0],"--skill");assert.ok(r.args[1].endsWith("/missions/SKILL.md"));assert.deepEqual(r.args.slice(2),["--session","/tmp/existing.jsonl"]);
+});
+
+test("started mission owners continue eligible steps; attached sessions remain explicit",needsCLI,async t=>{
+  const {createRequire,default:Module}=await import("node:module");
+  const {resolveJiti}=await import("../test-lib/jiti.mjs");const {jitiPath,nodePath}=resolveJiti();
+  process.env.NODE_PATH=nodePath;Module._initPaths();
+  const {createJiti}=createRequire(import.meta.url)(jitiPath);
+  const imported=createJiti(import.meta.url,{interopDefault:true})("./index.ts");const factory=imported.default || imported;
+  for(const started of [false,true]) {
+    const f=await fixture(t);delete f.env.PI_SUBAGENT_AGENT;if(started)f.env.PI_SUBAGENT_AGENT="mission-worker";
+    const events={},tools={},messages=[];
+    factory({on:(k,v)=>events[k]=v,registerTool:v=>tools[v.name]=v,registerCommand:()=>{},sendMessage:(message,options)=>messages.push({message,options})},{env:f.env,run:f.run});
+    const ctx={...f.ctx,ui:{notify:()=>{},setStatus:()=>{}}};
+    const claim=await tools.mission.execute("attach",{action:"attach",handle:f.handle},null,null,ctx);
+    writeFileSync(claim.details.artifact,"Step evidence");
+    await tools.mission.execute("finish",{action:"finish"},null,null,ctx);
+    await events.agent_before_settle({outcome:"completed"},ctx);
+    await events.agent_settled({aborted:false},ctx);
+    assert.equal(messages.length,started?1:0);
+    if(started){assert.equal(messages[0].message.customType,"mission-next");assert.equal(messages[0].options.triggerTurn,true);}
+    assert.equal((await f.bridge.call(["show",f.handle])).state.status,"ready");
+  }
+});

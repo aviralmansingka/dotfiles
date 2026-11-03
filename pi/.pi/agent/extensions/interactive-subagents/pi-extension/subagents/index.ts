@@ -85,6 +85,7 @@ import {
   parseAgentDefinition,
 } from "./agent-definitions.mjs";
 import { encodeSubagentInitialPrompt } from "./initial-prompt.ts";
+import { missionLaunchConfig } from "./mission-launch.mjs";
 
 /** Absolute path to `pi-extension/subagents`. https://github.com/nodejs/node/issues/37845 */
 const SUBAGENTS_DIR = dirname(fileURLToPath(import.meta.url));
@@ -1254,6 +1255,11 @@ function applySandboxToParts(
   // The Claude branch returns before the Pi path, so this stays Pi-only.
   parts.push(...baselineSubagentExtensionArgs(getAgentConfigDir()));
   parts.push(...agentIsolationArgs(loadout.agent));
+  if (loadout.missionEnv) {
+    // Keep explicit branch previews self-contained for both extension and skill.
+    parts.push("-e", shellEscape(join(SUBAGENTS_DIR, "../../../missions/index.ts")));
+    parts.push("--skill", shellEscape(join(SUBAGENTS_DIR, "../../../../../../../agents/.agents/skills/missions/SKILL.md")));
+  }
 
   if (loadout.model) {
     const model = loadout.thinking ? `${loadout.model}:${loadout.thinking}` : loadout.model;
@@ -1855,6 +1861,7 @@ async function launchSubagentOnSurface(
     autoExit: agentDefs?.autoExit ?? false,
     cwd: effectiveCwd ?? null,
     agentDir: resolvedAgentDir,
+    missionEnv: missionLaunchConfig(params),
   };
   writeSubagentLoadout(subagentSessionFile, loadout);
 
@@ -1864,6 +1871,9 @@ async function launchSubagentOnSurface(
 
   // Build env prefix: subagent identity + config dir propagation + spawn allowlist
   const envParts: string[] = [];
+  for (const [key, value] of Object.entries(loadout.missionEnv ?? {})) {
+    envParts.push(`${key}=${shellEscape(value)}`);
+  }
 
   if (resolvedAgentDir) {
     envParts.push(`PI_CODING_AGENT_DIR=${shellEscape(resolvedAgentDir)}`);
@@ -3110,6 +3120,14 @@ export default function subagentsExtension(pi: ExtensionAPI) {
             `(it predates sandboxed resume, or its .loadout.json sidecar was removed). ` +
             `Resuming would relaunch without the original tool/model restrictions, so this is refused. ` +
             `Re-run the task as a fresh subagent instead.`;
+          return { content: [{ type: "text" as const, text: err }], details: { error: err } };
+        }
+
+        // The general resume path creates an autonomous disposable surface.
+        // A durable mission must instead resume in its repository workspace,
+        // retaining its session and transport paths. Never silently downgrade it.
+        if (loadout.missionEnv) {
+          const err = "Resume this durable mission in its existing worktree through Herdr/Sidekick, using the same Pi session file and the MISSION_* paths saved in its .loadout.json. Then /mission attach to recover its attempt. Automatic disposable subagent resume is refused.";
           return { content: [{ type: "text" as const, text: err }], details: { error: err } };
         }
 

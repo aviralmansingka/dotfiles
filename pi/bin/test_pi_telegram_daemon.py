@@ -10,14 +10,18 @@ from __future__ import annotations
 
 import base64
 import importlib.util
+import io
 import json
 import os
 import re
 import shutil
 import sys
 import tempfile
+import threading
 import time
 import unittest
+import urllib.error
+import urllib.request
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -55,739 +59,552 @@ class TestSanitizeTitle(unittest.TestCase):
         self.assertEqual(daemon._sanitize_title("<b>Bold</b> text"), "Bold text")
 
 
-class TestTraceBuilder(unittest.TestCase):
-    """Unit tests for TraceBuilder — pure logic, no I/O."""
+class TestCallTitles(unittest.TestCase):
+    """Title resolution: model-written comment, stored title, or generated title."""
 
-    def _new_tree(self):
+    def _call(self, name, arguments=None, result=None):
+        return daemon.ToolCall(id="c1", name=name, arguments=arguments or {}, result=result)
+
+    # -- model-written leading intent comments ----------------------------
+
+    def test_bash_title_lifts_leading_intent_comment(self):
+        call = self._call("bash", {"command": "# Check which weekday the log names start on\ndate +%A"})
+        self.assertEqual(
+            daemon._call_title(call),
+            daemon._truncate_title("Check which weekday the log names start on"),
+        )
+
+    def test_powershell_title_lifts_hash_comment(self):
+        call = self._call("powershell", {"command": "# Stop the stale service\nStop-Service pi-telegram"})
+        self.assertEqual(daemon._call_title(call), "Stop the stale service")
+
+    def test_python_title_lifts_hash_comment(self):
+        call = self._call("python", {"code": "# Parse the session log for bash calls\nrows = []"})
+        self.assertEqual(daemon._call_title(call), "Parse the session log for bash calls")
+
+    def test_mcp_script_title_skips_options_directive(self):
+        call = self._call(
+            "mcpScript",
+            {"code": "// @options: {}\n// Fan out searches and filter failures\nconst x = 1"},
+        )
+        self.assertEqual(daemon._call_title(call), "Fan out searches and filter failures")
+
+    def test_multiline_comment_block_uses_first_line(self):
+        call = self._call(
+            "bash", {"command": "# Check the build directory\n# then report the newest file\nls -t /tmp"}
+        )
+        self.assertEqual(daemon._call_title(call), "Check the build directory")
+
+    def test_comment_after_code_is_not_a_title(self):
+        call = self._call("bash", {"command": "ls -la\n# List hidden files"})
+        self.assertIsNone(daemon._call_title(call))
+
+    def test_shebang_never_titles_a_call(self):
+        call = self._call(
+            "bash", {"command": "#!/bin/bash\n# Run the offline suite\nuv run python -m unittest"}
+        )
+        self.assertEqual(daemon._call_title(call), "Run the offline suite")
+
+    # -- untitled calls never show a tool name, command, or argument --------
+
+    def test_untitled_calls_have_no_fallback(self):
+        for name, args in (
+            ("bash", {"command": "date +%A; ls /tmp"}),
+            ("read", {"path": "/a/b/secret.py"}),
+            ("mcp__browserbase__search", {"query": "private"}),
+            ("some_new_tool", {}),
+        ):
+            with self.subTest(name=name):
+                self.assertIsNone(daemon._call_title(self._call(name, args)))
+
+    # -- stored intentTitle ----------------------------------------------
+
+    def test_stored_intent_title_wins_over_comment(self):
+        call = self._call(
+            "bash",
+            {"command": "# Fallback comment\nls"},
+            result={"details": {"intentTitle": "Check the weekday"}},
+        )
+        self.assertEqual(daemon._call_title(call), "Check the weekday")
+
+    def test_stored_intent_title_is_sanitized_to_one_line(self):
+        call = self._call(
+            "read", {}, result={"details": {"intentTitle": "\n**Recheck** the build <b>now</b>\nsecond"}}
+        )
+        self.assertEqual(daemon._call_title(call), "Recheck the build now")
+
+    def test_long_comment_title_is_truncated(self):
+        title = daemon._call_title(self._call("bash", {"command": "# " + "x" * 200 + "\ntrue"}))
+        self.assertLessEqual(len(title), daemon.TITLE_MAX + 1)
+        self.assertTrue(title.endswith("…"))
+
+
+class TestTraceBuilder(unittest.TestCase):
+    """Title-only trace: one line per titled call, in call order."""
+
+    def _tree(self, *calls):
         tree = daemon.TraceBuilder()
-        tree.start_time = 0.0  # deterministic: render(N) → elapsed=N
+        for call_id, name, args in calls:
+            tree.on_tool_execution_start(call_id, name, args)
         return tree
 
-    # -- header / empty ---------------------------------------------------
+    def test_empty_tree_renders_nothing(self):
+        self.assertEqual(daemon.TraceBuilder().render(), "")
 
-    def test_empty_render_shows_only_header(self):
-        tree = self._new_tree()
-        text = tree.render(5)
-        self.assertIn("thinking · 0:05", text)
+    def test_one_title_per_call_in_call_order(self):
+        tree = self._tree(
+            ("c1", "bash", {"command": "# Read the daemon log\njournalctl --user -u pi-telegram"}),
+            ("c2", "read", {"path": "/a/state.json"}),
+            ("c3", "bash", {"command": "# Stop the running daemon\nsystemctl --user stop pi-telegram"}),
+        )
+        tree.on_title("c2", "Inspect the project state")
+        self.assertEqual(
+            tree.render().split("\n"),
+            ["◇ Read the daemon log", "◇ Inspect the project state", "◇ Stop the running daemon"],
+        )
 
-    def test_elapsed_rolls_over_to_minutes(self):
-        tree = self._new_tree()
-        text = tree.render(75)
-        self.assertIn("thinking · 1:15", text)
-        self.assertNotIn("0:75", text)
+    def test_repeated_calls_render_repeated_titles(self):
+        tree = self._tree(
+            ("c1", "bash", {"command": "# Check the build directory\nls"}),
+            ("c2", "bash", {"command": "# Check the build directory\nls"}),
+        )
+        self.assertEqual(
+            tree.render().split("\n"),
+            ["◇ Check the build directory", "◇ Check the build directory"],
+        )
 
-    def test_turn_start_alone_shows_only_header(self):
-        """No content yet — just the header, no steps."""
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        text = tree.render(1)
-        self.assertIn("thinking · 0:01", text)
-        # No step lines yet (no content assembled)
-        self.assertNotIn("▸", text)
-        self.assertNotIn("▹", text)
+    def test_render_has_no_heading_glyph_timer_or_body(self):
+        tree = self._tree(("c1", "bash", {"command": "# List the builds\nls -t /tmp/builds"}))
+        tree.on_tool_execution_end(
+            "c1", {"content": [{"type": "text", "text": "traceback: boom"}], "details": {}}
+        )
+        text = tree.render()
+        self.assertEqual(text, "◆ List the builds")
+        for forbidden in (
+            "thinking", "▹", "▸", "├─", "└─", "$", "0:", "1:", "<pre>",
+            "traceback", "completed", "running",
+        ):
+            self.assertNotIn(forbidden, text)
 
-    # -- text title + tool calls ------------------------------------------
+    def test_failed_call_keeps_title_without_error_body(self):
+        tree = self._tree(("c1", "bash", {"command": "# Run the offline suite\nuv run pytest"}))
+        tree.on_tool_execution_end(
+            "c1", {"content": [{"type": "text", "text": "3 failed"}], "details": {"exitCode": 1}}, True
+        )
+        self.assertEqual(tree.render(), "× Run the offline suite")
 
-    def test_text_title_with_tool_call(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "text", "text": "Reading config"},
-            {"type": "toolCall", "id": "c1", "name": "read", "arguments": {"path": "config.toml"}},
-        ]})
-        text = tree.render(2)
-        self.assertIn("Reading config", text)
-        self.assertIn("▹", text)  # pending step (tool not completed)
-        # Compact render: no tool detail, only title + timer
-        self.assertNotIn("config.toml", text)
+    def test_tool_execution_events_are_authoritative(self):
+        """No assistant message events are needed: start carries id, name, args."""
+        tree = daemon.TraceBuilder()
+        tree.on_tool_execution_start("c1", "bash", {"command": "# Read the log\ntail -n 5 x"})
+        self.assertEqual(tree.render(), "◇ Read the log")
 
-    def test_completed_step_shows_filled_triangle(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "text", "text": "Reading config"},
-            {"type": "toolCall", "id": "c1", "name": "read", "arguments": {"path": "config.toml"}},
-        ]})
-        tree.on_tool_execution_start("c1", "read", {"path": "config.toml"})
-        tree.on_tool_execution_end("c1", False)
-        tree.on_turn_end()
-        text = tree.render(3)
-        self.assertIn("▸", text)  # completed step
-        self.assertNotIn("▹", text)
-        # Tool glyphs and summaries are not rendered on mobile
-        self.assertNotIn("◆", text)
-        self.assertNotIn("loaded", text)
+    def test_untitled_failed_call_stays_hidden_until_a_title_arrives(self):
+        tree = daemon.TraceBuilder()
+        tree.on_tool_execution_start("m1", "mcp__calendar", {"query": "secret"})
+        tree.on_tool_execution_end("m1", {"content": [{"type": "text", "text": "secret error"}]}, True)
+        self.assertEqual(tree.render(), "")
+        tree.on_title("m1", "Find calendar events")
+        self.assertEqual(tree.render(), "× Find calendar events")
 
-    # -- fallback titles (no explicit text) -------------------------------
+    def test_result_summaries_connect_to_finished_titles(self):
+        tree = self._tree(
+            ("a", "bash", {"command": "# Search calendar events\ntrue"}),
+            ("b", "bash", {"command": "# Check the service\ntrue"}),
+        )
+        tree.on_summary("a", "3 events & reminders\nprivate second line")
+        self.assertEqual(tree.render(), "◇ Search calendar events\n◇ Check the service")
+        tree.on_tool_execution_end("a", {"content": [{"type": "text", "text": "raw private output"}]})
+        tree.on_tool_execution_end("b", {"content": [{"type": "text", "text": "raw error body"}]}, True)
+        tree.on_summary("b", "**Service** is unavailable")
+        self.assertEqual(tree.render(),
+                         "◆ Search calendar events\n└─ 3 events &amp; reminders\n"
+                         "× Check the service\n└─ Service is unavailable")
+        self.assertNotIn("raw", tree.render())
+        self.assertNotIn("private", tree.render())
 
-    def test_fallback_title_read(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "read", "arguments": {"path": "config.toml"}},
-        ]})
-        text = tree.render(1)
-        self.assertIn("Reading", text)
-        self.assertIn("config.toml", text)  # part of the derived title
+    def test_result_line_limit_includes_prefix_and_utf16_units(self):
+        tree = self._tree(("a", "bash", {"command": "# Search mail\ntrue"}))
+        tree.on_tool_execution_end("a", {})
+        self.assertTrue(tree.on_summary("a", "3 emails matching XYZ"))
+        self.assertEqual(tree.render(), "◆ Search mail\n└─ 3 emails matching XYZ")
+        self.assertTrue(tree.on_summary("a", "x" * 23 + "🚀"))
+        self.assertEqual(daemon._utf16_len(tree.render().split("\n")[1]), daemon.SUMMARY_LINE_MAX)
+        self.assertFalse(tree.on_summary("a", "x" * 24 + "🚀"))
+        self.assertFalse(tree.on_summary("a", "a summary that is much too long"))
+        self.assertNotIn("…", tree.render())
 
-    def test_fallback_title_edit(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "edit", "arguments": {"path": "daemon.py"}},
-        ]})
-        text = tree.render(1)
-        self.assertIn("Updating", text)
-        self.assertIn("daemon.py", text)
+    def test_result_summary_is_dropped_as_a_whole_line_at_the_limit(self):
+        tree = self._tree(("a", "bash", {"command": "# Check events\ntrue"}))
+        tree.on_tool_execution_end("a", {})
+        tree.on_summary("a", "Found events & reminders")
+        full = "◆ Check events\n└─ Found events &amp; reminders"
+        with patch.object(daemon, "MAX_REPLY_CHARS", daemon._utf16_len(full) - 1):
+            self.assertEqual(tree.render(), "◆ Check events")
+        with patch.object(daemon, "MAX_REPLY_CHARS", daemon._utf16_len(full)):
+            self.assertEqual(tree.render(), full)
 
-    def test_fallback_title_bash(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "echo hello"}},
-        ]})
-        text = tree.render(1)
-        # Fallback title summarizes the command intent
-        self.assertIn("Printing", text)
-        # Compact render: no tool summary line
-        self.assertNotIn("$ echo hello", text)
+    def test_reused_id_keeps_each_call(self):
+        tree = self._tree(("c1", "bash", {"command": "# Read the first log\ntail x"}))
+        tree.on_tool_execution_end("c1", {"details": {"intentTitle": "Read the first log"}})
+        tree.on_tool_execution_start("c1", "bash", {"command": "# Read the second log\ntail y"})
+        tree.on_tool_execution_end("c1", {"details": {"intentTitle": "Read the second log"}})
+        self.assertEqual(tree.render(), "◆ Read the first log\n◆ Read the second log")
 
-    def test_fallback_title_uses_substantive_command_after_separator(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {
-                "command": "date; ls -t /tmp/builds | head -1",
-            }},
-        ]})
-        text = tree.render(1)
-        self.assertIn("Listing files builds", text)
-        self.assertNotIn("date;", text)
+    def test_messenger_keeps_titles_across_agent_start_retries(self):
+        """A retry or auto-continue re-emits agent_start; the trace keeps its calls."""
+        with patch.object(daemon, "telegram_api") as mock_api:
+            mock_api.return_value = {"message_id": 7}
+            sm = daemon.StatusMessenger("123")
+            sm.on_event({"type": "agent_start"})
+            sm.on_event({"type": "tool_execution_start", "toolCallId": "c1",
+                         "toolName": "bash", "args": {"command": "# Read the daemon log\ntail x"}})
+            sm.on_event({"type": "agent_end"})
+            sm.on_event({"type": "agent_start"})  # automatic retry
+            sm.on_event({"type": "tool_execution_start", "toolCallId": "c2",
+                         "toolName": "bash", "args": {"command": "# Read the daemon log\ntail x"}})
+            sm.flush()
+            self.assertEqual(
+                mock_api.call_args[0][1]["text"], "◇ Read the daemon log\n◇ Read the daemon log"
+            )
 
-    def test_fallback_title_finds_loop_body_command(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {
-                "command": "for f in *.log; do grep -q error \"$f\"; done",
-            }},
-        ]})
-        text = tree.render(1)
-        self.assertIn("Searching text error", text)
-        self.assertNotIn(" for", text)
+    def test_titles_are_html_escaped(self):
+        tree = self._tree(("c1", "bash", {"command": "# Compare a<b and c & d\n[ a -lt b ]"}))
+        text = tree.render()
+        self.assertEqual(text, "◇ Compare a&lt;b and c &amp; d")
+        self.assertNotIn("<", text)
 
-    def test_fallback_title_condenses_long_quoted_search_pattern(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {
-                "command": "rg -n '123456789012345678901234|another-pattern' sessions",
-            }},
-        ]})
-        text = tree.render(1)
-        self.assertIn("Searching text 123456789012345678901234", text)
-        self.assertNotIn("|</b>", text)
+    def test_multiline_comment_title_is_one_line(self):
+        tree = self._tree(("c1", "bash", {"command": "# Rebuild the cache\n# then restart\nmake cache"}))
+        self.assertEqual(tree.render(), "◇ Rebuild the cache")
 
-    def test_fallback_title_skips_multiline_assignment(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {
-                "command": "ROOT=/tmp/builds\nls -t \"$ROOT\" | head -1",
-            }},
-        ]})
-        text = tree.render(1)
-        self.assertIn("Listing files $ROOT", text)
-        self.assertNotIn("Running command", text)
+    def test_total_message_stays_within_telegram_limits(self):
+        """Overflow drops whole title lines: no cut entity, no ellipsis, no count row."""
+        tree = daemon.TraceBuilder()
+        for i in range(400):
+            tree.on_tool_execution_start(
+                f"c{i}", "bash", {"command": f"# Inspect the {i}th session log&entry\ntail x"}
+            )
+        text = tree.render()
+        self.assertLessEqual(daemon._utf16_len(text), daemon.MAX_REPLY_CHARS)
+        self.assertNotIn("…", text)
+        self.assertNotIn("hidden", text)
+        self.assertNotIn("more", text)
+        self.assertNotIn("&entry</b>", text)
+        for line in text.split("\n"):
+            self.assertTrue(line.endswith("entry"))  # whole titles only
+            self.assertFalse(line.startswith("&amp;"), line)  # never a chopped entity
 
-    def test_fallback_title_keeps_trailing_slash_search_subject(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {
-                "command": "grep -R /tmp/builds/ output.log",
-            }},
-        ]})
-        text = tree.render(1)
-        self.assertIn("Searching text builds", text)
+    def test_limits_count_utf16_code_units(self):
+        """An emoji title costs two units, so the byte cap is not the char cap."""
+        tree = self._tree(("c1", "bash", {"command": "# 🚀 Spanning the emoji pipeline\ntrue"}))
+        line = tree.render()
+        self.assertEqual(daemon._utf16_len(line), len(line) + 1)
+        with patch.object(daemon, "MAX_REPLY_CHARS", daemon._utf16_len(line) - 1):
+            self.assertEqual(tree.render(), "")
+        with patch.object(daemon, "MAX_REPLY_CHARS", daemon._utf16_len(line)):
+            self.assertEqual(tree.render(), line)
 
-    def test_fallback_title_checks(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "npm test"}},
-        ]})
-        text = tree.render(1)
-        self.assertIn("Running checks", text)
 
-    # -- summary helpers (not rendered, but tracked in the model) ---------
-
-    def test_summary_text_edit_count(self):
-        """_summary_text still formats tool summaries for potential future use."""
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "edit", "arguments": {
-                "path": "daemon.py", "edits": [{"oldText": "a", "newText": "b"}]}},
-        ]})
-        tree.on_tool_execution_end("c1", False)
-        tree.on_turn_end()
-        summary = daemon._summary_text(tree.steps[0], 0.0)
-        self.assertIn("1 edit", summary)
-        self.assertIn("updated", summary)
-
-    def test_summary_text_bash_command(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "git status"}},
-        ]})
-        summary = daemon._summary_text(tree.steps[0], 0.0)
-        self.assertIn("$ git status", summary)
-
-    # -- thinking ---------------------------------------------------------
-
-    def test_thinking_draft_shown(self):
-        """Thinking with no tool calls shows the first thinking line as title."""
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_start({"role": "assistant"})
-        tree.on_assistant_event({"type": "thinking_delta", "contentIndex": 0,
-                                 "delta": "I need to check the config"})
-        text = tree.render(1)
-        # No tools, no text title → first thinking line is the title
-        self.assertIn("check the config", text)
-        self.assertIn("▹", text)
-        self.assertNotIn("•", text)
-        self.assertNotIn("Thinking", text)
-
-    def test_thinking_with_tools_shows_bullets(self):
-        """Thinking + tool calls: title from text, thinking shown as bullets."""
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "text", "text": "Analyzing the request"},
-            {"type": "thinking", "thinking": "Need to check the config"},
-            {"type": "toolCall", "id": "c1", "name": "read", "arguments": {"path": "config.toml"}},
-        ]})
-        text = tree.render(1)
-        self.assertIn("Analyzing the request", text)
-        # Compact render: no thinking bullets or tool glyphs
-        self.assertNotIn("•", text)
-        self.assertNotIn("Need to check the config", text)
-        self.assertNotIn("◇", text)
-
-    def test_thinking_no_text_prefers_tool_title(self):
-        """Thinking + tools but no text: tool-derived title preferred over 'Thinking'."""
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "thinking", "thinking": "Deep thought about the problem"},
-            {"type": "toolCall", "id": "c1", "name": "read", "arguments": {"path": "x.py"}},
-        ]})
-        text = tree.render(1)
-        # Tool fallback wins over "Thinking" when tools are present
-        self.assertIn("Reading", text)
-        self.assertIn("x.py", text)
-        self.assertNotIn("Thinking", text)
-        self.assertNotIn("•", text)
-
-    # -- tree structure ---------------------------------------------------
-
-    def test_multiple_steps_tree_connectors(self):
-        """Multiple steps show tree connectors (├─/└─/│)."""
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "text", "text": "Step 1"},
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "ls"}},
-        ]})
-        tree.on_tool_execution_end("c1", False)
-        tree.on_turn_end()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "text", "text": "Step 2"},
-            {"type": "toolCall", "id": "c2", "name": "bash", "arguments": {"command": "pwd"}},
-        ]})
-        text = tree.render(5)
-        self.assertIn("Step 1", text)
-        self.assertIn("Step 2", text)
-        # Compact render: no tree connectors
-        self.assertNotIn("├─", text)
-        self.assertNotIn("└─", text)
-        self.assertNotIn("│", text)
-
-    def test_activity_header_shows_counts(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "text", "text": "Step 1"},
-            {"type": "toolCall", "id": "c1", "name": "read", "arguments": {"path": "a.py"}},
-            {"type": "toolCall", "id": "c2", "name": "read", "arguments": {"path": "b.py"}},
-        ]})
-        text = tree.render(1)
-        # Compact render: no activity header
-        self.assertNotIn("step", text)
-        self.assertNotIn("call", text)
-
-    def test_activity_header_all_passed(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "echo ok"}},
-        ]})
-        tree.on_tool_execution_end("c1", False)
-        tree.on_turn_end()
-        text = tree.render(1)
-        self.assertNotIn("all passed", text)
-
-    def test_activity_header_failed(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "false"}},
-        ]})
-        tree.on_tool_execution_end("c1", True)
-        tree.on_turn_end()
-        text = tree.render(1)
-        self.assertIn("×", text)  # failed step glyph
-
-    # -- tool summary format ----------------------------------------------
-
-    def test_edit_summary_shows_edit_count(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "edit", "arguments": {
-                "path": "daemon.py", "edits": [{"oldText": "a", "newText": "b"}]}},
-        ]})
-        tree.on_tool_execution_end("c1", False)
-        tree.on_turn_end()
-        text = tree.render(1)
-        self.assertNotIn("1 edit", text)
-        self.assertNotIn("updated", text)
-
-    def test_bash_summary_shows_command(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "git status"}},
-        ]})
-        text = tree.render(1)
-        self.assertNotIn("$ git status", text)
-        self.assertNotIn("running", text)
-
-    def test_multiple_bash_shows_per_call_lines(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "echo a"}},
-            {"type": "toolCall", "id": "c2", "name": "bash", "arguments": {"command": "echo b"}},
-        ]})
-        text = tree.render(1)
-        self.assertNotIn("$ echo a", text)
-        self.assertNotIn("$ echo b", text)
-
-    # -- elapsed timers ---------------------------------------------------
-
-    def test_no_per_step_timer_in_render(self):
-        """Timers were removed — step lines carry glyph + title only."""
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "text", "text": "Running tests"},
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "sleep 10"}},
-        ]})
-        tree.on_tool_execution_start("c1", "bash", {"command": "sleep 10"})
-        tree.current_step.started_at = 0.0
-        tree.current_step.tool_calls[0].started_at = 0.0
-        text = tree.render(2.5)
-        self.assertIn("Running tests", text)
-        # No elapsed suffix on the step line
-        step_line = [l for l in text.split("\n") if "Running tests" in l][0]
-        self.assertNotIn("s", step_line.split("</b>")[-1])
-        self.assertTrue(step_line.endswith("</b>"))
-
-    # -- HTML escaping ----------------------------------------------------
-
-    def test_html_escaping_in_title(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "text", "text": "<script>alert(1)</script>"},
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "ls"}},
-        ]})
-        text = tree.render(1)
-        # sanitizeTitle strips HTML tags, leaving just the text content
-        self.assertIn("alert(1)", text)
-        self.assertNotIn("<script>", text)
-
-    def test_html_escaping_in_thinking(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_start({"role": "assistant"})
-        tree.on_assistant_event({"type": "thinking_delta", "contentIndex": 0,
-                                 "delta": "Use <b> & <i> tags"})
-        text = tree.render(1)
-        # Thinking line used as title; sanitizeTitle strips HTML tags,
-        # & is HTML-escaped in output
-        self.assertNotIn("•", text)
-        self.assertIn("&amp;", text)
-        self.assertNotIn("<i>", text)
-
-    def test_html_escaping_in_command(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "echo '<x>'"}},
-        ]})
-        text = tree.render(1)
-        # Title is derived from fallback, not the command; no command in render
-        self.assertNotIn("<x>", text)
-
-    # -- title truncation -------------------------------------------------
-
-    def test_long_title_truncated(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        long_title = "x" * 100
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "text", "text": long_title},
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "ls"}},
-        ]})
-        text = tree.render(1)
-        self.assertIn("…", text)
-        self.assertLess(text.count("x"), 100)
-
-    # -- delta assembly ---------------------------------------------------
-
-    def test_text_deltas_accumulate(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_start({"role": "assistant"})
-        tree.on_assistant_event({"type": "text_start", "contentIndex": 0})
-        tree.on_assistant_event({"type": "text_delta", "contentIndex": 0, "delta": "Editing "})
-        tree.on_assistant_event({"type": "text_delta", "contentIndex": 0, "delta": "daemon"})
-        tree.on_assistant_event({"type": "toolcall_end", "contentIndex": 1, "toolCall": {
-            "id": "t1", "name": "edit", "arguments": {"path": "d.py"},
-        }})
-        text = tree.render(1)
-        self.assertIn("Editing daemon", text)
-
-    def test_toolcall_end_from_delta(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_start({"role": "assistant"})
-        tree.on_assistant_event({"type": "toolcall_start", "contentIndex": 0})
-        tree.on_assistant_event({"type": "toolcall_delta", "contentIndex": 0, "delta": ""})
-        tree.on_assistant_event({"type": "toolcall_end", "contentIndex": 0, "toolCall": {
-            "type": "toolCall", "id": "t1", "name": "read", "arguments": {"path": "/etc/hosts"},
-        }})
-        text = tree.render(1)
-        self.assertIn("Reading", text)
-        self.assertIn("hosts", text)
-
-    def test_toolcall_arguments_as_json_string(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_start({"role": "assistant"})
-        tree.on_assistant_event({"type": "toolcall_end", "contentIndex": 0, "toolCall": {
-            "name": "bash", "arguments": '{"command": "git status"}',
-        }})
-        text = tree.render(1)
-        # Fallback title summarizes: git status → "Git status"
-        self.assertIn("git status", text)
-        self.assertNotIn("$ git status", text)
-
-    def test_message_end_applies_authoritative_content(self):
-        """Non-streaming providers only emit message_start/message_end."""
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "text", "text": "Final label"},
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "ls"}},
-        ]})
-        text = tree.render(1)
-        self.assertIn("Final label", text)
-
-    def test_non_assistant_messages_do_not_reset_blocks(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_start({"role": "assistant"})
-        tree.on_assistant_event({"type": "text_delta", "contentIndex": 0, "delta": "My title"})
-        tree.on_assistant_event({"type": "toolcall_end", "contentIndex": 1, "toolCall": {
-            "id": "c1", "name": "bash", "arguments": {"command": "ls"},
-        }})
-        tree.on_message_start({"role": "toolResult"})
-        tree.on_message_end({"role": "toolResult", "content": [{"type": "toolResult", "output": "x"}]})
-        text = tree.render(1)
-        self.assertIn("My title", text)
-
-    def test_assistant_message_start_resets_blocks(self):
-        """Each assistant message gets its own step; old steps persist in the tree."""
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_start({"role": "assistant"})
-        tree.on_assistant_event({"type": "text_delta", "contentIndex": 0, "delta": "Old"})
-        tree.on_assistant_event({"type": "toolcall_end", "contentIndex": 1, "toolCall": {
-            "id": "c1", "name": "bash", "arguments": {"command": "ls"},
-        }})
-        tree.on_message_start({"role": "assistant"})
-        tree.on_assistant_event({"type": "text_delta", "contentIndex": 0, "delta": "New"})
-        tree.on_assistant_event({"type": "toolcall_end", "contentIndex": 1, "toolCall": {
-            "id": "c2", "name": "bash", "arguments": {"command": "ls"},
-        }})
-        text = tree.render(1)
-        self.assertIn("New", text)
-        # Both steps visible (compact render still shows all steps)
-        self.assertIn("Old", text)
-
-    # -- dedup -----------------------------------------------------------
-
-    def test_same_title_steps_merge(self):
-        """Two consecutive steps with the same title merge into one line."""
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "grep -r cache /etc"}},
-        ]})
-        tree.on_tool_execution_end("c1", False)
-        tree.on_turn_end()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "thinking", "thinking": "Let me also check the cache config"},
-            {"type": "toolCall", "id": "c2", "name": "bash", "arguments": {"command": "grep -r cache /var"}},
-        ]})
-        text = tree.render(5)
-        # Only one "Searching text cache" line, not two
-        self.assertEqual(text.count("Searching text cache"), 1)
-        self.assertEqual(len([l for l in text.split("\n") if "▸" in l or "▹" in l]), 1)
-
-    def test_different_title_steps_do_not_merge(self):
-        """Steps with different titles stay as separate lines."""
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "grep -r cache /etc"}},
-        ]})
-        tree.on_tool_execution_end("c1", False)
-        tree.on_turn_end()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c2", "name": "read", "arguments": {"path": "config.toml"}},
-        ]})
-        tree.on_tool_execution_end("c2", False)
-        tree.on_turn_end()
-        text = tree.render(5)
-        self.assertIn("Searching text cache", text)
-        self.assertIn("Reading config.toml", text)
-
-    # -- agent_end fails pending ------------------------------------------
-
-    def test_agent_end_fails_pending_steps(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "ls"}},
-        ]})
-        # Don't complete the tool — agent_end should mark it failed
-        tree.on_agent_end()
-        text = tree.render(1)
-        self.assertIn("×", text)  # failed step glyph
-
-    # -- markdown stripping in titles -------------------------------------
-
-    def test_markdown_stripped_from_title(self):
-        tree = self._new_tree()
-        tree.on_agent_start()
-        tree.on_turn_start()
-        tree.on_message_end({"role": "assistant", "content": [
-            {"type": "text", "text": "**Bold** goal with `code`"},
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "ls"}},
-        ]})
-        text = tree.render(1)
-        self.assertIn("Bold goal with code", text)
-        self.assertNotIn("**", text)
-
-    # -- total truncation -------------------------------------------------
-
-    def test_total_message_truncation(self):
-        """When total exceeds MAX_REPLY_CHARS, it's truncated with ellipsis."""
-        tree = self._new_tree()
-        tree.on_agent_start()
-        for i in range(300):
-            tree.on_turn_start()
-            tree.on_message_end({"role": "assistant", "content": [
-                {"type": "text", "text": f"Goal {i}: " + "y" * 200},
-                {"type": "toolCall", "id": f"c{i}", "name": "bash", "arguments": {"command": "ls"}},
-            ]})
-            tree.on_tool_execution_end(f"c{i}", False)
-            tree.on_turn_end()
-        text = tree.render(99)
-        self.assertLessEqual(len(text), daemon.MAX_REPLY_CHARS)
-        self.assertTrue(text.endswith("…"))
 class TestStatusMessenger(unittest.TestCase):
-    """Unit tests for StatusMessenger — mocks telegram_api."""
+    """Live title trace message lifecycle — telegram_api is mocked."""
 
     def setUp(self):
-        # Reset module-level state for each test
-        daemon.THINKING_STREAM_ENABLED = True
         daemon.STATUS_EDIT_INTERVAL = 1.0
         daemon.STATUS_FINAL_PAUSE = 0.0  # no pause in tests
 
-    def test_no_events_no_message(self):
+    @staticmethod
+    def _call_event(call_id="c1", name="bash", args=None):
+        return {
+            "type": "tool_execution_start",
+            "toolCallId": call_id,
+            "toolName": name,
+            "args": args if args is not None else {"command": "# Read the daemon log\njournalctl"},
+        }
+
+    def test_no_trace_message_before_first_tool_call(self):
         with patch.object(daemon, "telegram_api") as mock_api:
             sm = daemon.StatusMessenger("123")
+            sm.on_event({"type": "agent_start"})
+            sm.on_event({"type": "turn_start"})
+            mock_api.assert_not_called()
             sm.finalize()
             mock_api.assert_not_called()
 
-    def test_create_on_first_thinking_update(self):
+    def test_text_only_turn_leaves_no_trace(self):
+        """A turn whose only events are non-tool events never creates a message."""
+        with patch.object(daemon, "telegram_api") as mock_api:
+            sm = daemon.StatusMessenger("123")
+            sm.on_event({"type": "agent_start"})
+            sm.on_event({"type": "tool_execution_end", "toolCallId": "ghost", "result": {}})
+            sm.finalize()
+            mock_api.assert_not_called()
+
+    def test_first_tool_call_creates_title_only_message(self):
         with patch.object(daemon, "telegram_api") as mock_api:
             mock_api.return_value = {"message_id": 42}
-            sm = daemon.StatusMessenger("123", reply_to=100)
-            sm.on_event({"type": "turn_start"})
-            # First event creates the message
-            mock_api.assert_called_once()
-            call_args = mock_api.call_args
-            self.assertEqual(call_args[0][0], "sendMessage")
-            payload = call_args[0][1]
+            sm = daemon.StatusMessenger("123")
+            sm.on_event({"type": "agent_start"})
+            sm.on_event(self._call_event())
+            self.assertEqual(mock_api.call_count, 1)
+            method, payload = mock_api.call_args[0]
+            self.assertEqual(method, "sendMessage")
             self.assertEqual(payload["chat_id"], "123")
             self.assertEqual(payload["parse_mode"], "HTML")
-            self.assertEqual(payload["reply_parameters"]["message_id"], 100)
+            self.assertEqual(payload["link_preview_options"], {"is_disabled": True})
+            self.assertEqual(payload["text"], "◇ Read the daemon log")
+            # The trace never quotes the prompt and never carries buttons.
+            self.assertNotIn("reply_parameters", payload)
+            self.assertNotIn("reply_markup", payload)
             self.assertEqual(sm.message_id, 42)
 
-    def test_edit_coalescing(self):
-        """Rapid updates don't all trigger edits — 1/sec gate."""
-        with patch.object(daemon, "telegram_api") as mock_api:
-            mock_api.return_value = {"message_id": 1}
+    def test_second_call_edits_the_same_message(self):
+        with patch.object(daemon, "STATUS_EDIT_INTERVAL", 3600.0), \
+             patch.object(daemon, "telegram_api") as mock_api:
+            mock_api.return_value = {"message_id": 7}
             sm = daemon.StatusMessenger("123")
-            # First event creates
-            sm.on_event({"type": "turn_start"})
-            self.assertEqual(mock_api.call_count, 1)  # sendMessage
-            # Rapid updates should not edit (within 1s)
-            for i in range(5):
-                sm.on_event({
-                    "type": "message_update",
-                    "assistantMessageEvent": {
-                        "type": "thinking_delta",
-                        "contentIndex": 0,
-                        "delta": f"thought {i} ",
-                    },
-                })
-            # Should still be 1 call (the create); edits are throttled
-            self.assertEqual(mock_api.call_count, 1)
-            # Force flush should trigger one edit
+            sm.on_event(self._call_event())
+            sm.on_event(self._call_event("c2", "read", {"path": "x"}))
+            sm.on_event({"type": "extension_ui_request", "method": "setStatus",
+                         "statusKey": "pi-telegram:title:c2", "statusText": "Inspect project state"})
+            self.assertEqual(mock_api.call_count, 1)  # edit held by the throttle
             sm.flush()
-            self.assertEqual(mock_api.call_count, 2)
-            self.assertEqual(mock_api.call_args[0][0], "editMessageText")
+            method, payload = mock_api.call_args[0]
+            self.assertEqual(method, "editMessageText")
+            self.assertEqual(payload["message_id"], 7)
+            self.assertEqual(payload["link_preview_options"], {"is_disabled": True})
+            self.assertEqual(payload["text"], "◇ Read the daemon log\n◇ Inspect project state")
+            self.assertNotIn("reply_markup", payload)
 
-    def test_finalize_deletes_message(self):
+    def test_unchanged_titles_do_not_edit(self):
         with patch.object(daemon, "telegram_api") as mock_api:
-            mock_api.return_value = {"message_id": 99}
+            mock_api.return_value = {"message_id": 7}
             sm = daemon.StatusMessenger("123")
-            sm.on_event({"type": "turn_start"})
+            sm.on_event(self._call_event())
+            sm.on_event({"type": "tool_execution_end", "toolCallId": "c1", "isError": False,
+                         "result": {"content": [{"type": "text", "text": "ok"}]}})
+            sm.flush()
+            # The glyph settled ◇ → ◆, so one edit lands; nothing after it.
+            self.assertEqual([c[0][0] for c in mock_api.call_args_list], ["sendMessage", "editMessageText"])
+            sm.flush()
+            self.assertEqual(len(mock_api.call_args_list), 2)  # unchanged: no further edit
+
+    def test_finalize_deletes_the_temporary_message(self):
+        with patch.object(daemon, "telegram_api") as mock_api:
+            mock_api.return_value = {"message_id": 7}
+            sm = daemon.StatusMessenger("123")
+            sm.on_event(self._call_event())
             sm.finalize()
-            # Should have called deleteMessage
-            calls = [c[0][0] for c in mock_api.call_args_list]
-            self.assertIn("deleteMessage", calls)
+            self.assertEqual([c[0][0] for c in mock_api.call_args_list], ["sendMessage", "deleteMessage"])
+            self.assertEqual(mock_api.call_args_list[-1][0][1], {"chat_id": "123", "message_id": 7})
+            self.assertIsNone(sm.message_id)
 
-    def test_finalize_with_dirty_does_final_edit(self):
-        with patch.object(daemon, "telegram_api") as mock_api:
-            mock_api.return_value = {"message_id": 1}
+    def test_finalize_shows_success_or_failure_before_deletion(self):
+        for is_error, glyph in ((False, "◆"), (True, "×")):
+            with self.subTest(is_error=is_error), patch.object(daemon, "telegram_api") as api:
+                api.return_value = {"message_id": 7}
+                sm = daemon.StatusMessenger("123")
+                sm.on_event(self._call_event())
+                sm.on_event({"type": "tool_execution_end", "toolCallId": "c1", "result": {}, "isError": is_error})
+                sm.finalize()
+                self.assertEqual([c[0][0] for c in api.call_args_list],
+                                 ["sendMessage", "editMessageText", "deleteMessage"])
+                self.assertEqual(api.call_args_list[-2][0][1]["text"], f"{glyph} Read the daemon log")
+
+    def test_finalize_does_not_create_a_missing_message(self):
+        methods = []
+
+        def api_side_effect(method, payload, timeout=60):
+            methods.append(method)
+            if method == "sendMessage" and methods.count("sendMessage") == 1:
+                raise RuntimeError("429 Too Many Requests")
+            return {"message_id": 7}
+
+        with patch.object(daemon, "telegram_api", side_effect=api_side_effect), \
+             patch.object(daemon, "log"):
             sm = daemon.StatusMessenger("123")
-            sm.on_event({"type": "turn_start"})  # creates
-            # Another event that gets throttled (dirty=True)
+            sm.on_event(self._call_event())
+            self.assertEqual(methods, ["sendMessage"])
+            sm.finalize()
+        self.assertEqual(methods, ["sendMessage"])
+        self.assertIsNone(sm.message_id)
+
+    def test_failed_call_shows_title_without_error_body(self):
+        with patch.object(daemon, "telegram_api") as mock_api:
+            mock_api.return_value = {"message_id": 7}
+            sm = daemon.StatusMessenger("123")
+            sm.on_event(self._call_event())
             sm.on_event({
-                "type": "message_update",
-                "assistantMessageEvent": {
-                    "type": "thinking_delta",
-                    "contentIndex": 0,
-                    "delta": "last thought",
-                },
+                "type": "tool_execution_end", "toolCallId": "c1", "isError": True,
+                "result": {"content": [{"type": "text", "text": "exit 1: boom"}], "details": {}},
             })
+            sm.flush()
             sm.finalize()
-            calls = [c[0][0] for c in mock_api.call_args_list]
-            # create, final edit, delete
-            self.assertIn("sendMessage", calls)
-            self.assertIn("editMessageText", calls)
-            self.assertIn("deleteMessage", calls)
+            for call in mock_api.call_args_list:
+                self.assertNotIn("exit 1", call[0][1].get("text", ""))
+                self.assertNotIn("reply_markup", call[0][1])
+            self.assertEqual(
+                [c[0][1]["text"] for c in mock_api.call_args_list if "text" in c[0][1]][-1],
+                "× Read the daemon log",
+            )
+            self.assertEqual(mock_api.call_args_list[-1][0][0], "deleteMessage")
+
+    def test_generated_mcp_title_updates_only_its_call(self):
+        with patch.object(daemon, "telegram_api") as api:
+            api.return_value = {"message_id": 7}
+            sm = daemon.StatusMessenger("123")
+            sm.on_event(self._call_event("a", "mcp__slack", {"args": {"query": "private"}}))
+            sm.on_event(self._call_event("b", "read", {"path": "private.txt"}))
+            sm.on_event({"type": "extension_ui_request", "method": "setStatus",
+                         "statusKey": "unrelated:a", "statusText": "Ignore this"})
+            api.assert_not_called()  # no tool name or generic label before a title
+            sm.on_event({"type": "extension_ui_request", "method": "setStatus",
+                         "statusKey": "pi-telegram:title:a", "statusText": "Search chats & channels"})
+            sm.on_event({"type": "extension_ui_request", "method": "setStatus",
+                         "statusKey": "pi-telegram:title:b", "statusText": "Inspect project state"})
+            sm.flush()
+            self.assertEqual(api.call_args[0][1]["text"], "◇ Search chats &amp; channels\n◇ Inspect project state")
+            self.assertNotIn("private", api.call_args[0][1]["text"])
+
+    def test_title_can_arrive_before_start_or_after_end(self):
+        with patch.object(daemon, "telegram_api") as api:
+            api.return_value = {"message_id": 7}
+            sm = daemon.StatusMessenger("123")
+            sm.on_event({"type": "extension_ui_request", "method": "setStatus",
+                         "statusKey": "pi-telegram:title:a", "statusText": "Find calendar events"})
+            api.assert_not_called()
+            sm.on_event(self._call_event("a", "mcp__calendar", {}))
+            self.assertEqual(api.call_args[0][1]["text"], "◇ Find calendar events")
+            sm.on_event({"type": "tool_execution_end", "toolCallId": "a", "result": {}, "isError": False})
+            sm.on_event({"type": "extension_ui_request", "method": "setStatus",
+                         "statusKey": "pi-telegram:title:a", "statusText": "Check calendar events"})
+            sm.flush()
+            self.assertEqual(api.call_args[0][1]["text"], "◆ Check calendar events")
+
+    def test_summary_waits_for_a_title_and_is_rendered_only_after_completion(self):
+        with patch.object(daemon, "telegram_api") as api:
+            api.return_value = {"message_id": 7}
+            sm = daemon.StatusMessenger("123")
+            sm.on_event(self._call_event("a", "mcp__calendar", {"query": "private"}))
+            sm.on_event({"type": "extension_ui_request", "method": "setStatus",
+                         "statusKey": "pi-telegram:result:a", "statusText": "Found 3 events"})
+            sm.on_event({"type": "tool_execution_end", "toolCallId": "a", "result": {}, "isError": False})
+            api.assert_not_called()
+            sm.on_event({"type": "extension_ui_request", "method": "setStatus",
+                         "statusKey": "pi-telegram:title:a", "statusText": "Check upcoming events"})
+            self.assertEqual(api.call_args[0][1]["text"], "◆ Check upcoming events\n└─ Found 3 events")
+
+    def test_comment_and_stored_titles_take_precedence_over_generated_title(self):
+        tree = daemon.TraceBuilder()
+        tree.on_tool_execution_start("a", "codemode", {"code": "// Check the local notes\nrun()"})
+        tree.on_title("a", "Generic generated title")
+        self.assertEqual(tree.render(), "◇ Check the local notes")
+        tree.on_tool_execution_end("a", {"details": {"intentTitle": "Stored intent title"}})
+        self.assertEqual(tree.render(), "◆ Stored intent title")
+
+    def test_error_without_calls_removes_any_status_message(self):
+        """An unsuccessful path must not leave a stale status behind."""
+        with patch.object(daemon, "telegram_api") as mock_api:
+            mock_api.return_value = {"message_id": 9}
+            sm = daemon.StatusMessenger("123")
+            sm.message_id = 9  # a message existed, then the trace emptied
+            sm.finalize()
+            self.assertEqual([c[0][0] for c in mock_api.call_args_list], ["deleteMessage"])
+
+    def test_nested_tool_calls_do_not_add_rows(self):
+        with patch.object(daemon, "telegram_api") as mock_api:
+            mock_api.return_value = {"message_id": 7}
+            sm = daemon.StatusMessenger("123")
+            sm.on_event(self._call_event("p1", "mcpScript", {"code": "// Search the workspace\nrun()"}))
+            sm.on_event({
+                "type": "tool_execution_start", "toolCallId": "n1", "toolName": "grep",
+                "args": {"pattern": "x"}, "parentToolCallId": "p1",
+            })
+            sm.flush()
+            self.assertEqual(mock_api.call_args[0][1]["text"], "◇ Search the workspace")
 
     def test_telegram_api_error_does_not_crash(self):
         with patch.object(daemon, "telegram_api", side_effect=RuntimeError("429 Too Many Requests")):
             sm = daemon.StatusMessenger("123")
-            sm.on_event({"type": "turn_start"})  # should not raise
-            sm.finalize()  # should not raise
+            sm.on_event(self._call_event())  # create fails, swallowed
+            sm.finalize()  # nothing was created, so there is nothing to delete
+            sm.flush()
 
-    def test_finalize_without_message_id_no_delete(self):
-        with patch.object(daemon, "telegram_api") as mock_api:
-            sm = daemon.StatusMessenger("123")
-            sm.finalize()  # no message was created
-            # No deleteMessage call
-            calls = [c[0][0] for c in mock_api.call_args_list]
-            self.assertNotIn("deleteMessage", calls)
-
-    def test_malformed_message_update_is_safe(self):
+    def test_malformed_events_are_safe(self):
         with patch.object(daemon, "telegram_api") as mock_api:
             mock_api.return_value = {"message_id": 1}
             sm = daemon.StatusMessenger("123")
-            sm.on_event({"type": "turn_start"})
-            # Events with no delta type and no contentIndex must be ignored.
-            sm.on_event({"type": "message_update", "assistantMessageEvent": {}})
-            sm.on_event({"type": "message_update", "assistantMessageEvent": {"type": "text_delta"}})
-            sm.finalize()  # should not crash
+            sm.on_event({})
+            sm.on_event({"type": "tool_execution_start"})
+            sm.on_event({"type": "tool_execution_start", "toolCallId": "c1",
+                         "toolName": "", "args": "not-a-dict"})
+            sm.finalize()
+            mock_api.assert_not_called()
 
-    def test_streaming_deltas_show_text_title(self):
-        """Regression: labels stayed "working…" when deltas were ignored."""
-        with patch.object(daemon, "telegram_api") as mock_api:
-            mock_api.return_value = {"message_id": 1}
-            sm = daemon.StatusMessenger("123")
-            sm.tree.start_time = 0.0
-            sm.on_event({"type": "agent_start"})
-            sm.on_event({"type": "turn_start"})
-            sm.on_event({"type": "message_start", "message": {"role": "assistant"}})
-            sm.on_event({"type": "message_update", "assistantMessageEvent": {
-                "type": "text_delta", "contentIndex": 0, "delta": "Reading config",
+
+class TestCallbackSafety(unittest.TestCase):
+    """Old Details buttons are inert but every callback query is answered."""
+
+    def test_old_details_button_is_answered_without_edit(self):
+        with patch.object(daemon, "ALLOWED_CHATS", {"123"}), \
+             patch.object(daemon, "telegram_api") as mock_api:
+            daemon.handle_callback_query({"callback_query": {
+                "id": "cb1", "data": "d:stale-token",
+                "message": {"chat": {"id": 123}, "message_id": 7},
             }})
-            text = sm.tree.render(3)
-            self.assertIn("Reading config", text)
+            self.assertEqual(mock_api.call_count, 1)
+            method, payload = mock_api.call_args[0]
+            self.assertEqual(method, "answerCallbackQuery")
+            self.assertEqual(payload["callback_query_id"], "cb1")
+            self.assertIn("no longer available", payload["text"])
+
+    def test_old_hide_button_is_answered(self):
+        with patch.object(daemon, "ALLOWED_CHATS", {"123"}), \
+             patch.object(daemon, "telegram_api") as mock_api:
+            daemon.handle_callback_query({"callback_query": {
+                "id": "cb2", "data": "h:stale-token", "message": {"chat": {"id": 123}},
+            }})
+            method, payload = mock_api.call_args[0]
+            self.assertEqual(method, "answerCallbackQuery")
+            self.assertIn("no longer available", payload["text"])
+
+    def test_unrelated_callbacks_are_preserved(self):
+        with patch.object(daemon, "telegram_api") as mock_api:
+            daemon.handle_callback_query({"callback_query": {"id": "cb3", "data": "other:thing"}})
+            method, payload = mock_api.call_args[0]
+            self.assertEqual(method, "answerCallbackQuery")
+            self.assertNotIn("text", payload)  # no toast, no edit
+
+    def test_old_button_from_a_foreign_chat_is_rejected(self):
+        with patch.object(daemon, "ALLOWED_CHATS", {"123"}), \
+             patch.object(daemon, "telegram_api") as mock_api:
+            daemon.handle_callback_query({"callback_query": {
+                "id": "cb5", "data": "d:stale-token",
+                "message": {"chat": {"id": 999}, "message_id": 7},
+            }})
+        method, payload = mock_api.call_args[0]
+        self.assertEqual(method, "answerCallbackQuery")
+        self.assertIn("Not allowed", payload["text"])
+
+    def test_old_button_edit_is_never_sent(self):
+        with patch.object(daemon, "ALLOWED_CHATS", {"123"}), \
+             patch.object(daemon, "telegram_api") as mock_api:
+            daemon.handle_callback_query({"callback_query": {
+                "id": "cb6", "data": "h:stale-token",
+                "message": {"chat": {"id": "123"}, "message_id": 7},
+            }})
+        methods = [c[0][0] for c in mock_api.call_args_list]
+        self.assertEqual(methods, ["answerCallbackQuery"])
+
+    def test_callback_without_id_is_ignored(self):
+        with patch.object(daemon, "telegram_api") as mock_api:
+            daemon.handle_callback_query({"callback_query": {"data": "d:x"}})
+            mock_api.assert_not_called()
+
+    def test_answer_failure_is_swallowed(self):
+        with patch.object(daemon, "telegram_api", side_effect=RuntimeError("gone")), \
+             patch.object(daemon, "log"):
+            daemon.handle_callback_query({"callback_query": {"id": "cb4", "data": "d:x"}})
 
 
 class TestAskIntegration(unittest.TestCase):
@@ -798,14 +615,201 @@ class TestAskIntegration(unittest.TestCase):
         ev.update(kwargs)
         return ev
 
-    def test_ask_with_thinking_stream(self):
-        """Verify ask() creates status, streams, deletes, returns final text."""
+    @staticmethod
+    def _fake_pi(events):
+        """A PiRPC whose prompt reply is a fixed event list — no subprocess."""
+        pi = daemon.PiRPC.__new__(daemon.PiRPC)
+        pi.proc = MagicMock()
+        pi.proc.poll.return_value = None
+        pi.proc.stdin = MagicMock()
+        pi.lines = __import__("queue").Queue()
+        pi.lock = __import__("threading").Lock()
+        pi.reader_thread = None
+        pi.stderr_thread = None
+
+        def fake_send(cmd):
+            if cmd.get("type") == "prompt":
+                pi.lines.put({"type": "response", "id": cmd["id"], "success": True, "command": "prompt"})
+                for event in events:
+                    pi.lines.put(event)
+                pi.lines.put({"type": "agent_settled"})
+            elif cmd.get("type") == "get_last_assistant_text":
+                pi.lines.put({"type": "response", "id": cmd["id"], "success": True,
+                              "command": "get_last_assistant_text",
+                              "data": {"text": "There are 5 issues; next is #03."}})
+
+        pi._send = MagicMock(side_effect=fake_send)
+        return pi
+
+    def test_ask_deletes_title_trace_after_response_is_ready(self):
+        """A tool call creates a temporary title; the response fetch precedes deletion."""
+        events = [
+            {"type": "turn_start"},
+            {"type": "tool_execution_start", "toolCallId": "c1", "toolName": "bash",
+             "args": {"command": "# Check which weekday the log names start on\ndate +%A"}},
+            {"type": "tool_execution_end", "toolCallId": "c1", "isError": False,
+             "result": {"content": [{"type": "text", "text": "Monday"}], "details": {}}},
+            {"type": "turn_end"},
+        ]
         with patch.object(daemon, "telegram_api") as mock_tg, \
              patch.object(daemon, "THINKING_STREAM_ENABLED", True), \
              patch.object(daemon, "STATUS_FINAL_PAUSE", 0.0):
             mock_tg.return_value = {"message_id": 555}
+            pi = self._fake_pi(events)
+            wait_response = pi._wait_response
 
-            # Build a fake PiRPC that doesn't start a subprocess
+            def checked_wait(*args, **kwargs):
+                self.assertNotIn("deleteMessage", [c[0][0] for c in mock_tg.call_args_list])
+                return wait_response(*args, **kwargs)
+
+            pi._wait_response = checked_wait
+            result = pi.ask("test prompt", chat_id="123", reply_to=100)
+
+        self.assertEqual(result, "There are 5 issues; next is #03.")
+        methods = [c[0][0] for c in mock_tg.call_args_list]
+        self.assertEqual(methods, ["sendMessage", "editMessageText", "deleteMessage"])
+        payload = next(c[0][1] for c in mock_tg.call_args_list if c[0][0] == "sendMessage")
+        self.assertEqual(payload["text"], "◇ Check which weekday the log names start…")
+        self.assertEqual(mock_tg.call_args_list[-2][0][1]["text"], "◆ Check which weekday the log names start…")
+        self.assertNotIn("reply_parameters", payload)  # never quotes the prompt
+        self.assertNotIn("reply_markup", payload)  # no Details button
+        self.assertNotIn("%A", payload["text"])
+
+    def test_ask_deletes_status_if_reply_fetch_fails(self):
+        events = [{"type": "tool_execution_start", "toolCallId": "c1", "toolName": "bash",
+                   "args": {"command": "# Inspect the project state\ntrue"}}]
+        with patch.object(daemon, "telegram_api") as api, \
+             patch.object(daemon, "THINKING_STREAM_ENABLED", True), \
+             patch.object(daemon, "STATUS_FINAL_PAUSE", 0.0):
+            api.return_value = {"message_id": 555}
+            pi = self._fake_pi(events)
+            pi._wait_response = MagicMock(side_effect=RuntimeError("response fetch failed"))
+            with self.assertRaisesRegex(RuntimeError, "response fetch failed"):
+                pi.ask("test", chat_id="123")
+            self.assertEqual([c[0][0] for c in api.call_args_list], ["sendMessage", "deleteMessage"])
+
+    def test_ask_does_not_wait_for_a_handled_extension_command(self):
+        pi = self._fake_pi([])
+
+        def fake_send(cmd):
+            if cmd.get("type") == "prompt":
+                pi.lines.put({"type": "response", "id": cmd["id"], "success": True,
+                              "data": {"disposition": "handled"}})
+            else:
+                self.fail("A handled command must not fetch an earlier assistant reply")
+
+        pi._send = MagicMock(side_effect=fake_send)
+        with patch.object(daemon, "telegram_api") as api, patch.object(daemon, "THINKING_STREAM_ENABLED", True):
+            self.assertEqual(pi.ask("/example", chat_id="123"), "Command handled.")
+        api.assert_not_called()
+        self.assertEqual(pi._send.call_count, 1)
+
+    def test_ask_without_tool_calls_leaves_no_trace(self):
+        """A text-only turn sends no status message at all."""
+        events = [
+            {"type": "turn_start"},
+            {"type": "message_start", "message": {"role": "assistant"}},
+            {"type": "message_update", "assistantMessageEvent": {
+                "type": "thinking_delta", "contentIndex": 0, "delta": "I should look at the issues"}},
+            {"type": "turn_end"},
+        ]
+        with patch.object(daemon, "telegram_api") as mock_tg, \
+             patch.object(daemon, "THINKING_STREAM_ENABLED", True), \
+             patch.object(daemon, "STATUS_FINAL_PAUSE", 0.0):
+            mock_tg.return_value = {"message_id": 555}
+            pi = self._fake_pi(events)
+
+            result = pi.ask("test prompt", chat_id="123", reply_to=100)
+
+        self.assertEqual(result, "There are 5 issues; next is #03.")
+        mock_tg.assert_not_called()
+
+    def test_ask_never_sends_an_untitled_tool_name(self):
+        events = [
+            {"type": "tool_execution_start", "toolCallId": "m1", "toolName": "mcp__calendar", "args": {}},
+            {"type": "tool_execution_end", "toolCallId": "m1", "result": {}, "isError": True},
+        ]
+        with patch.object(daemon, "telegram_api") as api, patch.object(daemon, "THINKING_STREAM_ENABLED", True):
+            pi = self._fake_pi(events)
+            pi.ask("test", chat_id="123")
+            api.assert_not_called()
+
+    def test_ask_applies_generated_mcp_title_to_the_live_message(self):
+        events = [
+            {"type": "tool_execution_start", "toolCallId": "m1", "toolName": "mcp__calendar", "args": {}},
+            {"type": "extension_ui_request", "method": "setStatus",
+             "statusKey": "pi-telegram:title:m1", "statusText": "Find calendar events"},
+            {"type": "tool_execution_end", "toolCallId": "m1", "result": {}, "isError": False},
+        ]
+        with patch.object(daemon, "telegram_api") as api, \
+             patch.object(daemon, "THINKING_STREAM_ENABLED", True), \
+             patch.object(daemon, "STATUS_EDIT_INTERVAL", 0.0), \
+             patch.object(daemon, "STATUS_FINAL_PAUSE", 0.0):
+            api.return_value = {"message_id": 7}
+            pi = self._fake_pi(events)
+            self.assertEqual(pi.ask("test", chat_id="123"), "There are 5 issues; next is #03.")
+            self.assertEqual(api.call_args_list[-2][0][1]["text"], "◆ Find calendar events")
+            self.assertEqual(api.call_args_list[-1][0][0], "deleteMessage")
+            self.assertFalse(any(c.args[0].get("type") == "extension_ui_response" for c in pi._send.call_args_list))
+
+    def test_ask_shows_result_summary_before_deleting_status(self):
+        events = [
+            {"type": "tool_execution_start", "toolCallId": "c1", "toolName": "bash",
+             "args": {"command": "# Check the service\ntrue"}},
+            {"type": "tool_execution_end", "toolCallId": "c1", "isError": True,
+             "result": {"content": [{"type": "text", "text": "raw secret error"}]}},
+            {"type": "extension_ui_request", "method": "setStatus",
+             "statusKey": "pi-telegram:result:c1", "statusText": "Service is unavailable"},
+        ]
+        with patch.object(daemon, "telegram_api") as api, \
+             patch.object(daemon, "THINKING_STREAM_ENABLED", True), \
+             patch.object(daemon, "STATUS_FINAL_PAUSE", 0.0):
+            api.return_value = {"message_id": 7}
+            pi = self._fake_pi(events)
+            pi.ask("test", chat_id="123")
+            self.assertEqual(api.call_args_list[-2][0][1]["text"],
+                             "× Check the service\n└─ Service is unavailable")
+            self.assertEqual(api.call_args_list[-1][0][0], "deleteMessage")
+            self.assertNotIn("raw secret", str(api.call_args_list))
+
+    def test_ask_waits_for_agent_settled_across_a_retry(self):
+        """A retry emits another agent_start/agent_end; the trace keeps every title."""
+        events = [
+            {"type": "agent_start"},
+            {"type": "turn_start"},
+            {"type": "tool_execution_start", "toolCallId": "c1", "toolName": "bash",
+             "args": {"command": "# Check which weekday the log names start on\ndate +%A"}},
+            {"type": "tool_execution_end", "toolCallId": "c1", "result": {"content": [], "details": {}}},
+            {"type": "agent_end"},
+            {"type": "agent_start"},  # automatic retry of the same prompt
+            {"type": "tool_execution_start", "toolCallId": "c2", "toolName": "read",
+             "args": {"path": "/home/x/vault/state.json"}},
+            {"type": "extension_ui_request", "method": "setStatus",
+             "statusKey": "pi-telegram:title:c2", "statusText": "Inspect the project state"},
+            {"type": "agent_end"},
+        ]
+        with patch.object(daemon, "telegram_api") as mock_tg, \
+             patch.object(daemon, "THINKING_STREAM_ENABLED", True), \
+             patch.object(daemon, "STATUS_EDIT_INTERVAL", 0.0), \
+             patch.object(daemon, "STATUS_FINAL_PAUSE", 0.0):
+            mock_tg.return_value = {"message_id": 555}
+            pi = self._fake_pi(events)
+
+            result = pi.ask("test prompt", chat_id="123", reply_to=100)
+
+        self.assertEqual(result, "There are 5 issues; next is #03.")
+        texts = [c[0][1]["text"] for c in mock_tg.call_args_list if "text" in c[0][1]]
+        self.assertEqual(
+            texts[-1], "◆ Check which weekday the log names start…\n◇ Inspect the project state"
+        )
+        self.assertEqual(mock_tg.call_args_list[-1][0][0], "deleteMessage")
+
+    def test_ask_ignores_stale_events_before_the_prompt_response(self):
+        """Events queued before this prompt's response belong to an older run."""
+        with patch.object(daemon, "telegram_api") as mock_tg, \
+             patch.object(daemon, "THINKING_STREAM_ENABLED", True), \
+             patch.object(daemon, "STATUS_FINAL_PAUSE", 0.0):
+            mock_tg.return_value = {"message_id": 555}
             pi = daemon.PiRPC.__new__(daemon.PiRPC)
             pi.proc = MagicMock()
             pi.proc.poll.return_value = None
@@ -815,35 +819,82 @@ class TestAskIntegration(unittest.TestCase):
             pi.reader_thread = None
             pi.stderr_thread = None
 
-            # Mock _send to capture the prompt request_id and inject the
-            # matching response + agent events into the queue.
             def fake_send(cmd):
                 if cmd.get("type") == "prompt":
-                    rid = cmd["id"]
-                    pi.lines.put({"type": "response", "id": rid, "success": True, "command": "prompt"})
-                    pi.lines.put({"type": "turn_start"})
-                    pi.lines.put({"type": "message_start", "message": {"role": "assistant"}})
-                    pi.lines.put({"type": "message_update", "assistantMessageEvent": {
-                        "type": "thinking_delta", "contentIndex": 0,
-                        "delta": "I should look at the issues",
-                    }})
-                    pi.lines.put({"type": "turn_end"})
-                    pi.lines.put({"type": "agent_end", "messages": []})
+                    # Stale leftovers from the previous prompt, then the response.
+                    pi.lines.put({"type": "tool_execution_start", "toolCallId": "stale",
+                                  "toolName": "bash", "args": {"command": "# Stale leftover\ntrue"}})
+                    pi.lines.put({"type": "agent_start"})
+                    pi.lines.put({"type": "response", "id": cmd["id"], "success": True})
+                    pi.lines.put({"type": "tool_execution_start", "toolCallId": "fresh",
+                                  "toolName": "bash", "args": {"command": "# Read the fresh log\ntail x"}})
+                    pi.lines.put({"type": "agent_settled"})
                 elif cmd.get("type") == "get_last_assistant_text":
-                    rid = cmd["id"]
-                    pi.lines.put({"type": "response", "id": rid, "success": True,
-                                 "command": "get_last_assistant_text",
-                                 "data": {"text": "There are 5 issues; next is #03."}})
+                    pi.lines.put({"type": "response", "id": cmd["id"], "success": True,
+                                  "data": {"text": "Done."}})
 
             pi._send = MagicMock(side_effect=fake_send)
+            pi.ask("test prompt", chat_id="123")
 
-            result = pi.ask("test prompt", chat_id="123", reply_to=100)
+        texts = [c[0][1]["text"] for c in mock_tg.call_args_list if "text" in c[0][1]]
+        self.assertEqual(texts[-1], "◇ Read the fresh log")
 
-            self.assertEqual(result, "There are 5 issues; next is #03.")
-            # Verify telegram API calls: create status, delete
-            calls = [c[0][0] for c in mock_tg.call_args_list]
-            self.assertIn("sendMessage", calls)  # status create
-            self.assertIn("deleteMessage", calls)  # status cleanup
+    def test_ask_drops_an_old_title_before_prompt_acceptance(self):
+        with patch.object(daemon, "telegram_api") as api, \
+             patch.object(daemon, "THINKING_STREAM_ENABLED", True), \
+             patch.object(daemon, "STATUS_FINAL_PAUSE", 0.0):
+            api.return_value = {"message_id": 7}
+            pi = self._fake_pi([])
+
+            def fake_send(cmd):
+                if cmd.get("type") == "prompt":
+                    pi.lines.put({"type": "extension_ui_request", "method": "setStatus",
+                                  "statusKey": "pi-telegram:title:fresh", "statusText": "Old private title"})
+                    pi.lines.put({"type": "response", "id": cmd["id"], "success": True})
+                    pi.lines.put({"type": "tool_execution_start", "toolCallId": "fresh",
+                                  "toolName": "mcp__calendar", "args": {}})
+                    pi.lines.put({"type": "extension_ui_request", "method": "setStatus",
+                                  "statusKey": "pi-telegram:title:fresh", "statusText": "Check calendar events"})
+                    pi.lines.put({"type": "agent_settled"})
+                elif cmd.get("type") == "get_last_assistant_text":
+                    pi.lines.put({"type": "response", "id": cmd["id"], "success": True,
+                                  "data": {"text": "Done."}})
+
+            pi._send = MagicMock(side_effect=fake_send)
+            pi.ask("test", chat_id="123")
+            texts = [c[0][1]["text"] for c in api.call_args_list if "text" in c[0][1]]
+            self.assertEqual(texts, ["◇ Check calendar events"])
+
+    def test_ask_still_answers_extension_ui_requests_before_the_response(self):
+        """Headless UI auto-cancel is not part of the trace gate."""
+        with patch.object(daemon, "telegram_api") as mock_tg:
+            pi = daemon.PiRPC.__new__(daemon.PiRPC)
+            pi.proc = MagicMock()
+            pi.proc.poll.return_value = None
+            pi.proc.stdin = MagicMock()
+            pi.lines = __import__("queue").Queue()
+            pi.lock = __import__("threading").Lock()
+            pi.reader_thread = None
+            pi.stderr_thread = None
+            sent = []
+
+            def fake_send(cmd):
+                if cmd.get("type") == "prompt":
+                    pi.lines.put({"type": "extension_ui_request", "id": "ui1", "method": "confirm"})
+                    pi.lines.put({"type": "response", "id": cmd["id"], "success": True})
+                    pi.lines.put({"type": "agent_settled"})
+                elif cmd.get("type") == "get_last_assistant_text":
+                    pi.lines.put({"type": "response", "id": cmd["id"], "success": True,
+                                  "data": {"text": "Done."}})
+                sent.append(cmd)
+
+            pi._send = MagicMock(side_effect=fake_send)
+            pi.ask("test prompt")
+
+        answers = [c for c in sent if c.get("type") == "extension_ui_response"]
+        self.assertEqual(answers, [{"type": "extension_ui_response", "id": "ui1",
+                                    "cancelled": True, "confirmed": False}])
+        mock_tg.assert_not_called()
 
     def test_ask_without_chat_id_no_status(self):
         """Without chat_id, no status messages are sent."""
@@ -860,7 +911,7 @@ class TestAskIntegration(unittest.TestCase):
             def fake_send(cmd):
                 if cmd.get("type") == "prompt":
                     pi.lines.put({"type": "response", "id": cmd["id"], "success": True})
-                    pi.lines.put({"type": "agent_end", "messages": []})
+                    pi.lines.put({"type": "agent_settled"})
                 elif cmd.get("type") == "get_last_assistant_text":
                     pi.lines.put({"type": "response", "id": cmd["id"], "success": True,
                                  "data": {"text": "Done."}})
@@ -870,6 +921,26 @@ class TestAskIntegration(unittest.TestCase):
 
             self.assertEqual(result, "Done.")
             mock_tg.assert_not_called()
+
+    def test_ask_timeout_deletes_a_created_status(self):
+        with patch.object(daemon, "telegram_api") as api, \
+             patch.object(daemon, "THINKING_STREAM_ENABLED", True), \
+             patch.object(daemon, "PROMPT_TIMEOUT_SECONDS", 1), \
+             patch.object(daemon, "STATUS_FINAL_PAUSE", 0.0), \
+             patch.object(daemon.time, "time", side_effect=[0, 0, 0, 2]):
+            api.return_value = {"message_id": 7}
+            pi = self._fake_pi([])
+
+            def fake_send(cmd):
+                if cmd.get("type") == "prompt":
+                    pi.lines.put({"type": "response", "id": cmd["id"], "success": True})
+                    pi.lines.put({"type": "tool_execution_start", "toolCallId": "c1", "toolName": "bash",
+                                  "args": {"command": "# Inspect the project state\ntrue"}})
+
+            pi._send = MagicMock(side_effect=fake_send)
+            with self.assertRaises(TimeoutError):
+                pi.ask("test", chat_id="123")
+            self.assertEqual([c[0][0] for c in api.call_args_list], ["sendMessage", "deleteMessage"])
 
     def test_ask_timeout_cleans_up_status(self):
         """On timeout, the status message should be finalized (deleted)."""
@@ -1162,7 +1233,7 @@ class TestAskWithImages(unittest.TestCase):
                 sent.append(cmd)
                 if cmd.get("type") == "prompt":
                     pi.lines.put({"type": "response", "id": cmd["id"], "success": True})
-                    pi.lines.put({"type": "agent_end", "messages": []})
+                    pi.lines.put({"type": "agent_settled"})
                 elif cmd.get("type") == "get_last_assistant_text":
                     pi.lines.put({"type": "response", "id": cmd["id"], "success": True,
                                  "data": {"text": "It's a screenshot of a terminal."}})
@@ -1184,7 +1255,7 @@ class TestAskWithImages(unittest.TestCase):
                 sent.append(cmd)
                 if cmd.get("type") == "prompt":
                     pi.lines.put({"type": "response", "id": cmd["id"], "success": True})
-                    pi.lines.put({"type": "agent_end", "messages": []})
+                    pi.lines.put({"type": "agent_settled"})
                 elif cmd.get("type") == "get_last_assistant_text":
                     pi.lines.put({"type": "response", "id": cmd["id"], "success": True,
                                  "data": {"text": "ok"}})
@@ -1266,6 +1337,11 @@ class TestMentionGating(unittest.TestCase):
                         entities=[{"type": "mention", "offset": 0, "length": 7}])
         self.assertTrue(daemon.message_mentions_bot(msg))
 
+    def test_mention_after_emoji_uses_telegram_utf16_offsets(self):
+        msg = self._msg("🙂 @mybot hello",
+                        entities=[{"type": "mention", "offset": 3, "length": 6}])
+        self.assertTrue(daemon.message_mentions_bot(msg))
+
     def test_mention_entity_other_bot_does_not_match(self):
         msg = self._msg("@otherbot hi",
                         entities=[{"type": "mention", "offset": 0, "length": 10}])
@@ -1286,6 +1362,11 @@ class TestMentionGating(unittest.TestCase):
     def test_bot_command_with_bot_suffix_matches(self):
         msg = self._msg("/status@mybot",
                         entities=[{"type": "bot_command", "offset": 0, "length": 13}])
+        self.assertTrue(daemon.message_mentions_bot(msg))
+
+    def test_bot_command_after_emoji_uses_telegram_utf16_offsets(self):
+        msg = self._msg("🙂 /status@mybot",
+                        entities=[{"type": "bot_command", "offset": 3, "length": 13}])
         self.assertTrue(daemon.message_mentions_bot(msg))
 
     def test_bot_command_other_suffix_does_not_match(self):
@@ -1592,6 +1673,9 @@ class TestScanSession(unittest.TestCase):
     def test_voice_header_is_stripped(self):
         self._header_case("Telegram voice-note transcript from chat")
 
+    def test_shortcut_header_is_stripped(self):
+        self._header_case("iOS Shortcut voice-note transcript from chat")
+
     def test_header_without_blank_line_is_kept(self):
         # No "\n\n" separator: nothing is stripped.
         path = self._write_session([
@@ -1776,6 +1860,11 @@ class TestChatActionLoop(unittest.TestCase):
 class TestStatusMessengerFakeClock(unittest.TestCase):
     """Deferred flush and error survival, driven by an injected clock."""
 
+    @staticmethod
+    def _call(call_id, name="bash", args=None):
+        return {"type": "tool_execution_start", "toolCallId": call_id,
+                "toolName": name, "args": args or {"command": "# Inspect the project state\ntrue"}}
+
     def test_deferred_flush_fires_when_throttle_cools(self):
         fake = _FakeTime(100.0)
         with patch.object(daemon, "time", fake), \
@@ -1784,24 +1873,20 @@ class TestStatusMessengerFakeClock(unittest.TestCase):
              patch.object(daemon, "telegram_api") as api:
             api.return_value = {"message_id": 7}
             sm = daemon.StatusMessenger("1")
-            sm.on_event({"type": "turn_start"})  # t=100: create
+            sm.on_event(self._call("c1"))  # t=100: create
             self.assertEqual([c[0][0] for c in api.call_args_list], ["sendMessage"])
 
             fake.now = 103.0  # throttle hot: 103-100 < 10
-            sm.on_event({"type": "message_update", "assistantMessageEvent": {
-                "type": "text_delta", "contentIndex": 0, "delta": "Read"}})
-            sm.on_event({"type": "message_update", "assistantMessageEvent": {
-                "type": "text_delta", "contentIndex": 0, "delta": "ing config"}})
+            sm.on_event(self._call("c2"))
             self.assertEqual(api.call_count, 1)  # edit deferred, change held
             self.assertTrue(sm.dirty)
 
             fake.now = 111.0  # throttle cold: 111-100 >= 10
-            sm.on_event({"type": "tool_execution_start",
-                         "toolCallId": "c1", "toolName": "read", "args": {}})
+            sm.on_event(self._call("c3"))
             self.assertEqual(api.call_count, 2)  # deferred change flushed now
             method, payload = api.call_args[0][0], api.call_args[0][1]
             self.assertEqual(method, "editMessageText")
-            self.assertIn("Reading config", payload["text"])
+            self.assertEqual(payload["text"], "◇ Inspect the project state\n◇ Inspect the project state\n◇ Inspect the project state")
 
     def test_edit_failure_in_one_tick_does_not_kill_messenger(self):
         fake = _FakeTime(100.0)
@@ -1820,13 +1905,15 @@ class TestStatusMessengerFakeClock(unittest.TestCase):
              patch.object(daemon, "STATUS_FINAL_PAUSE", 0.0), \
              patch.object(daemon, "telegram_api", side_effect=api_side_effect) as api:
             sm = daemon.StatusMessenger("1")
-            sm.on_event({"type": "turn_start"})  # create
-            sm.on_event({"type": "turn_start"})  # edit raises — swallowed
-            sm.on_event({"type": "turn_start"})  # next edit succeeds
-            sm.finalize()  # final edit + delete still work
+            sm.on_event(self._call("c1"))  # create at 100
+            fake.now = 103.0
+            sm.on_event(self._call("c2"))  # edit raises — swallowed
+            fake.now = 106.0
+            sm.on_event(self._call("c3"))  # next edit succeeds
+            sm.finalize()
         methods = [c[0][0] for c in api.call_args_list]
         self.assertEqual(methods.count("editMessageText"), 2)
-        self.assertIn("deleteMessage", methods)
+        self.assertEqual(methods[-1], "deleteMessage")  # the temporary message is removed
 
 
 class TestMainLoopResilience(unittest.TestCase):
@@ -1866,6 +1953,24 @@ class TestMainLoopResilience(unittest.TestCase):
         # Backoff happened once, through the fake clock — never a real sleep.
         self.assertEqual(fake.sleeps, [3.5])
 
+    def test_uncertain_reply_delivery_does_not_send_a_second_message(self):
+        status_update = _make_update({"text": "!pi status"})
+        pi = MagicMock()
+        pi.status.return_value = "All good."
+        with patch.object(daemon, "BOT_TOKEN", "test-token"), \
+             patch.object(daemon, "ALLOWED_CHATS", {"123"}), \
+             patch.object(daemon, "PREFIX", "!pi"), \
+             patch.object(daemon, "load_state", return_value={"last_update_id": 0}), \
+             patch.object(daemon, "save_state"), \
+             patch.object(daemon, "fetch_bot_identity"), \
+             patch.object(daemon, "start_shortcut_listener"), \
+             patch.object(daemon, "send_telegram", side_effect=TimeoutError("uncertain")) as send, \
+             patch.object(daemon, "PiRPC", return_value=pi), \
+             patch.object(daemon, "fetch_updates", side_effect=[[status_update], SystemExit(0)]):
+            with self.assertRaises(SystemExit):
+                daemon.main()
+        send.assert_called_once_with("123", "All good.", reply_to_message_id=10)
+
 
 # ---------------------------------------------------------------------------
 # Extra daemon-behavior coverage (pure logic, offline)
@@ -1873,7 +1978,126 @@ class TestMainLoopResilience(unittest.TestCase):
 
 
 class TestReplyFormatting(unittest.TestCase):
-    """chunk_reply splitting and telegram_html rendering."""
+    """Telegram reply filtering, Rich Markdown, and fallback rendering."""
+
+    def test_suggested_followup_footer_is_removed(self):
+        text = "The answer.\n\n## Suggested follow-up questions\n- Can you show more?\n- Can you check it?\n"
+        self.assertEqual(daemon.strip_suggested_followups(text), "The answer.")
+
+    def test_followup_heading_variants_are_removed(self):
+        for heading in ("### SUGGESTED FOLLOW-UPS:", "**Suggested follow-up questions**"):
+            with self.subTest(heading=heading):
+                self.assertEqual(daemon.strip_suggested_followups(f"Done.\n\n{heading}\n- More?"), "Done.")
+
+    def test_followup_filter_preserves_later_sections(self):
+        text = "Done.\n\n## Suggested follow-up questions\n- More?\n\n## Details\nKeep this."
+        self.assertEqual(daemon.strip_suggested_followups(text), "Done.\n\n## Details\nKeep this.")
+
+    def test_followup_filter_preserves_code_and_ordinary_questions(self):
+        text = "Example:\n```md\n## Suggested follow-up questions\n- Keep this.\n```\n\nWhat should I check?"
+        self.assertEqual(daemon.strip_suggested_followups(text), text)
+        similar = "## Suggested follow-up questions answered\nKeep this."
+        self.assertEqual(daemon.strip_suggested_followups(similar), similar)
+
+    def test_send_telegram_filters_before_rendering_and_keeps_reply_target(self):
+        text = "Done.\n\n## Suggested follow-up questions\n- This footer must not be sent."
+        with patch.object(daemon, "telegram_api") as api:
+            daemon.send_telegram("123", text, reply_to_message_id=42)
+        api.assert_called_once_with("sendRichMessage", {
+            "chat_id": "123", "rich_message": {"markdown": "Done."},
+            "reply_parameters": {"message_id": 42, "allow_sending_without_reply": True},
+        }, timeout=60)
+
+    def test_send_telegram_handles_a_followup_only_reply(self):
+        with patch.object(daemon, "telegram_api") as api:
+            daemon.send_telegram("123", "## Suggested follow-up questions\n- More?")
+        self.assertEqual(api.call_args[0][1]["rich_message"]["markdown"], "(No response.)")
+
+    def test_rich_message_keeps_markdown_and_does_not_split_at_standard_limit(self):
+        text = "## Heading\n- **Bold** [link](https://example.com)\n\n| A | B |\n|---|---|\n| x | y |\n\n```py\nx = 1 + 2\n```"
+        with patch.object(daemon, "MAX_REPLY_CHARS", 10), patch.object(daemon, "telegram_api") as api:
+            daemon.send_telegram("123", text)
+        api.assert_called_once_with("sendRichMessage", {
+            "chat_id": "123", "rich_message": {"markdown": text},
+        }, timeout=60)
+
+    def test_rich_markdown_disables_html_and_media(self):
+        text = (
+            '<tg-button type="url">Press</tg-button> ![image](https://example.com/x.png)\n'
+            '\\<escaped> \\![escaped](https://example.com/x)\n'
+            '\\\\<unescaped> \\\\![unescaped](https://example.com/x)'
+        )
+        expected = (
+            '\\<tg-button type="url">Press\\</tg-button> \\![image](https://example.com/x.png)\n'
+            '\\<escaped> \\![escaped](https://example.com/x)\n'
+            '\\\\\\<unescaped> \\\\\\![unescaped](https://example.com/x)'
+        )
+        self.assertEqual(daemon.telegram_rich_markdown(text), expected)
+
+    def test_markup_with_possible_code_uses_safe_fallback_without_changing_code(self):
+        for text in (
+            '`x < y`', '```html\n<img src="x">\n```',
+            '~~~html\n<img src="x">\n~~~', '    <img src="x">',
+            '- item\n  ```\n<img src="x">',
+            '[link](https://example.com/`x) <img src="x"> `',
+            '`![](https://example.com/x)`',
+        ):
+            with self.subTest(text=text), patch.object(daemon, "telegram_api") as api:
+                daemon.send_telegram("123", text)
+                self.assertIsNone(daemon.telegram_rich_markdown(text))
+                self.assertEqual(api.call_args.args[0], "sendMessage")
+                self.assertEqual(api.call_args.args[1]["text"], daemon.telegram_html(text))
+
+    def test_rejected_rich_message_uses_standard_html(self):
+        for code in (400, 404):
+            with self.subTest(code=code), patch.object(daemon, "telegram_api", side_effect=[
+                daemon.TelegramAPIError("rejected", code), {},
+            ]) as api, patch.object(daemon, "log"):
+                daemon.send_telegram("123", "**Done**", reply_to_message_id=42)
+            self.assertEqual(api.call_count, 2)
+            self.assertEqual(api.call_args_list[1].args, ("sendMessage", {
+                "chat_id": "123", "text": "<b>Done</b>", "parse_mode": "HTML",
+                "link_preview_options": {"is_disabled": True},
+                "reply_parameters": {"message_id": 42, "allow_sending_without_reply": True},
+            }))
+
+    def test_rejected_html_falls_back_to_plain_text(self):
+        with patch.object(daemon, "telegram_api", side_effect=[
+            daemon.TelegramAPIError("rich rejected", 400),
+            daemon.TelegramAPIError("html rejected", 400), {},
+        ]) as api, patch.object(daemon, "log"):
+            daemon.send_telegram("123", "`**literal**`")
+        self.assertEqual([call.args[0] for call in api.call_args_list], [
+            "sendRichMessage", "sendMessage", "sendMessage",
+        ])
+        self.assertEqual(api.call_args.args[1], {
+            "chat_id": "123", "text": "`**literal**`", "link_preview_options": {"is_disabled": True},
+        })
+
+    def test_uncertain_rich_send_is_not_retried(self):
+        for error in (daemon.TelegramAPIError("rate limit", 429),
+                      daemon.TelegramAPIError("server", 500),
+                      urllib.error.URLError("network down"), TimeoutError("timeout")):
+            with self.subTest(error=error), patch.object(daemon, "telegram_api", side_effect=error) as api:
+                with self.assertRaises(type(error)):
+                    daemon.send_telegram("123", "hello")
+                api.assert_called_once()
+
+    def test_oversized_rich_message_uses_chunked_standard_messages(self):
+        with patch.object(daemon, "MAX_RICH_REPLY_CHARS", 5), \
+             patch.object(daemon, "MAX_REPLY_CHARS", 4), \
+             patch.object(daemon, "telegram_api") as api:
+            daemon.send_telegram("123", "abcdefghij")
+        self.assertEqual([call.args[0] for call in api.call_args_list], ["sendMessage"] * 3)
+        self.assertEqual([call.args[1]["text"] for call in api.call_args_list], [
+            "(1/3)\nabcd", "(2/3)\nefgh", "(3/3)\nij",
+        ])
+
+    def test_standard_chunk_limit_counts_emoji(self):
+        with patch.object(daemon, "MAX_REPLY_CHARS", 4):
+            chunks = daemon.chunk_reply("🙂🙂🙂a")
+        self.assertEqual(chunks, ["🙂🙂", "🙂a"])
+        self.assertTrue(all(daemon._utf16_len(chunk) <= 4 for chunk in chunks))
 
     def test_short_reply_is_one_chunk(self):
         with patch.object(daemon, "MAX_REPLY_CHARS", 100):
@@ -2047,6 +2271,13 @@ class TestVoiceTranscriptionGuards(unittest.TestCase):
 class TestTelegramApiGuards(unittest.TestCase):
     """The no-token guard fails fast before any network call."""
 
+    def test_update_polls_include_callbacks_for_old_buttons(self):
+        with patch.object(daemon, "telegram_api", return_value=[]) as api:
+            daemon.get_latest_update_id()
+            daemon.fetch_updates(42)
+        for call in api.call_args_list:
+            self.assertEqual(call.args[1]["allowed_updates"], ["message", "callback_query"])
+
     def test_api_without_token_raises(self):
         with patch.object(daemon, "BOT_TOKEN", ""):
             with self.assertRaises(RuntimeError) as ctx:
@@ -2058,6 +2289,207 @@ class TestTelegramApiGuards(unittest.TestCase):
             with self.assertRaises(RuntimeError) as ctx:
                 daemon.telegram_download("photos/x.jpg")
             self.assertIn("PI_TELEGRAM_BOT_TOKEN", str(ctx.exception))
+
+    def test_http_error_keeps_code_without_leaking_response_or_token(self):
+        error = urllib.error.HTTPError("https://example.com/bottest-token/sendRichMessage", 400,
+                                       "bad", {}, io.BytesIO(b"private reply"))
+        with patch.object(daemon, "BOT_TOKEN", "test-token"), \
+             patch.object(daemon.urllib.request, "urlopen", side_effect=error):
+            with self.assertRaises(daemon.TelegramAPIError) as ctx:
+                daemon.telegram_api("sendRichMessage", {})
+        self.assertEqual(ctx.exception.code, 400)
+        self.assertNotIn("test-token", str(ctx.exception))
+        self.assertNotIn("private reply", str(ctx.exception))
+
+    def test_api_failure_response_keeps_code_without_leaking_contents(self):
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = json.dumps({
+            "ok": False, "error_code": 400, "description": "private reply",
+        }).encode()
+        with patch.object(daemon, "BOT_TOKEN", "test-token"), \
+             patch.object(daemon.urllib.request, "urlopen", return_value=response):
+            with self.assertRaises(daemon.TelegramAPIError) as ctx:
+                daemon.telegram_api("sendRichMessage", {})
+        self.assertEqual(ctx.exception.code, 400)
+        self.assertNotIn("private reply", str(ctx.exception))
+
+
+class TestShortcutEndpoint(unittest.TestCase):
+    """iOS Shortcut audio endpoint: parser, auth, and handler flow (offline)."""
+
+    def setUp(self):
+        self._saved = (
+            daemon.SHORTCUT_TOKEN,
+            daemon.SHORTCUT_SEND_TO_TELEGRAM,
+            daemon.ALLOWED_CHATS,
+        )
+        daemon.SHORTCUT_TOKEN = "test-token"
+        daemon.SHORTCUT_SEND_TO_TELEGRAM = False
+        daemon.ALLOWED_CHATS = {"123456789", "-1001234567890"}
+
+    def tearDown(self):
+        (daemon.SHORTCUT_TOKEN, daemon.SHORTCUT_SEND_TO_TELEGRAM, daemon.ALLOWED_CHATS) = self._saved
+
+    @staticmethod
+    def _multipart(fields, boundary="x-boundary-123"):
+        out = b""
+        for name, (filename, data) in fields.items():
+            out += f"--{boundary}\r\n".encode()
+            if filename:
+                out += f'Content-Disposition: form-data; name="{name}"; filename="{filename}"\r\n'.encode()
+                out += b"Content-Type: audio/mp4\r\n"
+            else:
+                out += f'Content-Disposition: form-data; name="{name}"\r\n'.encode()
+            out += b"\r\n" + data + b"\r\n"
+        return out + f"--{boundary}--\r\n".encode(), boundary
+
+    def _post(self, base, body, boundary):
+        req = urllib.request.Request(
+            base, data=body, method="POST",
+            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+        return urllib.request.urlopen(req, timeout=5)
+
+    def test_parse_multipart(self):
+        audio = b"ID3\x04\x00fake-bytes\r\nwith-crlf"
+        body, boundary = self._multipart({
+            "token": (None, b"secret-token"),
+            "file": ("note.m4a", audio),
+        })
+        fields = daemon.parse_multipart(body, boundary)
+        self.assertEqual(fields["token"], (None, b"secret-token"))
+        self.assertEqual(fields["file"], ("note.m4a", audio))
+
+    def test_build_multipart_round_trip(self):
+        audio = b"ID3\x04\x00round-trip\r\nbytes"
+        body, boundary = daemon._build_multipart({
+            "chat_id": (None, b"123456789"),
+            "voice": ("note.m4a", audio),
+        })
+        fields = daemon.parse_multipart(body, boundary)
+        self.assertEqual(fields["chat_id"], (None, b"123456789"))
+        self.assertEqual(fields["voice"], ("note.m4a", audio))
+
+    def test_shortcut_uses_only_one_numeric_private_chat(self):
+        daemon.ALLOWED_CHATS = {"@owner", "123456789", "-1001234567890"}
+        self.assertEqual(daemon.shortcut_target_chat_id(), "123456789")
+        for chats in ({"@owner"}, {"123456789", "111222333"}, {"１２３"}, {"0"}):
+            with self.subTest(chats=chats):
+                daemon.ALLOWED_CHATS = chats
+                self.assertEqual(daemon.shortcut_target_chat_id(), "")
+
+    def test_ambiguous_shortcut_target_never_sends_to_a_chat(self):
+        daemon.ALLOWED_CHATS = {"123456789", "111222333"}
+        pi = MagicMock()
+        with patch.object(daemon, "send_telegram") as send, \
+             patch.object(daemon, "transcribe_with_command") as transcribe, patch.object(daemon, "log"):
+            daemon._run_shortcut_note(pi, "note.m4a", b"audio-bytes")
+        send.assert_not_called()
+        transcribe.assert_not_called()
+        pi.ask.assert_not_called()
+
+    def test_handle_shortcut_audio_flow(self):
+        sent, asked, voices = [], [], []
+
+        class FakePi:
+            def ask(self, message, chat_id=None, reply_to=None, images=None):
+                asked.append((chat_id, message))
+                return "agent reply"
+
+        with patch.object(daemon, "send_telegram",
+                          side_effect=lambda cid, text, reply_to_message_id=None: sent.append((cid, text))), \
+             patch.object(daemon, "send_telegram_voice",
+                          side_effect=lambda cid, path: voices.append((cid, path))), \
+             patch.object(daemon, "transcribe_with_command", return_value="hello from the shortcut"), \
+             patch.object(daemon, "transcribe_with_openai", return_value="must not be used"), \
+             patch.object(daemon, "configured_voice_provider", return_value="command"), \
+             patch.object(daemon, "ChatActionLoop"):
+            daemon.handle_shortcut_audio(FakePi(), "note.m4a", b"audio-bytes")
+        self.assertEqual(asked[0][0], "123456789")
+        self.assertIn("iOS Shortcut voice-note transcript", asked[0][1])
+        self.assertIn("hello from the shortcut", asked[0][1])
+        self.assertEqual(sent, [("123456789", "agent reply")])
+        self.assertEqual(voices, [])  # disabled by default
+
+    def test_shortcut_uncertain_delivery_does_not_send_an_error_message(self):
+        pi = MagicMock()
+        pi.ask.return_value = "agent reply"
+        with patch.object(daemon, "send_telegram", side_effect=TimeoutError("uncertain")) as send, \
+             patch.object(daemon, "transcribe_with_command", return_value="words"), \
+             patch.object(daemon, "configured_voice_provider", return_value="command"), \
+             patch.object(daemon, "ChatActionLoop"), patch.object(daemon, "log"):
+            daemon._run_shortcut_note(pi, "note.m4a", b"audio-bytes")
+        send.assert_called_once_with("123456789", "agent reply", reply_to_message_id=None)
+
+    def test_handle_shortcut_audio_posts_voice_when_enabled(self):
+        daemon.SHORTCUT_SEND_TO_TELEGRAM = True
+        voices, sent, asked = [], [], []
+
+        class FakePi:
+            def ask(self, message, chat_id=None, reply_to=None, images=None):
+                asked.append((chat_id, message))
+                return "agent reply"
+
+        def fake_voice(cid, path):
+            voices.append((cid, Path(path).read_bytes()))
+
+        with patch.object(daemon, "send_telegram",
+                          side_effect=lambda cid, text, reply_to_message_id=None: sent.append((cid, text))), \
+             patch.object(daemon, "send_telegram_voice", side_effect=fake_voice), \
+             patch.object(daemon, "transcribe_with_command", return_value="words"), \
+             patch.object(daemon, "configured_voice_provider", return_value="command"), \
+             patch.object(daemon, "ChatActionLoop"):
+            daemon.handle_shortcut_audio(FakePi(), "note.m4a", b"audio-bytes")
+        self.assertEqual(voices, [("123456789", b"audio-bytes")])
+        self.assertEqual(len(asked), 1)
+
+    def test_http_rejects_bad_token_and_missing_file(self):
+        pi = MagicMock()
+        with patch.object(daemon, "_run_shortcut_note") as run_note:
+            server = daemon.ShortcutHTTPServer(("127.0.0.1", 0), pi)
+            port = server.server_address[1]
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            try:
+                base = f"http://127.0.0.1:{port}{daemon.SHORTCUT_PATH}"
+                with urllib.request.urlopen(base, timeout=5) as r:  # GET health check
+                    self.assertEqual(r.status, 200)
+                body, boundary = self._multipart({
+                    "token": (None, b"wrong-token"), "file": ("n.m4a", b"x")})
+                with self.assertRaises(urllib.error.HTTPError) as ctx:
+                    self._post(base, body, boundary)
+                self.assertEqual(ctx.exception.code, 403)
+                body, boundary = self._multipart({"token": (None, b"test-token")})
+                with self.assertRaises(urllib.error.HTTPError) as ctx:
+                    self._post(base, body, boundary)
+                self.assertEqual(ctx.exception.code, 400)
+                self.assertFalse(run_note.called)
+            finally:
+                server.shutdown()
+                server.server_close()
+
+    def test_http_accepts_valid_note(self):
+        pi = MagicMock()
+        with patch.object(daemon, "_run_shortcut_note") as run_note:
+            server = daemon.ShortcutHTTPServer(("127.0.0.1", 0), pi)
+            port = server.server_address[1]
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            try:
+                base = f"http://127.0.0.1:{port}{daemon.SHORTCUT_PATH}"
+                body, boundary = self._multipart({
+                    "token": (None, b"test-token"), "file": ("note.m4a", b"audio-bytes")})
+                with self._post(base, body, boundary) as r:
+                    self.assertEqual(r.status, 200)
+                    self.assertIn(b'"ok": true', r.read())
+                deadline = time.time() + 2
+                while time.time() < deadline and not run_note.called:
+                    time.sleep(0.01)
+                self.assertTrue(run_note.called)
+                args = run_note.call_args[0]
+                self.assertEqual(args[0], pi)
+                self.assertEqual(args[1], "note.m4a")
+                self.assertEqual(args[2], b"audio-bytes")
+            finally:
+                server.shutdown()
+                server.server_close()
 
 
 if __name__ == "__main__":

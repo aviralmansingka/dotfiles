@@ -3,8 +3,9 @@
 // pins the render rules (passthrough, spinner, short-block-as-title,
 // heuristic fallback, escape), the closure detection that fires nested
 // title calls (closed runs only, never short ones, deduped, not awaited
-// inside handlers), the title cleanup, and the /thinking toggle. The
-// live-PTY contract lives in scripts/test-pi-hidden-thinking-render.py.
+// inside handlers), the title cleanup, the /titles toggle, and the empty
+// hidden label that keeps a hidden run off the transcript. The live-PTY
+// contract lives in scripts/test-pi-hidden-thinking-render.py.
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -16,9 +17,10 @@ const require = createRequire(import.meta.url);
 const { jitiPath } = resolveJiti({ extraFallbacks: [HOMEBREW_JITI, NVM_JITI] });
 const { createJiti } = require(jitiPath);
 
-// thinking-title.ts only type-imports the package, so an empty stub works.
+// The extension reads the running pi version from the package, so the stub
+// carries VERSION and nothing else.
 const tempRoot = mkdtempSync(join(tmpdir(), "thinking-title-test-"));
-writeFileSync(join(tempRoot, "pi-coding-agent.cjs"), "module.exports = {};\n");
+writeFileSync(join(tempRoot, "pi-coding-agent.cjs"), 'module.exports = { VERSION: "1.5.0" };\n');
 const jiti = createJiti(import.meta.url, {
 	alias: { "@earendil-works/pi-coding-agent": join(tempRoot, "pi-coding-agent.cjs") },
 });
@@ -118,7 +120,11 @@ assert.equal(
 // ── nested title calls ───────────────────────────────────────────────────────
 
 const calls = { complete: 0 };
-const ui = { setHiddenThinkingLabel: () => {}, notify: () => {} };
+const hiddenLabels = [];
+const ui = {
+	setHiddenThinkingLabel: (label) => hiddenLabels.push(label),
+	notify: () => {},
+};
 const modelRegistry = {
 	find: (provider, id) => (provider === "fireworks" && id === "deepseek-v4-flash-0731" ? { id } : undefined),
 	complete: async () => {
@@ -224,6 +230,17 @@ assert.equal(
 	"Patch the bundle anchors and rerun",
 	"toggled off returns to the title",
 );
+
+// ── hidden runs leave no row ───────────────────────────────────────────────
+// The extension requires pi 1.5.0, which renders a hidden run with an empty
+// label as no row and no spacer. A visible label would show a bare bullet row
+// that says "thinking" and carries no thinking text: the extra row the user
+// reported.
+registrations.handlers.get("session_start")({}, extCtx());
+assert.ok(hiddenLabels.length >= 2, "session_start and /titles set the hidden label");
+for (const label of hiddenLabels) {
+	assert.equal(label, "", "every hidden label must render no text");
+}
 
 rmSync(tempRoot, { recursive: true, force: true });
 console.log("thinking-title tests passed");

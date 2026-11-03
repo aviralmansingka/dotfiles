@@ -25,6 +25,7 @@ pi agent extensions (job `pi-tests`, gated on `pi/**` + `agents/**`):
 | Telegram daemon | pi/bin unittest (155 cases) | daemon 75 % (mention gating was 0 %) | 1.1 s |
 | Loader | scripts/test-extension-loader.mjs | 26 factories + 23 nested + settings entries | 0.2 s |
 | OpenGateway provider | opengateway.test.mjs | provider registration + model metadata | 0.13 s |
+| Missions | missions/missions.test.mjs + scripts/test-missions.sh | attachment, structured progress, replay, workspace ownership, final settlement | under 30 s warm |
 
 Neovim (job `nvim-tests`, gated on `nvim/**`): offline headless harness
 (`nvim/.config/nvim/tests/ci/`) + ten entries `scripts/test-nvim-*.sh`;
