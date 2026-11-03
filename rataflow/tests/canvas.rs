@@ -520,8 +520,11 @@ fn an_oversized_canvas_opens_at_its_first_section() {
     let cells = terminal.backend().buffer().content.clone();
     let row = row_of(&cells, width, &report.sections[0].title)
         .unwrap_or_else(|| panic!("the first title is not on screen:\n{}", text(&cells)));
+    // Round-13 owner directive: every section opens with a rule above its
+    // title - the first one included - so the title sits one row lower than
+    // before that change. The anchor still lands on the canvas top.
     assert_eq!(
-        row, 1,
-        "the first section's title sits on the first canvas row"
+        row, 3,
+        "the first section's title sits under the canvas's top rule (row 0 is the header)"
     );
 }

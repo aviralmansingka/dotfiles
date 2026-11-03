@@ -80,6 +80,10 @@ pub struct SpecNode {
     pub label: Option<String>,
     #[serde(default)]
     pub group: Option<String>,
+    /// This node is the component the next diagram zooms into: its border
+    /// renders double, so a reader sees which box expands.
+    #[serde(default)]
+    pub focus: bool,
 }
 
 /// One edge. `label` renders on the edge; `flow` animates it: `true` runs
@@ -282,6 +286,10 @@ pub struct SpecDiagram {
     pub description: Option<String>,
     /// The diagram's own graph (a single-graph spec, `diagrams` empty).
     pub graph: Box<Spec>,
+    /// The diagram is the CONTENTS of a zoomed-in component: its cells are
+    /// drawn inside a dotted box, which reads as "inside that box", not as
+    /// a node. Routes keep clear of the dotted perimeter.
+    pub enclosed: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -322,6 +330,8 @@ struct RawDiagram {
     edges: Option<Vec<SpecEdge>>,
     #[serde(default)]
     trunks: Vec<SpecTrunk>,
+    #[serde(default)]
+    enclosed: bool,
 }
 
 /// The single-graph fields, gathered so the validator runs on either the top
@@ -728,6 +738,7 @@ impl Spec {
                 title,
                 description,
                 graph: Box::new(graph),
+                enclosed: raw.enclosed,
             });
         }
 
@@ -1397,6 +1408,9 @@ pub struct Report {
     /// their source nor their destination: the round-13 "false relation"
     /// defect. Zero is the contract.
     pub passes_near_unrelated_node: usize,
+    /// Route cells sitting on a dotted enclosure boundary. A route may run
+    /// inside the box or outside it, never through its dotted line.
+    pub enclosure_crossings: usize,
     /// One entry per `(route, unrelated node)` pair behind that count, so
     /// `--check` can name the relation instead of only counting it.
     pub near_misses: Vec<router::NearMiss>,
@@ -1450,6 +1464,14 @@ pub struct SectionReport {
     /// Width of the section band: the widest of its title, description, and
     /// drawing, so the rule covers what it separates.
     pub width: i32,
+    /// Every divider spans the widest band on the canvas, so all rules are
+    /// the same length.
+    pub rule_width: i32,
+    /// World rect `(x, y, w, h)` of the dotted enclosure, when this diagram
+    /// is the contents of a zoomed-in component.
+    pub frame: Option<(i32, i32, i32, i32)>,
+    /// World ids of nodes drawn with a double border (the zoom parents).
+    pub focus: Vec<String>,
     pub nodes: usize,
     pub edges: usize,
     pub routes: usize,
@@ -1791,6 +1813,7 @@ fn build_single(
     let report = Report {
         nodes: boxes.len(),
         edges: spec.edges.len(),
+        enclosure_crossings: 0,
         routes: routes_spec.len(),
         extent: plan.extent,
         shared_run: plan.shared_run,
@@ -1936,11 +1959,17 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
         let (min_x, min_y, max_x, max_y) = graph_bounds(&flow);
         // The router's own extent covers label gutters that the geometry
         // bounds miss, so the band takes the wider of the two.
-        let width = ((max_x - min_x).ceil() as i32).max(report.extent.0 + 1);
-        let height = ((max_y - min_y).ceil() as i32).max(report.extent.1 + 1);
-        // A later section opens with a blank row and a rule above its title.
-        let rule = (index > 0).then(|| cursor + 1);
-        let mut top = cursor + if index > 0 { 2 } else { 0 };
+        let base_width = ((max_x - min_x).ceil() as i32).max(report.extent.0 + 1);
+        let base_height = ((max_y - min_y).ceil() as i32).max(report.extent.1 + 1);
+        // An enclosed diagram gets one cell of clearance on every side, so
+        // no route, label, or dot can ever touch the dotted boundary.
+        let pad = i32::from(diagram.enclosed);
+        let width = base_width + pad * 2;
+        let height = base_height + pad * 2;
+        // Every section opens with a rule above its title - the first one
+        // too, so a canvas reads as evenly divided bands.
+        let rule = Some(cursor + 1);
+        let mut top = cursor + 2;
         let title_row = top;
         let description_rows = i32::from(diagram.description.is_some());
         // One blank row keeps the heading off the top node border.
@@ -1953,8 +1982,8 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
                 .unwrap_or(0),
         );
 
-        let dx = -min_x;
-        let dy = top as f64 - min_y;
+        let dx = -min_x + pad as f64;
+        let dy = top as f64 - min_y + pad as f64;
         for node in flow.nodes() {
             let mut node = node.clone();
             // Diagram ids are their own namespace: two diagrams may both
@@ -1972,6 +2001,15 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
             edges.push(edge);
         }
 
+        let frame = diagram
+            .enclosed
+            .then(|| (0, top - pad, base_width + pad * 2, base_height + pad * 2));
+        let focus: Vec<String> = graph
+            .nodes
+            .iter()
+            .filter(|node| node.focus)
+            .map(|node| format!("{}:{}", diagram.id, node.id))
+            .collect();
         sections.push(SectionReport {
             diagram: diagram.id.clone(),
             title: diagram.title.clone(),
@@ -1981,6 +2019,10 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
             header: (0, title_row),
             rule,
             width: section_width,
+            // Filled in after the loop: every rule spans the widest band.
+            rule_width: 0,
+            frame,
+            focus,
             nodes: report.nodes,
             edges: report.edges,
             routes: report.routes,
@@ -2032,10 +2074,35 @@ fn build_canvas(spec: &Spec, mut palette: GroupPalette) -> Result<(Graph, Report
                 .skipped_labels
                 .push((format!("{}:{edge}", diagram.id), label.clone()));
         }
+        // A route may sit inside the dotted box or outside it, never on the
+        // boundary line: count any route cell that lands on the perimeter.
+        if let Some((fx, fy, fw, fh)) = frame {
+            let (x0, y0) = (fx, fy);
+            let (x1, y1) = (fx + fw - 1, fy + fh - 1);
+            for edge in flow.edges() {
+                let Some(route) = edge.content.route() else {
+                    continue;
+                };
+                for &(px, py) in &route.points {
+                    let (px, py) = (px as i32 + dx as i32, py as i32 + dy as i32);
+                    let on_row = (py == y0 || py == y1) && px >= x0 && px <= x1;
+                    let on_col = (px == x0 || px == x1) && py >= y0 && py <= y1;
+                    if on_row || on_col {
+                        total.enclosure_crossings += 1;
+                    }
+                }
+            }
+        }
         dot_hues.add(&report.dot_hues);
         cursor = top + height;
     }
 
+    // One divider length for the whole canvas: the widest band wins, so no
+    // rule reads as a different kind of separator.
+    let rule_width = sections.iter().map(|s| s.width).max().unwrap_or(0);
+    for section in &mut sections {
+        section.rule_width = rule_width;
+    }
     total.extent = sections_extent(&sections);
     total.groups = spec.groups();
     total.sections = sections;
@@ -2876,7 +2943,7 @@ fn draw_sections(frame: &mut Frame, flow: &Graph, canvas: Rect, sections: &[Sect
     for section in sections {
         if let Some(rule) = section.rule {
             let mut line = String::new();
-            for _ in 0..section.width.max(1) {
+            for _ in 0..section.rule_width.max(section.width).max(1) {
                 line.push('─');
             }
             put_world_text(
@@ -2908,6 +2975,88 @@ fn draw_sections(frame: &mut Frame, flow: &Graph, canvas: Rect, sections: &[Sect
                 description,
                 background.fg(palette.subtle),
             );
+        }
+        if let Some((fx, fy, fw, fh)) = section.frame {
+            draw_dotted_frame(frame, flow, canvas, fx, fy, fw, fh, palette.subtle);
+        }
+    }
+    draw_double_borders(frame, flow, canvas, sections, palette.text);
+}
+
+/// Paints a dotted rectangle: the boundary of a zoomed-in component's
+/// contents. Dots never read as a node border, so the frame says "inside
+/// this box" instead of looking like another element.
+#[allow(clippy::too_many_arguments)]
+fn draw_dotted_frame(
+    frame: &mut Frame,
+    flow: &Graph,
+    canvas: Rect,
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+    color: Color,
+) {
+    let style = Style::default().bg(flow.theme.palette().canvas_bg).fg(color);
+    if w < 2 || h < 2 {
+        return;
+    }
+    let mut line = String::new();
+    for _ in 0..w {
+        line.push('·');
+    }
+    for row in [y, y + h - 1] {
+        put_world_text(frame, flow, canvas, x, row, &line, style);
+    }
+    for row in (y + 1)..(y + h - 1) {
+        put_world_text(frame, flow, canvas, x, row, "·", style);
+        put_world_text(frame, flow, canvas, x + w - 1, row, "·", style);
+    }
+}
+
+/// Repaints a zoom parent's border with double-line glyphs: the box a
+/// reader can zoom into wears a second ring.
+fn draw_double_borders(
+    frame: &mut Frame,
+    flow: &Graph,
+    canvas: Rect,
+    sections: &[SectionReport],
+    color: Color,
+) {
+    let focus: Vec<&str> = sections
+        .iter()
+        .flat_map(|section| section.focus.iter().map(String::as_str))
+        .collect();
+    if focus.is_empty() {
+        return;
+    }
+    let style = Style::default().bg(flow.theme.palette().canvas_bg).fg(color);
+    for node in flow.nodes() {
+        if !focus.contains(&node.id.as_str()) {
+            continue;
+        }
+        let x0 = node.position.x as i32;
+        let y0 = node.position.y as i32;
+        let w = node.width as i32;
+        let h = node.height as i32;
+        if w < 2 || h < 2 {
+            continue;
+        }
+        let x1 = x0 + w - 1;
+        let y1 = y0 + h - 1;
+        for (glyph, cx, cy) in [('╔', x0, y0), ('╗', x1, y0), ('╚', x0, y1), ('╝', x1, y1)] {
+            put_world_text(frame, flow, canvas, cx, cy, &glyph.to_string(), style);
+        }
+        let mut across = String::new();
+        for _ in 1..w - 1 {
+            across.push('═');
+        }
+        for row in [y0, y1] {
+            put_world_text(frame, flow, canvas, x0 + 1, row, &across, style);
+        }
+        for row in (y0 + 1)..y1 {
+            put_world_text(frame, flow, canvas, x0, row, "║", style);
+            put_world_text(frame, flow, canvas, x1, row, "║", style);
         }
     }
 }

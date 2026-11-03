@@ -379,6 +379,12 @@ impl FlowEdge {
         self.dot_color = color;
     }
 
+    /// The planned route, when this edge was laid out by the engine's
+    /// router: its polyline, label cell, and leader cells in world space.
+    pub fn route(&self) -> Option<&Route> {
+        self.route.as_ref()
+    }
+
     /// The dot hue this route was given, if any.
     pub fn dot_color(&self) -> Option<Color> {
         self.dot_color

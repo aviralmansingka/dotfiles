@@ -55,3 +55,24 @@ recent prior generation on the left, r13 on the right).
 
 4. (captain, standing) engine cross-gap near-miss work + whole-canvas
    evidence harness + source-ledger completeness (see decision.md).
+
+5. (owner, 2026-11-03, C4 retry) "A big idea in c4 is to pick a component
+   and 'zoom' in on it. Can you add a double border on the component you
+   are zooming in to? Also once you expand that component, can you add all
+   the nested cells in a dotted box? be careful about how arrows and dots
+   go through it. Also try to keep most diagrams consistent. If all are
+   left-right oriented, then keep all of them that way."
+
+   ROUND-14 ENGINE FEATURES (C4 zoom-in):
+   a. ZOOM PARENT: a node that is zoomed into renders with a DOUBLE
+      BORDER (outer + inner ring) so the reader sees which box the next
+      diagram expands.
+   b. ENCLOSURE: the expanded diagram's nested cells render inside a
+      DOTTED BOX - the boundary is dotted so it reads as "contents of",
+      not as a node.
+   c. ROUTING AROUND THE ENCLOSURE: routes must not cross the dotted
+      boundary (they stay inside it or outside it); dots never ride the
+      dotted cells. Crossing the boundary line is a defect class.
+   d. ORIENTATION CONSISTENCY: diagrams on one canvas keep ONE reading
+      direction unless a measured reason forces a change (owner: "if all
+      are left-right oriented, then keep all of them that way").

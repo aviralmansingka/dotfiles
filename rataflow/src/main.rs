@@ -261,6 +261,22 @@ fn check(spec: &Spec, flow: &mut Graph, report: &Report) -> Result<()> {
             if let Some(description) = section.description.as_deref() {
                 println!("  description: {description}");
             }
+            if let Some((fx, fy, fw, fh)) = section.frame {
+                println!("  enclosed: dotted box={fw}x{fh} at {fx},{fy} (contents of a zoomed-in component)");
+            }
+            if !section.focus.is_empty() {
+                println!(
+                    "  double border: {} zoom parent(s) - {}",
+                    section.focus.len(),
+                    section.focus.join(", ")
+                );
+            }
+        }
+        if report.enclosure_crossings > 0 {
+            println!(
+                "enclosure-crossings: {} route cell(s) on a dotted boundary (a route may not cross it)",
+                report.enclosure_crossings
+            );
         }
     } else if !spec.layers.is_empty() {
         println!(
