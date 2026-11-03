@@ -34,8 +34,10 @@ RATES = {
     "gpt-6-sol": {"input": 2.0, "output": 10.0, "cache_read": 0.2, "cache_write": 2.5},
     # serverless Fireworks alias used by the codex/claude harnesses
     "deepseek-flash-latest": {"input": 0.14, "output": 0.28, "cache_read": 0.028, "cache_write": 0.0},
+    # serverless aliases used by the codex and claude harnesses; kimi comes from
+    # fireconnect's own model description, glm matches the router table
     "glm-fast-latest": {"input": 2.1, "output": 6.6, "cache_read": 0.39, "cache_write": 0.0},
-    "kimi-fast-latest": {"input": 4.5, "output": 22.5, "cache_read": 0.45, "cache_write": 0.0},
+    "kimi-fast-latest": {"input": 6.0, "output": 30.0, "cache_read": 0.6, "cache_write": 0.0},
     "accounts/fireworks/routers/glm-fast-latest": {"input": 2.1, "output": 6.6, "cache_read": 0.39, "cache_write": 0.0},
     "accounts/fireworks/routers/kimi-fast-latest": {"input": 4.5, "output": 22.5, "cache_read": 0.45, "cache_write": 0.0},
     "accounts/fireworks/routers/deepseek-flash-latest": {
@@ -179,6 +181,9 @@ def claude_usage(config_dir: str, model: str = "", worktree: str = "") -> dict:
         out["source"] = "claude-session-missing"
         return out
     seen_model = model
+    # Claude Code logs one record per content block, so the same message id
+    # repeats with identical usage. Count each id once.
+    seen_ids: set[str] = set()
     for path in files:
         for line in open(path, encoding="utf-8", errors="replace"):
             try:
@@ -189,6 +194,11 @@ def claude_usage(config_dir: str, model: str = "", worktree: str = "") -> dict:
             usage = message.get("usage") if isinstance(message, dict) else None
             if not isinstance(usage, dict):
                 continue
+            message_id = message.get("id")
+            if message_id:
+                if message_id in seen_ids:
+                    continue
+                seen_ids.add(message_id)
             seen_model = message.get("model") or seen_model
             out["tokens_in"] += int(usage.get("input_tokens") or 0)
             out["tokens_out"] += int(usage.get("output_tokens") or 0)
