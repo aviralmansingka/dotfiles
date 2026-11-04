@@ -1,0 +1,47 @@
+ rataflow-view · 77x47 @100% · canvas 156x145 · spec.json · 43 nodes · 33 edg
+
+─────────────────────────────────────────────────────────────────────────────
+L0 · System context
+System context: the machine manager is one box. The control plane and ops cal
+Gcore and Latitude, it boots and audits the fleet, which pulls boot artefacts
+exchanges diagnostic events and proposed actions with the janitor service.
+
+   ╭─────────────╮
+   │machine-agent│────────────────────────────╮
+   │             │    register + heartbeat    │
+   ╰─────────────╯                            │
+                                              │                 provider API
+╭───────────────────╮      provisioning       │ ╭───────────────╮
+│Modal control plane│────────────────────────╮╰▶│               │
+│                   │                        │  │               │  boot + aud
+╰───────────────────╯                        ╰─▶│               │────────────
+                           diagnostic events    │               │
+  ╭───────────────╮    ╭────────────────────────│Machine manager│────────────
+  │               │◀───╯                        │               │
+  │machine-janitor│                           ╭▶│               │────────────
+  │               │───────────────────────────╯ │               │confirm + al
+  ╰───────────────╯ proposed actions + reads  ╭▶│               │
+                                              │ ╰───────────────╯
+    ╭───────────╮            http             │
+    │ops + mmctl│─────────────────────────────╯
+    │           │
+    ╰───────────╯
+
+
+─────────────────────────────────────────────────────────────────────────────
+L1 · Boundary — requests and machines
+L0's box opened once: private and public gRPC, webapi, the boot server, SSH a
+inside. The control plane, ops, the fleet, the agent and the BMC endpoints st
+arrow carries each RPC family; the queue and store are opened at L2.
+
+                                                                            h
+    ╭─────────────╮                                        ▐▌ ▄ ▄ ▖
+    │machine-agent│────────────────────────────────        ▝    ▝
+    │             │   register + heartbeat, 1 min          ▐▘ ▜▀▝ ▀
+ ┌───────┐────────╯                                        ▐▖▗▛             ─
+ │ + [+] │                                                 ▝▘ ▀             e
+ │ − [-]─│───────────╮ create / terminate / repair         ▐▖ ▘█ ▝▘
+ │ ⊡ [f]c│ntrol plane│─────────────────────────────        ▗▖               ─
+ │ □ [i] │           │                                     ▐▘▝ ▝
+ └───────┘───────────╯                                                      ─
+                                                   ║                 │SSH exe
