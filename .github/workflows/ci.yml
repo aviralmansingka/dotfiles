@@ -448,11 +448,11 @@ jobs:
       - name: Set up mission CLI Go toolchain
         uses: actions/setup-go@v7
         with:
-          go-version-file: scripts/mission-cli/go.mod
-          cache-dependency-path: scripts/mission-cli/go.sum
+          go-version-file: go/mission/go.mod
+          cache-dependency-path: go/mission/go.sum
 
       - name: Prepare mission CLI dependencies
-        working-directory: scripts/mission-cli
+        working-directory: go/mission
         run: go mod download
 
       # ruby is preinstalled on ubuntu runners (test-gh-dash-open-pr.sh).

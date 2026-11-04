@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -80,6 +81,41 @@ func (s *Store) subject(r Record, a Attempt, st Step) subjectSnapshot {
 	snap.Hash = digest([]byte(strings.Join(values, "\n")))
 	return snap
 }
+
+// moduleRoot finds the one Go module inside an attempt checkout. The go-test
+// fingerprint and the test run both scope to it: a file outside the module, such
+// as a stow symlink elsewhere in the checkout, cannot block the check.
+func moduleRoot(cwd string) (string, error) {
+	var found []string
+	e := filepath.WalkDir(cwd, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			switch d.Name() {
+			case ".git", "node_modules", "vendor":
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if d.Name() == "go.mod" {
+			found = append(found, filepath.Dir(p))
+		}
+		return nil
+	})
+	if e != nil {
+		return "", e
+	}
+	switch len(found) {
+	case 0:
+		return "", fmt.Errorf("go-test requires a go.mod inside the checkout")
+	case 1:
+		return found[0], nil
+	}
+	sort.Strings(found)
+	return "", fmt.Errorf("go-test found %d Go modules in the checkout; keep one", len(found))
+}
+
 func repositoryHash(cwd string) (string, error) {
 	top, e := exec.Command("git", "-C", cwd, "rev-parse", "--show-toplevel").Output()
 	if e != nil {
@@ -89,7 +125,19 @@ func repositoryHash(cwd string) (string, error) {
 	if e != nil || root != cwd {
 		return "", fmt.Errorf("go-test requires the Git checkout root as the attempt cwd")
 	}
-	c := exec.Command("git", "-C", cwd, "ls-files", "-z", "--cached", "--others", "--exclude-standard")
+	module, e := moduleRoot(cwd)
+	if e != nil {
+		return "", e
+	}
+	rel, e := filepath.Rel(cwd, module)
+	if e != nil {
+		return "", e
+	}
+	args := []string{"ls-files", "-z", "--cached", "--others", "--exclude-standard"}
+	if rel != "." {
+		args = append(args, "--", filepath.ToSlash(rel))
+	}
+	c := exec.Command("git", append([]string{"-C", cwd}, args...)...)
 	b, e := c.Output()
 	if e != nil {
 		return "", fmt.Errorf("go-test evidence requires a Git checkout")
@@ -106,10 +154,11 @@ func repositoryHash(cwd string) (string, error) {
 			continue
 		}
 		p := filepath.Join(cwd, filepath.FromSlash(name))
-		rel, e := filepath.Rel(cwd, p)
-		if e != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-			return "", fmt.Errorf("source path escapes checkout")
+		inside, e := filepath.Rel(module, p)
+		if e != nil || inside == ".." || strings.HasPrefix(inside, ".."+string(os.PathSeparator)) {
+			return "", fmt.Errorf("source path escapes the Go module")
 		}
+		name = filepath.ToSlash(inside)
 		st, e := os.Lstat(p)
 		if os.IsNotExist(e) {
 			fmt.Fprintf(&tree, "%s\x00deleted\n", name)

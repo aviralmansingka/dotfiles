@@ -131,11 +131,14 @@ func (s *Store) verify(h, id, token string) (Record, error) {
 				res.Summary = "Result parses as one JSON value"
 			}
 		case "go-test":
+			module, e := moduleRoot(attempt.Cwd)
 			if before.RepoErr != nil {
 				res.Verdict = "inconclusive"
 				res.Summary = before.RepoErr.Error()
+			} else if e != nil {
+				res.Verdict, res.Summary = "inconclusive", e.Error()
 			} else {
-				res.Verdict, res.Summary, logs[i] = goTest(attempt.Cwd)
+				res.Verdict, res.Summary, logs[i] = goTest(module)
 			}
 		}
 		if res.Verdict != "passed" {

@@ -1,4 +1,4 @@
-// Paths: scripts/mission-cli/**, pi/.pi/agent/extensions/missions/**, pi/.pi/agent/extensions/interactive-subagents/**, agents/.agents/skills/missions/**
+// Paths: go/mission/**, pi/.pi/agent/extensions/missions/**, pi/.pi/agent/extensions/interactive-subagents/**, agents/.agents/skills/missions/**
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { execFile } from "node:child_process";

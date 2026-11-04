@@ -20,16 +20,20 @@ func cmdUI(a args, s *Store) int {
 // cmdRender prints one static frame of the desk and returns an exit code.
 func cmdRender(a args, s *Store) int {
 	w := 128
+	h := 42
 	var e error
 	if a.has("width") {
 		w, e = strconv.Atoi(a.get("width"))
+	}
+	if e == nil && a.has("height") {
+		h, e = strconv.Atoi(a.get("height"))
 	}
 	if e != nil {
 		return emit(nil, e)
 	}
 	m := newDesk(s)
-	m.width = max(48, w)
-	m.height = 42
+	m.width = w
+	m.height = h
 	m.refresh()
 	if m.err != nil {
 		return emit(nil, m.err)
