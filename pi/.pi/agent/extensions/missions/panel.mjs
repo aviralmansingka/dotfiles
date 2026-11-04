@@ -3,9 +3,9 @@ import { missionContinues } from "./core.mjs";
 // The mission panel's pure part: it turns one CLI record into rows and keys.
 // No TUI and no CLI call lives here, so the suite tests it directly.
 
-/** The widest row label decides the label column: "Checkpoint" is 10 columns.
- *  The panel adds one space before the value, so every value starts at 11. */
-export const LABEL_COLUMN = 10;
+/** The widest row label decides the label column: "Attempt" and "Blocker"
+ *  are 7 columns. The panel adds one space before the value. */
+export const LABEL_COLUMN = 7;
 
 /** The key row, in display order. `esc` and `q` both close the panel. */
 export const PANEL_KEYS = [
@@ -27,8 +27,8 @@ const STEP_LABELS = {
   needs_changes: "needs changes",
 };
 
-/** Checkpoint states the CLI writes, in human words. */
-const CHECKPOINT_LABELS = {
+/** Review states the CLI writes, in human words. */
+const REVIEW_LABELS = {
   pending: "waiting",
   accepted: "accepted",
   not_reached: "not reached",
@@ -61,13 +61,13 @@ export function actionBlockReason(action, record) {
   if (action === "open") return undefined;
   if (action === "accept" || action === "revise") {
     const id = state.pending_checkpoint;
-    if (!id) return "no pending checkpoint";
-    if (state.checkpoints?.[id]?.status !== "pending") return "checkpoint is not pending";
+    if (!id) return "no pending review";
+    if (state.checkpoints?.[id]?.status !== "pending") return "review is not pending";
     return undefined;
   }
   if (action === "start") {
     if (state.active_attempt) return "attempt is running";
-    if (state.pending_checkpoint) return "checkpoint is waiting";
+    if (state.pending_checkpoint) return "review is waiting";
     return missionContinues(state) ? undefined : "no step to start";
   }
   if (action === "retry") {
@@ -119,7 +119,7 @@ function currentStep(mission, state) {
   return { id, def: steps.find(step => step.id === id), state: state.steps?.[id] };
 }
 
-/** Rows the panel shows: Goal, Step, Attempt, Checkpoint, Blocker. */
+/** Rows the panel shows: Goal, Step, Attempt, Review, Blocker. */
 function recordRows(record, now) {
   const mission = record.mission || {};
   const state = record.state || {};
@@ -143,8 +143,8 @@ function recordRows(record, now) {
   const pending = state.pending_checkpoint;
   if (pending) {
     const definition = (mission.checkpoints || []).find(checkpoint => checkpoint.id === pending);
-    add("Checkpoint", has(definition?.question) ? `${pending} · ${definition.question}` : pending,
-      words(CHECKPOINT_LABELS, state.checkpoints?.[pending]?.status), "warning");
+    add("Review", has(definition?.question) ? `${pending} · ${definition.question}` : pending,
+      words(REVIEW_LABELS, state.checkpoints?.[pending]?.status), "warning");
   }
   // The blocker row always states something: "none" is a fact the human reads.
   const progress = attempt?.progress || [];
@@ -169,16 +169,14 @@ export function buildPanelModel(input = {}) {
   return { handle: name, status, statusLine, tone, rows: recordRows(record, now), keys: panelActions(record), error };
 }
 
-/** The CLI arguments for one human checkpoint decision. */
+/** The CLI arguments for one human review decision. No revision: the CLI
+ *  resolves the target from the pending review, and the actor from git. */
 export function checkpointArgs(handle, record, options = {}) {
-  const { decision, actor, note } = options;
+  const { decision, note } = options;
   if (!has(handle)) throw new Error("Choose a mission handle first.");
-  if (decision !== "accept" && decision !== "revise") throw new Error("A checkpoint decision is accept or revise.");
-  const state = record?.state;
-  const id = state?.pending_checkpoint;
-  if (!id) throw new Error("This mission has no pending checkpoint.");
-  if (!Number.isInteger(state.revision)) throw new Error("The mission record has no revision.");
+  if (decision !== "accept" && decision !== "revise") throw new Error("A review decision is accept or revise.");
+  const id = record?.state?.pending_checkpoint;
+  if (!id) throw new Error("This mission has no pending review.");
   const fallback = decision === "accept" ? "Accepted in the Pi mission panel" : "Revision requested in the Pi mission panel";
-  return ["checkpoint", handle, "--id", id, "--decision", decision, "--human", "--actor", actor || "pi-user",
-    "--note", has(note) ? note : fallback, "--revision", String(state.revision)];
+  return ["checkpoint", decision, handle, id, "--note", has(note) ? note : fallback];
 }

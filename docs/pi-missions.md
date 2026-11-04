@@ -101,6 +101,7 @@ Newly started mission-workers receive a continuation prompt after a successful
 step when the mission is ready for more work. They keep the same session and
 worktree. Existing sessions attached for progress tracking use explicit `next`.
 Both modes pause at checkpoints; accepting one does not silently start another run.
+A waiting review blocks the next step and `finish` only. The worker keeps every tool.
 
 ## Launch from the desk
 
@@ -159,10 +160,11 @@ calls `settle`. Required checks must pass before success; evidence changes inval
 their proof. Settlement records a Pi turn boundary, never a fictitious process exit.
 Unregistered detached jobs are outside this contract and must not be used as writers.
 
-Human checkpoints pause the mission after their step. The user reviews the result
-and check evidence before an explicit accept or revise decision. Neither the
-extension nor skill approves checkpoints. Mission checks complement the existing
-No Mistakes pipeline and do not start nested validation runs.
+Human reviews pause progression after their step. The user reviews the result
+and check evidence before an explicit accept or revise decision. A waiting review
+never blocks worker tools: it blocks the next step, `step edit`, and `finish`.
+Neither the extension nor skill approves reviews. Mission checks complement the
+existing No Mistakes pipeline and do not start nested validation runs.
 
 ## Reload and recovery
 

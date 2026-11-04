@@ -41,8 +41,14 @@ const help = `mission — work that survives the agent
   mission settle REPO/SLUG --session-id ID  Settle a reported Pi attempt after idle
   mission hook agent-start --session-id ID --event-id ID
   mission finish [REPO/SLUG] | fail [REPO/SLUG] --note TEXT
-  mission checkpoint REPO/SLUG --id C01 --decision accept --human
-      --actor aviral --note "Reviewed the evidence" --revision 5
+  mission show REPO/SLUG                    Record plus revision, pending_review,
+      next_command                         one stable line for the owner
+  mission checkpoint accept|revise REPO/SLUG [C01] --note TEXT [--actor NAME]
+      Owner decision; no revision needed; --actor defaults to git user.name
+  mission checkpoint REPO/SLUG --id C01 --decision accept --human --actor NAME
+      --note TEXT [--revision N]           Legacy flag form, one release
+  mission review reopen REPO/SLUG [C01] --note TEXT
+      Rebind a review after its evidence changed
   mission retry REPO/SLUG | repair REPO/SLUG
   mission demo --vault ./demo-vault         Seed isolated, simulated records
   mission render --view dashboard --width 128 --height 42 --color
@@ -73,7 +79,7 @@ func emit(v any, e error) int {
 		switch key {
 		case "usage", "invalid_handle", "not_found", "invalid_mission", "invalid_slug":
 			code = 2
-		case "busy", "checkpoint_pending", "step_blocked", "worktree_busy":
+		case "busy", "checkpoint_pending", "review_pending", "step_blocked", "worktree_busy":
 			code = 3
 		}
 	} else {
@@ -141,7 +147,7 @@ func dispatch(cmd string, a platform.Args, s *Store) (any, error) {
 	case "new":
 		return cmdNew(a, s)
 	case "list":
-		return s.list()
+		return s.listViews()
 	case "show":
 		return cmdShow(a, s)
 	case "checks":
@@ -174,6 +180,8 @@ func dispatch(cmd string, a platform.Args, s *Store) (any, error) {
 		return cmdFinish(cmd, a, s)
 	case "checkpoint":
 		return cmdCheckpoint(a, s)
+	case "review":
+		return cmdReview(a, s)
 	case "retry":
 		return cmdRetry(a, s)
 	case "repair":

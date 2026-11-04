@@ -42,8 +42,8 @@ export default function missions(pi: ExtensionAPI, options = {}) {
       await bridge.flush(ctx);
       const c = await bridge.current(ctx);
       return { message: { customType: "mission-context", display: false, content: c?.attempt ?
-        `Mission ${bridge.hint.handle}, step ${c.attempt.step}, attempt ${c.attempt.id}.\n${c.attempt.brief_snapshot}\nWrite the artifact at ${bridge.vault}/6_missions/${bridge.hint.handle}/${c.attempt.artifact}. Report progress with the mission tool. Explicitly report finish/fail; turn end alone does not complete work. Stay in this worktree. Human checkpoints require the user.` :
-        `Mission ${bridge.hint.handle} is ${c?.record.state.status}. Inspect status. Start another step only with mission action=next after checkpoints are accepted. Do not modify code while no step is active.` } };
+        `Mission ${bridge.hint.handle}, step ${c.attempt.step}, attempt ${c.attempt.id}.\n${c.attempt.brief_snapshot}\nWrite the artifact at ${bridge.vault}/6_missions/${bridge.hint.handle}/${c.attempt.artifact}. Report progress with the mission tool. Explicitly report finish/fail; turn end alone does not complete work. Stay in this worktree. Human reviews require the user.` :
+        `Mission ${bridge.hint.handle} is ${c?.record.state.status}. Inspect status. Start another step only with mission action=next after reviews are decided. Do not modify code while no step is active.` } };
     } catch (e: any) { bridge.error = e.message; return { message: { customType: "mission-context", display: false, content: "Mission tracking failed: " + e.message + ". Restore tracking before making changes." } }; }
   });
   pi.on("tool_call", async (event, ctx) => {
@@ -54,7 +54,7 @@ export default function missions(pi: ExtensionAPI, options = {}) {
     let current;
     try { await bridge.flush(ctx); current = await bridge.current(ctx); }
     catch (e: any) { return { block: true, reason: "Mission tracking must recover before work continues: " + e.message }; }
-    const reason = missionToolBlock({ toolName: event.toolName, current });
+    const reason = missionToolBlock({ toolName: event.toolName, action: event.input?.action, current });
     return reason ? { block: true, reason } : undefined;
   });
   pi.on("agent_start", guarded(async (_e: any, ctx: any) => { await bridge.record(ctx, { type: "agent-start", summary: "Pi turn started" }); }));
@@ -77,7 +77,7 @@ export default function missions(pi: ExtensionAPI, options = {}) {
     // A finished or human-held mission never asks for another step.
     if (missionContinues(result?.state) && bridge.hint?.autoContinue && !ctx.hasPendingMessages()) {
       pi.sendMessage({customType:"mission-next",display:true,
-        content:`The previous step of ${bridge.hint.handle} passed its checks. Call mission action=next to pick up the next eligible step in this same worktree. Read its returned brief before editing. Pause at human checkpoints.`},
+        content:`The previous step of ${bridge.hint.handle} passed its checks. Call mission action=next to pick up the next eligible step in this same worktree. Read its returned brief before editing. Pause at human reviews.`},
         {triggerTurn:true,deliverAs:"followUp"});
     }
   }));
@@ -130,7 +130,7 @@ export default function missions(pi: ExtensionAPI, options = {}) {
     if (action === "open") return "Mission desk opened in " + (await bridge.openDesk()) + ".";
     if (action === "start") await bridge.action(ctx, { action: "start", handle });
     else if (action === "retry") await bridge.call(["retry", handle]);
-    else await bridge.call(checkpointArgs(handle, record, { decision: action, actor: process.env.USER || "pi-user" }));
+    else await bridge.call(checkpointArgs(handle, record, { decision: action }));
     return action + " done.";
   };
   const openPanel = async (ctx: any, request?: string) => {

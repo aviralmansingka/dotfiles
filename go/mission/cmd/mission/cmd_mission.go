@@ -23,7 +23,12 @@ func cmdNew(a platform.Args, s *Store) (any, error) {
 	return s.create(m)
 }
 
-// cmdShow returns one mission record, defaulting to the attached mission.
+// cmdShow returns one mission record, defaulting to the attached mission. The
+// record view adds revision, pending_review, and next_command.
 func cmdShow(a platform.Args, s *Store) (any, error) {
-	return s.load(platform.Fallback(a.At(1), os.Getenv("MISSION_HANDLE")))
+	r, e := s.load(platform.Fallback(a.At(1), os.Getenv("MISSION_HANDLE")))
+	if e != nil {
+		return nil, e
+	}
+	return viewOf(r), nil
 }

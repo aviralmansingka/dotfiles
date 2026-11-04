@@ -75,17 +75,39 @@ export const CLOSED_MISSION_STATUSES = new Set(["waiting", "review", "done", "fa
 /** Step statuses the CLI still advances to (nextStep in go/mission). */
 const CONTINUABLE_STEP_STATUSES = new Set(["pending", "needs_changes"]);
 
+/** The pending review of a record: the derived field when the CLI emits it,
+ *  else the stored pending checkpoint. Null when no review waits. */
+export function pendingReviewOf(record) {
+  if (!record) return null;
+  if (record.pending_review) return record.pending_review;
+  const state = record.state;
+  const id = state?.pending_checkpoint;
+  if (!id) return null;
+  const cs = state.checkpoints?.[id];
+  if (!cs || cs.status !== "pending") return null;
+  const def = (record.mission?.checkpoints || []).find(c => c.id === id);
+  return { id, question: def?.question || "", evidence: cs.evidence || "" };
+}
+
 /** Gate one tool call by mission status. Returns a block reason, or undefined
- *  when the call may proceed. Inspection tools always pass. A closed mission
- *  passes every tool. An open mission authorizes changes only while one of its
- *  attempts is active; "ready" means the session must pick up a step first. */
-export function missionToolBlock({ toolName, current = null, tracked = true, expectedAttachment = false }) {
+ *  when the call may proceed. A pending review blocks only mission finish:
+ *  a worker keeps every tool so it can investigate and fix its own result.
+ *  Inspection tools always pass. A closed mission passes every tool. An open
+ *  mission authorizes changes only while one of its attempts is active;
+ *  "ready" means the session must pick up a step first. */
+export function missionToolBlock({ toolName, action, current = null, tracked = true, expectedAttachment = false }) {
+  const record = current?.record;
+  const review = pendingReviewOf(record);
+  if (review && toolName === "mission" && action === "finish") {
+    const next = record?.next_command || `mission checkpoint accept ${record?.handle} ${review.id} --note "Reviewed the evidence"`;
+    return `Review ${review.id} is waiting. Decide with: ${next}`;
+  }
   if (INSPECTION_TOOLS.has(toolName)) return undefined;
   if (!tracked) return expectedAttachment ? "Restore the mission credential cache before changing repository files." : undefined;
-  const status = current?.record?.state?.status;
+  const status = record?.state?.status;
   if (CLOSED_MISSION_STATUSES.has(status)) return undefined;
   if (current?.attempt) return undefined;
-  return "No active mission step. Inspect the checkpoint or explicitly pick up next.";
+  return "No active mission step. Inspect the review or explicitly pick up next.";
 }
 
 /** True only when a settled mission can start another step. Terminal

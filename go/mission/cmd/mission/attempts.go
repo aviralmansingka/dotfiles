@@ -133,6 +133,9 @@ func (s *Store) finish(h, id, token string, failed bool, note string, observedEx
 		if e != nil {
 			return r, e
 		}
+		if r.State.Pending != "" && r.State.Checkpoints[r.State.Pending].Attempt != id {
+			return r, mission.Problem("review_pending", "review %s is waiting. Decide with:\n  mission checkpoint accept %s %s --note \"Reviewed the evidence\"", r.State.Pending, r.Handle, r.State.Pending)
+		}
 		a, e := mission.FindAttempt(&r.State, id)
 		if e != nil {
 			return r, e
@@ -260,83 +263,6 @@ func (s *Store) finish(h, id, token string, failed bool, note string, observedEx
 				r.State.Status = "done"
 			} else {
 				return e
-			}
-		}
-		return nil
-	})
-}
-func (s *Store) checkpoint(h, id, decision, note, actor string, human bool, revision int) (mission.Record, error) {
-	if !human || actor == "" || note == "" {
-		return mission.Record{}, mission.Problem("human_required", "checkpoint decisions require --human, --actor, and --note; this records a human attestation")
-	}
-	return s.mutate(h, func(r *mission.Record) error {
-		if revision > 0 && r.State.Revision != revision {
-			return mission.Problem("revision_conflict", "expected revision %d, current %d", revision, r.State.Revision)
-		}
-		cp, ok := r.State.Checkpoints[id]
-		if !ok || r.State.Pending != id || cp.Status != "pending" {
-			return mission.Problem("checkpoint_not_pending", "checkpoint %s is not pending", id)
-		}
-		d, _ := s.dir(h)
-		b, e := os.ReadFile(filepath.Join(d, "mission.md"))
-		if e != nil {
-			return e
-		}
-		if mission.Digest(b) != r.State.SpecHash {
-			return mission.Problem("brief_changed", "brief changed since the reviewed attempt")
-		}
-		p, e := s.path(r.Mission.Repo, r.Mission.Slug, cp.Evidence)
-		if e != nil {
-			return e
-		}
-		b, e = os.ReadFile(p)
-		if e != nil || mission.Digest(b) != cp.Hash {
-			return mission.Problem("evidence_changed", "checkpoint evidence changed; cannot accept stale evidence")
-		}
-		if decision != "accept" && decision != "revise" {
-			return mission.Problem("invalid_decision", "decision must be accept or revise")
-		}
-		if decision == "accept" {
-			if a, e := mission.FindAttempt(&r.State, cp.Attempt); e == nil && len(a.Verifications) > 0 && !s.verified(*r, *a) {
-				return mission.Problem("evidence_changed", "checked input or verification evidence changed since this result")
-			}
-		}
-		cp.Actor = actor
-		cp.Note = note
-		cp.Status = "accepted"
-		r.State.Pending = ""
-		r.State.Status = "ready"
-		if decision == "revise" {
-			cp.Status = "changes_requested"
-			invalidate := false
-			for _, step := range r.Mission.Steps {
-				if step.ID == r.State.Current {
-					invalidate = true
-				}
-				if invalidate {
-					ss := r.State.Steps[step.ID]
-					ss.Status = "pending"
-					ss.Evidence = ""
-					r.State.Steps[step.ID] = ss
-					for _, c := range r.Mission.Checkpoints {
-						if c.After == step.ID && c.ID != id {
-							cs := r.State.Checkpoints[c.ID]
-							cs.Status = "invalidated"
-							r.State.Checkpoints[c.ID] = cs
-						}
-					}
-				}
-			}
-		}
-		r.State.Decisions = append(r.State.Decisions, mission.Decision{Checkpoint: id, Decision: decision, Attempt: cp.Attempt, EvidenceHash: cp.Hash, Actor: actor, Note: note, At: mission.Now()})
-		r.State.Checkpoints[id] = cp
-		if decision == "accept" {
-			if _, e := mission.NextStep(r.Mission, r.State); e != nil {
-				if de, ok := e.(*mission.DomainError); ok && de.Code == "complete" {
-					r.State.Status = "done"
-				} else {
-					return e
-				}
 			}
 		}
 		return nil
