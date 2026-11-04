@@ -4,26 +4,6 @@ import { Type } from "typebox";
 import { MissionBridge, missionContinues, missionToolBlock } from "./core.mjs";
 import { LABEL_COLUMN, actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
 
-// Shared UI mutex. ctx.ui.custom() holds one pop-up at a time, so every
-// pop-up extension serializes on one lock stored on globalThis.
-const SHARED_UI_LOCK_KEY = "__piSharedUiLock";
-function getSharedUiLock() {
-  const g = globalThis as any;
-  if (!g[SHARED_UI_LOCK_KEY]) {
-    let chain: Promise<void> = Promise.resolve();
-    g[SHARED_UI_LOCK_KEY] = {
-      withLock<T>(fn: () => T | Promise<T>): Promise<T> {
-        const prev = chain;
-        let release: () => void;
-        chain = new Promise<void>((r) => { release = r; });
-        return prev.then(fn).finally(() => release!());
-      },
-    };
-  }
-  return g[SHARED_UI_LOCK_KEY] as { withLock<T>(fn: () => T | Promise<T>): Promise<T> };
-}
-const withUILock = <T>(fn: () => Promise<T>): Promise<T> => getSharedUiLock().withLock(fn);
-
 export default function missions(pi: ExtensionAPI, options = {}) {
   const bridge = new MissionBridge(options);
   // The latest ctx, so the launch sweep can run on a timer while the session is
@@ -166,7 +146,7 @@ export default function missions(pi: ExtensionAPI, options = {}) {
       ctx.ui?.notify?.(JSON.stringify(loaded.record ?? { handle: target, error: loaded.error }, null, 2), loaded.error ? "warning" : "info");
       return;
     }
-    await withUILock(() => ctx.ui.custom<void>((tui: any, theme: any, _kb: any, done: () => void) => {
+    await ctx.ui.custom<void>((tui: any, theme: any, _kb: any, done: () => void) => {
       let busy: string | undefined;
       let notice: string | undefined;
       let cachedLines: string[] | undefined;
@@ -229,7 +209,7 @@ export default function missions(pi: ExtensionAPI, options = {}) {
         },
         invalidate,
       };
-    }, { blocked: { kind: "question", message: "Mission panel: " + target } }));
+    }, { blocked: { kind: "question", message: "Mission panel: " + target } });
   };
 
   pi.registerCommand("mission", {
