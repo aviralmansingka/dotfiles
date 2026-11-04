@@ -47,11 +47,19 @@ test("mission tool gate follows status and never blocks inspection", () => {
   assert.match(missionToolBlock({ toolName: "write", current: null }), /No active mission step/);
   assert.match(missionToolBlock({ toolName: "write", tracked: false, expectedAttachment: true }), /Restore/);
   assert.equal(missionToolBlock({ toolName: "write", tracked: false }), undefined);
-  for (const toolName of ["read", "grep", "find", "ls", "tool_search", "mission"]) {
+  for (const toolName of ["read", "grep", "find", "ls", "tool_search", "mission", "run-command"]) {
     assert.equal(missionToolBlock({ toolName, current: at("ready") }), undefined, `${toolName} inspects a ready mission`);
     assert.equal(missionToolBlock({ toolName, current: null }), undefined, `${toolName} inspects without a step`);
+    assert.equal(missionToolBlock({ toolName, current: at("waiting") }), undefined, `${toolName} passes on a held mission`);
     assert.equal(missionToolBlock({ toolName, tracked: false, expectedAttachment: true }), undefined, `${toolName} inspects a broken cache`);
   }
+  // A durable worker that owns no active step can still hand the human the
+  // exact repair command: printing one inspects nothing and changes nothing.
+  assert.equal(
+    missionToolBlock({ toolName: "run-command", current: null }),
+    undefined,
+    "run-command passes the mission gate with no active step",
+  );
 });
 
 test("next-step continuation follows status and pending steps", () => {

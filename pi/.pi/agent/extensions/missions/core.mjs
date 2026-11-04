@@ -27,8 +27,10 @@ export function quiescent(event, ctx) {
 
 /** Tools that only inspect: they never change the worktree or the vault, so the
  *  mission gate always passes them. `mission` stays available in every state so
- *  a held session can inspect its record, report progress, or pick up a step. */
-export const INSPECTION_TOOLS = new Set(["read", "grep", "find", "ls", "tool_search", "mission"]);
+ *  a held session can inspect its record, report progress, or pick up a step;
+ *  `run-command` only prints a repair command, so a worker that owns no active
+ *  step can still hand the human the exact command to run. */
+export const INSPECTION_TOOLS = new Set(["read", "grep", "find", "ls", "tool_search", "mission", "run-command"]);
 
 /** Mission statuses that hold no agent write authority: "waiting" and "review"
  *  wait on a human checkpoint decision, while "done" and "failed" already

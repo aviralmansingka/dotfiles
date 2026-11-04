@@ -63,6 +63,7 @@ const withTimeout = (promise, ms, label) =>
 	const saved = {
 		PI_SUBAGENT_POLL_MS: process.env.PI_SUBAGENT_POLL_MS,
 		PI_SUBAGENT_MAX_WAIT_MS: process.env.PI_SUBAGENT_MAX_WAIT_MS,
+		PI_SUBAGENT_STALL_MS: process.env.PI_SUBAGENT_STALL_MS,
 		PI_SUBAGENT_STARTUP_GRACE_MS: process.env.PI_SUBAGENT_STARTUP_GRACE_MS,
 		PI_SUBAGENT_PROCINFO_FAIL_LIMIT: process.env.PI_SUBAGENT_PROCINFO_FAIL_LIMIT,
 	};
@@ -74,6 +75,11 @@ const withTimeout = (promise, ms, label) =>
 				startupGraceMs: 60_000,
 				processInfoFailLimit: 3,
 			}, "default bounds are unchanged on both surfaces");
+			assert.equal(
+				mod.getSubagentStallMs(),
+				20 * 60_000,
+				"the durable stall bound defaults to 20 minutes on both surfaces",
+			);
 			assert.deepEqual(
 				mod.getSubagentPollBounds({ pollMs: 5, maxWaitMs: 6, startupGraceMs: 7, processInfoFailLimit: 8 }),
 				{ pollMs: 5, maxWaitMs: 6, startupGraceMs: 7, processInfoFailLimit: 8 },
@@ -82,6 +88,7 @@ const withTimeout = (promise, ms, label) =>
 		}
 		process.env.PI_SUBAGENT_POLL_MS = "40";
 		process.env.PI_SUBAGENT_MAX_WAIT_MS = "50";
+		process.env.PI_SUBAGENT_STALL_MS = "45";
 		process.env.PI_SUBAGENT_STARTUP_GRACE_MS = "60";
 		process.env.PI_SUBAGENT_PROCINFO_FAIL_LIMIT = "70";
 		for (const mod of [herdr, tmux]) {
@@ -91,6 +98,20 @@ const withTimeout = (promise, ms, label) =>
 				startupGraceMs: 60,
 				processInfoFailLimit: 70,
 			}, "env knobs override both surfaces identically");
+			assert.equal(
+				mod.getSubagentStallMs(),
+				45,
+				"PI_SUBAGENT_STALL_MS overrides the durable stall bound on both surfaces",
+			);
+			assert.equal(mod.getSubagentStallMs(7), 7, "an explicit stall override wins over env");
+		}
+		delete process.env.PI_SUBAGENT_STALL_MS;
+		for (const mod of [herdr, tmux]) {
+			assert.equal(
+				mod.getSubagentStallMs(),
+				20 * 60_000,
+				"an unset PI_SUBAGENT_STALL_MS falls back to the 20-minute default",
+			);
 		}
 	} finally {
 		for (const [key, value] of Object.entries(saved)) {
@@ -124,7 +145,10 @@ case "$1:$2" in
 	pane:run) printf '%s\\n' '{"result":{}}' ;;
 	agent:get) printf '%s\\n' '{"result":{"agent":{"agent_status":"idle"}}}' ;;
 	agent:prompt) printf '%s\\n' '{"result":{}}' ;;
-	pane:read) printf '%s\\n' "$LIV_SCREEN" ;;
+	pane:read)
+		[ -n "$LIV_READ_SLEEP" ] && sleep "$LIV_READ_SLEEP"
+		printf '%s\\n' "$LIV_SCREEN"
+		;;
 	pane:process-info)
 		if [ "$LIV_PROC_FAIL" = 1 ]; then exit 1; fi
 		mode="$LIV_PROC_MODE"
@@ -273,6 +297,100 @@ esac
 		).length;
 		assert.ok(procInfoAttempts >= 5, `kept polling past the failure threshold (${procInfoAttempts})`);
 		assert.ok(existenceProbes >= 1, "the pane-existence probe ran after the threshold");
+
+		// Durable-without-a-deadline vs. auto-exit-with-one, on the SAME growth:
+		// output flowing keeps a durable run alive past the wall clock, while an
+		// auto-exit run still dies exactly at its finite deadline.
+		process.env.LIV_PROC_MODE = "pi";
+		{
+			const autoExitFile = join(root, "auto-exit-growing.jsonl");
+			writeFileSync(autoExitFile, "");
+			let autoExitBytes = 0;
+			const autoExitGrowth = setInterval(
+				() => writeFileSync(autoExitFile, "y".repeat(++autoExitBytes)),
+				20,
+			);
+			const autoExitResult = await withTimeout(
+				herdr.pollForExit("wL:p2", new AbortController().signal, {
+					interval: 20,
+					maxWaitMs: 200,
+					sessionFile: autoExitFile,
+				}),
+				4000,
+				"auto-exit deadline poll",
+			);
+			clearInterval(autoExitGrowth);
+			assert.deepEqual(
+				autoExitResult,
+				{ reason: "timeout", exitCode: null },
+				"an auto-exit run keeps its finite wall-clock deadline even while output flows",
+			);
+		}
+
+		// The wall clock is re-evaluated on EVERY poll tick, never lazily at the
+		// end: the deadline branch sits at the top of the loop, so the tick count
+		// can never run away past the bound (a drift the durable exemption must
+		// not inherit, and a finite run must never exhibit either).
+		{
+			process.env.LIV_READ_SLEEP = "0.01";
+			const readsFrom = callsOf(capture).length;
+			const armedAt = Date.now();
+			const perTick = await withTimeout(
+				herdr.pollForExit("wL:p2", new AbortController().signal, { interval: 20, maxWaitMs: 200 }),
+				4000,
+				"per-tick deadline poll",
+			);
+			const took = Date.now() - armedAt;
+			delete process.env.LIV_READ_SLEEP;
+			assert.deepEqual(perTick, { reason: "timeout", exitCode: null });
+			const reads = callsOf(capture)
+				.slice(readsFrom)
+				.filter((c) => c[0] === "pane" && c[1] === "read").length;
+			assert.ok(took < 2000, `the deadline fires on a tick boundary, not after a long drift (${took} ms)`);
+			assert.ok(
+				reads <= Math.ceil(200 / 20) + 5,
+				`the deadline is checked on every tick — the loop cannot outrun it (${reads} reads)`,
+			);
+		}
+
+		// Durable (no wall-clock deadline) + stall clock: a live pi whose
+		// transcript keeps growing is never closed on time — and once the
+		// transcript goes quiet the verdict is `stalled`, never `timeout`.
+		process.env.LIV_PROC_MODE = "pi";
+		{
+			const durableFile = join(root, "durable.jsonl");
+			writeFileSync(durableFile, "");
+			const durableStart = Date.now();
+			const durablePoll = herdr.pollForExit("wL:p2", new AbortController().signal, {
+				interval: 20,
+				// An auto-exit run would already have timed out at this bound; a
+				// durable run must outlive it while the transcript grows.
+				maxWaitMs: Number.POSITIVE_INFINITY,
+				stallMs: 200,
+				sessionFile: durableFile,
+			});
+			let bytes = 0;
+			const growth = setInterval(
+				() => writeFileSync(durableFile, "x".repeat(++bytes)),
+				25,
+			);
+			await new Promise((resolve) => setTimeout(resolve, 500));
+			clearInterval(growth);
+			assert.ok(
+				Date.now() - durableStart >= 400,
+				"the durable poll outlives the ordinary wall-clock bound while output flows",
+			);
+			const quietFrom = Date.now();
+			assert.deepEqual(
+				await withTimeout(durablePoll, 4000, "durable stall poll"),
+				{ reason: "stalled", exitCode: null },
+				"a quiet transcript on a durable run → stalled, not timeout",
+			);
+			assert.ok(
+				Date.now() - quietFrom >= 100,
+				"the stall waits for the inactivity window, not for the wall clock",
+			);
+		}
 	} finally {
 		for (const [key, value] of Object.entries(saved)) {
 			if (value === undefined) delete process.env[key];
@@ -285,6 +403,7 @@ esac
 		delete process.env.LIV_PROC_FAIL;
 		delete process.env.LIV_PROC_STAGED;
 		delete process.env.LIV_PROC_MODE;
+		delete process.env.LIV_READ_SLEEP;
 		rmSync(root, { recursive: true, force: true });
 	}
 }
@@ -549,7 +668,10 @@ case "$1:$2" in
 	pane:run) printf '%s\\n' '{"result":{}}' ;;
 	agent:get) printf '%s\\n' '{"result":{"agent":{"agent_status":"idle"}}}' ;;
 	agent:prompt) printf '%s\\n' '{"result":{}}' ;;
-	pane:read) printf '%s\\n' "$LIV_E2E_SCREEN" ;;
+	pane:read)
+		[ -n "$LIV_E2E_READ_SLEEP" ] && sleep "$LIV_E2E_READ_SLEEP"
+		printf '%s\\n' "$LIV_E2E_SCREEN"
+		;;
 	pane:process-info)
 		if [ "$LIV_E2E_PROC" = shell ]; then
 			printf '%s\\n' '{"result":{"process_info":{"foreground_processes":[{"name":"zsh","pid":200,"argv":["zsh"]}]}}}'
@@ -643,10 +765,10 @@ esac
 
 		const subagentTool = registeredTools.get("subagent");
 		assert.ok(subagentTool, "the subagent tool is registered");
-		const spawn = (task) =>
+		const spawn = (task, agent = "worker") =>
 			subagentTool.execute(
 				"call-liveness",
-				{ agent: "worker", task },
+				{ agent, task },
 				new AbortController().signal,
 				undefined,
 				{
@@ -709,6 +831,21 @@ esac
 			hooks.unregisterActiveWatcher("sweep-past");
 			hooks.unregisterActiveWatcher("sweep-future");
 			assert.equal(hooks.sweepExpiredSubagents(), 0, "unregistered watchers are never swept");
+
+			// A durable watcher is never registered at all — the sweep cannot
+			// abort it, even at an already-expired (or infinite) deadline.
+			const durableAbort = new AbortController();
+			hooks.registerActiveWatcher(
+				{ id: "sweep-durable", surface: "wE:p2", abortController: durableAbort, durable: true },
+				Date.now() - 1000,
+			);
+			hooks.registerActiveWatcher(
+				{ id: "sweep-durable-inf", surface: "wE:p2", abortController: durableAbort, durable: true },
+				Number.POSITIVE_INFINITY,
+			);
+			assert.equal(hooks.activeWatchers.size, 0, "a durable run is never stored in the watchdog map");
+			assert.equal(hooks.sweepExpiredSubagents(), 0, "the sweep never touches a durable run");
+			assert.equal(durableAbort.signal.aborted, false, "a durable watcher is never aborted by the sweep");
 		}
 
 		// Scenario 1 — no-agent: pi never appears; the steer says why, and
@@ -743,6 +880,11 @@ esac
 			const name = ack.details.name;
 			const running = [...hooks.runningSubagents.values()].at(-1);
 			assert.ok(running, "the subagent is registered as running");
+			assert.equal(running.durable, false, "an auto-exit worker is NOT durable — it keeps the finite deadline");
+			assert.ok(
+				hooks.activeWatchers.has(running.id),
+				"an auto-exit run is registered with the watchdog's deadline",
+			);
 			writeChildSession(running.sessionFile, "Halfway: 2 of 5 files done.");
 			const callsBefore = callsOf(capture).length;
 			const steer = await steerFor(name);
@@ -816,6 +958,84 @@ esac
 			assert.equal(hooks.runningSubagents.size, 0);
 		}
 
+		// Scenario 5 — durable run (mission-worker, `auto-exit: false`): the
+		// wall clock never ends it. Only a quiet transcript does, and that
+		// verdict keeps the tab, the pane, and the CLI attempt ownership.
+		{
+			process.env.LIV_E2E_PROC = "pi";
+			// A 100 ms deadline would kill an auto-exit run on the first tick.
+			process.env.PI_SUBAGENT_MAX_WAIT_MS = "100";
+			process.env.PI_SUBAGENT_STALL_MS = "300";
+			const ack = await spawn("Own the mission.", "mission-worker");
+			const name = ack.details.name;
+			const running = [...hooks.runningSubagents.values()].at(-1);
+			assert.ok(running, "the durable worker is registered as running");
+			assert.equal(running.durable, true, "`auto-exit: false` marks the run durable");
+			assert.equal(
+				hooks.activeWatchers.size,
+				0,
+				"a durable run is never registered with the watchdog, so no sweep can abort it",
+			);
+			const callsBefore = callsOf(capture).length;
+			// Output keeps flowing well past the wall clock that would have
+			// timed out an auto-exit run.
+			let ticks = 0;
+			const growth = setInterval(
+				() => writeChildSession(running.sessionFile, `Working: ${++ticks} of 5 files.`),
+				40,
+			);
+			await new Promise((resolve) => setTimeout(resolve, 350));
+			clearInterval(growth);
+			assert.ok(ticks >= 3, `the durable run survives the wall-clock bound (${ticks} writes)`);
+			const steer = await steerFor(name);
+			assert.equal(steer.message.details.status, "stalled", "a quiet durable run reports a stall");
+			assert.match(steer.message.content, /stalled/i);
+			assert.doesNotMatch(steer.message.content, /timed out/i, "a stall is never rendered as a timeout");
+			assert.doesNotMatch(steer.message.content, /failed \(exit code|exited with code/i, "a stall is not an error");
+			assert.match(steer.message.content, /Working: \d+ of 5 files\./, "the last harvest rides along");
+			assert.equal(steer.message.details.partial, true);
+			const calls = callsOf(capture).slice(callsBefore);
+			assert.equal(
+				calls.some((c) => (c[0] === "tab" && c[1] === "close") || (c[0] === "pane" && c[1] === "close")),
+				false,
+				"a stalled durable run keeps its tab AND its pane",
+			);
+			assert.equal(hooks.runningSubagents.size, 0, "the watcher stops watching");
+			assert.equal(hooks.activeWatchers.size, 0);
+			const registry = JSON.parse(
+				readFileSync(join(sessionDir, "artifacts", "parent-id", "subagent-registry.json"), "utf8"),
+			);
+			assert.equal(registry[name].running, true, "the durable running mark survives the stall");
+			assert.equal(registry[name].autoExit, false, "the registry keeps the durable flag for adoption");
+			process.env.PI_SUBAGENT_MAX_WAIT_MS = "1500";
+			delete process.env.PI_SUBAGENT_STALL_MS;
+		}
+
+		// Scenario 6 — the wall clock is enforced on EVERY tick, even while a
+		// pane read hangs: the watchdog abort interrupts the in-flight read, so
+		// a stuck herdr call cannot stretch the bound into hours (the live
+		// 30-minute window that only closed after ~140 minutes).
+		{
+			process.env.LIV_E2E_PROC = "pi";
+			process.env.PI_SUBAGENT_POLL_MS = "150";
+			process.env.PI_SUBAGENT_MAX_WAIT_MS = "300";
+			process.env.LIV_E2E_READ_SLEEP = "5";
+			const ack = await spawn("Wedged inside a pane read.");
+			const name = ack.details.name;
+			const started = Date.now();
+			const steer = await steerFor(name, 6000);
+			const took = Date.now() - started;
+			delete process.env.LIV_E2E_READ_SLEEP;
+			assert.equal(steer.message.details.status, "timeout");
+			assert.ok(
+				took < 5000,
+				`a hung pane read cannot hold the watcher past its deadline (${took} ms)`,
+			);
+			assert.equal(hooks.runningSubagents.size, 0);
+			process.env.PI_SUBAGENT_POLL_MS = "25";
+			process.env.PI_SUBAGENT_MAX_WAIT_MS = "1500";
+		}
+
 		// Teardown: shutdown clears the watchdog so this process can exit.
 		handlers.session_shutdown?.({}, {});
 		assert.equal(hooks.activeWatchers.size, 0);
@@ -827,6 +1047,7 @@ esac
 		delete process.env.LIV_E2E_CAPTURE;
 		delete process.env.LIV_E2E_SCREEN;
 		delete process.env.LIV_E2E_PROC;
+		delete process.env.LIV_E2E_READ_SLEEP;
 		rmSync(root, { recursive: true, force: true });
 	}
 }

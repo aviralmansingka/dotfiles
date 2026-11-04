@@ -12,7 +12,7 @@
  */
 import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
-import { existsSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync, mkdirSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -292,12 +292,14 @@ export function closeTabForPane(paneId: string): void {
 
 /** TESTABILITY knobs (the same pattern as bridge.ts's NM_BRIDGE_POLL_MS):
  *  PI_SUBAGENT_POLL_MS (poll cadence), PI_SUBAGENT_MAX_WAIT_MS (hard
- *  deadline), PI_SUBAGENT_STARTUP_GRACE_MS (no-sighting grace), and
+ *  deadline), PI_SUBAGENT_STALL_MS (durable-run inactivity bound),
+ *  PI_SUBAGENT_STARTUP_GRACE_MS (no-sighting grace), and
  *  PI_SUBAGENT_PROCINFO_FAIL_LIMIT (consecutive read failures before a
  *  pane-existence probe) override a wait bound so tests run in milliseconds.
  *  They change no default behavior. Identical contract in ./herdr.ts. */
 export const DEFAULT_SUBAGENT_POLL_MS = 1000;
 export const DEFAULT_SUBAGENT_MAX_WAIT_MS = 30 * 60_000;
+export const DEFAULT_SUBAGENT_STALL_MS = 20 * 60_000;
 export const DEFAULT_SUBAGENT_STARTUP_GRACE_MS = 60_000;
 export const DEFAULT_SUBAGENT_PROCINFO_FAIL_LIMIT = 3;
 
@@ -305,6 +307,14 @@ function envMs(name: string, fallback: number): number {
   const raw = process.env[name]?.trim();
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+/** Inactivity bound for a DURABLE run (agent frontmatter `auto-exit: false`).
+ *  A durable run owns its tab, its pane, and the CLI attempt its session
+ *  picked up, so it must never expire on wall clock — only on silence: no
+ *  transcript growth for this window is the stall verdict. */
+export function getSubagentStallMs(override?: number): number {
+  return override ?? envMs("PI_SUBAGENT_STALL_MS", DEFAULT_SUBAGENT_STALL_MS);
 }
 
 export interface PollResult {
@@ -316,9 +326,10 @@ export interface PollResult {
     | "killed"
     | "agent-gone"
     | "no-agent"
-    | "timeout";
+    | "timeout"
+    | "stalled";
   /** Shell exit code. 0 for file-based exits; 130 when the pane was killed.
-   *  null for timeout/no-agent unless the deadline harvest reveals one. */
+   *  null for timeout/no-agent/stalled unless the deadline harvest reveals one. */
   exitCode: number | null;
   /** Error message if reason is "error" (auto-retry exhausted, provider overload, etc.) */
   errorMessage?: string;
@@ -403,6 +414,13 @@ function noAgentResult(): PollResult {
  *  (final sidecar/sentinel check) reveals one. */
 function timeoutResult(): PollResult {
   return { reason: "timeout", exitCode: null };
+}
+
+/** Durable inactivity expired: the transcript stopped growing for
+ *  PI_SUBAGENT_STALL_MS. Nothing failed and nothing exited — the surface,
+ *  the pane, and the CLI attempt all stay owned. */
+function stallResult(): PollResult {
+  return { reason: "stalled", exitCode: null };
 }
 
 // ── Liveness fallback ──
@@ -549,6 +567,7 @@ export const __pollForExitTest__ = {
   agentGoneResult,
   noAgentResult,
   timeoutResult,
+  stallResult,
   updateAgentLiveness,
   isPiForegroundProcess,
 };
@@ -560,7 +579,8 @@ export const __pollForExitTest__ = {
  *
  *   1. HARD DEADLINE (`maxWaitMs`, env PI_SUBAGENT_MAX_WAIT_MS, default
  *      30 min): on expiry, one final harvest attempt (sidecar + sentinel)
- *      and a `timeout` result. The wedged-agent failure class.
+ *      and a `timeout` result. The wedged-agent failure class. A durable
+ *      run passes Infinity and bounds itself with `stallMs` instead.
  *   2. NO-SIGHTING GRACE (`startupGraceMs`, env
  *      PI_SUBAGENT_STARTUP_GRACE_MS, default 60 s): pi was never seen in
  *      the pane's foreground processes and no sentinel appeared → the
@@ -580,6 +600,10 @@ export async function pollForExit(
     sentinelFile?: string;
     onTick?: (elapsed: number) => void;
     maxWaitMs?: number;
+    /** Durable inactivity bound. When set (always together with an infinite
+     *  `maxWaitMs`), no transcript growth for this window yields a
+     *  `stalled` result instead of waiting forever. */
+    stallMs?: number;
     startupGraceMs?: number;
     processInfoFailLimit?: number;
   },
@@ -595,10 +619,32 @@ export async function pollForExit(
   let seenAgentProcess = false;
   let consecutiveReadFails = 0;
 
+  // Durable stall clock: the transcript is the agent's truth. Any change to
+  // the session file resets it; silence for `stallMs` is the verdict.
+  const stallMs =
+    options.stallMs === undefined ? null : Math.max(0, getSubagentStallMs(options.stallMs));
+  let stallSize = -1;
+  let stallMtimeMs = -1;
+  let lastTranscriptChangeAt = start;
+  const readTranscriptChange = () => {
+    if (!options.sessionFile) return;
+    try {
+      const st = statSync(options.sessionFile);
+      if (st.size !== stallSize || st.mtimeMs !== stallMtimeMs) {
+        stallSize = st.size;
+        stallMtimeMs = st.mtimeMs;
+        lastTranscriptChangeAt = Date.now();
+      }
+    } catch {}
+  };
+
   for (;;) {
     if (signal.aborted) {
       throw new Error("Aborted while waiting for subagent to finish");
     }
+
+    // Durable liveness first: the transcript, not the pane.
+    if (stallMs !== null) readTranscriptChange();
 
     // Hard deadline: one final harvest attempt (a sidecar or a screen
     // sentinel that landed at the wire still produces its real result;
@@ -619,6 +665,13 @@ export async function pollForExit(
         return paneKilledResult();
       }
       return timeoutResult();
+    }
+
+    // Durable inactivity: a durable run has no wall-clock deadline, so a
+    // transcript that stopped growing IS the end of the watch. The surface
+    // stays open — the pane, the tab, and the CLI attempt it owns survive.
+    if (stallMs !== null && Date.now() - lastTranscriptChangeAt >= stallMs) {
+      return stallResult();
     }
 
     // Fast path: check for .exit sidecar file (written by the error path)

@@ -436,12 +436,14 @@ export function closeTabForPane(paneId: string): void {
 
 /** TESTABILITY knobs (the same pattern as bridge.ts's NM_BRIDGE_POLL_MS):
  *  PI_SUBAGENT_POLL_MS (poll cadence), PI_SUBAGENT_MAX_WAIT_MS (hard
- *  deadline), PI_SUBAGENT_STARTUP_GRACE_MS (no-sighting grace), and
+ *  deadline), PI_SUBAGENT_STALL_MS (durable-run inactivity bound),
+ *  PI_SUBAGENT_STARTUP_GRACE_MS (no-sighting grace), and
  *  PI_SUBAGENT_PROCINFO_FAIL_LIMIT (consecutive read failures before a
  *  pane-existence probe) override a wait bound so tests run in milliseconds.
  *  They change no default behavior. Identical contract in ./tmux.ts. */
 export const DEFAULT_SUBAGENT_POLL_MS = 1000;
 export const DEFAULT_SUBAGENT_MAX_WAIT_MS = 30 * 60_000;
+export const DEFAULT_SUBAGENT_STALL_MS = 20 * 60_000;
 export const DEFAULT_SUBAGENT_STARTUP_GRACE_MS = 60_000;
 export const DEFAULT_SUBAGENT_PROCINFO_FAIL_LIMIT = 3;
 
@@ -449,6 +451,14 @@ function envMs(name: string, fallback: number): number {
   const raw = process.env[name]?.trim();
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+/** Inactivity bound for a DURABLE run (agent frontmatter `auto-exit: false`).
+ *  A durable run owns its tab, its pane, and the CLI attempt its session
+ *  picked up, so it must never expire on wall clock — only on silence: no
+ *  transcript growth for this window is the stall verdict. */
+export function getSubagentStallMs(override?: number): number {
+  return override ?? envMs("PI_SUBAGENT_STALL_MS", DEFAULT_SUBAGENT_STALL_MS);
 }
 
 export interface PollResult {
@@ -460,9 +470,10 @@ export interface PollResult {
     | "killed"
     | "agent-gone"
     | "no-agent"
-    | "timeout";
+    | "timeout"
+    | "stalled";
   /** Shell exit code. 0 for file-based exits; 130 when the pane was killed.
-   *  null for timeout/no-agent unless the deadline harvest reveals one. */
+   *  null for timeout/no-agent/stalled unless the deadline harvest reveals one. */
   exitCode: number | null;
   /** Error message if reason is "error" (auto-retry exhausted, provider overload, etc.) */
   errorMessage?: string;
@@ -547,6 +558,13 @@ function noAgentResult(): PollResult {
  *  (final sidecar/sentinel check) reveals one. */
 function timeoutResult(): PollResult {
   return { reason: "timeout", exitCode: null };
+}
+
+/** Durable inactivity expired: the transcript stopped growing for
+ *  PI_SUBAGENT_STALL_MS. Nothing failed and nothing exited — the surface,
+ *  the pane, and the CLI attempt all stay owned. */
+function stallResult(): PollResult {
+  return { reason: "stalled", exitCode: null };
 }
 
 /** Does the pane still exist? Probed after repeated process-info read
@@ -641,6 +659,7 @@ export const __pollForExitTest__ = {
   agentGoneResult,
   noAgentResult,
   timeoutResult,
+  stallResult,
   updateAgentLiveness,
   isPiForegroundProcess,
 };
@@ -653,7 +672,8 @@ export const __pollForExitTest__ = {
  *
  *   1. HARD DEADLINE (`maxWaitMs`, env PI_SUBAGENT_MAX_WAIT_MS, default
  *      30 min): on expiry, one final harvest attempt (sidecar + sentinel)
- *      and a `timeout` result. The wedged-agent failure class.
+ *      and a `timeout` result. The wedged-agent failure class. A durable
+ *      run passes Infinity and bounds itself with `stallMs` instead.
  *   2. NO-SIGHTING GRACE (`startupGraceMs`, env
  *      PI_SUBAGENT_STARTUP_GRACE_MS, default 60 s): pi was never seen in
  *      the pane's foreground processes and no sentinel appeared → the
@@ -678,6 +698,11 @@ export async function pollForExit(
     sentinelFile?: string;
     onTick?: (elapsed: number) => void;
     maxWaitMs?: number;
+    /** Durable inactivity bound. When set (always together with an infinite
+     *  `maxWaitMs`), no transcript growth for this window yields a
+     *  `stalled` result instead of waiting forever. Unset for auto-exit
+     *  runs, whose `maxWaitMs` deadline is the only bound. */
+    stallMs?: number;
     startupGraceMs?: number;
     processInfoFailLimit?: number;
   },
@@ -703,10 +728,15 @@ export async function pollForExit(
   // closes as a clean completion so the session-file harvest delivers
   // the result.
   const transcriptBaseline = Math.max(0, options.transcriptBaseline ?? 0);
+  const stallMs =
+    options.stallMs === undefined ? null : Math.max(0, getSubagentStallMs(options.stallMs));
   let transcriptSize = -1;
   let transcriptMtimeMs = -1;
   let lastAgentWriteAt = 0;
   let agentWrote = false;
+  /** Any transcript change — not only growth past the baseline — resets the
+   *  durable stall clock. */
+  let lastTranscriptChangeAt = start;
   const readTranscriptState = () => {
     if (!options.sessionFile) return;
     try {
@@ -716,6 +746,7 @@ export async function pollForExit(
           agentWrote = true;
           lastAgentWriteAt = Date.now();
         }
+        lastTranscriptChangeAt = Date.now();
         transcriptSize = st.size;
         transcriptMtimeMs = st.mtimeMs;
       }
@@ -754,13 +785,23 @@ export async function pollForExit(
         } catch {}
       }
       try {
-        const screen = await readScreenAsync(surface, 5);
+        const screen = await readScreenAsync(surface, 5, signal);
         const match = screen.match(/__SUBAGENT_DONE_(\d+)__/);
         if (match) return { reason: "sentinel", exitCode: parseInt(match[1], 10) };
       } catch {
+        // An abort mid-read is the deadline firing (the watchdog sweep), not a
+        // dead pane: a stuck read must never stretch the bound past its tick.
+        if (signal.aborted) return timeoutResult();
         return paneKilledResult();
       }
       return timeoutResult();
+    }
+
+    // Durable inactivity: a durable run has no wall-clock deadline, so a
+    // transcript that stopped growing IS the end of the watch. The surface
+    // stays open — the pane, the tab, and the CLI attempt it owns survive.
+    if (stallMs !== null && Date.now() - lastTranscriptChangeAt >= stallMs) {
+      return stallResult();
     }
 
     // Fast path: check for .exit sidecar file (written by the error path)
@@ -778,12 +819,14 @@ export async function pollForExit(
 
     // Slow path: read terminal screen for sentinel (crash detection)
     try {
-      const screen = await readScreenAsync(surface, 5);
+      const screen = await readScreenAsync(surface, 5, signal);
       const match = screen.match(/__SUBAGENT_DONE_(\d+)__/);
       if (match) {
         return { reason: "sentinel", exitCode: parseInt(match[1], 10) };
       }
     } catch {
+      // An abort during the read is the end of the wait, never a verdict.
+      if (signal.aborted) throw new Error("Aborted while waiting for subagent to finish");
       // Surface was destroyed (manual pane close/kill) unless a late .exit
       // file explains it. Under pane churn a live headless session also
       // lands here — the transcript decides, not the lost surface.
@@ -801,6 +844,8 @@ export async function pollForExit(
     // automatic.
     const processes = await paneForegroundProcessesAsync(surface, signal);
     if (processes === null) {
+      // An aborted read (deadline sweep) is not a read failure.
+      if (signal.aborted) throw new Error("Aborted while waiting for subagent to finish");
       // Read failure (transient server error, or a pane that no longer
       // answers). After the threshold, probe pane existence: gone → the
       // killed path; alive → keep waiting, the deadline still bounds it.
