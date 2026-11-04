@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync, renameSync, existsSync, realpathSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync, renameSync, existsSync, realpathSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -88,6 +88,14 @@ export class MissionBridge {
     mkdirSync(this.cacheDir, { recursive: true, mode: 0o700 });
     const file = this.key(ctx), temp = file + "." + randomUUID();
     writeFileSync(temp, JSON.stringify(this.hint), { mode: 0o600 }); renameSync(temp, file);
+  }
+  /** One file, one write, one rename: a reader never sees a half-written
+   *  request, and the desk and this extension can both read at any moment. */
+  writeJSON(file, value) {
+    mkdirSync(join(file, ".."), { recursive: true, mode: 0o700 });
+    const temp = file + "." + randomUUID();
+    writeFileSync(temp, JSON.stringify(value, null, 2) + "\n", { mode: 0o600 });
+    renameSync(temp, file);
   }
   async call(args, token) {
     const env = { ...this.env };
@@ -252,6 +260,76 @@ export class MissionBridge {
       throw new Error("Mission launch was not acknowledged; intent and tab retained. Inspect the existing session before retrying.");
     await this.call(["launch", handle, "--launch-id", launchID, "--session-file", details.sessionFile]);
     return { launched: true, runtime: (await this.call(["show", handle])).state.runtime, session_file: details.sessionFile, pane, workspace };
+  }
+  /** Launch requests the desk left behind. The desk cannot start a mission: it
+   *  writes one file per handle, this session claims it, and start() stays the
+   *  only launch path. */
+  launchDir() { return join(this.cacheDir, "launches"); }
+  pendingLaunches() {
+    const dir = this.launchDir();
+    if (!existsSync(dir)) return [];
+    const out = [];
+    for (const name of readdirSync(dir)) {
+      if (!name.endsWith(".json")) continue;
+      const file = join(dir, name);
+      try {
+        const request = JSON.parse(readFileSync(file, "utf8"));
+        if (request?.state === "pending" && request.handle) out.push({ ...request, file });
+      } catch { /* a torn or foreign file is not a request */ }
+    }
+    return out;
+  }
+  /** Claim a request by rewriting it. A second claim reads "claimed" and loses,
+   *  so one press can never produce two workers. */
+  claimLaunch(request, sessionID) {
+    let live;
+    try { live = JSON.parse(readFileSync(request.file, "utf8")); } catch { return false; }
+    if (live?.state !== "pending") return false;
+    this.writeJSON(request.file, { ...live, state: "claimed", claimed_by: sessionID,
+      updated_at: new Date().toISOString() });
+    return true;
+  }
+  settleLaunch(request, patch) {
+    let live;
+    try { live = JSON.parse(readFileSync(request.file, "utf8")); } catch { live = request; }
+    const { file, ...rest } = live;
+    this.writeJSON(request.file, { ...rest, ...patch, updated_at: new Date().toISOString() });
+  }
+  /** The repository this session belongs to, by git common directory. A request
+   *  from another repository is left for that repository's session. */
+  async sessionRepo(ctx) {
+    const common = await this.common(ctx.cwd);
+    for (const repo of await this.call(["repo", "list"])) {
+      for (const path of Object.values(repo.checkouts || {})) {
+        try { if (await this.common(path) === common) return repo.slug; } catch { /* checkout is gone */ }
+      }
+    }
+    return null;
+  }
+  /** Claim and start one pending request for this repository. Workers never
+   *  launch, a busy turn waits, and a second sweep finds the claim gone. */
+  async sweepLaunches(ctx) {
+    if (this.sweeping) return this.sweeping;
+    this.sweeping = (async () => {
+      const pending = this.pendingLaunches();
+      if (!pending.length || this.hint) return;
+      if (!ctx.isIdle() || ctx.hasPendingMessages()) return;
+      const repo = await this.sessionRepo(ctx);
+      if (!repo) return;
+      for (const request of pending.filter(r => r.repo === repo)) {
+        if (!this.claimLaunch(request, ctx.sessionManager.getSessionId())) continue;
+        try {
+          const result = await this.start(ctx, request.handle);
+          const launched = result?.launched === true;
+          this.settleLaunch(request, { state: launched ? "started" : "failed", launch_id: result?.runtime?.launch_id,
+            ...(launched ? {} : { error: result?.reason || "the launch was not acknowledged" }) });
+        } catch (e) {
+          this.settleLaunch(request, { state: "failed", error: e.message });
+        }
+        return; // one launch per sweep: the next tick picks up the next request
+      }
+    })();
+    try { await this.sweeping; } finally { this.sweeping = null; }
   }
   async action(ctx, p, eventID = randomUUID()) {
     const handle = p.handle || this.hint?.handle;

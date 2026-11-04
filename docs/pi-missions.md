@@ -102,6 +102,26 @@ step when the mission is ready for more work. They keep the same session and
 worktree. Existing sessions attached for progress tracking use explicit `next`.
 Both modes pause at checkpoints; accepting one does not silently start another run.
 
+## Launch from the desk
+
+`mission ui` is a Go TUI. Press `L` on the selected mission to ask for a launch.
+The desk writes one request file at
+`${MISSION_STATE_DIR:-${XDG_STATE_HOME:-~/.local/state}/pi-missions}/launches/<repo>--<slug>.json`,
+with `state: pending`, `handle`, and `repo`.
+
+The desk has no launch path of its own. A Pi session in that repository claims the
+request and calls the same `start` action the `mission` tool uses, so the worktree,
+the launch reservation, and the worker tab come from one code path. The session
+sweeps every two seconds while it is idle, and again after each turn settles. A
+request from another repository is left for that repository's session.
+
+The claim is the file: a second reader finds `claimed` and stops, so one press
+cannot start two workers. A second press on the desk finds a live request and
+rewrites nothing; the desk shows "Launch already pending" instead. The session
+writes `state: started` with the launch id, or `state: failed` with the error, and
+the desk shows either on its next two-second refresh. A failed request can be
+pressed for again.
+
 ## Progress and completion
 
 Structured reports include status (`working`, `blocked`, `needs-input`, `ready`),

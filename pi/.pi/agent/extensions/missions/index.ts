@@ -4,6 +4,10 @@ import { MissionBridge, missionContinues, missionToolBlock } from "./core.mjs";
 
 export default function missions(pi: ExtensionAPI, options = {}) {
   const bridge = new MissionBridge(options);
+  // The latest ctx, so the launch sweep can run on a timer while the session is
+  // idle. The desk writes requests; this session claims and starts them.
+  let live: any = null;
+  const sweep = () => { if (live) bridge.sweepLaunches(live).catch((e: any) => { bridge.error = e.message; }); };
   const guarded = (fn: Function) => async (event: any, ctx: any) => {
     try { await fn(event, ctx); }
     catch (e: any) { bridge.error = e.message; ctx.ui.notify("Mission tracking: " + e.message, "warning"); }
@@ -14,12 +18,14 @@ export default function missions(pi: ExtensionAPI, options = {}) {
     ctx.ui.setStatus("mission", `${bridge.hint.handle} · ${c?.attempt?.step || c?.record.state.status}`);
   };
   pi.on("session_start", guarded(async (_e: any, ctx: any) => {
+    live = ctx;
     await bridge.restore(ctx);
+    sweep();
     if (bridge.hint) await bridge.record(ctx, {type:"session-start",summary:"Pi session restored from local mission context"});
     await badge(ctx);
   }));
   pi.on("session_before_switch", guarded(async (_e: any, ctx: any) => { await bridge.record(ctx, { type: "session-end", summary: "Session switch; ownership preserved for resume" }); }));
-  pi.on("session_shutdown", guarded(async (_e: any, ctx: any) => { await bridge.record(ctx, { type: "session-end", summary: "Session shutdown; preserve transcript and owner" }); }));
+  pi.on("session_shutdown", guarded(async (_e: any, ctx: any) => { clearInterval(timer); await bridge.record(ctx, { type: "session-end", summary: "Session shutdown; preserve transcript and owner" }); }));
   pi.on("before_agent_start", async (_e, ctx) => {
     bridge.lastOutcome = undefined;
     if (!bridge.hint) {
@@ -46,6 +52,12 @@ export default function missions(pi: ExtensionAPI, options = {}) {
     return reason ? { block: true, reason } : undefined;
   });
   pi.on("agent_start", guarded(async (_e: any, ctx: any) => { await bridge.record(ctx, { type: "agent-start", summary: "Pi turn started" }); }));
+  // A press in the desk lands between turns, so poll for it: a captain that sits
+  // idle still starts a mission the human asked for. Two seconds is fast enough
+  // for a keypress and quiet enough to cost one directory read.
+  const timer = setInterval(sweep, 2000);
+  // The poll must never hold the process open: an idle session still exits.
+  (timer as any)?.unref?.();
   pi.on("agent_end", guarded(async (event: any, ctx: any) => { await bridge.end(ctx, event); await badge(ctx); }));
   // agent_end can be followed by automatic retry/compaction/steered input.
   // Pi 1.5's final settlement boundary is the completion authority.
@@ -53,6 +65,7 @@ export default function missions(pi: ExtensionAPI, options = {}) {
   pi.on("agent_settled", guarded(async (event: any, ctx: any) => {
     const result = await bridge.settled(ctx, { ...event, outcome: bridge.lastOutcome });
     await badge(ctx);
+    sweep();
     // Starting a mission authorizes its eligible steps. Attaching an existing
     // session records its work without silently starting additional steps.
     // A finished or human-held mission never asks for another step.
