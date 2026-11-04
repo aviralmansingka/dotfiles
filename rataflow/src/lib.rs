@@ -3418,25 +3418,40 @@ fn draw_container(
         .map(|cx| peek(frame, cx, by0).map(is_route).unwrap_or(false))
         .collect();
 
+    // A route crossing the border leaves the route glyph and a GAP in the box -
+    // that reads as "a relation passes through here". Everywhere else the border
+    // is solid: a gap with no arrow under it is a defect, not a style.
     for (i, cx) in (bx0..=bx1).enumerate() {
         let crossed = crossed_top[i];
-        let (top, bottom) = if cx == bx0 {
-            ('\u{2554}', '\u{255a}')
-        } else if cx == bx1 {
-            ('\u{2557}', '\u{255d}')
-        } else if crossed {
-            ('\u{256a}', '\u{256a}') // double horizontal, single vertical
-        } else {
-            ('\u{2550}', '\u{2550}')
-        };
-        put(frame, cx, by0, top);
-        put(frame, cx, by1, bottom);
+        if !crossed || cx == bx0 || cx == bx1 {
+            let top = if cx == bx0 {
+                '\u{2554}'
+            } else if cx == bx1 {
+                '\u{2557}'
+            } else {
+                '\u{2550}'
+            };
+            put(frame, cx, by0, top);
+        }
+        let crossed_bottom = peek(frame, cx, by1).map(is_route).unwrap_or(false);
+        if !crossed_bottom || cx == bx0 || cx == bx1 {
+            let bottom = if cx == bx0 {
+                '\u{255a}'
+            } else if cx == bx1 {
+                '\u{255d}'
+            } else {
+                '\u{2550}'
+            };
+            put(frame, cx, by1, bottom);
+        }
     }
     for cy in (by0 + 1)..by1 {
-        let crossed = peek(frame, bx0, cy).map(is_route).unwrap_or(false);
-        let crossed_r = peek(frame, bx1, cy).map(is_route).unwrap_or(false);
-        put(frame, bx0, cy, if crossed { '\u{256b}' } else { '\u{2551}' });
-        put(frame, bx1, cy, if crossed_r { '\u{256b}' } else { '\u{2551}' });
+        if !peek(frame, bx0, cy).map(is_route).unwrap_or(false) {
+            put(frame, bx0, cy, '\u{2551}');
+        }
+        if !peek(frame, bx1, cy).map(is_route).unwrap_or(false) {
+            put(frame, bx1, cy, '\u{2551}');
+        }
     }
 
     // Longest run of the top edge no route crosses -> the label fits there.
