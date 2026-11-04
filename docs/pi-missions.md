@@ -107,20 +107,40 @@ Both modes pause at checkpoints; accepting one does not silently start another r
 `mission ui` is a Go TUI. Press `L` on the selected mission to ask for a launch.
 The desk writes one request file at
 `${MISSION_STATE_DIR:-${XDG_STATE_HOME:-~/.local/state}/pi-missions}/launches/<repo>--<slug>.json`,
-with `state: pending`, `handle`, and `repo`.
+with `state: pending`, `handle`, `repo`, and its owner seat.
 
 The desk has no launch path of its own. A Pi session in that repository claims the
 request and calls the same `start` action the `mission` tool uses, so the worktree,
-the launch reservation, and the worker tab come from one code path. The session
-sweeps every two seconds while it is idle, and again after each turn settles. A
-request from another repository is left for that repository's session.
+the launch reservation, and the worker tab come from one code path. That action
+opens the mission worktree as the repository's Herdr workspace, creates its tab,
+and spawns the `mission-worker` agent there.
+
+Each request carries the seat that asked: `owner_workspace` (`HERDR_WORKSPACE_ID`),
+`owner_label` (`HERDR_PANE_ID`), and `owner_common` (the absolute git common dir).
+The sweep picks one request per tick, in this order:
+
+1. A request addressed to this session's workspace. A captain that already owns a
+   mission still serves it, because the worker runs in its own worktree workspace.
+2. An unaddressed request, from a desk that ran outside Herdr. Any idle session of
+   the repository may claim it.
+3. A request whose addressed workspace is gone. Only a session in the same checkout
+   family adopts it, so a sibling clone never starts another checkout's mission.
+
+A request addressed to a live workspace elsewhere waits for that workspace. A
+request from another repository is left for that repository's session, and a worker
+never launches.
+
+The session sweeps every two seconds while it is idle, and again after each turn
+settles.
 
 The claim is the file: a second reader finds `claimed` and stops, so one press
 cannot start two workers. A second press on the desk finds a live request and
 rewrites nothing; the desk shows "Launch already pending" instead. The session
-writes `state: started` with the launch id, or `state: failed` with the error, and
-the desk shows either on its next two-second refresh. A failed request can be
-pressed for again.
+writes `state: started` with the launch id and the Herdr agent it created
+(`workspace`, `pane`, `session_file`), or `state: failed` with the error, and the
+desk shows either on its next two-second refresh. A started request reads
+`launch started · Herdr agent in <workspace>`. A failed request can be pressed for
+again.
 
 ## Progress and completion
 
