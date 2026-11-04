@@ -71,7 +71,7 @@ func cmdRender(a platform.Args, s *Store) int {
 		}
 		m.selectedStep = idx
 	}
-	views := map[string]int{"overview": 0, "attempts": 1, "activity": 2, "steps": 3}
+	views := map[string]int{"overview": 0, "troopers": 1, "attempts": 2, "activity": 3, "steps": 4}
 	if view, ok := views[a.Get("view")]; ok {
 		m.tab, m.focus = view, 1
 	}

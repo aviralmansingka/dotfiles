@@ -242,10 +242,37 @@ again.
 Structured reports include status (`working`, `blocked`, `needs-input`, `ready`),
 summary, next action, blocker, and optional evidence paths. The CLI captures hashes
 and deduplicates stable event IDs, refusing changed payloads for an existing ID.
+A progress call that names `--actor` (or `actor` in the mission tool) also appends
+the trooper's report to the attempt: who reported, the state reached, the summary,
+the next action, and the time. An attempt keeps one row per trooper, so a subagent
+that finishes `blocked`, is resumed, and finishes `ready` leaves the final state
+rather than the one it left behind; both completions stay in the append-only
+progress stream. The extension sends one report per finished interactive subagent
+through the same outbox as its lifecycle hooks, so a reload replays the report
+under its original ID instead of appending a second copy, and a judge step records
+the judge rather than the worker that spawned it.
 Evidence belongs to the current attempt. Lifecycle hooks record only event metadata,
 tool names/call IDs, session identity, and transcript snapshots. They omit tool
 arguments and outputs. Transcripts themselves can contain sensitive conversation
 content; they are intentionally preserved in the mission vault.
+
+### Reading the troopers
+
+The mission desk shows reports in two places. The detail pane's second tab
+(` Troopers `, between Overview and Attempts) renders one row per report of the
+attempt being watched: the active attempt while it carries reports, otherwise the
+newest attempt that does, so a finished attempt's rows outlive its active slot.
+Each row is a state glyph, the trooper's name, its age, and its summary. `✓` green
+means ready, `◉` aqua means still working, and `◆` yellow means blocked or waiting
+on input.
+
+The newest of those rows also surfaces as a line in the desk's refresh header, so
+the ground is readable without leaving the Overview tab: `TROOPER`, the same state
+glyph, the name, the age, and the summary. The header updates on the desk's
+two-second refresh tick — a trooper that finishes while the human watches changes
+the header without a key press. The row is clipped to the pane width: on a narrow
+pane the summary yields first, then the age, then the name. A mission with no
+reports keeps the header quiet: no placeholder line, no empty brackets.
 
 The CLI holds one active attempt per mission. `finish`/`fail` report an outcome.
 An attached Pi session retains ownership until a normal run settles with no queued

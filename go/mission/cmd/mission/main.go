@@ -37,7 +37,10 @@ const help = `mission — work that survives the agent
   mission attach REPO/SLUG --session-id ID --session-file PATH --cwd WORKTREE
       --workspace ID --pane ID             Private token in MISSION_TOKEN
   mission progress REPO/SLUG --status working --summary TEXT --event-id ID
-      [--next TEXT] [--blocker TEXT] [--evidence artifacts/001/result.md]
+      [--actor TROOPER] [--next TEXT] [--blocker TEXT]
+      [--evidence artifacts/001/result.md]
+                                           --actor also records one trooper
+                                           report on the attempt
   mission launch REPO/SLUG                 Reserve one launch; adapters only
   mission launch REPO/SLUG --release --launch-id ID
                                            Drop a failed launch intent
