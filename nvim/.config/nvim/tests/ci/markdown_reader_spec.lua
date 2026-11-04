@@ -1,10 +1,11 @@
 -- lua/helpers/reader.lua, exercised headless with a real window layout.
 -- Guards the centered reader column:
 --   * the eligibility rules (herdr scrollback, octo, non-prose buftypes);
---   * the column arithmetic (100 cells, window - 8, auto above 110);
+--   * the column arithmetic (100 cells, window - 8, auto wherever it fits);
 --   * enable/close leaves a symmetric two-filler layout, restores wrap and
 --     linebreak, and maps q/<Esc> only while the column is open;
---   * the auto rule (narrow windows stay alone, wide windows get the column);
+--   * the auto rule (a window too narrow for a 40-cell column stays alone,
+--     every other window gets the column);
 --   * a resize re-cuts the fillers, a window close and a buffer switch drop
 --     them, and :write keeps the column open.
 --
@@ -70,9 +71,10 @@ H.run("markdown_reader_spec", function()
   H.eq(reader.column_width(159), 100, "a wide window pins the column to 100 cells")
   H.eq(reader.column_width(120), 100, "the column caps at 100 cells")
   H.eq(reader.column_width(80), 72, "a narrow window keeps 8 cells for the margins")
-  H.eq(reader.should_auto(80), false, "a narrow window never auto-enables")
-  H.eq(reader.should_auto(110), false, "110 columns is still too narrow")
-  H.eq(reader.should_auto(111), true, "111 columns auto-enables")
+  H.eq(reader.should_auto(47), false, "47 columns leaves the column too narrow")
+  H.eq(reader.should_auto(48), true, "48 columns holds the narrowest 40-cell column")
+  H.eq(reader.should_auto(80), true, "an 80-cell window auto-enables")
+  H.eq(reader.should_auto(110), true, "110 columns auto-enables")
   H.eq(reader.should_auto(159), true, "a wide window auto-enables")
 
   -- ── enable / close ──────────────────────────────────────────────────────
@@ -129,9 +131,22 @@ H.run("markdown_reader_spec", function()
   vim.fn.delete(path)
 
   -- ── the auto rule ───────────────────────────────────────────────────────
+  vim.o.columns = 47
+  reader.maybe_auto(vim.api.nvim_get_current_win())
+  H.eq(win_count(), 1, "a window too narrow for a 40-cell column stays alone")
+
   vim.o.columns = 80
   reader.maybe_auto(vim.api.nvim_get_current_win())
-  H.eq(win_count(), 1, "a narrow window stays alone")
+  H.eq(win_count(), 3, "an 80-cell window gets the column on its own")
+  H.eq(vim.wo.wrap, true, "auto mode wraps prose too")
+  local narrow = target_info(vim.api.nvim_get_current_win())
+  H.eq(narrow.width - narrow.textoff, 72, "the 80-cell window fits a 72-cell column")
+  reader.close()
+
+  vim.o.columns = 110
+  reader.maybe_auto(vim.api.nvim_get_current_win())
+  H.eq(win_count(), 3, "a 110-cell window still gets the column on its own")
+  reader.close()
 
   vim.o.columns = 140
   reader.maybe_auto(vim.api.nvim_get_current_win())

@@ -12,7 +12,6 @@
 local M = {}
 
 local COLUMN = 100 -- wanted text columns
-local AUTO_COLUMNS = 110 -- auto-enable above this window width
 local MIN_COLUMN = 40 -- a column below this width gains nothing
 local MARGIN = 8 -- cells kept free for the two filler windows
 
@@ -27,9 +26,10 @@ function M.column_width(width)
   return math.min(COLUMN, width - MARGIN)
 end
 
---- Auto-enable rule: below this width the column gains nothing.
+--- Auto-enable rule. The column is the default for reading markdown. Auto-enable
+--- it wherever it fits: the window must hold MIN_COLUMN cells or more.
 function M.should_auto(width)
-  return width > AUTO_COLUMNS
+  return M.column_width(width) >= MIN_COLUMN
 end
 
 --- A prose buffer can use the reader column.
@@ -233,7 +233,7 @@ function M.toggle()
   end
 end
 
---- Enable the reader when `win` shows prose in a wide window.
+--- Enable the reader when `win` shows prose in a window that fits the column.
 function M.maybe_auto(win)
   win = win or vim.api.nvim_get_current_win()
   if M.is_open() or not vim.api.nvim_win_is_valid(win) then
@@ -253,7 +253,7 @@ end
 function M.setup()
   local group = vim.api.nvim_create_augroup("nvim_reader", { clear = true })
 
-  -- A markdown file opened in a wide window gets the column on its own.
+  -- A markdown file opened in a window that fits gets the column on its own.
   -- The same event re-applies the column options to the open reader.
   vim.api.nvim_create_autocmd("FileType", {
     group = group,
