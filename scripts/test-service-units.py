@@ -262,6 +262,19 @@ def check_verify(units, parsed):
             emit("PASS", "sysd-verify", rel, "systemd-analyze verify clean", ms)
             continue
         lines = [ln for ln in (proc.stdout + proc.stderr).splitlines() if ln.strip()]
+        # `verify` also loads the units ours pull in and reports on THEM. Only
+        # diagnostics naming this unit are ours to fix: a distro dependency's
+        # deprecation notice (systemd >= 257 removed CPUAccounting, so
+        # /usr/lib/systemd/system/xfs_scrub_all.service now warns and verify
+        # exits nonzero) must never fail a unit we do not own.
+        target = os.path.join(REPO, rel)
+        own = [ln for ln in lines if target in ln or os.path.basename(rel) in ln]
+        if not own:
+            emit("PASS", "sysd-verify", rel,
+                 f"verify clean for this unit ({len(lines)} diagnostic(s) on "
+                 "other units ignored)", ms)
+            continue
+        lines = own
         host_only = False
         if rel.endswith(".service") and rel in parsed:
             kind, _tok = exec_token_class(execstart_parts(parsed[rel]))
