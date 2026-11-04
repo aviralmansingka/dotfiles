@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { MissionBridge, missionContinues, missionToolBlock, repositoryWorkspaces, quiescent } from "./core.mjs";
+import { actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
 import { missionLaunchConfig } from "../interactive-subagents/pi-extension/subagents/mission-launch.mjs";
 
 const exec = promisify(execFile);
@@ -530,4 +531,122 @@ test("finished missions release every tool and stop the next-step prompt",needsC
   assert.equal((await b.f.bridge.call(["show",b.f.handle])).state.status,"failed");
   assert.equal(b.messages.length,0);
   assert.equal(await b.events.tool_call({toolName:"bash"},b.ctx),undefined);
+});
+
+// The panel's view model is pure data: these fixtures need no CLI and no TUI.
+const panelRecord = (handle, over = {}) => ({
+  handle,
+  mission: { title: "Mission panel", goal: "Render a mission inside Pi", kind: "implementation",
+    steps: [{ id: "S01", title: "Build the panel" }, { id: "S02", title: "Wire the command" }],
+    checkpoints: [{ id: "C01", after: "S01", kind: "human", question: "Is the layout right?" }] },
+  state: { status: "ready", revision: 4, current_step: "S01", steps: { S01: { status: "pending" }, S02: { status: "pending" } },
+    checkpoints: { C01: { status: "not_reached" } }, attempts: [] },
+  ...over,
+});
+/** A mission held at C01: one attempt ended, the human is deciding. */
+const waitingRecord = () => panelRecord("dotfiles/mission-panel", {
+  state: { status: "waiting", revision: 6, current_step: "S01", pending_checkpoint: "C01",
+    steps: { S01: { status: "passed" }, S02: { status: "pending" } }, checkpoints: { C01: { status: "pending" } },
+    attempts: [{ id: "attempt-1352c80c9551e20f0c7f24c7", agent: "scout", status: "succeeded", step: "S01", started_at: "2026-01-01T00:00:00Z" }] },
+});
+/** A mission with a worker running for three minutes. */
+const runningRecord = () => panelRecord("dotfiles/mission-panel", {
+  state: { status: "running", revision: 5, current_step: "S01", active_attempt: "attempt-eeb113ecd3f57be11b04ca55",
+    steps: { S01: { status: "running" }, S02: { status: "pending" } }, checkpoints: {},
+    attempts: [{ id: "attempt-eeb113ecd3f57be11b04ca55", agent: "worker", status: "running", step: "S01",
+      started_at: "2026-01-01T10:00:00Z", progress: [{ status: "working", blocker: "Waiting on the CI log" }] }] },
+});
+/** A mission whose last step passed. */
+const doneRecord = () => panelRecord("dotfiles/mission-panel", {
+  state: { status: "done", revision: 9, current_step: "S02", steps: { S01: { status: "passed" }, S02: { status: "passed" } },
+    checkpoints: { C01: { status: "accepted" } },
+    attempts: [{ id: "attempt-99c0ffee11223344556677", agent: "worker", status: "succeeded", step: "S02", started_at: "2026-01-01T09:00:00Z" }] },
+});
+const rowsOf = model => model.rows.map(row => [row.label, row.value, row.status]);
+const keysOf = model => Object.fromEntries(model.keys.map(key => [key.action, key.enabled]));
+
+test("the panel shows a pending checkpoint as a waiting row", () => {
+  const model = buildPanelModel({ record: waitingRecord(), now: Date.parse("2026-01-01T00:05:00Z") });
+  assert.equal(model.statusLine, "waiting · rev 6");
+  assert.deepEqual(rowsOf(model), [
+    ["Goal", "Render a mission inside Pi", ""],
+    ["Step", "S01 · Build the panel", "passed"],
+    ["Attempt", "attempt-1352 · scout", "succeeded"],
+    ["Checkpoint", "C01 · Is the layout right?", "waiting"],
+    ["Blocker", "none", ""],
+  ]);
+  // A hold on a checkpoint leaves the human one decision and no launch.
+  assert.deepEqual(keysOf(model), { accept: true, revise: true, start: false, retry: false, open: true, close: true });
+  assert.match(model.keys.find(key => key.action === "start").reason, /checkpoint is waiting/);
+});
+
+test("the panel shows a running attempt with its run time", () => {
+  const model = buildPanelModel({ record: runningRecord(), now: Date.parse("2026-01-01T10:03:00Z") });
+  assert.equal(model.statusLine, "running · rev 5");
+  assert.deepEqual(rowsOf(model), [
+    ["Goal", "Render a mission inside Pi", ""],
+    ["Step", "S01 · Build the panel", "in progress"],
+    ["Attempt", "attempt-eeb1 · worker", "running 3m"],
+    ["Blocker", "Waiting on the CI log", ""],
+  ]);
+  // A live attempt disables every other action, and the key row stays whole.
+  assert.deepEqual(keysOf(model), { accept: false, revise: false, start: false, retry: false, open: true, close: true });
+  assert.match(model.keys.find(key => key.action === "retry").reason, /attempt is running/);
+});
+
+test("the panel shows a finished mission without empty rows", () => {
+  const model = buildPanelModel({ record: doneRecord(), now: Date.parse("2026-01-01T10:03:00Z") });
+  assert.equal(model.statusLine, "done · rev 9");
+  assert.deepEqual(rowsOf(model), [
+    ["Goal", "Render a mission inside Pi", ""],
+    ["Step", "S02 · Wire the command", "passed"],
+    ["Attempt", "attempt-99c0 · worker", "succeeded"],
+    ["Blocker", "none", ""],
+  ]);
+  assert.deepEqual(keysOf(model), { accept: false, revise: false, start: false, retry: false, open: true, close: true });
+  assert.match(model.keys.find(key => key.action === "start").reason, /no step to start/);
+  // Every row states something: no labelled empty value ever reaches the panel.
+  assert.ok(model.rows.every(row => row.label && row.value.length > 0));
+});
+
+test("an invalid action key is disabled, never hidden", () => {
+  const model = buildPanelModel({ record: doneRecord(), now: Date.parse("2026-01-01T10:03:00Z") });
+  const accept = model.keys.find(key => key.action === "accept");
+  assert.equal(accept.enabled, false);
+  assert.match(accept.reason, /no pending checkpoint/);
+  assert.deepEqual(model.keys.map(key => key.key), ["a", "v", "s", "t", "o", "esc"]);
+  assert.equal(actionForKey("a"), "accept");
+  assert.equal(actionForKey("esc"), "close");
+  assert.equal(actionForKey("z"), undefined);
+  // The retry key stays visible and dim while the current step is not failed.
+  assert.match(model.keys.find(key => key.action === "retry").reason, /not failed/);
+});
+
+test("a missing handle yields the error row instead of a throw", () => {
+  const model = buildPanelModel({});
+  assert.deepEqual(model.rows, []);
+  assert.match(model.error, /handle is required/);
+  assert.equal(model.keys.find(key => key.action === "accept").enabled, false);
+  assert.equal(model.keys.find(key => key.action === "close").enabled, true);
+  // A failed CLI call keeps its reason and the handle the human asked for.
+  const missing = buildPanelModel({ handle: "dotfiles/ghost", error: "not_found: mission dotfiles/ghost not found" });
+  assert.equal(missing.handle, "dotfiles/ghost");
+  assert.match(missing.error, /not_found/);
+  // A record with no mission and no state renders no labelled empty row.
+  const bare = buildPanelModel({ record: { handle: "dotfiles/bare" } });
+  assert.deepEqual(bare.rows.map(row => row.label), ["Blocker"]);
+  assert.equal(bare.status, "unknown");
+});
+
+test("a checkpoint decision carries the attestation the CLI requires", () => {
+  const record = waitingRecord();
+  assert.deepEqual(checkpointArgs("dotfiles/mission-panel", record, { decision: "accept", actor: "aviral", note: "Layout reviewed" }),
+    ["checkpoint", "dotfiles/mission-panel", "--id", "C01", "--decision", "accept", "--human", "--actor", "aviral",
+      "--note", "Layout reviewed", "--revision", "6"]);
+  // The panel's own note names the surface that recorded the decision.
+  const revise = checkpointArgs("dotfiles/mission-panel", record, { decision: "revise", actor: "aviral" });
+  assert.match(revise[revise.indexOf("--note") + 1], /Revision requested in the Pi mission panel/);
+  assert.throws(() => checkpointArgs("dotfiles/mission-panel", doneRecord(), { decision: "accept" }), /no pending checkpoint/);
+  assert.throws(() => checkpointArgs("", record, { decision: "accept" }), /handle/);
+  assert.throws(() => checkpointArgs("dotfiles/mission-panel", record, { decision: "reject" }), /accept or revise/);
 });
