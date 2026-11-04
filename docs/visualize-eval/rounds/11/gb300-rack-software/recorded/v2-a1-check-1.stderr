@@ -1,0 +1,1 @@
+rataflow-view: the spec needs at least one edge, e.g. {"from": "a", "to": "b"}

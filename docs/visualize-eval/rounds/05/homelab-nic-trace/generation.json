@@ -1,0 +1,660 @@
+{
+  "case_id": "homelab-nic-trace",
+  "round": "05",
+  "generator": {
+    "surface": "pi worker subagent in Herdr tab w7E",
+    "name": "viz-ds05-3",
+    "agent_profile": "worker",
+    "provider": "fireworks",
+    "model": "accounts/fireworks/routers/deepseek-flash-latest",
+    "model_note": "PI_MODEL=accounts/fireworks/routers/deepseek-flash-latest, PI_PROVIDER=fireworks; no model switch, no judge spawned, no reviewer subagent spawned."
+  },
+  "frozen_inputs": {
+    "candidate_skill": {
+      "path": "docs/visualize-eval/rounds/05/SKILL.md",
+      "sha256": "ff4a9d3f32ba0bf86e54ee6bfbac02fdea3fac3b95b82a958b3411accef0a949",
+      "verified": true
+    },
+    "renderer": {
+      "path": "/tmp/visualize-eval/round-05/bin/rataflow-view",
+      "sha256": "b1ab9f2e78af11c2f2b005eea083a999079d184bf550e8d0b6d9c51867f22404",
+      "verified": true,
+      "used_by_absolute_path_only": true
+    }
+  },
+  "renderer_notes": {
+    "routes_line": "not emitted by the round-05 binary and not expected (route economy was dropped with the round-04 revert). Every --check run in this case lacks it by design; it is not counted as a defect, a blocker, or a wasted attempt."
+  },
+  "layout_engine_ownership": {
+    "coordinates_written": false,
+    "fields_used": [
+      "direction",
+      "theme",
+      "nodes[id,label,group]",
+      "edges[from,to,label,style]"
+    ],
+    "fields_not_used": [
+      "layers",
+      "trunks",
+      "dots",
+      "flow",
+      "timing",
+      "duration_ms"
+    ],
+    "motion": "fully static: the source never animated, and no dot was added as flair. Every --check reads '0 single-dot routes, 0 periodic routes, 0 violations'."
+  },
+  "views": [
+    {
+      "view": "v1",
+      "title": "host and its two virtual networks",
+      "spec": "specs/v1.json",
+      "spec_sha256": "7c23ec5bf060ea5e18cff4d08738773990bb1b787e438a7d3b004ec2363e8a1c",
+      "check": "evidence/v1/check.txt",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "frames": "evidence/v1/v1-frames.txt",
+      "frames_ansi": "evidence/v1/v1-frames.ansi",
+      "manifest": "evidence/v1/manifest.json",
+      "validator": "evidence/v1/validator.txt",
+      "pinned_dump": "evidence/v1/v1-77x47.txt",
+      "pinned_fit": true,
+      "measured": {
+        "viewport_line": null,
+        "viewport_token": "83x51 @100%",
+        "extent": "70x24",
+        "pinned_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "pane_rect": null,
+        "pane_rows_fallback": 51
+      },
+      "check_lines": {
+        "extent": "extent=70x24 cells",
+        "crossings": "crossings: 0 bridges, 0 touching bends",
+        "labels": "labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups": "groups: libvirt(2) docker(2) host(1)",
+        "dots": "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins": "origins: 0/0 routes start at their arrow origin",
+        "arrivals": "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      },
+      "static_frame_claim": "pane frames 0,1,2,3 byte-identical apart from timestamp (evidence/v1/v1-frames.txt); frame 4 differs only by the post-exit shell prompt. The pinned 77x47 dump carries the same five timestamps with an identical graph (evidence/v1/v1-77x47.txt).",
+      "fit_claim": "pinned 77x47 dump has no overflow banner; graph sits on rows 17-35 and the palette corner is complete on rows 41-46 (evidence/v1/v1-77x47.txt)."
+    },
+    {
+      "view": "v2",
+      "title": "overlay and the two host uplinks",
+      "spec": "specs/v2.json",
+      "spec_sha256": "97b91fd312b17b2fdfa9b4890d9c8ff1be54c6ced7a6131ed440dbd0afcf89a0",
+      "check": "evidence/v2/check.txt",
+      "text": "evidence/v2/v2-text.txt",
+      "ansi": "evidence/v2/v2-ansi.ansi",
+      "selected_ansi": "evidence/v2/v2-selected.ansi",
+      "frames": "evidence/v2/v2-frames.txt",
+      "frames_ansi": "evidence/v2/v2-frames.ansi",
+      "manifest": "evidence/v2/manifest.json",
+      "validator": "evidence/v2/validator.txt",
+      "pinned_dump": "evidence/v2/v2-77x47.txt",
+      "pinned_fit": false,
+      "measured": {
+        "viewport_line": null,
+        "viewport_token": "83x51 @100%",
+        "extent": "80x24",
+        "pinned_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "pane_rect": null,
+        "pane_rows_fallback": 51
+      },
+      "check_lines": {
+        "extent": "extent=80x24 cells",
+        "crossings": "crossings: 0 bridges, 0 touching bends",
+        "labels": "labels: 3/3 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups": "groups: overlay(1) host(1) nic(2)",
+        "dots": "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins": "origins: 0/0 routes start at their arrow origin",
+        "arrivals": "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      },
+      "static_frame_claim": "pane frames 0,1,2,3 byte-identical apart from timestamp (evidence/v2/v2-frames.txt); the pinned dump repeats the same five timestamps.",
+      "fit_claim": "DOES NOT FIT the pinned target: the 77x47 dump carries 'graph overflows · drag to pan' in all five frames, and the palette corner's bottom border is clipped at row 47 (evidence/v2/v2-77x47.txt rows 4, 43-47). Complete in the measured 83x51 pane instead (evidence/v2/v2-text.txt rows 17-36, palette rows 45-49)."
+    },
+    {
+      "view": "v3",
+      "title": "tailscale encapsulation, LAN segment, gateway, shared egress address",
+      "spec": "specs/v3.json",
+      "spec_sha256": "4409b833c5f2d213918e2795b4a944c7035cfc29c1e36f3b0adbd03e3d04d31e",
+      "check": "evidence/v3/check.txt",
+      "text": "evidence/v3/v3-text.txt",
+      "ansi": "evidence/v3/v3-ansi.ansi",
+      "selected_ansi": "evidence/v3/v3-selected.ansi",
+      "frames": "evidence/v3/v3-frames.txt",
+      "frames_ansi": "evidence/v3/v3-frames.ansi",
+      "manifest": "evidence/v3/manifest.json",
+      "validator": "evidence/v3/validator.txt",
+      "pinned_dump": "evidence/v3/v3-77x47.txt",
+      "pinned_fit": true,
+      "measured": {
+        "viewport_line": null,
+        "viewport_token": "83x51 @100%",
+        "extent": "38x32",
+        "pinned_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "pane_rect": null,
+        "pane_rows_fallback": 51
+      },
+      "check_lines": {
+        "extent": "extent=38x32 cells",
+        "crossings": "crossings: 0 bridges, 0 touching bends",
+        "labels": "labels: 3/3 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups": "groups: overlay(1) nic(1)",
+        "dots": "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins": "origins: 0/0 routes start at their arrow origin",
+        "arrivals": "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      },
+      "static_frame_claim": "pane frames 0,1,2,3 byte-identical apart from timestamp (evidence/v3/v3-frames.txt); the pinned dump repeats the same five timestamps.",
+      "fit_claim": "pinned 77x47 dump has no overflow banner; graph rows 13-40, palette corner complete on rows 41-46 (evidence/v3/v3-77x47.txt)."
+    },
+    {
+      "view": "v4",
+      "title": "Wi-Fi backup path, WAN transit chain, qualifiers, egress limits",
+      "spec": "specs/v4.json",
+      "spec_sha256": "922b3f7fb40b25fbf7698d8caa5061b2a4434f24404249f9a9c3948066de9017",
+      "check": "evidence/v4/check.txt",
+      "text": "evidence/v4/v4-text.txt",
+      "ansi": "evidence/v4/v4-ansi.ansi",
+      "selected_ansi": "evidence/v4/v4-selected.ansi",
+      "frames": "evidence/v4/v4-frames.txt",
+      "frames_ansi": "evidence/v4/v4-frames.ansi",
+      "manifest": "evidence/v4/manifest.json",
+      "validator": "evidence/v4/validator.txt",
+      "pinned_dump": "evidence/v4/v4-77x47.txt",
+      "pinned_fit": false,
+      "measured": {
+        "viewport_line": null,
+        "viewport_token": "83x51 @100%",
+        "extent": "34x48",
+        "pinned_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "pane_rect": null,
+        "pane_rows_fallback": 51
+      },
+      "check_lines": {
+        "extent": "extent=34x48 cells",
+        "crossings": "crossings: 0 bridges, 0 touching bends",
+        "labels": "labels: 5/5 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups": "groups: nic(1) historical traceroute(4)",
+        "dots": "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins": "origins: 0/0 routes start at their arrow origin",
+        "arrivals": "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      },
+      "static_frame_claim": "pane frames 0,1,2,3 byte-identical apart from timestamp (evidence/v4/v4-frames.txt); the pinned dump repeats the same five timestamps.",
+      "fit_claim": "DOES NOT FIT the pinned target: the 77x47 dump carries 'graph overflows · drag to pan' in all five frames and clips the cf node's bottom border (evidence/v4/v4-77x47.txt, last graph rows before 'frame 1'). Complete in the measured 83x51 pane (evidence/v4/v4-text.txt rows 3-50)."
+    }
+  ],
+  "pinned_target_dumps": {
+    "why": "The harness pane follows the agent tab (measured 83x51 here), which is not controlled. Each view therefore also ships a direct dump at the target size with the size pinned by environment: COLUMNS=77 LINES=47 <frozen-bin> --frames 5 <final spec>.",
+    "files": [
+      "evidence/v1/v1-77x47.txt",
+      "evidence/v2/v2-77x47.txt",
+      "evidence/v3/v3-77x47.txt",
+      "evidence/v4/v4-77x47.txt"
+    ],
+    "result": {
+      "v1": "fits",
+      "v2": "overflows by 3 columns",
+      "v3": "fits",
+      "v4": "overflows by 1 row"
+    }
+  },
+  "coverage_map": {
+    "v1": "e1-e4 (virtual-to-host relations) plus host identity: homelab, ASUS bare metal, Linux 7.0",
+    "v2": "e5, e7, e8 (overlay terminator, wired primary uplink, Wi-Fi backup uplink) plus identifiers tailscale0 100.113.153.49, bond0 192.168.1.197, wlp8s0 192.168.1.213, workload ~/rack-bench",
+    "v3": "e6, e9 and the shared pool address (e15) plus LAN subnet 192.168.1.0/24, member NIC eno1, router roles NAT+DHCP, claim marker on the router, hop latency 0.5 ms",
+    "v4": "e10-e14 (Wi-Fi metric, NAT egress, three transit hops) plus AS/A identities, historical qualifiers, and the egress limits (no global v6, no committed rate)"
+  },
+  "meaning_ledger": [
+    {
+      "fact": "host `homelab`, ASUS bare metal, Linux 7.0",
+      "kind": "role/identifier",
+      "fate": "drawn",
+      "where": "v1 box label 'homelab (ASUS, Linux 7.0)' (evidence/v1/v1-text.txt row 34)"
+    },
+    {
+      "fact": "`~/rack-bench` holds the Oct 11 runs; this is the rack-bench host, not the devbox",
+      "kind": "identifier/residency",
+      "fate": "abbreviated",
+      "where": "v2 box label 'homelab rack-bench' (evidence/v2/v2-text.txt row 26)",
+      "reason": "tilde path shortened to the workload name; the residency is expressed by the box node the uplinks hang from"
+    },
+    {
+      "fact": "bond0 over eno1, 2.5 GbE, 192.168.1.197 on 192.168.1.0/24",
+      "kind": "identifier + protocol",
+      "fate": "drawn (split across two views)",
+      "where": "v2 node 'bond0 192.168.1.197' + edge '2.5 GbE' (v2-text rows 30-36); v3 node 'bond0 192.168.1.197/24 · eno1' (v3-text rows 21-24)"
+    },
+    {
+      "fact": "Wi-Fi interface on the same LAN as a backup route, metric 600",
+      "kind": "identifier + qualifier",
+      "fate": "drawn",
+      "where": "v2 edge 'backup' (v2-text row 30) + v4 edge 'metric 600' (v4-text row 12) + node 'wlp8s0 192.168.1.213'"
+    },
+    {
+      "fact": "metric failover, not ECMP",
+      "kind": "qualifier",
+      "fate": "abbreviated (structural only)",
+      "where": "two differently-metered paths into the same gateway (v2 backup, v4 metric 600)",
+      "reason": "the negative phrase 'not ECMP' has no text slot; recorded as defect D5"
+    },
+    {
+      "fact": "gateway 192.168.1.1, 0.5 ms",
+      "kind": "identifier + measurement",
+      "fate": "drawn",
+      "where": "v3 node 'rtr 192.168.1.1 NAT+DHCP·claimed' + edge 'def gw 0.5 ms' (v3-text rows 26-31)"
+    },
+    {
+      "fact": "Verizon Fios router, WNC OUI (MAC-vendor role = historical interpretation)",
+      "kind": "identifier + qualifier",
+      "fate": "drawn",
+      "where": "v4 node 'rtr WNC ToR/spine/BF claimed' (v4-text row 16); the same node is marked claimed in v3"
+    },
+    {
+      "fact": "router does NAT and DHCP",
+      "kind": "action",
+      "fate": "drawn",
+      "where": "v3 node label 'NAT+DHCP'; NAT is also the e11 'NAT out' edge in v4 and the e15 'NAT egress' edge in v3"
+    },
+    {
+      "fact": "whole home shares one Fios pool IP 71.251.12.240",
+      "kind": "address",
+      "fate": "drawn (as an attached address, not a flow)",
+      "where": "v3 node 'pool 71.251.12.240' fed by edge 'NAT egress' (v3-text rows 33-40)",
+      "reason": "deliberate abstraction: an address has no peer host to flow to, so it is drawn as a labelled attachment on the router; see e15"
+    },
+    {
+      "fact": "ONT / Verizon edge 169.254.3.1, 4.5 ms",
+      "kind": "address + measurement",
+      "fate": "drawn",
+      "where": "v4 node 'ont 169.254.3.1 · claimed' + edge '4.5 ms hist'"
+    },
+    {
+      "fact": "Verizon aggregation 100.41.x, 6.6 ms",
+      "kind": "address + measurement",
+      "fate": "drawn",
+      "where": "v4 node 'vz edge 100.41.x' + edge '6.6 ms hist'"
+    },
+    {
+      "fact": "Verizon backbone AS701, 6-9 ms",
+      "kind": "AS number + measurement",
+      "fate": "drawn",
+      "where": "v4 node 'vz bb AS701' + edge '6-9 ms hist'"
+    },
+    {
+      "fact": "Cloudflare 1.1.1.1 AS13335",
+      "kind": "address + AS number",
+      "fate": "drawn",
+      "where": "v4 node 'cf 1.1.1.1 AS13335'"
+    },
+    {
+      "fact": "one libvirt VM behind a NAT bridge, 192.168.122.x, VM vnet0, virbr0",
+      "kind": "address + identifier",
+      "fate": "drawn",
+      "where": "v1 nodes 'vm · vnet0', 'virbr0 NAT', edge '192.168.122.x', edge 'NAT bridge'"
+    },
+    {
+      "fact": "one Docker container 172.18.2.x, docker bridge 172.18.2.1, veth",
+      "kind": "address + identifier",
+      "fate": "drawn",
+      "where": "v1 nodes 'ctr · veth', 'docker 172.18.2.1', edge '172.18.2.x', edge 'docker bridge'"
+    },
+    {
+      "fact": "Tailscale overlay, tailscale0 100.113.153.49, encapsulated over UDP on the wired path",
+      "kind": "address + protocol",
+      "fate": "drawn",
+      "where": "v2 node 'tailscale0 100.113.153.49' + edge 'overlay'; v3 edge 'encap over UDP' into bond0"
+    },
+    {
+      "fact": "IPv6: ULA prefixes only, no global IPv6, v6 internet unreachable",
+      "kind": "limitation",
+      "fate": "abbreviated",
+      "where": "v4 limits node 'no v6 (ULA), no committed rate' (v4-text rows 4-6)",
+      "reason": "prefix detail compressed to 'ULA'; unreachability has no relation to draw, so it is an unattached annotation node"
+    },
+    {
+      "fact": "NAT on egress, no committed rate, no v6 — the three Part B answers",
+      "kind": "roles/limits",
+      "fate": "drawn",
+      "where": "NAT: v4 edge 'NAT out' + v3 edge 'NAT egress'; no committed rate + no v6: v4 limits node"
+    },
+    {
+      "fact": "Fios router is the whole collapsed fabric: ToR, spine, border, firewall in one box",
+      "kind": "role (datacenter mapping)",
+      "fate": "abbreviated",
+      "where": "v4 node 'rtr WNC ToR/spine/BF claimed'",
+      "reason": "border and firewall compressed to BF to stay inside one node label; the mapping is an interpretation and is marked claimed"
+    },
+    {
+      "fact": "the ONT is the demarc, the MMR analog: one ISP, one path",
+      "kind": "interpretation",
+      "fate": "abbreviated",
+      "where": "the single unbroken v4 chain (no second ISP path exists in the drawing)",
+      "reason": "no text slot on the ONT node without widening v4 past its already over-target height; recorded as defect D6"
+    },
+    {
+      "fact": "traceroute hops and MAC-vendor device roles are historical interpretations, not verified topology; qualify the claimed ONT and router identity",
+      "kind": "qualifier",
+      "fate": "drawn",
+      "where": "'claimed' in v3/v4 router labels and in the v4 ONT label; 'hist' in all three transit edge labels; those edges are style=dashed and render with the dashed glyph ╎ (evidence/v4/v4-text.txt rows 27-45)"
+    },
+    {
+      "fact": "scope: the rack-bench host, not the devbox",
+      "kind": "scope",
+      "fate": "drawn",
+      "where": "v2 box node 'homelab rack-bench' is the only host drawn; no devbox node exists in any view"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "vm",
+      "to": "virbr",
+      "verb_tech": "libvirt VM on the NAT bridge",
+      "label": "192.168.122.x",
+      "label_owner": "e1",
+      "view": "v1",
+      "source_fact": "vm -> virbr"
+    },
+    {
+      "id": "e2",
+      "from": "virbr",
+      "to": "box",
+      "verb_tech": "NAT bridge into the host",
+      "label": "NAT bridge",
+      "label_owner": "e2",
+      "view": "v1",
+      "source_fact": "virbr -> box"
+    },
+    {
+      "id": "e3",
+      "from": "ctr",
+      "to": "dkbr",
+      "verb_tech": "container veth into the docker bridge",
+      "label": "172.18.2.x",
+      "label_owner": "e3",
+      "view": "v1",
+      "source_fact": "ctr -> dkbr"
+    },
+    {
+      "id": "e4",
+      "from": "dkbr",
+      "to": "box",
+      "verb_tech": "docker bridge into the host",
+      "label": "docker bridge",
+      "label_owner": "e4",
+      "view": "v1",
+      "source_fact": "dkbr -> box"
+    },
+    {
+      "id": "e5",
+      "from": "ts",
+      "to": "box",
+      "verb_tech": "Tailscale overlay endpoint on the host",
+      "label": "overlay",
+      "label_owner": "e5",
+      "view": "v2",
+      "source_fact": "ts -> box"
+    },
+    {
+      "id": "e6",
+      "from": "ts",
+      "to": "bond0",
+      "verb_tech": "UDP encapsulation over the wired path",
+      "label": "encap over UDP",
+      "label_owner": "e6",
+      "view": "v3",
+      "source_fact": "ts -> bond0"
+    },
+    {
+      "id": "e7",
+      "from": "box",
+      "to": "bond0",
+      "verb_tech": "eno1 member, 2.5 GbE wired uplink",
+      "label": "2.5 GbE",
+      "label_owner": "e7",
+      "view": "v2",
+      "source_fact": "box -> bond0 (eno1 2.5 GbE)",
+      "note": "'eno1' is carried on the same bond0 node in v3"
+    },
+    {
+      "id": "e8",
+      "from": "box",
+      "to": "wlp",
+      "verb_tech": "Wi-Fi backup path",
+      "label": "backup",
+      "label_owner": "e8",
+      "view": "v2",
+      "source_fact": "box -> wlp"
+    },
+    {
+      "id": "e9",
+      "from": "bond0",
+      "to": "rtr",
+      "verb_tech": "default gateway, 0.5 ms",
+      "label": "def gw 0.5 ms",
+      "label_owner": "e9",
+      "view": "v3",
+      "source_fact": "bond0 -> rtr"
+    },
+    {
+      "id": "e10",
+      "from": "wlp",
+      "to": "rtr",
+      "verb_tech": "route metric 600 (failover)",
+      "label": "metric 600",
+      "label_owner": "e10",
+      "view": "v4",
+      "source_fact": "wlp -> rtr"
+    },
+    {
+      "id": "e11",
+      "from": "rtr",
+      "to": "ont",
+      "verb_tech": "NAT on egress",
+      "label": "NAT out",
+      "label_owner": "e11",
+      "view": "v4",
+      "source_fact": "rtr -> ont"
+    },
+    {
+      "id": "e12",
+      "from": "ont",
+      "to": "vzagg",
+      "verb_tech": "traceroute hop, 4.5 ms, historical",
+      "label": "4.5 ms hist",
+      "label_owner": "e12",
+      "view": "v4",
+      "style": "dashed",
+      "source_fact": "ont -> vzagg"
+    },
+    {
+      "id": "e13",
+      "from": "vzagg",
+      "to": "vzbb",
+      "verb_tech": "traceroute hop, 6.6 ms, historical",
+      "label": "6.6 ms hist",
+      "label_owner": "e13",
+      "view": "v4",
+      "style": "dashed",
+      "source_fact": "vzagg -> vzbb"
+    },
+    {
+      "id": "e14",
+      "from": "vzbb",
+      "to": "cf",
+      "verb_tech": "traceroute hop, 6-9 ms, historical",
+      "label": "6-9 ms hist",
+      "label_owner": "e14",
+      "view": "v4",
+      "style": "dashed",
+      "source_fact": "vzbb -> cf"
+    },
+    {
+      "id": "e15",
+      "from": "rtr",
+      "to": "pool",
+      "verb_tech": "the shared NAT egress address 71.251.12.240",
+      "label": "NAT egress",
+      "label_owner": "e15",
+      "view": "v3",
+      "source_fact": "no edge in the source; the pool IP is an address of the router's WAN side",
+      "note": "deliberate abstraction, recorded in the ledger; the alternative was dropping the address"
+    }
+  ],
+  "trunk_audit": {
+    "trunks_declared": 0,
+    "reason": "The source describes no single bus that splits into branches. bond0/wlp are two independent uplinks with different metrics, and the two virtual bridges are separate NAT domains, so drawing a trunk would assert a shared corridor the source does not state. Plain edges carry the same relations."
+  },
+  "source_pointers": [
+    "docs/visualize-eval/cases/homelab-nic-trace/source.md#what-the-probes-found",
+    "docs/visualize-eval/cases/homelab-nic-trace/source.md#mapped-onto-the-datacenter-model",
+    "docs/visualize-eval/cases/homelab-nic-trace/source.md#relationship-facts-from-the-historical-attempt (14 relations, treated as historical evidence)",
+    "docs/visualize-eval/cases/homelab-nic-trace/source.md#fixed-constraints (qualification, separation, no probing)"
+  ],
+  "abbreviations": [
+    {
+      "text": "rack-bench",
+      "stands_for": "~/rack-bench with the latest Oct 11 runs"
+    },
+    {
+      "text": "ToR/spine/BF",
+      "stands_for": "ToR, spine, border and firewall collapsed into one box"
+    },
+    {
+      "text": "hist",
+      "stands_for": "historical traceroute interpretation, not verified physical topology"
+    },
+    {
+      "text": "claimed",
+      "stands_for": "device identity inferred from traceroute and MAC vendor, not verified"
+    },
+    {
+      "text": "vz edge / vz bb",
+      "stands_for": "Verizon aggregation edge and Verizon backbone"
+    },
+    {
+      "text": "def gw",
+      "stands_for": "default gateway"
+    },
+    {
+      "text": "ULA",
+      "stands_for": "IPv6 unique local addresses (the only v6 addressing present)"
+    }
+  ],
+  "deliberate_drops": [
+    {
+      "fact": "the exact traceroute hop count and any intermediate hops not listed in the relationship facts",
+      "reason": "unknown in the source brief; only the four named hops are drawn"
+    },
+    {
+      "fact": "Oct 11 run details beyond the workload name",
+      "reason": "not part of a topology relation and not reproduced in the brief's facts"
+    }
+  ],
+  "known_defects": [
+    {
+      "id": "D1",
+      "severity": "defect",
+      "defect": "v2 does not fit the 77x47 target: extent 80x24, three columns over. Its pinned 77x47 dump shows 'graph overflows · drag to pan' in every frame and the palette corner's bottom border is clipped at row 47.",
+      "evidence": "evidence/v2/v2-77x47.txt (banner row 4, palette rows 43-47); complete in the measured 83-col pane, evidence/v2/v2-text.txt rows 17-36 and palette rows 45-49",
+      "action": "reported, not hidden: the 3-candidate budget for this view is spent (82x24 with an ambiguous owner -> 80x24 -> 80x24) and the two-edge fan out of the host box is what sets the width"
+    },
+    {
+      "id": "D2",
+      "severity": "defect",
+      "defect": "v4 does not fit the 77x47 target: extent 34x48, one row over. Its pinned 77x47 dump shows the overflow banner and clips the cf node's bottom border.",
+      "evidence": "evidence/v4/v4-77x47.txt (banner in all five frames; last graph row before 'frame 1' is the cf label row); complete in the measured 83x51 pane, evidence/v4/v4-text.txt rows 3-50",
+      "action": "reported. Six tb ranks cost 48 rows: removing the limits annotation (candidate v4-a3) left the height unchanged at 34x48, so the honest choice kept the annotation and its facts"
+    },
+    {
+      "id": "D3",
+      "severity": "capability gap",
+      "defect": "Group names are not rendered by this build: no bordered block, no block title, only a hue on borders and routes. The candidate skill's 'engine draws each group as a bordered block' is not observable here.",
+      "evidence": "evidence/v1/v1-text.txt (no group border or title anywhere); group hues differ per group in the ANSI captures (169;182;101 for nic, 211;134;155 for historical traceroute)",
+      "action": "no source fact rides on a group name; roles and qualifiers were moved into node and edge labels"
+    },
+    {
+      "id": "D4",
+      "severity": "defect",
+      "defect": "The v4 'no v6 (ULA), no committed rate' annotation is an unattached node: an absence has no peer to arrow to. Attempt v4-a1 used two such nodes and they were drawn into one row and overlapped.",
+      "evidence": "attempts/v4-a1-frames.txt rows 7-10 show '│v6: ULA only│rate│' with a shared border row",
+      "action": "the final view uses exactly one annotation node; inventing an edge was rejected as a false relation"
+    },
+    {
+      "id": "D5",
+      "severity": "defect",
+      "defect": "The qualifier 'metric failover, not ECMP' is carried structurally (two differently-metered paths into one gateway) but the words are not on screen.",
+      "evidence": "no such string in any evidence/*/*-text.txt; the only Wi-Fi texts are 'backup' (v2) and 'metric 600' (v4)"
+    },
+    {
+      "id": "D6",
+      "severity": "defect",
+      "defect": "The datacenter mapping sentence 'the ONT is the demarc, the MMR analog: one ISP, one path' is not spelled out; only its shape (a single unbroken transit chain) is drawn.",
+      "evidence": "v4 is the only transit view and has no second ISP branch (evidence/v4/v4-text.txt)"
+    },
+    {
+      "id": "D7",
+      "severity": "defect",
+      "defect": "Selection state is colour-only in this build: the --select-all plain text is identical to the unselected plain text, and only the ANSI capture proves each node's selected border.",
+      "evidence": "evidence/v1/v1-ansi.ansi vs v1-selected.ansi: plain text identical, accent 216;166;87 covers 30 border cells in the selected frame",
+      "action": "reported; the ANSI artifact is shipped for every view"
+    }
+  ],
+  "blockers": [],
+  "unmet_requirements": [
+    {
+      "requirement": "every view must prove fit with a pinned 77x47 dump that shows the whole graph and no overflow banner",
+      "met": "v1, v3",
+      "unmet": "v2 (80x24: 3 columns over), v4 (34x48: 1 row over)",
+      "structural_finding": "In `tb` this build spends 8 rows per rank (5 ranks = 40 rows, 6 ranks = 48 rows), so a 77x47 view holds at most five ranks. v4 needs six ranks because the Wi-Fi path reaches the gateway one hop before the WAN chain starts (wlp -> rtr -> ont -> vzagg -> vzbb -> cf). v2 needs two nodes in one rank for the host's parallel uplinks, and a two-node rank with two gap labels in this engine is about 80 columns wide (its three checked candidates measured 82, 80 and 80).",
+      "reshuffle_checked_and_rejected": "Moving e10 (wlp -> rtr) from v4 into v3 would leave v4 a five-rank chain, but v3 would then hold a two-node rank (bond0 plus wlp) with two gap labels, which is the same geometry that put v2 at 80 columns — the breakage would move, not disappear. The genuinely clean fix is a fifth view splitting the WAN chain at vzagg, and the round caps the case at four views.",
+      "no_rule_broken": "Neither relation nor label was deleted to reach the target: candidate v4-a1 (31x40, fits 47 rows) would have dropped e10 and was rejected for exactly that reason."
+    }
+  ],
+  "validator_summary": {
+    "script": "scripts/viz-validate.py",
+    "args": "--require-select --require-frames --attempts attempts.json",
+    "per_view": [
+      {
+        "view": "v1",
+        "output": "evidence/v1/validator.txt",
+        "failing": [],
+        "passed": 32,
+        "verdict": "all checks passed"
+      },
+      {
+        "view": "v2",
+        "output": "evidence/v2/validator.txt",
+        "failing": [
+          "viewport_matches_target"
+        ],
+        "passed": 31,
+        "verdict": "1 check failed — the pinned dump overflows"
+      },
+      {
+        "view": "v3",
+        "output": "evidence/v3/validator.txt",
+        "failing": [],
+        "passed": 32,
+        "verdict": "all checks passed"
+      },
+      {
+        "view": "v4",
+        "output": "evidence/v4/validator.txt",
+        "failing": [
+          "viewport_matches_target"
+        ],
+        "passed": 31,
+        "verdict": "1 check failed — the pinned dump overflows"
+      }
+    ],
+    "overall": "not green: two views fail the fit proof, both named as defects D1/D2. No validator, manifest, capture or dump was edited to clear a check.",
+    "routes_line": "not emitted by this binary and not expected in round 05; no check depends on it."
+  },
+  "review": {
+    "independent_review": "not run — the task forbids spawning a reviewer; the captain starts a separate Sol judge.",
+    "self_verdict": "not claimed green"
+  }
+}

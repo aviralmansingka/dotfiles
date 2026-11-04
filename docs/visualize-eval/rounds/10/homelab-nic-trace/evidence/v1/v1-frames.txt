@@ -1,0 +1,184 @@
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/10/homelab-nic-trace/specs/v1-
+host-virtuals.json
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+󰂄 6% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/10/homelab-nic-trace/sp
+ecs/v1-host-virtuals.json
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+󰂄 6% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/10/homelab-nic-trace/sp
+ecs/v1-host-virtuals.json --select-all
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+󰂄 6% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/10/homelab-nic-trace/sp
+ecs/v1-host-virtuals.json --frames 3 --step-ms 100
+viewport: 82x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 82x51 @100% · v1-host-virtuals.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                             ╭────────╮   ╭────────╮
+                             │ctr veth│   │VM vnet0│
+                             │        │   │        │
+                             ╰────────╯   ╰────────╯
+                                 │            │  192.168.122.x
+                      172.18.2.x │            │
+                                 ╰╮           ╰────╮
+                                  ▼                ▼
+                         ╭──────────────────╮   ╭──────╮
+                         │docker0 172.18.2.1│   │virbr0│
+                         │                  │   │      │
+                         ╰──────────────────╯   ╰──────╯
+                                  │                │
+                     docker bridge│                │
+                                  ╰────╮ ╭─────────╯
+                                       ▼ ▼libvirt NAT
+                       ╭─────────────────────────────────╮
+                       │homelab rack-bench · no global v6│
+                       │                                 │
+                       ╰─────────────────────────────────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 82x51 @100% · v1-host-virtuals.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                             ╭────────╮   ╭────────╮
+                             │ctr veth│   │VM vnet0│
+                             │        │   │        │
+                             ╰────────╯   ╰────────╯
+                                 │            │  192.168.122.x
+                      172.18.2.x │            │
+                                 ╰╮           ╰────╮
+                                  ▼                ▼
+                         ╭──────────────────╮   ╭──────╮
+                         │docker0 172.18.2.1│   │virbr0│
+                         │                  │   │      │
+                         ╰──────────────────╯   ╰──────╯
+                                  │                │
+                     docker bridge│                │
+                                  ╰────╮ ╭─────────╯
+                                       ▼ ▼libvirt NAT
+                       ╭─────────────────────────────────╮
+                       │homelab rack-bench · no global v6│
+                       │                                 │
+                       ╰─────────────────────────────────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 82x51 @100% · v1-host-virtuals.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                             ╭────────╮   ╭────────╮
+                             │ctr veth│   │VM vnet0│
+                             │        │   │        │
+                             ╰────────╯   ╰────────╯
+                                 │            │  192.168.122.x
+                      172.18.2.x │            │
+                                 ╰╮           ╰────╮
+                                  ▼                ▼
+                         ╭──────────────────╮   ╭──────╮
+                         │docker0 172.18.2.1│   │virbr0│
+                         │                  │   │      │
+                         ╰──────────────────╯   ╰──────╯
+                                  │                │
+                     docker bridge│                │
+                                  ╰────╮ ╭─────────╯
+                                       ▼ ▼libvirt NAT
+                       ╭─────────────────────────────────╮
+                       │homelab rack-bench · no global v6│
+                       │                                 │
+                       ╰─────────────────────────────────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+󰂄 6% ❯

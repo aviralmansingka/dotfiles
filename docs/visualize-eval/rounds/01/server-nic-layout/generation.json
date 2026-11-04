@@ -1,0 +1,447 @@
+{
+  "case_id": "server-nic-layout",
+  "round": "01",
+  "generator": {
+    "identity": "pi worker subagent 'viz-ds01-server-nic-layout' (PI_SUBAGENT_AGENT=worker, PI_SUBAGENT_ID=2b026675)",
+    "provider": "fireworks",
+    "model": "accounts/fireworks/routers/deepseek-flash-latest",
+    "model_env": "PI_MODEL=accounts/fireworks/routers/deepseek-flash-latest, PI_PROVIDER=fireworks, PI_REASONING_LEVEL=high",
+    "pi_session_id": "01a19b5c-28a1-77c9-b5f2-32cc092c430e",
+    "session_file": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-dotfiles-fix-visualize-skill--/2026-11-02T08-24-29-857Z_2b026675-93ab02bd-90ea756f-45fc.jsonl",
+    "herdr_workspace": "w7E",
+    "herdr_tab": "w7E:tQ",
+    "agent_pane": "w7E:p2W",
+    "cwd": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill",
+    "started_utc": "2026-11-02T08:24:30Z",
+    "finished_utc": "2026-11-02T08:29:00Z"
+  },
+  "candidate_skill": {
+    "path": "docs/visualize-eval/rounds/01/SKILL.md",
+    "sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+    "note": "read fresh at start of this run; the globally installed visualize skill was not consulted or used"
+  },
+  "renderer": {
+    "path": "/tmp/visualize-eval/round-01/bin/rataflow-view",
+    "sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+    "note": "only binary used for every --check and every viewer launch; no build, install, or renderer edit"
+  },
+  "viewport": {
+    "target": "77 columns x 47 rows at natural 100% zoom",
+    "actual": "77 columns x 47 rows",
+    "measurement_method": "stty size inside each viewer pane before launching the viewer -> '47 77' (rows cols)",
+    "pane_rect_including_pane_chrome": "79x49",
+    "split": "herdr pane split --current --direction right --ratio 0.5 --cwd <repo> --no-focus",
+    "pane_chrome_note": "the Herdr pane rect is 79x49; the pty the app draws into is 77x47, so the target is met exactly",
+    "zoom": "natural, 100%; 'f' (fit) was never pressed and no scroll/zoom was used",
+    "no_focus": true
+  },
+  "views": [
+    {
+      "id": "A",
+      "name": "host, dark ports, /29 peers and the Arista .57 gateway",
+      "direction": "tb",
+      "layers": 4,
+      "spec": "docs/visualize-eval/rounds/01/server-nic-layout/specs/vA-host-tor.json",
+      "spec_sha256": "91e8bb79a1cdc09582d7e1217394dd781f8c329247391f1c20268db67b32e549",
+      "extent_cells": "64x32",
+      "pane_id": "w7E:p3Q",
+      "timestamps_utc": {
+        "split": "2026-11-02T08:26:59Z",
+        "viewer_start": "2026-11-02T08:27:03Z",
+        "unselected_capture": "2026-11-02T08:27:05Z",
+        "frame1": "2026-11-02T08:27:06Z",
+        "frame2": "2026-11-02T08:27:07Z",
+        "selected_1": "2026-11-02T08:27:09Z",
+        "selected_2": "2026-11-02T08:27:13Z",
+        "quit_and_pane_closed": "2026-11-02T08:27:44Z"
+      },
+      "launch_command": "/tmp/visualize-eval/round-01/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/01/server-nic-layout/specs/vA-host-tor.json; herdr pane close w7E:p3Q",
+      "header_observed": "rataflow-view · vA-host-tor.json · 6 nodes · 5 edges · 0 flows · drag pan ·",
+      "check": {
+        "command": "/tmp/visualize-eval/round-01/bin/rataflow-view --check docs/visualize-eval/rounds/01/server-nic-layout/specs/vA-host-tor.json",
+        "exit_code": 0,
+        "stdout_file": "docs/visualize-eval/rounds/01/server-nic-layout/checks/vA-host-tor.stdout.txt",
+        "stdout": "ok: nodes=6 edges=5 flows=0 direction=tb theme=gruvbox\nlayers=4 (explicit placement, sugiyama skipped)\nextent=64x32 cells",
+        "stderr_file": "docs/visualize-eval/rounds/01/server-nic-layout/checks/vA-host-tor.stderr.txt",
+        "stderr": "",
+        "warnings": 0
+      },
+      "captures": {
+        "dimensions": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vA/stty-size.raw.txt",
+        "pane_layout": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vA/pane-layout.json",
+        "header_wait": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vA/header-wait.json",
+        "unselected_text": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vA/unselected.text.txt",
+        "unselected_ansi": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vA/unselected.ansi.txt",
+        "selected_states": [
+          {
+            "key": "Tab (first node selected)",
+            "text": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vA/selected-1.text.txt",
+            "ansi": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vA/selected-1.ansi.txt"
+          },
+          {
+            "key": "Right (second node selected)",
+            "text": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vA/selected-2.text.txt",
+            "ansi": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vA/selected-2.ansi.txt"
+          }
+        ],
+        "frames": [
+          {
+            "at": "2026-11-02T08:27:06Z",
+            "text": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vA/frame1.text.txt",
+            "sha256": "83009d4bc07ab9f3e5ebe05c36b797791a9a51901047731467fcdbcd13b0f5ad"
+          },
+          {
+            "at": "2026-11-02T08:27:07Z",
+            "text": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vA/frame2.text.txt",
+            "sha256": "83009d4bc07ab9f3e5ebe05c36b797791a9a51901047731467fcdbcd13b0f5ad"
+          }
+        ],
+        "frames_note": "view A is intentionally static (0 flows), so the two timestamped frames are byte-identical; that is the animation evidence for this view",
+        "grid_check": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vA/grid-check.txt",
+        "border_color_check": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vA/unselected.ansi.txt",
+        "border_color_note": "parsed with tools/ansi_grid.py: all six box perimeters are single-colour"
+      }
+    },
+    {
+      "id": "B",
+      "name": "observed egress hops above the gateway (animated path)",
+      "direction": "tb",
+      "layers": 4,
+      "spec": "docs/visualize-eval/rounds/01/server-nic-layout/specs/vB-upstream.json",
+      "spec_sha256": "73e2d48c87e9ff021086998f835a1153c04fb2526329076f13ec464aee1aa5f0",
+      "extent_cells": "22x29",
+      "pane_id": "w7E:p41",
+      "timestamps_utc": {
+        "split": "2026-11-02T08:27:48Z",
+        "viewer_start": "2026-11-02T08:27:51Z",
+        "unselected_capture": "2026-11-02T08:27:53Z",
+        "frame1": "2026-11-02T08:28:03Z",
+        "frame2": "2026-11-02T08:28:04Z",
+        "frame3": "2026-11-02T08:28:05Z",
+        "frame4": "2026-11-02T08:28:05Z",
+        "selected_1": "2026-11-02T08:28:14Z",
+        "selected_2": "2026-11-02T08:28:15Z",
+        "quit_and_pane_closed": "2026-11-02T08:28:33Z"
+      },
+      "launch_command": "/tmp/visualize-eval/round-01/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/01/server-nic-layout/specs/vB-upstream.json; herdr pane close w7E:p41",
+      "header_observed": "rataflow-view · vB-upstream.json · 4 nodes · 3 edges · 3 flows · drag pan ·",
+      "check": {
+        "command": "/tmp/visualize-eval/round-01/bin/rataflow-view --check docs/visualize-eval/rounds/01/server-nic-layout/specs/vB-upstream.json",
+        "exit_code": 0,
+        "stdout_file": "docs/visualize-eval/rounds/01/server-nic-layout/checks/vB-upstream.stdout.txt",
+        "stdout": "ok: nodes=4 edges=3 flows=3 direction=tb theme=gruvbox\nlayers=4 (explicit placement, sugiyama skipped)\nextent=22x29 cells",
+        "stderr_file": "docs/visualize-eval/rounds/01/server-nic-layout/checks/vB-upstream.stderr.txt",
+        "stderr": "",
+        "warnings": 0
+      },
+      "captures": {
+        "dimensions": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vB/stty-size.raw.txt",
+        "pane_layout": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vB.pane-layout.json",
+        "header_wait": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vB/header-wait.json",
+        "unselected_text": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vB/unselected.text.txt",
+        "unselected_ansi": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vB/unselected.ansi.txt",
+        "selected_states": [
+          {
+            "key": "Tab (Arista .57 selected)",
+            "text": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vB/selected-1.text.txt",
+            "ansi": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vB/selected-1.ansi.txt"
+          },
+          {
+            "key": "Tab again (Airtel BB selected)",
+            "text": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vB/selected-2.text.txt",
+            "ansi": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vB/selected-2.ansi.txt"
+          }
+        ],
+        "frames": [
+          {
+            "at": "2026-11-02T08:28:03Z",
+            "text": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vB/frame1.text.txt"
+          },
+          {
+            "at": "2026-11-02T08:28:04Z",
+            "text": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vB/frame2.text.txt"
+          },
+          {
+            "at": "2026-11-02T08:28:05Z",
+            "text": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vB/frame3.text.txt"
+          },
+          {
+            "at": "2026-11-02T08:28:05Z",
+            "text": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vB/frame4.text.txt"
+          }
+        ],
+        "frames_note": "four distinct frame hashes; dots advance along the chain, so the animation is real and captured",
+        "grid_check": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vB/grid-check-unselected.txt",
+        "border_color_check": "docs/visualize-eval/rounds/01/server-nic-layout/captures/vB/ansi-border-colors.txt",
+        "border_color_note": "tools/ansi_grid.py output for unselected and both selected states"
+      }
+    }
+  ],
+  "relationship_coverage": [
+    {
+      "source_relationship": "dark -> s1: no cable",
+      "view_edge": "A: dark -> s1",
+      "visible_label": "7 dark ports",
+      "status": "covered, qualified",
+      "note": "drawn as the observed fact (seven NICs with no link). The brief forbids claiming cable absence from inactive ports, so the label states the observation instead of 'no cable'; the unproven part is not asserted in the diagram."
+    },
+    {
+      "source_relationship": "s1 -> nic: only uplink",
+      "view_edge": "A: s1 -> nic",
+      "visible_label": "only uplink",
+      "status": "covered",
+      "note": "direction preserved (host owns the single active interface)."
+    },
+    {
+      "source_relationship": "nic -> gw: default gw 0.1 ms",
+      "view_edge": "A: nic -> gw",
+      "visible_label": "gw 0.1 ms",
+      "status": "covered",
+      "note": "same /29 L3 gateway, latency kept."
+    },
+    {
+      "source_relationship": "s2 -> gw: same /29",
+      "view_edge": "A: s2 -> gw",
+      "visible_label": "same /29",
+      "status": "covered",
+      "note": "neighbouring server routed by the same gateway."
+    },
+    {
+      "source_relationship": "spare -> gw: free in /29",
+      "view_edge": "A: spare -> gw",
+      "visible_label": "free? in /29",
+      "status": "covered, qualified",
+      "note": "the question mark carries the brief's qualification that unresponsive addresses do not prove the addresses are free."
+    },
+    {
+      "source_relationship": "gw -> airtel: transit 1.8 ms",
+      "view_edge": "B: gw -> airtel",
+      "visible_label": "transit 1.8 ms",
+      "status": "covered",
+      "note": "animated (flow 0.3) to mark the observed egress path."
+    },
+    {
+      "source_relationship": "airtel -> airtelbb: 7.1 ms",
+      "view_edge": "B: airtel -> airtelbb",
+      "visible_label": "7.1 ms",
+      "status": "covered",
+      "note": "Airtel backbone hop, animated."
+    },
+    {
+      "source_relationship": "airtelbb -> cf: 8.3 ms",
+      "view_edge": "B: airtelbb -> cf",
+      "visible_label": "8.3 ms",
+      "status": "covered",
+      "note": "Cloudflare 1.1.1.1 reached at 8.3 ms (relationship list). Source prose line 120 said 8.6 ms; the relationship facts say 8.3 ms and were followed."
+    }
+  ],
+  "node_coverage": [
+    {
+      "source_node": "s1 (server1 Dell R7725 .58)",
+      "drawn_as": "A: 'server1 R7725 .58'"
+    },
+    {
+      "source_node": "dark (7 NICs dark)",
+      "drawn_as": "A: '7 NICs dark'"
+    },
+    {
+      "source_node": "nic (eno16595np0 25 GbE)",
+      "drawn_as": "A: 'eno16595np0 25 GbE'"
+    },
+    {
+      "source_node": "s2 (server2 Dell R7725 .59)",
+      "drawn_as": "A: 'server2 R7725 .59'"
+    },
+    {
+      "source_node": "spare (free .60-.62)",
+      "drawn_as": "A: 'spare .60-.62'"
+    },
+    {
+      "source_node": "gw (Arista ToR .57 AS132717)",
+      "drawn_as": "A and B: 'Arista .57 AS132717' (shared boundary node in both views)"
+    },
+    {
+      "source_node": "airtel (Airtel 14.143.x)",
+      "drawn_as": "B: 'Airtel 14.143.x'"
+    },
+    {
+      "source_node": "airtelbb (Airtel backbone 14.141.x)",
+      "drawn_as": "B: 'Airtel BB 14.141.x'"
+    },
+    {
+      "source_node": "cf (Cloudflare 1.1.1.1 AS13335)",
+      "drawn_as": "B: 'Cloudflare 1.1.1.1' (AS13335 omitted for width; see abbreviations)"
+    }
+  ],
+  "abbreviations": {
+    "BB": "Airtel backbone (source node 'airtelbb', 14.141.x)",
+    "gw": "gateway / default next hop (the .57 Arista)",
+    "/29": "the public 103.19.91.56/29 block",
+    "ms": "milliseconds of observed round-trip latency from the source brief",
+    "R7725": "Dell PowerEdge R7725 (brand omitted for box width)",
+    "OUI": "MAC address vendor prefix, mentioned only in the qualifications, not in the diagram"
+  },
+  "qualifications": [
+    "Arista identity is MAC-OUI derived: the gateway node says 'Arista .57 AS132717', never 'ToR', so the diagram does not assert the ToR role that the brief says MAC OUI cannot prove.",
+    "Seven dark NICs are drawn as an observation ('7 NICs dark' / '7 dark ports'); the diagram does not assert that those ports have no cable.",
+    "The .60-.62 addresses are labelled with a question mark ('free? in /29') because no response was observed rather than proven absence of use.",
+    "No spine, leaf, VXLAN or MPLS device is drawn: the source says traceroute cannot see them, and the brief forbids inventing them."
+  ],
+  "abstractions": [
+    "One 9-node/8-edge graph does not fit 77x47: a single 7-layer tb spec measures 64x56 cells (attempts/v1-full-tb.json), taller than the 47-row pane. The graph is therefore split into view A (host, ports, /29, gateway) and view B (hops above the gateway), with the Arista .57 gateway drawn in both views as the shared boundary node. No relationship is dropped.",
+    "Deliberate omissions (not relationships in the source facts, and drawing them would invent structure): 'no NAT, public L3 straight to the host, no IPv6', server uptime (1.5 days), 'no GPUs / no rack-bench yet', and the general note that everything above the ToR is invisible from the host.",
+    "View A is intentionally static (0 flows). An animated variant (attempts/vA-host-tor-flow.json, captured in captures/superseded-vA-flow/) put flow dots on the two short active-path stems; on stems shorter than the renderer's 7-cell dot spacing the dots crowded two rows apart and replaced route corner glyphs, so the static version was kept. That is a rendering choice, not a relationship change."
+  ],
+  "defects": [
+    {
+      "view": "A",
+      "defect": "Source stems and arrowheads attach one cell inside the node's left corner rather than at the box centre: dark stem at col 13 of a box spanning 12-24, s1 arrow at col 10 of 9-27, and the three gw fan-in arrowheads at cols 9/11/13 of 8-28.",
+      "impact": "Ports are distinct cells (no shared corridor, no false branch), but the gateway's three in-edges read as a left-side bundle instead of a fanned fan-in.",
+      "mitigation": "kept; moving them is not expressible in the spec"
+    },
+    {
+      "view": "A",
+      "defect": "The 'free? in /29' label sits on the arrowhead row rather than on its own horizontal run (the run is one row above), one corridor away from the 'same /29' label.",
+      "impact": "label ownership is inferred by proximity; both labels are inside their corridors' span, so no label is attached to the wrong edge, but the pairing is less explicit than for the other three edges"
+    },
+    {
+      "view": "A and B",
+      "defect": "Node labels are single-line, so two source facts had to be shortened: 'Cloudflare 1.1.1.1 AS13335' is drawn as 'Cloudflare 1.1.1.1', and 'Dell PowerEdge R7725' as 'R7725'.",
+      "impact": "vendor/AS detail for the endpoint and server brand are not visible on screen; both are listed in node_coverage and abbreviations"
+    },
+    {
+      "view": "A and B",
+      "defect": "Selection is carried by bold plus the accent colour only; the plain-text capture is byte-identical between selected and unselected states.",
+      "impact": "a text-only reader cannot tell which node is selected; the ANSI captures (selected-1/selected-2) are required to see it"
+    },
+    {
+      "view": "A and B",
+      "defect": "The selection/flow accent (216,166,87) is the same RGB triple as the first shade of the layer-0 hue family, so in both views a selected node is the same colour as the unselected layer-0 node.",
+      "impact": "selection reads only from the bold weight plus the colour change of a non-layer-0 node; the accent is not reserved exclusively for selection as the candidate skill claims"
+    },
+    {
+      "view": "B",
+      "defect": "Flow dots overwrite route corner glyphs on the two short jogs under the gateway and under Airtel: frame4 shows '●─●' where the ╰ and ╮ corners should be, frame2 shows '●╯' replacing a ╭ corner.",
+      "impact": "for those frames the dogleg is momentarily unreadable as a continuous route; the endpoints and arrowheads stay correct"
+    },
+    {
+      "view": "B",
+      "defect": "Two dots appear on the same short jog at the same time (frames 2 and 4), well inside the renderer's 7-cell dot spacing rule.",
+      "impact": "reads as two flows on one hop; spacing is a renderer property of short segments and could not be fixed from the spec without deleting the animation"
+    },
+    {
+      "view": "B",
+      "defect": "The chain occupies cols 29-49 of the 77-column pane, leaving roughly 28 empty columns; extent is 22x29 in a 77x47 viewport.",
+      "impact": "no clipping and no overflow badge, but the pane is under-used; an 'lr' layout cannot help (measured 102x5 and 119x5 for this chain, wider than the pane)"
+    }
+  ],
+  "blockers": [],
+  "unmet_needs": [
+    "The candidate skill's independent readability review was not run: the round task reserves judging for a separate Astra judge that the captain starts after this result. No reviewer or judge was spawned here.",
+    "No renderer feature was missing for this case, so no blocker is recorded.",
+    "Target viewport was met exactly (77x47), so no dimension blocker is recorded."
+  ],
+  "attempts": [
+    {
+      "view": "A+B combined",
+      "spec": "docs/visualize-eval/rounds/01/server-nic-layout/attempts/v1-full-tb.json",
+      "check": "docs/visualize-eval/rounds/01/server-nic-layout/attempts/check-logs/v1-full-tb.stdout.txt",
+      "result": "rejected: 7-layer single view, extent 64x56 cells (56 rows > 47-row pane)"
+    },
+    {
+      "view": "A",
+      "spec": "docs/visualize-eval/rounds/01/server-nic-layout/attempts/v2a-host-tb.json",
+      "check": "docs/visualize-eval/rounds/01/server-nic-layout/attempts/check-logs/v2a-host-tb.stdout.txt",
+      "result": "kept: 6 nodes / 5 edges, extent 64x32"
+    },
+    {
+      "view": "A",
+      "spec": "docs/visualize-eval/rounds/01/server-nic-layout/attempts/vA-host-tor-flow.json",
+      "check": "docs/visualize-eval/rounds/01/server-nic-layout/attempts/check-logs/vA-host-tor-flow.stdout.txt",
+      "result": "captured, then superseded: composed and rendered but its static form was preferred; its flow dots crowded 2 rows apart on the short active-path stems"
+    },
+    {
+      "view": "A",
+      "spec": "docs/visualize-eval/rounds/01/server-nic-layout/specs/vA-host-tor.json",
+      "check": "docs/visualize-eval/rounds/01/server-nic-layout/checks/vA-host-tor.stdout.txt",
+      "result": "final: same layout as attempt 2 plus the mandatory label qualification ('free in /29' -> 'free? in /29'). This is a label-correctness fix required by the brief, not a new layout attempt."
+    },
+    {
+      "view": "B",
+      "spec": "docs/visualize-eval/rounds/01/server-nic-layout/attempts/v2b-upstream-lr.json",
+      "check": "docs/visualize-eval/rounds/01/server-nic-layout/attempts/check-logs/v2b-upstream-lr.stdout.txt",
+      "result": "rejected: lr, extent 119x5 (wider than 77 columns)"
+    },
+    {
+      "view": "B",
+      "spec": "docs/visualize-eval/rounds/01/server-nic-layout/attempts/v2b-upstream-lr2.json",
+      "check": "docs/visualize-eval/rounds/01/server-nic-layout/attempts/check-logs/v2b-upstream-lr2.stdout.txt",
+      "result": "rejected: lr with shorter labels, extent 102x5 (still wider than 77 columns)"
+    },
+    {
+      "view": "B",
+      "spec": "docs/visualize-eval/rounds/01/server-nic-layout/attempts/v2b-upstream-tb-attempt3.json",
+      "check": "docs/visualize-eval/rounds/01/server-nic-layout/attempts/check-logs/v2b-upstream-tb-attempt3.stdout.txt",
+      "result": "kept: tb, 4 nodes / 3 edges / 3 flows, extent 22x29 (byte-identical to specs/vB-upstream.json)"
+    }
+  ],
+  "verification": [
+    "rataflow-view --check on both final specs: exit 0, no warnings, no skipped-label or shared-corridor lines (checks/).",
+    "Viewer header read in-pane for both views before capture (captures/vA/header-wait.json, captures/vB/header-wait.json).",
+    "Plain-text visible captures inspected: all 6 (A) and 4 (B) node boxes complete, all 5 + 3 relationship labels visible, no box or label clipped.",
+    "tools/grid_check.py: 5 (A) and 3 (B) arrowheads each land directly on the target box's top border; 5 and 3 source stems sit on the source box's bottom border; 0 route glyphs inside any box interior; 0 border-glyph problems; all four corners present on every box.",
+    "tools/ansi_grid.py: every box perimeter is a single foreground colour (no mixed border/handle colours) in both views; layer families are distinct (A: amber / teal / pink / green; B: amber / teal / pink / green); stems and arrowheads are the muted stroke colour; labels are the neutral text colour; flow dots use the accent.",
+    "Animation: view B frames 1-4 have four distinct hashes and dots advance; view A frames are byte-identical (static by design).",
+    "Dimensions: stty inside each pane reported '47 77' before the viewer started; recorded verbatim in captures/vA/stty-size.raw.txt and captures/vB/stty-size.raw.txt."
+  ],
+  "cleanup": {
+    "panes_created": [
+      {
+        "pane_id": "w7E:p36",
+        "purpose": "first view A attempt (superseded flow variant)",
+        "closed_at_utc": "2026-11-02T08:26:21Z",
+        "closed_by": "self-closing viewer command after 'q'"
+      },
+      {
+        "pane_id": "w7E:p3G",
+        "purpose": "second view A run (static, unqualified spare label)",
+        "closed_at_utc": "2026-11-02T08:26:54Z",
+        "closed_by": "self-closing viewer command after 'q'"
+      },
+      {
+        "pane_id": "w7E:p3Q",
+        "purpose": "final view A capture",
+        "closed_at_utc": "2026-11-02T08:27:45Z",
+        "closed_by": "self-closing viewer command after 'q'"
+      },
+      {
+        "pane_id": "w7E:p41",
+        "purpose": "final view B capture",
+        "closed_at_utc": "2026-11-02T08:28:34Z",
+        "closed_by": "self-closing viewer command after 'q'"
+      }
+    ],
+    "status": "clean",
+    "verification": "herdr pane list after each quit shows only the agent pane w7E:p2W in tab w7E:tQ; no pane was closed manually with 'pane close' and no pane leaked",
+    "captain_tab_untouched": true,
+    "raw_tmux_used": false
+  },
+  "judging": {
+    "generator_claimed_verdict": "none",
+    "judge_run_by_generator": false,
+    "note": "the captain starts a separate Astra judge; this generator neither ran nor simulated a review"
+  },
+  "hash_manifest": "docs/visualize-eval/rounds/01/server-nic-layout/captures/sha256-manifest.txt",
+  "commands_log": "docs/visualize-eval/rounds/01/server-nic-layout/captures/commands.log",
+  "tools": [
+    "docs/visualize-eval/rounds/01/server-nic-layout/tools/grid_check.py",
+    "docs/visualize-eval/rounds/01/server-nic-layout/tools/ansi_grid.py"
+  ],
+  "source_pointers": {
+    "brief": "docs/visualize-eval/cases/server-nic-layout/source.md",
+    "historical_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-rack-bench-feat-network-diagram--/2026-10-13T05-14-42-097Z_01a133af-3231-71ff-87c1-c56889a12a6c.jsonl",
+    "historical_lines": "120 (assistant layout), 121 (user question), 125 (assistant answer)",
+    "historical_tool_call": "chatcmpl-tool-bd5526a999aeb873 (line 110)",
+    "read_scope": "source.md only; the chat jsonl, expected.json, historical-variants.json, other cases, earlier rounds and prior critiques were not read"
+  }
+}

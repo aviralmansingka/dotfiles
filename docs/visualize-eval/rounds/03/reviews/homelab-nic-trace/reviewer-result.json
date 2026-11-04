@@ -1,0 +1,1257 @@
+{
+  "protocol_version": 1,
+  "round": 3,
+  "case_id": "homelab-nic-trace",
+  "candidate_sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+  "renderer_sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7",
+  "rubric_sha256": "5519fd84f6b75973dbf7b5f5544c909a8f32a8841a876c8e7af00a1fcb119335",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "e7ade0406af0ae17303f5662a35b94c620878051c92d56ddbf2a9dc33472eae0",
+  "generator": {
+    "worker_id": "viz-ds03-3",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge03-homelab",
+    "model": "openai/gpt-6.1-sol"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": null,
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/03/reviews/homelab-nic-trace/observed-first.md",
+      "sha256": "e3b445b5b4641c8bb29ae1284b33cf4b56663d469c7a7dd095a1780beeeeb833",
+      "description": "Immutable stage-A observation, saved and hashed before expected reveal; saved_before_expected_reveal=true.",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/03/reviews/homelab-nic-trace/spec-manifest.json",
+      "sha256": "e7ade0406af0ae17303f5662a35b94c620878051c92d56ddbf2a9dc33472eae0",
+      "description": "Deterministic sorted repository-relative final spec path and actual SHA-256 pairs; this file hash is spec_sha256.",
+      "capture": null
+    },
+    {
+      "id": "hash-verification",
+      "path": "docs/visualize-eval/rounds/03/reviews/homelab-nic-trace/hash-verification.json",
+      "sha256": "3cb43939999e24dcd57f41f2e013c423af0e8f7a2ee08fb2ca2dbb002c464d2e",
+      "description": "Actual frozen skill, binary, rubric, dataset, source, spec, artifact, attempt, and harness digest comparisons.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+      "sha256": "abe8b376eccd7d0027f2985aab55ed656603b2094c275ee66ed223a57421b4c4",
+      "description": "Frozen source excerpts and overriding historical/claimed constraints; no historical live commands replayed.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/homelab-nic-trace/expected.json",
+      "sha256": "91ef88d09af71cd4583cfd0f1141e10f2fc2efdd3a779f9389f1d67759cd09c7",
+      "description": "Frozen 13 historical-reference entities and 14 historical-reference relations, with human qualification constraints.",
+      "capture": null
+    },
+    {
+      "id": "variants",
+      "path": "docs/visualize-eval/cases/homelab-nic-trace/historical-variants.json",
+      "sha256": "d70fd9d33cc1966bc015b6bc4d84176984979cac15b9cb7d1d89165e1bc7fc1f",
+      "description": "Historical generated spec; not independent physical-topology verification.",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/03/rubric.json",
+      "sha256": "5519fd84f6b75973dbf7b5f5544c909a8f32a8841a876c8e7af00a1fcb119335",
+      "description": "All seven frozen categories and result schema, corrected reviewer identity revision 4.",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/03/metadata.json",
+      "sha256": "2b8b65daab2e7c34565fa8ed90f7b83fb4c9475b9e88a029be27168fa6afcb86",
+      "description": "Frozen inputs, endpoint identities, worker labels, hash records, and clerical correction episode.",
+      "capture": null
+    },
+    {
+      "id": "config",
+      "path": "docs/visualize-eval/rounds/03/config.json",
+      "sha256": "0c86972ce7eac6f4ae2a8b0c2aea8df0e8c7c83ef162ccc33c1f0f9adacab8b0",
+      "description": "Frozen round-3 execution target and corrected Sol identity.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen manifest; homelab animation optional, not required.",
+      "capture": null
+    },
+    {
+      "id": "candidate-skill",
+      "path": "docs/visualize-eval/rounds/03/SKILL.md",
+      "sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+      "description": "Frozen candidate skill, not the current mutable installed skill.",
+      "capture": null
+    },
+    {
+      "id": "capture-harness",
+      "path": "scripts/viz-evidence.sh",
+      "sha256": "2a804dea703e5a9da9cdd788d4eb89690860a02606ec681948670dfe19e8e069",
+      "description": "Bytes verified identical to metadata pin; combines --check stdout/stderr, records exit/window, runs exact captures, and probes closure. Read only, not executed by reviewer.",
+      "capture": null
+    },
+    {
+      "id": "validator-harness",
+      "path": "scripts/viz-validate.py",
+      "sha256": "4a13878de22dd9dc28ac098658c0dc0c07727e7a03228af994a6f839e7d54ade",
+      "description": "Bytes verified identical to metadata pin. Passing validator output does not substitute for independent judgment.",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/generation.json",
+      "sha256": "a5cc1b320055057a5d4d4a95b26e77f11fef4aa30432b9071f1fac8c7a28c8be",
+      "description": "Generator identity, commands, meaning/relationship ledgers, dimensions claims, omissions, and cleanup statements.",
+      "capture": null
+    },
+    {
+      "id": "generation-report",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/generation.md",
+      "sha256": "a4247e26b923c4b1cec4fb31e71c0b3aa09470fb17d37d5940d771139cfe799e",
+      "description": "Generator report and explicit remaining defects; not accepted as a visual verdict.",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/attempts.json",
+      "sha256": "185f89067cd6d94f092da927086d4ee0ce8358780abd7cc8f72a6af4ebfd6d09",
+      "description": "Attempt budget, recorded dimensions/crossings, final selection, and qualifier deletion to avoid a crossing.",
+      "capture": null
+    },
+    {
+      "id": "attempt-spec-1",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/attempts/v1-attempt1-combined-7nodes.json",
+      "sha256": "7ce69e4cf5df31013c6ba73f0d5273a93c28a3c699178c70be5e016f38e80989",
+      "description": "Saved rejected/local-attempt spec; byte hash verified against attempts.json. Not a final capture.",
+      "capture": null
+    },
+    {
+      "id": "attempt-spec-2",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/attempts/v2-attempt1-no-caption.json",
+      "sha256": "1c2c779edf6923905445ea1665f83f131f0eb9a581bf25ecf650cc35fc540153",
+      "description": "Saved rejected/local-attempt spec; byte hash verified against attempts.json. Not a final capture.",
+      "capture": null
+    },
+    {
+      "id": "attempt-spec-3",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/attempts/v2-attempt2-claimed-rtr-crossing.json",
+      "sha256": "dc65ca9982c69b5fe746957b5bb4837295aae6dbb5284e16d5328bfd7c2b8729",
+      "description": "Saved rejected/local-attempt spec; byte hash verified against attempts.json. Not a final capture.",
+      "capture": null
+    },
+    {
+      "id": "attempt-spec-4",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/attempts/v3-attempt1-plain.json",
+      "sha256": "1676e1f5cc2f99c4f589c40778d9066339396e76d58bc687e6df7645eecfc3ab",
+      "description": "Saved rejected/local-attempt spec; byte hash verified against attempts.json. Not a final capture.",
+      "capture": null
+    },
+    {
+      "id": "v1-spec",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v1-virtual-nets.json",
+      "sha256": "f6dcb5d64b17f49f3ef41668682a0b876e1802183ed9fec52c9342d0d45ca9e5",
+      "description": "Final spec; actual hash matches generator ledger and capture manifest.",
+      "capture": null
+    },
+    {
+      "id": "v1-text",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v1-virtual-nets/v1-virtual-nets-text.txt",
+      "sha256": "d6de0845aa704d2b731fd99daa8cc01daf29d585e7bf25c3908662e89ea5938f",
+      "description": "Actual visible text snapshot; terminal target 77x47, trailing blank row omitted in text serialization. Timestamp is the recorded capture interval, not an invented per-snapshot time. Dimensions here describe app grids, not a separately measured external live rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-virtual-nets",
+        "frame": "normal",
+        "timestamp": "2026-11-02T11:18:27Z/2026-11-02T11:18:31Z",
+        "state": "normal natural zoom",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-normal",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v1-virtual-nets/v1-virtual-nets-ansi.ansi",
+      "sha256": "97e01cf3470b20e26fb860ad959ce24b23045be5fc7f00fc4d5d7033cd80efcd",
+      "description": "Actual 77x47 normal ANSI cell grid with RGB border evidence. Timestamp is the recorded capture interval, not an invented per-snapshot time. Dimensions here describe app grids, not a separately measured external live rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-virtual-nets",
+        "frame": "normal",
+        "timestamp": "2026-11-02T11:18:27Z/2026-11-02T11:18:31Z",
+        "state": "normal natural zoom",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-selected",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v1-virtual-nets/v1-virtual-nets-selected.ansi",
+      "sha256": "33fd8b16485b67457c6ffc654553c3115a9e66a8853d764746337a1d5b055cab",
+      "description": "Actual 77x47 all-selected ANSI grid; all node perimeter cells captured, not independent transitions or drag handles. Timestamp is the recorded capture interval, not an invented per-snapshot time. Dimensions here describe app grids, not a separately measured external live rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-virtual-nets",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T11:18:27Z/2026-11-02T11:18:31Z",
+        "state": "all nodes selected simultaneously",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frames-text",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v1-virtual-nets/v1-virtual-nets-frames.txt",
+      "sha256": "a435581cfc1b6c341d4ee932b0314268ae9a65e898ca97922d86ada58275fc01",
+      "description": "Timestamped runtime stdout and frames; includes actual viewport startup lines and exact executed viewer argv. Timestamp is the recorded capture interval, not an invented per-snapshot time. Dimensions here describe app grids, not a separately measured external live rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-virtual-nets",
+        "frame": "0@0ms,1@100ms,2@200ms,3@300ms,4@400ms",
+        "timestamp": "2026-11-02T11:18:27Z/2026-11-02T11:18:31Z",
+        "state": "static frame sequence",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frames-ansi",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v1-virtual-nets/v1-virtual-nets-frames.ansi",
+      "sha256": "ef210ee0c3dfc9c984a5fa6b1169d11a1f3d7888552a44d64bc53a2bfaf2d50a",
+      "description": "Matching saved frame stream; graph frames contain no SGR, hence no separate per-frame color claim. Timestamp is the recorded capture interval, not an invented per-snapshot time. Dimensions here describe app grids, not a separately measured external live rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-virtual-nets",
+        "frame": "0@0ms,1@100ms,2@200ms,3@300ms,4@400ms",
+        "timestamp": "2026-11-02T11:18:27Z/2026-11-02T11:18:31Z",
+        "state": "static frame sequence",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-manifest",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v1-virtual-nets/manifest.json",
+      "sha256": "65278d8ac074761f5422f83fbe932fdf64d5036f423111f9f3d2749e1b29c337",
+      "description": "Recorded check exit=0, windows, artifact digests, selected coverage, pane ID and confirmed_closed. External pane column/rectangle fields are null.",
+      "capture": null
+    },
+    {
+      "id": "v1-check",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v1-virtual-nets/check.txt",
+      "sha256": "99fd5f4f1b4a302239e3bcb6aea76316ae41d6413ea9bd6968c6db5cd4612531",
+      "description": "Complete saved --check combined stdout+stderr, bound to exit/window in manifest and pinned capture-harness redirect; headless viewport unknown.",
+      "capture": null
+    },
+    {
+      "id": "v1-validator",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v1-virtual-nets/validator.txt",
+      "sha256": "4e46700d9608600eca0a03dc2e2eb64aadaec8381d2d477bcea5701738b8092a",
+      "description": "Saved all-checks-passed validator output; insufficient to prove route label ownership or independently measured live width.",
+      "capture": null
+    },
+    {
+      "id": "v1-binary-record",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v1-virtual-nets/bin.sha256",
+      "sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "description": "Saved hash plus absolute executable path actually selected by the capture harness; executable bytes independently re-hashed by reviewer.",
+      "capture": null
+    },
+    {
+      "id": "v2-spec",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v2-overlay-uplinks.json",
+      "sha256": "6610bdef07888a59b0b93513dc4ba5984cf7b79cae9a355f7273c54a3db3ea6c",
+      "description": "Final spec; actual hash matches generator ledger and capture manifest.",
+      "capture": null
+    },
+    {
+      "id": "v2-text",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v2-overlay-uplinks/v2-overlay-uplinks-text.txt",
+      "sha256": "9cc346513cd7dce8a5e2da62e188fab5da5a690e27f35374c6f9a31b21be5857",
+      "description": "Actual visible text snapshot; terminal target 77x47, trailing blank row omitted in text serialization. Timestamp is the recorded capture interval, not an invented per-snapshot time. Dimensions here describe app grids, not a separately measured external live rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-overlay-uplinks",
+        "frame": "normal",
+        "timestamp": "2026-11-02T11:18:41Z/2026-11-02T11:18:45Z",
+        "state": "normal natural zoom",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-normal",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v2-overlay-uplinks/v2-overlay-uplinks-ansi.ansi",
+      "sha256": "db0557666fa939b56f04da1d661dbad3f1f92da98376b24db4f757454dc1864f",
+      "description": "Actual 77x47 normal ANSI cell grid with RGB border evidence. Timestamp is the recorded capture interval, not an invented per-snapshot time. Dimensions here describe app grids, not a separately measured external live rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-overlay-uplinks",
+        "frame": "normal",
+        "timestamp": "2026-11-02T11:18:41Z/2026-11-02T11:18:45Z",
+        "state": "normal natural zoom",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-selected",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v2-overlay-uplinks/v2-overlay-uplinks-selected.ansi",
+      "sha256": "8744c58522de728247d7799048a2d9c659e3c7a9157ad7e4a1c016dbab7405c0",
+      "description": "Actual 77x47 all-selected ANSI grid; all node perimeter cells captured, not independent transitions or drag handles. Timestamp is the recorded capture interval, not an invented per-snapshot time. Dimensions here describe app grids, not a separately measured external live rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-overlay-uplinks",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T11:18:41Z/2026-11-02T11:18:45Z",
+        "state": "all nodes selected simultaneously",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frames-text",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v2-overlay-uplinks/v2-overlay-uplinks-frames.txt",
+      "sha256": "7bb9e3b69516ec09c8f82870b8de5fe413f6d2ea005a8c38d4c9ef3fcce75ce0",
+      "description": "Timestamped runtime stdout and frames; includes actual viewport startup lines and exact executed viewer argv. Timestamp is the recorded capture interval, not an invented per-snapshot time. Dimensions here describe app grids, not a separately measured external live rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-overlay-uplinks",
+        "frame": "0@0ms,1@100ms,2@200ms,3@300ms,4@400ms",
+        "timestamp": "2026-11-02T11:18:41Z/2026-11-02T11:18:45Z",
+        "state": "static frame sequence",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frames-ansi",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v2-overlay-uplinks/v2-overlay-uplinks-frames.ansi",
+      "sha256": "0b508b45a9aeb3500db14bb9e3ce59abe9e1316dd242170d217c94bd90ce798f",
+      "description": "Matching saved frame stream; graph frames contain no SGR, hence no separate per-frame color claim. Timestamp is the recorded capture interval, not an invented per-snapshot time. Dimensions here describe app grids, not a separately measured external live rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-overlay-uplinks",
+        "frame": "0@0ms,1@100ms,2@200ms,3@300ms,4@400ms",
+        "timestamp": "2026-11-02T11:18:41Z/2026-11-02T11:18:45Z",
+        "state": "static frame sequence",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-manifest",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v2-overlay-uplinks/manifest.json",
+      "sha256": "07b24598a8e32723edeed548298c16132a817e671d9ba56bac6caf833b802693",
+      "description": "Recorded check exit=0, windows, artifact digests, selected coverage, pane ID and confirmed_closed. External pane column/rectangle fields are null.",
+      "capture": null
+    },
+    {
+      "id": "v2-check",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v2-overlay-uplinks/check.txt",
+      "sha256": "0736ddac6a6ef13cd7879c65404cc1d3ba5310df68a2ddee59f8837b754743d0",
+      "description": "Complete saved --check combined stdout+stderr, bound to exit/window in manifest and pinned capture-harness redirect; headless viewport unknown.",
+      "capture": null
+    },
+    {
+      "id": "v2-validator",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v2-overlay-uplinks/validator.txt",
+      "sha256": "4e46700d9608600eca0a03dc2e2eb64aadaec8381d2d477bcea5701738b8092a",
+      "description": "Saved all-checks-passed validator output; insufficient to prove route label ownership or independently measured live width.",
+      "capture": null
+    },
+    {
+      "id": "v2-binary-record",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v2-overlay-uplinks/bin.sha256",
+      "sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "description": "Saved hash plus absolute executable path actually selected by the capture harness; executable bytes independently re-hashed by reviewer.",
+      "capture": null
+    },
+    {
+      "id": "v3-spec",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v3-wan-egress.json",
+      "sha256": "03d008a8804140b0b07e39f13c27787fcd5c202d61c9387520a0fcb16b915cb8",
+      "description": "Final spec; actual hash matches generator ledger and capture manifest.",
+      "capture": null
+    },
+    {
+      "id": "v3-text",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v3-wan-egress/v3-wan-egress-text.txt",
+      "sha256": "1bd24c6690024d1ec41d1422e89f6d71a527bd471543dba71d5434004f03b18b",
+      "description": "Actual visible text snapshot; terminal target 77x47, trailing blank row omitted in text serialization. Timestamp is the recorded capture interval, not an invented per-snapshot time. Dimensions here describe app grids, not a separately measured external live rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-wan-egress",
+        "frame": "normal",
+        "timestamp": "2026-11-02T11:18:49Z/2026-11-02T11:18:53Z",
+        "state": "normal natural zoom",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-normal",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v3-wan-egress/v3-wan-egress-ansi.ansi",
+      "sha256": "e727cff1b2feba4e25922e94a398ab942ec4732094929a16a6aef7d057f80f9b",
+      "description": "Actual 77x47 normal ANSI cell grid with RGB border evidence. Timestamp is the recorded capture interval, not an invented per-snapshot time. Dimensions here describe app grids, not a separately measured external live rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-wan-egress",
+        "frame": "normal",
+        "timestamp": "2026-11-02T11:18:49Z/2026-11-02T11:18:53Z",
+        "state": "normal natural zoom",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-selected",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v3-wan-egress/v3-wan-egress-selected.ansi",
+      "sha256": "3fb40cb0e35f1585bc0f5737671d53aa9f9c0f47f6cf3208f75692b8fd9f4a6b",
+      "description": "Actual 77x47 all-selected ANSI grid; all node perimeter cells captured, not independent transitions or drag handles. Timestamp is the recorded capture interval, not an invented per-snapshot time. Dimensions here describe app grids, not a separately measured external live rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-wan-egress",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T11:18:49Z/2026-11-02T11:18:53Z",
+        "state": "all nodes selected simultaneously",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-frames-text",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v3-wan-egress/v3-wan-egress-frames.txt",
+      "sha256": "a5f2d5dec7140590346a0e7e228f467b94cedbda3d07ca90064e1988c9d3dc6b",
+      "description": "Timestamped runtime stdout and frames; includes actual viewport startup lines and exact executed viewer argv. Timestamp is the recorded capture interval, not an invented per-snapshot time. Dimensions here describe app grids, not a separately measured external live rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-wan-egress",
+        "frame": "0@0ms,1@100ms,2@200ms,3@300ms,4@400ms",
+        "timestamp": "2026-11-02T11:18:49Z/2026-11-02T11:18:53Z",
+        "state": "static frame sequence",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frames-ansi",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v3-wan-egress/v3-wan-egress-frames.ansi",
+      "sha256": "8fefc1de3bbf6e24623d7196baf51af5f4e947bc24b29c35d947715b0d85f9b7",
+      "description": "Matching saved frame stream; graph frames contain no SGR, hence no separate per-frame color claim. Timestamp is the recorded capture interval, not an invented per-snapshot time. Dimensions here describe app grids, not a separately measured external live rectangle.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-wan-egress",
+        "frame": "0@0ms,1@100ms,2@200ms,3@300ms,4@400ms",
+        "timestamp": "2026-11-02T11:18:49Z/2026-11-02T11:18:53Z",
+        "state": "static frame sequence",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-manifest",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v3-wan-egress/manifest.json",
+      "sha256": "a12645d7ce880fd69f25ad0bc336f4d198dfda7d052558da42aeb36db1607993",
+      "description": "Recorded check exit=0, windows, artifact digests, selected coverage, pane ID and confirmed_closed. External pane column/rectangle fields are null.",
+      "capture": null
+    },
+    {
+      "id": "v3-check",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v3-wan-egress/check.txt",
+      "sha256": "de66398fa00300e56e9f0f6152f448b48282d20854b71ed472094c0f3550aeee",
+      "description": "Complete saved --check combined stdout+stderr, bound to exit/window in manifest and pinned capture-harness redirect; headless viewport unknown.",
+      "capture": null
+    },
+    {
+      "id": "v3-validator",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v3-wan-egress/validator.txt",
+      "sha256": "4e46700d9608600eca0a03dc2e2eb64aadaec8381d2d477bcea5701738b8092a",
+      "description": "Saved all-checks-passed validator output; insufficient to prove route label ownership or independently measured live width.",
+      "capture": null
+    },
+    {
+      "id": "v3-binary-record",
+      "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v3-wan-egress/bin.sha256",
+      "sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "description": "Saved hash plus absolute executable path actually selected by the capture harness; executable bytes independently re-hashed by reviewer.",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 13 reference entities and 14 directed line geometries occur across views, but e6 UDP ownership is visually ambiguous, the view-2 router is unqualified, no committed rate and source identifiers are absent, and the IPv6 note is presented as an unattached device-like node. Coverage ledgers and deliberate-drop reasons cannot substitute for visible required meaning.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-normal",
+        "v2-normal",
+        "v3-normal",
+        "blind",
+        "generation",
+        "expected",
+        "source"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 14 actual independent arrow geometries are traceable stem-to-unique intact downward arrowhead, with correct directed endpoints, zero crossings/bridges/shared cells/inline forks. Source-named buses are not required here. One adjacent bend pair and staggered runs remain distinguishable. e6 fails semantic/protocol ownership, not geometric endpoint trace. No animated dot compromises origin/direction.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-normal",
+        "v2-normal",
+        "v3-normal",
+        "blind",
+        "v1-check",
+        "v2-check",
+        "v3-check"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All graph boxes/full labels are physically visible at app-reported 77x47 natural 100%; graph clipping=0 and crossings=0. Viewer-help truncation is UI furniture, not a failed graph-fit label. Nevertheless the saved attempt choice deletes required claimed qualification to reduce a crossing (F6), contrary to complete source coverage and no meaning-for-layout trade. Separately, independent measured live width/rectangle is missing (G1); this gap cannot erase the known layout-selection failure.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-normal",
+        "v2-normal",
+        "v3-normal",
+        "attempts",
+        "generation",
+        "v1-manifest",
+        "v2-manifest",
+        "v3-manifest"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Normal ANSI shows coherent nearby source concepts: guest/bridge nodes share amber shades, homelab host teal, physical uplinks pink, local edge amber within the WAN view, ISP hops teal, and destination a separate family. The placement follows virtual-to-host, overlay/host-to-uplinks-to-gateway, and historical WAN order. No alphabetic/depth grouping or source-tier reordering is evidenced. Per-view palette reuse/hue changes are not a separate gate; the IPv6 caption-role problem is classified semantic.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-normal",
+        "v2-normal",
+        "v3-normal",
+        "v1-spec",
+        "v2-spec",
+        "v3-spec"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Normal and selected ANSI prove all four sides/corners and uniform RGB per perimeter for all 16 node occurrences (5+6+5). Selected perimeters are all bold RGB (216,166,87), including the note. Coverage=16/16 in simultaneous all-selected snapshots. These do not prove isolated interaction transitions or drag-handle states; no such separate state is requested/present and no handle defect appears.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-normal",
+        "v2-normal",
+        "v3-normal",
+        "v1-selected",
+        "v2-selected",
+        "v3-selected",
+        "blind"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Frozen input, binary, spec/attempt/artifact and harness hashes match; separate DeepSeek generator and actual Sol judge identities, immutable blind-first record, exact harness/viewer commands, combined check stdout/stderr with exit/windows, normal/selected ANSI and text/frame evidence, and all three cleanup probes are preserved. But separately measured live pane columns/rectangle are absent in all manifests. This required evidence gap blocks a workflow pass despite the validator green results. Corrected rubric identity revision 4 is recorded without falsifying reviewer identity.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "evidence_ids": [
+        "hash-verification",
+        "metadata",
+        "rubric",
+        "generation",
+        "attempts",
+        "capture-harness",
+        "blind",
+        "v1-manifest",
+        "v2-manifest",
+        "v3-manifest"
+      ]
+    },
+    "animation": {
+      "applicable": false,
+      "status": null,
+      "reason": "Source requests a layout, not animation; frozen cases.json and expected.json mark homelab animation optional, and generator chose static. All 15 supplied 0–400 ms frames have zero route dots and no motion. Full-cycle direction/origin/synchronized-arrival tests are N/A, not inferred from five-frame samples; header middle dots are static separators.",
+      "source_refs": [
+        "docs/visualize-eval/cases.json#/cases/2/animation",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/animation",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#task"
+      ],
+      "evidence_ids": [
+        "dataset",
+        "expected",
+        "generation",
+        "v1-frames-text",
+        "v2-frames-text",
+        "v3-frames-text"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/0",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#fixed-constraints"
+      ],
+      "expected": "vm -> virbr: 192.168.122.x; preserve direction and applicable historical/claimed device interpretations; independent link, not a shared bus.",
+      "observed": "vm vnet0 bottom stem [24,19] descends to [24,21], turns left to [19,21], then down to the intact arrowhead [19,22] above virbr0 libvirt NAT. Label 192.168.122.x at [26,20,13,1]. Solid. No crossing, junction, branch or owner ambiguity.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-normal",
+          "region": [
+            19,
+            19,
+            20,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/1",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#fixed-constraints"
+      ],
+      "expected": "virbr -> box: NAT bridge; preserve direction and applicable historical/claimed device interpretations; independent link, not a shared bus.",
+      "observed": "virbr0 libvirt NAT stem [19,27] runs straight down to intact arrowhead [19,30] above homelab rack-bench. NAT bridge at [21,28,10,1] identifies this route. Separate host port from Docker; no junction, crossing or branch.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-normal",
+          "region": [
+            19,
+            27,
+            12,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/2",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#fixed-constraints"
+      ],
+      "expected": "ctr -> dkbr: 172.18.2.x; preserve direction and applicable historical/claimed device interpretations; independent link, not a shared bus.",
+      "observed": "ctr veth stem [48,19] descends to [48,21], turns left to [43,21], then down to intact arrowhead [43,22] above docker 172.18.2.1. Label 172.18.2.x at [50,20,10,1]. Solid, unambiguous, no crossing or junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-normal",
+          "region": [
+            43,
+            19,
+            17,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/3",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#fixed-constraints"
+      ],
+      "expected": "dkbr -> box: docker bridge; preserve direction and applicable historical/claimed device interpretations; independent link, not a shared bus.",
+      "observed": "docker 172.18.2.1 stem [43,27] descends to [43,29], turns left to [21,29], then down to intact arrowhead [21,30] above homelab rack-bench. docker bridge at [26,30,13,1] is below the horizontal return. It does not merge with NAT route at column 19.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-normal",
+          "region": [
+            19,
+            27,
+            25,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/4",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#fixed-constraints"
+      ],
+      "expected": "ts -> box: overlay; preserve direction and applicable historical/claimed device interpretations; independent link, not a shared bus.",
+      "observed": "tailscale0 100.113.153.49 stem [16,11] descends to [16,13], turns left to [15,13], then down to intact arrowhead [15,14] above homelab ASUS bare metal. overlay at [18,12,7,1] is beside this short route. UDP encap is also beside it, but does not prevent tracing this overlay relation. Adjacent external bend at [14,13] is not a junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-normal",
+          "region": [
+            14,
+            11,
+            12,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/5",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#fixed-constraints"
+      ],
+      "expected": "ts -> bond0: encap over UDP; preserve direction and applicable historical/claimed device interpretations; independent link, not a shared bus.",
+      "observed": "tailscale0 stem [14,11] descends to [14,13], turns left to [12,13], follows the outer column-12 corridor down past the host to [12,22], turns right to [17,22], then down to intact arrowhead [17,23] above bond0 192.168.1.197. No crossing or shared run. The route is traceable, but UDP encap at [17,11,9,1] visually labels the OTHER short route, so its required UDP/wired meaning is not reliably readable. The outer bypass itself is a source-listed relation, not an invented host-bypass relation.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-normal",
+          "region": [
+            12,
+            11,
+            14,
+            13
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/6",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#fixed-constraints"
+      ],
+      "expected": "box -> bond0: eno1 2.5 GbE; preserve direction and applicable historical/claimed device interpretations; independent link, not a shared bus.",
+      "observed": "homelab ASUS bare metal stem [15,19] descends to [15,21], turns right to [19,21], then down to intact arrowhead [19,23] above bond0 192.168.1.197. eno1 2.5GbE at [21,22,11,1] preserves the port and rate. Distinct from adjacent bypass at row 22; no crossing or merge.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-normal",
+          "region": [
+            15,
+            19,
+            17,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/7",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#fixed-constraints"
+      ],
+      "expected": "box -> wlp: backup path; preserve direction and applicable historical/claimed device interpretations; independent link, not a shared bus.",
+      "observed": "homelab ASUS bare metal stem [17,19] turns at [17,20], runs right to [45,20], then down to intact arrowhead [45,23] above wlp8s0 192.168.1.213. backup path at [26,19,11,1]. Solid, distinct host port, no crossing or inline junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-normal",
+          "region": [
+            17,
+            19,
+            29,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e9",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/8",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#fixed-constraints"
+      ],
+      "expected": "bond0 -> rtr: default gw 0.5 ms; preserve direction and applicable historical/claimed device interpretations; independent link, not a shared bus.",
+      "observed": "bond0 192.168.1.197 stem [17,28] descends straight to intact arrowhead [17,31] above Fios rtr 192.168.1.1. gw 0.5 ms at [19,29,9,1] preserves gateway/latency meaning. No crossing or merge. Required historical/claimed qualification of the target router is absent in this view, so the qualified-source relation does not fully pass.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-normal",
+          "region": [
+            17,
+            28,
+            20,
+            8
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2",
+        "F6"
+      ]
+    },
+    {
+      "edge_id": "e10",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/9",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#fixed-constraints"
+      ],
+      "expected": "wlp -> rtr: metric 600; preserve direction and applicable historical/claimed device interpretations; independent link, not a shared bus.",
+      "observed": "wlp8s0 192.168.1.213 stem [45,28] descends to [45,30], turns left to [19,30], then down to intact arrowhead [19,31] above Fios rtr 192.168.1.1. metric 600 failover at [23,31,19,1] plus backup path preserves non-ECMP backup semantics. Separate router port, no crossing or trunk. Required router qualifier is absent in this view.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-normal",
+          "region": [
+            17,
+            28,
+            29,
+            8
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2",
+        "F6"
+      ]
+    },
+    {
+      "edge_id": "e11",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/10",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#fixed-constraints"
+      ],
+      "expected": "rtr -> ont: NAT out; preserve direction and applicable historical/claimed device interpretations; independent link, not a shared bus.",
+      "observed": "claimed Fios rtr 192.168.1.1 stem [25,11] uses dashed vertical strokes to [25,12], bends right via [25,13] and [26,13], then ends with intact downward arrowhead [26,14] above ONT 169.254.3.1 historical. NAT+DHCP 71.251.12.240 at [27,12,22,1] preserves egress translation/shared pool and router service role. Historical device interpretation is explicit. No crossing/junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-normal",
+          "region": [
+            25,
+            11,
+            24,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e12",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/11",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#fixed-constraints"
+      ],
+      "expected": "ont -> vzagg: 4.5 ms; preserve direction and applicable historical/claimed device interpretations; independent link, not a shared bus.",
+      "observed": "ONT 169.254.3.1 historical stem [26,19] follows a dashed straight column to intact downward arrowhead [26,22] above VZ edge 100.41.x historical. 4.5 ms at [28,20,6,1]. This follows the frozen edge-to-label assignment, not a new verification of traceroute hop identity. No crossing or junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-normal",
+          "region": [
+            26,
+            19,
+            8,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e13",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/12",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#fixed-constraints"
+      ],
+      "expected": "vzagg -> vzbb: 6.6 ms; preserve direction and applicable historical/claimed device interpretations; independent link, not a shared bus.",
+      "observed": "VZ edge 100.41.x historical stem [26,27] descends dashed to [26,28], bends right along [26,29] ╰, [27,29] ╌, [28,29] ╮, then ends at intact downward arrowhead [28,30] above VZ bb AS701 historical. 6.6 ms at [28,28,6,1]. No crossing/junction; historical interpretation retained.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-normal",
+          "region": [
+            26,
+            27,
+            8,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e14",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/13",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md#fixed-constraints"
+      ],
+      "expected": "vzbb -> cf: 6-9 ms; preserve direction and applicable historical/claimed device interpretations; independent link, not a shared bus.",
+      "observed": "VZ bb AS701 historical stem [28,35] descends dashed to [28,36], bends right along row 37 columns 28–30, then ends at intact downward arrowhead [30,38] above cf 1.1.1.1 AS13335. 6-9 ms at [30,36,6,1]. CF address and AS13335 survive; only the upstream interpretation is qualified historical. No crossing/junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-normal",
+          "region": [
+            28,
+            35,
+            8,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "apparent-udp-ts-box",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/4",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json#/historical_reference/edges/5"
+      ],
+      "expected": null,
+      "observed": "Extra apparent PROTOCOL assignment, not a fifteenth drawn arrow: UDP encap touches the tailscale-to-host short route at column 16. A reader can assign both UDP encap and overlay to ts -> box while the intended ts -> bond0 bypass at column 14 reads as unlabeled. No extra line, fake junction or added physical topology is claimed.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-normal",
+          "region": [
+            14,
+            11,
+            12,
+            3
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e6",
+        "apparent-udp-ts-box"
+      ],
+      "severity": "high",
+      "description": "DEFECT: UDP encap at [17,11,9,1] abuts the column-16 tailscale-to-host line. Its intended tailscale-to-bond0 bypass is at column 14, separated from the text by the other line. Thus the required UDP-on-wired relation is semantically ambiguous and an extra UDP-on-overlay/host association is apparent. JSON ownership and clean label-cell checks do not repair the capture. One uncertain label owner, as recorded blind.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-normal",
+          "region": [
+            12,
+            11,
+            14,
+            13
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e9",
+        "e10"
+      ],
+      "severity": "critical",
+      "description": "DEFECT: View 2 names Fios rtr 192.168.1.1 without claimed/historical qualification. View 3 does qualify the same address, but that does not qualify the independently readable local-uplinks view. Source explicitly requires qualification of MAC-vendor router identity; a required qualifier was removed to avoid a crossing, per attempts.json. The ONT and downstream interpretations are correctly qualified in view 3.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-normal",
+          "region": [
+            16,
+            32,
+            22,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-normal",
+          "region": [
+            24,
+            7,
+            30,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "category": "semantic_fidelity",
+      "edge_ids": [],
+      "severity": "critical",
+      "description": "DEFECT: No committed rate, a source-stated property of this host's Fios egress and a Part B answer, is absent from every final view. Recording a deliberate drop or exhausted attempt budget is not complete source coverage. NAT/pool IP and the IPv6 limitation are present, so this is a specific missing egress qualifier, not an absent whole WAN view.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-normal",
+          "region": [
+            24,
+            7,
+            30,
+            36
+          ]
+        },
+        {
+          "evidence_id": "v2-normal",
+          "region": [
+            12,
+            7,
+            54,
+            36
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "category": "semantic_fidelity",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "DEFECT: Identifier audit finds source LAN prefix 192.168.1.0/24, host software identifier Linux 7.0, and WNC OUI provenance absent from all final captures. The bond0 and Wi-Fi individual IPv4 addresses are complete, but do not explicitly give the LAN prefix. claimed in view 3 expresses uncertainty, not the missing WNC provenance. These are localized source-label omissions; no required IPv4 host/interface address or AS number is lost. Supporting generation prose is not a rendered key.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-normal",
+          "region": [
+            14,
+            15,
+            52,
+            21
+          ]
+        },
+        {
+          "evidence_id": "v3-normal",
+          "region": [
+            24,
+            7,
+            30,
+            12
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F5",
+      "category": "semantic_fidelity",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "DEFECT: The source limitation no global v6 (ULA only) is preserved as text but drawn in the same complete selectable device-style box as actual interfaces/devices. It has no edge or explicit attachment to homelab. Its words read as a note, yet the graph grammar presents an isolated peer entity. This is a localized role/scope ambiguity, not an invented directed relation. Native annotation support is only reported missing by the generator; that claim is not treated as a proven impossibility.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-normal",
+          "region": [
+            14,
+            39,
+            25,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-selected",
+          "region": [
+            14,
+            39,
+            25,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F6",
+      "category": "layout_fit",
+      "edge_ids": [
+        "e9",
+        "e10"
+      ],
+      "severity": "medium",
+      "description": "DEFECT: The selected zero-crossing view 2 drops claimed from the router label. The saved attempt ledger explicitly trades the qualifier for reducing one crossing to zero. Layout may not recover fit/readability by weakening required meaning or losing source coverage. No group reordering or relation merging is visible, and no graph box is physically clipped; the failure is the documented meaning-for-layout trade, not the three truncated viewer-help tails.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json",
+        "docs/visualize-eval/rounds/03/homelab-nic-trace/attempts.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-normal",
+          "region": [
+            16,
+            32,
+            22,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G1",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "EVIDENCE GAP / BLOCKER: Every manifest has pane_cols=null and pane_rect=null; pane_rows=47 is recorded. App headers, 77-cell ANSI rows and runtime viewport: 77x47 zoom: 1.00 natural establish the app grid, but no independently recorded live pane width/rectangle survives. generation.json.measured.columns=77 repeats a claim without a raw external-width result. The fixed fit/workflow gates require separately measured live dimensions. All three checks, artifact hashes and cleanup probes are otherwise preserved.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/layout_fit",
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/workflow_evidence"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-normal",
+          "region": [
+            1,
+            1,
+            77,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-normal",
+          "region": [
+            1,
+            1,
+            77,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-normal",
+          "region": [
+            1,
+            1,
+            77,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "G1 — Missing separately measured live pane columns and rectangle in all three manifests; record live_pane=null. App viewport is verified from actual grids/runtime lines but cannot substitute for the separately required external pane measurement. No new viewer session is permitted to repair this record. No model-unavailability blocker; native annotation support is a reported capability gap, not an independently proven impossibility."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pBW",
+      "w7E:pB0",
+      "w7E:pC2"
+    ],
+    "closed_pane_ids": [
+      "w7E:pBW",
+      "w7E:pB0",
+      "w7E:pC2"
+    ],
+    "status": "done",
+    "reason": "Each case manifest records confirmed_closed; pinned capture harness implements close followed by failing herdr pane get, and generation records all three closures in the generator-owned tab w7E:t3S. Reviewer opened no pane and ran no cleanup command. Rejected attempts have no additional recorded owned pane IDs."
+  },
+  "overall": "fail"
+}

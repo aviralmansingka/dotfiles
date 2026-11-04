@@ -1,0 +1,17 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "rms", "label": "nv-rms" },
+    { "id": "oob", "label": "OOB LAN" },
+    { "id": "nvos", "label": "NVOS" },
+    { "id": "nmxc", "label": "NMX-C/T" },
+    { "id": "bmc_s", "label": "NVSwitch BMC" }
+  ],
+  "edges": [
+    { "from": "rms", "to": "nvos", "label": "NVUE/SSH/SFTP", "dots": 0 },
+    { "from": "rms", "to": "nmxc", "label": "NMX-C gRPC", "dots": 0 },
+    { "from": "nvos", "to": "nmxc", "label": "hosts", "dots": 0 },
+    { "from": "oob", "to": "bmc_s", "label": "power+serial", "dots": 0 }
+  ]
+}

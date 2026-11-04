@@ -1,0 +1,98 @@
+{
+  "round": "02",
+  "case_id": "datacenter-redundancy",
+  "worker_id": "viz-ds02-datacenter-redundancy",
+  "views_budget": 4,
+  "attempts_per_view_budget": 3,
+  "final_selection_rule": "For each view every attempt was rendered through the harness (77x47 pane, natural zoom) and inspected; the attempt with the fewest defects was kept as the final spec and re-captured under its final name. Dot violations and warnings were treated as defects to remove; label collisions that --check cannot see were read off the captured frames.",
+  "views": [
+    {
+      "view": "v1",
+      "final_spec": "v1.json",
+      "final_spec_sha256": "98e8ba90854d81d8fae0f5de5ca7d772462d9a17c7e083a36dff6377ab9d1ccb",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "attempts/v1-a1.json",
+          "spec_sha256": "98e8ba90854d81d8fae0f5de5ca7d772462d9a17c7e083a36dff6377ab9d1ccb",
+          "note": "WAN tier: ISP A-D -> MUX 1/2 -> Core 1/2, 8 edges, explicit 5-layer placement with one spacer row between tiers (spacer rows added after a capability probe showed a two-tier K2,2 diamond can fail with 'no obstacle-safe route' in tb). check: extent 43x41, 4/4 labels, 0 on route, 0 skipped, 8 single-dot routes, 0 dot violations, no warnings. Selected as final after all three attempts were rendered: every ISP stem and every MUX->Core cross-connect keeps its own lane and each 'x-connect' label lands on its own corridor."
+        },
+        {
+          "attempt": 2,
+          "spec": "attempts/v1-a2-compact.json",
+          "spec_sha256": "7dda6d6f71a784b2d861a2a1b4492fa1f94a7876238574de1c07333b88064c4a",
+          "note": "Same 8 nodes and 8 edges with the spacer rows removed (3 explicit layers, tiers adjacent). check was clean (extent 43x23, 4/4 labels, 0 violations), but the captured frame showed a crowded label band at the MUX->Core crossing ('x-connect' texts sitting against the arrowheads) that the check cannot detect. Rejected."
+        },
+        {
+          "attempt": 3,
+          "spec": "attempts/v1-a3.json",
+          "spec_sha256": "cf242609e1b8cb00670db40fe6cd49a1ba4790db1e5ad5568b414942a4ee4a5c",
+          "note": "Middle ground: one spacer row only before the Core row. check clean (extent 43x32), but the captured frame kept the same crowded label band (the extra row lengthened the run without spreading the labels). Rejected."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "final_spec": "v2.json",
+      "final_spec_sha256": "9a8b1950a7595b958fd6b2cbc6892a59cd48b04d1c0c4e9bb8c6833aac0577f2",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "attempts/v2-a1.json",
+          "spec_sha256": "9a8b1950a7595b958fd6b2cbc6892a59cd48b04d1c0c4e9bb8c6833aac0577f2",
+          "note": "Core 1/2 -> FW1 active / FW2 standby -> BL 1/2, 8 edges, 5-layer placement with one spacer row between tiers. Standby paths carry style dashed plus the literal label 'standby'; active paths are solid and labelled 'active'. check: extent 30x41, 8/8 labels, 0 on route, 0 skipped, 8 single-dot routes, 0 dot violations, no warnings. Selected as final: no label collision, dashed standby routes are traceable end to end."
+        },
+        {
+          "attempt": 2,
+          "spec": "attempts/v2-a2-compact.json",
+          "spec_sha256": "0d601e589c78939588872ced97a44dc12090ecd5c81b8c16ba94301ea5b6d8eb",
+          "note": "Same edges with spacer rows removed (3 explicit layers). check clean (extent 30x23), but the captured frame showed two adjacent 'active' labels fused into the single token 'activeactive' at the Core->FW1 band, which makes label ownership ambiguous. Rejected."
+        },
+        {
+          "attempt": 3,
+          "spec": "attempts/v2-a3.json",
+          "spec_sha256": "8e9cc98003b6830a5e148c3669ef54f6b21b4042a039054bfcd85fb9caab246d",
+          "note": "Middle ground: one spacer row only before the FW row. check clean (extent 30x32); the Core->FW1 collision cleared but the same fused-label defect appeared in the FW->BL band. Rejected."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "final_spec": "v3.json",
+      "final_spec_sha256": "c6bdfb415415e794cdd6cc2d85fd10dcb2f2b7d842f2b65ec59f2de7b4a25429",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "attempts/v3-a1.json",
+          "spec_sha256": "6042babd3fa394082e9460549dea4fa346e2a90837349cc14aa24a2cde731924",
+          "note": "Single fabric view carrying all 12 fabric edges (BL->spine 4, spine->leaf 4, leaf->rack 4), spines on top, border leaves and rack leaves in one shared row, racks at the bottom. Rejected: extent 49x49 exceeds the 47-row pane height, and the 12 routes left 1 dot violation (a route dot on a cell two routes own)."
+        },
+        {
+          "attempt": 2,
+          "spec": "attempts/v3-a2.json",
+          "spec_sha256": "b86090b3b00474db5d0e0f1a9cab05d6f49a1414ad261eb84f3e5707febbb17b",
+          "note": "Rack edges moved to v4: spines above, border leaves + rack leaves in one shared row in the default order (bl1, bl2, leaf1, leaf2), 8 edges. Rejected: 2 dot violations from routes sharing corner cells between the upward BL->spine routes and the downward spine->leaf routes."
+        },
+        {
+          "attempt": 3,
+          "spec": "v3.json",
+          "spec_sha256": "c6bdfb415415e794cdd6cc2d85fd10dcb2f2b7d842f2b65ec59f2de7b4a25429",
+          "note": "Same 6-node fabric with the shared row ordered bl2, leaf1, leaf2, bl1 so the two border leaves sit at the row edges. check: extent 46x20, 8/8 labels, 0 on route, 0 skipped, 8 single-dot routes, 0 dot violations, no warnings. Kept as final; remaining visual defect recorded in generation.json (one cross-connect takes a long perimeter detour and the ECMP labels crowd the crossing band)."
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "final_spec": "v4.json",
+      "final_spec_sha256": "44cbe30cb0574e53ac01f5e3cd547ee05bb3687397a140e703d790e5346a619a",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "v4.json",
+          "spec_sha256": "44cbe30cb0574e53ac01f5e3cd547ee05bb3687397a140e703d790e5346a619a",
+          "note": "Dual-homed racks: Leaf 1/2 -> Rack 1/2, 4 edges, labels 'dual'. check: extent 21x14, 4/4 labels, 0 on route, 0 skipped, 4 single-dot routes, 0 dot violations, no warnings. Accepted."
+        }
+      ]
+    }
+  ]
+}

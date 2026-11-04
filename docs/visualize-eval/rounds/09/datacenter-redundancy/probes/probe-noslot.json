@@ -1,0 +1,12 @@
+{
+  "direction": "tb",
+  "nodes": [
+    { "id": "a", "label": "A", "group": "wan" },
+    { "id": "b", "label": "B", "group": "wan" },
+    { "id": "c", "label": "C", "group": "core" }
+  ],
+  "edges": [
+    { "from": "a", "to": "c", "label": "x-connect", "dots": 0 },
+    { "from": "b", "to": "c", "label": "ECMP", "dots": 0 }
+  ]
+}

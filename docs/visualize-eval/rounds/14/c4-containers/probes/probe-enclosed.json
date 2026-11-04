@@ -1,0 +1,4 @@
+{"direction":"lr","theme":"gruvbox","diagrams":[
+ {"id":"a","title":"A","description":"d","containers":[{"label":"Box","members":["x","y"]}],"enclosed":true,
+  "nodes":[{"id":"x","label":"x"},{"id":"y","label":"y"}],"edges":[{"from":"x","to":"y","label":"l"}]}
+]}

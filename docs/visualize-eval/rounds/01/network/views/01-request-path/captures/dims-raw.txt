@@ -1,0 +1,12 @@
+stty size; tput cols; tput lines
+
+rounds/01/network on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  a
+viralmansingka@gmail.com
+❯ stty size; tput cols; tput lines
+47 77
+77
+47
+
+rounds/01/network on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  a
+viralmansingka@gmail.com
+❯

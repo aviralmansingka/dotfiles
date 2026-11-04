@@ -1,0 +1,288 @@
+/tmp/visualize-eval/round-09/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/09/datacenter-redundancy/views
+/v3.json
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-09/bin/rataflow-view /Users/aviral/.herdr/worktrees/do
+tfiles/fix-visualize-skill/docs/visualize-eval/rounds/09/datacenter-redundancy/vie
+ws/v3.json
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-09/bin/rataflow-view /Users/aviral/.herdr/worktrees/do
+tfiles/fix-visualize-skill/docs/visualize-eval/rounds/09/datacenter-redundancy/vie
+ws/v3.json --select-all
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-09/bin/rataflow-view /Users/aviral/.herdr/worktrees/do
+tfiles/fix-visualize-skill/docs/visualize-eval/rounds/09/datacenter-redundancy/vie
+ws/v3.json --frames 5 --step-ms 100
+viewport: 82x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 82x51 @100% · v3.json · 8 nodes · 12 edges · q quit
+
+
+
+
+
+
+
+                         ╭──────────────────────────╮
+                         │                          │
+                         │              ╭───────────⌒───────╮
+                         │              │           │       │
+                         │    ╭───────╮ │ ╭───────╮ │       │
+                         │ ╭─▶│       │ ╰▶│       │ │       │
+                         │ │  │Spine 1│   │Spine 2│ │       │
+                         ╰─⌒─▶│       │ ╭▶│       │ │       │
+                           │  ╰───────╯ │ ╰───────╯ │       │
+                           │   │ │ ECMP │  │ │      │       │
+                           │   │ │ECMP  │  │ │ ECMP╭╯       │
+                           ╰───⌒─⌒────╮ ╰──⌒─⌒─────⌒────────⌒─╮
+                               │ │  ╭─⌒────⌒─╯     │        │ │
+                         ECMP  │ │  │ │ECMP│       │        │ │
+                       ╭───────╯╭⌒──⌒─⌒────╯       │        │ │
+                       │ ╭──────╯╰╮ │ ╰───╮   ECMP │   ECMP │ │
+                       ▼ ▼ ECMP   ▼ ▼     │ ╭────╮ │ ╭────╮ │ │
+                      ╭──────╮   ╭──────╮ ╰─│    │ ╰─│    │ │ │
+                      │Leaf 1│   │Leaf 2│   │BL 1│   │BL 2│ │ │
+                      │      │   │      │ ╭─│    │ ╭─│    │ │ │
+                      ╰──────╯   ╰──────╯ │ ╰────╯ │ ╰────╯ │ │
+                       │ │        │ │     │        │        │ │
+                       │ │        │ │ dual╰────────⌒────────╯ │
+                       │ │   dual │ ╰────────╮     │          │
+                       │ ╰────────⌒────────╮ │     ╰──────────╯
+                       │          │dual    │ │
+                       ╰────────╮ │        │ │
+                         dual   ▼ ▼        ▼ ▼
+                               ╭──────╮   ╭──────╮
+                               │Rack 1│   │Rack 2│
+                               │      │   │      │
+                               ╰──────╯   ╰──────╯
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 82x51 @100% · v3.json · 8 nodes · 12 edges · q quit
+
+
+
+
+
+
+
+                         ╭──────────────────────────╮
+                         │                          │
+                         │              ╭───────────⌒───────╮
+                         │              │           │       │
+                         │    ╭───────╮ │ ╭───────╮ │       │
+                         │ ╭─▶│       │ ╰▶│       │ │       │
+                         │ │  │Spine 1│   │Spine 2│ │       │
+                         ╰─⌒─▶│       │ ╭▶│       │ │       │
+                           │  ╰───────╯ │ ╰───────╯ │       │
+                           │   │ │ ECMP │  │ │      │       │
+                           │   │ │ECMP  │  │ │ ECMP╭╯       │
+                           ╰───⌒─⌒────╮ ╰──⌒─⌒─────⌒────────⌒─╮
+                               │ │  ╭─⌒────⌒─╯     │        │ │
+                         ECMP  │ │  │ │ECMP│       │        │ │
+                       ╭───────╯╭⌒──⌒─⌒────╯       │        │ │
+                       │ ╭──────╯╰╮ │ ╰───╮   ECMP │   ECMP │ │
+                       ▼ ▼ ECMP   ▼ ▼     │ ╭────╮ │ ╭────╮ │ │
+                      ╭──────╮   ╭──────╮ ╰─│    │ ╰─│    │ │ │
+                      │Leaf 1│   │Leaf 2│   │BL 1│   │BL 2│ │ │
+                      │      │   │      │ ╭─│    │ ╭─│    │ │ │
+                      ╰──────╯   ╰──────╯ │ ╰────╯ │ ╰────╯ │ │
+                       │ │        │ │     │        │        │ │
+                       │ │        │ │ dual╰────────⌒────────╯ │
+                       │ │   dual │ ╰────────╮     │          │
+                       │ ╰────────⌒────────╮ │     ╰──────────╯
+                       │          │dual    │ │
+                       ╰────────╮ │        │ │
+                         dual   ▼ ▼        ▼ ▼
+                               ╭──────╮   ╭──────╮
+                               │Rack 1│   │Rack 2│
+                               │      │   │      │
+                               ╰──────╯   ╰──────╯
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 82x51 @100% · v3.json · 8 nodes · 12 edges · q quit
+
+
+
+
+
+
+
+                         ╭──────────────────────────╮
+                         │                          │
+                         │              ╭───────────⌒───────╮
+                         │              │           │       │
+                         │    ╭───────╮ │ ╭───────╮ │       │
+                         │ ╭─▶│       │ ╰▶│       │ │       │
+                         │ │  │Spine 1│   │Spine 2│ │       │
+                         ╰─⌒─▶│       │ ╭▶│       │ │       │
+                           │  ╰───────╯ │ ╰───────╯ │       │
+                           │   │ │ ECMP │  │ │      │       │
+                           │   │ │ECMP  │  │ │ ECMP╭╯       │
+                           ╰───⌒─⌒────╮ ╰──⌒─⌒─────⌒────────⌒─╮
+                               │ │  ╭─⌒────⌒─╯     │        │ │
+                         ECMP  │ │  │ │ECMP│       │        │ │
+                       ╭───────╯╭⌒──⌒─⌒────╯       │        │ │
+                       │ ╭──────╯╰╮ │ ╰───╮   ECMP │   ECMP │ │
+                       ▼ ▼ ECMP   ▼ ▼     │ ╭────╮ │ ╭────╮ │ │
+                      ╭──────╮   ╭──────╮ ╰─│    │ ╰─│    │ │ │
+                      │Leaf 1│   │Leaf 2│   │BL 1│   │BL 2│ │ │
+                      │      │   │      │ ╭─│    │ ╭─│    │ │ │
+                      ╰──────╯   ╰──────╯ │ ╰────╯ │ ╰────╯ │ │
+                       │ │        │ │     │        │        │ │
+                       │ │        │ │ dual╰────────⌒────────╯ │
+                       │ │   dual │ ╰────────╮     │          │
+                       │ ╰────────⌒────────╮ │     ╰──────────╯
+                       │          │dual    │ │
+                       ╰────────╮ │        │ │
+                         dual   ▼ ▼        ▼ ▼
+                               ╭──────╮   ╭──────╮
+                               │Rack 1│   │Rack 2│
+                               │      │   │      │
+                               ╰──────╯   ╰──────╯
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 82x51 @100% · v3.json · 8 nodes · 12 edges · q quit
+
+
+
+
+
+
+
+                         ╭──────────────────────────╮
+                         │                          │
+                         │              ╭───────────⌒───────╮
+                         │              │           │       │
+                         │    ╭───────╮ │ ╭───────╮ │       │
+                         │ ╭─▶│       │ ╰▶│       │ │       │
+                         │ │  │Spine 1│   │Spine 2│ │       │
+                         ╰─⌒─▶│       │ ╭▶│       │ │       │
+                           │  ╰───────╯ │ ╰───────╯ │       │
+                           │   │ │ ECMP │  │ │      │       │
+                           │   │ │ECMP  │  │ │ ECMP╭╯       │
+                           ╰───⌒─⌒────╮ ╰──⌒─⌒─────⌒────────⌒─╮
+                               │ │  ╭─⌒────⌒─╯     │        │ │
+                         ECMP  │ │  │ │ECMP│       │        │ │
+                       ╭───────╯╭⌒──⌒─⌒────╯       │        │ │
+                       │ ╭──────╯╰╮ │ ╰───╮   ECMP │   ECMP │ │
+                       ▼ ▼ ECMP   ▼ ▼     │ ╭────╮ │ ╭────╮ │ │
+                      ╭──────╮   ╭──────╮ ╰─│    │ ╰─│    │ │ │
+                      │Leaf 1│   │Leaf 2│   │BL 1│   │BL 2│ │ │
+                      │      │   │      │ ╭─│    │ ╭─│    │ │ │
+                      ╰──────╯   ╰──────╯ │ ╰────╯ │ ╰────╯ │ │
+                       │ │        │ │     │        │        │ │
+                       │ │        │ │ dual╰────────⌒────────╯ │
+                       │ │   dual │ ╰────────╮     │          │
+                       │ ╰────────⌒────────╮ │     ╰──────────╯
+                       │          │dual    │ │
+                       ╰────────╮ │        │ │
+                         dual   ▼ ▼        ▼ ▼
+                               ╭──────╮   ╭──────╮
+                               │Rack 1│   │Rack 2│
+                               │      │   │      │
+                               ╰──────╯   ╰──────╯
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 82x51 @100% · v3.json · 8 nodes · 12 edges · q quit
+
+
+
+
+
+
+
+                         ╭──────────────────────────╮
+                         │                          │
+                         │              ╭───────────⌒───────╮
+                         │              │           │       │
+                         │    ╭───────╮ │ ╭───────╮ │       │
+                         │ ╭─▶│       │ ╰▶│       │ │       │
+                         │ │  │Spine 1│   │Spine 2│ │       │
+                         ╰─⌒─▶│       │ ╭▶│       │ │       │
+                           │  ╰───────╯ │ ╰───────╯ │       │
+                           │   │ │ ECMP │  │ │      │       │
+                           │   │ │ECMP  │  │ │ ECMP╭╯       │
+                           ╰───⌒─⌒────╮ ╰──⌒─⌒─────⌒────────⌒─╮
+                               │ │  ╭─⌒────⌒─╯     │        │ │
+                         ECMP  │ │  │ │ECMP│       │        │ │
+                       ╭───────╯╭⌒──⌒─⌒────╯       │        │ │
+                       │ ╭──────╯╰╮ │ ╰───╮   ECMP │   ECMP │ │
+                       ▼ ▼ ECMP   ▼ ▼     │ ╭────╮ │ ╭────╮ │ │
+                      ╭──────╮   ╭──────╮ ╰─│    │ ╰─│    │ │ │
+                      │Leaf 1│   │Leaf 2│   │BL 1│   │BL 2│ │ │
+                      │      │   │      │ ╭─│    │ ╭─│    │ │ │
+                      ╰──────╯   ╰──────╯ │ ╰────╯ │ ╰────╯ │ │
+                       │ │        │ │     │        │        │ │
+                       │ │        │ │ dual╰────────⌒────────╯ │
+                       │ │   dual │ ╰────────╮     │          │
+                       │ ╰────────⌒────────╮ │     ╰──────────╯
+                       │          │dual    │ │
+                       ╰────────╮ │        │ │
+                         dual   ▼ ▼        ▼ ▼
+                               ╭──────╮   ╭──────╮
+                               │Rack 1│   │Rack 2│
+                               │      │   │      │
+                               ╰──────╯   ╰──────╯
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯

@@ -1,0 +1,15 @@
+{"direction":"tb","layers":[["ts"],["box"],["bond0","wlp"],["rtr"],["v6"]],
+ "nodes":[
+  {"id":"ts","label":"tailscale0 100.113.153.49","group":"overlay"},
+  {"id":"box","label":"homelab ASUS bare metal","group":"host"},
+  {"id":"bond0","label":"bond0 192.168.1.197","group":"wire"},
+  {"id":"wlp","label":"wlp8s0 .213","group":"wire"},
+  {"id":"rtr","label":"Fios rtr 192.168.1.1","group":"edge"},
+  {"id":"v6","label":"no global v6 (ULA only)","group":"limit"}],
+ "edges":[
+  {"from":"ts","to":"box","label":"overlay"},
+  {"from":"ts","to":"bond0","label":"UDP encap"},
+  {"from":"box","to":"bond0","label":"eno1 2.5GbE"},
+  {"from":"box","to":"wlp","label":"backup path"},
+  {"from":"bond0","to":"rtr","label":"gw 0.5 ms"},
+  {"from":"wlp","to":"rtr","label":"metric 600"}]}

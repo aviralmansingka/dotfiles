@@ -1,0 +1,129 @@
+{
+  "theme": "gruvbox",
+  "diagrams": [
+    {
+      "id": "d1",
+      "title": "worker and runtime: the two RPC seams",
+      "description": "Task input plus control RPCs down; events plus management RPCs back. Two directed seams, never one arrow.",
+      "direction": "lr",
+      "nodes": [
+        {
+          "id": "worker",
+          "label": "modal-worker"
+        },
+        {
+          "id": "runtime",
+          "label": "modal-runtime",
+          "group": "orchestration"
+        }
+      ],
+      "edges": [
+        {
+          "from": "worker",
+          "to": "runtime",
+          "label": "task input + control RPCs",
+          "minlen": 2
+        },
+        {
+          "from": "runtime",
+          "to": "worker",
+          "label": "events + management RPCs"
+        }
+      ]
+    },
+    {
+      "id": "d2",
+      "title": "task dispatch down to the container",
+      "description": "modal-runtime dispatches to the Task engine, which starts a Container backend that runs the user process.",
+      "direction": "lr",
+      "nodes": [
+        {
+          "id": "runtime",
+          "label": "modal-runtime",
+          "group": "orchestration"
+        },
+        {
+          "id": "engine",
+          "label": "Task engine",
+          "group": "orchestration"
+        },
+        {
+          "id": "backend",
+          "label": "Container backend",
+          "group": "compute"
+        },
+        {
+          "id": "container",
+          "label": "Task container",
+          "group": "compute"
+        }
+      ],
+      "edges": [
+        {
+          "from": "runtime",
+          "to": "engine",
+          "label": "dispatches tasks"
+        },
+        {
+          "from": "engine",
+          "to": "backend",
+          "label": "starts / manages"
+        },
+        {
+          "from": "backend",
+          "to": "container",
+          "label": "runs user process"
+        }
+      ]
+    },
+    {
+      "id": "d3",
+      "title": "storage and daemon interfaces",
+      "description": "Engine mounts/snapshots Filesystem + volumes, then Blobnet; runtime to daemon: HTTP/UDS, not worker gRPC.",
+      "direction": "lr",
+      "nodes": [
+        {
+          "id": "engine",
+          "label": "Task engine",
+          "group": "orchestration"
+        },
+        {
+          "id": "runtime",
+          "label": "modal-runtime",
+          "group": "orchestration"
+        },
+        {
+          "id": "filesystem",
+          "label": "Filesystem + volumes",
+          "group": "storage"
+        },
+        {
+          "id": "daemon",
+          "label": "modal-daemon"
+        },
+        {
+          "id": "blobnet",
+          "label": "Blobnet",
+          "group": "storage"
+        }
+      ],
+      "edges": [
+        {
+          "from": "engine",
+          "to": "filesystem",
+          "label": "mounts / snapshots"
+        },
+        {
+          "from": "filesystem",
+          "to": "blobnet",
+          "label": "image + volume data"
+        },
+        {
+          "from": "runtime",
+          "to": "daemon",
+          "label": "filesystem HTTP over UDS"
+        }
+      ]
+    }
+  ]
+}

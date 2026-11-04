@@ -1,0 +1,1000 @@
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 29 at 2900ms
+ rataflow-view · 82x51 @100% · v1-provision-att3.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                         ● create / terminate / repair
+                                         │
+                                        ╭╯
+                                        ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                        │  enqueue job
+                                        │
+                                        │
+                                        ▼
+                                   ╭──────────╮
+                                   │River jobs│
+                                   │          │
+                                   ╰──────────╯
+                                        ●  provision job
+                                        │
+                                        ╰╮
+                                         ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                         │ provider API
+                                         │
+                                        ╭╯
+                                        ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                                        ●  allocate instance
+                                        │
+                                        ╰╮
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 30 at 3000ms
+ rataflow-view · 82x51 @100% · v1-provision-att3.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                         │ create / terminate / repair
+                                         ●
+                                        ╭╯
+                                        ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                        │  enqueue job
+                                        │
+                                        │
+                                        ▼
+                                   ╭──────────╮
+                                   │River jobs│
+                                   │          │
+                                   ╰──────────╯
+                                        │  provision job
+                                        ●
+                                        ╰╮
+                                         ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                         │ provider API
+                                         │
+                                        ╭╯
+                                        ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                                        │  allocate instance
+                                        ●
+                                        ╰╮
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 31 at 3100ms
+ rataflow-view · 82x51 @100% · v1-provision-att3.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                         │ create / terminate / repair
+                                         ●
+                                        ╭╯
+                                        ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                        │  enqueue job
+                                        │
+                                        │
+                                        ▼
+                                   ╭──────────╮
+                                   │River jobs│
+                                   │          │
+                                   ╰──────────╯
+                                        │  provision job
+                                        ●
+                                        ╰╮
+                                         ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                         │ provider API
+                                         │
+                                        ╭╯
+                                        ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                                        │  allocate instance
+                                        ●
+                                        ╰╮
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 32 at 3200ms
+ rataflow-view · 82x51 @100% · v1-provision-att3.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                         ● create / terminate / repair
+                                         │
+                                        ╭╯
+                                        ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                        │  enqueue job
+                                        │
+                                        │
+                                        ▼
+                                   ╭──────────╮
+                                   │River jobs│
+                                   │          │
+                                   ╰──────────╯
+                                        ●  provision job
+                                        │
+                                        ╰╮
+                                         ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                         │ provider API
+                                         │
+                                        ╭╯
+                                        ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                                        ●  allocate instance
+                                        │
+                                        ╰╮
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 33 at 3300ms
+ rataflow-view · 82x51 @100% · v1-provision-att3.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                         ● create / terminate / repair
+                                         │
+                                        ╭╯
+                                        ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                        │  enqueue job
+                                        │
+                                        │
+                                        ▼
+                                   ╭──────────╮
+                                   │River jobs│
+                                   │          │
+                                   ╰──────────╯
+                                        ●  provision job
+                                        │
+                                        ╰╮
+                                         ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                         │ provider API
+                                         │
+                                        ╭╯
+                                        ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                                        ●  allocate instance
+                                        │
+                                        ╰╮
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 34 at 3400ms
+ rataflow-view · 82x51 @100% · v1-provision-att3.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                         │ create / terminate / repair
+                                         ●
+                                        ╭╯
+                                        ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                        │  enqueue job
+                                        │
+                                        │
+                                        ▼
+                                   ╭──────────╮
+                                   │River jobs│
+                                   │          │
+                                   ╰──────────╯
+                                        │  provision job
+                                        ●
+                                        ╰╮
+                                         ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                         │ provider API
+                                         │
+                                        ╭╯
+                                        ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                                        │  allocate instance
+                                        ●
+                                        ╰╮
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 35 at 3500ms
+ rataflow-view · 82x51 @100% · v1-provision-att3.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                         │ create / terminate / repair
+                                         ●
+                                        ╭╯
+                                        ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                        │  enqueue job
+                                        │
+                                        │
+                                        ▼
+                                   ╭──────────╮
+                                   │River jobs│
+                                   │          │
+                                   ╰──────────╯
+                                        │  provision job
+                                        ●
+                                        ╰╮
+                                         ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                         │ provider API
+                                         │
+                                        ╭╯
+                                        ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                                        │  allocate instance
+                                        ●
+                                        ╰╮
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 36 at 3600ms
+ rataflow-view · 82x51 @100% · v1-provision-att3.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                         ● create / terminate / repair
+                                         │
+                                        ╭╯
+                                        ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                        │  enqueue job
+                                        │
+                                        │
+                                        ▼
+                                   ╭──────────╮
+                                   │River jobs│
+                                   │          │
+                                   ╰──────────╯
+                                        ●  provision job
+                                        │
+                                        ╰╮
+                                         ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                         │ provider API
+                                         │
+                                        ╭╯
+                                        ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                                        ●  allocate instance
+                                        │
+                                        ╰╮
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 37 at 3700ms
+ rataflow-view · 82x51 @100% · v1-provision-att3.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                         ● create / terminate / repair
+                                         │
+                                        ╭╯
+                                        ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                        │  enqueue job
+                                        │
+                                        │
+                                        ▼
+                                   ╭──────────╮
+                                   │River jobs│
+                                   │          │
+                                   ╰──────────╯
+                                        ●  provision job
+                                        │
+                                        ╰╮
+                                         ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                         │ provider API
+                                         │
+                                        ╭╯
+                                        ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                                        ●  allocate instance
+                                        │
+                                        ╰╮
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 38 at 3800ms
+ rataflow-view · 82x51 @100% · v1-provision-att3.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                         │ create / terminate / repair
+                                         ●
+                                        ╭╯
+                                        ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                        │  enqueue job
+                                        │
+                                        │
+                                        ▼
+                                   ╭──────────╮
+                                   │River jobs│
+                                   │          │
+                                   ╰──────────╯
+                                        │  provision job
+                                        ●
+                                        ╰╮
+                                         ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                         │ provider API
+                                         │
+                                        ╭╯
+                                        ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                                        │  allocate instance
+                                        ●
+                                        ╰╮
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 39 at 3900ms
+ rataflow-view · 82x51 @100% · v1-provision-att3.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                         │ create / terminate / repair
+                                         ●
+                                        ╭╯
+                                        ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                        │  enqueue job
+                                        │
+                                        │
+                                        ▼
+                                   ╭──────────╮
+                                   │River jobs│
+                                   │          │
+                                   ╰──────────╯
+                                        │  provision job
+                                        ●
+                                        ╰╮
+                                         ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                         │ provider API
+                                         │
+                                        ╭╯
+                                        ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                                        │  allocate instance
+                                        ●
+                                        ╰╮
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 40 at 4000ms
+ rataflow-view · 82x51 @100% · v1-provision-att3.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                         ● create / terminate / repair
+                                         │
+                                        ╭╯
+                                        ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                        │  enqueue job
+                                        │
+                                        │
+                                        ▼
+                                   ╭──────────╮
+                                   │River jobs│
+                                   │          │
+                                   ╰──────────╯
+                                        ●  provision job
+                                        │
+                                        ╰╮
+                                         ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                         │ provider API
+                                         │
+                                        ╭╯
+                                        ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                                        ●  allocate instance
+                                        │
+                                        ╰╮
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 41 at 4100ms
+ rataflow-view · 82x51 @100% · v1-provision-att3.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                         ● create / terminate / repair
+                                         │
+                                        ╭╯
+                                        ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                        │  enqueue job
+                                        │
+                                        │
+                                        ▼
+                                   ╭──────────╮
+                                   │River jobs│
+                                   │          │
+                                   ╰──────────╯
+                                        ●  provision job
+                                        │
+                                        ╰╮
+                                         ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                         │ provider API
+                                         │
+                                        ╭╯
+                                        ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                                        ●  allocate instance
+                                        │
+                                        ╰╮
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 42 at 4200ms
+ rataflow-view · 82x51 @100% · v1-provision-att3.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                         │ create / terminate / repair
+                                         ●
+                                        ╭╯
+                                        ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                        │  enqueue job
+                                        │
+                                        │
+                                        ▼
+                                   ╭──────────╮
+                                   │River jobs│
+                                   │          │
+                                   ╰──────────╯
+                                        │  provision job
+                                        ●
+                                        ╰╮
+                                         ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                         │ provider API
+                                         │
+                                        ╭╯
+                                        ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                                        │  allocate instance
+                                        ●
+                                        ╰╮
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 43 at 4300ms
+ rataflow-view · 82x51 @100% · v1-provision-att3.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                         │ create / terminate / repair
+                                         ●
+                                        ╭╯
+                                        ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                        │  enqueue job
+                                        │
+                                        │
+                                        ▼
+                                   ╭──────────╮
+                                   │River jobs│
+                                   │          │
+                                   ╰──────────╯
+                                        │  provision job
+                                        ●
+                                        ╰╮
+                                         ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                         │ provider API
+                                         │
+                                        ╭╯
+                                        ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                                        │  allocate instance
+                                        ●
+                                        ╰╮
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 44 at 4400ms
+ rataflow-view · 82x51 @100% · v1-provision-att3.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                         ● create / terminate / repair
+                                         │
+                                        ╭╯
+                                        ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                        │  enqueue job
+                                        │
+                                        │
+                                        ▼
+                                   ╭──────────╮
+                                   │River jobs│
+                                   │          │
+                                   ╰──────────╯
+                                        ●  provision job
+                                        │
+                                        ╰╮
+                                         ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                         │ provider API
+                                         │
+                                        ╭╯
+                                        ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                                        ●  allocate instance
+                                        │
+                                        ╰╮
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 45 at 4500ms
+ rataflow-view · 82x51 @100% · v1-provision-att3.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                         ● create / terminate / repair
+                                         │
+                                        ╭╯
+                                        ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                        │  enqueue job
+                                        │
+                                        │
+                                        ▼
+                                   ╭──────────╮
+                                   │River jobs│
+                                   │          │
+                                   ╰──────────╯
+                                        ●  provision job
+                                        │
+                                        ╰╮
+                                         ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                         │ provider API
+                                         │
+                                        ╭╯
+                                        ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                                        ●  allocate instance
+                                        │
+                                        ╰╮
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 46 at 4600ms
+ rataflow-view · 82x51 @100% · v1-provision-att3.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                         │ create / terminate / repair
+                                         ●
+                                        ╭╯
+                                        ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                        │  enqueue job
+                                        │
+                                        │
+                                        ▼
+                                   ╭──────────╮
+                                   │River jobs│
+                                   │          │
+                                   ╰──────────╯
+                                        │  provision job
+                                        ●
+                                        ╰╮
+                                         ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                         │ provider API
+                                         │
+                                        ╭╯
+                                        ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                                        │  allocate instance
+                                        ●
+                                        ╰╮
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+frame 47 at 4700ms
+ rataflow-view · 82x51 @100% · v1-provision-att3.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                         │ create / terminate / repair
+                                         ●
+                                        ╭╯
+                                        ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                        │  enqueue job
+                                        │
+                                        │
+                                        ▼
+                                   ╭──────────╮
+                                   │River jobs│
+                                   │          │
+                                   ╰──────────╯
+                                        │  provision job
+                                        ●
+                                        ╰╮
+                                         ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                         │ provider API
+                                         │
+                                        ╭╯
+                                        ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                                        │  allocate instance
+                                        ●
+                                        ╰╮
+                                         ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘
+
+
+/private/tmp via 🐹 v1.26.1 via 🌙 v5.5.0 via  v26.8.1 via 🐍 v3.9.6 via 🦀 v1.94
+.0 on ☁️  (ap-south-1) on ☁️  aviralmansingka@gmail.com
+󰂄 7% ❯

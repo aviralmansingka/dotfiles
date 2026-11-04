@@ -1,0 +1,68 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "runtime",
+      "label": "modal-runtime",
+      "group": "orchestration"
+    },
+    {
+      "id": "daemon",
+      "label": "modal-daemon",
+      "group": "worker-plane"
+    },
+    {
+      "id": "engine",
+      "label": "Task engine",
+      "group": "orchestration"
+    },
+    {
+      "id": "backend",
+      "label": "Container backend",
+      "group": "compute"
+    },
+    {
+      "id": "filesystem",
+      "label": "Filesystem + vols",
+      "group": "storage"
+    },
+    {
+      "id": "container",
+      "label": "Task container",
+      "group": "compute"
+    },
+    {
+      "id": "blobnet",
+      "label": "Blobnet",
+      "group": "storage"
+    }
+  ],
+  "edges": [
+    {
+      "from": "runtime",
+      "to": "daemon",
+      "label": "fs HTTP over UDS"
+    },
+    {
+      "from": "engine",
+      "to": "backend",
+      "label": "starts / manages"
+    },
+    {
+      "from": "engine",
+      "to": "filesystem",
+      "label": "mounts / snapshots"
+    },
+    {
+      "from": "backend",
+      "to": "container",
+      "label": "runs user process"
+    },
+    {
+      "from": "filesystem",
+      "to": "blobnet",
+      "label": "image + volume data"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "n1", "label": "a", "group": "DC edge" },
+    { "id": "n2", "label": "b", "group": "wan" },
+    { "id": "n3", "label": "c", "group": "carrier" },
+    { "id": "n4", "label": "d", "group": "beyond" },
+    { "id": "n5", "label": "e", "group": "external hops" },
+    { "id": "n6", "label": "f", "group": "upstream hops" }
+  ],
+  "edges": [
+    { "from": "n1", "to": "n2" },
+    { "from": "n2", "to": "n3" },
+    { "from": "n3", "to": "n4" },
+    { "from": "n4", "to": "n5" },
+    { "from": "n5", "to": "n6" }
+  ]
+}

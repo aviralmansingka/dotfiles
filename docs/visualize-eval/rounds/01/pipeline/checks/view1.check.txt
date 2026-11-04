@@ -1,0 +1,6 @@
+# date: 2026-11-02T08:27:59Z
+# cmd: /tmp/visualize-eval/round-01/bin/rataflow-view --check spec/view1.json
+ok: nodes=6 edges=6 flows=6 direction=tb theme=gruvbox
+extent=36x40 cells
+--- stderr ---
+--- exit=0

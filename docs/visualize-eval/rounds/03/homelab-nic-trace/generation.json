@@ -1,0 +1,247 @@
+{
+  "case_id": "homelab-nic-trace",
+  "round": "03",
+  "generator": {
+    "identity": "pi worker subagent, fresh diagram generator (round 03)",
+    "exact_model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "candidate_skill": {
+    "path": "docs/visualize-eval/rounds/03/SKILL.md",
+    "sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c"
+  },
+  "renderer": {
+    "path": "/tmp/visualize-eval/round-03/bin/rataflow-view",
+    "sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7"
+  },
+  "source": {
+    "case_file": "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+    "historical_chat_pointer": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-rack-bench-feat-network-diagram--/2026-10-13T05-14-42-097Z_01a133af-3231-71ff-87c1-c56889a12a6c.jsonl",
+    "historical_graph_call": "line 62, call chatcmpl-tool-b004896d418e23a3",
+    "note": "Only the source.md excerpts were read. No SSH, no probes, no credentials, no other case or round output."
+  },
+  "static_case": {
+    "animation_requested": false,
+    "flow_used": false,
+    "dots_used": false,
+    "why": "The source asks for a layout of physical, virtual, overlay and egress relations. No rate or movement fact exists, so no arc is animated; the frames capture is a static-sample artifact required by the harness."
+  },
+  "target": { "columns": 77, "rows": 47, "zoom": 1.0 },
+  "coverage_map": [
+    { "view": "v1-virtual-nets", "carries": "the host with its two local virtual networks (libvirt NAT bridge, Docker bridge) and their guests; relations e1-e4" },
+    { "view": "v2-overlay-uplinks", "carries": "the host, its wired primary and Wi-Fi backup links, the Tailscale overlay, the gateway latency, and the IPv6 limitation; relations e5-e10, with the gateway box shared with v3" },
+    { "view": "v3-wan-egress", "carries": "the historical ISP path from the Fios gateway to Cloudflare, NAT/DHCP pool address, hop latencies, and the historical qualification; relations e11-e14" }
+  ],
+  "views": [
+    {
+      "view": "v1-virtual-nets",
+      "spec": "specs/v1-virtual-nets.json",
+      "spec_sha256": "f6dcb5d64b17f49f3ef41668682a0b876e1802183ed9fec52c9342d0d45ca9e5",
+      "evidence_dir": "evidence/v1-virtual-nets",
+      "text": "evidence/v1-virtual-nets/v1-virtual-nets-text.txt",
+      "ansi": "evidence/v1-virtual-nets/v1-virtual-nets-ansi.ansi",
+      "selected_ansi": "evidence/v1-virtual-nets/v1-virtual-nets-selected.ansi",
+      "check": "evidence/v1-virtual-nets/check.txt",
+      "frames_text": "evidence/v1-virtual-nets/v1-virtual-nets-frames.txt",
+      "frames_ansi": "evidence/v1-virtual-nets/v1-virtual-nets-frames.ansi",
+      "manifest": "evidence/v1-virtual-nets/manifest.json",
+      "validator_output": "evidence/v1-virtual-nets/validator.txt",
+      "measured": { "extent": "44x21", "columns": 77, "rows": 47, "viewport_line": "viewport: 77x47 zoom: 1.00 natural", "viewport_token": "77x47 @100%", "pane_id": "w7E:pBW", "cleanup": "confirmed_closed" },
+      "crossings_chosen": 0,
+      "crossings_by_attempt": [1, 0],
+      "labels": "4/4 placed, 0 on route cells, 0 skipped",
+      "groups": "virtual(4) host(1)",
+      "frames": 5,
+      "validator_verdict": "all checks passed (28/28 PASS)"
+    },
+    {
+      "view": "v2-overlay-uplinks",
+      "spec": "specs/v2-overlay-uplinks.json",
+      "spec_sha256": "6610bdef07888a59b0b93513dc4ba5984cf7b79cae9a355f7273c54a3db3ea6c",
+      "evidence_dir": "evidence/v2-overlay-uplinks",
+      "text": "evidence/v2-overlay-uplinks/v2-overlay-uplinks-text.txt",
+      "ansi": "evidence/v2-overlay-uplinks/v2-overlay-uplinks-ansi.ansi",
+      "selected_ansi": "evidence/v2-overlay-uplinks/v2-overlay-uplinks-selected.ansi",
+      "check": "evidence/v2-overlay-uplinks/check.txt",
+      "frames_text": "evidence/v2-overlay-uplinks/v2-overlay-uplinks-frames.txt",
+      "frames_ansi": "evidence/v2-overlay-uplinks/v2-overlay-uplinks-frames.ansi",
+      "manifest": "evidence/v2-overlay-uplinks/manifest.json",
+      "validator_output": "evidence/v2-overlay-uplinks/validator.txt",
+      "measured": { "extent": "54x37", "columns": 77, "rows": 47, "viewport_line": "viewport: 77x47 zoom: 1.00 natural", "viewport_token": "77x47 @100%", "pane_id": "w7E:pB0", "cleanup": "confirmed_closed" },
+      "crossings_chosen": 0,
+      "crossings_by_attempt": [0, 1, 0],
+      "labels": "6/6 placed, 0 on route cells, 0 skipped",
+      "groups": "overlay(1) host(1) wire(2) edge(1) limit(1)",
+      "frames": 5,
+      "validator_verdict": "all checks passed (28/28 PASS)"
+    },
+    {
+      "view": "v3-wan-egress",
+      "spec": "specs/v3-wan-egress.json",
+      "spec_sha256": "03d008a8804140b0b07e39f13c27787fcd5c202d61c9387520a0fcb16b915cb8",
+      "evidence_dir": "evidence/v3-wan-egress",
+      "text": "evidence/v3-wan-egress/v3-wan-egress-text.txt",
+      "ansi": "evidence/v3-wan-egress/v3-wan-egress-ansi.ansi",
+      "selected_ansi": "evidence/v3-wan-egress/v3-wan-egress-selected.ansi",
+      "check": "evidence/v3-wan-egress/check.txt",
+      "frames_text": "evidence/v3-wan-egress/v3-wan-egress-frames.txt",
+      "frames_ansi": "evidence/v3-wan-egress/v3-wan-egress-frames.ansi",
+      "manifest": "evidence/v3-wan-egress/manifest.json",
+      "validator_output": "evidence/v3-wan-egress/validator.txt",
+      "measured": { "extent": "31x37", "columns": 77, "rows": 47, "viewport_line": "viewport: 77x47 zoom: 1.00 natural", "viewport_token": "77x47 @100%", "pane_id": "w7E:pC2", "cleanup": "confirmed_closed" },
+      "crossings_chosen": 0,
+      "crossings_by_attempt": [0, 0],
+      "labels": "4/4 placed, 0 on route cells, 0 skipped",
+      "groups": "edge(2) isp(2) wan(1)",
+      "frames": 5,
+      "validator_verdict": "all checks passed (28/28 PASS)"
+    }
+  ],
+  "check_lines": {
+    "v1-virtual-nets": [
+      "viewport: unknown zoom: 1.00 natural",
+      "ok: nodes=5 edges=4 flows=0 direction=tb theme=gruvbox",
+      "layers=3 (explicit placement, sugiyama skipped)",
+      "extent=44x21 cells",
+      "crossings: 0",
+      "labels: 4/4 placed, 0 on route cells, 0 skipped",
+      "groups: virtual(4) host(1)",
+      "trunks:",
+      "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 synchronized at 2000ms",
+      "origins: 0/0 routes start at their arrow origin"
+    ],
+    "v2-overlay-uplinks": [
+      "viewport: unknown zoom: 1.00 natural",
+      "ok: nodes=6 edges=6 flows=0 direction=tb theme=gruvbox",
+      "layers=5 (explicit placement, sugiyama skipped)",
+      "extent=54x37 cells",
+      "crossings: 0",
+      "labels: 6/6 placed, 0 on route cells, 0 skipped",
+      "groups: overlay(1) host(1) wire(2) edge(1) limit(1)",
+      "trunks:",
+      "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 synchronized at 2000ms",
+      "origins: 0/0 routes start at their arrow origin"
+    ],
+    "v3-wan-egress": [
+      "viewport: unknown zoom: 1.00 natural",
+      "ok: nodes=5 edges=4 flows=0 direction=tb theme=gruvbox",
+      "layers=5 (explicit placement, sugiyama skipped)",
+      "extent=31x37 cells",
+      "crossings: 0",
+      "labels: 4/4 placed, 0 on route cells, 0 skipped",
+      "groups: edge(2) isp(2) wan(1)",
+      "trunks:",
+      "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 synchronized at 2000ms",
+      "origins: 0/0 routes start at their arrow origin"
+    ]
+  },
+  "meaning_ledger": [
+    { "fact": "host `homelab` runs the rack-bench checkout (~/rack-bench, latest runs Oct 11)", "kind": "identity / role", "fate": "drawn", "where": "v1 box `homelab rack-bench`; v2 box `homelab ASUS bare metal`" },
+    { "fact": "host is ASUS bare metal", "kind": "hardware", "fate": "drawn", "where": "v2 box label" },
+    { "fact": "host runs Linux 7.0", "kind": "software version", "fate": "dropped with reason", "reason": "an OS version is not a node, port, or link in this relation set; no renderer field for a host annotation, and it names no relation" },
+    { "fact": "`bond0` over `eno1`, 2.5 GbE, 192.168.1.197 on 192.168.1.0/24", "kind": "identifier + physical link", "fate": "drawn", "where": "v2 node `bond0 192.168.1.197`, edge e7 label `eno1 2.5GbE`" },
+    { "fact": "`wlp8s0` Wi-Fi on the same LAN as backup, .213", "kind": "identifier", "fate": "drawn", "where": "v2 node `wlp8s0 192.168.1.213` (abbreviated .213 expanded from the LAN context)" },
+    { "fact": "backup is metric failover (metric 600), not ECMP", "kind": "qualifier", "fate": "drawn", "where": "v2 edges e8 `backup path` and e10 `metric 600 failover`" },
+    { "fact": "gateway 192.168.1.1 at 0.5 ms", "kind": "identifier + latency", "fate": "drawn", "where": "v2 node + edge e9 `gw 0.5 ms`" },
+    { "fact": "router is a Verizon Fios router, WNC OUI, does NAT and DHCP", "kind": "role / historical interpretation", "fate": "abbreviated + qualified", "where": "v3 node `claimed Fios rtr 192.168.1.1`, edge e11 label `NAT+DHCP 71.251.12.240`; the WNC MAC-vendor role is carried by the `claimed` qualifier rather than the OUI string" },
+    { "fact": "whole home shares one Fios pool IP 71.251.12.240", "kind": "address", "fate": "drawn", "where": "v3 edge e11 label" },
+    { "fact": "WAN path ONT 169.254.3.1 (4.5 ms) -> Verizon aggregation 100.41.x (6.6 ms) -> Verizon backbone AS701 (6-9 ms) -> Cloudflare", "kind": "path + identifiers + latencies", "fate": "drawn", "where": "v3 nodes and edges e11-e14" },
+    { "fact": "Cloudflare 1.1.1.1 / AS13335", "kind": "address", "fate": "drawn", "where": "v3 node `cf 1.1.1.1 AS13335`" },
+    { "fact": "one libvirt VM behind a NAT bridge on 192.168.122.x", "kind": "virtual network", "fate": "drawn", "where": "v1 nodes vm/virbr and edges e1/e2" },
+    { "fact": "one Docker container on 172.18.2.x behind docker bridge 172.18.2.1", "kind": "virtual network", "fate": "drawn", "where": "v1 nodes ctr/dkbr and edges e3/e4" },
+    { "fact": "Tailscale overlay 100.113.153.49, encapsulated over UDP on the wired path", "kind": "overlay + protocol", "fate": "drawn", "where": "v2 node `tailscale0 100.113.153.49`, edges e5 `overlay` and e6 `UDP encap`" },
+    { "fact": "ULA IPv6 only, no global v6, so v6 internet is unreachable", "kind": "limitation / qualifier", "fate": "drawn", "where": "v2 caption node `no global v6 (ULA only)` (no renderer annotation field; see defects)" },
+    { "fact": "`bench internet` measures the Fios path with no committed rate", "kind": "SLA qualifier", "fate": "dropped with reason", "reason": "no renderer field for an annotation and the per-view attempt budget was already spent; it names no node or link, and the caption box is reserved for the IPv6 reachability fact. Recorded as a remaining defect." },
+    { "fact": "Fios router is the whole collapsed fabric (ToR, spine, border, firewall in one box); ONT is the demarc", "kind": "interpretation", "fate": "dropped with reason", "reason": "a datacenter-model analogy, not a relation between two rack-bench entities; drawing it would invent nodes that the source's own relationship list does not contain. The historical/claimed qualifiers carry the uncertainty that matters." }
+  ],
+  "relationship_audit": [
+    { "id": "e1", "from": "vm", "to": "virbr", "verb_tech": "libvirt guest port, subnet 192.168.122.x", "label_owner": "e1", "view": "v1-virtual-nets" },
+    { "id": "e2", "from": "virbr", "to": "box", "verb_tech": "NAT bridge", "label_owner": "e2", "view": "v1-virtual-nets" },
+    { "id": "e3", "from": "ctr", "to": "dkbr", "verb_tech": "veth into docker bridge, subnet 172.18.2.x", "label_owner": "e3", "view": "v1-virtual-nets" },
+    { "id": "e4", "from": "dkbr", "to": "box", "verb_tech": "docker bridge", "label_owner": "e4", "view": "v1-virtual-nets" },
+    { "id": "e5", "from": "ts", "to": "box", "verb_tech": "Tailscale overlay", "label_owner": "e5", "view": "v2-overlay-uplinks" },
+    { "id": "e6", "from": "ts", "to": "bond0", "verb_tech": "UDP encapsulation onto the wired path", "label_owner": "e6", "view": "v2-overlay-uplinks" },
+    { "id": "e7", "from": "box", "to": "bond0", "verb_tech": "eno1, 2.5 GbE wired uplink", "label_owner": "e7", "view": "v2-overlay-uplinks" },
+    { "id": "e8", "from": "box", "to": "wlp", "verb_tech": "Wi-Fi backup path", "label_owner": "e8", "view": "v2-overlay-uplinks" },
+    { "id": "e9", "from": "bond0", "to": "rtr", "verb_tech": "default gateway, 0.5 ms", "label_owner": "e9", "view": "v2-overlay-uplinks" },
+    { "id": "e10", "from": "wlp", "to": "rtr", "verb_tech": "metric 600 failover route", "label_owner": "e10", "view": "v2-overlay-uplinks" },
+    { "id": "e11", "from": "rtr", "to": "ont", "verb_tech": "NAT out through the shared pool 71.251.12.240; router does DHCP", "label_owner": "e11", "view": "v3-wan-egress", "style": "dashed", "style_reason": "the ONT identity is a historical interpretation, not verified topology" },
+    { "id": "e12", "from": "ont", "to": "vzagg", "verb_tech": "4.5 ms hop (traceroute)", "label_owner": "e12", "view": "v3-wan-egress", "style": "dashed", "style_reason": "traceroute hop, historical interpretation" },
+    { "id": "e13", "from": "vzagg", "to": "vzbb", "verb_tech": "6.6 ms hop (traceroute)", "label_owner": "e13", "view": "v3-wan-egress", "style": "dashed", "style_reason": "traceroute hop, historical interpretation" },
+    { "id": "e14", "from": "vzbb", "to": "cf", "verb_tech": "6-9 ms hop to the Cloudflare edge (traceroute)", "label_owner": "e14", "view": "v3-wan-egress", "style": "dashed", "style_reason": "traceroute hop, historical interpretation" }
+  ],
+  "relationship_mapping": [
+    { "source_relationship": "`vm -> virbr`: 192.168.122.x", "visible": "v1: vm -> virbr, label `192.168.122.x`" },
+    { "source_relationship": "`virbr -> box`: NAT bridge", "visible": "v1: virbr0 libvirt NAT -> homelab rack-bench, label `NAT bridge`" },
+    { "source_relationship": "`ctr -> dkbr`: 172.18.2.x", "visible": "v1: ctr veth -> docker 172.18.2.1, label `172.18.2.x`" },
+    { "source_relationship": "`dkbr -> box`: docker bridge", "visible": "v1: docker 172.18.2.1 -> homelab rack-bench, label `docker bridge`" },
+    { "source_relationship": "`ts -> box`: overlay", "visible": "v2: tailscale0 100.113.153.49 -> homelab ASUS bare metal, label `overlay`" },
+    { "source_relationship": "`ts -> bond0`: encap over UDP", "visible": "v2: tailscale0 -> bond0 192.168.1.197, label `UDP encap`" },
+    { "source_relationship": "`box -> bond0`: eno1 2.5 GbE", "visible": "v2: homelab -> bond0, label `eno1 2.5GbE`" },
+    { "source_relationship": "`box -> wlp`: backup path", "visible": "v2: homelab -> wlp8s0 192.168.1.213, label `backup path`" },
+    { "source_relationship": "`bond0 -> rtr`: default gw 0.5 ms", "visible": "v2: bond0 -> Fios rtr 192.168.1.1, label `gw 0.5 ms`" },
+    { "source_relationship": "`wlp -> rtr`: metric 600", "visible": "v2: wlp8s0 -> Fios rtr 192.168.1.1, label `metric 600 failover`" },
+    { "source_relationship": "`rtr -> ont`: NAT out", "visible": "v3: claimed Fios rtr 192.168.1.1 -> ONT 169.254.3.1 historical, dashed, label `NAT+DHCP 71.251.12.240`" },
+    { "source_relationship": "`ont -> vzagg`: 4.5 ms", "visible": "v3: ONT -> VZ edge 100.41.x, dashed, label `4.5 ms`" },
+    { "source_relationship": "`vzagg -> vzbb`: 6.6 ms", "visible": "v3: VZ edge -> VZ bb AS701, dashed, label `6.6 ms`" },
+    { "source_relationship": "`vzbb -> cf`: 6-9 ms", "visible": "v3: VZ bb AS701 -> cf 1.1.1.1 AS13335, dashed, label `6-9 ms`" }
+  ],
+  "groups_declared": {
+    "virtual": "guest ports and their bridges inside the host (v1)",
+    "host": "the rack-bench host itself (v1, v2)",
+    "overlay": "the Tailscale overlay endpoint (v2)",
+    "wire": "the physical NICs/uplinks of the host (v2)",
+    "edge": "the home edge: Fios gateway and the claimed ONT demarc (v2, v3)",
+    "isp": "the Verizon transport hops read from traceroute (v3)",
+    "wan": "the internet destination (v3)",
+    "limit": "a stated reachability limitation, not a device (v2 caption; no renderer annotation field)"
+  },
+  "abbreviations": [
+    { "as_drawn": "VZ edge 100.41.x", "full": "Verizon aggregation / edge, 100.41.x", "key": "context of the v3 column, ISP group" },
+    { "as_drawn": "VZ bb AS701", "full": "Verizon backbone, AS701", "key": "ISP group in the same column" },
+    { "as_drawn": "cf 1.1.1.1 AS13335", "full": "Cloudflare edge 1.1.1.1, AS13335", "key": "same column" },
+    { "as_drawn": "gw 0.5 ms", "full": "default gateway, 0.5 ms RTT", "key": "edge e9 owner label" },
+    { "as_drawn": "2.5GbE", "full": "2.5 GbE", "key": "within the edge e7 label" }
+  ],
+  "deliberate_drops": [
+    { "fact": "host runs Linux 7.0", "reason": "software version, not an entity or relation in this graph; no annotation field" },
+    { "fact": "no committed rate on the Fios path (Part B answer)", "reason": "SLA qualifier with no node or link; the single caption slot was needed for the IPv6 reachability fact and the per-view attempt budget (3) was already spent. Remaining defect." },
+    { "fact": "Fios router as the collapsed ToR/spine/border/firewall; ONT as MMR analog", "reason": "datacenter-model analogy about the same box; drawing it needs nodes the source does not list" },
+    { "fact": "WNC OUI string", "reason": "the MAC-vendor role is a historical interpretation; carried as the `claimed` qualifier instead of an OUI string that would read as verified" }
+  ],
+  "known_defects": [
+    "v2 carries the IPv6 limitation as a caption node with no edge: rataflow-view has no footnote/annotation field, so a stated limitation can only be drawn as a box. It is grouped `limit` and labeled as a limitation, but a reader can mistake it for a device.",
+    "`no committed rate` (a Part B answer in the source) is not drawn: the caption slot was spent on IPv6 and the v2 attempt budget (3) was used up. Disclosed, not silently dropped.",
+    "The router qualifier (`claimed`) appears in v3 but not in v2, where the same router box is labeled `Fios rtr 192.168.1.1`. Adding it to v2 produced 1 crossing (attempt 2), and crossings are kept at 0 by leaving the qualifier in the view that draws the interpreted ISP chain.",
+    "v2 draws the tailscale0 -> bond0 encapsulation as one edge that skips the host band. The renderer routes it in an outer corridor, which is honest but visually implies the packet bypasses the host; the host is the sender in both e5 and e6.",
+    "v3 is a single-file column: every node is in its own band, so it uses 37 of 47 rows and 31 of 77 columns. That is layout inefficiency, not clipping: extent 31x37 inside 77x47 at 100% zoom.",
+    "Static case: no view animates a dot, so `dots: 0 ... 0 synchronized`, `origins: 0/0` and a 5-frame static capture are the honest evidence. There is no motion claim to verify.",
+    "The `--check` runs report `viewport: unknown` when run headless; the measured size in the bundle comes from the app's own pane header `77x47 @100%` and the pane read."
+  ],
+  "blockers": [],
+  "cleanup": {
+    "panes": [
+      { "view": "v1-virtual-nets", "pane_id": "w7E:pBW", "result": "confirmed_closed" },
+      { "view": "v2-overlay-uplinks", "pane_id": "w7E:pB0", "result": "confirmed_closed" },
+      { "view": "v3-wan-egress", "pane_id": "w7E:pC2", "result": "confirmed_closed" }
+    ],
+    "note": "Each capture split a no-focus half pane in this worker's own tab (w7E:t3S) and closed it; herdr pane get failed after each close. No pane of the captain's tab was touched, no raw tmux."
+  },
+  "commands": [
+    "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v1-virtual-nets.json --bin /tmp/visualize-eval/round-03/bin/rataflow-view --out docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v1-virtual-nets --label v1-virtual-nets --frames 5",
+    "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v2-overlay-uplinks.json --bin /tmp/visualize-eval/round-03/bin/rataflow-view --out docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v2-overlay-uplinks --label v2-overlay-uplinks --frames 5",
+    "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v3-wan-egress.json --bin /tmp/visualize-eval/round-03/bin/rataflow-view --out docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v3-wan-egress --label v3-wan-egress --frames 5",
+    "python3 scripts/viz-validate.py docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v1-virtual-nets --require-select --require-frames --attempts docs/visualize-eval/rounds/03/homelab-nic-trace/attempts.json",
+    "python3 scripts/viz-validate.py docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v2-overlay-uplinks --require-select --require-frames --attempts docs/visualize-eval/rounds/03/homelab-nic-trace/attempts.json",
+    "python3 scripts/viz-validate.py docs/visualize-eval/rounds/03/homelab-nic-trace/evidence/v3-wan-egress --require-select --require-frames --attempts docs/visualize-eval/rounds/03/homelab-nic-trace/attempts.json"
+  ],
+  "validator": {
+    "verdict": "all checks passed on all three bundles (28/28 PASS each)",
+    "per_view": {
+      "v1-virtual-nets": "all checks passed",
+      "v2-overlay-uplinks": "all checks passed",
+      "v3-wan-egress": "all checks passed"
+    },
+    "failing_checks": []
+  },
+  "approval": "Not self-approved and not reviewer-approved: no judge was spawned, per the round-03 generator task. The Sol judge runs separately."
+}

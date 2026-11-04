@@ -1,0 +1,17 @@
+# captures/overview.text.none.txt  lines=47 cols=77
+node  'modal-worker'           lines 6-9 cols 11-24
+node  'modal-runtime'          lines 14-17 cols 10-24
+node  'Task engine'            lines 22-25 cols 11-23
+node  'Container backend'      lines 31-34 cols 8-26
+node  'Filesystem + volumes'   lines 31-34 cols 31-52
+node  'modal-daemon'           lines 31-34 cols 57-70
+node  'Task container'         lines 39-42 cols 34-49
+node  'Blobnet'                lines 39-42 cols 60-68
+glyph ◀ at line  7 col 25   context: 'er│◀╮'
+glyph ▼ at line 13 col 11   context: '   ▼    '
+glyph ▼ at line 21 col 12   context: '   ▼    '
+glyph ▼ at line 30 col  9   context: '   ▼    '
+glyph ▼ at line 30 col 32   context: '   ▼    '
+glyph ▼ at line 30 col 58   context: '   ▼'
+glyph ▼ at line 38 col 35   context: '   ▼    '
+glyph ▼ at line 38 col 61   context: '   ▼'

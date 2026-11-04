@@ -1,0 +1,15 @@
+2026-11-02T08:27:03Z split start
+2026-11-02T08:27:03Z pane=w7E:p3S
+2026-11-02T08:27:05Z measured tty=47 77x
+2026-11-02T08:27:05Z viewer launched
+2026-11-02T08:27:08Z captured none-state
+2026-11-02T08:27:09Z captured tab-selected
+2026-11-02T08:27:09Z captured right-selected
+2026-11-02T08:27:11Z pane w7E:p3S self-closed
+ rataflow-view · execution.json · 5 nodes · 4 edges · 0 flows · drag pan · sc
+none 53b685bf6e07a8f1ea3846f9ff8c8fb8150a4ba2450fd3476950c80995466815  captures/execution.text.none.txt
+5e4b7ea3ac0541fd04eef341ac106e864a9b47eae5c304c0f661ab60cda367f5  captures/execution.ansi.none.txt
+sel-tab 53b685bf6e07a8f1ea3846f9ff8c8fb8150a4ba2450fd3476950c80995466815  captures/execution.text.sel-tab.txt
+298242d65fb9b7f7fb6e6cd8ec112de8cca086137ae64b5a72302a6f1115fd2e  captures/execution.ansi.sel-tab.txt
+sel-right 53b685bf6e07a8f1ea3846f9ff8c8fb8150a4ba2450fd3476950c80995466815  captures/execution.text.sel-right.txt
+803313eb41bbbe4125abf981b9bedef12262ed644ceffd12d512ae6093533ee7  captures/execution.ansi.sel-right.txt

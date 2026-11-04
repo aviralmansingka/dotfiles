@@ -1,0 +1,100 @@
+{
+  "case_id": "gb300-rack-software",
+  "round": "13",
+  "surface_under_test": "canvas: OOB hardware-control plane + in-band compute/NVSwitch software",
+  "budget_note": "Three spec candidates carry the canvas, so each of the canvas's two diagrams saw three candidates — the per-diagram budget. The trunk-fan geometry, the round's flagship risk, also needed three throwaway shape probes; they are listed under abandoned_shapes with their record labels, as the skill requires for exploratory probes beyond the view budget.",
+  "views": [
+    {
+      "view": "canvas",
+      "spec": "specs/canvas-v3.json",
+      "final": true,
+      "evidence": "evidence/canvas",
+      "attempts_total": 3,
+      "attempts": [
+        {
+          "id": "canvas-v1",
+          "spec": "specs/canvas-v1.json",
+          "record_label": "canvas-v1",
+          "record_stdout": "recorded/canvas-v1.stdout",
+          "bundle": null,
+          "verdict": "rejected",
+          "reason": "First canvas: tb, trunk terminus last in its rank, labels in rank gaps. The trunk hub worked (1 junction) and labels placed 6/6, but the bus corridor descended over the NVSwitch BMC box and its split arms crossed it: near-misses 16 (10 corridor + 6 arm at ring 2), and the two diagrams' label gutters made the canvas 64x103.",
+          "near_misses": 16,
+          "passes_near_unrelated_node": 16,
+          "canvas_extent": "64x103",
+          "diagram_extents": { "oob": "58x38", "inband": "32x57" },
+          "trunks": "oob:lane from oob to pwr, 2 branches, 1 junctions",
+          "labels": "6/6 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners"
+        },
+        {
+          "id": "canvas-v2",
+          "spec": "specs/canvas-v2.json",
+          "record_label": "canvas-v2",
+          "record_stdout": "recorded/canvas-v2.stdout",
+          "bundle": null,
+          "verdict": "rejected",
+          "reason": "label_slot on every labelled edge (to stop a label costing rank-row height) and the Power shelf declared third in its rank. Declaration order does not decide within-rank order — the engine orders group siblings by id — so the terminus did not move, and the tightened in-band gaps added a new near-miss (dcgm -> driver hugging dcgm-exporter): 24 total.",
+          "near_misses": 24,
+          "passes_near_unrelated_node": 24,
+          "canvas_extent": "64x78",
+          "diagram_extents": { "oob": "58x33", "inband": "33x37" },
+          "trunks": "oob:lane from oob to pwr, 2 branches, 1 junctions",
+          "labels": "6/6 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners"
+        },
+        {
+          "id": "canvas-v3",
+          "spec": "specs/canvas-v3.json",
+          "record_label": "canvas-v3",
+          "record_stdout": "recorded/canvas-v3.stdout",
+          "bundle": "evidence/canvas",
+          "verdict": "shipped (best honest result)",
+          "reason": "Shipped canvas. Node ids chosen so the engine's id-ordered rank puts the Power shelf in the middle of the OOB fan: the trunk corridor now descends straight into its own target and the bus itself has ZERO near-miss cells. In-band labels shortened to ':9400' so its rank gaps stay wide enough for a route to pass a sibling box cleanly: in-band near-misses 0. Residual defect: the two split arms leave the junction two rows above the Power shelf top and cross that box's span at ring 2 (6 + 13 cells).",
+          "near_misses": 19,
+          "passes_near_unrelated_node": 19,
+          "near_miss_routes": [
+            "near-miss: route oob:e2 passes 6 cell(s) at ring 2 of node 'pwr' (nearest cell 34,31)",
+            "near-miss: route oob:e3 passes 13 cell(s) at ring 2 of node 'pwr' (nearest cell 34,31)"
+          ],
+          "canvas_extent": "64x95",
+          "diagram_extents": { "oob": "58x38", "inband": "32x49" },
+          "trunks": "oob:lane from oob to pwr, 2 branches, 1 junctions",
+          "labels": "6/6 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners",
+          "warnings": [
+            "warning: two edges share 2 cell(s), including ports; increase routing space",
+            "warning: 19 route cell(s) hug a node their relation does not serve; move the affected relations or let them route around"
+          ]
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "id": "probe-capability",
+      "record_label": "probe-capability",
+      "spec": "attempts/probe-capability.json",
+      "purpose": "Read the round-13 check vocabulary before spending a candidate: does a canvas print per-diagram origin/extent/description lines, does a trunk with two branches plus a corridor terminus report one junction, and does `near-miss:` name the offending route and node?",
+      "result": "Confirmed all four. A 9-node toy canvas reported 'trunks: p1:t1 from b to e, 2 branches, 1 junctions' and three named near-miss lines. Never shipped."
+    },
+    {
+      "id": "probe-order",
+      "record_label": "probe-order",
+      "spec": "attempts/probe-order.json",
+      "purpose": "Find out what decides within-rank order, because the trunk corridor only stays clear of unrelated boxes if its terminus is the middle box of the fan. Four nodes declared zz, aa, mm — rendered Alpha, Mu, Zeta.",
+      "result": "Within-rank order is id-lexicographic, not declaration order. That is why canvas-v2's reordering failed and canvas-v3 renames the ids instead (bmc_c < pwr < sw). Never shipped."
+    },
+    {
+      "id": "probe-fan",
+      "record_label": "probe-fan",
+      "spec": "attempts/probe-fan.json",
+      "purpose": "Three fan geometries in one canvas — (a) tb fan with the terminus centred, (b) lr stack with the terminus at the bottom, (c) tb with the terminus pinned one rank under the branches — to find one where a three-way trunk split keeps every route clear of the boxes it does not serve.",
+      "result": "All three fail: (a) 6 + 13 cells at ring 2 of the centred terminus, (b) 6 corridor + 4 arm cells at ring 2, (c) 18 corridor cells at ring 2 in the three-cell gap between the branch boxes. 53 cells total. This is the evidence for the structural yield recorded in generation.json. Never shipped."
+    }
+  ],
+  "probe_log": "attempts-log.jsonl",
+  "probe_raw_dir": "recorded/",
+  "spec_budget": {
+    "canvas_candidates": 3,
+    "per_diagram_candidates": { "oob": 3, "inband": 3 },
+    "exploratory_shape_probes": 3
+  }
+}

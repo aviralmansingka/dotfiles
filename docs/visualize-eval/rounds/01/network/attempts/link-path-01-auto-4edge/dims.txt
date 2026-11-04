@@ -1,0 +1,9 @@
+pane_id=w7E:p33
+pane_rect=79x49 (herdr pane layout, includes chrome)
+stty_size_inside=47 77
+measured_at=2026-11-02T08:25:25Z
+measure_cmd=stty size; tput cols; tput lines
+raw_stdout=
+47 77
+77
+47

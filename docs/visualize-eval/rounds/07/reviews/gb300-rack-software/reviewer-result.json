@@ -1,0 +1,21 @@
+{
+  "round": 7,
+  "case_id": "gb300-rack-software",
+  "generator": {"worker_id": "viz-rf07", "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"},
+  "reviewer": {"worker_id": "viz-judge07-sol", "model": "openai/gpt-6.1-sol"},
+  "observed_first": {"path": "docs/visualize-eval/rounds/07/reviews/gb300-rack-software/observed-first-rf.md", "sha256": "1ff049f9be3dee983209910525ed3fc2d81656cecdf2e48649aae36cb71ba31a", "saved_before_expected_reveal": true},
+  "baseline_result": "docs/visualize-eval/rounds/05/reviews/gb300-rack-software/reviewer-result.json",
+  "reactflow_evidence": {"html": "docs/visualize-eval/rounds/07/gb300-rack-software/reactflow.html", "html_sha256": "7614f6053c9d61c37411dc4ba4635217ec51480a7be2a2fbbed7411542081417", "capture": "docs/visualize-eval/rounds/07/gb300-rack-software/capture.png", "capture_sha256": "e1985ef5eb1bb53651f7fc359a6b281fd4c0395c37e7df209e495ad0a1e59340", "notes": "docs/visualize-eval/rounds/07/gb300-rack-software/notes.md", "commands": "docs/visualize-eval/rounds/07/gb300-rack-software/commands.txt", "attempts": "docs/visualize-eval/rounds/07/attempts.md"},
+  "categories": {
+    "semantic_fidelity": {"rataflow": {"applicable": true, "status": "fail"}, "reactflow": {"applicable": true, "status": "fail", "reason": "The requested once-split named OOB bus is replaced by independently rendered coincident paths. Compute BMC count, CDU/PDU reach, shelf HTTPS, NVOS SSH/SFTP and exporter serving-role semantics are absent; historical driver→Fabric Manager remains unconfirmed rather than verified."}},
+    "arrow_traceability": {"rataflow": {"applicable": true, "status": "fail"}, "reactflow": {"applicable": true, "status": "fail", "reason": "Three OOB edges merely overlap rather than implementing the named single-split bus; direct rms→NMX gRPC goes behind NVOS and coincides with hosts, so independent endpoint direction cannot be traced in v3."}},
+    "layout_fit": {"rataflow": {"applicable": true, "status": "fail"}, "reactflow": {"applicable": true, "status": "pass", "reason": "Adapted criterion only: all four graphs' node/group extents fit their captured canvases without pan at captured zoom. Route occlusion is separately failed, not treated as fit evidence."}},
+    "conceptual_grouping_color": {"rataflow": {"applicable": true, "status": "pass"}, "reactflow": {"applicable": true, "status": "pass", "reason": "All nine titled and tinted group boxes contain their members; off-rack, OOB, hardware, tray, in-band cluster and compute-host residency are explicit."}},
+    "border_integrity": {"rataflow": {"applicable": true, "status": "blocked"}, "reactflow": {"applicable": true, "status": "pass", "reason": "All 17 captured node borders are complete and color-continuous; selection disabled, group-title cutouts do not damage node borders."}},
+    "workflow_evidence": {"rataflow": {"applicable": true, "status": "fail"}, "reactflow": {"applicable": true, "status": "blocked", "reason": "Commands, attempts, html/capture and blind hashes are available; narrative equal reload digest lacks raw paired outputs, and command statuses/browser closure are not preserved. No nondeterminism is inferred."}},
+    "animation": {"rataflow": {"applicable": false, "status": null}, "reactflow": {"applicable": false, "status": null, "reason": "Source-backed manifest and expected case mark motion optional/not requested; all HTML edges static and image has no dots. No no-dot prohibition is invented."}}
+  },
+  "overall": {"reactflow": "fail", "green": false, "reason": "Known semantic and traceability failures; workflow evidence blocked."},
+  "convergence": "docs/visualize-eval/rounds/07/reviews/gb300-rack-software/convergence.md",
+  "critique": "docs/visualize-eval/rounds/07/reviews/gb300-rack-software/critique.md"
+}

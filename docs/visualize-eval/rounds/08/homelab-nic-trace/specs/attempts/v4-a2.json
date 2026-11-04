@@ -1,0 +1,13 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "ts",    "label": "tailscale0 100.113.153.49 UDP", "group": "overlay: UDP on wired path" },
+    { "id": "box",   "label": "homelab host" },
+    { "id": "bond0", "label": "bond0 eno1" }
+  ],
+  "edges": [
+    { "from": "ts",  "to": "box",   "label": "overlay" },
+    { "from": "ts",  "to": "bond0", "label": "UDP encap" }
+  ]
+}

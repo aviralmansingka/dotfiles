@@ -1,0 +1,24 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "box", "label": "homelab host: ASUS, Linux 7.0, ~/rack-bench, v6 ULA-only", "group": "host" },
+    { "id": "bond0", "label": "bond0 192.168.1.197, LAN 192.168.1.0/24", "group": "nics" },
+    { "id": "wlp", "label": "wlp8s0 192.168.1.213", "group": "nics" },
+    { "id": "rtr", "label": "Fios rtr 192.168.1.1 (hist.): ToR+spine+border+FW, NAT+DHCP", "group": "gateway" },
+    { "id": "ont", "label": "ONT 169.254.3.1 (hist.) = MMR analog; 1 ISP vs 4-ISP/2-MMR", "group": "wanpath" },
+    { "id": "vzagg", "label": "Vz aggregation 100.41.x", "group": "wanpath" },
+    { "id": "vzbb", "label": "Vz backbone AS701", "group": "wanpath" },
+    { "id": "cf", "label": "Cloudflare 1.1.1.1 AS13335", "group": "wanpath" }
+  ],
+  "edges": [
+    { "from": "box", "to": "bond0", "label": "eno1 2.5 GbE" },
+    { "from": "box", "to": "wlp", "label": "backup path" },
+    { "from": "bond0", "to": "rtr", "label": "def gw 0.5 ms" },
+    { "from": "wlp", "to": "rtr", "label": "metric 600, not ECMP" },
+    { "from": "rtr", "to": "ont", "label": "NAT out: pool 71.251.12.240, no CIR, no v6", "label_slot": true },
+    { "from": "ont", "to": "vzagg", "label": "4.5 ms" },
+    { "from": "vzagg", "to": "vzbb", "label": "6.6 ms" },
+    { "from": "vzbb", "to": "cf", "label": "6-9 ms" }
+  ]
+}

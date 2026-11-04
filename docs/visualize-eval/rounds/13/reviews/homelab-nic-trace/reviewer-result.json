@@ -1,0 +1,880 @@
+{
+  "protocol_version": 1,
+  "round": 13,
+  "case_id": "homelab-nic-trace",
+  "candidate_sha256": "9ddfaef45aa5b7fd0e98fdc5bcd256c702dac1a83276af0715667a2e6acaf1b8",
+  "renderer_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+  "rubric_sha256": "6bfd3733c8d08b66af9a92e71985a20846f954d7916eaf9685f86c8d2f96bcb8",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "9ddfaef45aa5b7fd0e98fdc5bcd256c702dac1a83276af0715667a2e6acaf1b8",
+  "generator": {
+    "worker_id": "viz-ds13-4",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge13-homelab",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 68,
+    "rows": 44
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/13/reviews/homelab-nic-trace/observed-first.md",
+      "sha256": "642975bd811cff7dbffec9686e0a48e990a3379677dd666c22de020226a474eb",
+      "description": "Blind record saved before reveal",
+      "capture": null
+    },
+    {
+      "id": "spec",
+      "path": "docs/visualize-eval/rounds/13/homelab-nic-trace/spec.json",
+      "sha256": "9ddfaef45aa5b7fd0e98fdc5bcd256c702dac1a83276af0715667a2e6acaf1b8",
+      "description": "Shipped canvas specification",
+      "capture": null
+    },
+    {
+      "id": "wide",
+      "path": "docs/visualize-eval/rounds/13/homelab-nic-trace/evidence/canvas-sections/whole-canvas-215x45-frames.txt",
+      "sha256": "66620816bc11f9b8984c26add95bbd10412ff7edb5f3d0273942795bf5b0cf12",
+      "description": "Whole natural canvas",
+      "capture": {
+        "dimensions": {
+          "columns": 215,
+          "rows": 45
+        },
+        "view": "canvas",
+        "frame": "0",
+        "timestamp": "0ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "pinned",
+      "path": "docs/visualize-eval/rounds/13/homelab-nic-trace/evidence/canvas/canvas-77x47-frames.txt",
+      "sha256": "949451364c6662f56371e91fb265b4487c1aaeae4e16e2988920c2864b23bba5",
+      "description": "Pinned final spec natural viewport",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "canvas",
+        "frame": "0",
+        "timestamp": "0ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "text",
+      "path": "docs/visualize-eval/rounds/13/homelab-nic-trace/evidence/canvas/canvas-text.txt",
+      "sha256": "9d17e9a5026e359261769c64ee42fa5955fb506664a72fa1de3e7e454c9be179",
+      "description": "Actual pane text",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "canvas",
+        "frame": "pane",
+        "timestamp": "2026-11-03T14:01:40Z\u201314:01:44Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi",
+      "path": "docs/visualize-eval/rounds/13/homelab-nic-trace/evidence/canvas/canvas-ansi.ansi",
+      "sha256": "11fc6612bb6005699615a992d806bbd88aef89b57fb2cbd5b6518b7dd08dd878",
+      "description": "Actual pane colors",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "canvas",
+        "frame": "pane",
+        "timestamp": "2026-11-03T14:01:40Z\u201314:01:44Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected",
+      "path": "docs/visualize-eval/rounds/13/homelab-nic-trace/evidence/canvas/canvas-selected.ansi",
+      "sha256": "7431b5b63d2b1e37208cca86982371c3c52e80d0da9d3cbb4fe586e8128ca51f",
+      "description": "Actual pane select-all",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "canvas",
+        "frame": "pane",
+        "timestamp": "2026-11-03T14:01:40Z\u201314:01:44Z",
+        "state": "selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "frames",
+      "path": "docs/visualize-eval/rounds/13/homelab-nic-trace/evidence/canvas/canvas-frames.txt",
+      "sha256": "d96bf010d214cca88e7dca81aa45a630e50909990b4fc52bf08695286531310d",
+      "description": "Timestamped pane frames",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "canvas",
+        "frame": "0\u20132",
+        "timestamp": "0\u2013200ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "check",
+      "path": "docs/visualize-eval/rounds/13/homelab-nic-trace/evidence/canvas/check.txt",
+      "sha256": "26bd2e8d1e433536083f1a7e2150523f61d861c4086455af8b73fdcf4777f07d",
+      "description": "Shipped check",
+      "capture": null
+    },
+    {
+      "id": "manifest",
+      "path": "docs/visualize-eval/rounds/13/homelab-nic-trace/evidence/canvas/manifest.json",
+      "sha256": "285b78e158d4ded12e79260d91f8b17650937ac98dae5b3f658b7a081c00c25e",
+      "description": "Capture and cleanup manifest",
+      "capture": null
+    },
+    {
+      "id": "validator",
+      "path": "docs/visualize-eval/rounds/13/homelab-nic-trace/validator-canvas.txt",
+      "sha256": "f45f4ef71fdc7dae59e47137fb78d823838387bf32c6f9474f2ba265ba7a4c28",
+      "description": "Validator results",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/13/homelab-nic-trace/generation.json",
+      "sha256": "b7ede823c3f68f4ce754e1f75e5714940c5ea637b85d02022268093c0e869cc3",
+      "description": "Generation, triage and coverage record",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/13/homelab-nic-trace/attempts.json",
+      "sha256": "f5d7a4dec76160f7f262ab127adc99f7fdc271a7ba1db3347a167c261c0c900a",
+      "description": "Measured attempts",
+      "capture": null
+    },
+    {
+      "id": "log",
+      "path": "docs/visualize-eval/rounds/13/homelab-nic-trace/attempts-log.jsonl",
+      "sha256": "e5eacef6d607882e37c20b6866fc2320c4b74a9ab3bb48098796500f0ede39a5",
+      "description": "Recorded command checks",
+      "capture": null
+    },
+    {
+      "id": "egress",
+      "path": "docs/visualize-eval/rounds/13/homelab-nic-trace/evidence/canvas-sections/egress-section.txt",
+      "sha256": "82d4f434a90de49f6c02fd48818d4f6ffc9f1ba252a6fa442943d36668508ca6",
+      "description": "egress section crop",
+      "capture": null
+    },
+    {
+      "id": "local",
+      "path": "docs/visualize-eval/rounds/13/homelab-nic-trace/evidence/canvas-sections/local-section.txt",
+      "sha256": "bd401f3e8d6b724757a7a1e4f191947a81e9816ddb4ec7c69b2635f9cd862627",
+      "description": "local section crop",
+      "capture": null
+    },
+    {
+      "id": "secondary",
+      "path": "docs/visualize-eval/rounds/13/homelab-nic-trace/evidence/canvas-sections/secondary-section.txt",
+      "sha256": "e8b94ccc68216ab5cb5f0ec6f0ea9d64b5701436059cce4f3f797ac9d1fe107e",
+      "description": "secondary section crop",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Dropped source identifiers, roles, date and limitations; historical hops does not explicitly qualify MAC-vendor-derived device identities. All 14 relations remain.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/rounds/13/briefs/homelab-nic-trace.md"
+      ],
+      "evidence_ids": [
+        "wide",
+        "spec",
+        "generation"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 14 distinct routes have visible correct heads and owners in the wide frame; zero crossing, ambiguous ownership and unrelated-node near-miss.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/rounds/13/briefs/homelab-nic-trace.md"
+      ],
+      "evidence_ids": [
+        "wide",
+        "check"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Branch B canvas extent 210x38 and the three extents are proven at natural zoom, but branch B does not excuse dropped required source facts. The separate pinned 77x47 capture clips.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/rounds/13/briefs/homelab-nic-trace.md"
+      ],
+      "evidence_ids": [
+        "wide",
+        "check",
+        "pinned",
+        "generation"
+      ]
+    },
+    "navigation_clarity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Titles and scope descriptions are distinct and source-consistent, but all descriptions clip at 68 and 77 columns; overflow UI also obscures secondary content.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/rounds/13/briefs/homelab-nic-trace.md"
+      ],
+      "evidence_ids": [
+        "wide",
+        "text",
+        "pinned",
+        "generation"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Adjacent distinct uplink and gateway use identical purple in the visible egress ANSI, without a recorded justified shared-family choice. Other offscreen cross-diagram hues lack proof.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/rounds/13/briefs/homelab-nic-trace.md"
+      ],
+      "evidence_ids": [
+        "ansi",
+        "wide",
+        "generation"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Correct and stated family identity-probe-maps: source is dense in interfaces, addresses, AS numbers, and historical qualifiers. Capture verifies seven-stage chain and per-hop corridors, with flow-chain habit. Identity recipe is not satisfied: source identifiers and qualifiers are dropped, with no evidenced impossibility yield."
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "The narrow actual pane overflow graphic overwrites the secondary host border in normal and selected captures; remaining offscreen border colors and selected states lack proof.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/rounds/13/briefs/homelab-nic-trace.md"
+      ],
+      "evidence_ids": [
+        "ansi",
+        "selected",
+        "wide"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Triage is honest, checks/attempts and pane cleanup recorded, but complete per-node ANSI and selected-state coverage is not captured; wide capture is plain text.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/rounds/13/briefs/homelab-nic-trace.md"
+      ],
+      "evidence_ids": [
+        "ansi",
+        "selected",
+        "manifest",
+        "log",
+        "validator",
+        "blind"
+      ]
+    },
+    "animation": {
+      "applicable": false,
+      "status": null,
+      "reason": "Optional case; the source never requests animation and the supplied graphs and timestamped frames have no dots.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases.json"
+      ],
+      "evidence_ids": [
+        "check",
+        "wide",
+        "pinned"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "vm->virbr",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md"
+      ],
+      "expected": "vm \u2192 virbr: 192.168.122.x",
+      "observed": "vm \u2192 virbr, right-pointing head; continuous distinct route, no crossing or apparent junction; label 192.168.122.x.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            24,
+            22,
+            40,
+            2
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "virbr->box",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md"
+      ],
+      "expected": "virbr \u2192 box: NAT bridge",
+      "observed": "virbr \u2192 box, right-pointing head; continuous distinct route, no crossing or apparent junction; label NAT bridge.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            54,
+            22,
+            29,
+            2
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "ctr->dkbr",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md"
+      ],
+      "expected": "ctr \u2192 dkbr: 172.18.2.x",
+      "observed": "ctr \u2192 dkbr, right-pointing head; continuous distinct route, no crossing or apparent junction; label 172.18.2.x.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            22,
+            18,
+            33,
+            2
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "dkbr->box",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md"
+      ],
+      "expected": "dkbr \u2192 box: docker bridge",
+      "observed": "dkbr \u2192 box, right-pointing head; continuous distinct route, no crossing or apparent junction; label docker bridge.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            56,
+            18,
+            28,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "ts->box",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md"
+      ],
+      "expected": "ts \u2192 box: overlay",
+      "observed": "ts \u2192 box, right-pointing head; continuous distinct route, no crossing or apparent junction; label overlay.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            36,
+            36,
+            35,
+            3
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "ts->bond0",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md"
+      ],
+      "expected": "ts \u2192 bond0: encap over UDP",
+      "observed": "ts \u2192 bond0, right-pointing head; continuous distinct route, no crossing or apparent junction; label encap over UDP.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            36,
+            33,
+            38,
+            3
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "box->bond0",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md"
+      ],
+      "expected": "box \u2192 bond0: eno1 2.5 GbE",
+      "observed": "box \u2192 bond0, right-pointing head; continuous distinct route, no crossing or apparent junction; label eno1 2.5 GbE.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            10,
+            8,
+            49,
+            2
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "box->wlp",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md"
+      ],
+      "expected": "box \u2192 wlp: backup path",
+      "observed": "box \u2192 wlp, right-pointing head; continuous distinct route, no crossing or apparent junction; label backup path.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            58,
+            36,
+            52,
+            3
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "bond0->rtr",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md"
+      ],
+      "expected": "bond0 \u2192 rtr: default gw 0.5 ms",
+      "observed": "bond0 \u2192 rtr, right-pointing head; continuous distinct route, no crossing or apparent junction; label gw 0.5 ms.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            39,
+            8,
+            57,
+            2
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "wlp->rtr",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md"
+      ],
+      "expected": "wlp \u2192 rtr: metric 600",
+      "observed": "wlp \u2192 rtr, right-pointing head; continuous distinct route, no crossing or apparent junction; label metric 600.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            89,
+            35,
+            59,
+            2
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "rtr->ont",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md"
+      ],
+      "expected": "rtr \u2192 ont: NAT out",
+      "observed": "rtr \u2192 ont, right-pointing head; continuous distinct route, no crossing or apparent junction; label NAT out.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            72,
+            8,
+            51,
+            2
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "ont->vzagg",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md"
+      ],
+      "expected": "ont \u2192 vzagg: 4.5 ms",
+      "observed": "ont \u2192 vzagg, right-pointing head; continuous distinct route, no crossing or apparent junction; label 4.5 ms.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            107,
+            8,
+            43,
+            2
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "vzagg->vzbb",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md"
+      ],
+      "expected": "vzagg \u2192 vzbb: 6.6 ms",
+      "observed": "vzagg \u2192 vzbb, right-pointing head; continuous distinct route, no crossing or apparent junction; label 6.6 ms.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            133,
+            8,
+            45,
+            2
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "vzbb->cf",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md"
+      ],
+      "expected": "vzbb \u2192 cf: 6-9 ms",
+      "observed": "vzbb \u2192 cf, right-pointing head; continuous distinct route, no crossing or apparent junction; label 6-9 ms.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            160,
+            8,
+            47,
+            2
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "missing-source-facts",
+      "category": "semantic_fidelity",
+      "edge_ids": [],
+      "severity": "critical",
+      "description": "The Fios DHCP/shared pool IP 71.251.12.240, Cloudflare AS13335, ONT demarc/MMR analogy, no committed rate, Oct 11 run date and explicit no-global-v6/internet reachability are not shown; these are source facts, not optional edges.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/rounds/13/briefs/homelab-nic-trace.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            9,
+            5,
+            88,
+            1
+          ]
+        },
+        {
+          "evidence_id": "wide",
+          "region": [
+            72,
+            8,
+            134,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "identity-qualification",
+      "category": "semantic_fidelity",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Historical hops is diagram-level; it does not explicitly mark ONT and router device identities as MAC-vendor/traceroute interpretations.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/rounds/13/briefs/homelab-nic-trace.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            9,
+            5,
+            88,
+            1
+          ]
+        },
+        {
+          "evidence_id": "wide",
+          "region": [
+            71,
+            7,
+            52,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "canvas-coverage",
+      "category": "layout_fit",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Branch B cannot waive source-fact omissions despite clean natural 210x38 extent proof.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/rounds/13/briefs/homelab-nic-trace.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            9,
+            4,
+            88,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "clipped-descriptions",
+      "category": "navigation_clarity",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "Every description clips in both the actual 68x44 and pinned 77x47 view, contrary to the no-clipping requirement.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/rounds/13/briefs/homelab-nic-trace.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "text",
+          "region": [
+            1,
+            3,
+            68,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text",
+          "region": [
+            1,
+            13,
+            68,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text",
+          "region": [
+            1,
+            28,
+            68,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shared-purple",
+      "category": "conceptual_grouping_color",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "Distinct uplink and gateway share the same captured purple border in the same egress diagram without recorded justification; gateway is partly visible.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/rounds/13/briefs/homelab-nic-trace.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "ansi",
+          "region": [
+            30,
+            5,
+            21,
+            1
+          ]
+        },
+        {
+          "evidence_id": "ansi",
+          "region": [
+            63,
+            5,
+            6,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "identity-recipe",
+      "category": "category_fit",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Identity family is suitable, but multiple source identifiers and qualifiers were deliberately removed rather than covered; no measured renderer-impossibility yield.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/rounds/13/briefs/homelab-nic-trace.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "wide",
+          "region": [
+            9,
+            5,
+            88,
+            1
+          ]
+        },
+        {
+          "evidence_id": "wide",
+          "region": [
+            107,
+            8,
+            99,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "overflow-border",
+      "category": "border_integrity",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Overflow graphic overwrites secondary host border in actual normal and selected capture.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/rounds/13/briefs/homelab-nic-trace.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "ansi",
+          "region": [
+            44,
+            35,
+            25,
+            4
+          ]
+        },
+        {
+          "evidence_id": "selected",
+          "region": [
+            44,
+            35,
+            25,
+            4
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "No complete ANSI/buffer capture for all 17 node occurrences at normal and selected states; cannot verify offscreen border continuity, selection, and group hues.",
+    "Frozen result schema requires viewport 77x47 and disallows viewport.note and top-level blind_observation_sha256, contrary to requested 210x38 object; actual canvas extent is in layout reason and blind hash is in evidence."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pZT"
+    ],
+    "closed_pane_ids": [
+      "w7E:pZT"
+    ],
+    "status": "done",
+    "reason": "Evidence manifest says confirmed_closed."
+  },
+  "overall": "fail"
+}

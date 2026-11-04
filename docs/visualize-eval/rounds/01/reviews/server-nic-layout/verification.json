@@ -1,0 +1,60 @@
+{
+  "frozen_inputs": [
+    {
+      "path": "docs/visualize-eval/rounds/01/SKILL.md",
+      "expected_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "actual_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "matches": true
+    },
+    {
+      "path": "../../../../../../tmp/visualize-eval/round-01/bin/rataflow-view",
+      "expected_sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "actual_sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/rubric.json",
+      "expected_sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "actual_sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/cases.json",
+      "expected_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "actual_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/cases/server-nic-layout/source.md",
+      "expected_sha256": "235d296fef435710c8a49bcd247455c8c82b844e71726f146c4cedf227d0308b",
+      "actual_sha256": "235d296fef435710c8a49bcd247455c8c82b844e71726f146c4cedf227d0308b",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/cases/server-nic-layout/expected.json",
+      "expected_sha256": "ada8d8b1b8a3dfda4221b22fd1bb785327d6eeda69834c35ab5ab17b0678afb4",
+      "actual_sha256": "ada8d8b1b8a3dfda4221b22fd1bb785327d6eeda69834c35ab5ab17b0678afb4",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/server-nic-layout/specs/vA-host-tor.json",
+      "expected_sha256": "91e8bb79a1cdc09582d7e1217394dd781f8c329247391f1c20268db67b32e549",
+      "actual_sha256": "91e8bb79a1cdc09582d7e1217394dd781f8c329247391f1c20268db67b32e549",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/server-nic-layout/specs/vB-upstream.json",
+      "expected_sha256": "73e2d48c87e9ff021086998f835a1153c04fb2526329076f13ec464aee1aa5f0",
+      "actual_sha256": "73e2d48c87e9ff021086998f835a1153c04fb2526329076f13ec464aee1aa5f0",
+      "matches": true
+    }
+  ],
+  "observed_first_sha256": "d2d88b88beb589f8874a36c369f04183949cd31a2140f097d7bb10b67f3807a2",
+  "observed_first_unchanged": true,
+  "reviewer_environment": {
+    "PI_SUBAGENT_NAME": "viz-judge01-server-nic-layout",
+    "PI_PROVIDER": "openai",
+    "PI_MODEL": "gpt-6-astra"
+  },
+  "method": "Read-only hash verification; no viewer, generator helpers or renderer execution."
+}

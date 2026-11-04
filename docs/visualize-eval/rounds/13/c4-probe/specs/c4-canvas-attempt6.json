@@ -1,0 +1,413 @@
+{
+  "theme": "gruvbox",
+  "diagrams": [
+    {
+      "id": "l1",
+      "title": "L1 · System context — the machine manager",
+      "description": "One system: humans and mmctl call it over http; providers allocate machines; machines boot, audit and report heartbeat.",
+      "direction": "tb",
+      "nodes": [
+        {
+          "id": "web",
+          "label": "humans + mmctl",
+          "group": "humans"
+        },
+        {
+          "id": "mm",
+          "label": "machine manager"
+        },
+        {
+          "id": "prov",
+          "label": "providers (BM)",
+          "group": "external"
+        },
+        {
+          "id": "mch",
+          "label": "machines (BM)",
+          "group": "external"
+        },
+        {
+          "id": "s3",
+          "label": "S3 object store",
+          "group": "external"
+        },
+        {
+          "id": "slack",
+          "label": "Slack",
+          "group": "external"
+        }
+      ],
+      "layers": [
+        [
+          "web"
+        ],
+        [
+          "mm",
+          "prov"
+        ],
+        [
+          "mch",
+          "s3",
+          "slack"
+        ]
+      ],
+      "edges": [
+        {
+          "from": "web",
+          "to": "mm",
+          "label": "http",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "mm",
+          "to": "prov",
+          "label": "API+sync 1m",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "prov",
+          "to": "mch",
+          "label": "allocate inst"
+        },
+        {
+          "from": "mm",
+          "to": "mch",
+          "label": "boot+audit",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "mch",
+          "to": "mm",
+          "label": "iPXE+heart",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "mm",
+          "to": "s3",
+          "label": "diag uploads"
+        },
+        {
+          "from": "mm",
+          "to": "slack",
+          "label": "confirm+alerts"
+        }
+      ]
+    },
+    {
+      "id": "l2a",
+      "title": "L2 · Containers — request, provisioning and boot",
+      "description": "API actions (create/term/repair, reinstall/reprov) become a River job, a provider allocation, then a boot; the reconcile loop syncs gcore every minute.",
+      "direction": "lr",
+      "nodes": [
+        {
+          "id": "web",
+          "label": "humans + mmctl",
+          "group": "humans"
+        },
+        {
+          "id": "cp",
+          "label": "control plane",
+          "group": "control"
+        },
+        {
+          "id": "wapi",
+          "label": "webapi server",
+          "group": "control"
+        },
+        {
+          "id": "pgrpc",
+          "label": "private gRPC",
+          "group": "control"
+        },
+        {
+          "id": "q",
+          "label": "River queue",
+          "group": "async"
+        },
+        {
+          "id": "rec",
+          "label": "reconcile loop",
+          "group": "async"
+        },
+        {
+          "id": "reg",
+          "label": "provider registry",
+          "group": "async"
+        },
+        {
+          "id": "boot",
+          "label": "boot server",
+          "group": "hostops"
+        },
+        {
+          "id": "db",
+          "label": "Postgres",
+          "group": "state"
+        },
+        {
+          "id": "prov",
+          "label": "providers (BM)",
+          "group": "external"
+        },
+        {
+          "id": "mch",
+          "label": "machines (BM)",
+          "group": "external"
+        },
+        {
+          "id": "s3",
+          "label": "S3 object store",
+          "group": "external"
+        }
+      ],
+      "layers": [
+        [
+          "web",
+          "cp"
+        ],
+        [
+          "wapi",
+          "pgrpc"
+        ],
+        [
+          "q",
+          "rec"
+        ],
+        [
+          "reg",
+          "db"
+        ],
+        [
+          "prov",
+          "s3"
+        ],
+        [
+          "mch"
+        ],
+        [
+          "boot"
+        ]
+      ],
+      "edges": [
+        {
+          "from": "web",
+          "to": "wapi",
+          "label": "http",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "cp",
+          "to": "pgrpc",
+          "label": "create/term/repair",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "pgrpc",
+          "to": "q",
+          "label": "enqueue job"
+        },
+        {
+          "from": "wapi",
+          "to": "q",
+          "label": "reinstall/reprov"
+        },
+        {
+          "from": "q",
+          "to": "reg",
+          "label": "provision job"
+        },
+        {
+          "from": "reg",
+          "to": "prov",
+          "label": "provider API",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "prov",
+          "to": "mch",
+          "label": "allocate inst",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "mch",
+          "to": "boot",
+          "label": "iPXE request",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "boot",
+          "to": "mch",
+          "label": "boot.ipxe + S3",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "mch",
+          "to": "s3",
+          "label": "pull boot image"
+        },
+        {
+          "from": "pgrpc",
+          "to": "db",
+          "label": "machine rows"
+        },
+        {
+          "from": "q",
+          "to": "db",
+          "label": "job rows"
+        },
+        {
+          "from": "rec",
+          "to": "prov",
+          "label": "gcore sync 1m"
+        },
+        {
+          "from": "rec",
+          "to": "db",
+          "label": "cluster state"
+        }
+      ]
+    },
+    {
+      "id": "l2b",
+      "title": "L2 · Containers — heartbeat, audits and diagnostics",
+      "description": "Agent heartbeat, slow audit and diagnose jobs, janitor proposals and the Slack alerts they raise.",
+      "direction": "lr",
+      "nodes": [
+        {
+          "id": "pub",
+          "label": "public gRPC",
+          "group": "control"
+        },
+        {
+          "id": "wapi",
+          "label": "webapi server",
+          "group": "control"
+        },
+        {
+          "id": "q",
+          "label": "River queue",
+          "group": "async"
+        },
+        {
+          "id": "ssh",
+          "label": "SSH + BMC ops",
+          "group": "hostops"
+        },
+        {
+          "id": "agent",
+          "label": "machine-agent",
+          "group": "hostops"
+        },
+        {
+          "id": "db",
+          "label": "Postgres",
+          "group": "state"
+        },
+        {
+          "id": "jan",
+          "label": "janitor app",
+          "group": "ops"
+        },
+        {
+          "id": "mch",
+          "label": "machines (BM)",
+          "group": "external"
+        },
+        {
+          "id": "s3",
+          "label": "S3 object store",
+          "group": "external"
+        },
+        {
+          "id": "slack",
+          "label": "Slack",
+          "group": "external"
+        }
+      ],
+      "layers": [
+        [
+          "q"
+        ],
+        [
+          "ssh"
+        ],
+        [
+          "mch",
+          "jan"
+        ],
+        [
+          "agent",
+          "wapi"
+        ],
+        [
+          "slack",
+          "pub"
+        ],
+        [
+          "db"
+        ]
+      ],
+      "edges": [
+        {
+          "from": "q",
+          "to": "ssh",
+          "label": "audit"
+        },
+        {
+          "from": "ssh",
+          "to": "mch",
+          "label": "machine-audit"
+        },
+        {
+          "from": "mch",
+          "to": "agent",
+          "label": "runs on host"
+        },
+        {
+          "from": "agent",
+          "to": "pub",
+          "label": "register+beat",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "pub",
+          "to": "db",
+          "label": "machine state"
+        },
+        {
+          "from": "q",
+          "to": "jan",
+          "label": "diag events"
+        },
+        {
+          "from": "jan",
+          "to": "wapi",
+          "label": "proposed acts"
+        },
+        {
+          "from": "wapi",
+          "to": "slack",
+          "label": "confirm+alerts",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "q",
+          "to": "s3",
+          "label": "diag uploads"
+        }
+      ]
+    }
+  ]
+}

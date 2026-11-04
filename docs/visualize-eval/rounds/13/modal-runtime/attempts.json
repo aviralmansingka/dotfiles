@@ -1,0 +1,65 @@
+{
+  "case_id": "modal-runtime",
+  "round": "13",
+  "budget": "three spec candidates per rendered diagram",
+  "final_form": "canvas",
+  "views": [
+    {
+      "view": "canvas",
+      "spec": "specs/modal-runtime-canvas.json",
+      "evidence": "evidence/canvas",
+      "attempts": [
+        {
+          "label": "canvas-c1",
+          "spec": "attempts/canvas-c1.json",
+          "check": "recorded/canvas-c1.stdout",
+          "change": "first canvas: d1 (pair) lr, d2 (dispatch) lr, d3 (storage+daemon) tb; full source labels",
+          "measured": "canvas 202x86; d1 68x6, d2 133x5, d3 40x62",
+          "result": "rejected: 1 label skipped + 1 ambiguous owner (d1:e0 \"task input + control RPCs\"), canvas widened to 202 by a 163-char description",
+          "why": "the pair's two labels land in one rank gap in lr and share an apparent owner; the long description widened the canvas beyond the drawings"
+        },
+        {
+          "label": "canvas-c2",
+          "spec": "attempts/canvas-c2.json",
+          "check": "recorded/canvas-c2.stdout",
+          "change": "d1 switched to tb, d3 switched to lr, descriptions shortened",
+          "measured": "canvas 163x64; d1 27x36, d2 133x5, d3 107x10",
+          "result": "rejected: labels 6/8, 2 skipped (both d1 labels), 0 ambiguous",
+          "why": "a tb 2-node diagram is only ~15 cells wide, and a 25-char label needs a clear horizontal span inside the extent (clear() rejects lo<1 or lo+len>extent.0-1), so both pair labels were dropped"
+        },
+        {
+          "label": "canvas-c3",
+          "spec": "attempts/canvas-c3.json",
+          "check": "recorded/canvas-c3.stdout",
+          "change": "d1 back to lr with minlen:2 on worker -> runtime, so the layout reserves the pair's own label rank",
+          "measured": "canvas 163x34; d1 75x6, d2 133x5, d3 107x10",
+          "result": "clean on every check line: labels 8/8 placed, 0 leader-ticked, 0 skipped, 0 ambiguous; near-misses 0; crossings 0; no warnings",
+          "why": "shipped (with the text-only revision below): the reserved label rank gives the long seam label structural ownership instead of a guessed neighbour distance"
+        }
+      ],
+      "final_revision": {
+        "label": "canvas-c3-final",
+        "spec": "specs/modal-runtime-canvas.json",
+        "check": "recorded/canvas-c3-final.stdout",
+        "change": "descriptions only: shortened to 105 characters each",
+        "measured": "canvas 133x34 (unchanged per-diagram extents 75x6, 133x5, 107x10)",
+        "why": "a description wider than the widest drawing sets the canvas extent but is drawn at its section's x offset, so a longer line was cut off at the canvas edge (defect recorded in generation.json); no layout, route or label changed",
+        "layout_identical_to": "canvas-c3"
+      }
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "shape": "single view (v1): all 8 nodes / 8 edges on one 77x47 pane",
+      "record_labels": ["v1-a1", "v1-a2", "v1-a3"],
+      "specs": ["attempts/v1-a1.json", "attempts/v1-a2.json", "attempts/v1-a3.json"],
+      "checks": ["recorded/v1-a1.stdout", "recorded/v1-a2.stdout", "recorded/v1-a3.stdout"],
+      "measurements": [
+        "v1-a1 tb, full labels: extent 47x93, labels 5/8 placed, 3 skipped, 1 ambiguous (e2)",
+        "v1-a2 tb + label_slot on every edge: extent 68x30, labels 8/8, 3 ambiguous owners (e0, e2, e7), near-miss 2 cells (e3 hugging 'filesystem')",
+        "v1-a3 tb + label_slot + labels shortened to <=16 chars: extent 57x30, labels 8/8, 1 ambiguous owner (e0 'task+ctrl RPCs'), near-miss 2 cells (e3 near 'filesystem')"
+      ],
+      "reason": "the best single view fits 77x47 but keeps one ambiguous label owner on the anti-parallel worker/runtime pair and two route cells inside the margin of a node the route does not serve; both are round-13 rubric failures, and no further candidate was available under the 3-candidate budget"
+    }
+  ]
+}

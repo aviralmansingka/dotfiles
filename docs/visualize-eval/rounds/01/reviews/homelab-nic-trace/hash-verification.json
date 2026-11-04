@@ -1,0 +1,348 @@
+{
+  "checks": [
+    {
+      "path": "docs/visualize-eval/rounds/01/SKILL.md",
+      "expected_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "actual_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "matches": true
+    },
+    {
+      "path": "/tmp/visualize-eval/round-01/bin/rataflow-view",
+      "expected_sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "actual_sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/rubric.json",
+      "expected_sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "actual_sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/cases.json",
+      "expected_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "actual_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+      "expected_sha256": "abe8b376eccd7d0027f2985aab55ed656603b2094c275ee66ed223a57421b4c4",
+      "actual_sha256": "abe8b376eccd7d0027f2985aab55ed656603b2094c275ee66ed223a57421b4c4",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/cases/homelab-nic-trace/expected.json",
+      "expected_sha256": "91ef88d09af71cd4583cfd0f1141e10f2fc2efdd3a779f9389f1d67759cd09c7",
+      "actual_sha256": "91ef88d09af71cd4583cfd0f1141e10f2fc2efdd3a779f9389f1d67759cd09c7",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/generation.md",
+      "expected_sha256": "f098e3a3c5b5b55dba8d0d77e10a2033d267c98b6f6b33c1d66ff838615ffeda",
+      "actual_sha256": "f098e3a3c5b5b55dba8d0d77e10a2033d267c98b6f6b33c1d66ff838615ffeda",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v1-commands.txt",
+      "expected_sha256": "c665f1c823dc8b4a830f35304986c567dbd36be1cf5dbb6296f04e00a116c9fa",
+      "actual_sha256": "c665f1c823dc8b4a830f35304986c567dbd36be1cf5dbb6296f04e00a116c9fa",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v1-selected.ansi",
+      "expected_sha256": "0e6fa0f7702d35cd801bc82d18ec6e57f335196a248a0fbeede04a01a157b12d",
+      "actual_sha256": "0e6fa0f7702d35cd801bc82d18ec6e57f335196a248a0fbeede04a01a157b12d",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v1-selected.txt",
+      "expected_sha256": "1e596a8bfa11bb826ae80974e86d5dca5cae5e0acf4c90e9791b517f99cbb5f4",
+      "actual_sha256": "1e596a8bfa11bb826ae80974e86d5dca5cae5e0acf4c90e9791b517f99cbb5f4",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v1-size.txt",
+      "expected_sha256": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "actual_sha256": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v1-unselected.ansi",
+      "expected_sha256": "d0bfef295e083a0c30d326290a1d566ee4500235bc0b8e2339e84bbba05f028f",
+      "actual_sha256": "d0bfef295e083a0c30d326290a1d566ee4500235bc0b8e2339e84bbba05f028f",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v1-unselected.txt",
+      "expected_sha256": "1e82a74c82a9fc4789470b962c5cff0ae729b10b82096a91872888b14c3c50a2",
+      "actual_sha256": "1e82a74c82a9fc4789470b962c5cff0ae729b10b82096a91872888b14c3c50a2",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v2-commands.txt",
+      "expected_sha256": "4671462209b9549592d01df9fbae5f1b4b8cf0e1d395373a870e11572f0d302e",
+      "actual_sha256": "4671462209b9549592d01df9fbae5f1b4b8cf0e1d395373a870e11572f0d302e",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v2-selected.ansi",
+      "expected_sha256": "8560f39f9a44769e1b1b8ef959ff1dd17d1fb688af2c4c2c0001d6c66c1ac736",
+      "actual_sha256": "8560f39f9a44769e1b1b8ef959ff1dd17d1fb688af2c4c2c0001d6c66c1ac736",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v2-selected.txt",
+      "expected_sha256": "e3fa3f99d2f8aecffaeba2676e9a270252498ed47127018241eb95325f1af249",
+      "actual_sha256": "e3fa3f99d2f8aecffaeba2676e9a270252498ed47127018241eb95325f1af249",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v2-size.txt",
+      "expected_sha256": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "actual_sha256": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v2-unselected.ansi",
+      "expected_sha256": "ef5468a4fd79efdf3567085cef317e796b32860038a1d5d0151380410f99b1d1",
+      "actual_sha256": "ef5468a4fd79efdf3567085cef317e796b32860038a1d5d0151380410f99b1d1",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v2-unselected.txt",
+      "expected_sha256": "dd19a13ae16cd988c63b39d02ff2724625beec976e31f23ad3b51f6c2603b910",
+      "actual_sha256": "dd19a13ae16cd988c63b39d02ff2724625beec976e31f23ad3b51f6c2603b910",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v3-commands.txt",
+      "expected_sha256": "27c8361d11dc41e498d8d5bb410b32e25277e2be3eac03b765077c7fda36dfe3",
+      "actual_sha256": "27c8361d11dc41e498d8d5bb410b32e25277e2be3eac03b765077c7fda36dfe3",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v3-selected.ansi",
+      "expected_sha256": "ff62ee0a3d47dc8492351c6279ef20306b8c23b8799f71250b9c26746f9eee4a",
+      "actual_sha256": "ff62ee0a3d47dc8492351c6279ef20306b8c23b8799f71250b9c26746f9eee4a",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v3-selected.txt",
+      "expected_sha256": "2991152eeb2b2e80703fc8fcb71e4988800aa446e144ed8ef758916872009464",
+      "actual_sha256": "2991152eeb2b2e80703fc8fcb71e4988800aa446e144ed8ef758916872009464",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v3-size.txt",
+      "expected_sha256": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "actual_sha256": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v3-unselected.ansi",
+      "expected_sha256": "49fc76079b9a6c458563c231ae08effe89362e420613181c101e9dfe5f678670",
+      "actual_sha256": "49fc76079b9a6c458563c231ae08effe89362e420613181c101e9dfe5f678670",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/captures/v3-unselected.txt",
+      "expected_sha256": "faa5828e902477d997d5cb76875328e4ef2d91dc0a7bc73d199c17e576ed24bb",
+      "actual_sha256": "faa5828e902477d997d5cb76875328e4ef2d91dc0a7bc73d199c17e576ed24bb",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/tools/render_view.sh",
+      "expected_sha256": "42725b8d8784a0e8b024aa8bb1d05a30f65d00619085ee266b31421a5caef5c6",
+      "actual_sha256": "42725b8d8784a0e8b024aa8bb1d05a30f65d00619085ee266b31421a5caef5c6",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/specs/v1-local-nets.json",
+      "expected_sha256": "75f8726b25bdfb82e1e748ab24b020b41d0e3c67828035d28fa38b4c228dae29",
+      "actual_sha256": "75f8726b25bdfb82e1e748ab24b020b41d0e3c67828035d28fa38b4c228dae29",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/specs/v2-host-nics.json",
+      "expected_sha256": "c74d69c2e9ca5caffa1656a61aa13629c1a7f0bb2bc6f87023b7c78ce827721f",
+      "actual_sha256": "c74d69c2e9ca5caffa1656a61aa13629c1a7f0bb2bc6f87023b7c78ce827721f",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/specs/v3-lan-wan.json",
+      "expected_sha256": "454a27aa771de81413696af518f94c97f024fa9556f4c518f5c5410400f33213",
+      "actual_sha256": "454a27aa771de81413696af518f94c97f024fa9556f4c518f5c5410400f33213",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/checks/v1-borders.json",
+      "expected_sha256": "69ec92c444d9844879e1327d8ef17c2b464d56e89c191e5b9df28771abb84a3e",
+      "actual_sha256": "69ec92c444d9844879e1327d8ef17c2b464d56e89c191e5b9df28771abb84a3e",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/checks/v1-check.txt",
+      "expected_sha256": "d62a2a7c153a8e2a6082bbdf9e105a5d93cb21fc72a63b8caf6ff1953b7ea2a5",
+      "actual_sha256": "d62a2a7c153a8e2a6082bbdf9e105a5d93cb21fc72a63b8caf6ff1953b7ea2a5",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/checks/v1-selection-diff.json",
+      "expected_sha256": "da657e7eb4eb6233072abaec6ddab10e241aaab3caad76dba59001adceba410c",
+      "actual_sha256": "da657e7eb4eb6233072abaec6ddab10e241aaab3caad76dba59001adceba410c",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/checks/v2-borders.json",
+      "expected_sha256": "f45e9a89861c6c5716856bba02ec917531463144d12892b1b50d4d698514e2c2",
+      "actual_sha256": "f45e9a89861c6c5716856bba02ec917531463144d12892b1b50d4d698514e2c2",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/checks/v2-check.txt",
+      "expected_sha256": "d7fdf126f6a29143ecf221fb33d084f8568a6973f575dcded8ebe69b817aff29",
+      "actual_sha256": "d7fdf126f6a29143ecf221fb33d084f8568a6973f575dcded8ebe69b817aff29",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/checks/v2-selection-diff.json",
+      "expected_sha256": "a81ed357bfbd91ff755800a47f8c4728500b4f0c0fa81100ec544bf868b15365",
+      "actual_sha256": "a81ed357bfbd91ff755800a47f8c4728500b4f0c0fa81100ec544bf868b15365",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/checks/v3-borders.json",
+      "expected_sha256": "5ac1bc0855fb809251ac882e12873b0a2372cbeda157635e53e7261ecbd2da61",
+      "actual_sha256": "5ac1bc0855fb809251ac882e12873b0a2372cbeda157635e53e7261ecbd2da61",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/checks/v3-check.txt",
+      "expected_sha256": "bbb136c8d7d20e8edbf0bf80a0c266f0003ffd15b0dcec0dea6c810e70913d16",
+      "actual_sha256": "bbb136c8d7d20e8edbf0bf80a0c266f0003ffd15b0dcec0dea6c810e70913d16",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/checks/v3-selection-diff.json",
+      "expected_sha256": "757d8a352d55b47e6dd2ec625ead02cbb633234296a414b854dc8fb437bfde97",
+      "actual_sha256": "757d8a352d55b47e6dd2ec625ead02cbb633234296a414b854dc8fb437bfde97",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v1-frame01.ansi",
+      "expected_sha256": "d0bfef295e083a0c30d326290a1d566ee4500235bc0b8e2339e84bbba05f028f",
+      "actual_sha256": "d0bfef295e083a0c30d326290a1d566ee4500235bc0b8e2339e84bbba05f028f",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v1-frame01.txt",
+      "expected_sha256": "1e82a74c82a9fc4789470b962c5cff0ae729b10b82096a91872888b14c3c50a2",
+      "actual_sha256": "1e82a74c82a9fc4789470b962c5cff0ae729b10b82096a91872888b14c3c50a2",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v1-frame02.ansi",
+      "expected_sha256": "dbe6bd81108a3dd685c1db9021f958c9a27b34d0076cc09e6ae18201246f1de7",
+      "actual_sha256": "dbe6bd81108a3dd685c1db9021f958c9a27b34d0076cc09e6ae18201246f1de7",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v1-frame02.txt",
+      "expected_sha256": "efb1ecaa6aa31f1ed2c342a94b90e01fb1a65c1b1edc3402269efb3a0f26ca91",
+      "actual_sha256": "efb1ecaa6aa31f1ed2c342a94b90e01fb1a65c1b1edc3402269efb3a0f26ca91",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v1-frame03.ansi",
+      "expected_sha256": "e883028e58869e18069d8a6ecad0051225f1e5d6d1e1662c1ec9aee3b8743dd2",
+      "actual_sha256": "e883028e58869e18069d8a6ecad0051225f1e5d6d1e1662c1ec9aee3b8743dd2",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v1-frame03.txt",
+      "expected_sha256": "09034972d04c713f268bcf62de90214257b2a575f264e845f8e6c11e83642507",
+      "actual_sha256": "09034972d04c713f268bcf62de90214257b2a575f264e845f8e6c11e83642507",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v2-frame01.ansi",
+      "expected_sha256": "ef5468a4fd79efdf3567085cef317e796b32860038a1d5d0151380410f99b1d1",
+      "actual_sha256": "ef5468a4fd79efdf3567085cef317e796b32860038a1d5d0151380410f99b1d1",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v2-frame01.txt",
+      "expected_sha256": "dd19a13ae16cd988c63b39d02ff2724625beec976e31f23ad3b51f6c2603b910",
+      "actual_sha256": "dd19a13ae16cd988c63b39d02ff2724625beec976e31f23ad3b51f6c2603b910",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v2-frame02.ansi",
+      "expected_sha256": "4f8af766a734d102f483c038a6bd03604a89dfacbed6a27dcdde965567dfd601",
+      "actual_sha256": "4f8af766a734d102f483c038a6bd03604a89dfacbed6a27dcdde965567dfd601",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v2-frame02.txt",
+      "expected_sha256": "1bad9de8964a815e0471c77bd8fc34075b35311ac743d750b6efe7a3ccedc9af",
+      "actual_sha256": "1bad9de8964a815e0471c77bd8fc34075b35311ac743d750b6efe7a3ccedc9af",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v2-frame03.ansi",
+      "expected_sha256": "3aeda8b963c180fc0dfe9c89fe957c2fe2fe2c10a59895851ebc4eb432d0613f",
+      "actual_sha256": "3aeda8b963c180fc0dfe9c89fe957c2fe2fe2c10a59895851ebc4eb432d0613f",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v2-frame03.txt",
+      "expected_sha256": "d3d4bc994b53d87fae8fa61be39d8a52c0c108535d51fac28fb08f5fd3e3d15f",
+      "actual_sha256": "d3d4bc994b53d87fae8fa61be39d8a52c0c108535d51fac28fb08f5fd3e3d15f",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v3-frame01.ansi",
+      "expected_sha256": "49fc76079b9a6c458563c231ae08effe89362e420613181c101e9dfe5f678670",
+      "actual_sha256": "49fc76079b9a6c458563c231ae08effe89362e420613181c101e9dfe5f678670",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v3-frame01.txt",
+      "expected_sha256": "faa5828e902477d997d5cb76875328e4ef2d91dc0a7bc73d199c17e576ed24bb",
+      "actual_sha256": "faa5828e902477d997d5cb76875328e4ef2d91dc0a7bc73d199c17e576ed24bb",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v3-frame02.ansi",
+      "expected_sha256": "5a794afc39cfcc1333834e4e29459e0593b831590fbce31389a8b03f97b4d7af",
+      "actual_sha256": "5a794afc39cfcc1333834e4e29459e0593b831590fbce31389a8b03f97b4d7af",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v3-frame02.txt",
+      "expected_sha256": "0263cf39758b58b4ed407ffddcd7fc619c5dcd580808b9df70a957de82db954b",
+      "actual_sha256": "0263cf39758b58b4ed407ffddcd7fc619c5dcd580808b9df70a957de82db954b",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v3-frame03.ansi",
+      "expected_sha256": "743814e055328e3ec9649883ffacf13df3653fecc560228ffb2f60bb92f465e3",
+      "actual_sha256": "743814e055328e3ec9649883ffacf13df3653fecc560228ffb2f60bb92f465e3",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/homelab-nic-trace/frames/v3-frame03.txt",
+      "expected_sha256": "d44460592a1a63b90a713281bead41b54250263d3320276cbdc969bc309849db",
+      "actual_sha256": "d44460592a1a63b90a713281bead41b54250263d3320276cbdc969bc309849db",
+      "matches": true
+    }
+  ],
+  "all_match": true,
+  "reviewer_environment": {
+    "PI_MODEL": "gpt-6-astra",
+    "PI_PROVIDER": "openai",
+    "PI_SUBAGENT_NAME": "viz-judge01-homelab-nic-trace"
+  },
+  "observed_first_sha256": "0485b74aac7129fdd5771c4ae12bdb6319b4615d1e5122ea3c992984219fdced",
+  "spec_manifest_sha256": "8631a1f0dd2f47e662ed11eb851e77a1bc1eec48764d5bddc34e90e6449cbb0e"
+}

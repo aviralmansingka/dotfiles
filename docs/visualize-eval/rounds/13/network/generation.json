@@ -1,0 +1,698 @@
+{
+ "case_id": "network",
+ "round": "13",
+ "generator": {
+  "agent": "viz-ds13-2",
+  "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+  "harness": "pi worker subagent in a non-main dotfiles worktree; no judges, no subagents, no commits"
+ },
+ "frozen_inputs": {
+  "skill_path": "docs/visualize-eval/rounds/13/SKILL.md",
+  "skill_sha256": "65d826f0f1f9e61ddfd806628cb162827b0e6cf6d7df2490c9d75e6cbe485d2a",
+  "renderer_path": "/tmp/visualize-eval/round-13/bin/rataflow-view",
+  "renderer_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+  "rubric_revision": 11,
+  "rubric_sha256": "6bfd3733c8d08b66af9a92e71985a20846f954d7916eaf9685f86c8d2f96bcb8",
+  "source_path": "docs/visualize-eval/cases/network/source.md",
+  "source_sha256": "9d23a7b50d1d26a69f95523a9586bab96ec588afb9628ae274c896992b147947",
+  "target_viewport": "77x47 @100% natural zoom",
+  "cases_json_animation": "required"
+ },
+ "triage": {
+  "human_in_loop": false,
+  "annex_id": "TRIAGE-network",
+  "brief": "docs/visualize-eval/rounds/13/briefs/network.md \u2014 \"network diagram, wan down to the db\" (11 words)",
+  "questions_provoked": [
+   "Q1 scope \u2014 \"network diagram, wan down to the db\": the whole path (WAN, firewall, core, then the web/Redis/DB tiers), or just one edge of it?",
+   "Q2 reader's job \u2014 what do you read off it: the link speeds, which application talks to which, or just the box layout?",
+   "Q3 shape \u2014 one pane beside the chat, or a canvas I can pan?",
+   "Q4 motion \u2014 are the dots a measurement? Should a 25 GbE link show faster dots than a 1 GbE one?",
+   "Q5 Redis \u2014 the ask names WAN and the db but not Redis: does the 25 GbE core link and the web-to-Redis session both stay, or does Redis fold into the web tier?",
+   "Q6 dots on every line, or only some \u2014 should the three application relations (session, queries, fill) carry dots too, or only the transport links?",
+   "Q7 qualifiers \u2014 do the historical speed facts stay printed on the links even where a link is not exercised?"
+  ],
+  "questions_used": [
+   {
+    "id": "TRIAGE-network-1",
+    "question": "Q1 scope \u2014 the whole path, or just the edge?",
+    "answer": "WAN through firewall and core, down to web, Redis and the database. All of it.",
+    "answer_source": "annex answer TRIAGE-network-1"
+   },
+   {
+    "id": "TRIAGE-network-2",
+    "question": "Q2 reader's job \u2014 link speeds, or the application pairing?",
+    "answer": "I need to read the link speeds and see which application talks to which \u2014 not a picture of the boxes.",
+    "answer_source": "annex answer TRIAGE-network-2"
+   },
+   {
+    "id": "TRIAGE-network-3",
+    "question": "Q3 shape \u2014 one pane, or a canvas?",
+    "answer": "One pane, side-by-side. It's small enough.",
+    "answer_source": "annex answer TRIAGE-network-3"
+   },
+   {
+    "id": "TRIAGE-network-4",
+    "question": "Q4 motion \u2014 is the dot speed a measurement?",
+    "answer": "No. Slow sparse dots show traffic direction; the GbE labels are the measurement. Never imply the dot speed is the link speed.",
+    "answer_source": "annex answer TRIAGE-network-4"
+   },
+   {
+    "id": "TRIAGE-network-5",
+    "question": "Q5 Redis \u2014 does the 25 GbE core link and the web-to-Redis session both stay?",
+    "answer": "Both stay, as two separate relations: core->cache 25 GbE and web->cache session are distinct, and Redis is its own tier behind the core.",
+    "answer_source": "own judgment \u2014 source.md's Fixed constraints say \"Preserve separate core-to-cache and web-to-cache relations\" and the relationship facts list both; the annex is silent, so the source decides. No fact is added."
+   },
+   {
+    "id": "TRIAGE-network-6",
+    "question": "Q6 dots on every line, or only the transport links?",
+    "answer": "Dots on the four directional transport links only (wan->fw, fw->core, core->web, core->cache); the three application relations stay static.",
+    "answer_source": "own judgment \u2014 source.md asks for \"slow, sparse motion\" and for dots whose \"direction represents the flow of traffic\", while TRIAGE-network-4 says the labels are the measurement and dot speed never is. Sparse plus that correction make the four speed-labelled hops the dotted set; all four run at the default constant 0.5 c/step so no dot can read as 1/10/25 GbE, and the static triangle leaves the session/queries/fill labels uncrowded. No annex answer covers the split; no node, relation or qualifier is introduced by it."
+   },
+   {
+    "id": "TRIAGE-network-7",
+    "question": "Q7 qualifiers \u2014 do the historical speeds stay printed verbatim?",
+    "answer": "Yes: \"1 GbE\", \"10 GbE\", \"10 GbE\", \"25 GbE\" \u2014 the two 10 GbE links are separate edges, each keeping its own label.",
+    "answer_source": "brief framing (its \"What must not change\" list forbids changing them) plus source.md's relationship facts, so the question needed no user turn."
+   }
+  ],
+  "questions_declined": [
+   "\"Should I use a canvas with one diagram per tier?\" \u2014 declined as unnecessary: TRIAGE-network-3 answers one pane, and a six-node graph is one connected concept, so rung 2 would be the round-11 over-splitting failure."
+  ],
+  "converged_when": "After answers 1-4 the scope (all six nodes and seven relations, Redis included), the reader's job (link speeds plus application pairing), the surface (one pane beside the chat) and the motion contract (direction only; the labels are the measurement) were all fixed. Answers 5-7 follow from source.md's fixed constraints and the brief's \"must not change\" list, so no further question could change a node, a relation or the drawing. Stopped at seven provoked questions, five answered by the annex.",
+  "shape_decision": "one view (ladder rung 1): six nodes, seven relations, 34x41 cells at 77x47 natural zoom, read side-by-side with the chat"
+ },
+ "classification": {
+  "family": "service-meshes",
+  "evidence": "The core switch is a two-edge fan (core->web 10 GbE, core->cache 25 GbE) with a second fan of application relations below it, and the same targets carry two different relations (core->cache 25 GbE vs web->cache session; fw->core and core->web are both 10 GbE) \u2014 the family's parallel/anti-parallel pressure.",
+  "tie_breakers_considered": [
+   "flow-chains: E~=N holds (7 edges / 6 nodes) and the source animates, but only wan->fw->core is a chain; the core fans and the three application relations form a triangle, and the two-relations-per-target signature is the stronger read.",
+   "identity-probe-maps: the source is identifier-poor \u2014 no addresses, ports, AS numbers or uncertainty qualifiers \u2014 so coverage is not the hard part; rejected."
+  ],
+  "secondary_recipe": "flow-chains \u2014 the wan->fw->core spine borrows its habits: short single-stage ranks, one dot per animated hop, no invented side branches.",
+  "reclassification": null
+ },
+ "view_shape": {
+  "rung_chosen": 1,
+  "decision_facts": [
+   "TRIAGE-network-3: \"One pane, side-by-side. It's small enough.\"",
+   "Six nodes, seven relations, seven short labels: one connected concept (the request path plus the application triangle), not several separable concepts.",
+   "The whole drawing measures 34x41 cells (check extent) and the pinned 77x47 capture carries no `canvas` badge, so it reads without pan or zoom."
+  ],
+  "rungs_rejected": [
+   {
+    "rung": 2,
+    "name": "one canvas of described concept-diagrams",
+    "reason": "The source is one connected path plus a triangle below the core; splitting it would produce thin fragments of a single concept, the round-11 over-splitting failure, and the triage answer asks for one pane."
+   },
+   {
+    "rung": 3,
+    "name": "drop or thin a concept to fit",
+    "reason": "Not needed: nothing was dropped, merged or shortened \u2014 all six nodes, seven relations and seven labels are drawn."
+   }
+  ],
+  "orientation": "tb with five ranks (wan, fw, core, {web,cache}, db). lr would spend width on five ranks plus inter-rank label room and cannot fit 77 columns at natural zoom (arithmetic from the measured box widths, not a measured attempt); tb spends height and the measured drawing is 41 rows.",
+  "splits_considered": "none \u2014 a single view carries every audited edge (see coverage map)."
+ },
+ "surfaces": [
+  {
+   "view": "v1",
+   "kind": "single view (graph form)",
+   "spec": "spec.json",
+   "spec_sha256": "dcf349a6f91792249214387c99cc95985a9a61f2f8dba8826febb74864e0bd54",
+   "direction": "tb",
+   "theme": "gruvbox",
+   "evidence_bundle": "evidence/v1",
+   "text": "evidence/v1/v1-text.txt",
+   "ansi": "evidence/v1/v1-ansi.ansi",
+   "selected_ansi": "evidence/v1/v1-selected.ansi",
+   "check": "evidence/v1/check.txt",
+   "frames": "evidence/v1/v1-frames.txt",
+   "frames_ansi": "evidence/v1/v1-frames.ansi",
+   "pinned_frames": "evidence/v1/v1-77x47-frames.txt",
+   "manifest": "evidence/v1/manifest.json",
+   "frame_audit": "evidence/v1/frame-audit.txt",
+   "measured_pane": {
+    "cols": 68,
+    "rows": 44,
+    "source": "header token in evidence/v1/v1-text.txt line 1: \" rataflow-view \u00b7 68x44 @100% \u00b7 spec.json \u00b7 6 nodes \u00b7 7 edges \u00b7 q quit\""
+   },
+   "viewport_token": "68x44 @100%",
+   "pinned_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+   "check_extent": "34x41 cells",
+   "drawn_extent_in_pane": "rows 2..42, cols 24..60 of the 68x44 pane frame (evidence/v1/v1-ansi.ansi): 37x41 drawn cells, no `canvas` badge",
+   "pane_id": "w7E:pZY",
+   "cleanup": "confirmed_closed (manifest.cleanup)",
+   "nodes": 6,
+   "edges": 7,
+   "labels": 7,
+   "routes_with_dots": 4,
+   "groups": 2,
+   "trunks": 0,
+   "crossings": "0 bridges, 0 touching bends",
+   "counts_line": "ok: nodes=6 edges=7 flows=4 direction=tb theme=gruvbox"
+  }
+ ],
+ "canvas_totals": null,
+ "hues": {
+  "group_families": [
+   {
+    "group": "fabric",
+    "source_fact": "The traffic crosses a Firewall and a Core switch: source.md names both as the network equipment between WAN and the application tiers.",
+    "members_in_source_order": [
+     "fw",
+     "core"
+    ],
+    "family": "blue",
+    "shades": {
+     "fw": "#73A1CE (115;161;206)",
+     "core": "#99BADD (153;186;219)"
+    },
+    "capture": "evidence/v1/v1-ansi.ansi rows 10,13 (Firewall) and 18,21 (Core switch)"
+   },
+   {
+    "group": "tiers",
+    "source_fact": "source.md names the application tiers \"web tier\", \"Redis\" and \"DB tier\".",
+    "members_in_source_order": [
+     "web",
+     "cache",
+     "db"
+    ],
+    "family": "purple",
+    "shades": {
+     "web": "#8A73CE (138;115;206)",
+     "cache": "#AA99DB (170;153;219)",
+     "db": "#6A4EC1 (106;78;193)"
+    },
+    "capture": "evidence/v1/v1-ansi.ansi rows 31,34 (Web tier / Redis) and 39,42 (DB tier)"
+   },
+   {
+    "group": null,
+    "source_fact": "WAN is the network outside the diagram's own plant and belongs to neither family, so it carries no group.",
+    "members_in_source_order": [
+     "wan"
+    ],
+    "family": "none (single ungrouped hue)",
+    "shades": {
+     "wan": "#D8A657 (216;166;87)"
+    },
+    "capture": "evidence/v1/v1-ansi.ansi rows 2,5"
+   }
+  ],
+  "case_wide_consistency": "One diagram, so each group keeps one hue family and one source order (fabric: fw, core; tiers: web, cache, db); nothing contradicts itself across surfaces.",
+  "selected_borders": "evidence/v1/v1-selected.ansi: all six boxes draw the selection accent 216;166;87 (rows 2,10,18,31,39), proving --select-all reached every node; the dots keep their own hues (rows 26-28).",
+  "dot_hues_line": "dot hues: 0 by source, 4 by destination, 0 shared-hue pair(s) (source-only 1, destination-only 0)",
+  "dot_binding": [
+   {
+    "route": "e0 wan->fw",
+    "dot_hue": "#73A1CE (Firewall, destination end)",
+    "capture": "evidence/v1/v1-ansi.ansi row 6 col 34"
+   },
+   {
+    "route": "e1 fw->core",
+    "dot_hue": "#99BADD (Core switch, destination end)",
+    "capture": "evidence/v1/v1-ansi.ansi row 14 col 34"
+   },
+   {
+    "route": "e2 core->web",
+    "dot_hue": "#8A73CE (Web tier, destination end)",
+    "capture": "evidence/v1/v1-ansi.ansi row 26 col 34"
+   },
+   {
+    "route": "e3 core->cache",
+    "dot_hue": "#AA99DB (Redis, destination end)",
+    "capture": "evidence/v1/v1-ansi.ansi row 26 col 36"
+   }
+  ],
+  "why_destination_end": "The destination end leaves 0 routes sharing a hue; the source end would make core->web and core->cache share Core switch's hue (the check's \"source-only 1\"). The engine chose the least-conflict end for all four routes, and no dot uses an accent hue."
+ },
+ "navigation": {
+  "titles_descriptions": null,
+  "note": "single view \u2014 the skill requires title + description only on a canvas."
+ },
+ "ledger": [
+  {
+   "fact": "node `wan` = WAN",
+   "kind": "role",
+   "fate": "drawn (label \"WAN\")"
+  },
+  {
+   "fact": "node `fw` = Firewall",
+   "kind": "role",
+   "fate": "drawn (label \"Firewall\")"
+  },
+  {
+   "fact": "node `core` = Core switch",
+   "kind": "role",
+   "fate": "drawn (label \"Core switch\")"
+  },
+  {
+   "fact": "node `web` = Web tier",
+   "kind": "role/tier",
+   "fate": "drawn (label \"Web tier\")"
+  },
+  {
+   "fact": "node `cache` = Redis",
+   "kind": "role/tier",
+   "fate": "drawn (label \"Redis\" \u2014 the source's own node name)"
+  },
+  {
+   "fact": "node `db` = DB tier",
+   "kind": "role/tier",
+   "fate": "drawn (label \"DB tier\")"
+  },
+  {
+   "fact": "wan -> fw: 1 GbE",
+   "kind": "link speed",
+   "fate": "drawn (edge label \"1 GbE\")"
+  },
+  {
+   "fact": "fw -> core: 10 GbE",
+   "kind": "link speed",
+   "fate": "drawn (edge label \"10 GbE\")"
+  },
+  {
+   "fact": "core -> web: 10 GbE",
+   "kind": "link speed",
+   "fate": "drawn (edge label \"10 GbE\")"
+  },
+  {
+   "fact": "core -> cache: 25 GbE",
+   "kind": "link speed",
+   "fate": "drawn (edge label \"25 GbE\")"
+  },
+  {
+   "fact": "web -> cache: session",
+   "kind": "relation",
+   "fate": "drawn (edge label \"session\")"
+  },
+  {
+   "fact": "web -> db: queries",
+   "kind": "relation/verb",
+   "fate": "drawn (edge label \"queries\")"
+  },
+  {
+   "fact": "cache -> db: fill",
+   "kind": "relation/verb",
+   "fate": "drawn (edge label \"fill\")"
+  },
+  {
+   "fact": "live dots along the lines, direction = flow of traffic",
+   "kind": "motion request",
+   "fate": "drawn \u2014 one dot per dotted route moving from `from` to `to` (evidence/v1/v1-77x47-frames.txt frames 0..29)"
+  },
+  {
+   "fact": "slow, sparse motion",
+   "kind": "motion qualifier",
+   "fate": "drawn \u2014 four single-dot routes at the default constant 0.5 cells / 100 ms, no numeric flow rate"
+  },
+  {
+   "fact": "motion speed must not imply a link measurement",
+   "kind": "human correction",
+   "fate": "drawn \u2014 all four dotted routes share one rate (frame audit 0.500..0.500 c/frame); the four GbE labels are the only measurement"
+  },
+  {
+   "fact": "keep core->cache and web->cache as separate relations",
+   "kind": "fixed constraint",
+   "fate": "drawn \u2014 two edges, two ports, two labels (\"25 GbE\", \"session\")"
+  },
+  {
+   "fact": "keep 1/10/25 GbE visible",
+   "kind": "fixed constraint",
+   "fate": "drawn \u2014 three distinct speeds over four labelled edges (10 GbE appears on two separate edges)"
+  },
+  {
+   "fact": "gruvbox colour scheme",
+   "kind": "style",
+   "fate": "drawn \u2014 theme gruvbox (RGB codes in evidence/v1/v1-ansi.ansi)"
+  },
+  {
+   "fact": "historical line 48 \"even split, not narrowed\"",
+   "kind": "pane preference",
+   "fate": "dropped with reason \u2014 a pane-geometry instruction for the live viewer, not a graph fact; the harness split the pane itself (68x44)"
+  }
+ ],
+ "relationship_audit": [
+  {
+   "id": "e0",
+   "check_route": "e0",
+   "from": "wan",
+   "to": "fw",
+   "verb_or_tech": "1 GbE link",
+   "label": "1 GbE",
+   "label_owner": "e0",
+   "dots": 1,
+   "view": "v1"
+  },
+  {
+   "id": "e1",
+   "check_route": "e1",
+   "from": "fw",
+   "to": "core",
+   "verb_or_tech": "10 GbE link",
+   "label": "10 GbE",
+   "label_owner": "e1",
+   "dots": 1,
+   "view": "v1"
+  },
+  {
+   "id": "e2",
+   "check_route": "e2",
+   "from": "core",
+   "to": "web",
+   "verb_or_tech": "10 GbE link",
+   "label": "10 GbE",
+   "label_owner": "e2",
+   "dots": 1,
+   "view": "v1"
+  },
+  {
+   "id": "e3",
+   "check_route": "e3",
+   "from": "core",
+   "to": "cache",
+   "verb_or_tech": "25 GbE link",
+   "label": "25 GbE",
+   "label_owner": "e3",
+   "dots": 1,
+   "view": "v1"
+  },
+  {
+   "id": "e4",
+   "check_route": "e4",
+   "from": "web",
+   "to": "cache",
+   "verb_or_tech": "session",
+   "label": "session",
+   "label_owner": "e4",
+   "dots": 0,
+   "view": "v1"
+  },
+  {
+   "id": "e5",
+   "check_route": "e5",
+   "from": "web",
+   "to": "db",
+   "verb_or_tech": "queries",
+   "label": "queries",
+   "label_owner": "e5",
+   "dots": 0,
+   "view": "v1"
+  },
+  {
+   "id": "e6",
+   "check_route": "e6",
+   "from": "cache",
+   "to": "db",
+   "verb_or_tech": "fill",
+   "label": "fill",
+   "label_owner": "e6",
+   "dots": 0,
+   "view": "v1"
+  }
+ ],
+ "coverage_map": [
+  {
+   "view": "v1",
+   "carries": "all 6 nodes, all 7 relations (e0-e6), all 7 labels, all 3 speeds, the two relations into Redis, the two into DB tier, and 4 dots"
+  }
+ ],
+ "relationship_mapping": [
+  {
+   "source_fact": "wan -> fw: 1 GbE",
+   "visible_as": "vertical arrow WAN -> Firewall labelled \"1 GbE\" with one dot (rows 6-9)"
+  },
+  {
+   "source_fact": "fw -> core: 10 GbE",
+   "visible_as": "vertical arrow Firewall -> Core switch labelled \"10 GbE\" with one dot (rows 14-17)"
+  },
+  {
+   "source_fact": "core -> web: 10 GbE",
+   "visible_as": "left arm of the core fan into Web tier labelled \"10 GbE\" with one dot (rows 22-30, label row 25)"
+  },
+  {
+   "source_fact": "core -> cache: 25 GbE",
+   "visible_as": "right arm of the core fan into Redis labelled \"25 GbE\" with one dot (rows 22-30, label row 25)"
+  },
+  {
+   "source_fact": "web -> cache: session",
+   "visible_as": "lateral arrow Web tier --\u25b6 Redis labelled \"session\" (label row 30, run row 32)"
+  },
+  {
+   "source_fact": "web -> db: queries",
+   "visible_as": "down arrow Web tier -> DB tier labelled \"queries\" (label row 35)"
+  },
+  {
+   "source_fact": "cache -> db: fill",
+   "visible_as": "down arrow Redis -> DB tier labelled \"fill\" (label row 35)"
+  }
+ ],
+ "structural_levers": [
+  {
+   "lever": "groups: fabric, tiers",
+   "members": "fw+core; web+cache+db",
+   "source_fact": "source.md names a firewall and a core switch between WAN and the tiers, and names \"web tier\", \"Redis\" and \"DB tier\"."
+  },
+  {
+   "lever": "layers pin [[wan],[fw],[core],[web,cache],[db]]",
+   "source_fact": "source.md's own order (\"WAN through firewall and core to web, Redis, and the database tiers\") plus the constraint that core->cache and web->cache stay separate relations: Redis hangs off the core, not off the web tier. Check: \"layers=5 (6 pinned, within-rank order automatic)\", \"pins: 6 pinned, 0 conflict(s)\"."
+  },
+  {
+   "lever": "label_slot on e0, e1, e4, e5, e6",
+   "source_fact": "The speed/relation labels are the case's measurement content and each is 4-7 characters; without gutters the tb engine reserves label_width+3 rows per rank gap (9-10 rows), which alone made the drawing 67 rows tall (attempt a1) \u2014 20 rows past the pane. Gutters keep each label beside its own run with unchanged text."
+  },
+  {
+   "lever": "label_slot deliberately omitted on e2 and e3 (core->web, core->cache)",
+   "source_fact": "The 10 GbE / 25 GbE fan is the case's anti-parallel pressure; leaving those two labels in-band opens the 9-row core fan gap so the 25 GbE jog leaves Core switch well above Web tier instead of inside its 2-cell margin (measured 5 -> 2 -> 0 near-miss cells across a2/a3/a4)."
+  },
+  {
+   "lever": "trunks",
+   "source_fact": "none declared \u2014 the source names no shared bus, and one line per relation is required (core->cache and web->cache stay apart)."
+  },
+  {
+   "lever": "minlen",
+   "source_fact": "none declared \u2014 the source describes no corridor longer than one rank gap."
+  },
+  {
+   "lever": "diagrams (canvas form)",
+   "source_fact": "none \u2014 one view carries the whole concept (rung 1)."
+  },
+  {
+   "lever": "style: dashed",
+   "source_fact": "none \u2014 every relation in source.md is stated, none is unconfirmed."
+  }
+ ],
+ "habits": {
+  "borrowed": [
+   "service-meshes: the core's fan keeps the source's listing order (web before Redis, left-to-right in the capture at rows 31-34), and the two relations onto one target stay two distinct labelled edges at distinct ports in the ONE view (core->cache 25 GbE from above, web->cache session from the left, into Redis).",
+   "service-meshes: the parallel 10 GbE pair (fw->core, core->web) is drawn as two independent labelled edges, never merged into one \"10 GbE\" relation.",
+   "flow-chains (secondary): the wan->fw->core spine uses short single-stage ranks one node deep, one dot per animated hop, and no invented side branches."
+  ],
+  "deviations": [
+   {
+    "deviation": "the three application relations (web->cache, web->db, cache->db) are drawn static while the four transport links carry dots",
+    "reason": "source.md asks for slow, sparse motion whose direction shows traffic flow, and TRIAGE-network-4 forbids reading dot speed as a measurement. A uniform constant rate on the four speed-labelled hops keeps the two apart, and the static triangle keeps the session/queries/fill labels uncrowded. No relation is dropped or thinned: all three keep their own labels and arrowheads.",
+    "capture": "evidence/v1/v1-frames.txt frames 0..29 \u2014 the frame audit reports \"dots/frame [4]\" in every frame, and the static routes carry none in any frame."
+   },
+   {
+    "deviation": "five ranks in tb, where the chain habit says tb for four or fewer",
+    "reason": "The orientation is chosen for the pane, not for the chain habit: lr would spend five columns plus inter-rank label room and cannot fit 77 columns, while the measured tb drawing occupies 34x41.",
+    "capture": "evidence/v1/v1-77x47-frames.txt \u2014 \"viewport: 77x47 zoom: 1.00 natural\", no `canvas` badge."
+   }
+  ]
+ },
+ "routing_record": [
+  {
+   "attempt": "a1-tb-four-dots",
+   "near_miss_lines": 0,
+   "passes_near_unrelated_node": 0,
+   "note": "clean routing and labels; only height failed (29x67)"
+  },
+  {
+   "attempt": "a2-tb-gutters",
+   "near_miss_lines": 1,
+   "passes_near_unrelated_node": 5,
+   "near_miss_detail": "near-miss: route e3 passes 5 cell(s) at ring 2 of node 'web' (nearest cell 19,22)"
+  },
+  {
+   "attempt": "a3-tb-pinned-tiers",
+   "near_miss_lines": 1,
+   "passes_near_unrelated_node": 2,
+   "near_miss_detail": "near-miss: route e3 passes 2 cell(s) at ring 2 of node 'web' (nearest cell 22,22)"
+  },
+  {
+   "attempt": "a4-tb-open-fan (shipped as spec.json)",
+   "near_miss_lines": 0,
+   "passes_near_unrelated_node": 0,
+   "near_miss_detail": null
+  }
+ ],
+ "routing_relief": {
+  "defect": "route e3 (core->cache, 25 GbE) ran along the top edge of Web tier's box inside the 2-cell margin, so Redis's link read as if it joined the web tier",
+  "lever": "opened the core fan band: removed label_slot from e2 and e3 so that rank gap reserves its own label room (9 rows) instead of 2 rows, which moves the fan's horizontal jog several rows above Web tier's box",
+  "measured": "5 -> 2 -> 0 cells across a2, a3, a4; no relation was deleted, merged or reordered, and evidence/v1/check.txt carries no near-miss line"
+ },
+ "label_record": {
+  "line": "labels: 7/7 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners",
+  "leadered_note": "No leader ticks were needed. In a3 the engine's ownership repair ended with 1 ambiguous owner instead of a leader tick; a4 removed the cause geometrically rather than accept either.",
+  "placement": [
+   {
+    "label": "1 GbE",
+    "owner": "e0",
+    "where": "beside the vertical run, row 6 (evidence/v1/v1-text.txt drawing row 6)"
+   },
+   {
+    "label": "10 GbE (fw->core)",
+    "owner": "e1",
+    "where": "beside the vertical run, row 14"
+   },
+   {
+    "label": "10 GbE (core->web)",
+    "owner": "e2",
+    "where": "in-band beside the left fan arm, row 25"
+   },
+   {
+    "label": "25 GbE",
+    "owner": "e3",
+    "where": "in-band beside the right fan arm, row 25"
+   },
+   {
+    "label": "session",
+    "owner": "e4",
+    "where": "above the lateral run, row 30"
+   },
+   {
+    "label": "queries",
+    "owner": "e5",
+    "where": "beside the left down run, row 35"
+   },
+   {
+    "label": "fill",
+    "owner": "e6",
+    "where": "beside the right down run, row 35"
+   }
+  ]
+ },
+ "animation": {
+  "applicability": "required \u2014 cases.json animation=required, and source.md asks for live dots whose direction shows traffic flow",
+  "mode": "constant (default); four single-dot routes; no numeric flow rate; no same-arrival",
+  "dotted_routes": [
+   "e0 wan->fw",
+   "e1 fw->core",
+   "e2 core->web",
+   "e3 core->cache"
+  ],
+  "static_routes": [
+   "e4 web->cache",
+   "e5 web->db",
+   "e6 cache->db"
+  ],
+  "static_reason": "triage answer TRIAGE-network-6 (own judgment): sparse motion on the speed-labelled transport hops only, so no dot competes with the application labels and no dot can be read as a link measurement",
+  "frames_captured": 30,
+  "frames_needed": "ceil(longest dotted route 14 cells / 0.5) = 28",
+  "check_lines": [
+   "dots: 4 single-dot routes, 0 periodic routes, 0 violations, 4 constant at 0.5c/step, 0 same-arrival at 2000ms",
+   "origins: 4/4 routes start at their arrow origin",
+   "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+  ],
+  "frame_audit": {
+   "tool": "scripts/viz-frame-audit.py",
+   "capture": "evidence/v1/v1-77x47-frames.txt",
+   "output": "evidence/v1/frame-audit.txt",
+   "exit_status": 0,
+   "verdict": "PASS \u2014 every tracked dot holds one rate and covers equal distance (4 routes, 0.500..0.500 cells/frame, spread 0.0, equal distance over 19 ten-frame windows)"
+  },
+  "motion_proof": "evidence/v1/v1-77x47-frames.txt: frame 0 places every dot on its own arrow's first drawn cell (row 6 col 34, row 14 col 34, row 26 cols 34 and 36); frames 10 and 20 each show all four dots advanced 5 cells (audit rows r1/r2 \"14 cells / [14]\", r3/r4 \"\u0394 per 10 frames [5, 5]\"); no captured frame rests a dot on a corner, bridge, junction or label."
+ },
+ "source_pointers": {
+  "source": "docs/visualize-eval/cases/network/source.md",
+  "relationship_facts": "source.md \"Relationship facts from the historical attempt\" (7 bullets)",
+  "fixed_constraints": "source.md \"Fixed constraints\" (2 bullets)",
+  "motion_request": "source.md \"Original line 5 (user)\" \u2014 dots, direction = traffic flow, slow and sparse, gruvbox",
+  "pane_preference": "source.md \"Original line 48 (user)\" \u2014 pane geometry, not a graph fact"
+ },
+ "abbreviations": [
+  {
+   "text": "WAN",
+   "for": "wide-area network (the source's own node name)"
+  },
+  {
+   "text": "GbE",
+   "for": "gigabit Ethernet (the source's own unit)"
+  },
+  {
+   "text": "fw / core / web / cache / db",
+   "for": "engine-only node ids; the drawn labels are the source's names (Firewall, Core switch, Web tier, Redis, DB tier)"
+  }
+ ],
+ "deliberate_drops": [
+  {
+   "fact": "historical line 48 \"even split, not narrowed\"",
+   "reason": "a pane-geometry instruction for the live viewer, not a node, relation or qualifier; the harness's own half split produced the 68x44 pane"
+  },
+  {
+   "fact": "historical line 5 \"their speed represents any speed I'd like to indicate\"",
+   "reason": "source.md's fixed constraint and TRIAGE-network-4 override it \u2014 motion must not imply the measurement. Recorded as a deviation with its reason, not a dropped relation."
+  }
+ ],
+ "defects": [
+  {
+   "surface": "v1",
+   "defect": "the lateral web->cache arrow is short (3 route cells: \"Web tier --\u25b6 Redis\") and is static by design, so it shows no motion",
+   "severity": "minor, deliberate (triage answer TRIAGE-network-6)"
+  }
+ ],
+ "engine_observations": [
+  "In a3 the ownership repair could not place \"session\" unambiguously and reported 1 ambiguous owner with labels_leadered: 0 instead of falling back to a leader tick; a4 removed the cause geometrically.",
+  "In tb the engine sizes a rank gap from the *width* of an edge label (label_width + 3 rows) unless that edge sets label_slot, so a six-character speed label costs nine rows of height per gap. That is the dominant cost in this case (a1 29x67 -> a2 27x45)."
+ ],
+ "blockers": [],
+ "recipe_yield": null,
+ "attempt_budget": {
+  "distinct_spec_candidates_checked": 4,
+  "cap": 3,
+  "exceeded_by": 1,
+  "explanation": "Openly recorded: a1 was the orientation probe (plain tb, no pins, no gutters) \u2014 clean routing and labels but 29x67 cells, so it never could ship and only measured the label-height cost. a2 then still carried 5 near-miss cells plus 1 ambiguous label, a3 carried 2 near-miss cells plus 1 ambiguous label, and reaching passes-near-unrelated-node: 0 needed a fourth drawing (a4). a1 is listed as an abandoned orientation probe; views[].attempts lists the three drafts that competed for shipping. Every check is in attempts-log.jsonl with its raw output."
+ },
+ "cleanup": {
+  "panes": [
+   {
+    "pane_id": "w7E:pZY",
+    "owner": "scripts/viz-evidence.sh (half split in this session's tab)",
+    "result": "confirmed_closed (evidence/v1/manifest.json .cleanup)"
+   }
+  ],
+  "record_runs": "no panes opened by scripts/viz-evidence.sh record",
+  "notes": "the pinned dumps run their own pty (scripts/viz-pinned-dump.py) and leave no pane"
+ },
+ "commands": [
+  "scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/13/network/attempts-log.jsonl --label a1-tb-four-dots -- /tmp/visualize-eval/round-13/bin/rataflow-view --check docs/visualize-eval/rounds/13/network/attempts/a1-tb-four-dots.json",
+  "scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/13/network/attempts-log.jsonl --label a2-tb-gutters -- /tmp/visualize-eval/round-13/bin/rataflow-view --check docs/visualize-eval/rounds/13/network/attempts/a2-tb-gutters.json",
+  "scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/13/network/attempts-log.jsonl --label a3-tb-pinned-tiers -- /tmp/visualize-eval/round-13/bin/rataflow-view --check docs/visualize-eval/rounds/13/network/attempts/a3-tb-pinned-tiers.json",
+  "scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/13/network/attempts-log.jsonl --label a4-tb-open-fan -- /tmp/visualize-eval/round-13/bin/rataflow-view --check docs/visualize-eval/rounds/13/network/attempts/a4-tb-open-fan.json",
+  "scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/13/network/attempts-log.jsonl --label final-check-spec-identical-to-a4 -- /tmp/visualize-eval/round-13/bin/rataflow-view --check docs/visualize-eval/rounds/13/network/spec.json",
+  "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/13/network/spec.json --bin /tmp/visualize-eval/round-13/bin/rataflow-view --out docs/visualize-eval/rounds/13/network/evidence/v1 --label v1 --frames 30 --pinned-frames 30",
+  "python3 scripts/viz-frame-audit.py docs/visualize-eval/rounds/13/network/evidence/v1/v1-77x47-frames.txt",
+  "scripts/viz-validate.py docs/visualize-eval/rounds/13/network/evidence/v1 --require-select --require-frames --require-records --attempts docs/visualize-eval/rounds/13/network/attempts.json --frame-audit"
+ ],
+ "validation": {
+  "bundle": "evidence/v1",
+  "output": "validation.txt",
+  "command": "scripts/viz-validate.py evidence/v1 --require-select --require-frames --require-records --attempts attempts.json --frame-audit",
+  "checks_run": 36,
+  "result": "all checks passed",
+  "failing_checks": [],
+  "notable_passes": [
+   "routes_near_unrelated_nodes",
+   "labels_ownership_clear",
+   "labels_not_skipped",
+   "dots_no_violations",
+   "origins_complete",
+   "viewport_matches_target (pinned 77x47 dump; pane measured 68x44)",
+   "cleanup_confirmed",
+   "attempts_records_complete",
+   "probe_inputs_present",
+   "frame_audit_passes"
+  ],
+  "frame_audit_output": "evidence/v1/frame-audit.txt (exit 0)"
+ }
+}

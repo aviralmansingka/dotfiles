@@ -1,0 +1,25 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=27 edges=23 flows=10 direction=lr theme=gruvbox
+canvas: 3 diagrams on one canvas, drawn whole at 100%
+diagram l1 "L1 · System context — the machine manager" at 0,5: extent=171x23 nodes=11 edges=9 routes=9
+  description: The manager's boundary services in one box; the control plane, humans, providers, storage and machines stay outside it.
+diagram l2 "L2 · Inside the machine manager" at 0,33: extent=155x25 nodes=9 edges=10 routes=10
+  description: The same box opened: the manager's own services and their internal wiring — enqueue, dispatch, state writes, diagnostics, ops.
+diagram l1b "L1b · The machine side and the manager's outward edges" at 0,63: extent=128x15 nodes=7 edges=4 routes=4
+  description: The same context from the fleet's end: heartbeat registration into public gRPC, plus queue-to-S3 uploads and webapi alerts.
+pins: 27 pinned, 0 conflict(s)
+extent=171x78 cells (whole canvas)
+crossings: 7 bridges, 3 touching bends
+near-misses: 28 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)
+passes-near-unrelated-node: 28
+near-miss: route l2:e7 passes 10 cell(s) at ring 2 of node 'pub' (nearest cell 81,10)
+near-miss: route l2:e7 passes 4 cell(s) at ring 2 of node 'rec' (nearest cell 72,15)
+near-miss: route l2:e9 passes 14 cell(s) at ring 2 of node 'db' (nearest cell 112,6)
+warning: 28 route cell(s) hug a node their relation does not serve; move the affected relations or let them route around
+labels: 23/23 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners
+groups: modal(1) operators(1) manager(17) providers(1) machines(3) storage(3) tooling(1)
+trunks:
+dots: 10 single-dot routes, 0 periodic routes, 0 violations, 10 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 7 by source, 3 by destination, 1 shared-hue pair(s) (source-only 7, destination-only 7)
+origins: 10/10 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

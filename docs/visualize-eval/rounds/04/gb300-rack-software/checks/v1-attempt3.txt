@@ -1,0 +1,1 @@
+rataflow-view: no obstacle-safe route for oob -> bmc_s, oob -> pwr; increase node/layer spacing

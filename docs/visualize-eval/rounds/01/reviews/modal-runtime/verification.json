@@ -1,0 +1,175 @@
+{
+  "method": "Independent byte SHA-256; renderer hashed only, never executed. Actual capture content was examined independently in Stage A. No generator audit helper was executed.",
+  "reviewer_env": {
+    "PI_SUBAGENT_NAME": "viz-judge01-modal-runtime",
+    "PI_MODEL": "gpt-6-astra",
+    "PI_PROVIDER": "openai"
+  },
+  "blind_observation_verified_sha256": "b49b433d92fe06c005feeb3e64dd50c39fdd60fa89a80144a2a6e506c13b803b",
+  "hash_checks": [
+    {
+      "path": "docs/visualize-eval/rounds/01/SKILL.md",
+      "expected_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "actual_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "matches": true
+    },
+    {
+      "path": "/tmp/visualize-eval/round-01/bin/rataflow-view",
+      "expected_sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "actual_sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/rubric.json",
+      "expected_sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "actual_sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/cases.json",
+      "expected_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "actual_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/cases/modal-runtime/source.md",
+      "expected_sha256": "c6e4552d5842347bc9472e53a2351897c3624c92b5a14541aaa3c28216dc4a0d",
+      "actual_sha256": "c6e4552d5842347bc9472e53a2351897c3624c92b5a14541aaa3c28216dc4a0d",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/cases/modal-runtime/expected.json",
+      "expected_sha256": "fd3963e207e9c433b7e5825c8a1691766bb13d5df7322ac97a05e379d2cbba99",
+      "actual_sha256": "fd3963e207e9c433b7e5825c8a1691766bb13d5df7322ac97a05e379d2cbba99",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/spec/overview.json",
+      "expected_sha256": "e6fdb516325c72692661235f3794e8660ce4809d3ada9af21e9f8f37dff7bf93",
+      "actual_sha256": "e6fdb516325c72692661235f3794e8660ce4809d3ada9af21e9f8f37dff7bf93",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/spec/seams.json",
+      "expected_sha256": "f0d0da4a41d6419763af4e2c040f5b0b654d6a783ef3c0a564b5235ceb547867",
+      "actual_sha256": "f0d0da4a41d6419763af4e2c040f5b0b654d6a783ef3c0a564b5235ceb547867",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/spec/execution.json",
+      "expected_sha256": "1e3d23a22364fd791094ace692dbb6db58d7a77a3eee6ef37fa6014e7139ae6d",
+      "actual_sha256": "1e3d23a22364fd791094ace692dbb6db58d7a77a3eee6ef37fa6014e7139ae6d",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.text.none.txt",
+      "expected_sha256": "f7473d088464eb103e89c45aa586e384980890283e82049badeee90fe25f267a",
+      "actual_sha256": "f7473d088464eb103e89c45aa586e384980890283e82049badeee90fe25f267a",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.none.txt",
+      "expected_sha256": "091cb97f1d579ec59f42e3901d8371464bc5d5eaa6f5b8aed4f61b5422e3b551",
+      "actual_sha256": "091cb97f1d579ec59f42e3901d8371464bc5d5eaa6f5b8aed4f61b5422e3b551",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.text.sel-tab.txt",
+      "expected_sha256": "f7473d088464eb103e89c45aa586e384980890283e82049badeee90fe25f267a",
+      "actual_sha256": "f7473d088464eb103e89c45aa586e384980890283e82049badeee90fe25f267a",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-tab.txt",
+      "expected_sha256": "d6f89951395b3ef24d6feee72bbe113c46b6c2ba725f632fc7bd4f8498eefa7e",
+      "actual_sha256": "d6f89951395b3ef24d6feee72bbe113c46b6c2ba725f632fc7bd4f8498eefa7e",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.text.sel-right.txt",
+      "expected_sha256": "f7473d088464eb103e89c45aa586e384980890283e82049badeee90fe25f267a",
+      "actual_sha256": "f7473d088464eb103e89c45aa586e384980890283e82049badeee90fe25f267a",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/overview.ansi.sel-right.txt",
+      "expected_sha256": "7be36f81e2601489e2ee95cf6fa06066168a05bb2051a0f05d389e4771561707",
+      "actual_sha256": "7be36f81e2601489e2ee95cf6fa06066168a05bb2051a0f05d389e4771561707",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.text.none.txt",
+      "expected_sha256": "31a33e6a1d869b1871899b499bd76d1f6af5a2d4ef27a6a3a2d293388b2816a8",
+      "actual_sha256": "31a33e6a1d869b1871899b499bd76d1f6af5a2d4ef27a6a3a2d293388b2816a8",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.ansi.none.txt",
+      "expected_sha256": "dbd6dcc82f9cb04e2fd1fbec5958c9c7d0a69e8c653a6a70133257eda5f69996",
+      "actual_sha256": "dbd6dcc82f9cb04e2fd1fbec5958c9c7d0a69e8c653a6a70133257eda5f69996",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.text.sel-tab.txt",
+      "expected_sha256": "31a33e6a1d869b1871899b499bd76d1f6af5a2d4ef27a6a3a2d293388b2816a8",
+      "actual_sha256": "31a33e6a1d869b1871899b499bd76d1f6af5a2d4ef27a6a3a2d293388b2816a8",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.ansi.sel-tab.txt",
+      "expected_sha256": "40f53bc37889bd3aee862fc8d87d15c867ee29775d913c2d198e051497109bcc",
+      "actual_sha256": "40f53bc37889bd3aee862fc8d87d15c867ee29775d913c2d198e051497109bcc",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.text.sel-right.txt",
+      "expected_sha256": "31a33e6a1d869b1871899b499bd76d1f6af5a2d4ef27a6a3a2d293388b2816a8",
+      "actual_sha256": "31a33e6a1d869b1871899b499bd76d1f6af5a2d4ef27a6a3a2d293388b2816a8",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/seams.ansi.sel-right.txt",
+      "expected_sha256": "a9b1592e8aff4dbc5f480c251e65f8b299ddcb552017a35adabef553283ed4db",
+      "actual_sha256": "a9b1592e8aff4dbc5f480c251e65f8b299ddcb552017a35adabef553283ed4db",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.text.none.txt",
+      "expected_sha256": "53b685bf6e07a8f1ea3846f9ff8c8fb8150a4ba2450fd3476950c80995466815",
+      "actual_sha256": "53b685bf6e07a8f1ea3846f9ff8c8fb8150a4ba2450fd3476950c80995466815",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.none.txt",
+      "expected_sha256": "5e4b7ea3ac0541fd04eef341ac106e864a9b47eae5c304c0f661ab60cda367f5",
+      "actual_sha256": "5e4b7ea3ac0541fd04eef341ac106e864a9b47eae5c304c0f661ab60cda367f5",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.text.sel-tab.txt",
+      "expected_sha256": "53b685bf6e07a8f1ea3846f9ff8c8fb8150a4ba2450fd3476950c80995466815",
+      "actual_sha256": "53b685bf6e07a8f1ea3846f9ff8c8fb8150a4ba2450fd3476950c80995466815",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.sel-tab.txt",
+      "expected_sha256": "298242d65fb9b7f7fb6e6cd8ec112de8cca086137ae64b5a72302a6f1115fd2e",
+      "actual_sha256": "298242d65fb9b7f7fb6e6cd8ec112de8cca086137ae64b5a72302a6f1115fd2e",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.text.sel-right.txt",
+      "expected_sha256": "53b685bf6e07a8f1ea3846f9ff8c8fb8150a4ba2450fd3476950c80995466815",
+      "actual_sha256": "53b685bf6e07a8f1ea3846f9ff8c8fb8150a4ba2450fd3476950c80995466815",
+      "matches": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-runtime/captures/execution.ansi.sel-right.txt",
+      "expected_sha256": "803313eb41bbbe4125abf981b9bedef12262ed644ceffd12d512ae6093533ee7",
+      "actual_sha256": "803313eb41bbbe4125abf981b9bedef12262ed644ceffd12d512ae6093533ee7",
+      "matches": true
+    }
+  ],
+  "overview_provenance_caveat": "Manifest mtime values predate the reported viewer launch and differ from the claimed capture interval. They are preserved as reported artifact timestamps, not certified capture times.",
+  "cleanup_caveat": "Six helper timelines record self-close; overview p2Z has a generator cleanup assertion but no per-step close record or retained final pane-list response."
+}

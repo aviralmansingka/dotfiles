@@ -1,0 +1,21 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "box",   "label": "homelab host",                    "group": "homelab host" },
+    { "id": "bond0", "label": "bond0 eno1 192.168.1.197/24",     "group": "wired uplink" },
+    { "id": "wlp",   "label": "wlp8s0 192.168.1.213",            "group": "wifi backup, not ECMP" },
+    { "id": "rtr",   "label": "rtr 192.168.1.1",                 "group": "egress rtr = ToR+spine+FW, NAT, no v6 (ULA)" }
+  ],
+  "layers": [
+    ["box"],
+    ["bond0", "wlp"],
+    ["rtr"]
+  ],
+  "edges": [
+    { "from": "box",   "to": "bond0", "label": "2.5 GbE" },
+    { "from": "box",   "to": "wlp",   "label": "backup" },
+    { "from": "bond0", "to": "rtr",   "label": "0.5 ms" },
+    { "from": "wlp",   "to": "rtr",   "label": "metric 600" }
+  ]
+}

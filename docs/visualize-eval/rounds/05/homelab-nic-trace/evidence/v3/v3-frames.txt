@@ -1,0 +1,288 @@
+/tmp/visualize-eval/round-05/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotfi
+les/fix-visualize-skill/docs/visualize-eval/rounds/05/homelab-nic-trace/specs/v3.js
+on
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-05/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/05/homelab-nic-trace/specs/v3.
+json
+viewport: 83x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-05/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/05/homelab-nic-trace/specs/v3.
+json --select-all
+viewport: 83x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-05/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/05/homelab-nic-trace/specs/v3.
+json --frames 5 --step-ms 100
+viewport: 83x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 83x51 @100% · v3.json · 4 nodes · 3 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+                        ╭─────────────────────────╮
+                        │tailscale0 100.113.153.49│
+                        │                         │
+                        ╰─────────────────────────╯
+                         │
+                         │ encap over UDP
+                         │
+                         ▼
+                        ╭─────────────────────────────╮
+                        │bond0 192.168.1.197/24 · eno1│
+                        │                             │
+                        ╰─────────────────────────────╯
+                         │
+                         │ def gw 0.5 ms
+                         │
+                         ▼
+                        ╭────────────────────────────────╮
+                        │rtr 192.168.1.1 NAT+DHCP·claimed│
+                        │                                │
+                        ╰────────────────────────────────╯
+                         │
+                         │ NAT egress
+                         │
+                         ▼
+                        ╭──────────────────╮
+                        │pool 71.251.12.240│
+                        │                  │
+                        ╰──────────────────╯
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 83x51 @100% · v3.json · 4 nodes · 3 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+                        ╭─────────────────────────╮
+                        │tailscale0 100.113.153.49│
+                        │                         │
+                        ╰─────────────────────────╯
+                         │
+                         │ encap over UDP
+                         │
+                         ▼
+                        ╭─────────────────────────────╮
+                        │bond0 192.168.1.197/24 · eno1│
+                        │                             │
+                        ╰─────────────────────────────╯
+                         │
+                         │ def gw 0.5 ms
+                         │
+                         ▼
+                        ╭────────────────────────────────╮
+                        │rtr 192.168.1.1 NAT+DHCP·claimed│
+                        │                                │
+                        ╰────────────────────────────────╯
+                         │
+                         │ NAT egress
+                         │
+                         ▼
+                        ╭──────────────────╮
+                        │pool 71.251.12.240│
+                        │                  │
+                        ╰──────────────────╯
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 83x51 @100% · v3.json · 4 nodes · 3 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+                        ╭─────────────────────────╮
+                        │tailscale0 100.113.153.49│
+                        │                         │
+                        ╰─────────────────────────╯
+                         │
+                         │ encap over UDP
+                         │
+                         ▼
+                        ╭─────────────────────────────╮
+                        │bond0 192.168.1.197/24 · eno1│
+                        │                             │
+                        ╰─────────────────────────────╯
+                         │
+                         │ def gw 0.5 ms
+                         │
+                         ▼
+                        ╭────────────────────────────────╮
+                        │rtr 192.168.1.1 NAT+DHCP·claimed│
+                        │                                │
+                        ╰────────────────────────────────╯
+                         │
+                         │ NAT egress
+                         │
+                         ▼
+                        ╭──────────────────╮
+                        │pool 71.251.12.240│
+                        │                  │
+                        ╰──────────────────╯
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 83x51 @100% · v3.json · 4 nodes · 3 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+                        ╭─────────────────────────╮
+                        │tailscale0 100.113.153.49│
+                        │                         │
+                        ╰─────────────────────────╯
+                         │
+                         │ encap over UDP
+                         │
+                         ▼
+                        ╭─────────────────────────────╮
+                        │bond0 192.168.1.197/24 · eno1│
+                        │                             │
+                        ╰─────────────────────────────╯
+                         │
+                         │ def gw 0.5 ms
+                         │
+                         ▼
+                        ╭────────────────────────────────╮
+                        │rtr 192.168.1.1 NAT+DHCP·claimed│
+                        │                                │
+                        ╰────────────────────────────────╯
+                         │
+                         │ NAT egress
+                         │
+                         ▼
+                        ╭──────────────────╮
+                        │pool 71.251.12.240│
+                        │                  │
+                        ╰──────────────────╯
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 83x51 @100% · v3.json · 4 nodes · 3 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+                        ╭─────────────────────────╮
+                        │tailscale0 100.113.153.49│
+                        │                         │
+                        ╰─────────────────────────╯
+                         │
+                         │ encap over UDP
+                         │
+                         ▼
+                        ╭─────────────────────────────╮
+                        │bond0 192.168.1.197/24 · eno1│
+                        │                             │
+                        ╰─────────────────────────────╯
+                         │
+                         │ def gw 0.5 ms
+                         │
+                         ▼
+                        ╭────────────────────────────────╮
+                        │rtr 192.168.1.1 NAT+DHCP·claimed│
+                        │                                │
+                        ╰────────────────────────────────╯
+                         │
+                         │ NAT egress
+                         │
+                         ▼
+                        ╭──────────────────╮
+                        │pool 71.251.12.240│
+                        │                  │
+                        ╰──────────────────╯
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯

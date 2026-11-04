@@ -1,0 +1,53 @@
+{
+  "spec_path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/13/gb300-rack-software/specs/canvas-v3.json",
+  "spec_sha256": "7f95990ab59ad8ea067200816162292dc19cd54216c82c522ceed3a49dfaad14",
+  "spec_form": "canvas",
+  "diagrams": [
+    {
+      "id": "oob",
+      "title": "OOB hardware-control plane",
+      "description": "one OOB trunk to the BMCs and power shelf; nv-rms source is free"
+    },
+    {
+      "id": "inband",
+      "title": "In-band compute and NVSwitch software",
+      "description": "compute chain plus NVSwitch software; the OOB LAN reaches NVOS"
+    }
+  ],
+  "binary_path": "/tmp/visualize-eval/round-13/bin/rataflow-view",
+  "binary_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+  "pane_id": "w7E:p09",
+  "pane_rect": null,
+  "pane_cols": null,
+  "pane_rows": 44,
+  "viewport_line": null,
+  "viewport_token": "68x44 @100%",
+  "check_exit": 0,
+  "check_window": [
+    "2026-11-03T14:09:53Z",
+    "2026-11-03T14:09:53Z"
+  ],
+  "capture_window": [
+    "2026-11-03T14:09:53Z",
+    "2026-11-03T14:09:58Z"
+  ],
+  "cleanup": "confirmed_closed",
+  "select_all_frame": true,
+  "frames": 5,
+  "frame_step_ms": 100,
+  "pinned_frames": {
+    "file": "canvas-77x47-frames.txt",
+    "viewport_line": "viewport: 77x47 zoom: 1.00 natural"
+  },
+  "artifacts": {
+    "bin.sha256": "41acd28bd47aeed7923377b953efce1900faf3bdd0d9c08a898ca8ffaf087a8d",
+    "canvas-77x47-frames.txt": "9e03f6f5481242ff61f8d39fa3c95fe726dbf7a3d76f6b049d87d5e86a751310",
+    "canvas-ansi.ansi": "c8e6553cbb71595037fd20ed95f5eeedb4de13d2cddbf07e44eb32d892eaf97c",
+    "canvas-frames.ansi": "93cff603749d1ee59b87077f2a35326b109c59cd296159df2fd0893637289a11",
+    "canvas-frames.txt": "094f7ea0d0436823248363efacfabfcd4b8ee35e4b2b9491f303f1041ba3ebc9",
+    "canvas-pinned.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "canvas-selected.ansi": "84fa7421d4405b9954a44b89cf19c66b7c7baaa0a7261d14c3f65b4cbfe80b2c",
+    "canvas-text.txt": "926f27ffa14c769289f0aae8eec364d6570fd0bffc98703aeb11d11884553cd4",
+    "check.txt": "0baa88a412820b9d3b3cd6a24c1021a24cc497bfc1a5d832d431cf9bae04cc11"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "runtime", "label": "modal-runtime", "group": "orchestration" },
+    { "id": "engine", "label": "Task engine", "group": "orchestration" },
+    { "id": "daemon", "label": "modal-daemon", "group": "storage" },
+    { "id": "backend", "label": "Container backend", "group": "compute" },
+    { "id": "filesystem", "label": "Filesystem + volumes", "group": "storage" },
+    { "id": "container", "label": "Task container", "group": "compute" },
+    { "id": "blobnet", "label": "Blobnet", "group": "storage" }
+  ],
+  "edges": [
+    { "from": "runtime", "to": "engine", "label": "dispatches tasks", "label_slot": true, "dots": 0 },
+    { "from": "runtime", "to": "daemon", "label": "HTTP over UDS", "label_slot": true, "dots": 0 },
+    { "from": "engine", "to": "backend", "label": "starts / manages", "dots": 0 },
+    { "from": "backend", "to": "container", "label": "runs user process", "label_slot": true, "dots": 0 },
+    { "from": "engine", "to": "filesystem", "label": "mounts / snapshots", "dots": 0 },
+    { "from": "filesystem", "to": "blobnet", "label": "image + volume data", "label_slot": true, "dots": 0 }
+  ]
+}

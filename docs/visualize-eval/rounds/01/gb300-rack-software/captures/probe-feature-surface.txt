@@ -1,0 +1,10 @@
+$ printf '%s' '{"direction":"tb","edges":[{"from":"a","to":"b","style":"dashed"}]}' > /tmp/gb300-probe/unknown.json
+2026-11-02T08:29:49Z
+rataflow-view: parsing the spec (fields: direction, theme, nodes, edges): unknown field `style`, expected one of `from`, `to`, `label`, `flow` at line 1 column 55
+exit=1
+
+$ printf ... '{"direction":"tb","layers":[["a"],["b","c"]], ...}' > /tmp/gb300-probe/layers.json
+ok: nodes=3 edges=2 flows=0 direction=tb theme=gruvbox
+layers=2 (explicit placement, sugiyama skipped)
+extent=14x13 cells
+exit=0

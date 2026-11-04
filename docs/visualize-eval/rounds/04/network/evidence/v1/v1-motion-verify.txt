@@ -1,0 +1,66 @@
+source: docs/visualize-eval/rounds/04/network/evidence/v1/v1-frames-77x47.txt (COLUMNS=77 LINES=47, --frames 21 --step-ms 100; flow: true, dots: 1)
+coordinates are (column, graph row): graph row 0 is the first line below the app header line of the frame.
+frames: 21 indices [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] | dots per frame: [7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7]
+
+node boxes (x, graph-row, width) at frame 0: [(33, 0, 5), (31, 8, 10), (29, 16, 13), (31, 24, 10), (18, 33, 7), (50, 41, 9)]
+bottom-face ports of those boxes: [(19, 37), (21, 37), (30, 20), (32, 12), (32, 20), (32, 28), (34, 4), (34, 12), (34, 28), (36, 4), (51, 45), (53, 45)]
+
+frame 0 (0 ms): every dot is exactly one cell from a source port, i.e. at its arrow origin
+  dot (19,38)  source port (19, 37)  origin_ok=True
+  dot (30,21)  source port (30, 20)  origin_ok=True
+  dot (32,13)  source port (32, 12)  origin_ok=True
+  dot (32,21)  source port (32, 20)  origin_ok=True
+  dot (32,29)  source port (32, 28)  origin_ok=True
+  dot (34, 5)  source port (34, 4)  origin_ok=True
+  dot (34,29)  source port (34, 28)  origin_ok=True
+  origins: 7/7 dots at their arrow origin
+
+constant-rate motion: cumulative cells travelled by each of the 7 dots
+step(ms)  dot0  dot1  dot2  dot3  dot4  dot5  dot6
+  100    0   0   0   0   0   0   0
+  200    1   1   1   1   1   1   1
+  300    1   1   1   1   1   1   1
+  400    2   2   2   2   2   2   2
+  500    2   2   2   2   2   2   2
+  600    3   3   3   3   3   3   3
+  700    3   3   3   3   3   3   3
+  800    4   4   4   4   4   4   4
+  900    4   4   4   4   4   4   4
+ 1000    5   5   5   5   5   5   5
+ 1100    5   5   5   5   5   5   5
+ 1200    6   6   6   6   6   6   6
+ 1300    6   6   6   6   6   6   6
+ 1400    7   7   7   7   7   7   7
+ 1500    7   7   7   7   7   7   7
+ 1600    8   8   8   8   8   8   8
+ 1700    8   8   8   8   8   8   8
+ 1800    9   9   9   9   9   9   9
+ 1900    9   9   9   9   9   9   9
+ 2000    10   10   10   10   10   10   10
+
+cells moved over the 20-step cycle, per dot: [10, 10, 10, 10, 10, 10, 10]
+identical for every dot (no route reads faster or slower): True
+=> 10 cells / 20 steps = 0.5 cells per 100 ms step, the constant default rate
+
+per-frame dot cells:
+  frame  0 at    0ms: [(19, 38), (30, 21), (32, 13), (32, 21), (32, 29), (34, 5), (34, 29)]
+  frame  1 at  100ms: [(19, 38), (30, 21), (32, 13), (32, 21), (32, 29), (34, 5), (34, 29)]
+  frame  2 at  200ms: [(20, 39), (29, 22), (31, 14), (32, 22), (32, 30), (33, 6), (34, 30)]
+  frame  3 at  300ms: [(20, 39), (29, 22), (31, 14), (32, 22), (32, 30), (33, 6), (34, 30)]
+  frame  4 at  400ms: [(21, 39), (28, 22), (30, 14), (31, 31), (32, 6), (32, 21), (34, 31)]
+  frame  5 at  500ms: [(21, 39), (28, 22), (30, 14), (31, 31), (32, 6), (32, 21), (34, 31)]
+  frame  6 at  600ms: [(22, 39), (27, 22), (30, 31), (32, 13), (32, 22), (34, 5), (34, 32)]
+  frame  7 at  700ms: [(22, 39), (27, 22), (30, 31), (32, 13), (32, 22), (34, 5), (34, 32)]
+  frame  8 at  800ms: [(23, 39), (26, 22), (29, 31), (31, 14), (32, 21), (33, 6), (34, 33)]
+  frame  9 at  900ms: [(23, 39), (26, 22), (29, 31), (31, 14), (32, 21), (33, 6), (34, 33)]
+  frame 10 at 1000ms: [(24, 39), (25, 22), (28, 31), (30, 14), (32, 6), (32, 22), (34, 34)]
+  frame 11 at 1100ms: [(24, 39), (25, 22), (28, 31), (30, 14), (32, 6), (32, 22), (34, 34)]
+  frame 12 at 1200ms: [(24, 22), (25, 39), (27, 31), (32, 13), (32, 21), (34, 5), (34, 35)]
+  frame 13 at 1300ms: [(24, 22), (25, 39), (27, 31), (32, 13), (32, 21), (34, 5), (34, 35)]
+  frame 14 at 1400ms: [(23, 22), (26, 31), (26, 39), (31, 14), (32, 22), (33, 6), (34, 36)]
+  frame 15 at 1500ms: [(23, 22), (26, 31), (26, 39), (31, 14), (32, 22), (33, 6), (34, 36)]
+  frame 16 at 1600ms: [(22, 22), (25, 31), (27, 39), (30, 14), (32, 6), (32, 21), (34, 37)]
+  frame 17 at 1700ms: [(22, 22), (25, 31), (27, 39), (30, 14), (32, 6), (32, 21), (34, 37)]
+  frame 18 at 1800ms: [(21, 22), (24, 31), (28, 39), (32, 13), (32, 22), (34, 5), (35, 38)]
+  frame 19 at 1900ms: [(21, 22), (24, 31), (28, 39), (32, 13), (32, 22), (34, 5), (35, 38)]
+  frame 20 at 2000ms: [(20, 22), (23, 31), (29, 39), (31, 14), (32, 21), (33, 6), (36, 38)]

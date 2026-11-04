@@ -1,0 +1,66 @@
+{
+  "theme": "gruvbox",
+  "diagrams": [
+    {
+      "id": "egress",
+      "title": "Wired egress, hop by hop",
+      "description": "Primary egress trace: historical hops; Fios router is the collapsed fabric; v6 ULA-only.",
+      "direction": "lr",
+      "nodes": [
+        { "id": "box", "label": "homelab host", "group": "host" },
+        { "id": "bond0", "label": "bond0 192.168.1.197", "group": "uplink" },
+        { "id": "rtr", "label": "Fios router 192.168.1.1", "group": "gateway" },
+        { "id": "ont", "label": "ONT 169.254.3.1", "group": "demarc" },
+        { "id": "vzagg", "label": "VZ edge 100.41.x", "group": "isp" },
+        { "id": "vzbb", "label": "VZ backbone AS701", "group": "isp" },
+        { "id": "cf", "label": "Cloudflare 1.1.1.1", "group": "internet" }
+      ],
+      "edges": [
+        { "from": "box", "to": "bond0", "label": "eno1 2.5 GbE", "dots": 0 },
+        { "from": "bond0", "to": "rtr", "label": "gw 0.5 ms", "dots": 0 },
+        { "from": "rtr", "to": "ont", "label": "NAT out", "dots": 0 },
+        { "from": "ont", "to": "vzagg", "label": "4.5 ms", "dots": 0 },
+        { "from": "vzagg", "to": "vzbb", "label": "6.6 ms", "dots": 0 },
+        { "from": "vzbb", "to": "cf", "label": "6-9 ms", "dots": 0 }
+      ]
+    },
+    {
+      "id": "local",
+      "title": "Local virtual nets",
+      "description": "Local to the host: VM behind the libvirt NAT bridge, container behind the Docker bridge.",
+      "direction": "lr",
+      "nodes": [
+        { "id": "vm", "label": "VM vnet0", "group": "libvirt" },
+        { "id": "virbr", "label": "virbr0", "group": "libvirt" },
+        { "id": "ctr", "label": "container", "group": "docker" },
+        { "id": "dkbr", "label": "docker 172.18.2.1", "group": "docker" },
+        { "id": "box", "label": "homelab host", "group": "host" }
+      ],
+      "edges": [
+        { "from": "vm", "to": "virbr", "label": "192.168.122.x", "dots": 0 },
+        { "from": "virbr", "to": "box", "label": "NAT bridge", "dots": 0 },
+        { "from": "ctr", "to": "dkbr", "label": "172.18.2.x", "dots": 0 },
+        { "from": "dkbr", "to": "box", "label": "docker bridge", "dots": 0 }
+      ]
+    },
+    {
+      "id": "secondary",
+      "title": "Wi-Fi backup and Tailscale overlay",
+      "description": "Secondary paths: Wi-Fi failover at metric 600, Tailscale encapsulated over UDP on bond0.",
+      "direction": "lr",
+      "nodes": [
+        { "id": "ts", "label": "tailscale0 100.113.153.49", "group": "overlay" },
+        { "id": "box", "label": "homelab host", "group": "host" },
+        { "id": "bond0", "label": "bond0 192.168.1.197", "group": "uplink" },
+        { "id": "wlp", "label": "wlp8s0 192.168.1.213", "group": "wifi" },
+        { "id": "rtr", "label": "Fios router 192.168.1.1", "group": "gateway" }
+      ],
+      "edges": [
+        { "from": "ts", "to": "box", "label": "overlay", "dots": 0 },
+        { "from": "ts", "to": "bond0", "label": "encap over UDP", "dots": 0 },
+        { "from": "box", "to": "wlp", "label": "backup path", "dots": 0 },
+        { "from": "wlp", "to": "rtr", "label": "metric 600", "dots": 0 }
+      ]
+    }
+  ]
+}

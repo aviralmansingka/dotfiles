@@ -1,0 +1,3364 @@
+{
+  "blockers": [
+    "Workflow evidence gap, not renderer capability: no retained executed capture/cleanup proof for claimed owned panes w7E:p76, w7E:p78, w7E:p79; four final panes do have confirmed_closed records.",
+    "No demonstrated unsupported required renderer capability. Label-clearance/ownership placement and its checking are renderer-level correction candidates, but these captures do not prove that all compliant spec arrangements are impossible."
+  ],
+  "candidate_sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+  "case_id": "datacenter-redundancy",
+  "categories": {
+    "animation": {
+      "applicable": false,
+      "evidence_ids": [
+        "dataset",
+        "expected",
+        "source",
+        "blind",
+        "v1-frames",
+        "v2-frames",
+        "v3-frames",
+        "v4-frames"
+      ],
+      "reason": "N/A: the frozen dataset explicitly sets datacenter-redundancy animation=off, expected.json repeats off, and source original line 134 says remove the flowing dots. This earns no animation pass. The 140 observed single-dot placements have no special-cell violations, but the existence of motion still violates the human prohibition and is scored as semantic F01.",
+      "source_refs": [
+        "docs/visualize-eval/cases.json#/cases/4/animation",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/animation",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 134 (user)"
+      ],
+      "status": null
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "evidence_ids": [
+        "blind",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v4-ansi"
+      ],
+      "reason": "All 28 independent stems lead to unique correct inward arrowheads with no bundled run. Twelve crossings (1/2/8/1) are marked by distinguishable bridges; seven touching-bend pairs are awkward but port orientations disambiguate them. Four apparent branch clusters are explicitly audited and rejected. Label-owner failures are recorded under semantic_fidelity/layout_fit, not invented topological branches.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 270 (user)",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/constraints/2"
+      ],
+      "status": "pass"
+    },
+    "border_integrity": {
+      "applicable": true,
+      "evidence_ids": [
+        "blind",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v4-ansi",
+        "v1-selected",
+        "v2-selected",
+        "v3-selected",
+        "v4-selected"
+      ],
+      "reason": "24/24 normal and 24/24 selected node occurrences have complete four-sided/cornered perimeters, each uniform in foreground RGB. All selected perimeters are gold RGB(216,166,87) and bold, including normal-gold nodes; no perimeter cell is missing or color-discontinuous. Side-attached paths do not overwrite borders. Simultaneous select-all proves the captured state, not drag-hover transitions; timed frame color evidence is absent and not needed to replace the supplied colored state captures.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/border_integrity"
+      ],
+      "status": "pass"
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "evidence_ids": [
+        "blind",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v4-ansi"
+      ],
+      "reason": "ANSI proves related hue families and proximity for each source role pair/group in each view: ISPs, MUXes, cores, firewalls, leaves, racks. In v3 BL1/BL2 and Leaf1/Leaf2 share a teal family and the same top row (28), with both spines above them. Semantic roles, not geometric depth, support these groups. No additional cross-view per-node hue-stability gate is imposed.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 248 (user)",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/constraints/1"
+      ],
+      "status": "pass"
+    },
+    "layout_fit": {
+      "applicable": true,
+      "evidence_ids": [
+        "blind",
+        "v4-ansi",
+        "v1-frames",
+        "v2-frames",
+        "v3-frames",
+        "v4-frames",
+        "metadata"
+      ],
+      "reason": "Every view measures 77x47 at natural 100%, and all 24 complete boxes and all visible character cells fit without pan, zoom or occlusion. However v4 [33,22,8,1] fuses two required dual labels into dualdual without a separator. This is a localized full-label readability violation, not clipping; complete topology coverage cannot waive it.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 158 (user)",
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/layout_fit"
+      ],
+      "status": "fail"
+    },
+    "semantic_fidelity": {
+      "applicable": true,
+      "evidence_ids": [
+        "blind",
+        "source",
+        "expected",
+        "generation-report",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v4-ansi",
+        "v1-frames",
+        "v2-frames",
+        "v3-frames",
+        "v4-frames"
+      ],
+      "reason": "All 18 concepts and all 28 endpoint/direction relations are visible, with complete four-view seams and stated physical-arrow convention. Nevertheless, the explicit remove-dots instruction is violated on all routes (critical F01), and 14 edge-label runs have unresolved owner ambiguity (F02; 15 per-edge labeled audits fail). No relation was lost at a view split.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json"
+      ],
+      "status": "fail"
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "evidence_ids": [
+        "metadata",
+        "candidate",
+        "hash-verification",
+        "spec-manifest",
+        "generation",
+        "attempts",
+        "blind",
+        "v1-manifest",
+        "v2-manifest",
+        "v3-manifest",
+        "v4-manifest"
+      ],
+      "reason": "Frozen candidate, binary, rubric, dataset, source/expected, specs, harness and artifacts hash-verify. Stage A preceded reveal and its hash is unchanged; DeepSeek generator and separate Sol reviewer identities are recorded. Four final checks, text/ANSI, select-all, timed frames, and final cleanup confirmations exist. The source-off motion is not a workflow substitute. Three additional owned panes have only cleanup claims after their probe directories were removed; exact discarded capture/close records cannot be verified. This missing trail blocks workflow/cleanup, not visual fit. Null Herdr pane width/rect is an explicitly frozen harness limitation; app viewport tokens and 77x47 ANSI grids prove display size.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/02/judge-full-task.md",
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/workflow_evidence"
+      ],
+      "status": "blocked"
+    }
+  },
+  "cleanup": {
+    "closed_pane_ids": [
+      "w7E:p7W",
+      "w7E:p7X",
+      "w7E:p7B",
+      "w7E:p7C"
+    ],
+    "owned_pane_ids": [
+      "w7E:p78",
+      "w7E:p79",
+      "w7E:p7B",
+      "w7E:p7C",
+      "w7E:p7W",
+      "w7E:p7X",
+      "w7E:p76"
+    ],
+    "reason": "No panes were opened by the reviewer. Four generator final-pane manifests retain confirmed_closed; generation claims all seven closed, but p76/p78/p79 discarded probe records are not supplied. The closed_pane_ids list includes only retained confirmations; it does not assert the other three remain open.",
+    "status": "blocked"
+  },
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "expected": "ispA (ISP A) -> mux1 (MUX 1); unlabeled; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            20,
+            9,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            20,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            20,
+            9,
+            1,
+            14
+          ]
+        }
+      ],
+      "observed": "v1: ISP A stem (20, 9); turns []; unique inward ▼ arrowhead (20, 22) at MUX 1. solid; crossing cells []; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Correctly unlabeled; no ISP protocol invented. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/0",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "e2",
+      "expected": "ispB (ISP B) -> mux1 (MUX 1); unlabeled; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            32,
+            9,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            22,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            22,
+            9,
+            11,
+            14
+          ]
+        }
+      ],
+      "observed": "v1: ISP B stem (32, 9); turns [(32, 20), (22, 20)]; unique inward ▼ arrowhead (22, 22) at MUX 1. solid; crossing cells []; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Correctly unlabeled; no ISP protocol invented. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/1",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "e3",
+      "expected": "ispC (ISP C) -> mux2 (MUX 2); unlabeled; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            43,
+            9,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            32,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            32,
+            9,
+            12,
+            14
+          ]
+        }
+      ],
+      "observed": "v1: ISP C stem (43, 9); turns [(43, 20), (33, 20), (33, 21), (32, 21)]; unique inward ▼ arrowhead (32, 22) at MUX 2. solid; crossing cells []; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Correctly unlabeled; no ISP protocol invented. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/2",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "e4",
+      "expected": "ispD (ISP D) -> mux2 (MUX 2); unlabeled; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            54,
+            9,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            34,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            34,
+            9,
+            21,
+            14
+          ]
+        }
+      ],
+      "observed": "v1: ISP D stem (54, 9); turns [(54, 21), (34, 21)]; unique inward ▼ arrowhead (34, 22) at MUX 2. solid; crossing cells []; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Correctly unlabeled; no ISP protocol invented. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/3",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "e5",
+      "expected": "mux1 (MUX 1) -> core1 (Core 1); x-connect; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [
+        "F02"
+      ],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            20,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            19,
+            40,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            19,
+            27,
+            2,
+            14
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            23,
+            33,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            23,
+            36,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            24,
+            38,
+            9,
+            1
+          ]
+        }
+      ],
+      "observed": "v1: MUX 1 stem (20, 27); turns [(20, 39), (19, 39)]; unique inward ▼ arrowhead (19, 40) at Core 1. solid; crossing cells []; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'x-connect' cannot be assigned uniquely from the indicated nearby runs; per-edge label audit fails although endpoints/direction pass. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/4",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "fail"
+    },
+    {
+      "edge_id": "e6",
+      "expected": "mux1 (MUX 1) -> core2 (Core 2); x-connect; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [
+        "F02"
+      ],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            22,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            31,
+            40,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            22,
+            27,
+            10,
+            14
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            23,
+            33,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            23,
+            36,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            24,
+            38,
+            9,
+            1
+          ]
+        }
+      ],
+      "observed": "v1: MUX 1 stem (22, 27); turns [(22, 39), (31, 39)]; unique inward ▼ arrowhead (31, 40) at Core 2. solid; crossing cells [(22, 37)]; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'x-connect' cannot be assigned uniquely from the indicated nearby runs; per-edge label audit fails although endpoints/direction pass. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/5",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "fail"
+    },
+    {
+      "edge_id": "e7",
+      "expected": "mux2 (MUX 2) -> core1 (Core 1); x-connect; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [
+        "F02"
+      ],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            32,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            21,
+            40,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            21,
+            27,
+            12,
+            14
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            23,
+            33,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            23,
+            36,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            24,
+            38,
+            9,
+            1
+          ]
+        }
+      ],
+      "observed": "v1: MUX 2 stem (32, 27); turns [(32, 37), (21, 37)]; unique inward ▼ arrowhead (21, 40) at Core 1. solid; crossing cells [(22, 37)]; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'x-connect' cannot be assigned uniquely from the indicated nearby runs; per-edge label audit fails although endpoints/direction pass. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/6",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "fail"
+    },
+    {
+      "edge_id": "e8",
+      "expected": "mux2 (MUX 2) -> core2 (Core 2); x-connect; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            34,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            33,
+            40,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            33,
+            27,
+            2,
+            14
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            36,
+            33,
+            9,
+            1
+          ]
+        }
+      ],
+      "observed": "v1: MUX 2 stem (34, 27); turns [(34, 39), (33, 39)]; unique inward ▼ arrowhead (33, 40) at Core 2. solid; crossing cells []; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'x-connect' is readable beside this route. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/7",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "e9",
+      "expected": "core1 (Core 1) -> fw1 (FW1 active); active; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [
+        "F02"
+      ],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            28,
+            9,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            26,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            26,
+            9,
+            3,
+            14
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            31,
+            14,
+            6,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            40,
+            20,
+            7,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            28,
+            38,
+            6,
+            1
+          ]
+        }
+      ],
+      "observed": "v2: Core 1 stem (28, 9); turns [(28, 20), (26, 20)]; unique inward ▼ arrowhead (26, 22) at FW1 active. solid; crossing cells []; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'active' cannot be assigned uniquely from the indicated nearby runs; per-edge label audit fails although endpoints/direction pass. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/8",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "fail"
+    },
+    {
+      "edge_id": "e10",
+      "expected": "core2 (Core 2) -> fw1 (FW1 active); active; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            45,
+            9,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            28,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            28,
+            9,
+            18,
+            14
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            34,
+            18,
+            6,
+            1
+          ]
+        }
+      ],
+      "observed": "v2: Core 2 stem (45, 9); turns [(45, 19), (29, 19), (29, 21), (28, 21)]; unique inward ▼ arrowhead (28, 22) at FW1 active. solid; crossing cells [(30, 19)]; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'active' is readable beside this route. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/9",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "e11",
+      "expected": "core1 (Core 1) -> fw2 (FW2 standby); standby; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            30,
+            9,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            42,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            30,
+            9,
+            13,
+            14
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            32,
+            15,
+            7,
+            1
+          ]
+        }
+      ],
+      "observed": "v2: Core 1 stem (30, 9); turns [(30, 21), (42, 21)]; unique inward ▼ arrowhead (42, 22) at FW2 standby. dashed; crossing cells [(30, 19)]; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'standby' is readable beside this route. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/10",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "e12",
+      "expected": "core2 (Core 2) -> fw2 (FW2 standby); standby; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [
+        "F02"
+      ],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            47,
+            9,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            44,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            44,
+            9,
+            4,
+            14
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            31,
+            14,
+            6,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            40,
+            20,
+            7,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            28,
+            38,
+            6,
+            1
+          ]
+        }
+      ],
+      "observed": "v2: Core 2 stem (47, 9); turns [(47, 21), (44, 21)]; unique inward ▼ arrowhead (44, 22) at FW2 standby. dashed; crossing cells []; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'standby' cannot be assigned uniquely from the indicated nearby runs; per-edge label audit fails although endpoints/direction pass. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/11",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "fail"
+    },
+    {
+      "edge_id": "e13",
+      "expected": "fw1 (FW1 active) -> bl1 (BL 1); active; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [
+        "F02"
+      ],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            26,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            29,
+            40,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            26,
+            27,
+            4,
+            14
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            31,
+            14,
+            6,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            40,
+            20,
+            7,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            28,
+            38,
+            6,
+            1
+          ]
+        }
+      ],
+      "observed": "v2: FW1 active stem (26, 27); turns [(26, 39), (29, 39)]; unique inward ▼ arrowhead (29, 40) at BL 1. solid; crossing cells []; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'active' cannot be assigned uniquely from the indicated nearby runs; per-edge label audit fails although endpoints/direction pass. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/12",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "fail"
+    },
+    {
+      "edge_id": "e14",
+      "expected": "fw1 (FW1 active) -> bl2 (BL 2); active; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            28,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            46,
+            40,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            28,
+            27,
+            19,
+            14
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            34,
+            36,
+            6,
+            1
+          ]
+        }
+      ],
+      "observed": "v2: FW1 active stem (28, 27); turns [(28, 37), (46, 37)]; unique inward ▼ arrowhead (46, 40) at BL 2. solid; crossing cells [(42, 37)]; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'active' is readable beside this route. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/13",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "e15",
+      "expected": "fw2 (FW2 standby) -> bl1 (BL 1); standby; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            42,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            31,
+            40,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            31,
+            27,
+            12,
+            14
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            35,
+            33,
+            7,
+            1
+          ]
+        }
+      ],
+      "observed": "v2: FW2 standby stem (42, 27); turns [(42, 39), (31, 39)]; unique inward ▼ arrowhead (31, 40) at BL 1. dashed; crossing cells [(42, 37)]; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'standby' is readable beside this route. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/14",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "e16",
+      "expected": "fw2 (FW2 standby) -> bl2 (BL 2); standby; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            44,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            48,
+            40,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            44,
+            27,
+            5,
+            14
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            46,
+            31,
+            7,
+            1
+          ]
+        }
+      ],
+      "observed": "v2: FW2 standby stem (44, 27); turns [(44, 35), (48, 35)]; unique inward ▼ arrowhead (48, 40) at BL 2. dashed; crossing cells []; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'standby' is readable beside this route. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/15",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "e17",
+      "expected": "bl1 (BL 1) -> sp1 (Spine 1); ECMP; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            54,
+            29,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            16,
+            17,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            15,
+            14,
+            40,
+            16
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            54,
+            22,
+            4,
+            1
+          ]
+        }
+      ],
+      "observed": "v3: BL 1 stem (54, 29); turns [(52, 29), (52, 14), (15, 14), (15, 17)]; unique inward ▶ arrowhead (16, 17) at Spine 1. solid; crossing cells []; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'ECMP' is readable beside this route. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/16",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "e18",
+      "expected": "bl1 (BL 1) -> sp2 (Spine 2); ECMP; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            54,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            29,
+            17,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            27,
+            17,
+            28,
+            17
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            38,
+            32,
+            4,
+            1
+          ]
+        }
+      ],
+      "observed": "v3: BL 1 stem (54, 31); turns [(52, 31), (52, 33), (27, 33), (27, 17)]; unique inward ▶ arrowhead (29, 17) at Spine 2. solid; crossing cells [(27, 29), (27, 26), (27, 24)]; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'ECMP' is readable beside this route. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/17",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "e19",
+      "expected": "bl2 (BL 2) -> sp1 (Spine 1); ECMP; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [
+        "F02"
+      ],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            18,
+            29,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            16,
+            19,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            15,
+            19,
+            4,
+            11
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            36,
+            20,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            35,
+            22,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            23,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            30,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            36,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            17,
+            27,
+            4,
+            1
+          ]
+        }
+      ],
+      "observed": "v3: BL 2 stem (18, 29); turns [(15, 29), (15, 19)]; unique inward ▶ arrowhead (16, 19) at Spine 1. solid; crossing cells []; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'ECMP' cannot be assigned uniquely from the indicated nearby runs; per-edge label audit fails although endpoints/direction pass. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/18",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "fail"
+    },
+    {
+      "edge_id": "e20",
+      "expected": "bl2 (BL 2) -> sp2 (Spine 2); ECMP; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [
+        "F02"
+      ],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            25,
+            29,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            39,
+            17,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            25,
+            17,
+            16,
+            13
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            36,
+            20,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            35,
+            22,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            23,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            30,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            36,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            17,
+            27,
+            4,
+            1
+          ]
+        }
+      ],
+      "observed": "v3: BL 2 stem (25, 29); turns [(29, 29), (29, 23), (40, 23), (40, 17)]; unique inward ◀ arrowhead (39, 17) at Spine 2. solid; crossing cells [(27, 29), (29, 26), (29, 24), (34, 23), (40, 21)]; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'ECMP' cannot be assigned uniquely from the indicated nearby runs; per-edge label audit fails although endpoints/direction pass. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/19",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "fail"
+    },
+    {
+      "edge_id": "e21",
+      "expected": "sp1 (Spine 1) -> leaf1 (Leaf 1); ECMP; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [
+        "F02"
+      ],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            18,
+            21,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            32,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            18,
+            21,
+            15,
+            7
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            36,
+            20,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            35,
+            22,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            23,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            30,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            36,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            17,
+            27,
+            4,
+            1
+          ]
+        }
+      ],
+      "observed": "v3: Spine 1 stem (18, 21); turns [(18, 26), (32, 26)]; unique inward ▼ arrowhead (32, 27) at Leaf 1. solid; crossing cells [(27, 26), (29, 26)]; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'ECMP' cannot be assigned uniquely from the indicated nearby runs; per-edge label audit fails although endpoints/direction pass. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/20",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "fail"
+    },
+    {
+      "edge_id": "e22",
+      "expected": "sp1 (Spine 1) -> leaf2 (Leaf 2); ECMP; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [
+        "F02"
+      ],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            20,
+            21,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            44,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            20,
+            21,
+            25,
+            7
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            36,
+            20,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            35,
+            22,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            23,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            30,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            36,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            17,
+            27,
+            4,
+            1
+          ]
+        }
+      ],
+      "observed": "v3: Spine 1 stem (20, 21); turns [(20, 24), (44, 24)]; unique inward ▼ arrowhead (44, 27) at Leaf 2. solid; crossing cells [(27, 24), (29, 24), (34, 24)]; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'ECMP' cannot be assigned uniquely from the indicated nearby runs; per-edge label audit fails although endpoints/direction pass. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/21",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "fail"
+    },
+    {
+      "edge_id": "e23",
+      "expected": "sp2 (Spine 2) -> leaf1 (Leaf 1); ECMP; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [
+        "F02"
+      ],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            31,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            34,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            31,
+            20,
+            4,
+            8
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            36,
+            20,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            35,
+            22,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            23,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            30,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            36,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            17,
+            27,
+            4,
+            1
+          ]
+        }
+      ],
+      "observed": "v3: Spine 2 stem (31, 20); turns [(31, 22), (34, 22)]; unique inward ▼ arrowhead (34, 27) at Leaf 1. solid; crossing cells [(34, 23), (34, 24)]; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'ECMP' cannot be assigned uniquely from the indicated nearby runs; per-edge label audit fails although endpoints/direction pass. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/22",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "fail"
+    },
+    {
+      "edge_id": "e24",
+      "expected": "sp2 (Spine 2) -> leaf2 (Leaf 2); ECMP; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [
+        "F02"
+      ],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            33,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            46,
+            27,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            33,
+            20,
+            14,
+            8
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            36,
+            20,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            35,
+            22,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            23,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            30,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            36,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            17,
+            27,
+            4,
+            1
+          ]
+        }
+      ],
+      "observed": "v3: Spine 2 stem (33, 20); turns [(33, 21), (46, 21)]; unique inward ▼ arrowhead (46, 27) at Leaf 2. solid; crossing cells [(40, 21)]; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'ECMP' cannot be assigned uniquely from the indicated nearby runs; per-edge label audit fails although endpoints/direction pass. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/23",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "fail"
+    },
+    {
+      "edge_id": "e25",
+      "expected": "leaf1 (Leaf 1) -> rack1 (Rack 1); dual; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [
+        "F02",
+        "F03"
+      ],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            30,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            30,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            30,
+            22,
+            1,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            33,
+            22,
+            8,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            35,
+            25,
+            4,
+            1
+          ]
+        }
+      ],
+      "observed": "v4: Leaf 1 stem (30, 22); turns []; unique inward ▼ arrowhead (30, 26) at Rack 1. solid; crossing cells []; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'dual' cannot be assigned uniquely from the indicated nearby runs; per-edge label audit fails although endpoints/direction pass. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/24",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "fail"
+    },
+    {
+      "edge_id": "e26",
+      "expected": "leaf2 (Leaf 2) -> rack1 (Rack 1); dual; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [
+        "F02",
+        "F03"
+      ],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            42,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            32,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            32,
+            22,
+            11,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            33,
+            22,
+            8,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            35,
+            25,
+            4,
+            1
+          ]
+        }
+      ],
+      "observed": "v4: Leaf 2 stem (42, 22); turns [(42, 23), (33, 23), (33, 25), (32, 25)]; unique inward ▼ arrowhead (32, 26) at Rack 1. solid; crossing cells [(33, 24)]; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'dual' cannot be assigned uniquely from the indicated nearby runs; per-edge label audit fails although endpoints/direction pass. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/25",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "fail"
+    },
+    {
+      "edge_id": "e27",
+      "expected": "leaf1 (Leaf 1) -> rack2 (Rack 2); dual; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            32,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            42,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            32,
+            22,
+            11,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            38,
+            26,
+            4,
+            1
+          ]
+        }
+      ],
+      "observed": "v4: Leaf 1 stem (32, 22); turns [(32, 24), (42, 24)]; unique inward ▼ arrowhead (42, 26) at Rack 2. solid; crossing cells [(33, 24)]; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'dual' is readable beside this route. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/26",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "e28",
+      "expected": "leaf2 (Leaf 2) -> rack2 (Rack 2); dual; independent physical connectivity, arrowhead at audited to endpoint, not one-way traffic.",
+      "finding_ids": [
+        "F02",
+        "F03"
+      ],
+      "kind": "independent_link",
+      "locations": [
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            44,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            44,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            44,
+            22,
+            1,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            33,
+            22,
+            8,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            35,
+            25,
+            4,
+            1
+          ]
+        }
+      ],
+      "observed": "v4: Leaf 2 stem (44, 22); turns []; unique inward ▼ arrowhead (44, 26) at Rack 2. solid; crossing cells []; no shared run, trunk, or junction. Complete route is glyph-traceable without endpoint guessing. Required label 'dual' cannot be assigned uniquely from the indicated nearby runs; per-edge label audit fails although endpoints/direction pass. Physical orientation follows the stated audited-to-endpoint convention, not a traffic-direction assertion. Source-off animation remains a case-level semantic defect F01 on this route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges/27",
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt"
+      ],
+      "status": "fail"
+    },
+    {
+      "edge_id": "apparent-v1-center",
+      "expected": null,
+      "finding_ids": [],
+      "kind": "unexpected_link",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            32,
+            20,
+            3,
+            2
+          ]
+        }
+      ],
+      "observed": "Audit of an apparent extra relationship, rejected on visible glyph orientation: Three edge-adjacent pairs of corners can look branched; their openings separate e2/e3/e4. No extra connection.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 270 (user)",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/constraints/2"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "apparent-v2-upper",
+      "expected": null,
+      "finding_ids": [],
+      "kind": "unexpected_link",
+      "locations": [
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            28,
+            19,
+            3,
+            3
+          ]
+        }
+      ],
+      "observed": "Audit of an apparent extra relationship, rejected on visible glyph orientation: Two distinct-route touching-bend pairs plus bridge (30,19); e9/e10/e11 remain separate. No extra connection.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 270 (user)",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/constraints/2"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "apparent-v3-bridge-stack",
+      "expected": null,
+      "finding_ids": [],
+      "kind": "unexpected_link",
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            34,
+            22,
+            1,
+            3
+          ]
+        }
+      ],
+      "observed": "Audit of an apparent extra relationship, rejected on visible glyph orientation: Turn above two vertically adjacent bridges; e20/e22/e23 do not branch into each other. No extra connection.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 270 (user)",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/constraints/2"
+      ],
+      "status": "pass"
+    },
+    {
+      "edge_id": "apparent-v4-knot",
+      "expected": null,
+      "finding_ids": [],
+      "kind": "unexpected_link",
+      "locations": [
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            32,
+            23,
+            11,
+            3
+          ]
+        }
+      ],
+      "observed": "Audit of an apparent extra relationship, rejected on visible glyph orientation: Bridge and immediately adjacent corners produce a knot but e26/e27 cross, not merge; both arrowheads remain unique. No extra connection.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 270 (user)",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/constraints/2"
+      ],
+      "status": "pass"
+    }
+  ],
+  "evidence": [
+    {
+      "capture": null,
+      "description": "Frozen Stage-A observations saved before expectation reveal.",
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/02/reviews/datacenter-redundancy/observed-first.md",
+      "sha256": "16901b56f026228236c66d0dc7e5343ecceeaa22ab42885e76cde470eb383898"
+    },
+    {
+      "capture": null,
+      "description": "Deterministic sorted repository-relative final spec paths and actual SHA-256 pairs; top-level spec_sha256 hashes this file.",
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/02/reviews/datacenter-redundancy/spec-manifest.json",
+      "sha256": "1e39f8068c41e2611e4e038e9a8416086b41571ed2ae80e593b9bcaa879ec87f"
+    },
+    {
+      "capture": null,
+      "description": "Actual-byte verification against frozen metadata, artifact manifests, and attempt hash records; no rendering.",
+      "id": "hash-verification",
+      "path": "docs/visualize-eval/rounds/02/reviews/datacenter-redundancy/hash-verification.json",
+      "sha256": "66d19a6a78c34384c11c4e57aa9326398d3db6f884dc3d2b48a47595b246ece7"
+    },
+    {
+      "capture": null,
+      "description": "Round-02 frozen baseline; authoritative Sol identity, tab-label correction, and pane-cols fallback.",
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/02/metadata.json",
+      "sha256": "e40d17b02025d270a79fe0dd437fb908ed07c048ea6cbe043d4e17ccaf94bc45"
+    },
+    {
+      "capture": null,
+      "description": "Seven categories and embedded result_schema.",
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/02/rubric.json",
+      "sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f"
+    },
+    {
+      "capture": null,
+      "description": "Frozen source-backed manifest; this case animation=off.",
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05"
+    },
+    {
+      "capture": null,
+      "description": "This case user requirements and qualified physical-link relationships.",
+      "id": "source",
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+      "sha256": "a3051af3eeeec31aee53558dafbbea5d061dc74253618fd6940eba5c39b5bb98"
+    },
+    {
+      "capture": null,
+      "description": "This case 18 concepts, 28 required relationships, physical-link and layout constraints.",
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/expected.json",
+      "sha256": "926e866fbdbb3eaac5b7a21360905d1f621a7a6386139afab303e8ba7e62ed47"
+    },
+    {
+      "capture": null,
+      "description": "Frozen candidate skill, not the current skill tree.",
+      "id": "candidate",
+      "path": "docs/visualize-eval/rounds/02/SKILL.md",
+      "sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70"
+    },
+    {
+      "capture": null,
+      "description": "Generator identity, arrow convention, declared coverage and cleanup claims; not visual proof.",
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/generation.json",
+      "sha256": "19245185ec0334cdbd10c04b746cff7acceb8ba95d198114dfbe581783fc4db2"
+    },
+    {
+      "capture": null,
+      "description": "Generation report and stated physical-arrow convention; not visual proof.",
+      "id": "generation-report",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/generation.md",
+      "sha256": "e073cdaaf549a15b5eb53a9b61a2fbc1207ac6c8c86a8cf4b11a7f9bfa7c6710"
+    },
+    {
+      "capture": null,
+      "description": "Ten final/alternative attempt records; rejected capture and cleanup probes are not retained here.",
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/attempts.json",
+      "sha256": "89085e64b55d53da25765860565323758d8fcfb047dd80597c0a66db572ef798"
+    },
+    {
+      "capture": null,
+      "description": "Final executed spec; intent only, not proof of visibility.",
+      "id": "v1-spec",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/v1.json",
+      "sha256": "98e8ba90854d81d8fae0f5de5ca7d772462d9a17c7e083a36dff6377ab9d1ccb"
+    },
+    {
+      "capture": null,
+      "description": "Frozen execution and capture windows, check_exit=0, four final-pane cleanup confirmation, artifact hashes; pane_cols/pane_rect null.",
+      "id": "v1-manifest",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/manifest.json",
+      "sha256": "5f4ff4cca77ee0be50ba63fa34308b67a1849bb9047add03b346e1802a3c850d"
+    },
+    {
+      "capture": null,
+      "description": "Preserved final check output; no warning, not visual proof. Exit status is in the manifest.",
+      "id": "v1-check",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/check.txt",
+      "sha256": "f06d53f3b6df808f645cb7c5d93d7e4ac818fd401212e55a20e6e65427fb105d"
+    },
+    {
+      "capture": null,
+      "description": "Executed absolute binary hash record; actual frozen binary bytes independently verified.",
+      "id": "v1-binary-record",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "normal screen",
+        "state": "normal",
+        "timestamp": "2026-11-02T10:03:00Z / 2026-11-02T10:03:04Z",
+        "view": "v1"
+      },
+      "description": "Actual supplied v1 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v1-text",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-text.txt",
+      "sha256": "478f64bf24b201be0f9265b22f23e52f84176a57ab582fb25efd0141e75d691a"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "ansi",
+        "frame": "normal screen",
+        "state": "normal",
+        "timestamp": "2026-11-02T10:03:00Z / 2026-11-02T10:03:04Z",
+        "view": "v1"
+      },
+      "description": "Actual supplied v1 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v1-ansi",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-ansi.ansi",
+      "sha256": "a9dbc871345212e82fe49bb84d4f871d964459a1dff0143038fde1277db9909d"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "ansi",
+        "frame": "--select-all screen",
+        "state": "all nodes selected",
+        "timestamp": "2026-11-02T10:03:00Z / 2026-11-02T10:03:04Z",
+        "view": "v1"
+      },
+      "description": "Actual supplied v1 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v1-selected",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-selected.ansi",
+      "sha256": "f49c853c0406e77cd2b49872cd187fdd48db5ac379b6b2ff67b71e6566955781"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frames 0..4 at 0..400ms",
+        "state": "five timed normal-state diagram screens",
+        "timestamp": "2026-11-02T10:03:00Z / 2026-11-02T10:03:04Z",
+        "view": "v1"
+      },
+      "description": "Actual supplied v1 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v1-frames",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-frames.txt",
+      "sha256": "6ec17bb8eeb886fe18371e4070f252b13b7b1018e2ff71fe0301f79de567e88d"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "ansi",
+        "frame": "frames 0..4 at 0..400ms",
+        "state": "shell ANSI transcript; diagram frames have no foreground attributes",
+        "timestamp": "2026-11-02T10:03:00Z / 2026-11-02T10:03:04Z",
+        "view": "v1"
+      },
+      "description": "Actual supplied v1 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v1-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-frames.ansi",
+      "sha256": "87d3a42cf2932c754a3597282d4885f27228563206731e256e6280a713d3e770"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 0 at 0ms",
+        "state": "normal, animated",
+        "timestamp": "0ms",
+        "view": "v1"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v1-frame0",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-frames.txt",
+      "sha256": "6ec17bb8eeb886fe18371e4070f252b13b7b1018e2ff71fe0301f79de567e88d"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 1 at 100ms",
+        "state": "normal, animated",
+        "timestamp": "100ms",
+        "view": "v1"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v1-frame1",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-frames.txt",
+      "sha256": "6ec17bb8eeb886fe18371e4070f252b13b7b1018e2ff71fe0301f79de567e88d"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 2 at 200ms",
+        "state": "normal, animated",
+        "timestamp": "200ms",
+        "view": "v1"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v1-frame2",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-frames.txt",
+      "sha256": "6ec17bb8eeb886fe18371e4070f252b13b7b1018e2ff71fe0301f79de567e88d"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 3 at 300ms",
+        "state": "normal, animated",
+        "timestamp": "300ms",
+        "view": "v1"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v1-frame3",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-frames.txt",
+      "sha256": "6ec17bb8eeb886fe18371e4070f252b13b7b1018e2ff71fe0301f79de567e88d"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 4 at 400ms",
+        "state": "normal, animated",
+        "timestamp": "400ms",
+        "view": "v1"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v1-frame4",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-frames.txt",
+      "sha256": "6ec17bb8eeb886fe18371e4070f252b13b7b1018e2ff71fe0301f79de567e88d"
+    },
+    {
+      "capture": null,
+      "description": "Preserved 24-check validator output; passing output does not override capture defects.",
+      "id": "v1-validation",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/validation/v1.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6"
+    },
+    {
+      "capture": null,
+      "description": "Final executed spec; intent only, not proof of visibility.",
+      "id": "v2-spec",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/v2.json",
+      "sha256": "9a8b1950a7595b958fd6b2cbc6892a59cd48b04d1c0c4e9bb8c6833aac0577f2"
+    },
+    {
+      "capture": null,
+      "description": "Frozen execution and capture windows, check_exit=0, four final-pane cleanup confirmation, artifact hashes; pane_cols/pane_rect null.",
+      "id": "v2-manifest",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/manifest.json",
+      "sha256": "ffbce17dafd5770c376b09d48f93a5dcfd31483530cb8a61c841c7637335e4e3"
+    },
+    {
+      "capture": null,
+      "description": "Preserved final check output; no warning, not visual proof. Exit status is in the manifest.",
+      "id": "v2-check",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/check.txt",
+      "sha256": "c4307177f06ecee2bad85e7699c033f0b728fa0afbd0989eb031801ae9cf9496"
+    },
+    {
+      "capture": null,
+      "description": "Executed absolute binary hash record; actual frozen binary bytes independently verified.",
+      "id": "v2-binary-record",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "normal screen",
+        "state": "normal",
+        "timestamp": "2026-11-02T10:03:04Z / 2026-11-02T10:03:08Z",
+        "view": "v2"
+      },
+      "description": "Actual supplied v2 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v2-text",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-text.txt",
+      "sha256": "822dd591b9f41beb089ad5b336f735674ab91f0fccf25b293062973f361f44ea"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "ansi",
+        "frame": "normal screen",
+        "state": "normal",
+        "timestamp": "2026-11-02T10:03:04Z / 2026-11-02T10:03:08Z",
+        "view": "v2"
+      },
+      "description": "Actual supplied v2 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v2-ansi",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-ansi.ansi",
+      "sha256": "70205fe3d9c3f66d32301bc1542378355689de462e67d24b532df0b2e09e873d"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "ansi",
+        "frame": "--select-all screen",
+        "state": "all nodes selected",
+        "timestamp": "2026-11-02T10:03:04Z / 2026-11-02T10:03:08Z",
+        "view": "v2"
+      },
+      "description": "Actual supplied v2 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v2-selected",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-selected.ansi",
+      "sha256": "80ad0288f590fd0b3aab7fbdb957665ab7714c9b35bd417e95b39a3546d9659d"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frames 0..4 at 0..400ms",
+        "state": "five timed normal-state diagram screens",
+        "timestamp": "2026-11-02T10:03:04Z / 2026-11-02T10:03:08Z",
+        "view": "v2"
+      },
+      "description": "Actual supplied v2 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v2-frames",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-frames.txt",
+      "sha256": "cefe60393aa63c0cfa39dfed72fed6b0be4d62c38f14427f6970465da8184b6d"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "ansi",
+        "frame": "frames 0..4 at 0..400ms",
+        "state": "shell ANSI transcript; diagram frames have no foreground attributes",
+        "timestamp": "2026-11-02T10:03:04Z / 2026-11-02T10:03:08Z",
+        "view": "v2"
+      },
+      "description": "Actual supplied v2 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v2-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-frames.ansi",
+      "sha256": "71f06ce0c66eb781fcf4a8df981b663ef6dbbd5821128ef261c33641276d494e"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 0 at 0ms",
+        "state": "normal, animated",
+        "timestamp": "0ms",
+        "view": "v2"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v2-frame0",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-frames.txt",
+      "sha256": "cefe60393aa63c0cfa39dfed72fed6b0be4d62c38f14427f6970465da8184b6d"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 1 at 100ms",
+        "state": "normal, animated",
+        "timestamp": "100ms",
+        "view": "v2"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v2-frame1",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-frames.txt",
+      "sha256": "cefe60393aa63c0cfa39dfed72fed6b0be4d62c38f14427f6970465da8184b6d"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 2 at 200ms",
+        "state": "normal, animated",
+        "timestamp": "200ms",
+        "view": "v2"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v2-frame2",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-frames.txt",
+      "sha256": "cefe60393aa63c0cfa39dfed72fed6b0be4d62c38f14427f6970465da8184b6d"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 3 at 300ms",
+        "state": "normal, animated",
+        "timestamp": "300ms",
+        "view": "v2"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v2-frame3",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-frames.txt",
+      "sha256": "cefe60393aa63c0cfa39dfed72fed6b0be4d62c38f14427f6970465da8184b6d"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 4 at 400ms",
+        "state": "normal, animated",
+        "timestamp": "400ms",
+        "view": "v2"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v2-frame4",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-frames.txt",
+      "sha256": "cefe60393aa63c0cfa39dfed72fed6b0be4d62c38f14427f6970465da8184b6d"
+    },
+    {
+      "capture": null,
+      "description": "Preserved 24-check validator output; passing output does not override capture defects.",
+      "id": "v2-validation",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/validation/v2.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6"
+    },
+    {
+      "capture": null,
+      "description": "Final executed spec; intent only, not proof of visibility.",
+      "id": "v3-spec",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/v3.json",
+      "sha256": "c6bdfb415415e794cdd6cc2d85fd10dcb2f2b7d842f2b65ec59f2de7b4a25429"
+    },
+    {
+      "capture": null,
+      "description": "Frozen execution and capture windows, check_exit=0, four final-pane cleanup confirmation, artifact hashes; pane_cols/pane_rect null.",
+      "id": "v3-manifest",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/manifest.json",
+      "sha256": "4b1b8251ee4cbfdf94f326dff192c1954dcd9ed0bec65de477e28a1ef3ce7c9b"
+    },
+    {
+      "capture": null,
+      "description": "Preserved final check output; no warning, not visual proof. Exit status is in the manifest.",
+      "id": "v3-check",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/check.txt",
+      "sha256": "abc97dbc205641ca3f48c522e5d520c55bda112842c9dd78f5648e60c7f65d72"
+    },
+    {
+      "capture": null,
+      "description": "Executed absolute binary hash record; actual frozen binary bytes independently verified.",
+      "id": "v3-binary-record",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "normal screen",
+        "state": "normal",
+        "timestamp": "2026-11-02T10:01:09Z / 2026-11-02T10:01:13Z",
+        "view": "v3"
+      },
+      "description": "Actual supplied v3 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v3-text",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-text.txt",
+      "sha256": "6f76e824bdc4e98ed238f1d493ee50f2b780d8a83e8d8ab18912e70464d7907a"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "ansi",
+        "frame": "normal screen",
+        "state": "normal",
+        "timestamp": "2026-11-02T10:01:09Z / 2026-11-02T10:01:13Z",
+        "view": "v3"
+      },
+      "description": "Actual supplied v3 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v3-ansi",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-ansi.ansi",
+      "sha256": "dbeebed84c1a0ff98313579a7d961d6e8d4dbf0f79ed5b0782fe5d9a7a53052d"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "ansi",
+        "frame": "--select-all screen",
+        "state": "all nodes selected",
+        "timestamp": "2026-11-02T10:01:09Z / 2026-11-02T10:01:13Z",
+        "view": "v3"
+      },
+      "description": "Actual supplied v3 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v3-selected",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-selected.ansi",
+      "sha256": "c04fa2c9c0c345ef82bfe99f0627a1421c8b6b19f76376d85ffcb7a132a7b920"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frames 0..4 at 0..400ms",
+        "state": "five timed normal-state diagram screens",
+        "timestamp": "2026-11-02T10:01:09Z / 2026-11-02T10:01:13Z",
+        "view": "v3"
+      },
+      "description": "Actual supplied v3 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v3-frames",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-frames.txt",
+      "sha256": "b196347e167536f025c5fbf783cae2ac0327119cba6fb0907298473133df8f54"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "ansi",
+        "frame": "frames 0..4 at 0..400ms",
+        "state": "shell ANSI transcript; diagram frames have no foreground attributes",
+        "timestamp": "2026-11-02T10:01:09Z / 2026-11-02T10:01:13Z",
+        "view": "v3"
+      },
+      "description": "Actual supplied v3 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v3-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-frames.ansi",
+      "sha256": "7ecc89cda4751f81135d2d15560207f6cb27e83feafaf45a895361d77c9278bc"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 0 at 0ms",
+        "state": "normal, animated",
+        "timestamp": "0ms",
+        "view": "v3"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v3-frame0",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-frames.txt",
+      "sha256": "b196347e167536f025c5fbf783cae2ac0327119cba6fb0907298473133df8f54"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 1 at 100ms",
+        "state": "normal, animated",
+        "timestamp": "100ms",
+        "view": "v3"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v3-frame1",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-frames.txt",
+      "sha256": "b196347e167536f025c5fbf783cae2ac0327119cba6fb0907298473133df8f54"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 2 at 200ms",
+        "state": "normal, animated",
+        "timestamp": "200ms",
+        "view": "v3"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v3-frame2",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-frames.txt",
+      "sha256": "b196347e167536f025c5fbf783cae2ac0327119cba6fb0907298473133df8f54"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 3 at 300ms",
+        "state": "normal, animated",
+        "timestamp": "300ms",
+        "view": "v3"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v3-frame3",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-frames.txt",
+      "sha256": "b196347e167536f025c5fbf783cae2ac0327119cba6fb0907298473133df8f54"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 4 at 400ms",
+        "state": "normal, animated",
+        "timestamp": "400ms",
+        "view": "v3"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v3-frame4",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-frames.txt",
+      "sha256": "b196347e167536f025c5fbf783cae2ac0327119cba6fb0907298473133df8f54"
+    },
+    {
+      "capture": null,
+      "description": "Preserved 24-check validator output; passing output does not override capture defects.",
+      "id": "v3-validation",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/validation/v3.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6"
+    },
+    {
+      "capture": null,
+      "description": "Final executed spec; intent only, not proof of visibility.",
+      "id": "v4-spec",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/v4.json",
+      "sha256": "44cbe30cb0574e53ac01f5e3cd547ee05bb3687397a140e703d790e5346a619a"
+    },
+    {
+      "capture": null,
+      "description": "Frozen execution and capture windows, check_exit=0, four final-pane cleanup confirmation, artifact hashes; pane_cols/pane_rect null.",
+      "id": "v4-manifest",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/manifest.json",
+      "sha256": "08e25508214d22fe2efa4489075a552950d76e81ba0872b758b9ada3cc23e90e"
+    },
+    {
+      "capture": null,
+      "description": "Preserved final check output; no warning, not visual proof. Exit status is in the manifest.",
+      "id": "v4-check",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/check.txt",
+      "sha256": "44e5a23ebb7e08855fdd75e6159f3867ac41c9b3569aca48770a1c8844e454cf"
+    },
+    {
+      "capture": null,
+      "description": "Executed absolute binary hash record; actual frozen binary bytes independently verified.",
+      "id": "v4-binary-record",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "normal screen",
+        "state": "normal",
+        "timestamp": "2026-11-02T10:01:14Z / 2026-11-02T10:01:18Z",
+        "view": "v4"
+      },
+      "description": "Actual supplied v4 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v4-text",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-text.txt",
+      "sha256": "4d9b6ee764776dcf7a073c19ea57a4aac1ca87e64d9bd0034234c86f1a810bd7"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "ansi",
+        "frame": "normal screen",
+        "state": "normal",
+        "timestamp": "2026-11-02T10:01:14Z / 2026-11-02T10:01:18Z",
+        "view": "v4"
+      },
+      "description": "Actual supplied v4 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v4-ansi",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-ansi.ansi",
+      "sha256": "b8b738f5d289c75b042b2b19279610a217ad77457294f1271ce0a3392b6283ff"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "ansi",
+        "frame": "--select-all screen",
+        "state": "all nodes selected",
+        "timestamp": "2026-11-02T10:01:14Z / 2026-11-02T10:01:18Z",
+        "view": "v4"
+      },
+      "description": "Actual supplied v4 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v4-selected",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-selected.ansi",
+      "sha256": "90448a5f8397678abceb2c65b9af2f3f917bf08efc1f062874d5066df5ef56b0"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frames 0..4 at 0..400ms",
+        "state": "five timed normal-state diagram screens",
+        "timestamp": "2026-11-02T10:01:14Z / 2026-11-02T10:01:18Z",
+        "view": "v4"
+      },
+      "description": "Actual supplied v4 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v4-frames",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-frames.txt",
+      "sha256": "7a5a689494f2414340ba2f0870adf5fa84068af802d7e5661618f158fab57e7e"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "ansi",
+        "frame": "frames 0..4 at 0..400ms",
+        "state": "shell ANSI transcript; diagram frames have no foreground attributes",
+        "timestamp": "2026-11-02T10:01:14Z / 2026-11-02T10:01:18Z",
+        "view": "v4"
+      },
+      "description": "Actual supplied v4 capture. Timestamp field is the recorded capture-window bounds, not an invented exact screen instant.",
+      "id": "v4-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-frames.ansi",
+      "sha256": "18252f959b7109fdf722a2f5185c4c435063e0c33b76851f1e1db84a81d61db3"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 0 at 0ms",
+        "state": "normal, animated",
+        "timestamp": "0ms",
+        "view": "v4"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v4-frame0",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-frames.txt",
+      "sha256": "7a5a689494f2414340ba2f0870adf5fa84068af802d7e5661618f158fab57e7e"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 1 at 100ms",
+        "state": "normal, animated",
+        "timestamp": "100ms",
+        "view": "v4"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v4-frame1",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-frames.txt",
+      "sha256": "7a5a689494f2414340ba2f0870adf5fa84068af802d7e5661618f158fab57e7e"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 2 at 200ms",
+        "state": "normal, animated",
+        "timestamp": "200ms",
+        "view": "v4"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v4-frame2",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-frames.txt",
+      "sha256": "7a5a689494f2414340ba2f0870adf5fa84068af802d7e5661618f158fab57e7e"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 3 at 300ms",
+        "state": "normal, animated",
+        "timestamp": "300ms",
+        "view": "v4"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v4-frame3",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-frames.txt",
+      "sha256": "7a5a689494f2414340ba2f0870adf5fa84068af802d7e5661618f158fab57e7e"
+    },
+    {
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "format": "text",
+        "frame": "frame 4 at 400ms",
+        "state": "normal, animated",
+        "timestamp": "400ms",
+        "view": "v4"
+      },
+      "description": "Frame-specific reference into the supplied multi-frame text transcript. Regions are relative to this frame's title row, not transcript line 1.",
+      "id": "v4-frame4",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-frames.txt",
+      "sha256": "7a5a689494f2414340ba2f0870adf5fa84068af802d7e5661618f158fab57e7e"
+    },
+    {
+      "capture": null,
+      "description": "Preserved 24-check validator output; passing output does not override capture defects.",
+      "id": "v4-validation",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/validation/v4.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6"
+    },
+    {
+      "capture": null,
+      "description": "Preserved attempt spec; discarded pane captures and close probes are not available for independent review.",
+      "id": "attempt-v1-a1",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/attempts/v1-a1.json",
+      "sha256": "98e8ba90854d81d8fae0f5de5ca7d772462d9a17c7e083a36dff6377ab9d1ccb"
+    },
+    {
+      "capture": null,
+      "description": "Preserved attempt spec; discarded pane captures and close probes are not available for independent review.",
+      "id": "attempt-v1-a2-compact",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/attempts/v1-a2-compact.json",
+      "sha256": "7dda6d6f71a784b2d861a2a1b4492fa1f94a7876238574de1c07333b88064c4a"
+    },
+    {
+      "capture": null,
+      "description": "Preserved attempt spec; discarded pane captures and close probes are not available for independent review.",
+      "id": "attempt-v1-a3",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/attempts/v1-a3.json",
+      "sha256": "cf242609e1b8cb00670db40fe6cd49a1ba4790db1e5ad5568b414942a4ee4a5c"
+    },
+    {
+      "capture": null,
+      "description": "Preserved attempt spec; discarded pane captures and close probes are not available for independent review.",
+      "id": "attempt-v2-a1",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/attempts/v2-a1.json",
+      "sha256": "9a8b1950a7595b958fd6b2cbc6892a59cd48b04d1c0c4e9bb8c6833aac0577f2"
+    },
+    {
+      "capture": null,
+      "description": "Preserved attempt spec; discarded pane captures and close probes are not available for independent review.",
+      "id": "attempt-v2-a2-compact",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/attempts/v2-a2-compact.json",
+      "sha256": "0d601e589c78939588872ced97a44dc12090ecd5c81b8c16ba94301ea5b6d8eb"
+    },
+    {
+      "capture": null,
+      "description": "Preserved attempt spec; discarded pane captures and close probes are not available for independent review.",
+      "id": "attempt-v2-a3",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/attempts/v2-a3.json",
+      "sha256": "8e9cc98003b6830a5e148c3669ef54f6b21b4042a039054bfcd85fb9caab246d"
+    },
+    {
+      "capture": null,
+      "description": "Preserved attempt spec; discarded pane captures and close probes are not available for independent review.",
+      "id": "attempt-v3-a1",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/attempts/v3-a1.json",
+      "sha256": "6042babd3fa394082e9460549dea4fa346e2a90837349cc14aa24a2cde731924"
+    },
+    {
+      "capture": null,
+      "description": "Preserved attempt spec; discarded pane captures and close probes are not available for independent review.",
+      "id": "attempt-v3-a2",
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/attempts/v3-a2.json",
+      "sha256": "b86090b3b00474db5d0e0f1a9cab05d6f49a1414ad261eb84f3e5707febbb17b"
+    }
+  ],
+  "findings": [
+    {
+      "category": "semantic_fidelity",
+      "description": "The explicit human request to remove the flowing dots was not followed. All 28 independent physical links still animate, with one moving dot per route in five 100ms samples. One dot is not zero. The source-backed animation setting is off; this is an instruction/meaning-ledger failure, not missing motion evidence.",
+      "edge_ids": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6",
+        "e7",
+        "e8",
+        "e9",
+        "e10",
+        "e11",
+        "e12",
+        "e13",
+        "e14",
+        "e15",
+        "e16",
+        "e17",
+        "e18",
+        "e19",
+        "e20",
+        "e21",
+        "e22",
+        "e23",
+        "e24",
+        "e25",
+        "e26",
+        "e27",
+        "e28"
+      ],
+      "id": "F01",
+      "locations": [
+        {
+          "evidence_id": "v1-frame0",
+          "region": [
+            20,
+            10,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-frame1",
+          "region": [
+            20,
+            11,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-frame0",
+          "region": [
+            28,
+            10,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-frame0",
+          "region": [
+            18,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-frame0",
+          "region": [
+            30,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-frame1",
+          "region": [
+            30,
+            24,
+            1,
+            1
+          ]
+        }
+      ],
+      "severity": "critical",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 134 (user)",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/animation",
+        "docs/visualize-eval/cases.json#/cases/4/animation"
+      ]
+    },
+    {
+      "category": "semantic_fidelity",
+      "description": "Fourteen visible text runs retain uncertain individual edge ownership: v1=3, v2=3, v3=6, v4=2. The fused v4 run contains two labels with no separator, so this is 15 label units. These are not missing endpoints or cross-view relation loss: all 28 routes remain traceable. They fail the per-link label-meaning/readability gate; the clearest contradictory proximity is active immediately beside the dashed standby stem at v2 [31,14,6,1]. Edge ids list affected or competing nearby links, not an inferred unique ownership assignment. Homogeneous ECMP/x-connect text makes the broad tier meaning recoverable but does not establish individual label owners.",
+      "edge_ids": [
+        "e5",
+        "e6",
+        "e7",
+        "e9",
+        "e11",
+        "e12",
+        "e13",
+        "e14",
+        "e19",
+        "e20",
+        "e21",
+        "e22",
+        "e23",
+        "e24",
+        "e25",
+        "e26",
+        "e27",
+        "e28"
+      ],
+      "id": "F02",
+      "locations": [
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            23,
+            33,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            23,
+            36,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-ansi",
+          "region": [
+            24,
+            38,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            31,
+            14,
+            6,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            40,
+            20,
+            7,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            28,
+            38,
+            6,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            36,
+            20,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            35,
+            22,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            23,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            30,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            36,
+            25,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            17,
+            27,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            33,
+            22,
+            8,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            35,
+            25,
+            4,
+            1
+          ]
+        }
+      ],
+      "severity": "high",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges",
+        "docs/visualize-eval/rounds/02/SKILL.md#Step 2 — Relationship audit"
+      ]
+    },
+    {
+      "category": "layout_fit",
+      "description": "At v4 [33,22,8,1], two required dual labels touch as dualdual, one uninterrupted RGB (235,219,178) run. The two substrings at [33,22,4,1] and [37,22,4,1] have no visible separator. This breaks both label ownership (F02) and full-label layout readability even though all characters and boxes fit inside 77x47. It is not clipping and not a missing route.",
+      "edge_ids": [
+        "e25",
+        "e26",
+        "e27",
+        "e28"
+      ],
+      "id": "F03",
+      "locations": [
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            33,
+            22,
+            8,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            33,
+            22,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-ansi",
+          "region": [
+            37,
+            22,
+            4,
+            1
+          ]
+        }
+      ],
+      "severity": "medium",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#Original line 158 (user)",
+        "docs/visualize-eval/cases/datacenter-redundancy/expected.json#/historical_reference/edges",
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/layout_fit"
+      ]
+    },
+    {
+      "category": "workflow_evidence",
+      "description": "Only four final-pane manifests retain confirmed_closed results. generation.json claims seven owned/closed panes but says discarded probe capture directories were removed. The supplied case tree has no preserved capture/cleanup probe for w7E:p76, w7E:p78, or w7E:p79, so cleanup including failures/superseded captures is not independently verifiable. This blocks workflow_evidence and cleanup verification; it does not assert that those panes leaked. No pixel coordinate is applicable to a missing execution record.",
+      "edge_ids": [],
+      "id": "F04",
+      "locations": [],
+      "severity": "high",
+      "source_refs": [
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/02/datacenter-redundancy/generation.json#/cleanup",
+        "docs/visualize-eval/rounds/02/datacenter-redundancy/generation.md#Cleanup"
+      ]
+    }
+  ],
+  "generator": {
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "worker_id": "viz-ds02-datacenter-redundancy"
+  },
+  "live_pane": null,
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "overall": "fail",
+  "protocol_version": 1,
+  "renderer_sha256": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+  "reviewer": {
+    "model": "openai/gpt-6.1-sol",
+    "worker_id": "viz-judge02-datacenter-redundancy"
+  },
+  "round": 2,
+  "rubric_sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f",
+  "spec_sha256": "1e39f8068c41e2611e4e038e9a8416086b41571ed2ae80e593b9bcaa879ec87f",
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "verified": true,
+    "zoom_percent": 100
+  }
+}

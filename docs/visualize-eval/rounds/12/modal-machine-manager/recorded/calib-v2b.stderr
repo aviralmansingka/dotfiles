@@ -1,0 +1,3 @@
+warning: edge e1 label "run machine-audit" had no clear cell; shorten it or add routing space
+warning: edge e6 label "boot.ipxe + S3 args" had no clear cell; shorten it or add routing space
+warning: edge e8 label "runs on host" had no clear cell; shorten it or add routing space

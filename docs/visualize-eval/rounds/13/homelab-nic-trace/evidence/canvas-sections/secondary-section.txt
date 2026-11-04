@@ -1,0 +1,13 @@
+# crop of whole-canvas-215x45-frames.txt frame 0, lines 31-42 (title, description, drawing)
+        Wi-Fi backup and Tailscale overlay
+        Secondary paths: Wi-Fi failover at metric 600, Tailscale encapsulated over UDP on bond0.
+
+                                                    ╭───────────────────╮
+                                                  ╭▶│bond0 192.168.1.197│
+        ╭─────────────────────────╮encap over UDP │ │                   │
+        │                         │───────────────╯ ╰───────────────────╯              ╭────────────────────╮ metric 600  ╭───────────────────────╮
+        │tailscale0 100.113.153.49│                                                  ╭▶│wlp8s0 192.168.1.213│────────────▶│Fios router 192.168.1.1│
+        │                         │──────────────╮      ╭────────────╮  backup path  │ │                    │             │                       │
+        ╰─────────────────────────╯    overlay   ╰─────▶│homelab host│───────────────╯ ╰────────────────────╯             ╰───────────────────────╯
+ ┌───────┐                                              │            │
+ │ + [+] │                                              ╰────────────╯

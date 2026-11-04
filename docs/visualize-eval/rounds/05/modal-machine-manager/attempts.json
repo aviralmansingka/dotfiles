@@ -1,0 +1,202 @@
+{
+  "case_id": "modal-machine-manager",
+  "round": "05",
+  "budget_rule": "at most 3 spec candidates per view, every --check run on a distinct spec counted; 4 views max",
+  "budget_deviation": {
+    "views_over_budget": {
+      "v2": 5,
+      "v4": 6
+    },
+    "distinct_specs_checked": 17,
+    "reason": "Nine of the 17 checks were hard renderer refusals ('no obstacle-safe route ...; increase node/layer spacing') that produced no diagram, not layout tuning. The ops/reconcile region only routed after the split was changed, and the case's fixed constraint 'cover all 17 components and 23 relations' forced re-candidates. No warning was silenced and no rejected draft was deleted.",
+    "disclosure": "viz-validate.py attempts_spec_budget fails for v2 and v4; its unedited output is preserved in validation/v*-validate.txt."
+  },
+  "spec_reconstruction_note": "Six superseded candidate specs were overwritten in place during iteration before this ledger was written. They were re-typed verbatim from the generation transcript; their node/edge/direction counts are checked against the preserved raw --check output (which remains the authoritative record). Reconstructed specs are flagged; they were NOT re-checked, so no extra candidate was spent.",
+  "views": [
+    {
+      "view": "v1",
+      "carries": "ingress + jobs + confirm (7 nodes, 7 edges)",
+      "final_spec": "specs/v1.json",
+      "final_spec_sha256": "51940826d898a708dd305bee0318861eef11c5bfd9e6a01e90f58f3d0df864fe",
+      "attempts": [
+        {
+          "n": 1,
+          "spec_path": "specs/v1.json",
+          "spec_sha256": "51940826d898a708dd305bee0318861eef11c5bfd9e6a01e90f58f3d0df864fe",
+          "spec_reconstructed": false,
+          "check_output": "attempts/v1-a1-check.txt",
+          "check_sha256": "f4e32df66b4b72ec23b696154b410fb6a033844f1a6c801d474117541c536514",
+          "note": "tb, 7 nodes/7 edges: accepted; labels 7/7, 1 ambiguous owner, extent 75x32"
+        },
+        {
+          "n": 2,
+          "spec_path": "attempts/v1-a2-lr.json",
+          "spec_sha256": "bfc9d0e812dab6cddc1fe8d644251f13e0ab6d1774a839531e9f5b115f571f11",
+          "spec_reconstructed": false,
+          "check_output": "attempts/v1-a2-check.txt",
+          "check_sha256": "390aeb8f9a178ba4f039ff3c2402d4b1c386adece228f26709335fc5aa9d33d9",
+          "note": "lr probe of the same content: extent 111x29, wider than 77 \u2014 rejected (overflow)"
+        },
+        {
+          "n": 3,
+          "spec_path": "attempts/v1-a3.json",
+          "spec_sha256": "4802a1e248d76fc7a4327e936ada1e3d854e64fb48464753b8eb247782ee110a",
+          "spec_reconstructed": false,
+          "check_output": "attempts/v1-a3-check.txt",
+          "check_sha256": "32415cec7f346de4a9fdb96854f1295443e99dbce4cc7f5e867aeacb6f28953f",
+          "note": "tb with Slack/e21 split out: 1 bridge, 2 ambiguous owners, 1 dot violation \u2014 rejected"
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "carries": "provisioning + boot + reconcile writes (7 nodes, 7 edges)",
+      "final_spec": "specs/v2.json",
+      "final_spec_sha256": "b8c0d4df662084787af45751c955502c9579c552460fee63fbdf6e9f9722315a",
+      "attempts": [
+        {
+          "n": 1,
+          "spec_path": "attempts/v2-a1.json",
+          "spec_sha256": "472db0265e3f408270dc9c8ce499600451d579f41ef3de047ef214569299660f",
+          "spec_reconstructed": true,
+          "check_output": "attempts/v2-a1-check.txt",
+          "check_sha256": "e97d8a85c9f82acb994641c4e3553175a681d1d9904e34e48859ac4b2a6f4a76",
+          "note": "9-node provisioning+heartbeat region, lr: extent 221x39 \u2014 rejected (overflow)"
+        },
+        {
+          "n": 2,
+          "spec_path": "attempts/v2-a2-tb.json",
+          "spec_sha256": "a72e1b3c01d012ad01eb31522c3edd95b76cf850fe7279e649ebd00e508417c1",
+          "spec_reconstructed": false,
+          "check_output": "attempts/v2-a2-check.txt",
+          "check_sha256": "2d5b0c43f9bf4fd0ad7b8b4d2348e7952dfec9f4df52c2a9ed1aeb27f0695566",
+          "note": "same 9-node region, tb: extent 82x56 \u2014 rejected (overflow both axes)"
+        },
+        {
+          "n": 3,
+          "spec_path": "attempts/v2-a3.json",
+          "spec_sha256": "55f0ee22c6b14380fa7929d168e0f734be813e3185c90084e08821472da690fd",
+          "spec_reconstructed": true,
+          "check_output": "attempts/v2-a3-check.txt",
+          "check_sha256": "b0869c9c1a7765de6d2083126b9c10c24fbf843adeabb9e15e0eb5c3ab1b2557",
+          "note": "tb 5-node chain: 2 labels skipped (alloc instance, boot.ipxe + S3 args) \u2014 rejected"
+        },
+        {
+          "n": 4,
+          "spec_path": "attempts/v2-a4.json",
+          "spec_sha256": "047136576af13dd52bbad7d44734bc9c7a3a85716e9a495b3002afb2f98c0803",
+          "spec_reconstructed": true,
+          "check_output": "attempts/v2-a4-check.txt",
+          "check_sha256": "95379dd02bd3c3eb113896405b60feca0c4fb299b562f4720b171d3f09d1b788",
+          "note": "tb 6-node with rec->prov lane: 1 skipped label (boot.ipxe + S3 args), 1 ambiguous, 0 dot violations"
+        },
+        {
+          "n": 5,
+          "spec_path": "specs/v2.json",
+          "spec_sha256": "b8c0d4df662084787af45751c955502c9579c552460fee63fbdf6e9f9722315a",
+          "spec_reconstructed": false,
+          "check_output": "attempts/v2-a5-check.txt",
+          "check_sha256": "7a7a5da7f81b10e093ec56aeed7947be0b439ee5b6f1779c6e3fdd8daff9b97b",
+          "note": "tb 7-node with rec->db: covers all 23 relations; 6/7 labels (boot.ipxe + S3 args skipped), 2 ambiguous, 1 dot violation \u2014 ACCEPTED for coverage"
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "carries": "telemetry + image pulls (6 nodes, 5 edges)",
+      "final_spec": "specs/v3.json",
+      "final_spec_sha256": "f17f920df3eb652afb9a525be1a77ace11469b721240dfca58a34f42e5357f0d",
+      "attempts": [
+        {
+          "n": 1,
+          "spec_path": "attempts/v3-a1.json",
+          "spec_sha256": "ede9a6fc603d65f12893d3f2d069b3ecc3b445e76edd1b6049b7609b7de772a7",
+          "spec_reconstructed": true,
+          "check_output": "attempts/v3-a1-check.txt",
+          "check_sha256": "30b2e65d1740d1ff325d19ce179c25a0cd330eedf4da1bf16b349ec9ecd80ca7",
+          "note": "tb with 15-18 char labels: 3 ambiguous owners, 1 dot violation, extent 47x32"
+        },
+        {
+          "n": 2,
+          "spec_path": "attempts/v3-a2-lr.json",
+          "spec_sha256": "7fd02ccf62d6c0de4d11b26c09250820505381176513ef0eb9dbcf4729abfd83",
+          "spec_reconstructed": false,
+          "check_output": "attempts/v3-a2-check.txt",
+          "check_sha256": "22ac6641b73eaf057ef4e366384c299f3e244b0085b9ee82188d6de8afa71e2f",
+          "note": "lr: extent 105x20 \u2014 rejected (overflow)"
+        },
+        {
+          "n": 3,
+          "spec_path": "specs/v3.json",
+          "spec_sha256": "f17f920df3eb652afb9a525be1a77ace11469b721240dfca58a34f42e5357f0d",
+          "spec_reconstructed": false,
+          "check_output": "attempts/v3-a3-check.txt",
+          "check_sha256": "1b708414e222b87670587649509881ca09074067f47590016de9b8610cbafae2",
+          "note": "tb with labels trimmed to <=14 chars: 2 ambiguous owners, 1 dot violation, extent 47x32 \u2014 best of three"
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "carries": "ops + diagnostics (5 nodes, 4 edges)",
+      "final_spec": "specs/v4.json",
+      "final_spec_sha256": "63afda58ce4738d175ffe73230d5886b1fa15b91f4fffad0e54f9c8d9c473074",
+      "attempts": [
+        {
+          "n": 1,
+          "spec_path": "attempts/v4-a1.json",
+          "spec_sha256": "7b10fc31f81605653df61fcf1dfe041e76823b1b260819ac0489b7905da901e9",
+          "spec_reconstructed": true,
+          "check_output": "attempts/v4-a1-check.txt",
+          "check_sha256": "5ef2112e686f81d65aed1f095b294e61592307bf55dfcd28f9d02f4a4e3b9690",
+          "note": "tb, 8 nodes incl. reconcile pair: renderer refused \u2014 no obstacle-safe route (4 routes)"
+        },
+        {
+          "n": 2,
+          "spec_path": "attempts/v4-a2-lr.json",
+          "spec_sha256": "eebeacc587a44290c7dcbdbbb3414de912e434d961f0dcdcdea32172818fa5c4",
+          "spec_reconstructed": false,
+          "check_output": "attempts/v4-a2-check.txt",
+          "check_sha256": "5933ddfca529fb9312ee0afdaf23448dfc0e1e5fd781855f00ae38b27f5f106e",
+          "note": "lr, same 8 nodes: refused \u2014 no obstacle-safe route (all 6 routes)"
+        },
+        {
+          "n": 3,
+          "spec_path": "attempts/v4-a3.json",
+          "spec_sha256": "cf49c2f80197201aa29f26e902e282ab1dde7ee93db066aa8048317243b9b202",
+          "spec_reconstructed": false,
+          "check_output": "attempts/v4-a3-check.txt",
+          "check_sha256": "5ef2112e686f81d65aed1f095b294e61592307bf55dfcd28f9d02f4a4e3b9690",
+          "note": "tb, short labels (<=14): refused \u2014 4 routes unroutable"
+        },
+        {
+          "n": 4,
+          "spec_path": "attempts/v4-a4.json",
+          "spec_sha256": "a6ed8d9d7d48006ad66356eb157f265e22cb2890557a0e60369df6c3ed1d5c23",
+          "spec_reconstructed": true,
+          "check_output": "attempts/v4-a4-check.txt",
+          "check_sha256": "5ef2112e686f81d65aed1f095b294e61592307bf55dfcd28f9d02f4a4e3b9690",
+          "note": "tb, 8 nodes, 1-min period moved into the rec node label: refused \u2014 4 routes unroutable"
+        },
+        {
+          "n": 5,
+          "spec_path": "attempts/v4-a5.json",
+          "spec_sha256": "07f2de9c699a48c0f714c1664c9668127c84d40aeb0e78ec3eb0a506e4371a60",
+          "spec_reconstructed": true,
+          "check_output": "attempts/v4-a5-check.txt",
+          "check_sha256": "75927b93d1ce5313af306a70a0be98e32a02fec0d52676232a30d6cffdce145a",
+          "note": "tb, 7 nodes (rec->db in, rec->prov in v2): refused \u2014 rec->db and q->jan unroutable"
+        },
+        {
+          "n": 6,
+          "spec_path": "specs/v4.json",
+          "spec_sha256": "63afda58ce4738d175ffe73230d5886b1fa15b91f4fffad0e54f9c8d9c473074",
+          "spec_reconstructed": false,
+          "check_output": "attempts/v4-a6-check.txt",
+          "check_sha256": "ef774b660bc9f4537f1b66f735796236c385f0a3671cb3a63cc1059b1deaeb34",
+          "note": "tb, 5 nodes/4 edges ops only: routed; labels 4/4, 1 ambiguous owner, extent 49x24 \u2014 ACCEPTED"
+        }
+      ]
+    }
+  ]
+}

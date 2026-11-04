@@ -1,0 +1,461 @@
+{
+  "case_id": "homelab-nic-trace",
+  "round": "13",
+  "generator": {
+    "identity": "viz-ds13-4",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "frozen_inputs": {
+    "candidate_skill": {
+      "path": "docs/visualize-eval/rounds/13/SKILL.md",
+      "proposal": 12,
+      "sha256": "65d826f0f1f9e61ddfd806628cb162827b0e6cf6d7df2490c9d75e6cbe485d2a"
+    },
+    "rubric": {
+      "path": "docs/visualize-eval/rounds/13/rubric.json",
+      "revision": 11,
+      "sha256": "6bfd3733c8d08b66af9a92e71985a20846f954d7916eaf9685f86c8d2f96bcb8"
+    },
+    "renderer": {
+      "path": "/tmp/visualize-eval/round-13/bin/rataflow-view",
+      "sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13"
+    },
+    "source": {
+      "path": "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+      "sha256": "abe8b376eccd7d0027f2985aab55ed656603b2094c275ee66ed223a57421b4c4"
+    },
+    "target_viewport": "77x47 @100% natural zoom"
+  },
+  "triage": {
+    "annex": "TRIAGE-homelab-nic-trace",
+    "questions_provoked": [
+      "Which path matters most? The wired egress, or the whole host's connectivity map?",
+      "What is the reader's job at each hop - reading a latency claim, or reading roles and addresses?",
+      "Do the Wi-Fi backup and the Tailscale overlay share the egress surface, or are they a secondary surface of their own?",
+      "Do the libvirt and Docker bridges belong beside the wired hop chain, or on their own local surface?",
+      "One pane beside the chat, or a canvas I navigate?",
+      "Dots: does motion help trace a hop, or is this a static instrument?",
+      "Must the historical/claimed qualifiers stay drawn (traceroute hops, ONT and router identity, ULA-only IPv6)?",
+      "Do the hop latencies (0.5 / 4.5 / 6.6 / 6-9 ms) belong on the routes themselves?"
+    ],
+    "questions_used": [
+      {
+        "id": "TRIAGE-homelab-nic-trace-1",
+        "question": "Which path matters most?",
+        "answer": "The wired one, end to end: host through bond0, the router, ONT, the Verizon hops, Cloudflare. I want to follow it hop by hop.",
+        "answer_source": "annex answer TRIAGE-homelab-nic-trace-1"
+      },
+      {
+        "id": "TRIAGE-homelab-nic-trace-2",
+        "question": "And the Wi-Fi and overlay paths?",
+        "answer": "Keep them, but clearly secondary - they're the backup and the encapsulation, not the main path. Don't let them tangle into it.",
+        "answer_source": "annex answer TRIAGE-homelab-nic-trace-2"
+      },
+      {
+        "id": "TRIAGE-homelab-nic-trace-3",
+        "question": "Panes or one pane?",
+        "answer": "One pane if the hop chain reads cleanly; a canvas if the local virtual nets need their own space. Your call.",
+        "answer_source": "annex answer TRIAGE-homelab-nic-trace-3"
+      },
+      {
+        "id": "TRIAGE-homelab-nic-trace-4",
+        "question": "Dots?",
+        "answer": "Only if they help me follow a hop. This is a trace, not a traffic map.",
+        "answer_source": "annex answer TRIAGE-homelab-nic-trace-4"
+      },
+      {
+        "id": "own-local-scope",
+        "question": "Do the libvirt and Docker bridges belong beside the wired hop chain, or on their own local surface?",
+        "answer": "\"Same for the libvirt and Docker bridges - they're local, keep them local\" (the brief's request), so they get their own described diagram instead of hanging off the egress band.",
+        "answer_source": "brief framing"
+      },
+      {
+        "id": "own-qualifiers",
+        "question": "Must the historical/claimed qualifiers stay drawn?",
+        "answer": "Yes - the brief's fixed constraints keep the traceroute hops and MAC-vendor roles as historical interpretations, the ONT/router identity qualified, and the ULA-only IPv6 note; so one of them has to be drawn as text on the canvas.",
+        "answer_source": "brief framing"
+      },
+      {
+        "id": "own-latency-placement",
+        "question": "Do the hop latencies belong on the routes themselves?",
+        "answer": "Yes - the brief's reader stops at each hop to check 0.5 / 4.5 / 6.6 / 6-9 ms, so each of those four claims is the label of its own route, never a node annotation.",
+        "answer_source": "brief framing"
+      },
+      {
+        "id": "own-motion",
+        "question": "Dots here?",
+        "answer": "No - the annex allows dots 'only if they help me follow a hop' and the source never shows motion, so the honest reading is static: motion would imply a measurement the source does not make.",
+        "answer_source": "own judgment",
+        "reason": "cases.json marks motion optional and source.md never animates traffic; the skill says a source that never shows motion is drawn static, and the annex's conditional is not a request for dots."
+      }
+    ],
+    "converged_when": "The source was fully read (13 nodes, 14 relations, 5 path kinds, 3 qualifier groups), the reader's job was a hop-by-hop trace with one latency claim per hop, and the shape question was settled by measurement: the one-view probe drew 293 columns, so the local virtual nets and the two secondary paths each needed their own described section of one canvas. After that no open question changed the drawing.",
+    "shape_decision": {
+      "rung": "canvas",
+      "diagrams": 3,
+      "one_line": "One canvas of three described diagrams: the wired egress chain, the local virtual nets, and the Wi-Fi/Tailscale secondary paths."
+    }
+  },
+  "classification": {
+    "family": "identity-probe-maps",
+    "evidence": "every node is an interface, address or AS role (bond0 192.168.1.197, ONT 169.254.3.1, VZ backbone AS701), the chain is 7 hops deep, and the source explicitly marks the hops and device identities as historical interpretations.",
+    "tie_breakers_considered": [
+      "Density (14 edges vs 13 nodes) also fits flow-chains; the chain shape was borrowed for the egress diagram, but the source's qualifier and address load outranks shape by the skill's rule 3.",
+      "placement-planes nearly fits: three weakly-connected worlds (local virtual, host/uplink, egress) - but the source names no shared bus/trunk between them, so the bus habit was not used and the worlds are separated by described canvas sections instead of a trunk.",
+      "No reclassification was needed; the family held from the first read."
+    ],
+    "secondary_recipe": "flow-chains (the 7-hop egress diagram: one rank per hop, no invented side branches, lr for 5+ stages) plus placement-planes' separation habit (the worlds sit in their own canvas sections; no drawn boxes or titles around groups - the canvas titles are the engine's section headings).",
+    "reclassification": null
+  },
+  "view_shape_decision": {
+    "rung_chosen": "rung 2 - one large canvas hosting three named, described concept-diagrams",
+    "source_facts": [
+      "The egress chain alone is 7 hops deep with 6 labelled routes, so one hop-per-rank already spends most of a pane's width.",
+      "The source names five path kinds that must stay separate (wired primary, Wi-Fi backup, Tailscale encapsulation, Docker bridge, libvirt NAT), which are three concepts on this host.",
+      "The qualifier text (historical hops, collapsed Fios fabric, ULA-only IPv6) is prose, not a node or an edge, so the canvas description lines are the only honest place to draw it.",
+      "Measured: the all-in-one probe drew extent 293x15 at natural zoom - 3.8x the 77-column pane - and the check itself warned that 13 nodes / 14 edges is above the readable budget."
+    ],
+    "rejected_rungs": [
+      {
+        "rung": "rung 1 - one view side-by-side",
+        "reason": "measured 293x15 (attempts/probe-1-single-view.json, recorded/probe-1-single-view.stdout); it cannot be read beside the chat without panning away from the hops."
+      },
+      {
+        "rung": "rung 3 - drop or thin a concept",
+        "reason": "not used: every source relation, identifier and path kind is drawn; the local virtual nets and the two secondary paths each kept their own nodes and labels."
+      }
+    ]
+  },
+  "surfaces": [
+    {
+      "surface": "canvas",
+      "form": "canvas",
+      "spec": "spec.json",
+      "spec_sha256": "9ddfaef45aa5b7fd0e98fdc5bcd256c702dac1a83276af0715667a2e6acaf1b8",
+      "evidence_bundle": "evidence/canvas",
+      "text": "evidence/canvas/canvas-text.txt",
+      "ansi": "evidence/canvas/canvas-ansi.ansi",
+      "selected_ansi": "evidence/canvas/canvas-selected.ansi",
+      "check": "evidence/canvas/check.txt",
+      "frames": "evidence/canvas/canvas-frames.txt",
+      "frames_ansi": "evidence/canvas/canvas-frames.ansi",
+      "pinned_dump_77x47": "evidence/canvas/canvas-77x47-frames.txt",
+      "whole_canvas_natural_dump": "evidence/canvas-sections/whole-canvas-215x45-frames.txt",
+      "section_captures": {
+        "egress": "evidence/canvas-sections/egress-section.txt",
+        "local": "evidence/canvas-sections/local-section.txt",
+        "secondary": "evidence/canvas-sections/secondary-section.txt"
+      },
+      "measured_pane": {
+        "header_token": "68x44 @100%",
+        "pane_rows": 44,
+        "viewport_line": null,
+        "note": "the harness split a half pane in this worker's tab, which is 68x44 rather than the 77x47 target; the size is recorded as measured, not relabelled. The canvas form's fit proof is the recorded per-diagram extents below, and the 215x45 pinned dump shows the whole 210x38 canvas drawn at 100% with no overflow token."
+      },
+      "check_summary": {
+        "canvas": "3 diagrams on one canvas, drawn whole at 100%",
+        "canvas_extent": "210x38 cells (whole canvas)",
+        "crossings": "0 bridges, 0 touching bends",
+        "near_misses": "0 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)",
+        "passes_near_unrelated_node": 0,
+        "labels": "14/14 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners",
+        "groups": "host(3) uplink(2) gateway(2) demarc(1) isp(2) internet(1) libvirt(2) docker(2) overlay(1) wifi(1)",
+        "trunks": "none",
+        "dots": "0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "dot_hues": "0 by source, 0 by destination, 0 shared-hue pair(s) (source-only 0, destination-only 0)",
+        "origins": "0/0 routes start at their arrow origin",
+        "arrivals": "0/0 same-arrival routes show their dot at the arrowhead on the final step",
+        "warnings": 0
+      },
+      "diagrams": [
+        {
+          "id": "egress",
+          "title": "Wired egress, hop by hop",
+          "description": "Primary egress trace: historical hops; Fios router is the collapsed fabric; v6 ULA-only.",
+          "check_origin": [0, 3],
+          "check_extent": [210, 5],
+          "nodes": 7,
+          "edges": 6,
+          "routes": 6,
+          "direction": "lr",
+          "node_list": [
+            "box: homelab host (host)",
+            "bond0: bond0 192.168.1.197 (uplink)",
+            "rtr: Fios router 192.168.1.1 (gateway)",
+            "ont: ONT 169.254.3.1 (demarc)",
+            "vzagg: VZ edge 100.41.x (isp)",
+            "vzbb: VZ backbone AS701 (isp)",
+            "cf: Cloudflare 1.1.1.1 (internet)"
+          ],
+          "labels": ["eno1 2.5 GbE", "gw 0.5 ms", "NAT out", "4.5 ms", "6.6 ms", "6-9 ms"],
+          "capture": "evidence/canvas-sections/egress-section.txt"
+        },
+        {
+          "id": "local",
+          "title": "Local virtual nets",
+          "description": "Local to the host: VM behind the libvirt NAT bridge, container behind the Docker bridge.",
+          "check_origin": [0, 13],
+          "check_extent": [88, 10],
+          "nodes": 5,
+          "edges": 4,
+          "routes": 4,
+          "direction": "lr",
+          "node_list": [
+            "vm: VM vnet0 (libvirt)",
+            "virbr: virbr0 (libvirt)",
+            "ctr: container (docker)",
+            "dkbr: docker 172.18.2.1 (docker)",
+            "box: homelab host (host)"
+          ],
+          "labels": ["192.168.122.x", "NAT bridge", "172.18.2.x", "docker bridge"],
+          "capture": "evidence/canvas-sections/local-section.txt"
+        },
+        {
+          "id": "secondary",
+          "title": "Wi-Fi backup and Tailscale overlay",
+          "description": "Secondary paths: Wi-Fi failover at metric 600, Tailscale encapsulated over UDP on bond0.",
+          "check_origin": [0, 28],
+          "check_extent": [151, 10],
+          "nodes": 5,
+          "edges": 4,
+          "routes": 4,
+          "direction": "lr",
+          "node_list": [
+            "ts: tailscale0 100.113.153.49 (overlay)",
+            "box: homelab host (host)",
+            "bond0: bond0 192.168.1.197 (uplink)",
+            "wlp: wlp8s0 192.168.1.213 (wifi)",
+            "rtr: Fios router 192.168.1.1 (gateway)"
+          ],
+          "labels": ["overlay", "encap over UDP", "backup path", "metric 600"],
+          "capture": "evidence/canvas-sections/secondary-section.txt"
+        }
+      ],
+      "totals": {
+        "nodes": 17,
+        "node_instances_note": "13 distinct source nodes; box/bond0/rtr recur as anchors across diagrams, so the canvas draws 17 node instances and 14 routes - every audited relation exactly once",
+        "edges": 14,
+        "routes": 14,
+        "labels_on_edges": 14,
+        "distinct_source_nodes": 13
+      }
+    }
+  ],
+  "views": [
+    {
+      "view": "canvas",
+      "spec": "spec.json",
+      "spec_sha256": "9ddfaef45aa5b7fd0e98fdc5bcd256c702dac1a83276af0715667a2e6acaf1b8",
+      "spec_form": "canvas",
+      "diagrams": ["egress", "local", "secondary"],
+      "evidence_bundle": "evidence/canvas",
+      "attempts": [
+        { "label": "canvas-a", "spec": "attempts/canvas-a.json", "verdict": "shipped (byte-identical to spec.json)" },
+        { "label": "canvas-b", "spec": "attempts/canvas-b.json", "verdict": "rejected: tb stack inflated the canvas to 71x212" },
+        { "label": "canvas-c", "spec": "attempts/canvas-c.json", "verdict": "rejected: label_slot put secondary:e0 in ring 2 of bond0 (near-misses: 4)" }
+      ]
+    }
+  ],
+  "habits_borrowed": [
+    {
+      "surface": "canvas/egress",
+      "habit": "identity-probe-maps: every identifier and qualifier is a coverage row first; the chain then falls out as a deep lr chain",
+      "capture": "evidence/canvas-sections/egress-section.txt rows 1-7"
+    },
+    {
+      "surface": "canvas/egress",
+      "habit": "flow-chains: one rank per hop, no invented side branches, lr for a 5+ stage chain",
+      "capture": "evidence/canvas-sections/egress-section.txt row 4 (single row of node boxes, one arrow per hop)"
+    },
+    {
+      "surface": "canvas/local + canvas/secondary",
+      "habit": "placement-planes: the weakly-connected worlds sit in their own areas of the page, without drawn boxes or titles for the worlds",
+      "capture": "evidence/canvas/canvas-77x47-frames.txt (sections separated by rules, no group outline drawn)"
+    }
+  ],
+  "deviations": [
+    {
+      "deviation": "Three concepts on one canvas instead of one side-by-side view",
+      "reason": "measured rung 1 at 293x15; the source's own path-kind separation plus the qualifier prose needs described sections",
+      "capture": "recorded/probe-1-single-view.stdout vs evidence/canvas/check.txt"
+    },
+    {
+      "deviation": "No dots, although the graph has arrows a reader might expect to animate",
+      "reason": "the source never shows motion and the annex allows dots only if they help follow a hop; static is the honest reading",
+      "capture": "evidence/canvas/canvas-77x47-frames.txt has 12 timestamped frames whose drawings are byte-identical"
+    },
+    {
+      "deviation": "The main egress diagram is lr although the source chat described the layout 'bottom to top'",
+      "reason": "the historical phrase describes the original pane, not a source relation; lr gives the hop chain one reading direction and keeps every hop's label in its own gutter (the tb attempt needed 93 rows for the same chain)",
+      "capture": "recorded/canvas-b.stdout (tb, egress extent 37x93) vs evidence/canvas/check.txt (lr, 210x5)"
+    }
+  ],
+  "meaning_ledger": [
+    { "fact": "box = homelab rack-bench host", "kind": "residency", "fate": "drawn as node 'homelab host' (rack-bench abbreviated; see abbreviations)" },
+    { "fact": "the host holds ~/rack-bench with the latest Oct 11 runs", "kind": "residency", "fate": "dropped - not a network relation and not one of the fourteen audited edges; the node label keeps the host identity only" },
+    { "fact": "bond0 over eno1, 2.5 GbE wired, 192.168.1.197, primary uplink", "kind": "address + role", "fate": "drawn (node label + route label 'eno1 2.5 GbE')" },
+    { "fact": "a Wi-Fi interface on the same LAN as backup, metric 600", "kind": "address + role", "fate": "drawn (node 'wlp8s0 192.168.1.213', routes 'backup path' and 'metric 600')" },
+    { "fact": "metric failover, not ECMP", "kind": "qualifier", "fate": "drawn - 'backup path' + 'metric 600' + the secondary description 'Wi-Fi failover at metric 600'" },
+    { "fact": "gateway 192.168.1.1 at 0.5 ms, a Verizon Fios router (WNC OUI)", "kind": "address + claim", "fate": "drawn (node + route label 'gw 0.5 ms'); the 0.5 ms claim is marked historical at diagram level" },
+    { "fact": "the router does NAT and DHCP; the home shares one Fios pool IP 71.251.12.240", "kind": "role + identifier", "fate": "NAT drawn as route label 'NAT out'; DHCP and the pool IP 71.251.12.240 dropped - they are properties of the router's NAT service with no drawn counterpart among the fourteen relations (see deliberate_drops)" },
+    { "fact": "ONT / Verizon edge 169.254.3.1 at 4.5 ms", "kind": "address + claim", "fate": "drawn (node 'ONT 169.254.3.1', route '4.5 ms')" },
+    { "fact": "Verizon aggregation 100.41.x at 6.6 ms", "kind": "address + claim", "fate": "drawn (node 'VZ edge 100.41.x', route '6.6 ms')" },
+    { "fact": "Verizon backbone AS701 at 6-9 ms", "kind": "AS number + claim", "fate": "drawn (node 'VZ backbone AS701', route '6-9 ms')" },
+    { "fact": "Cloudflare 1.1.1.1, AS13335", "kind": "address + AS number", "fate": "drawn as node 'Cloudflare 1.1.1.1'; AS13335 abbreviated out of the label (see deliberate_drops)" },
+    { "fact": "one libvirt VM behind a NAT bridge, 192.168.122.x", "kind": "relation + address", "fate": "drawn (vm -> virbr '192.168.122.x', virbr -> box 'NAT bridge')" },
+    { "fact": "one Docker container on 172.18.2.x behind docker 172.18.2.1", "kind": "relation + address", "fate": "drawn (ctr -> dkbr '172.18.2.x', dkbr -> box 'docker bridge')" },
+    { "fact": "Tailscale tailscale0 100.113.153.49, encapsulated over UDP on the wired path", "kind": "address + protocol", "fate": "drawn (node label, ts -> box 'overlay', ts -> bond0 'encap over UDP')" },
+    { "fact": "IPv6: ULA prefixes only, so v6 internet is unreachable", "kind": "limitation", "fate": "drawn in the egress description ('v6 ULA-only')" },
+    { "fact": "the Fios router is the whole collapsed fabric (ToR, spine, border, firewall in one box)", "kind": "role", "fate": "drawn in the egress description ('Fios router is the collapsed fabric')" },
+    { "fact": "the ONT is the demarc, the MMR analog; one ISP, one path", "kind": "interpretation", "fate": "dropped - a datacenter-model mapping of the same nodes, not a relation this graph draws (see deliberate_drops)" },
+    { "fact": "bench internet from this host measures the Fios path: NAT on egress, no committed rate, no v6", "kind": "limitation", "fate": "NAT and no-v6 drawn; 'no committed rate' dropped - no node or route in this source carries a rate claim" },
+    { "fact": "traceroute hops and MAC-vendor device roles are historical interpretations", "kind": "qualifier", "fate": "abbreviated to the egress description 'historical hops'; the ONT/router identity qualifier is diagram-level only (known defect 2)" },
+    { "fact": "keep wired primary, Wi-Fi backup, Tailscale, Docker bridge and libvirt NAT separate", "kind": "constraint", "fate": "drawn - three described diagrams and five distinct group tags, no trunk and no shared bus" },
+    { "fact": "do not SSH or probe any host", "kind": "constraint", "fate": "respected - no viewer command, no script and no evidence step touched a host; only the frozen binary ran locally" }
+  ],
+  "relationship_audit": [
+    { "id": "egress:e0", "from_to": "box -> bond0", "verb_tech": "eno1 2.5 GbE wired uplink", "label_owner": "egress:e0", "surface": "canvas/egress" },
+    { "id": "egress:e1", "from_to": "bond0 -> rtr", "verb_tech": "default gateway, 0.5 ms", "label_owner": "egress:e1", "surface": "canvas/egress" },
+    { "id": "egress:e2", "from_to": "rtr -> ont", "verb_tech": "NAT on egress", "label_owner": "egress:e2", "surface": "canvas/egress" },
+    { "id": "egress:e3", "from_to": "ont -> vzagg", "verb_tech": "4.5 ms hop claim", "label_owner": "egress:e3", "surface": "canvas/egress" },
+    { "id": "egress:e4", "from_to": "vzagg -> vzbb", "verb_tech": "6.6 ms hop claim", "label_owner": "egress:e4", "surface": "canvas/egress" },
+    { "id": "egress:e5", "from_to": "vzbb -> cf", "verb_tech": "6-9 ms hop claim", "label_owner": "egress:e5", "surface": "canvas/egress" },
+    { "id": "local:e0", "from_to": "vm -> virbr", "verb_tech": "libvirt vnet on 192.168.122.x", "label_owner": "local:e0", "surface": "canvas/local" },
+    { "id": "local:e1", "from_to": "virbr -> box", "verb_tech": "libvirt NAT bridge", "label_owner": "local:e1", "surface": "canvas/local" },
+    { "id": "local:e2", "from_to": "ctr -> dkbr", "verb_tech": "container veth on 172.18.2.x", "label_owner": "local:e2", "surface": "canvas/local" },
+    { "id": "local:e3", "from_to": "dkbr -> box", "verb_tech": "Docker bridge", "label_owner": "local:e3", "surface": "canvas/local" },
+    { "id": "secondary:e0", "from_to": "ts -> box", "verb_tech": "Tailscale overlay", "label_owner": "secondary:e0", "surface": "canvas/secondary" },
+    { "id": "secondary:e1", "from_to": "ts -> bond0", "verb_tech": "UDP encapsulation on the wired path", "label_owner": "secondary:e1", "surface": "canvas/secondary" },
+    { "id": "secondary:e2", "from_to": "box -> wlp", "verb_tech": "Wi-Fi backup path", "label_owner": "secondary:e2", "surface": "canvas/secondary" },
+    { "id": "secondary:e3", "from_to": "wlp -> rtr", "verb_tech": "metric 600 failover", "label_owner": "secondary:e3", "surface": "canvas/secondary" }
+  ],
+  "relationship_mapping": [
+    { "source_relation": "vm -> virbr (192.168.122.x)", "visible": "canvas/local, route local:e0, label '192.168.122.x'" },
+    { "source_relation": "virbr -> box (NAT bridge)", "visible": "canvas/local, route local:e1, label 'NAT bridge'" },
+    { "source_relation": "ctr -> dkbr (172.18.2.x)", "visible": "canvas/local, route local:e2, label '172.18.2.x'" },
+    { "source_relation": "dkbr -> box (docker bridge)", "visible": "canvas/local, route local:e3, label 'docker bridge'" },
+    { "source_relation": "ts -> box (overlay)", "visible": "canvas/secondary, route secondary:e0, label 'overlay'" },
+    { "source_relation": "ts -> bond0 (encap over UDP)", "visible": "canvas/secondary, route secondary:e1, label 'encap over UDP'" },
+    { "source_relation": "box -> bond0 (eno1 2.5 GbE)", "visible": "canvas/egress, route egress:e0, label 'eno1 2.5 GbE'" },
+    { "source_relation": "box -> wlp (backup path)", "visible": "canvas/secondary, route secondary:e2, label 'backup path'" },
+    { "source_relation": "bond0 -> rtr (default gw 0.5 ms)", "visible": "canvas/egress, route egress:e1, label 'gw 0.5 ms'" },
+    { "source_relation": "wlp -> rtr (metric 600)", "visible": "canvas/secondary, route secondary:e3, label 'metric 600'" },
+    { "source_relation": "rtr -> ont (NAT out)", "visible": "canvas/egress, route egress:e2, label 'NAT out'" },
+    { "source_relation": "ont -> vzagg (4.5 ms)", "visible": "canvas/egress, route egress:e3, label '4.5 ms'" },
+    { "source_relation": "vzagg -> vzbb (6.6 ms)", "visible": "canvas/egress, route egress:e4, label '6.6 ms'" },
+    { "source_relation": "vzbb -> cf (6-9 ms)", "visible": "canvas/egress, route egress:e5, label '6-9 ms'" }
+  ],
+  "coverage_map": [
+    { "diagram": "egress", "carries": "box, bond0, rtr, ont, vzagg, vzbb, cf; egress:e0-e5; the collapsed-fabric role, historical-hop marker and ULA-only v6 limitation" },
+    { "diagram": "local", "carries": "vm, virbr, ctr, dkbr + the host anchor; local:e0-e3; both local address ranges and the NAT/bridge verbs" },
+    { "diagram": "secondary", "carries": "ts, box, bond0, wlp, rtr; secondary:e0-e3; the overlay address, the UDP encapsulation and the metric-600 failover" }
+  ],
+  "structural_levers": [
+    {
+      "lever": "diagrams blocks (3, each with title + description)",
+      "source_fact": "the source separates wired primary, Wi-Fi backup, Tailscale encapsulation, Docker bridge and libvirt NAT; the qualifier prose (historical hops, collapsed fabric, ULA-only v6) has no node or edge to attach to",
+      "surface": "canvas"
+    },
+    {
+      "lever": "group tags (host, uplink, gateway, demarc, isp, internet, libvirt, docker, overlay, wifi)",
+      "source_fact": "the source states each node's role and the fixed constraint keeps the path kinds separate; boxes shared across diagrams keep one group tag so an anchor keeps its identity",
+      "surface": "canvas (all three diagrams)"
+    },
+    {
+      "lever": "direction per diagram (lr for all three)",
+      "source_fact": "the egress chain is 7 stages deep (5+ => lr); a tb chain spends a rank gap as tall as its label is wide, measured at 93 rows for 7 hops",
+      "surface": "canvas"
+    }
+  ],
+  "levers_not_used": [
+    { "lever": "layers", "reason": "the source states no tier order for the host's own interfaces; ranking is unambiguous by longest path" },
+    { "lever": "trunks", "reason": "no source-named shared bus: the host's two uplinks are independent interfaces and the overlay is its own route" },
+    { "lever": "minlen", "reason": "no source-described corridor needs reserved space" },
+    { "lever": "label_slot", "reason": "tried in canvas-c; it shrank the sections but pushed the ts -> box route into ring 2 of bond0 (near-miss), so the shipped spec omits it" }
+  ],
+  "routing_record": {
+    "per_attempt": [
+      { "label": "probe-1-single-view", "near_misses": 0, "passes_near_unrelated_node": 0, "lever_for_relief": null },
+      { "label": "canvas-a", "near_misses": 0, "passes_near_unrelated_node": 0, "lever_for_relief": null },
+      { "label": "canvas-b", "near_misses": 0, "passes_near_unrelated_node": 0, "lever_for_relief": null },
+      { "label": "canvas-c", "near_misses": 4, "passes_near_unrelated_node": 4, "lever_for_relief": "dropped label_slot and kept canvas-a's lr geometry, which routes secondary:e0 at ring >= 3 of bond0" }
+    ],
+    "shipped_verification": {
+      "check": "0 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses); passes-near-unrelated-node: 0",
+      "visible_proof": "in evidence/canvas-sections/whole-canvas-215x45-frames.txt the secondary route ts -> bond0 ('encap over UDP') turns at cell (50,37) and enters bond0's left port at (52,35), while 'homelab host' occupies rows 39-42, columns 56-69 - the nearest route cell is 5 columns and 2 rows away, so nothing reads as a false join; the sibling route ts -> box ('overlay') corners at (49,39) and enters the host at (56,40), 7 columns clear of bond0's left border at column 52"
+    }
+  },
+  "hue_record": {
+    "policy": "one group tag keeps one hue family across every diagram of a canvas; the engine derives the family from the group name and extends the canvas palette diagram by diagram",
+    "group_to_hue": [
+      { "group": "host", "members": "box (in all three diagrams)", "capture_hue": "rgb(115,206,183)", "capture": "evidence/canvas/canvas-ansi.ansi, egress label row, cols 0-12" },
+      { "group": "docker", "members": "ctr, dkbr", "capture_hue": "rgb(206,115,206)", "capture": "evidence/canvas/canvas-ansi.ansi, local section" },
+      { "group": "libvirt", "members": "vm, virbr", "capture_hue": "rgb(206,161,115)", "capture": "evidence/canvas/canvas-ansi.ansi, local section" },
+      { "group": "overlay", "members": "ts", "capture_hue": "rgb(115,206,115)", "capture": "evidence/canvas/canvas-ansi.ansi, secondary section" },
+      { "group": "uplink", "members": "bond0 (egress + secondary)", "capture_hue": "rgb(138,115,206)", "capture": "evidence/canvas/canvas-ansi.ansi, egress top border row" },
+      { "group": "gateway", "members": "rtr (egress + secondary)", "capture_hue": "not visible", "capture": "rtr sits beyond the 68-column pane capture; the check's groups line is the only evidence" },
+      { "group": "demarc", "members": "ont", "capture_hue": "not visible", "capture": "beyond the 68-column pane capture" },
+      { "group": "isp", "members": "vzagg, vzbb", "capture_hue": "not visible", "capture": "beyond the 68-column pane capture" },
+      { "group": "internet", "members": "cf", "capture_hue": "not visible", "capture": "beyond the 68-column pane capture" },
+      { "group": "wifi", "members": "wlp", "capture_hue": "not visible", "capture": "beyond the 68-column pane capture" }
+    ],
+    "limits": "the evidence pane is 68 columns wide, so the two offscreen 'homelab host' instances (local and secondary sections) could not be compared pixel by pixel; the canvas palette is built once and extended per diagram, and the check reports one host(3) group, but case-wide hue consistency is capture-verified only for the egress instance",
+    "dot_hues": "none - the canvas is static (dot hues: 0 by source, 0 by destination, 0 shared-hue pair(s))"
+  },
+  "motion_record": {
+    "decision": "static",
+    "source_backing": "source.md never shows motion; cases.json marks motion optional; the annex allows dots only if they help follow a hop",
+    "evidence": "evidence/canvas/canvas-77x47-frames.txt has 12 timestamped frames (0-1100 ms) whose drawings are byte-identical; evidence/canvas-sections/whole-canvas-215x45-frames.txt has 3 identical frames",
+    "frame_audit": "not run - scripts/viz-frame-audit.py audits animated captures and this case has no dots"
+  },
+  "recipe_yield": null,
+  "validation": {
+    "canvas": {
+      "command": "scripts/viz-validate.py docs/visualize-eval/rounds/13/homelab-nic-trace/evidence/canvas --require-select --require-frames --require-records --attempts docs/visualize-eval/rounds/13/homelab-nic-trace/attempts.json",
+      "output": "validator-canvas.txt",
+      "result": "all checks passed (40 PASS, 0 FAIL; note layout_fit_canvas_form)"
+    }
+  },
+  "evidence_commands": {
+    "probes": "scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/13/homelab-nic-trace/attempts-log.jsonl --label <label> -- /tmp/visualize-eval/round-13/bin/rataflow-view --check <spec>",
+    "surface": "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/13/homelab-nic-trace/spec.json --bin /tmp/visualize-eval/round-13/bin/rataflow-view --out docs/visualize-eval/rounds/13/homelab-nic-trace/evidence/canvas --label canvas --frames 3",
+    "whole_canvas_dump": "COLUMNS=215 LINES=45 /tmp/visualize-eval/round-13/bin/rataflow-view --frames 3 docs/visualize-eval/rounds/13/homelab-nic-trace/spec.json > evidence/canvas-sections/whole-canvas-215x45-frames.txt"
+  },
+  "source_pointers": [
+    "docs/visualize-eval/cases/homelab-nic-trace/source.md (the only facts read; sha256 abe8b376...)",
+    "historical chat jsonl 2026-10-13T05-14-42 line 62 (chatcmpl-tool-b004896d418e23a3) - cited by the source, not opened",
+    "the original /tmp/homelab-network-layout.json - named by the source, deliberately not read"
+  ],
+  "abbreviations": [
+    { "drawn": "gw 0.5 ms", "source": "default gw 0.5 ms", "reason": "the edge label budget; the role is unambiguous between the host and the Fios router" },
+    { "drawn": "homelab host", "source": "homelab rack-bench host", "reason": "the bench role is residency, not a network relation" },
+    { "drawn": "virbr0", "source": "virbr0 libvirt NAT", "reason": "the NAT role is drawn on its own route ('NAT bridge')" },
+    { "drawn": "container", "source": "container veth", "reason": "the veth is the interface kind, drawn by its route into the Docker bridge" },
+    { "drawn": "VZ edge 100.41.x / VZ backbone AS701", "source": "Verizon edge 100.41.x / Verizon backbone AS701", "reason": "node label width; the address and AS number are kept" },
+    { "drawn": "wlp8s0 192.168.1.213", "source": "wlp8s0 wifi .213 (same LAN as bond0)", "reason": "the source gives the suffix .213 and states the 192.168.1.0/24 LAN; the full address is the two source facts combined, recorded here rather than imported" }
+  ],
+  "deliberate_drops": [
+    { "fact": "DHCP and the shared Fios pool IP 71.251.12.240", "reason": "a property of the router's NAT service, not an endpoint of any of the fourteen audited relations; labelling the rtr -> ont route with it would assert the pool address as that hop's identity, which the source does not state" },
+    { "fact": "Cloudflare AS13335", "reason": "the node label carries the address 1.1.1.1; a second identifier would double the label width and the AS number adds nothing to a hop-by-hop trace" },
+    { "fact": "the ONT is the demarc / MMR analog; one ISP, one path", "reason": "a datacenter-model interpretation of the same node, not a relation this source draws; the part that changes how the router is read (collapsed fabric) is drawn in the egress description" },
+    { "fact": "no committed rate on the Fios path", "reason": "no node or route in this source carries a rate claim; drawing it would need an edge the source does not state" },
+    { "fact": "the host holds ~/rack-bench with the latest Oct 11 runs", "reason": "residency, not connectivity; the diagram's job is the egress trace" }
+  ],
+  "known_defects": [
+    "Diagram descriptions are 84-91 characters, so at the 68-column evidence pane (and at 77) their tail is offscreen until the reader pans right; the full text is in check.txt and in the 215-column whole-canvas dump.",
+    "The historical qualifier is drawn at diagram level ('historical hops') rather than per node, so the claimed ONT and router identities are marked only by that sentence.",
+    "The router's DHCP/pool address, the Cloudflare AS number and the ONT demarc interpretation are not drawn (see deliberate_drops).",
+    "Case-wide hue consistency is capture-verified only for the host group's egress instance and for the local/secondary groups inside the visible 68 columns; the five offscreen groups rest on the check's groups line.",
+    "In a narrow pane the palette legend (bottom-left pane corner) sits over empty canvas space below the secondary drawing - it overlaps no node, route or label."
+  ],
+  "blockers": [
+    "Measured pane is 68x44 @100% (this worker's tab geometry), not the 77x47 target. It is recorded as measured: the canvas form's fit proof is the per-diagram extents plus the 215x45 natural-zoom dump in which the whole 210x38 canvas draws with no overflow token. No 77x47 fit exists for a 210x38 canvas and none is claimed.",
+    "The evidence pane's 68 columns clip the canvas, so no ANSI capture in this bundle shows the offscreen node hues or the full description lines."
+  ],
+  "cleanup": {
+    "panes": [
+      { "pane_id": "w7E:pZT", "result": "confirmed_closed", "proof": "evidence/canvas/manifest.json cleanup field" }
+    ],
+    "status": "clean - the evidence script closed its own half pane and proved it gone; no other pane, tab or workspace was touched"
+  }
+}

@@ -1,0 +1,2769 @@
+{
+  "protocol_version": 1,
+  "round": 4,
+  "case_id": "modal-machine-manager",
+  "candidate_sha256": "ac431c6d3035e466e29136f36d9579c551c2e070a354dc5df72999b1bb1beb3c",
+  "renderer_sha256": "0da16d8d8ed46e2a25eb773fc71ecad4de9e310cd33e303a4c7fe77231ad95bc",
+  "rubric_sha256": "18412615f82841b34cf131976c6b5f4b00cd4fc031a710cdfc81058e2dd68d10",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "724c9d7480c5e275be69039a809d0994efaf1453b4bdedbccf57c0f87816505f",
+  "generator": {
+    "worker_id": "viz-ds04-modal-machine-manager",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge04-machine-manager",
+    "model": "openai/gpt-6.1-sol"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 77,
+    "rows": 47
+  },
+  "evidence": [
+    {
+      "id": "observed-first",
+      "path": "docs/visualize-eval/rounds/04/reviews/modal-machine-manager/observed-first.md",
+      "sha256": "de1d57b4d077b5367df8f865a6974ccf0f5370782221f14ee42f94349e97b16c",
+      "description": "Immutable stage-A blind coordinate/color/motion record; saved before expectations were revealed.",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/04/reviews/modal-machine-manager/spec-manifest.json",
+      "sha256": "724c9d7480c5e275be69039a809d0994efaf1453b4bdedbccf57c0f87816505f",
+      "description": "Deterministic sorted repository-relative spec paths and actual SHA-256 pairs; spec_sha256 binds these exact manifest bytes.",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/04/metadata.json",
+      "sha256": "2a33a2f6787598bb03ae874ac2bc1222f8095e7f8ec35a09132d9ed47f4f09a8",
+      "description": "Frozen round-04 identities and input hashes.",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/04/rubric.json",
+      "sha256": "18412615f82841b34cf131976c6b5f4b00cd4fc031a710cdfc81058e2dd68d10",
+      "description": "Full seven-category rubric and result_schema.",
+      "capture": null
+    },
+    {
+      "id": "candidate-skill",
+      "path": "docs/visualize-eval/rounds/04/SKILL.md",
+      "sha256": "ac431c6d3035e466e29136f36d9579c551c2e070a354dc5df72999b1bb1beb3c",
+      "description": "Frozen candidate skill; no current-source substitution.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen dataset manifest; only this case evaluated.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/source.md",
+      "sha256": "a41065d9ceca1ed035bfd6282f0e937abbd0034ad497a33637a76f2d8a9ebab3",
+      "description": "Permitted source excerpts and human corrections.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/expected.json",
+      "sha256": "c6d14814bcfa0f41e7401df3b57ea1400e15050b9fb4db3d2e12980d6fde9764",
+      "description": "Qualified historical relation baseline and fixed case constraints.",
+      "capture": null
+    },
+    {
+      "id": "history",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/historical-variants.json",
+      "sha256": "22f00c085b50f218115610ed1580e89f4c0a94d39f8ecf83c80d6712116a06b2",
+      "description": "Permitted historical spec variants; not independent fact verification.",
+      "capture": null
+    },
+    {
+      "id": "renderer-binary",
+      "path": "../../../../../../tmp/visualize-eval/round-04/bin/rataflow-view",
+      "sha256": "0da16d8d8ed46e2a25eb773fc71ecad4de9e310cd33e303a4c7fe77231ad95bc",
+      "description": "Frozen executed renderer binary, hash independently verified without executing it; path is repository-relative with parent traversal because binary is outside the checkout.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v1-a1-check-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v1-a1.check.txt",
+      "sha256": "fe063b8da2aab1950454cb4fa0cef5997f9d8347e627e838f0165e203051d738",
+      "description": "Frozen case artifact: attempts/v1-a1.check.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v1-a1-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v1-a1.json",
+      "sha256": "79c62ad7196ff871b5090c93fce6b7a2ade763bddfd672f0ca8987c21cae6a7a",
+      "description": "Frozen case artifact: attempts/v1-a1.json.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v1-a2-check-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v1-a2.check.txt",
+      "sha256": "f0bf4c3bb5c8ccaee631cd463413bb59d3c152499bfd45e8b9f0ec6af02b796c",
+      "description": "Frozen case artifact: attempts/v1-a2.check.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v1-a2-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v1-a2.json",
+      "sha256": "612d0a849588c22f7d73c11f59e5d16c85ae39f78a5823fd4a338b3d4323c37c",
+      "description": "Frozen case artifact: attempts/v1-a2.json.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v1-a3-check-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v1-a3.check.txt",
+      "sha256": "fe063b8da2aab1950454cb4fa0cef5997f9d8347e627e838f0165e203051d738",
+      "description": "Frozen case artifact: attempts/v1-a3.check.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v1-a3-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v1-a3.json",
+      "sha256": "e03bce6ff14e8b4f46b7723cfb9ff2fec3683ed300ba15e2f912e04015ac13d3",
+      "description": "Frozen case artifact: attempts/v1-a3.json.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v2-a1-check-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v2-a1.check.txt",
+      "sha256": "610aecb6021e03a3b980f86f56896caf9a163501700b858a1c5db5678ebd95f0",
+      "description": "Frozen case artifact: attempts/v2-a1.check.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v2-a1-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v2-a1.json",
+      "sha256": "c4998f76ba2ce82142472edc2d0caa7014987564d3fefe7c77372811815e39d5",
+      "description": "Frozen case artifact: attempts/v2-a1.json.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v2-a2-check-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v2-a2.check.txt",
+      "sha256": "02520630e9886788a3552108a68b89a61d0a5a0ede31013c599887115affe2b4",
+      "description": "Frozen case artifact: attempts/v2-a2.check.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v2-a2-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v2-a2.json",
+      "sha256": "d7ded5086a50635426c3d4ec69e042fb3c19ac311fc3ec2fb50ffaddad8491ee",
+      "description": "Frozen case artifact: attempts/v2-a2.json.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v2-a3-check-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v2-a3.check.txt",
+      "sha256": "9cea0b0b90c45801b2873beda508882cd2831eb5a8fd07f9ef9a0f7e2683d2ec",
+      "description": "Frozen case artifact: attempts/v2-a3.check.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v2-a3-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v2-a3.json",
+      "sha256": "eb7a63b3aa220ed7c1f55d2461840532f243d0534fff95e6895b9d3e139429b9",
+      "description": "Frozen case artifact: attempts/v2-a3.json.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v3-a1-check-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v3-a1.check.txt",
+      "sha256": "9a113f13310d0360b43f7a74f533f38a82333709d0dfaefad1f6f2fbad3dc322",
+      "description": "Frozen case artifact: attempts/v3-a1.check.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v3-a1-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v3-a1.json",
+      "sha256": "3f044c2daf04a0e68c6d613a8c685c0c7d740c148fe27a9a3210a0f08653b0d9",
+      "description": "Frozen case artifact: attempts/v3-a1.json.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v3-a2-check-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v3-a2.check.txt",
+      "sha256": "151ff07bc6e8894fe3a675d046476be0e4a28839fdf8637a53b2a0532100f684",
+      "description": "Frozen case artifact: attempts/v3-a2.check.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v3-a2-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v3-a2.json",
+      "sha256": "9e49f38f84045f233d58700322c485dc79d90b68125b14a2a48cfdf6b9e154f8",
+      "description": "Frozen case artifact: attempts/v3-a2.json.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v3-a3-check-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v3-a3.check.txt",
+      "sha256": "94d892d1658ced7385af4c895d33c688b958b01f1ed9aec980c7bcdf8336315e",
+      "description": "Frozen case artifact: attempts/v3-a3.check.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v3-a3-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v3-a3.json",
+      "sha256": "ddbedaf644c30f9890ec7d906af63631a038bd6471acd9b1ecee16dbddf29955",
+      "description": "Frozen case artifact: attempts/v3-a3.json.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v4-a1-check-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v4-a1.check.txt",
+      "sha256": "8ff10ef1f7219338d032676241d71df99af34b2a1c8eeae500e948156feae475",
+      "description": "Frozen case artifact: attempts/v4-a1.check.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v4-a1-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v4-a1.json",
+      "sha256": "e1a91701ed23aa6fa270ad6579f92fa369472cb16c7b9e99a6e068a625b9131a",
+      "description": "Frozen case artifact: attempts/v4-a1.json.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v4-a2-check-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v4-a2.check.txt",
+      "sha256": "52fa99d091c201abbb0b82ee146b2aa5258eb92064461a3ce1189e5241bc2738",
+      "description": "Frozen case artifact: attempts/v4-a2.check.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v4-a2-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v4-a2.json",
+      "sha256": "a757fdb3bcbf26e41a96958cd7e0cc6752d94ac4bf2f6db3f579212855f966eb",
+      "description": "Frozen case artifact: attempts/v4-a2.json.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v4-a3-check-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v4-a3.check.txt",
+      "sha256": "cd9658b91115f12ea91e83caf6de13659acebdc5e9feb63bf246e2c9d55ae08b",
+      "description": "Frozen case artifact: attempts/v4-a3.check.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-v4-a3-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts/v4-a3.json",
+      "sha256": "b11a993ac703201aed3ac04f198ff2cbdab4b3319ecdccde0ce6bc90c30868fb",
+      "description": "Frozen case artifact: attempts/v4-a3.json.",
+      "capture": null
+    },
+    {
+      "id": "case-attempts-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/attempts.json",
+      "sha256": "235f681438c2cb81d90ebb20a84b196c5e4c2179055de077ae7e5a08f738a6ee",
+      "description": "Frozen case artifact: attempts.json.",
+      "capture": null
+    },
+    {
+      "id": "case-evidence-v1-intake-bin-sha256",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v1-intake/bin.sha256",
+      "sha256": "8846c6305d5cd8f9cfd0db1d5780eda124cf8de84586b65d722509919150e2ff",
+      "description": "Frozen case artifact: evidence/v1-intake/bin.sha256.",
+      "capture": null
+    },
+    {
+      "id": "case-evidence-v1-intake-check-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v1-intake/check.txt",
+      "sha256": "fe063b8da2aab1950454cb4fa0cef5997f9d8347e627e838f0165e203051d738",
+      "description": "Frozen case artifact: evidence/v1-intake/check.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-evidence-v1-intake-direct-frames-77x47-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v1-intake/direct-frames-77x47.txt",
+      "sha256": "bc93cb87d55c40cd9e6cde474305cbc2cdd1a058be6d650b423b01bae2cb8483",
+      "description": "Target-size direct timestamped text frame sequence, only 0–2000ms (not full laps for long routes).",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-intake",
+        "frame": "0–20 at 100ms steps",
+        "timestamp": "relative 0–2000ms; direct dump absolute capture time not preserved",
+        "state": "constant one-dot animation",
+        "format": "text"
+      }
+    },
+    {
+      "id": "case-evidence-v1-intake-manifest-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v1-intake/manifest.json",
+      "sha256": "24fd36f9da1b351f7b6116a10add5762f937588cc2bd61eed3f786e2c2cf718b",
+      "description": "Frozen case artifact: evidence/v1-intake/manifest.json.",
+      "capture": null
+    },
+    {
+      "id": "case-evidence-v1-intake-v1-intake-ansi-ansi",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v1-intake/v1-intake-ansi.ansi",
+      "sha256": "6ce8d5989469009582a4a362e6594fb1a95f959fa4b11d07218bb353b8a7a4e8",
+      "description": "Target-size static pane capture.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-intake",
+        "frame": "static capture; frame index not recorded",
+        "timestamp": "manifest capture window 2026-11-02T12:49:31Z to 2026-11-02T12:49:35Z",
+        "state": "normal node-border state",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "case-evidence-v1-intake-v1-intake-frames-ansi",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v1-intake/v1-intake-frames.ansi",
+      "sha256": "f601c30116268804b1840b9ded567f09d828d0aac4fba4458f386d9142575029",
+      "description": "Target-size pane-captured frame sequence with partial initial frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-intake",
+        "frame": "partial unheaded 0, then 1–20 at 100ms steps",
+        "timestamp": "manifest capture window 2026-11-02T12:49:31Z to 2026-11-02T12:49:35Z",
+        "state": "constant one-dot animation",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "case-evidence-v1-intake-v1-intake-frames-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v1-intake/v1-intake-frames.txt",
+      "sha256": "45de1e48ebdc57e803d3eeb763320756df5b60547426f020f8a8cd034bc7e8e9",
+      "description": "Target-size pane-captured frame sequence with partial initial frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-intake",
+        "frame": "partial unheaded 0, then 1–20 at 100ms steps",
+        "timestamp": "manifest capture window 2026-11-02T12:49:31Z to 2026-11-02T12:49:35Z",
+        "state": "constant one-dot animation",
+        "format": "text"
+      }
+    },
+    {
+      "id": "case-evidence-v1-intake-v1-intake-selected-ansi",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v1-intake/v1-intake-selected.ansi",
+      "sha256": "11db0ea1173176cd536fae0f911ba66443e17c93386c9cfbf8f357f09402152a",
+      "description": "Target-size selected border ANSI.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-intake",
+        "frame": "static capture; frame index not recorded",
+        "timestamp": "manifest capture window 2026-11-02T12:49:31Z to 2026-11-02T12:49:35Z",
+        "state": "all node borders selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "case-evidence-v1-intake-v1-intake-text-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v1-intake/v1-intake-text.txt",
+      "sha256": "925ec9c57c91a975d9663a6ed3bee4e9e9d4e249182b987c570af1fd36b460f8",
+      "description": "Target-size static pane capture.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-intake",
+        "frame": "static capture; frame index not recorded",
+        "timestamp": "manifest capture window 2026-11-02T12:49:31Z to 2026-11-02T12:49:35Z",
+        "state": "normal node-border state",
+        "format": "text"
+      }
+    },
+    {
+      "id": "case-evidence-v1-intake-validator-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v1-intake/validator.txt",
+      "sha256": "5829e4cb7d716ef068a6039907415e74de24076b5db13d050999090e3f970dc2",
+      "description": "Frozen case artifact: evidence/v1-intake/validator.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-evidence-v2-provision-bin-sha256",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v2-provision/bin.sha256",
+      "sha256": "8846c6305d5cd8f9cfd0db1d5780eda124cf8de84586b65d722509919150e2ff",
+      "description": "Frozen case artifact: evidence/v2-provision/bin.sha256.",
+      "capture": null
+    },
+    {
+      "id": "case-evidence-v2-provision-check-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v2-provision/check.txt",
+      "sha256": "9cea0b0b90c45801b2873beda508882cd2831eb5a8fd07f9ef9a0f7e2683d2ec",
+      "description": "Frozen case artifact: evidence/v2-provision/check.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v2-provision/direct-frames-77x47.txt",
+      "sha256": "3cd7ed4b9f9520994dc0d7c777cf84c6877a735868647bf1296533bd26aeec5b",
+      "description": "Target-size direct timestamped text frame sequence, only 0–2000ms (not full laps for long routes).",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-provision",
+        "frame": "0–20 at 100ms steps",
+        "timestamp": "relative 0–2000ms; direct dump absolute capture time not preserved",
+        "state": "constant one-dot animation",
+        "format": "text"
+      }
+    },
+    {
+      "id": "case-evidence-v2-provision-manifest-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v2-provision/manifest.json",
+      "sha256": "7582ddb150a9dd861e0c3d1099c91c16516b80cc0125e28c257cc0b6aa63e59c",
+      "description": "Frozen case artifact: evidence/v2-provision/manifest.json.",
+      "capture": null
+    },
+    {
+      "id": "case-evidence-v2-provision-v2-provision-ansi-ansi",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v2-provision/v2-provision-ansi.ansi",
+      "sha256": "af45582c9a69e4920317652ff446df3beb966290581dbc58d1e74df4a42a7747",
+      "description": "Target-size static pane capture.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-provision",
+        "frame": "static capture; frame index not recorded",
+        "timestamp": "manifest capture window 2026-11-02T12:49:49Z to 2026-11-02T12:49:53Z",
+        "state": "normal node-border state",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "case-evidence-v2-provision-v2-provision-frames-ansi",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v2-provision/v2-provision-frames.ansi",
+      "sha256": "45a91a7e16747458352cab25e20bcd6b7f6c5e83106b3f4d94552a22d06bf042",
+      "description": "Target-size pane-captured frame sequence with partial initial frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-provision",
+        "frame": "partial unheaded 0, then 1–20 at 100ms steps",
+        "timestamp": "manifest capture window 2026-11-02T12:49:49Z to 2026-11-02T12:49:53Z",
+        "state": "constant one-dot animation",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "case-evidence-v2-provision-v2-provision-frames-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v2-provision/v2-provision-frames.txt",
+      "sha256": "5e3ea26b8ae9cb07a1f477f0aeb0e2177991ba024d04209016c69b9e9e6a8a6f",
+      "description": "Target-size pane-captured frame sequence with partial initial frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-provision",
+        "frame": "partial unheaded 0, then 1–20 at 100ms steps",
+        "timestamp": "manifest capture window 2026-11-02T12:49:49Z to 2026-11-02T12:49:53Z",
+        "state": "constant one-dot animation",
+        "format": "text"
+      }
+    },
+    {
+      "id": "case-evidence-v2-provision-v2-provision-selected-ansi",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v2-provision/v2-provision-selected.ansi",
+      "sha256": "440104c3e94437a1235dc47e45f66dc9f0cf54d50d341e1489f844195499a3fe",
+      "description": "Target-size selected border ANSI.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-provision",
+        "frame": "static capture; frame index not recorded",
+        "timestamp": "manifest capture window 2026-11-02T12:49:49Z to 2026-11-02T12:49:53Z",
+        "state": "all node borders selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "case-evidence-v2-provision-v2-provision-text-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v2-provision/v2-provision-text.txt",
+      "sha256": "8ad810f711d4aca4f1a313d121ef2f05f326f8dd0d7b07f12bfe3efae6df2863",
+      "description": "Target-size static pane capture.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-provision",
+        "frame": "static capture; frame index not recorded",
+        "timestamp": "manifest capture window 2026-11-02T12:49:49Z to 2026-11-02T12:49:53Z",
+        "state": "normal node-border state",
+        "format": "text"
+      }
+    },
+    {
+      "id": "case-evidence-v2-provision-validator-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v2-provision/validator.txt",
+      "sha256": "5829e4cb7d716ef068a6039907415e74de24076b5db13d050999090e3f970dc2",
+      "description": "Frozen case artifact: evidence/v2-provision/validator.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-evidence-v3-state-bin-sha256",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v3-state/bin.sha256",
+      "sha256": "8846c6305d5cd8f9cfd0db1d5780eda124cf8de84586b65d722509919150e2ff",
+      "description": "Frozen case artifact: evidence/v3-state/bin.sha256.",
+      "capture": null
+    },
+    {
+      "id": "case-evidence-v3-state-check-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v3-state/check.txt",
+      "sha256": "94d892d1658ced7385af4c895d33c688b958b01f1ed9aec980c7bcdf8336315e",
+      "description": "Frozen case artifact: evidence/v3-state/check.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-evidence-v3-state-direct-frames-77x47-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v3-state/direct-frames-77x47.txt",
+      "sha256": "7f46904584fef7545230c5da289a1427b45810aa39636744b5dc99019e10b3f1",
+      "description": "Target-size direct timestamped text frame sequence, only 0–2000ms (not full laps for long routes).",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-state",
+        "frame": "0–20 at 100ms steps",
+        "timestamp": "relative 0–2000ms; direct dump absolute capture time not preserved",
+        "state": "constant one-dot animation",
+        "format": "text"
+      }
+    },
+    {
+      "id": "case-evidence-v3-state-manifest-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v3-state/manifest.json",
+      "sha256": "453b90aae4d28b70fcbbc317952eb9134eafcae2323ca2688c4de7e6c0065324",
+      "description": "Frozen case artifact: evidence/v3-state/manifest.json.",
+      "capture": null
+    },
+    {
+      "id": "case-evidence-v3-state-v3-state-ansi-ansi",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v3-state/v3-state-ansi.ansi",
+      "sha256": "29eff16bb5d9da538eb74710c27945369fa8f85bd86964b2a669247adc67df46",
+      "description": "Target-size static pane capture.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-state",
+        "frame": "static capture; frame index not recorded",
+        "timestamp": "manifest capture window 2026-11-02T12:49:54Z to 2026-11-02T12:49:58Z",
+        "state": "normal node-border state",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "case-evidence-v3-state-v3-state-frames-ansi",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v3-state/v3-state-frames.ansi",
+      "sha256": "9c5f575c800dfdd1797d739a62c185f145f5782a4f0ba0b2d369113e2ff8b613",
+      "description": "Target-size pane-captured frame sequence with partial initial frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-state",
+        "frame": "partial unheaded 0, then 1–20 at 100ms steps",
+        "timestamp": "manifest capture window 2026-11-02T12:49:54Z to 2026-11-02T12:49:58Z",
+        "state": "constant one-dot animation",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "case-evidence-v3-state-v3-state-frames-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v3-state/v3-state-frames.txt",
+      "sha256": "e1ff9da76c09206b254813a6aa5e20ccbec64e42196e9511dbb57aa17f38e9c0",
+      "description": "Target-size pane-captured frame sequence with partial initial frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-state",
+        "frame": "partial unheaded 0, then 1–20 at 100ms steps",
+        "timestamp": "manifest capture window 2026-11-02T12:49:54Z to 2026-11-02T12:49:58Z",
+        "state": "constant one-dot animation",
+        "format": "text"
+      }
+    },
+    {
+      "id": "case-evidence-v3-state-v3-state-selected-ansi",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v3-state/v3-state-selected.ansi",
+      "sha256": "c31e9d8dd6eac017fbb5a273a74da738ccb9a5d24a50591915eacea2123d61cf",
+      "description": "Target-size selected border ANSI.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-state",
+        "frame": "static capture; frame index not recorded",
+        "timestamp": "manifest capture window 2026-11-02T12:49:54Z to 2026-11-02T12:49:58Z",
+        "state": "all node borders selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "case-evidence-v3-state-v3-state-text-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v3-state/v3-state-text.txt",
+      "sha256": "6fb282aee06b360f872181f0f425e10022151a8c157e2ce6ef556a4000ac9c97",
+      "description": "Target-size static pane capture.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-state",
+        "frame": "static capture; frame index not recorded",
+        "timestamp": "manifest capture window 2026-11-02T12:49:54Z to 2026-11-02T12:49:58Z",
+        "state": "normal node-border state",
+        "format": "text"
+      }
+    },
+    {
+      "id": "case-evidence-v3-state-validator-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v3-state/validator.txt",
+      "sha256": "5829e4cb7d716ef068a6039907415e74de24076b5db13d050999090e3f970dc2",
+      "description": "Frozen case artifact: evidence/v3-state/validator.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-evidence-v4-ops-bin-sha256",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v4-ops/bin.sha256",
+      "sha256": "8846c6305d5cd8f9cfd0db1d5780eda124cf8de84586b65d722509919150e2ff",
+      "description": "Frozen case artifact: evidence/v4-ops/bin.sha256.",
+      "capture": null
+    },
+    {
+      "id": "case-evidence-v4-ops-check-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v4-ops/check.txt",
+      "sha256": "cd9658b91115f12ea91e83caf6de13659acebdc5e9feb63bf246e2c9d55ae08b",
+      "description": "Frozen case artifact: evidence/v4-ops/check.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-evidence-v4-ops-direct-frames-77x47-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v4-ops/direct-frames-77x47.txt",
+      "sha256": "938ab9e36c14970a85e7d11197c0493c155a6bb2ba98fd5a0348e8196cc86cd9",
+      "description": "Target-size direct timestamped text frame sequence, only 0–2000ms (not full laps for long routes).",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-ops",
+        "frame": "0–20 at 100ms steps",
+        "timestamp": "relative 0–2000ms; direct dump absolute capture time not preserved",
+        "state": "constant one-dot animation",
+        "format": "text"
+      }
+    },
+    {
+      "id": "case-evidence-v4-ops-manifest-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v4-ops/manifest.json",
+      "sha256": "39909997c99d552a49b2e7bcf518a4d0565891bbf1d68f2175d0c409515c508c",
+      "description": "Frozen case artifact: evidence/v4-ops/manifest.json.",
+      "capture": null
+    },
+    {
+      "id": "case-evidence-v4-ops-v4-ops-ansi-ansi",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v4-ops/v4-ops-ansi.ansi",
+      "sha256": "de7a1927ccda26c16ae6c61fbe9bd62e6b84f766ff59da4e1d7b5d44c6d78408",
+      "description": "Target-size static pane capture.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-ops",
+        "frame": "static capture; frame index not recorded",
+        "timestamp": "manifest capture window 2026-11-02T12:49:59Z to 2026-11-02T12:50:02Z",
+        "state": "normal node-border state",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "case-evidence-v4-ops-v4-ops-frames-ansi",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v4-ops/v4-ops-frames.ansi",
+      "sha256": "a139268af3e93d1a5fe284084b14f18a9ce5323c5160c71a7373329b873763c5",
+      "description": "Target-size pane-captured frame sequence with partial initial frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-ops",
+        "frame": "partial unheaded 0, then 1–20 at 100ms steps",
+        "timestamp": "manifest capture window 2026-11-02T12:49:59Z to 2026-11-02T12:50:02Z",
+        "state": "constant one-dot animation",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "case-evidence-v4-ops-v4-ops-frames-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v4-ops/v4-ops-frames.txt",
+      "sha256": "8fbdb8faf7a4e01019aebe0a7ec6d9098c97823574c87f5f559a2e6c6f178347",
+      "description": "Target-size pane-captured frame sequence with partial initial frame.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-ops",
+        "frame": "partial unheaded 0, then 1–20 at 100ms steps",
+        "timestamp": "manifest capture window 2026-11-02T12:49:59Z to 2026-11-02T12:50:02Z",
+        "state": "constant one-dot animation",
+        "format": "text"
+      }
+    },
+    {
+      "id": "case-evidence-v4-ops-v4-ops-selected-ansi",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v4-ops/v4-ops-selected.ansi",
+      "sha256": "45bf957253640cb1b30badb1654b191e4de8fec49c67e2e01fdfe843eb8f606d",
+      "description": "Target-size selected border ANSI.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-ops",
+        "frame": "static capture; frame index not recorded",
+        "timestamp": "manifest capture window 2026-11-02T12:49:59Z to 2026-11-02T12:50:02Z",
+        "state": "all node borders selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "case-evidence-v4-ops-v4-ops-text-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v4-ops/v4-ops-text.txt",
+      "sha256": "4b5104851581e44256bba4612abb1c9c43b025a2d5f00f44cad2ab3f79aaf040",
+      "description": "Target-size static pane capture.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-ops",
+        "frame": "static capture; frame index not recorded",
+        "timestamp": "manifest capture window 2026-11-02T12:49:59Z to 2026-11-02T12:50:02Z",
+        "state": "normal node-border state",
+        "format": "text"
+      }
+    },
+    {
+      "id": "case-evidence-v4-ops-validator-txt",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v4-ops/validator.txt",
+      "sha256": "5829e4cb7d716ef068a6039907415e74de24076b5db13d050999090e3f970dc2",
+      "description": "Frozen case artifact: evidence/v4-ops/validator.txt.",
+      "capture": null
+    },
+    {
+      "id": "case-generation-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/generation.json",
+      "sha256": "f26443d4fb993d404a1e5dc7ab09974a4ce0d2ac7e1a6570366ae6185bab4a00",
+      "description": "Frozen case artifact: generation.json.",
+      "capture": null
+    },
+    {
+      "id": "case-generation-md",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/generation.md",
+      "sha256": "3c225bf7beef5e64f2004cb2e83b06ba82aefd572cd1d4582b9e69d9c6236980",
+      "description": "Frozen case artifact: generation.md.",
+      "capture": null
+    },
+    {
+      "id": "case-specs-v1-intake-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/specs/v1-intake.json",
+      "sha256": "e03bce6ff14e8b4f46b7723cfb9ff2fec3683ed300ba15e2f912e04015ac13d3",
+      "description": "Frozen case artifact: specs/v1-intake.json.",
+      "capture": null
+    },
+    {
+      "id": "case-specs-v2-provision-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/specs/v2-provision.json",
+      "sha256": "eb7a63b3aa220ed7c1f55d2461840532f243d0534fff95e6895b9d3e139429b9",
+      "description": "Frozen case artifact: specs/v2-provision.json.",
+      "capture": null
+    },
+    {
+      "id": "case-specs-v3-state-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/specs/v3-state.json",
+      "sha256": "ddbedaf644c30f9890ec7d906af63631a038bd6471acd9b1ecee16dbddf29955",
+      "description": "Frozen case artifact: specs/v3-state.json.",
+      "capture": null
+    },
+    {
+      "id": "case-specs-v4-ops-json",
+      "path": "docs/visualize-eval/rounds/04/modal-machine-manager/specs/v4-ops.json",
+      "sha256": "b11a993ac703201aed3ac04f198ff2cbdab4b3319ecdccde0ce6bc90c30868fb",
+      "description": "Frozen case artifact: specs/v4-ops.json.",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "observed-first",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 17 components and 23 directed relationships are present once across four views; reimage, pull, boot.ipxe + S3 args, and janitor→webapi survive. Four labels have uncertain owners (F04–F07); source fastest/slow path qualifiers are absent (F09). Exhausted retries do not establish the no-unambiguous-placement exception. JSON coverage is not readable capture coverage.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/rubric.json#/categories"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "history",
+        "observed-first",
+        "case-evidence-v1-intake-v1-intake-text-txt",
+        "case-evidence-v2-provision-v2-provision-text-txt",
+        "case-evidence-v3-state-v3-state-text-txt",
+        "case-evidence-v4-ops-v4-ops-text-txt"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Static stems, distinct ports, full paths and intact target heads exist for all 23 arrows, but every dot starts on the second drawn cell, failing the explicit direction/origin gate (F01). Four ambiguous owners also impair meaning. No fake bus/branch, missing head, or demonstrated fixed-port detour; forced queue routing is not failed for length alone.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/rubric.json#/categories"
+      ],
+      "evidence_ids": [
+        "observed-first",
+        "case-evidence-v1-intake-direct-frames-77x47-txt",
+        "case-evidence-v2-provision-direct-frames-77x47-txt",
+        "case-evidence-v3-state-direct-frames-77x47-txt",
+        "case-evidence-v4-ops-direct-frames-77x47-txt",
+        "case-evidence-v1-intake-v1-intake-text-txt",
+        "case-evidence-v2-provision-v2-provision-text-txt",
+        "case-evidence-v3-state-v3-state-text-txt",
+        "case-evidence-v4-ops-v4-ops-text-txt"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All four actual app headers measure 77x47 @100%; pinned direct files begin viewport: 77x47 zoom: 1.00 natural. No clipping, hidden labels, palette occlusion, pan or zoom rescue. Separate pane rectangle is unavailable but the running app header is accepted proof. One avoidable Postgres bridge at (37,38) fails the crossing-minimization gate: destination-port reassignment suffices without changing source groups/tiers/edges (F08).",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/rubric.json#/categories"
+      ],
+      "evidence_ids": [
+        "observed-first",
+        "case-evidence-v1-intake-v1-intake-text-txt",
+        "case-evidence-v2-provision-v2-provision-text-txt",
+        "case-evidence-v3-state-v3-state-text-txt",
+        "case-evidence-v4-ops-v4-ops-text-txt",
+        "case-evidence-v1-intake-direct-frames-77x47-txt",
+        "case-evidence-v2-provision-direct-frames-77x47-txt",
+        "case-evidence-v3-state-direct-frames-77x47-txt",
+        "case-evidence-v4-ops-direct-frames-77x47-txt"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Source-related control, RPC, provider, host, state, ops, people and boot concepts use supported semantic groups. Normal ANSI shows related hue families and source-chain proximity: provider registry/providers adjacent; host/agent adjacent; control and RPC hue families distinguish local roles. Cross-view hue stability is not a separate gate. No arbitrary depth-based grouping claim.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/rubric.json#/categories"
+      ],
+      "evidence_ids": [
+        "source",
+        "case-specs-v1-intake-json",
+        "case-specs-v2-provision-json",
+        "case-specs-v3-state-json",
+        "case-specs-v4-ops-json",
+        "case-evidence-v1-intake-v1-intake-ansi-ansi",
+        "case-evidence-v2-provision-v2-provision-ansi-ansi",
+        "case-evidence-v3-state-v3-state-ansi-ansi",
+        "case-evidence-v4-ops-v4-ops-ansi-ansi"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "ANSI proves every side and corner of all 26 node occurrences is complete and color-continuous. All 26/26 have their own full selected border in four select-all captures (bold RGB 216,166,87). This does not prove exclusive keyboard selection or dragging, neither of which is an added pass condition.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/rubric.json#/categories"
+      ],
+      "evidence_ids": [
+        "observed-first",
+        "case-evidence-v1-intake-v1-intake-ansi-ansi",
+        "case-evidence-v2-provision-v2-provision-ansi-ansi",
+        "case-evidence-v3-state-v3-state-ansi-ansi",
+        "case-evidence-v4-ops-v4-ops-ansi-ansi",
+        "case-evidence-v1-intake-v1-intake-selected-ansi",
+        "case-evidence-v2-provision-v2-provision-selected-ansi",
+        "case-evidence-v3-state-v3-state-selected-ansi",
+        "case-evidence-v4-ops-v4-ops-selected-ansi"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Frozen candidate/renderer/rubric/dataset/case/final-spec hashes independently match, models are DeepSeek generator and independent Sol reviewer, and the blind record predated reveal. All 28 manifest artifact hashes verify; 12 draft specs/raw checks exist. But rejected v1-a2 has an invalid 65-character digest binding (F10), a known failure. Missing exact execution commands/status/probe transcripts and incomplete long-route cycles remain evidence blockers (G01/G02), not passes. Four owned panes are recorded confirmed_closed.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/rubric.json#/categories"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "candidate-skill",
+        "renderer-binary",
+        "rubric",
+        "dataset",
+        "spec-manifest",
+        "observed-first",
+        "case-attempts-json",
+        "case-generation-json",
+        "case-evidence-v1-intake-manifest-json",
+        "case-evidence-v2-provision-manifest-json",
+        "case-evidence-v3-state-manifest-json",
+        "case-evidence-v4-ops-manifest-json"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Required by source corrections ending in one live dot per line. Exactly one dot exists on each of 23 routes in every sampled frame; slow constant mode and unequal arrivals are legal. Nonetheless all 23 starts miss actual origins (F01), seven routes occupy corners (F02, 40 route-frame occurrences), and 14 include unequal geometric cell advances due to corner skips (F03). No observed border/label/bridge/junction dot. Fifteen routes lack full-lap evidence (G01); known failures stay fail.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/rubric.json#/categories"
+      ],
+      "evidence_ids": [
+        "source",
+        "history",
+        "dataset",
+        "observed-first",
+        "case-evidence-v1-intake-direct-frames-77x47-txt",
+        "case-evidence-v2-provision-direct-frames-77x47-txt",
+        "case-evidence-v3-state-direct-frames-77x47-txt",
+        "case-evidence-v4-ops-direct-frames-77x47-txt",
+        "case-evidence-v1-intake-v1-intake-frames-ansi",
+        "case-evidence-v2-provision-v2-provision-frames-ansi",
+        "case-evidence-v3-state-v3-state-frames-ansi",
+        "case-evidence-v4-ops-v4-ops-frames-ansi"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/1"
+      ],
+      "expected": "web → wapi: http; directed point-to-point, no source-named shared bus.",
+      "observed": "v1-intake: `humans + mmctl` → `webapi`, visible label `http`. Source border port (48, 18), first exterior stem (48, 19); route vertices [[48, 19], [48, 22]]; intact target head (48, 22) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. Frame-0 dot is (48, 20), index 1, so the required origin gate fails even though static geometry is present.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v1-intake-v1-intake-text-txt",
+          "region": [
+            48,
+            19,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v1-intake-v1-intake-text-txt",
+          "region": [
+            50,
+            20,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v1-intake-direct-frames-77x47-txt",
+          "region": [
+            48,
+            19,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01"
+      ]
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/0"
+      ],
+      "expected": "cp → pgrpc: create / terminate / repair; directed point-to-point, no source-named shared bus.",
+      "observed": "v1-intake: `control plane` → `private gRPC`, visible label `create/term/repair`. Source border port (16, 18), first exterior stem (16, 19); route vertices [[16, 19], [16, 22]]; intact target head (16, 22) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. Frame-0 dot is (16, 20), index 1, so the required origin gate fails even though static geometry is present.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v1-intake-v1-intake-text-txt",
+          "region": [
+            16,
+            19,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v1-intake-v1-intake-text-txt",
+          "region": [
+            18,
+            20,
+            18,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v1-intake-direct-frames-77x47-txt",
+          "region": [
+            16,
+            19,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01"
+      ]
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/2"
+      ],
+      "expected": "pgrpc → q: enqueue job; directed point-to-point, no source-named shared bus.",
+      "observed": "v1-intake: `private gRPC` → `River queue`, visible label `enqueue job`. Source border port (16, 26), first exterior stem (16, 27); route vertices [[16, 27], [16, 29], [32, 29], [32, 30]]; intact target head (32, 30) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. Frame-0 dot is (16, 28), index 1, so the required origin gate fails even though static geometry is present. See associated label-owner finding; do not treat the JSON owner as capture proof.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v1-intake-v1-intake-text-txt",
+          "region": [
+            16,
+            27,
+            17,
+            4
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v1-intake-v1-intake-text-txt",
+          "region": [
+            19,
+            28,
+            11,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v1-intake-direct-frames-77x47-txt",
+          "region": [
+            16,
+            27,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F03",
+        "F04"
+      ]
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/3"
+      ],
+      "expected": "wapi → q: reinstall / reprovision; directed point-to-point, no source-named shared bus.",
+      "observed": "v1-intake: `webapi` → `River queue`, visible label `reinstall/reprov`. Source border port (48, 26), first exterior stem (48, 27); route vertices [[48, 27], [48, 29], [34, 29], [34, 30]]; intact target head (34, 30) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. Frame-0 dot is (48, 28), index 1, so the required origin gate fails even though static geometry is present. See associated label-owner finding; do not treat the JSON owner as capture proof.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v1-intake-v1-intake-text-txt",
+          "region": [
+            34,
+            27,
+            15,
+            4
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v1-intake-v1-intake-text-txt",
+          "region": [
+            32,
+            28,
+            16,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v1-intake-direct-frames-77x47-txt",
+          "region": [
+            48,
+            27,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F03",
+        "F04"
+      ]
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/4"
+      ],
+      "expected": "q → reg: provision job; directed point-to-point, no source-named shared bus.",
+      "observed": "v2-provision: `River queue` → `provider registry`, visible label `provision job`. Source border port (13, 9), first exterior stem (13, 10); route vertices [[13, 10], [13, 12], [10, 12], [10, 13]]; intact target head (10, 13) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. Frame-0 dot is (13, 11), index 1, so the required origin gate fails even though static geometry is present.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v2-provision-v2-provision-text-txt",
+          "region": [
+            10,
+            10,
+            4,
+            4
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-v2-provision-text-txt",
+          "region": [
+            15,
+            11,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            13,
+            10,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F02",
+        "F03"
+      ]
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/5"
+      ],
+      "expected": "reg → prov: provider API; directed point-to-point, no source-named shared bus.",
+      "observed": "v2-provision: `provider registry` → `bare-metal providers`, visible label `provider API`. Source border port (10, 17), first exterior stem (10, 18); route vertices [[10, 18], [10, 20], [8, 20], [8, 21]]; intact target head (8, 21) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. Frame-0 dot is (10, 19), index 1, so the required origin gate fails even though static geometry is present.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v2-provision-v2-provision-text-txt",
+          "region": [
+            8,
+            18,
+            3,
+            4
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-v2-provision-text-txt",
+          "region": [
+            12,
+            19,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            10,
+            18,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F02",
+        "F03"
+      ]
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/6"
+      ],
+      "expected": "prov → mch: allocate instance; directed point-to-point, no source-named shared bus.",
+      "observed": "v2-provision: `bare-metal providers` → `bare-metal machines`, visible label `allocate instance`. Source border port (8, 25), first exterior stem (8, 26); route vertices [[8, 26], [8, 28], [9, 28], [9, 29]]; intact target head (9, 29) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. Frame-0 dot is (8, 27), index 1, so the required origin gate fails even though static geometry is present.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v2-provision-v2-provision-text-txt",
+          "region": [
+            8,
+            26,
+            2,
+            4
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-v2-provision-text-txt",
+          "region": [
+            10,
+            27,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            8,
+            26,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F02",
+        "F03"
+      ]
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/7"
+      ],
+      "expected": "mch → boot: iPXE request; directed point-to-point, no source-named shared bus.",
+      "observed": "v2-provision: `bare-metal machines` → `boot server`, visible label `iPXE request`. Source border port (9, 33), first exterior stem (9, 34); route vertices [[9, 34], [9, 37], [34, 37], [34, 38]]; intact target head (34, 38) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. Frame-0 dot is (9, 35), index 1, so the required origin gate fails even though static geometry is present. See associated label-owner finding; do not treat the JSON owner as capture proof.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v2-provision-v2-provision-text-txt",
+          "region": [
+            9,
+            34,
+            26,
+            5
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-v2-provision-text-txt",
+          "region": [
+            15,
+            38,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            9,
+            34,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F03",
+        "F05"
+      ]
+    },
+    {
+      "edge_id": "e9",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/8"
+      ],
+      "expected": "boot → mch: boot.ipxe + S3 args; directed point-to-point, no source-named shared bus.",
+      "observed": "v2-provision: `boot server` → `bare-metal machines`, visible label `boot.ipxe + S3 args`. Source border port (33, 40), first exterior stem (32, 40); route vertices [[32, 40], [6, 40], [6, 31], [7, 31]]; intact target head (7, 31) ▶. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. Response leaves the boot box leftward, runs up at column 6, and ends with a right-pointing ▶ into the machine's left border at (7,31); this preserves boot→machines, not a reversed relation. Frame-0 dot is (31, 40), index 1, so the required origin gate fails even though static geometry is present. See associated label-owner finding; do not treat the JSON owner as capture proof.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v2-provision-v2-provision-text-txt",
+          "region": [
+            6,
+            31,
+            27,
+            10
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-v2-provision-text-txt",
+          "region": [
+            10,
+            39,
+            19,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            31,
+            40,
+            2,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F05"
+      ]
+    },
+    {
+      "edge_id": "e10",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/16"
+      ],
+      "expected": "mch → s3: pull boot image; directed point-to-point, no source-named shared bus.",
+      "observed": "v2-provision: `bare-metal machines` → `S3 object store`, visible label `pull boot image`. Source border port (11, 33), first exterior stem (11, 34); route vertices [[11, 34], [11, 35], [55, 35], [55, 38]]; intact target head (55, 38) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. The verb pull is present in full: pull boot image. Frame-0 dot is (11, 35), index 1, so the required origin gate fails even though static geometry is present.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v2-provision-v2-provision-text-txt",
+          "region": [
+            11,
+            34,
+            45,
+            5
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-v2-provision-text-txt",
+          "region": [
+            26,
+            34,
+            15,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            11,
+            34,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F02"
+      ]
+    },
+    {
+      "edge_id": "e11",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/9"
+      ],
+      "expected": "mch → agent: runs on host; directed point-to-point, no source-named shared bus.",
+      "observed": "v3-state: `bare-metal machines` → `machine-agent`, visible label `runs on host`. Source border port (8, 8), first exterior stem (8, 9); route vertices [[8, 9], [8, 11], [11, 11], [11, 12]]; intact target head (11, 12) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. Frame-0 dot is (8, 10), index 1, so the required origin gate fails even though static geometry is present.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v3-state-v3-state-text-txt",
+          "region": [
+            8,
+            9,
+            4,
+            4
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-v3-state-text-txt",
+          "region": [
+            10,
+            10,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            8,
+            9,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F02",
+        "F03"
+      ]
+    },
+    {
+      "edge_id": "e12",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/10"
+      ],
+      "expected": "agent → pub: register + heartbeat; directed point-to-point, no source-named shared bus.",
+      "observed": "v3-state: `machine-agent` → `public gRPC`, visible label `register + heartbeat`. Source border port (11, 16), first exterior stem (11, 17); route vertices [[11, 17], [11, 19], [12, 19], [12, 20]]; intact target head (12, 20) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. Frame-0 dot is (11, 18), index 1, so the required origin gate fails even though static geometry is present.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v3-state-v3-state-text-txt",
+          "region": [
+            11,
+            17,
+            2,
+            4
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-v3-state-text-txt",
+          "region": [
+            13,
+            18,
+            20,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            11,
+            17,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F02",
+        "F03",
+        "F09"
+      ]
+    },
+    {
+      "edge_id": "e13",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/11"
+      ],
+      "expected": "pub → db: machine state; directed point-to-point, no source-named shared bus.",
+      "observed": "v3-state: `public gRPC` → `Postgres`, visible label `machine state`. Source border port (12, 24), first exterior stem (12, 25); route vertices [[12, 25], [12, 39], [35, 39], [35, 40]]; intact target head (35, 40) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. Frame-0 dot is (12, 26), index 1, so the required origin gate fails even though static geometry is present. See associated label-owner finding; do not treat the JSON owner as capture proof.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v3-state-v3-state-text-txt",
+          "region": [
+            12,
+            25,
+            24,
+            16
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-v3-state-text-txt",
+          "region": [
+            17,
+            38,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            12,
+            25,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F06",
+        "F09"
+      ]
+    },
+    {
+      "edge_id": "e14",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/12"
+      ],
+      "expected": "pgrpc → db: machine rows; directed point-to-point, no source-named shared bus.",
+      "observed": "v3-state: `private gRPC` → `Postgres`, visible label `machine rows`. Source border port (33, 24), first exterior stem (33, 25); route vertices [[33, 25], [33, 36], [37, 36], [37, 38], [37, 40]]; intact target head (37, 40) ▼. Static route is individually traceable; no shared bus or fake branch. Crosses the other Postgres input at bridge (37,38), not a junction. Frame-0 dot is (33, 26), index 1, so the required origin gate fails even though static geometry is present.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v3-state-v3-state-text-txt",
+          "region": [
+            33,
+            25,
+            5,
+            16
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-v3-state-text-txt",
+          "region": [
+            35,
+            29,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            33,
+            25,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F03",
+        "F08"
+      ]
+    },
+    {
+      "edge_id": "e15",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/13"
+      ],
+      "expected": "q → db: job rows; directed point-to-point, no source-named shared bus.",
+      "observed": "v3-state: `River queue` → `Postgres`, visible label `job rows`. Source border port (34, 16), first exterior stem (34, 17); route vertices [[34, 17], [34, 19], [30, 19], [30, 38], [37, 38], [39, 38], [39, 40]]; intact target head (39, 40) ▼. Static route is individually traceable; no shared bus or fake branch. Crosses the other Postgres input at bridge (37,38), not a junction. Frame-0 dot is (34, 18), index 1, so the required origin gate fails even though static geometry is present. See associated label-owner finding; do not treat the JSON owner as capture proof.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v3-state-v3-state-text-txt",
+          "region": [
+            30,
+            17,
+            10,
+            24
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-v3-state-text-txt",
+          "region": [
+            21,
+            28,
+            8,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            34,
+            17,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F03",
+        "F06",
+        "F08"
+      ]
+    },
+    {
+      "edge_id": "e16",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/22"
+      ],
+      "expected": "rec → db: cluster state; directed point-to-point, no source-named shared bus.",
+      "observed": "v3-state: `reconcile loop` → `Postgres`, visible label `cluster state`. Source border port (54, 24), first exterior stem (54, 25); route vertices [[54, 25], [54, 38], [41, 38], [41, 40]]; intact target head (41, 40) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. Frame-0 dot is (54, 26), index 1, so the required origin gate fails even though static geometry is present.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v3-state-v3-state-text-txt",
+          "region": [
+            41,
+            25,
+            14,
+            16
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-v3-state-text-txt",
+          "region": [
+            41,
+            31,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            54,
+            25,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01"
+      ]
+    },
+    {
+      "edge_id": "e17",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/21"
+      ],
+      "expected": "rec → prov: gcore sync, 1 min; directed point-to-point, no source-named shared bus.",
+      "observed": "v3-state: `reconcile loop` → `bare-metal providers`, visible label `gcore sync, 1 min`. Source border port (56, 24), first exterior stem (56, 25); route vertices [[56, 25], [56, 39], [51, 39], [51, 40]]; intact target head (51, 40) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. Frame-0 dot is (56, 26), index 1, so the required origin gate fails even though static geometry is present.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v3-state-v3-state-text-txt",
+          "region": [
+            51,
+            25,
+            6,
+            16
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-v3-state-text-txt",
+          "region": [
+            53,
+            40,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            56,
+            25,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F09"
+      ]
+    },
+    {
+      "edge_id": "e18",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/14"
+      ],
+      "expected": "q → ssh: audit / verify reimage; directed point-to-point, no source-named shared bus.",
+      "observed": "v4-ops: `River queue` → `SSH + BMC ops`, visible label `audit/verify reimage`. Source border port (25, 9), first exterior stem (25, 10); route vertices [[25, 10], [25, 21], [2, 21], [2, 23]]; intact target head (2, 23) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. The reimage qualifier is present in audit/verify reimage. Frame-0 dot is (25, 11), index 1, so the required origin gate fails even though static geometry is present. See associated label-owner finding; do not treat the JSON owner as capture proof.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v4-ops-v4-ops-text-txt",
+          "region": [
+            2,
+            10,
+            24,
+            14
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-v4-ops-text-txt",
+          "region": [
+            4,
+            20,
+            20,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-direct-frames-77x47-txt",
+          "region": [
+            25,
+            10,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F03",
+        "F07",
+        "F09"
+      ]
+    },
+    {
+      "edge_id": "e19",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/15"
+      ],
+      "expected": "ssh → mch: run machine-audit; directed point-to-point, no source-named shared bus.",
+      "observed": "v4-ops: `SSH + BMC ops` → `bare-metal machines`, visible label `run machine-audit`. Source border port (2, 27), first exterior stem (2, 28); route vertices [[2, 28], [2, 30], [21, 30], [21, 31]]; intact target head (21, 31) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. Frame-0 dot is (2, 29), index 1, so the required origin gate fails even though static geometry is present.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v4-ops-v4-ops-text-txt",
+          "region": [
+            2,
+            28,
+            20,
+            4
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-v4-ops-text-txt",
+          "region": [
+            3,
+            29,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-direct-frames-77x47-txt",
+          "region": [
+            2,
+            28,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F03",
+        "F09"
+      ]
+    },
+    {
+      "edge_id": "e20",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/17"
+      ],
+      "expected": "q → s3: diagnose uploads; directed point-to-point, no source-named shared bus.",
+      "observed": "v4-ops: `River queue` → `S3 object store`, visible label `diagnose uploads`. Source border port (27, 9), first exterior stem (27, 10); route vertices [[27, 10], [27, 22], [23, 22], [23, 23]]; intact target head (23, 23) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. Frame-0 dot is (27, 11), index 1, so the required origin gate fails even though static geometry is present. See associated label-owner finding; do not treat the JSON owner as capture proof.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v4-ops-v4-ops-text-txt",
+          "region": [
+            23,
+            10,
+            5,
+            14
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-v4-ops-text-txt",
+          "region": [
+            6,
+            22,
+            16,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-direct-frames-77x47-txt",
+          "region": [
+            27,
+            10,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F07"
+      ]
+    },
+    {
+      "edge_id": "e21",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/18"
+      ],
+      "expected": "q → jan: diagnostic events; directed point-to-point, no source-named shared bus.",
+      "observed": "v4-ops: `River queue` → `janitor app`, visible label `diagnostic events`. Source border port (29, 9), first exterior stem (29, 10); route vertices [[29, 10], [29, 22], [46, 22], [46, 23]]; intact target head (46, 23) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. Frame-0 dot is (29, 11), index 1, so the required origin gate fails even though static geometry is present.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v4-ops-v4-ops-text-txt",
+          "region": [
+            29,
+            10,
+            18,
+            14
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-v4-ops-text-txt",
+          "region": [
+            29,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-direct-frames-77x47-txt",
+          "region": [
+            29,
+            10,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F09"
+      ]
+    },
+    {
+      "edge_id": "e22",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/19"
+      ],
+      "expected": "jan → wapi: proposed actions; directed point-to-point, no source-named shared bus.",
+      "observed": "v4-ops: `janitor app` → `webapi server`, visible label `proposed actions`. Source border port (46, 27), first exterior stem (46, 28); route vertices [[46, 28], [46, 30], [63, 30], [63, 31]]; intact target head (63, 31) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. The historically protected janitor→webapi proposal relation survives. Frame-0 dot is (46, 29), index 1, so the required origin gate fails even though static geometry is present.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v4-ops-v4-ops-text-txt",
+          "region": [
+            46,
+            28,
+            18,
+            4
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-v4-ops-text-txt",
+          "region": [
+            46,
+            31,
+            16,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-direct-frames-77x47-txt",
+          "region": [
+            46,
+            28,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F03",
+        "F09"
+      ]
+    },
+    {
+      "edge_id": "e23",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/20"
+      ],
+      "expected": "wapi → slack: confirm + alerts; directed point-to-point, no source-named shared bus.",
+      "observed": "v4-ops: `webapi server` → `Slack`, visible label `confirm + alerts`. Source border port (63, 35), first exterior stem (63, 36); route vertices [[63, 36], [63, 38], [67, 38], [67, 39]]; intact target head (67, 39) ▼. Static route is individually traceable; no shared bus or fake branch. No crossing or junction on this route. Frame-0 dot is (63, 37), index 1, so the required origin gate fails even though static geometry is present.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v4-ops-v4-ops-text-txt",
+          "region": [
+            63,
+            36,
+            5,
+            4
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-v4-ops-text-txt",
+          "region": [
+            50,
+            39,
+            16,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-direct-frames-77x47-txt",
+          "region": [
+            63,
+            36,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F02",
+        "F03",
+        "F09"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F01",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6",
+        "e7",
+        "e8",
+        "e9",
+        "e10",
+        "e11",
+        "e12",
+        "e13",
+        "e14",
+        "e15",
+        "e16",
+        "e17",
+        "e18",
+        "e19",
+        "e20",
+        "e21",
+        "e22",
+        "e23"
+      ],
+      "severity": "high",
+      "description": "DEFECT: all 23 frame-0 dots are one drawn cell downstream of the actual origin (route index 1 instead of 0). For example intake control plane origin (16,19) versus dot (16,20); ops queue first origin (25,10) versus dot (25,11); boot response origin (32,40) versus dot (31,40). The constant-mode origin rule applies too. Static stems/heads are present, but the rubric explicitly treats offset dot starts as direction unproven. The checks' origins:N/N assertions are contradicted by captured coordinates. This also fails animation.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Original-line-217",
+        "docs/visualize-eval/rounds/04/rubric.json#/categories/arrow_traceability",
+        "docs/visualize-eval/rounds/04/rubric.json#/categories/animation"
+      ],
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v1-intake-direct-frames-77x47-txt",
+          "region": [
+            48,
+            19,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v1-intake-direct-frames-77x47-txt",
+          "region": [
+            16,
+            19,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v1-intake-direct-frames-77x47-txt",
+          "region": [
+            48,
+            27,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v1-intake-direct-frames-77x47-txt",
+          "region": [
+            16,
+            27,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            13,
+            10,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            10,
+            18,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            8,
+            26,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            9,
+            34,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            11,
+            34,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            31,
+            40,
+            2,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            8,
+            9,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            11,
+            17,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            12,
+            25,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            33,
+            25,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            34,
+            17,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            54,
+            25,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            56,
+            25,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-direct-frames-77x47-txt",
+          "region": [
+            25,
+            10,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-direct-frames-77x47-txt",
+          "region": [
+            27,
+            10,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-direct-frames-77x47-txt",
+          "region": [
+            29,
+            10,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-direct-frames-77x47-txt",
+          "region": [
+            2,
+            28,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-direct-frames-77x47-txt",
+          "region": [
+            46,
+            28,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-direct-frames-77x47-txt",
+          "region": [
+            63,
+            36,
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F02",
+      "category": "animation",
+      "edge_ids": [
+        "e5",
+        "e6",
+        "e7",
+        "e10",
+        "e11",
+        "e12",
+        "e23"
+      ],
+      "severity": "medium",
+      "description": "DEFECT: seven routes visibly overwrite a corner with their dot, totaling 40 route-frame occupancies: q→reg at (10,12), reg→prov at (8,20), prov→mch at (9,28), mch→S3 at (11,35), mch→agent at (11,11), agent→public gRPC at (12,19), and webapi→Slack at (67,38). See unchanged blind record for every frame number. First-corner skipping is not an effective no-corner guarantee.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/rubric.json#/categories/animation",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Fixed-constraints"
+      ],
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            10,
+            12,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            8,
+            20,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            9,
+            28,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            11,
+            35,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            11,
+            11,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            12,
+            19,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-direct-frames-77x47-txt",
+          "region": [
+            67,
+            38,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F03",
+      "category": "animation",
+      "edge_ids": [
+        "e4",
+        "e3",
+        "e5",
+        "e6",
+        "e7",
+        "e8",
+        "e11",
+        "e12",
+        "e14",
+        "e15",
+        "e18",
+        "e19",
+        "e22",
+        "e23"
+      ],
+      "severity": "medium",
+      "description": "DEFECT: 14 routes skip a visible centerline cell at a corner, producing a two-cell move in a 200ms interval while other routes move one. In ops, frames 0→2 move q→SSH (25,11)→(25,12), one cell, while SSH→machines moves (2,29)→(3,30), two centerline cells. In provision, q→registry moves (13,11)→(12,12), two cells, while the boot-response dot moves (31,40)→(30,40), one. This is unequal visible-grid advance, not an objection to legal unequal arrival times. Odd frames repeat the preceding even frame; quantization itself is not failed.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/rubric.json#/categories/animation"
+      ],
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v1-intake-direct-frames-77x47-txt",
+          "region": [
+            47,
+            28,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v1-intake-direct-frames-77x47-txt",
+          "region": [
+            16,
+            28,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            12,
+            11,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            9,
+            19,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            8,
+            27,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            9,
+            36,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            8,
+            10,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            11,
+            18,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            33,
+            35,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            33,
+            18,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-direct-frames-77x47-txt",
+          "region": [
+            24,
+            20,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-direct-frames-77x47-txt",
+          "region": [
+            2,
+            29,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-direct-frames-77x47-txt",
+          "region": [
+            46,
+            29,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-direct-frames-77x47-txt",
+          "region": [
+            63,
+            37,
+            2,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F04",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e4",
+        "e3"
+      ],
+      "severity": "high",
+      "description": "DEFECT: ambiguous owner for `reinstall/reprov`. The label spans immediately above the sibling private-gRPC→queue horizontal run and beside its own webapi vertical. An abbreviation preserves both verbs but does not establish a unique owner. Also counts against arrow traceability. All four checks report one ambiguity. The generator recorded the warnings and spent three candidates, but exhaustion of an attempt budget is not proof that no unambiguous placement exists; the exception is not established.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges",
+        "docs/visualize-eval/rounds/04/rubric.json#/categories/semantic_fidelity"
+      ],
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v1-intake-v1-intake-text-txt",
+          "region": [
+            32,
+            28,
+            16,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F05",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e9",
+        "e8"
+      ],
+      "severity": "high",
+      "description": "DEFECT: ambiguous owner for `boot.ipxe + S3 args`. The complete payload label survives between the request run on row 37 and response run on row 40. The response is the nearer/stronger reading, but no leader or isolated label band resolves the parallel pair. Boot→machines is not deleted or reversed; ownership is still uncertain. Also counts against arrow traceability. All four checks report one ambiguity. The generator recorded the warnings and spent three candidates, but exhaustion of an attempt budget is not proof that no unambiguous placement exists; the exception is not established.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges",
+        "docs/visualize-eval/rounds/04/rubric.json#/categories/semantic_fidelity"
+      ],
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v2-provision-v2-provision-text-txt",
+          "region": [
+            10,
+            39,
+            19,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F06",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e13",
+        "e15"
+      ],
+      "severity": "high",
+      "description": "DEFECT: ambiguous owner for `machine state`. Blind observation identifies machine state, not a guess among the generator's job rows/machine rows/cluster state candidates: the label ends directly before the queue bend at (30,38), while its own public-gRPC run lies below on row 39. Also counts against arrow traceability. All four checks report one ambiguity. The generator recorded the warnings and spent three candidates, but exhaustion of an attempt budget is not proof that no unambiguous placement exists; the exception is not established.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges",
+        "docs/visualize-eval/rounds/04/rubric.json#/categories/semantic_fidelity"
+      ],
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v3-state-v3-state-text-txt",
+          "region": [
+            17,
+            38,
+            13,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F07",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e20",
+        "e18"
+      ],
+      "severity": "high",
+      "description": "DEFECT: ambiguous owner for `diagnose uploads`. The label sits one row below the sibling queue→SSH run at row 21, left of its own S3 bend at (23,22), and can be assigned to the SSH route. Its required independent diagnostics relation is therefore not reliably readable. Also counts against arrow traceability. All four checks report one ambiguity. The generator recorded the warnings and spent three candidates, but exhaustion of an attempt budget is not proof that no unambiguous placement exists; the exception is not established.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges",
+        "docs/visualize-eval/rounds/04/rubric.json#/categories/semantic_fidelity"
+      ],
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v4-ops-v4-ops-text-txt",
+          "region": [
+            6,
+            22,
+            16,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F08",
+      "category": "layout_fit",
+      "edge_ids": [
+        "e14",
+        "e15"
+      ],
+      "severity": "medium",
+      "description": "DEFECT: avoidable bridge at (37,38), the only crossing. The source does not constrain individual Postgres input-port order. Keeping every node/group/tier fixed, exchanging the queue/private-gRPC destination ports removes this crossing: queue can end via (30,38)→(37,38)→(37,40), and private gRPC via (33,36)→(39,36)→(39,40), without touching the public-gRPC route ending at (35,40) or reconcile ending at (41,40). This is an offline geometric counterexample, not a new rendered sample or a modification. Current bridge is distinguishable from a junction; the defect is avoidability, not false connectivity. Current fixed-port long queue route is reported forced, so length alone is not failed.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/04/rubric.json#/categories/layout_fit"
+      ],
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v3-state-v3-state-text-txt",
+          "region": [
+            30,
+            36,
+            12,
+            5
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-v3-state-ansi-ansi",
+          "region": [
+            37,
+            38,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F09",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e12",
+        "e13",
+        "e18",
+        "e19",
+        "e21",
+        "e22",
+        "e23",
+        "e17"
+      ],
+      "severity": "medium",
+      "description": "DEFECT: source line 31 names the heartbeat path fastest and the ops path slow; neither qualifier appears in any final view. Generation explicitly admits fastest is not drawn, then inaccurately declares that no qualifier was removed. Legal shared-speed animation should stay shared-speed; preserve source cadence meaning with text instead of deleting it or changing dot rates. No missing renderer cadence field prevents text labels.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#Original-line-31-assistant",
+        "docs/visualize-eval/rounds/04/rubric.json#/categories/semantic_fidelity"
+      ],
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v3-state-v3-state-text-txt",
+          "region": [
+            10,
+            13,
+            59,
+            19
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-v4-ops-text-txt",
+          "region": [
+            1,
+            6,
+            76,
+            38
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F10",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "DEFECT: attempts.json binds rejected v1-a2.json to a 65-character spec_sha256 612d0a849588c22f7d73c11f59e5d16c85ae39f78a5823fd4a338b3d4323c37c2; its actual SHA-256 is 612d0a849588c22f7d73c11f59e5d16c85ae39f78a5823fd4a338b3d4323c37c. Eleven other draft spec hashes match. Final spec/manifest/binary hashes match, but this rejected-draft binding is objectively invalid and fails complete reproducible workflow evidence. Evidence inventory records actual hashes, not the bad declared value.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/modal-machine-manager/attempts.json#/views/0/attempts/1/spec_sha256",
+        "docs/visualize-eval/rounds/04/rubric.json#/categories/workflow_evidence"
+      ],
+      "locations": []
+    },
+    {
+      "id": "G01",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "EVIDENCE GAP / BLOCKER: all direct frame files contain only 0–2000ms. Fifteen longer routes have no complete lap. The frozen skill's assertion that 21 frames cover the longest constant-speed route is false for these lengths/rates. Later-corner/bridge/full-cycle behavior remains unproven; known origin/corner/speed failures still fail animation rather than being replaced with blocked. No same-arrival requirement applies.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/rubric.json#/categories/animation",
+        "docs/visualize-eval/rounds/04/SKILL.md#Step-8"
+      ],
+      "locations": [
+        {
+          "evidence_id": "case-evidence-v1-intake-direct-frames-77x47-txt",
+          "region": [
+            1,
+            1,
+            77,
+            47
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v2-provision-direct-frames-77x47-txt",
+          "region": [
+            1,
+            1,
+            77,
+            47
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v3-state-direct-frames-77x47-txt",
+          "region": [
+            1,
+            1,
+            77,
+            47
+          ]
+        },
+        {
+          "evidence_id": "case-evidence-v4-ops-direct-frames-77x47-txt",
+          "region": [
+            1,
+            1,
+            77,
+            47
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G02",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "EVIDENCE GAP / BLOCKER: rejected specs and raw combined check text exist for all 12 candidates, and final manifests record check_exit=0 and capture/check windows. However the bundle contains no exact per-execution check/dump/pane-launch command transcript, no rejected-check exit statuses or separate stdout/stderr attribution, and no raw cleanup/probe command/status logs. generation.md uses an ellipsis in the direct-dump command; validator commands alone are exact. Cleanup is recorded as confirmed_closed in all four manifests, not independently exposed raw. Do not fabricate missing command/status records or rerun them.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/04/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/04/modal-machine-manager/attempts.json",
+        "docs/visualize-eval/rounds/04/modal-machine-manager/generation.md"
+      ],
+      "locations": []
+    }
+  ],
+  "blockers": [
+    "G01 evidence gap: 15 animated routes have no full-cycle capture at 77x47; all supplied direct sequences stop at 2000ms. Later corner/bridge/full-cycle behavior is unproven.",
+    "G02 evidence gap: exact renderer/check/pane invocation commands, rejected-check exit statuses/stdout-stderr attribution, and raw cleanup/probe command/status transcripts are not preserved. Do not repair this gap by running new sessions."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pE9",
+      "w7E:pEA",
+      "w7E:pEB",
+      "w7E:pEC"
+    ],
+    "closed_pane_ids": [
+      "w7E:pE9",
+      "w7E:pEA",
+      "w7E:pEB",
+      "w7E:pEC"
+    ],
+    "status": "done",
+    "reason": "All four evidence manifests record cleanup=confirmed_closed for their owned panes. This is the preserved cleanup record, not a new live probe; no new panes were opened by this reviewer. Raw close/probe execution transcripts are missing (G02)."
+  },
+  "overall": "fail"
+}

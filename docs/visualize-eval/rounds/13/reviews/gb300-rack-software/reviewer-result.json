@@ -1,0 +1,647 @@
+{
+  "protocol_version": 1,
+  "round": 13,
+  "case_id": "gb300-rack-software",
+  "candidate_sha256": "7f95990ab59ad8ea067200816162292dc19cd54216c82c522ceed3a49dfaad14",
+  "renderer_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+  "rubric_sha256": "6bfd3733c8d08b66af9a92e71985a20846f954d7916eaf9685f86c8d2f96bcb8",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "587e0bfeac4fde18901f1ea048023a83d56d094d5a3b72c39c98e64e5160b4fd",
+  "generator": {
+    "worker_id": "viz-ds13-7",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge13-gb300",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 68,
+    "rows": 44
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/13/reviews/gb300-rack-software/observed-first.md",
+      "sha256": "d7e752b2d33ebb57a10a13aebadf8e0a2d44c3ac6b9bdc95d6fe28b1d7c7e4d5",
+      "description": "Blind record saved before reveal",
+      "capture": null
+    },
+    {
+      "id": "spec",
+      "path": "docs/visualize-eval/rounds/13/gb300-rack-software/specs/canvas-v3.json",
+      "sha256": "7f95990ab59ad8ea067200816162292dc19cd54216c82c522ceed3a49dfaad14",
+      "description": "Final canvas spec",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/13/reviews/gb300-rack-software/spec-manifest.json",
+      "sha256": "587e0bfeac4fde18901f1ea048023a83d56d094d5a3b72c39c98e64e5160b4fd",
+      "description": "Sorted final spec manifest",
+      "capture": null
+    },
+    {
+      "id": "pinned",
+      "path": "docs/visualize-eval/rounds/13/gb300-rack-software/evidence/canvas/canvas-77x47-frames.txt",
+      "sha256": "9e03f6f5481242ff61f8d39fa3c95fe726dbf7a3d76f6b049d87d5e86a751310",
+      "description": "12 pinned 77x47 frames, initial viewport only",
+      "capture": null
+    },
+    {
+      "id": "live",
+      "path": "docs/visualize-eval/rounds/13/gb300-rack-software/evidence/canvas/canvas-text.txt",
+      "sha256": "926f27ffa14c769289f0aae8eec364d6570fd0bffc98703aeb11d11884553cd4",
+      "description": "Live 68x44 text capture",
+      "capture": null
+    },
+    {
+      "id": "ansi",
+      "path": "docs/visualize-eval/rounds/13/gb300-rack-software/evidence/canvas/canvas-ansi.ansi",
+      "sha256": "c8e6553cbb71595037fd20ed95f5eeedb4de13d2cddbf07e44eb32d892eaf97c",
+      "description": "Normal state ANSI",
+      "capture": null
+    },
+    {
+      "id": "selected",
+      "path": "docs/visualize-eval/rounds/13/gb300-rack-software/evidence/canvas/canvas-selected.ansi",
+      "sha256": "84fa7421d4405b9954a44b89cf19c66b7c7baaa0a7261d14c3f65b4cbfe80b2c",
+      "description": "Selected-state ANSI",
+      "capture": null
+    },
+    {
+      "id": "check",
+      "path": "docs/visualize-eval/rounds/13/gb300-rack-software/evidence/canvas/check.txt",
+      "sha256": "0baa88a412820b9d3b3cd6a24c1021a24cc497bfc1a5d832d431cf9bae04cc11",
+      "description": "Final checker output",
+      "capture": null
+    },
+    {
+      "id": "validator",
+      "path": "docs/visualize-eval/rounds/13/gb300-rack-software/evidence/canvas/validator.txt",
+      "sha256": "5049d229d4592ed3318548834853bb4a336cc400485c0a52b1945b55c45a4e29",
+      "description": "Bundle validation",
+      "capture": null
+    },
+    {
+      "id": "manifest",
+      "path": "docs/visualize-eval/rounds/13/gb300-rack-software/evidence/canvas/manifest.json",
+      "sha256": "664b35ccbce6f31801fa2d7a2a754bca709a9bd4ce618b46c8eb53e4b76c250f",
+      "description": "Capture manifest and cleanup",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/13/gb300-rack-software/generation.json",
+      "sha256": "cd143ad72f8c2c684d95cc4b5e70aeb345af362e47e2f7d43ce7523aa20c4961",
+      "description": "Generation, triage and coverage",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/13/gb300-rack-software/attempts.json",
+      "sha256": "dbb53d6c0b2de5289251f3f70b9f42d5c3621ef758a5f5ec1979930705d8a5f7",
+      "description": "Attempt history",
+      "capture": null
+    },
+    {
+      "id": "records",
+      "path": "docs/visualize-eval/rounds/13/gb300-rack-software/attempts-log.jsonl",
+      "sha256": "27bb4ed648daff70c1f6552251fc95f60f0b90c56306819fa6c9d3cfbbb384e1",
+      "description": "Probe and draft records",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/13/SKILL.md",
+      "sha256": "65d826f0f1f9e61ddfd806628cb162827b0e6cf6d7df2490c9d75e6cbe485d2a",
+      "description": "Frozen candidate skill",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Explicit nv-rms control of NVOS/NMX and interfaces are missing; in-band relationships are not captured.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json",
+        "docs/visualize-eval/rounds/13/briefs/gb300-rack-software.md"
+      ],
+      "evidence_ids": [
+        "spec",
+        "pinned",
+        "generation"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Two trunk arms enter unrelated Power shelf margin; checker reports 6 and 13 cells at ring 2.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json",
+        "docs/visualize-eval/rounds/13/briefs/gb300-rack-software.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "check"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Branch B is eligible but cannot excuse omitted control relationship; panned second diagram and full heading not proven.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json",
+        "docs/visualize-eval/rounds/13/briefs/gb300-rack-software.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "check",
+        "spec"
+      ]
+    },
+    "navigation_clarity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Palette obscures second heading and description in pinned capture; no panned capture proves full identification.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json",
+        "docs/visualize-eval/rounds/13/briefs/gb300-rack-software.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "live"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "In-band ANSI and cross-diagram same-group hue evidence absent.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json",
+        "docs/visualize-eval/rounds/13/briefs/gb300-rack-software.md"
+      ],
+      "evidence_ids": [
+        "ansi",
+        "pinned",
+        "spec"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Judged and stated family placement-planes. Generator evidence: Two weakly-connected worlds — oob/rms/bmc_c/bmc_s/pwr on one side, k8s/gpuop/dcgm/dcgmx/drvk/fm/nvos/nmxc on the other — joined by exactly one bus (the OOB LAN, which fans to three device classes) and one cross-plane relation (oob -> nvos). Visible OOB fan has one split and separate section heading; second world and boundary-stub rendering lack capture. Vertical stacking and stub yields recorded."
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Palette overwrites Compute BMC border and live right overlay clips NVSwitch BMC; other surface not captured.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json",
+        "docs/visualize-eval/rounds/13/briefs/gb300-rack-software.md"
+      ],
+      "evidence_ids": [
+        "ansi",
+        "selected",
+        "pinned"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "No panned actual capture or selected borders for the in-band surface, despite complete records and honest triage.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases/gb300-rack-software/expected.json",
+        "docs/visualize-eval/rounds/13/briefs/gb300-rack-software.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "selected",
+        "validator",
+        "records",
+        "manifest"
+      ]
+    },
+    "animation": {
+      "applicable": false,
+      "status": null,
+      "reason": "Source animates nothing; case manifest makes animation optional and brief specifies static.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md",
+        "docs/visualize-eval/cases.json",
+        "docs/visualize-eval/rounds/13/briefs/gb300-rack-software.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "check"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "rms-oob",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "expected": "nv-rms is client on OOB LAN",
+      "observed": "Visible downward stem and arrowhead; client label.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            15,
+            5,
+            19,
+            17
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "oob-bmc-c",
+      "kind": "bus_branch",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "expected": "OOB LAN trunk → Compute BMC",
+      "observed": "Visible leftward arrow; shared junction and bridge. Route enters unrelated Power shelf margin.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            1,
+            34,
+            25,
+            7
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2",
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "oob-bmc-s",
+      "kind": "bus_branch",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "expected": "OOB LAN trunk → NVSwitch BMC",
+      "observed": "Visible rightward arrow; shared junction. Route enters unrelated Power shelf margin.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            23,
+            35,
+            23,
+            6
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2",
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "oob-pwr",
+      "kind": "bus_trunk",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "expected": "OOB LAN trunk → Power shelf",
+      "observed": "Visible downward corridor and arrowhead; branch hub shares cells by checker report.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            17,
+            21,
+            13,
+            20
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "oob-nvos",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "expected": "OOB LAN → NVOS physical reachability",
+      "observed": "Declared in final spec in in-band diagram, but no supplied frame shows its route or endpoints; exact unsupported semantics remain qualified.",
+      "status": "blocked",
+      "locations": [],
+      "finding_ids": [
+        "F5"
+      ]
+    },
+    {
+      "edge_id": "nvos-nmxc",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "expected": "NVOS hosts NMX-C/T",
+      "observed": "Declared in final spec in in-band diagram, but no supplied frame shows its route or endpoints; exact unsupported semantics remain qualified.",
+      "status": "blocked",
+      "locations": [],
+      "finding_ids": [
+        "F5"
+      ]
+    },
+    {
+      "edge_id": "k8s-gpuop",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "expected": "Kubernetes → GPU Operator",
+      "observed": "Declared in final spec in in-band diagram, but no supplied frame shows its route or endpoints; exact unsupported semantics remain qualified.",
+      "status": "blocked",
+      "locations": [],
+      "finding_ids": [
+        "F5"
+      ]
+    },
+    {
+      "edge_id": "gpuop-dcgm",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "expected": "GPU Operator → DCGM DaemonSet",
+      "observed": "Declared in final spec in in-band diagram, but no supplied frame shows its route or endpoints; exact unsupported semantics remain qualified.",
+      "status": "blocked",
+      "locations": [],
+      "finding_ids": [
+        "F5"
+      ]
+    },
+    {
+      "edge_id": "dcgm-dcgmx",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "expected": "DCGM → dcgm-exporter, port 9400",
+      "observed": "Declared in final spec in in-band diagram, but no supplied frame shows its route or endpoints; exact unsupported semantics remain qualified.",
+      "status": "blocked",
+      "locations": [],
+      "finding_ids": [
+        "F5"
+      ]
+    },
+    {
+      "edge_id": "dcgm-drvk",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "expected": "DCGM reads driver via NVML",
+      "observed": "Declared in final spec in in-band diagram, but no supplied frame shows its route or endpoints; exact unsupported semantics remain qualified.",
+      "status": "blocked",
+      "locations": [],
+      "finding_ids": [
+        "F5"
+      ]
+    },
+    {
+      "edge_id": "drvk-fm",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "expected": "Historical Driver+CUDA → Fabric Mgr: exact dependency unsupported; must not invent manages/deploys",
+      "observed": "Declared in final spec in in-band diagram, but no supplied frame shows its route or endpoints; exact unsupported semantics remain qualified.",
+      "status": "blocked",
+      "locations": [],
+      "finding_ids": [
+        "F5"
+      ]
+    },
+    {
+      "edge_id": "rms-nvos-control",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "expected": "nv-rms controls NVSwitch through NVOS; qualified southbound interfaces",
+      "observed": "No controller-to-NVOS relationship or NVUE/SSH/gRPC control labels in spec or visible OOB surface; LAN-to-NVOS is not equivalent.",
+      "status": "fail",
+      "locations": [],
+      "finding_ids": [
+        "F1",
+        "F6"
+      ]
+    },
+    {
+      "edge_id": "rms-nmxc-control",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "expected": "nv-rms reaches NMX-C via gRPC, qualified by source",
+      "observed": "No nv-rms/NMX control relation or gRPC label in spec; NVOS hosts NMX-C/T is not controller control.",
+      "status": "fail",
+      "locations": [],
+      "finding_ids": [
+        "F1",
+        "F6"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "rms-nvos-control",
+        "rms-nmxc-control"
+      ],
+      "severity": "critical",
+      "description": "nv-rms control of NVOS/NMX and source-qualified NVUE REST, SSH/SFTP and NMX-C gRPC are absent; LAN reachability does not itself show controller control.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "locations": []
+    },
+    {
+      "id": "F2",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "oob-bmc-c",
+        "oob-bmc-s"
+      ],
+      "severity": "medium",
+      "description": "Two trunk arms pass 6 and 13 cells at ring 2 of the unrelated Power shelf; identifiable after careful tracing but violates the explicit zero-margin gate.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            15,
+            35,
+            19,
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "category": "border_integrity",
+      "edge_ids": [
+        "oob-bmc-c",
+        "oob-bmc-s"
+      ],
+      "severity": "medium",
+      "description": "Floating palette overwrites the Compute BMC box and the live right overlay truncates NVSwitch BMC.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            1,
+            38,
+            13,
+            4
+          ]
+        },
+        {
+          "evidence_id": "live",
+          "region": [
+            33,
+            37,
+            13,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "category": "navigation_clarity",
+      "edge_ids": [
+        "oob-nvos"
+      ],
+      "severity": "high",
+      "description": "Second diagram title and description are clipped and palette-occluded; no panned capture proves them fully legible.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            1,
+            45,
+            51,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F5",
+      "category": "workflow_evidence",
+      "edge_ids": [
+        "oob-nvos",
+        "nvos-nmxc",
+        "k8s-gpuop",
+        "gpuop-dcgm",
+        "dcgm-dcgmx",
+        "dcgm-drvk",
+        "drvk-fm"
+      ],
+      "severity": "high",
+      "description": "No captured in-band surface, its relations, ANSI hues or selected borders; the 12 pinned frames repeat the same initial viewport.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            1,
+            45,
+            51,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F6",
+      "category": "layout_fit",
+      "edge_ids": [
+        "rms-nvos-control",
+        "rms-nmxc-control"
+      ],
+      "severity": "high",
+      "description": "The canvas shape does not excuse the missing controller relation; rendered reachability and heading evidence for the lower diagram are missing.",
+      "source_refs": [
+        "docs/visualize-eval/cases/gb300-rack-software/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            1,
+            45,
+            51,
+            2
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "No panned capture of the in-band diagram, its titles, routes, colors, or selected borders.",
+    "Frozen renderer/validator report 19 unrelated-node margin cells and trunk-junction shared cells; six explored layouts did not eliminate both.",
+    "Rubric schema viewport only permits 77x47 and no note, so canvas extent 64x95 cannot be encoded in that field; see critique and check evidence."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:p09"
+    ],
+    "closed_pane_ids": [
+      "w7E:p09"
+    ],
+    "status": "done",
+    "reason": "Evidence manifest reports confirmed_closed."
+  },
+  "overall": "fail"
+}

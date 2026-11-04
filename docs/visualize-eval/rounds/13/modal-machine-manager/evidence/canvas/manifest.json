@@ -1,0 +1,60 @@
+{
+  "spec_path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/13/modal-machine-manager/specs/canvas.json",
+  "spec_sha256": "2cd0500be4927ea084971cb0274bd30c032aa940a48ad6ac8a0601dbb71e0dff",
+  "spec_form": "canvas",
+  "diagrams": [
+    {
+      "id": "request",
+      "title": "Request and provisioning path",
+      "description": "Humans and the control plane enter through webapi and private gRPC, enqueue River jobs, and provision bare metal down to the iPXE boot."
+    },
+    {
+      "id": "heartbeat",
+      "title": "Heartbeat and machine state",
+      "description": "The fastest path: each host's machine-agent registers and heartbeats over public gRPC. Public gRPC, private gRPC and the queue each write their own Postgres rows."
+    },
+    {
+      "id": "ops",
+      "title": "Slow ops path and reconcile loop",
+      "description": "Queued work beside the fast path: SSH audits, diagnostics to the janitor, its proposals through webapi to Slack, and the one-minute gcore cluster sync."
+    }
+  ],
+  "binary_path": "/tmp/visualize-eval/round-13/bin/rataflow-view",
+  "binary_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+  "pane_id": "w7E:pZS",
+  "pane_rect": null,
+  "pane_cols": null,
+  "pane_rows": 44,
+  "viewport_line": null,
+  "viewport_token": "68x44 @100%",
+  "check_exit": 0,
+  "check_window": [
+    "2026-11-03T14:01:23Z",
+    "2026-11-03T14:01:23Z"
+  ],
+  "capture_window": [
+    "2026-11-03T14:01:23Z",
+    "2026-11-03T14:01:28Z"
+  ],
+  "cleanup": "confirmed_closed",
+  "select_all_frame": true,
+  "frames": 88,
+  "frame_step_ms": 100,
+  "pinned_frames": {
+    "file": "canvas-77x47-frames.txt",
+    "viewport_line": "viewport: 77x47 zoom: 1.00 natural"
+  },
+  "artifacts": {
+    "bin.sha256": "41acd28bd47aeed7923377b953efce1900faf3bdd0d9c08a898ca8ffaf087a8d",
+    "canvas-300x70-frames.txt": "a877887adf23db3c7019118aa45d10d2dbea1c7147cfcd41eba66abe278064de",
+    "canvas-300x70.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "canvas-77x47-frames.txt": "862e0b9f696996aaba18aeaf8bd1a22bdd8686789137a4f8b193bc8cc63a356c",
+    "canvas-ansi.ansi": "120e0048057993c71db202a84c9153bebd422403b6fe0cd08fada41c459bede8",
+    "canvas-frames.ansi": "859b2ee8a8bbc4a309f9e6ebbbb518667553163d1457ba05645bc42ea603cd65",
+    "canvas-frames.txt": "ee2db46f6f8c3aaddfd20300b08dc9665e29c6a567996a0780ed50adfa75bbb5",
+    "canvas-pinned.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "canvas-selected.ansi": "63694ce405e1552540cb2b6c8c8fe2ba077ac35fc53d549b98ce11ebc818cf7e",
+    "canvas-text.txt": "1cac3b4377875d71d773b5623d67d5dd0d6088e3a949a6550a79ee9a807247e1",
+    "check.txt": "59c915fdf8f5c9aea307bd57e5f1ff8a3cb18fbb1e640f1707e93f5761c629ed"
+  }
+}

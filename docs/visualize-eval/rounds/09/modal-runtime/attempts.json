@@ -1,0 +1,101 @@
+{
+  "case_id": "modal-runtime",
+  "round": "09",
+  "binary": "/tmp/visualize-eval/round-09/bin/rataflow-view",
+  "views": [
+    {
+      "view": "v3",
+      "role": "shipped — worker RPC seam (anti-parallel pair)",
+      "attempts": [
+        {
+          "spec": "specs/v3-final.json",
+          "spec_sha256": "83b4256fbb26d58d00e1340201c5f1e6eb7c88eace55fe4faf96cc1bf352138f",
+          "log_label": "v3-final-a1-3node-seam",
+          "result": "rejected",
+          "note": "3-node seam (worker, runtime, engine) at lr, label_slot on all three edges, pair minlen 2: extent 62x13, labels 3/3 placed but 1 ambiguous owner -> fails labels_ownership_clear"
+        },
+        {
+          "spec": "specs/v3-final-a2.json",
+          "spec_sha256": "63a0594432e7ed6e183994554597d5211b94a7a36cd6a46d24f3e291556e9eb6",
+          "log_label": "v3-final-a2-tb-3node-seam",
+          "result": "rejected",
+          "note": "same 3 nodes at tb: labels 3/3 placed, 0 ambiguous, but 1 bridge and 1 touching bend (dispatch port interleaves with the pair's ports)"
+        },
+        {
+          "spec": "specs/v3-seam-pair.json",
+          "spec_sha256": "f2484f0a664a4a9081b9ed624518bbb775006fe4c62e6318ffbc387a28a84f72",
+          "log_label": "v3-final-a3-pair-only",
+          "result": "shipped",
+          "note": "pair alone: extent 37x17, 0 bridges, 0 touching bends, labels 2/2, 0 skipped, 0 ambiguous. The fan edge that caused the bridge is covered by v4."
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "role": "shipped — core fan and the UDS seam",
+      "attempts": [
+        {
+          "spec": "specs/v4-fan.json",
+          "spec_sha256": "f078e03355edcafc02af32003c36cf4de4a64020f10f21cdb5aac3ded8b89ce2",
+          "log_label": "v4-a6-fan-tb",
+          "result": "rejected",
+          "note": "runtime, engine, daemon at tb with label_slot on both fan edges: unroutable (runtime -> engine, runtime -> daemon) - two gutter bands beside two adjacent same-rank targets pinch the channel"
+        },
+        {
+          "spec": "specs/v4-core-fan.json",
+          "spec_sha256": "93c8066a4ccfb77a141084f1d13d3a45cde000ffbbae71597c4367a835f0449d",
+          "log_label": "v4-a7-fan-tb-plain",
+          "result": "shipped",
+          "note": "same nodes and labels, label_slot removed so no band blocks the channel: extent 41x27, 0 bridges, labels 2/2, 0 skipped, 0 ambiguous"
+        }
+      ]
+    },
+    {
+      "view": "v5",
+      "role": "shipped — engine fan to compute and storage paths",
+      "attempts": [
+        {
+          "spec": "specs/v5-engine-tree.json",
+          "spec_sha256": "f1ae35dd1dbd819a07e931c72ee7962353f36bb7d1ee56258d060d44b738855d",
+          "log_label": "v5-a1-tree-tb-plain",
+          "result": "shipped",
+          "note": "engine -> backend -> container and engine -> filesystem -> blobnet at tb, plain labels: extent 55x46, 0 bridges, labels 4/4, 0 skipped, 0 ambiguous"
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "shape": "whole graph in one view (8 nodes, 8 edges)",
+      "log_labels": [
+        "v1-a1-tb",
+        "v1-a2-lr",
+        "v1-a3-tb-minlen2",
+        "v4-a1-tb-labslot-all"
+      ],
+      "verdict": "rejected: tb + minlen 2 on the fan routes but the rank gaps are sized by the longest plain label, so the drawing was 81x72 cells (over 47 rows); label_slot on every edge broke routing outright"
+    },
+    {
+      "shape": "core seam view with the fan (worker, runtime, engine, daemon)",
+      "log_labels": [
+        "v2-a1-lr-labslot",
+        "v2-a2-lr-pair-minlen2",
+        "v2-a3-lr-minlen2-all",
+        "v3-a1-lr-short-labslot",
+        "v3-a2-tb-plain-labels",
+        "v3-a3-lr-pair-minlen3"
+      ],
+      "verdict": "rejected: the anti-parallel pair routes once it gets a two-rank channel (minlen 2), but with the fan in the same view one label always ends up with an ambiguous owner (1 in three separate layouts) or two labels are skipped (tb)"
+    },
+    {
+      "shape": "paths view (runtime, engine, daemon, backend, container, filesystem, blobnet)",
+      "log_labels": [
+        "v4-a2-paths-tb",
+        "v4-a3-paths-tb-shortlabels",
+        "v4-a4-paths-mixed-slots",
+        "v4-a5-paths-2slots"
+      ],
+      "verdict": "rejected: 7 nodes over four ranks; without label_slot the rank gaps total ~54 rows (over the 47-row target), and every label_slot variant left 2-5 routes unroutable. Split into v4 + v5."
+    }
+  ]
+}

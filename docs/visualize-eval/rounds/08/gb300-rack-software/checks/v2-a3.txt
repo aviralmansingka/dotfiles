@@ -1,0 +1,12 @@
+# v2 attempt 3 (tb so the 4-member rack-hw region renders correctly; one protocol label only, fan labels collided in tb a1)
+viewport: unknown zoom: 1.00 natural
+ok: nodes=6 edges=5 flows=0 direction=tb theme=gruvbox
+extent=62x34 cells
+crossings: 2 bridges, 1 touching bends
+labels: 2/2 placed, 0 on route cells, 0 skipped, 0 ambiguous owners
+groups: OOB plant(1) rack hw(4) in-band(1)
+trunks:
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step
+exit=0

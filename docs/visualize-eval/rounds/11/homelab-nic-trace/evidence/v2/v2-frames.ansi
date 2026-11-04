@@ -1,0 +1,288 @@
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/11/homelab-nic-trace/specs/v2-
+wan.json
+
+[0m[1m[38;5;6m/private/tmp[0m via [0m[1m[38;5;6m🐹 v1.26.1 [0mvia [0m[1m[38;5;4m🌙 v5.5.0 [0mvia [0m[1m[38;5;2m v26.8.1 [0mvia [0m[1m[38;5;3m🐍 v3.9.6 [0mvia [0m[1m[38;5;1m🦀 v1.94[0m
+[0m[1m[38;5;1m.0 [0mon [0m[1m[38;5;3m☁️  (ap-south-1) [0mon [0m[1m[38;5;4m☁️  aviralmansingka@gmail.com[0m 
+[0m[1m[38;5;1m󰂄 8%[0m [0m[1m[38;5;2m❯[0m [0m[38;5;2m/tmp/visualize-eval/round-10/bin/rataflow-view[0m [0m[4m/Users/aviral/.herdr/worktre[0m
+[0m[4mes/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/homelab-nic-trace/sp[0m
+[0m[4mecs/v2-wan.json[0m
+viewport: 82x51 zoom: 1.00 natural
+
+[0m[1m[38;5;6m/private/tmp[0m via [0m[1m[38;5;6m🐹 v1.26.1 [0mvia [0m[1m[38;5;4m🌙 v5.5.0 [0mvia [0m[1m[38;5;2m v26.8.1 [0mvia [0m[1m[38;5;3m🐍 v3.9.6 [0mvia [0m[1m[38;5;1m🦀 v1.94[0m
+[0m[1m[38;5;1m.0 [0mon [0m[1m[38;5;3m☁️  (ap-south-1) [0mon [0m[1m[38;5;4m☁️  aviralmansingka@gmail.com[0m 
+[0m[1m[38;5;1m󰂄 8%[0m [0m[1m[38;5;2m❯[0m [0m[38;5;2m/tmp/visualize-eval/round-10/bin/rataflow-view[0m [0m[4m/Users/aviral/.herdr/worktre[0m
+[0m[4mes/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/homelab-nic-trace/sp[0m
+[0m[4mecs/v2-wan.json[0m --select-all
+viewport: 82x51 zoom: 1.00 natural
+
+[0m[1m[38;5;6m/private/tmp[0m via [0m[1m[38;5;6m🐹 v1.26.1 [0mvia [0m[1m[38;5;4m🌙 v5.5.0 [0mvia [0m[1m[38;5;2m v26.8.1 [0mvia [0m[1m[38;5;3m🐍 v3.9.6 [0mvia [0m[1m[38;5;1m🦀 v1.94[0m
+[0m[1m[38;5;1m.0 [0mon [0m[1m[38;5;3m☁️  (ap-south-1) [0mon [0m[1m[38;5;4m☁️  aviralmansingka@gmail.com[0m 
+[0m[1m[38;5;1m󰂄 8%[0m [0m[1m[38;5;2m❯[0m [0m[38;5;2m/tmp/visualize-eval/round-10/bin/rataflow-view[0m [0m[4m/Users/aviral/.herdr/worktre[0m
+[0m[4mes/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/homelab-nic-trace/sp[0m
+[0m[4mecs/v2-wan.json[0m --frames 5 --step-ms 100
+viewport: 82x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 82x51 @100% · v2-wan.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+         ╭─────────────────────────────────────────────────────────────╮
+         │Fios router 192.168.1.1 (hist., WNC OUI): ToR/spine/border/FW│
+         │                                                             │
+         ╰─────────────────────────────────────────────────────────────╯
+                                        │ NAT out, pool 71.251.12.240
+                                        │
+                                        │
+                                        ▼
+           ╭──────────────────────────────────────────────────────────╮
+           │ONT 169.254.3.1 (hist.) = MMR analog, 1 ISP vs 4-ISP/2-MMR│
+           │                                                          │
+           ╰──────────────────────────────────────────────────────────╯
+                                        │  4.5 ms, no CIR
+                                        │
+                                        │
+                                        ▼
+                          ╭────────────────────────────╮
+                          │Verizon aggregation 100.41.x│
+                          │                            │
+                          ╰────────────────────────────╯
+                                        │  6.6 ms
+                                        │
+                                        │
+                                        ▼
+                             ╭──────────────────────╮
+                             │Verizon backbone AS701│
+                             │                      │
+                             ╰──────────────────────╯
+                                        │  6-9 ms
+                                        │
+                                        │
+                                        ▼
+                           ╭──────────────────────────╮
+                           │Cloudflare 1.1.1.1 AS13335│
+                           │                          │
+                           ╰──────────────────────────╯
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 82x51 @100% · v2-wan.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+         ╭─────────────────────────────────────────────────────────────╮
+         │Fios router 192.168.1.1 (hist., WNC OUI): ToR/spine/border/FW│
+         │                                                             │
+         ╰─────────────────────────────────────────────────────────────╯
+                                        │ NAT out, pool 71.251.12.240
+                                        │
+                                        │
+                                        ▼
+           ╭──────────────────────────────────────────────────────────╮
+           │ONT 169.254.3.1 (hist.) = MMR analog, 1 ISP vs 4-ISP/2-MMR│
+           │                                                          │
+           ╰──────────────────────────────────────────────────────────╯
+                                        │  4.5 ms, no CIR
+                                        │
+                                        │
+                                        ▼
+                          ╭────────────────────────────╮
+                          │Verizon aggregation 100.41.x│
+                          │                            │
+                          ╰────────────────────────────╯
+                                        │  6.6 ms
+                                        │
+                                        │
+                                        ▼
+                             ╭──────────────────────╮
+                             │Verizon backbone AS701│
+                             │                      │
+                             ╰──────────────────────╯
+                                        │  6-9 ms
+                                        │
+                                        │
+                                        ▼
+                           ╭──────────────────────────╮
+                           │Cloudflare 1.1.1.1 AS13335│
+                           │                          │
+                           ╰──────────────────────────╯
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 82x51 @100% · v2-wan.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+         ╭─────────────────────────────────────────────────────────────╮
+         │Fios router 192.168.1.1 (hist., WNC OUI): ToR/spine/border/FW│
+         │                                                             │
+         ╰─────────────────────────────────────────────────────────────╯
+                                        │ NAT out, pool 71.251.12.240
+                                        │
+                                        │
+                                        ▼
+           ╭──────────────────────────────────────────────────────────╮
+           │ONT 169.254.3.1 (hist.) = MMR analog, 1 ISP vs 4-ISP/2-MMR│
+           │                                                          │
+           ╰──────────────────────────────────────────────────────────╯
+                                        │  4.5 ms, no CIR
+                                        │
+                                        │
+                                        ▼
+                          ╭────────────────────────────╮
+                          │Verizon aggregation 100.41.x│
+                          │                            │
+                          ╰────────────────────────────╯
+                                        │  6.6 ms
+                                        │
+                                        │
+                                        ▼
+                             ╭──────────────────────╮
+                             │Verizon backbone AS701│
+                             │                      │
+                             ╰──────────────────────╯
+                                        │  6-9 ms
+                                        │
+                                        │
+                                        ▼
+                           ╭──────────────────────────╮
+                           │Cloudflare 1.1.1.1 AS13335│
+                           │                          │
+                           ╰──────────────────────────╯
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 82x51 @100% · v2-wan.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+         ╭─────────────────────────────────────────────────────────────╮
+         │Fios router 192.168.1.1 (hist., WNC OUI): ToR/spine/border/FW│
+         │                                                             │
+         ╰─────────────────────────────────────────────────────────────╯
+                                        │ NAT out, pool 71.251.12.240
+                                        │
+                                        │
+                                        ▼
+           ╭──────────────────────────────────────────────────────────╮
+           │ONT 169.254.3.1 (hist.) = MMR analog, 1 ISP vs 4-ISP/2-MMR│
+           │                                                          │
+           ╰──────────────────────────────────────────────────────────╯
+                                        │  4.5 ms, no CIR
+                                        │
+                                        │
+                                        ▼
+                          ╭────────────────────────────╮
+                          │Verizon aggregation 100.41.x│
+                          │                            │
+                          ╰────────────────────────────╯
+                                        │  6.6 ms
+                                        │
+                                        │
+                                        ▼
+                             ╭──────────────────────╮
+                             │Verizon backbone AS701│
+                             │                      │
+                             ╰──────────────────────╯
+                                        │  6-9 ms
+                                        │
+                                        │
+                                        ▼
+                           ╭──────────────────────────╮
+                           │Cloudflare 1.1.1.1 AS13335│
+                           │                          │
+                           ╰──────────────────────────╯
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 82x51 @100% · v2-wan.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+         ╭─────────────────────────────────────────────────────────────╮
+         │Fios router 192.168.1.1 (hist., WNC OUI): ToR/spine/border/FW│
+         │                                                             │
+         ╰─────────────────────────────────────────────────────────────╯
+                                        │ NAT out, pool 71.251.12.240
+                                        │
+                                        │
+                                        ▼
+           ╭──────────────────────────────────────────────────────────╮
+           │ONT 169.254.3.1 (hist.) = MMR analog, 1 ISP vs 4-ISP/2-MMR│
+           │                                                          │
+           ╰──────────────────────────────────────────────────────────╯
+                                        │  4.5 ms, no CIR
+                                        │
+                                        │
+                                        ▼
+                          ╭────────────────────────────╮
+                          │Verizon aggregation 100.41.x│
+                          │                            │
+                          ╰────────────────────────────╯
+                                        │  6.6 ms
+                                        │
+                                        │
+                                        ▼
+                             ╭──────────────────────╮
+                             │Verizon backbone AS701│
+                             │                      │
+                             ╰──────────────────────╯
+                                        │  6-9 ms
+                                        │
+                                        │
+                                        ▼
+                           ╭──────────────────────────╮
+                           │Cloudflare 1.1.1.1 AS13335│
+                           │                          │
+                           ╰──────────────────────────╯
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+[0m[1m[38;5;6m/private/tmp[0m via [0m[1m[38;5;6m🐹 v1.26.1 [0mvia [0m[1m[38;5;4m🌙 v5.5.0 [0mvia [0m[1m[38;5;2m v26.8.1 [0mvia [0m[1m[38;5;3m🐍 v3.9.6 [0mvia [0m[1m[38;5;1m🦀 v1.94[0m
+[0m[1m[38;5;1m.0 [0mon [0m[1m[38;5;3m☁️  (ap-south-1) [0mon [0m[1m[38;5;4m☁️  aviralmansingka@gmail.com[0m 
+[0m[1m[38;5;1m󰂄 8%[0m [0m[1m[38;5;2m❯[0m 

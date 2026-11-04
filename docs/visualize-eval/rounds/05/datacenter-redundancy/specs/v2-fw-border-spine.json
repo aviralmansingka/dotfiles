@@ -1,0 +1,124 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "core1",
+      "label": "Core 1",
+      "group": "core"
+    },
+    {
+      "id": "core2",
+      "label": "Core 2",
+      "group": "core"
+    },
+    {
+      "id": "fw1",
+      "label": "FW1",
+      "group": "firewall"
+    },
+    {
+      "id": "fw2",
+      "label": "FW2",
+      "group": "firewall"
+    },
+    {
+      "id": "bl1",
+      "label": "BL 1",
+      "group": "border-leaf"
+    },
+    {
+      "id": "bl2",
+      "label": "BL 2",
+      "group": "border-leaf"
+    },
+    {
+      "id": "sp1",
+      "label": "Spine 1",
+      "group": "spine"
+    },
+    {
+      "id": "sp2",
+      "label": "Spine 2",
+      "group": "spine"
+    }
+  ],
+  "edges": [
+    {
+      "from": "core1",
+      "to": "fw1",
+      "label": "active",
+      "dots": 0
+    },
+    {
+      "from": "core2",
+      "to": "fw1",
+      "label": "active",
+      "dots": 0
+    },
+    {
+      "from": "core1",
+      "to": "fw2",
+      "label": "standby?",
+      "style": "dashed",
+      "dots": 0
+    },
+    {
+      "from": "core2",
+      "to": "fw2",
+      "label": "standby?",
+      "style": "dashed",
+      "dots": 0
+    },
+    {
+      "from": "fw1",
+      "to": "bl1",
+      "label": "active",
+      "dots": 0
+    },
+    {
+      "from": "fw1",
+      "to": "bl2",
+      "label": "active",
+      "dots": 0
+    },
+    {
+      "from": "fw2",
+      "to": "bl1",
+      "label": "standby?",
+      "style": "dashed",
+      "dots": 0
+    },
+    {
+      "from": "fw2",
+      "to": "bl2",
+      "label": "standby?",
+      "style": "dashed",
+      "dots": 0
+    },
+    {
+      "from": "bl1",
+      "to": "sp1",
+      "label": "ECMP",
+      "dots": 0
+    },
+    {
+      "from": "bl1",
+      "to": "sp2",
+      "label": "ECMP",
+      "dots": 0
+    },
+    {
+      "from": "bl2",
+      "to": "sp1",
+      "label": "ECMP",
+      "dots": 0
+    },
+    {
+      "from": "bl2",
+      "to": "sp2",
+      "label": "ECMP",
+      "dots": 0
+    }
+  ]
+}

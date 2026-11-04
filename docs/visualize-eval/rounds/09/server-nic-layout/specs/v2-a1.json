@@ -1,0 +1,15 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "gw", "label": ".57 Arista AS132717", "group": "nxtgen" },
+    { "id": "airtel", "label": "Airtel 14.143.x", "group": "transit" },
+    { "id": "airtelbb", "label": "Airtel backbone 14.141.x", "group": "transit" },
+    { "id": "cf", "label": "Cloudflare 1.1.1.1 AS13335", "group": "transit" }
+  ],
+  "edges": [
+    { "from": "gw", "to": "airtel", "label": "1.8 ms", "label_slot": true, "dots": 0 },
+    { "from": "airtel", "to": "airtelbb", "label": "7.1 ms", "label_slot": true, "dots": 0 },
+    { "from": "airtelbb", "to": "cf", "label": "8.6 ms", "label_slot": true, "dots": 0 }
+  ]
+}

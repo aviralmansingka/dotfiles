@@ -1,0 +1,35 @@
+{
+ "round": 12,
+ "status": "frozen",
+ "skill_sha256": "44935981b942e49ef475f7e7203fcb2035db88339977e0f072cb806463dd2a9b",
+ "binary_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+ "binary_path": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+ "rubric_sha256": "5e09b9be9078ab5b46a82d0faf7bc986bf3d38a2d4cbb2f6745dd3fb9f0f54d7",
+ "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+ "renderer_source_sha256": "0efb3117939b5f1dbce6228a74c4c115a35681d1ace97cc81942febfb6a40ada",
+ "generator_model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+ "reviewer_model": "openai/gpt-6.1-terra:high",
+ "target": {
+  "columns": 77,
+  "rows": 47,
+  "zoom": 1.0
+ },
+ "worker_labels": {
+  "modal-machine-manager": "viz-ds12-6",
+  "modal-runtime": "viz-ds12-7"
+ },
+ "animation_default": "constant 0.5 cells/step; full-lap capture at ceil(cells/0.5) frames",
+ "layout": "engine-owned (unchanged r10 binary): logical group tags, mid-side attachment, target-aligned ports, lane-aware gaps, label_slot gutters",
+ "skill_change": "budget removed as constraint - ~12n/16e is a readability hint; coverage overrides budget (proposal 11)",
+ "cases": [
+  "modal-machine-manager",
+  "modal-runtime"
+ ],
+ "carried_verdicts": {
+  "pipeline": "from round 11",
+  "network": "from round 11",
+  "server-nic-layout": "from round 11",
+  "homelab-nic-trace": "from round 11",
+  "gb300-rack-software": "from round 11"
+ }
+}

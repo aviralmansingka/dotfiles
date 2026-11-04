@@ -1,0 +1,84 @@
+{
+  "case_id": "server-nic-layout",
+  "round": "13",
+  "binary": "/tmp/visualize-eval/round-13/bin/rataflow-view",
+  "binary_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+  "budget": {
+    "rendered_diagrams": 2,
+    "spec_candidates_allowed": 6,
+    "spec_candidates_used": 6,
+    "note": "Every --check run on a distinct spec is counted, orientation and schema probes included: probe-schema, probe-single-view, probe-single-view-tb, canvas-a1, canvas-a2, canvas-a3."
+  },
+  "views": [
+    {
+      "view": "canvas",
+      "shape": "one canvas of 2 named, described concept-diagrams (diagrams form)",
+      "final_spec": "specs/canvas-a3.json",
+      "final_evidence": [
+        "evidence/canvas",
+        "evidence/canvas-wide"
+      ],
+      "attempts": [
+        {
+          "n": 1,
+          "spec": "specs/canvas-a1.json",
+          "record": "canvas-a1",
+          "record_log": "attempts-log.jsonl",
+          "check": "canvas: 2 diagrams on one canvas; local at 0,3 extent=115x15 nodes=6 edges=5 routes=5; upstream at 0,23 extent=131x5 nodes=4 edges=3; extent=131x28 cells (whole canvas); labels 8/8; near-misses 0; passes-near-unrelated-node 0; crossings 0; dot hues 0/0/0",
+          "result": "accepted layout, rejected wording: both descriptions ran 150+ characters, so the whole canvas widened to 163x28 and the description lines, not the drawings, drove the width",
+          "rejected": true,
+          "reason": "descriptions too long: the reader had to pan extra columns for prose rather than for a drawing"
+        },
+        {
+          "n": 2,
+          "spec": "specs/canvas-a2.json",
+          "record": "canvas-a2",
+          "record_log": "attempts-log.jsonl",
+          "check": "canvas: 2 diagrams; local at 0,3 extent=115x15 nodes=6 edges=5; upstream at 0,23 extent=131x5 nodes=4 edges=3; extent=131x28 cells (whole canvas); labels 8/8; near-misses 0; crossings 0",
+          "result": "canvas narrowed to 131x28 with trimmed accurate descriptions",
+          "rejected": true,
+          "reason": "identifier coverage short: server models (R7725) and the default-gateway role were not on their labels; the trailing 'free' address fact still read as proven"
+        },
+        {
+          "n": 3,
+          "spec": "specs/canvas-a3.json",
+          "record": "canvas-a3",
+          "record_log": "attempts-log.jsonl",
+          "check": "canvas: 2 diagrams; local at 0,3 extent=124x15 nodes=6 edges=5 routes=5; upstream at 0,23 extent=131x5 nodes=4 edges=3 routes=3; extent=131x28 cells (whole canvas); labels 8/8 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners; near-misses 0; passes-near-unrelated-node 0; crossings 0 bridges, 0 touching bends; groups: ports(2) hosts(2) pool(1) access(2) wan(3); dots 0/0/0 violations; dot hues 0 by source, 0 by destination, 0 shared-hue; origins 0/0; arrivals 0/0",
+          "result": "SHIPPED",
+          "rejected": false,
+          "reason": "full coverage of 9 entities and 8 relations with every qualifier drawn, no near-miss, no label defect"
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "label": "probe-schema",
+      "spec": "probes/probe-schema.json",
+      "record": "probe-schema",
+      "record_log": "attempts-log.jsonl",
+      "why": "capability preflight: two-node one-diagram canvas to confirm the frozen binary prints the canvas block, per-diagram origin/extent lines, the description lines and the static 'dots: ... 0 constant at 0.5c/step, 0 same-arrival at 2000ms' line. Output: canvas 1 diagram, extent=55x8, labels 1/1, near-misses 0. No pattern drawn from it."
+    },
+    {
+      "label": "probe-single-view",
+      "spec": "probes/probe-single-view.json",
+      "record": "probe-single-view",
+      "record_log": "attempts-log.jsonl",
+      "why": "rung-1 test, lr: all 9 nodes and 8 relations in ONE view. Output: extent=183x14 cells, labels 8/8, near-misses 0. 183 columns against a 77-column target, so the single view is rejected with a measured number, not a taste."
+    },
+    {
+      "label": "probe-single-view-tb",
+      "spec": "probes/probe-single-view-tb.json",
+      "record": "probe-single-view-tb",
+      "record_log": "attempts-log.jsonl",
+      "why": "rung-1 test, tb (the other orientation): same 9 nodes/8 relations. Output: extent=53x96 cells, labels 8/8. 96 rows against 47, so no orientation of the single view holds the source at natural zoom; the canvas rung is the honest shape."
+    }
+  ],
+  "cleanup": {
+    "panes_opened": 2,
+    "pane_ids": ["w7E:pZV", "w7E:pZW"],
+    "closes": "each viz-evidence.sh bundle closed its own pane and recorded cleanup=confirmed_closed in its manifest.json; no pane was left open",
+    "failures": []
+  }
+}

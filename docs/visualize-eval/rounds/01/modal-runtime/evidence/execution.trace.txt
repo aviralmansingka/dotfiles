@@ -1,0 +1,10 @@
+# captures/execution.text.none.txt  lines=47 cols=77
+node  'Task engine'            lines 15-18 cols 20-32
+node  'Container backend'      lines 23-26 cols 17-35
+node  'Filesystem + volumes'   lines 23-26 cols 40-61
+node  'Task container'         lines 31-34 cols 19-34
+node  'Blobnet'                lines 31-34 cols 47-55
+glyph ▼ at line 22 col 18   context: '   ▼    '
+glyph ▼ at line 22 col 41   context: '   ▼'
+glyph ▼ at line 30 col 20   context: '   ▼    '
+glyph ▼ at line 30 col 48   context: '   ▼'

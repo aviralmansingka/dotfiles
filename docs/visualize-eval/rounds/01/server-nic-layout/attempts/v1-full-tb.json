@@ -1,0 +1,34 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "dark", "label": "7 NICs dark" },
+    { "id": "s2", "label": "server2 R7725 .59" },
+    { "id": "spare", "label": "spare .60-.62" },
+    { "id": "s1", "label": "server1 R7725 .58" },
+    { "id": "nic", "label": "eno16595np0 25 GbE" },
+    { "id": "gw", "label": "Arista .57 AS132717" },
+    { "id": "airtel", "label": "Airtel 14.143.x" },
+    { "id": "airtelbb", "label": "Airtel BB 14.141.x" },
+    { "id": "cf", "label": "Cloudflare 1.1.1.1" }
+  ],
+  "layers": [
+    ["dark", "s2", "spare"],
+    ["s1"],
+    ["nic"],
+    ["gw"],
+    ["airtel"],
+    ["airtelbb"],
+    ["cf"]
+  ],
+  "edges": [
+    { "from": "dark", "to": "s1", "label": "7 dark ports" },
+    { "from": "s1", "to": "nic", "label": "only uplink" },
+    { "from": "nic", "to": "gw", "label": "gw 0.1 ms" },
+    { "from": "s2", "to": "gw", "label": "same /29" },
+    { "from": "spare", "to": "gw", "label": "free in /29" },
+    { "from": "gw", "to": "airtel", "label": "transit 1.8 ms", "flow": 0.3 },
+    { "from": "airtel", "to": "airtelbb", "label": "7.1 ms", "flow": 0.3 },
+    { "from": "airtelbb", "to": "cf", "label": "8.3 ms", "flow": 0.3 }
+  ]
+}

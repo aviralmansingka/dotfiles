@@ -1,0 +1,16 @@
+viewport: 60x14 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 60x14 @100% · canvas 171x28 · containment-l
+
+────────────────────────────────────────────────────────────
+L1 · System context — the machine
+The manager's boundary services in                         n
+
+
+ ┌───────┐                         ▄▄▄   ▗▄▖▟█▌  ▄▄▄   ▄▄▄
+ │ + [+] │                         ▄▄     ▄ ▄▄▖  ▗▄▄   ▀▀▀
+ │ − [-] │                                  ▀▀
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+╭───────────────────╮                             ║╭────────

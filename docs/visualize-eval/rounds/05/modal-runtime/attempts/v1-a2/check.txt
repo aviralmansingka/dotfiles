@@ -1,0 +1,12 @@
+warning: edge e1 label "events+mg RPC" had no clear cell; shorten it or add routing space
+viewport: unknown zoom: 1.00 natural
+ok: nodes=3 edges=3 flows=0 direction=tb theme=gruvbox
+extent=49x16 cells
+crossings: 1 bridges, 0 touching bends
+warning: 1 edge label(s) had no free slot; shorten the labels or split the graph
+labels: 2/3 placed, 0 on route cells, 1 skipped, 0 ambiguous owners
+groups: orchestration(1)
+trunks:
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

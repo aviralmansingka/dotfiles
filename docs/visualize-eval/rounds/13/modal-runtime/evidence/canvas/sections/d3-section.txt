@@ -1,0 +1,13 @@
+       ───────────────────────────────────────────────────────────────────────────────────────────────────────────
+       storage and daemon interfaces
+       Engine mounts/snapshots Filesystem + volumes, then Blobnet; runtime to daemon: HTTP/UDS, not worker gRPC.
+
+        ╭───────────╮                            ╭────────────────────╮
+        │Task engine│───────────────────────────▶│Filesystem + volumes│────────────────────╮
+        │           │    mounts / snapshots      │                    │ image + volume data│
+        ╰───────────╯                            ╰────────────────────╯                    │ ╭───────╮
+                                                                                           ╰▶│Blobnet│
+       ╭─────────────╮   filesystem HTTP over UDS    ╭────────────╮                          │       │
+       │modal-runtime│──────────────────────────────▶│modal-daemon│                          ╰───────╯
+       │             │                               │            │
+       ╰─────────────╯                               ╰────────────╯

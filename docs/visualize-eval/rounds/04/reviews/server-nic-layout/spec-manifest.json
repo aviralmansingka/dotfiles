@@ -1,0 +1,14 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/04/server-nic-layout/specs/v1-host.json",
+    "sha256": "a68544d0acc4fc1efbf2b864e3b65094e735bc397acbad605242b3312e8815e5"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/04/server-nic-layout/specs/v2-subnet.json",
+    "sha256": "ce4cf67d58718dbb7a017de5b6ea363614ee71b649f63b2a8b0669163cb27ced"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/04/server-nic-layout/specs/v3-upstream.json",
+    "sha256": "78d192cf1b141bf48a3afd6017a9ca43a3d0a942881bfad2e826ecb86d782e7a"
+  }
+]

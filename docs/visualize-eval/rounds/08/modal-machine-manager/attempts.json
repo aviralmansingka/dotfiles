@@ -1,0 +1,102 @@
+{
+  "case_id": "modal-machine-manager",
+  "round": "08",
+  "budget_rule": "at most three spec candidates per view, counting every --check run on a distinct spec",
+  "accounting_note": "Attempts are assigned to the view whose subject they carried. The first candidate (specs/v1-provision.json, filenamed v1 by accident) drew the cp -> gRPC -> queue -> registry -> providers -> machines phase chain, i.e. the dispatch/provision subject that became v2; its raw check is attempts-raw/v1-a1-check.txt. The request view (final v1) therefore has three candidates and dispatch has three.",
+  "total_check_runs": 10,
+  "views": [
+    {
+      "view": "v1",
+      "subject": "request / human channel into the queue",
+      "final_spec": "specs/v1-request.json",
+      "final_spec_sha256": "5e19b2ed34593f0b3ab7979e751c3812c97bd064f6b5d17bb5f4f44297dca9e4",
+      "attempts": [
+        {
+          "candidate": 1,
+          "spec_sha256": "overwritten (6-node request view: cp, web | pgrpc, wapi | q, slack)",
+          "note": "tb, 3 ranks, 5 edges. Labels 4/5: 'create/term/repair' had no clear cell inside the control-plane region. extent 47x47, 0 ambiguous. Rejected: a skipped label is a defect.",
+          "raw_check": "attempts-raw/v1-a2-check.txt"
+        },
+        {
+          "candidate": 2,
+          "spec_sha256": "327597e820ce56339373e5184c69d2d73087f96d2528bcb3ba6f8892399fb3ae",
+          "note": "web moved to v2 so the long label had the whole band; 17-char label now placed. extent 41x47 (full target height, zero margin), labels 4/4, 1 ambiguous owner. Rejected only because 47/47 rows leaves no header margin.",
+          "raw_check": "attempts-raw/v1-a3-check.txt",
+          "spec_copy": "prior-attempts/v1-a3-create-term-repair.json"
+        },
+        {
+          "candidate": 3,
+          "spec_sha256": "5e19b2ed34593f0b3ab7979e751c3812c97bd064f6b5d17bb5f4f44297dca9e4",
+          "note": "FINAL. Same structure, e1 label shortened to 'create/term' (11 cells). extent 41x40, labels 4/4, origins 4/4, 0 crossings, 1 ambiguous owner (webapi's two out-edges in one band). Chosen for the 7-row fit margin.",
+          "raw_check": "attempts-raw/v1-a4-check.txt"
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "subject": "dispatch: queue fan into job classes and the provider chain",
+      "final_spec": "specs/v2-dispatch.json",
+      "final_spec_sha256": "70f3c2ca0c7dda0db3b360770966ad968e2c0933e8eef8a6715f859c00277e9c",
+      "attempts": [
+        {
+          "candidate": 1,
+          "spec_sha256": "91b17a435b3df2d6a3c3d1e409d30f617f0f407f23599508c0d91ac1b92db9 (file retained as specs/v1-provision.json)",
+          "note": "tb, 6 ranks, 8 nodes (cp, web | pgrpc, wapi | q | reg | prov | mch). This candidate measured the rank-gap cost: extent 44x108 because a tb rank gap reserves the height of its longest label. Labels 6/7 (skipped 'create/term/repair'), 0 ambiguous. Rejected: 2.3x the target height.",
+          "raw_check": "attempts-raw/v1-a1-check.txt"
+        },
+        {
+          "candidate": 2,
+          "spec_sha256": "overwritten (7-node tb dispatch: q | reg, ssh, jan | prov, mch, wapi)",
+          "note": "tb, 3 ranks. extent 65x40, labels 6/6, 1 ambiguous owner. Rejected in favour of lr: in tb a node's fan ports sit 2 cells apart, so any fan label is ambiguous.",
+          "raw_check": "attempts-raw/v2-a1-check.txt"
+        },
+        {
+          "candidate": 3,
+          "spec_sha256": "70f3c2ca0c7dda0db3b360770966ad968e2c0933e8eef8a6715f859c00277e9c",
+          "note": "FINAL. lr, 3 ranks, 8 nodes, 7 edges. extent 71x28, labels 7/7, origins 7/7, 1 bridge, 1 ambiguous owner (middle route of the three-way queue fan).",
+          "raw_check": "attempts-raw/v2-a2-check.txt"
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "subject": "boot plant, image pull, host agent",
+      "final_spec": "specs/v3-boot.json",
+      "final_spec_sha256": "aff9f588faff84fd06f2449a93ff3fd0091c096cda0e294acc0f78abbc5964c4",
+      "attempts": [
+        {
+          "candidate": 1,
+          "spec_sha256": "aff9f588faff84fd06f2449a93ff3fd0091c096cda0e294acc0f78abbc5964c4",
+          "note": "FINAL. tb, 2 ranks, 5 nodes, 5 edges. extent 52x24, labels 5/5 including 'boot.ipxe + S3 args', origins 5/5, 0 crossings, 1 ambiguous owner. Chosen over the lr alternative because lr cannot route the anti-parallel pair.",
+          "raw_check": "attempts-raw/v3-a1-check.txt"
+        },
+        {
+          "candidate": 2,
+          "spec_sha256": "overwritten (lr boot view, same 5 nodes / 5 edges)",
+          "note": "lr. --check exited nonzero: 'no obstacle-safe route for boot -> mch; increase node/layer spacing'. The anti-parallel pair has no route in lr at this size. Rejected; lr is unusable for a boot pair.",
+          "raw_check": "attempts-raw/v3-a2-check.txt"
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "subject": "state writers, heartbeat sink, reconcile loop",
+      "final_spec": "specs/v4-state-reconcile.json",
+      "final_spec_sha256": "df95ea2a9e36c9822a6fbb4b9971bc6c0a2a2d29f37bcac11e2d299d7037b89e",
+      "attempts": [
+        {
+          "candidate": 1,
+          "spec_sha256": "overwritten (5-node state view: pgrpc, rec, q | prov, db)",
+          "note": "tb, 2 ranks. extent 54x26, labels 4/4, 0 ambiguous. Correct but only 4 of the 23 relations; extended to the final 8-node form.",
+          "raw_check": "attempts-raw/v4-a1-check.txt"
+        },
+        {
+          "candidate": 2,
+          "spec_sha256": "df95ea2a9e36c9822a6fbb4b9971bc6c0a2a2d29f37bcac11e2d299d7037b89e",
+          "note": "FINAL. tb, 3 ranks, 8 nodes, 7 edges. extent 76x40, labels 7/7, origins 7/7, 0 ambiguous owners, 2 bridges.",
+          "raw_check": "attempts-raw/v4-a2-check.txt"
+        }
+      ]
+    }
+  ]
+}

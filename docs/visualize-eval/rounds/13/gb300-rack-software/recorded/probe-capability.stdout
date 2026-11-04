@@ -1,0 +1,23 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=9 edges=4 flows=0 direction=lr theme=gruvbox
+canvas: 2 diagrams on one canvas, drawn whole at 100%
+diagram p1 "Probe plane one" at 0,3: extent=45x18 nodes=5 edges=1 routes=4
+  description: capability probe: canvas form, trunk with two branches plus a terminus
+diagram p2 "Probe plane two" at 0,26: extent=50x10 nodes=4 edges=3 routes=3
+  description: capability probe: plain chain with one long crossing edge
+extent=70x36 cells (whole canvas)
+crossings: 5 bridges, 2 touching bends
+warning: two edges share 6 cell(s), including ports; increase routing space
+near-misses: 13 cell(s) inside the 2-cell margin of a node the route does not serve (10 on trunk buses)
+passes-near-unrelated-node: 13
+near-miss: route p1:e1 passes 6 cell(s) at ring 2 of node 'd' (nearest cell 25,6)
+near-miss: route p1:e2 passes 4 cell(s) at ring 2 of node 'd' (nearest cell 25,6)
+near-miss: route p2:e0 passes 3 cell(s) at ring 2 of node 'h' (nearest cell 22,4)
+warning: 13 route cell(s) hug a node their relation does not serve; move the affected relations or let them route around
+labels: 1/1 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners
+groups: plane-a(6) plane-b(3)
+trunks: p1:t1 from b to e, 2 branches, 1 junctions
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 0 by source, 0 by destination, 0 shared-hue pair(s) (source-only 0, destination-only 0)
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

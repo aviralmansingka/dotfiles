@@ -1,0 +1,50 @@
+ rataflow-view · 82x51 @100% · v2-exec-storage.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              ╭─────────────────╮     ╭──────────────╮
+             starts/manages ╭▶│Container backend│────▶│Task container│
+           ╭───────────╮    │ │                 │     │              │
+           │           │────╯ ╰─────────────────╯     ╰──────────────╯
+           │Task engine│                     user process
+           │           │──╮ ╭────────────────────╮        ╭───────╮
+           ╰───────────╯  ╰▶│Filesystem + volumes│───────▶│Blobnet│
+                            │                    │        │       │
+                            ╰────────────────────╯        ╰───────╯
+                   mount+snapshot            image+volume
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘

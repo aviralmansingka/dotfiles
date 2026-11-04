@@ -1,0 +1,878 @@
+{
+  "case_id": "datacenter-redundancy",
+  "round": "01",
+  "generator": {
+    "role": "fresh diagram generator (replaces the user-cancelled Astra generation; no artifact from that run was read or reused)",
+    "agent_name": "viz-ds01-datacenter-redundancy",
+    "agent_profile": "worker",
+    "provider": "fireworks",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "model_env": {
+      "PI_PROVIDER": "fireworks",
+      "PI_MODEL": "accounts/fireworks/routers/deepseek-flash-latest",
+      "PI_REASONING_LEVEL": "high"
+    },
+    "session_file": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-dotfiles-fix-visualize-skill--/2026-11-02T08-24-53-281Z_d7d21c6c-db4579fa-907fd159-fd5c.jsonl",
+    "judging": "separate Astra judges are captain-owned; this generator spawned no judge and claims no approval"
+  },
+  "candidate": {
+    "skill": {
+      "path": "docs/visualize-eval/rounds/01/SKILL.md",
+      "sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "note": "read fresh for this round; the globally installed skill was not used"
+    },
+    "renderer": {
+      "path": "/tmp/visualize-eval/round-01/bin/rataflow-view",
+      "sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "invocation": "absolute path only; no build, install, or PATH override of another binary"
+    },
+    "expected_skill_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+    "expected_renderer_sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8"
+  },
+  "environment": {
+    "herdr_env": "1",
+    "own_pane": "w7E:p20",
+    "own_tab": "w7E:tS",
+    "worktree": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/01/datacenter-redundancy",
+    "split_command": "herdr pane split --current --direction right --ratio 0.5 --cwd $PWD --no-focus",
+    "pane_rect": "79x49 (herdr pane layout)",
+    "pty_size_measured": "stty size -> '47 77' (rows cols) inside every viewer pane",
+    "viewport_target": "77x47",
+    "viewport_actual": "77x47",
+    "viewport_status": "met",
+    "zoom": "100% natural fit; 'f' never pressed, no pan, no zoom"
+  },
+  "views": [
+    {
+      "id": "view1",
+      "file": "specs/view1-isp-mux.json",
+      "role": "ISP uplinks into the MUX pair",
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": 6,
+      "edges": 4,
+      "flow_dots": 0,
+      "extent_cells": {
+        "w": 45,
+        "h": 14
+      },
+      "rendered_at": {
+        "rows": "18-30",
+        "cols": "17-60"
+      },
+      "spec_sha256": "e2cd6d8e3c6fc18874a944a58d5b27270d0a125630b61868e4c3a14c51fc3f9d",
+      "check": {
+        "stdout": "ok: nodes=6 edges=4 flows=0 direction=tb theme=gruvbox\nlayers=2 (explicit placement, sugiyama skipped)\nextent=45x14 cells",
+        "stderr": "",
+        "exit": 0,
+        "meta": "command: /tmp/visualize-eval/round-01/bin/rataflow-view --check specs/view1-isp-mux.json\ntimestamp_utc: 20261102T083542Z\nexit: 0\nspec_sha256: e2cd6d8e3c6fc18874a944a58d5b27270d0a125630b61868e4c3a14c51fc3f9d"
+      },
+      "pane_id": "w7E:p5G",
+      "captured_at_utc": "20261102T083328Z",
+      "captures": {
+        "visible_text": {
+          "path": "captures/final-view1-20261102T083328Z-visible.txt",
+          "sha256": "795e694c547a487638db008d80027f411b4d2c841f9d8af104d23fd4c920e96a"
+        },
+        "visible_ansi": {
+          "path": "captures/final-view1-20261102T083328Z-visible.ansi",
+          "sha256": "c40496ef73fb674f4706004cd793182abe6edea7c103a15b419a95ed8297f551"
+        },
+        "selected_text": {
+          "path": "captures/final-view1-20261102T083328Z-selected.txt",
+          "sha256": "795e694c547a487638db008d80027f411b4d2c841f9d8af104d23fd4c920e96a"
+        },
+        "selected_ansi": {
+          "path": "captures/final-view1-20261102T083328Z-selected.ansi",
+          "sha256": "ee81c353834906a9ad25c96b033f38ab12f152faeed22d71cfbdc71d4376990d"
+        },
+        "frame2_text": {
+          "path": "captures/final-view1-20261102T083328Z-frame2.txt",
+          "sha256": "795e694c547a487638db008d80027f411b4d2c841f9d8af104d23fd4c920e96a"
+        }
+      },
+      "extra_selected_proof": {
+        "pane_id": "w7E:p5Q",
+        "captured_at_utc": "20261102T083435Z",
+        "note": "two Tab presses; second selection (ISP B) changes border 228;184;111 -> accent 216;166;87. The first Tab selects ISP A, whose base border already equals the accent shade, so that state is colour-identical.",
+        "visible_ansi": {
+          "path": "captures/final-view1c-20261102T083435Z-visible.ansi",
+          "sha256": "c40496ef73fb674f4706004cd793182abe6edea7c103a15b419a95ed8297f551"
+        },
+        "selected_ansi": {
+          "path": "captures/final-view1c-20261102T083435Z-selected2.ansi",
+          "sha256": "ed27a09a8fba4ef08c09de153d1b6455862379b2a698aee9c1ca162f52764b77"
+        }
+      },
+      "arrows_verified": 4,
+      "node_boxes_complete": "6/6",
+      "labels_in_spec": 0
+    },
+    {
+      "id": "view2",
+      "file": "specs/view2-mux-core.json",
+      "role": "MUX to core cross-connect (independent links, no shared bus)",
+      "direction": "lr",
+      "theme": "gruvbox",
+      "nodes": 4,
+      "edges": 4,
+      "flow_dots": 0,
+      "extent_cells": {
+        "w": 45,
+        "h": 12
+      },
+      "rendered_at": {
+        "rows": "19-29",
+        "cols": "15-60"
+      },
+      "spec_sha256": "bf534caf77d60058529824cc699659e5c3281045b0c2b3a30e22b41282f6a5f6",
+      "check": {
+        "stdout": "ok: nodes=4 edges=4 flows=0 direction=lr theme=gruvbox\nlayers=3 (explicit placement, sugiyama skipped)\nextent=45x12 cells",
+        "stderr": "",
+        "exit": 0,
+        "meta": "command: /tmp/visualize-eval/round-01/bin/rataflow-view --check specs/view2-mux-core.json\ntimestamp_utc: 20261102T083542Z\nexit: 0\nspec_sha256: bf534caf77d60058529824cc699659e5c3281045b0c2b3a30e22b41282f6a5f6"
+      },
+      "pane_id": "w7E:p5H",
+      "captured_at_utc": "20261102T083335Z",
+      "captures": {
+        "visible_text": {
+          "path": "captures/final-view2-20261102T083335Z-visible.txt",
+          "sha256": "f3aa3f72a6de925af44763f5dad5e3f03f9b7d7d4ff6e00faccceea732fd0e6d"
+        },
+        "visible_ansi": {
+          "path": "captures/final-view2-20261102T083335Z-visible.ansi",
+          "sha256": "5611367375c3b1762a95dc762ab3b3881cacfa59ae65f3a806ee28b1568a47e7"
+        },
+        "selected_text": {
+          "path": "captures/final-view2-20261102T083335Z-selected.txt",
+          "sha256": "f3aa3f72a6de925af44763f5dad5e3f03f9b7d7d4ff6e00faccceea732fd0e6d"
+        },
+        "selected_ansi": {
+          "path": "captures/final-view2-20261102T083335Z-selected.ansi",
+          "sha256": "c86bbf384a88266b1d8d1582574fe644660ab9f9f00bc2e9c60408e257a4cc98"
+        },
+        "frame2_text": {
+          "path": "captures/final-view2-20261102T083335Z-frame2.txt",
+          "sha256": "f3aa3f72a6de925af44763f5dad5e3f03f9b7d7d4ff6e00faccceea732fd0e6d"
+        }
+      },
+      "arrows_verified": 4,
+      "node_boxes_complete": "4/4",
+      "labels_in_spec": 4,
+      "labels_visible": 4
+    },
+    {
+      "id": "view3",
+      "file": "specs/view3-fw-ha.json",
+      "role": "core to active/standby firewall to border leaf",
+      "direction": "lr",
+      "theme": "gruvbox",
+      "nodes": 6,
+      "edges": 8,
+      "flow_dots": 0,
+      "extent_cells": {
+        "w": 67,
+        "h": 12
+      },
+      "rendered_at": {
+        "rows": "19-29",
+        "cols": "6-71"
+      },
+      "spec_sha256": "196b286044375214c68e457d182a02a05323adcbf6741fb6941047217b91bd6b",
+      "check": {
+        "stdout": "ok: nodes=6 edges=8 flows=0 direction=lr theme=gruvbox\nlayers=4 (explicit placement, sugiyama skipped)\nextent=67x12 cells",
+        "stderr": "",
+        "exit": 0,
+        "meta": "command: /tmp/visualize-eval/round-01/bin/rataflow-view --check specs/view3-fw-ha.json\ntimestamp_utc: 20261102T083542Z\nexit: 0\nspec_sha256: 196b286044375214c68e457d182a02a05323adcbf6741fb6941047217b91bd6b"
+      },
+      "pane_id": "w7E:p5J",
+      "captured_at_utc": "20261102T083341Z",
+      "captures": {
+        "visible_text": {
+          "path": "captures/final-view3-20261102T083341Z-visible.txt",
+          "sha256": "fd372dee9fc70b8deba1047163d7997c9f16f9e5bd4087a421ff47338987045c"
+        },
+        "visible_ansi": {
+          "path": "captures/final-view3-20261102T083341Z-visible.ansi",
+          "sha256": "9ae4f387d438c08e7d145a1be772a41afecf7f5da8b14f65bb84e18efc1fcb79"
+        },
+        "selected_text": {
+          "path": "captures/final-view3-20261102T083341Z-selected.txt",
+          "sha256": "fd372dee9fc70b8deba1047163d7997c9f16f9e5bd4087a421ff47338987045c"
+        },
+        "selected_ansi": {
+          "path": "captures/final-view3-20261102T083341Z-selected.ansi",
+          "sha256": "4e768fefb063946d51168a2aa188afa6f484721aad4db88fc147bb4459cc6e68"
+        },
+        "frame2_text": {
+          "path": "captures/final-view3-20261102T083341Z-frame2.txt",
+          "sha256": "fd372dee9fc70b8deba1047163d7997c9f16f9e5bd4087a421ff47338987045c"
+        }
+      },
+      "arrows_verified": 8,
+      "node_boxes_complete": "6/6",
+      "labels_in_spec": 8,
+      "labels_visible": 8
+    },
+    {
+      "id": "view4",
+      "file": "specs/view4-fabric.json",
+      "role": "fabric: border leaves and leaf pair on one level, both spines above, racks below",
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": 8,
+      "edges": 12,
+      "flow_dots": 0,
+      "extent_cells": {
+        "w": 63,
+        "h": 28
+      },
+      "rendered_at": {
+        "rows": "10-37",
+        "cols": "8-69"
+      },
+      "spec_sha256": "ff24f445d9e2ef696063142efbf63e18ab7d0756c4d4ce3be402b19a10093257",
+      "check": {
+        "stdout": "ok: nodes=8 edges=12 flows=0 direction=tb theme=gruvbox\nlayers=3 (explicit placement, sugiyama skipped)\nextent=63x28 cells",
+        "stderr": "",
+        "exit": 0,
+        "meta": "command: /tmp/visualize-eval/round-01/bin/rataflow-view --check specs/view4-fabric.json\ntimestamp_utc: 20261102T083542Z\nexit: 0\nspec_sha256: ff24f445d9e2ef696063142efbf63e18ab7d0756c4d4ce3be402b19a10093257"
+      },
+      "pane_id": "w7E:p5N",
+      "captured_at_utc": "20261102T083348Z",
+      "captures": {
+        "visible_text": {
+          "path": "captures/final-view4-20261102T083348Z-visible.txt",
+          "sha256": "8e88af9e6244d8a3f8415377fd1b46fa2063919b5106b8de25110ee8b538f5be"
+        },
+        "visible_ansi": {
+          "path": "captures/final-view4-20261102T083348Z-visible.ansi",
+          "sha256": "b3ee67313d63f0be25be6a3006df9bead62ead22f83967101af7f2fda186055e"
+        },
+        "selected_text": {
+          "path": "captures/final-view4-20261102T083348Z-selected.txt",
+          "sha256": "8e88af9e6244d8a3f8415377fd1b46fa2063919b5106b8de25110ee8b538f5be"
+        },
+        "selected_ansi": {
+          "path": "captures/final-view4-20261102T083348Z-selected.ansi",
+          "sha256": "455c1af6f83a0ab2f17d41b12b966c01716db64f09b00b4257c5c36401de0e18"
+        },
+        "frame2_text": {
+          "path": "captures/final-view4-20261102T083348Z-frame2.txt",
+          "sha256": "8e88af9e6244d8a3f8415377fd1b46fa2063919b5106b8de25110ee8b538f5be"
+        }
+      },
+      "placement_check": {
+        "border_leaves_and_leaves_same_level": "BL 1 rows 24-28, BL 2 rows 24-27, Leaf 1 and Leaf 2 rows 24-27: top edges all row 24 (BL 1 is one row taller because it carries two ports)",
+        "spines_above": "Spine 1 rows 12-15, Spine 2 rows 12-16, both above row 24",
+        "racks_below": "Rack 1 and Rack 2 rows 34-37"
+      },
+      "arrows_verified": 12,
+      "node_boxes_complete": "8/8",
+      "labels_in_spec": 12,
+      "labels_visible": 12
+    }
+  ],
+  "relationship_coverage": [
+    {
+      "relation": "ispA -> mux1",
+      "from": "ispA",
+      "to": "mux1",
+      "label": null,
+      "view": "view1",
+      "visible_evidence": "stem (22-24,18) -> corner (25,18) -> run (25,19-28) -> corner (25,29) -> down col 29 -> arrow (26,29) on MUX 1 top border",
+      "direction_preserved": true
+    },
+    {
+      "relation": "ispB -> mux1",
+      "from": "ispB",
+      "to": "mux1",
+      "label": null,
+      "view": "view1",
+      "visible_evidence": "stem (22-23,29) -> dogleg (24,29)\u2570\u2500(24,30)\u2500(24,31)\u256e -> down col 31 -> arrow (26,31) on MUX 1 top border",
+      "direction_preserved": true
+    },
+    {
+      "relation": "ispC -> mux2",
+      "from": "ispC",
+      "to": "mux2",
+      "label": null,
+      "view": "view1",
+      "visible_evidence": "stem (22-24,44) -> corner (25,44) -> run (25,45-54) -> corner (25,55) -> down col 55 -> arrow (26,55) on MUX 2 top border",
+      "direction_preserved": true
+    },
+    {
+      "relation": "ispD -> mux2",
+      "from": "ispD",
+      "to": "mux2",
+      "label": null,
+      "view": "view1",
+      "visible_evidence": "stem (22-23,55) -> dogleg (24,55)\u2570\u2500(24,57)\u256e -> down col 57 -> arrow (26,57) on MUX 2 top border",
+      "direction_preserved": true
+    },
+    {
+      "relation": "mux1 -> core1",
+      "from": "mux1",
+      "to": "core1",
+      "label": "x-conn",
+      "view": "view2",
+      "visible_evidence": "run (20,24-51) -> arrow (20,52) on Core 1 left border; label (19,35-40) directly above",
+      "direction_preserved": true
+    },
+    {
+      "relation": "mux1 -> core2",
+      "from": "mux1",
+      "to": "core2",
+      "label": "x-conn",
+      "view": "view2",
+      "visible_evidence": "run (22,24-49) -> corner (22,50) -> down col 50 (crossing hop at (23,50)) -> corner (26,50) -> arrow (26,52) on Core 2 left border; label (21,34-39)",
+      "direction_preserved": true
+    },
+    {
+      "relation": "mux2 -> core1",
+      "from": "mux2",
+      "to": "core1",
+      "label": "x-conn",
+      "view": "view2",
+      "visible_evidence": "run (26,24-47) -> corner (26,48) up col 48 -> corner (23,48) -> run (23,49-50) (crossing hop (23,50)) -> corner (23,51) up col 51 -> corner (22,51) -> arrow (22,52) on Core 1 left border; label (25,33-38)",
+      "direction_preserved": true
+    },
+    {
+      "relation": "mux2 -> core2",
+      "from": "mux2",
+      "to": "core2",
+      "label": "x-conn",
+      "view": "view2",
+      "visible_evidence": "run (28,24-51) -> arrow (28,52) on Core 2 left border; label (27,35-40)",
+      "direction_preserved": true
+    },
+    {
+      "relation": "core1 -> fw1",
+      "from": "core1",
+      "to": "fw1",
+      "label": "act",
+      "view": "view3",
+      "visible_evidence": "run (20,14-44) -> arrow (20,45) on FW1 left border; label (19,28-30)",
+      "direction_preserved": true
+    },
+    {
+      "relation": "core2 -> fw1",
+      "from": "core2",
+      "to": "fw1",
+      "label": "act",
+      "view": "view3",
+      "visible_evidence": "run (26,14-42) -> corner (26,43) up col 43 -> corner (22,43) -> run (22,44) -> arrow (22,45) on FW1 left border; label (25,27-29)",
+      "direction_preserved": true
+    },
+    {
+      "relation": "core1 -> fw2",
+      "from": "core1",
+      "to": "fw2",
+      "label": "stby",
+      "view": "view3",
+      "visible_evidence": "run (22,14-40) -> corner (22,41) down col 41 -> corner (25,41) -> run (25,42) (crossing hop (25,43)) -> corner (25,44) -> down col 44 -> corner (26,44) -> arrow (26,45) on FW2 left border; label (21,25-28)",
+      "direction_preserved": true
+    },
+    {
+      "relation": "core2 -> fw2",
+      "from": "core2",
+      "to": "fw2",
+      "label": "stby",
+      "view": "view3",
+      "visible_evidence": "run (28,14-44) -> arrow (28,45) on FW2 left border; label (27,27-30)",
+      "direction_preserved": true
+    },
+    {
+      "relation": "fw1 -> bl1",
+      "from": "fw1",
+      "to": "bl1",
+      "label": "act",
+      "view": "view3",
+      "visible_evidence": "run (20,58-64) -> arrow (20,65) on BL 1 left border; label (19,60-62)",
+      "direction_preserved": true
+    },
+    {
+      "relation": "fw1 -> bl2",
+      "from": "fw1",
+      "to": "bl2",
+      "label": "act",
+      "view": "view3",
+      "visible_evidence": "run (22,58-62) -> corner (22,63) down col 63 (crossing hop (23,63)) -> corner (26,63) -> run (26,64) -> arrow (26,65) on BL 2 left border; label placed in free space at (24,56-59)",
+      "direction_preserved": true
+    },
+    {
+      "relation": "fw2 -> bl1",
+      "from": "fw2",
+      "to": "bl1",
+      "label": "stby",
+      "view": "view3",
+      "visible_evidence": "run (26,57-60) -> corner (26,61) up col 61 -> corner (23,61) -> run (23,62) (crossing hop (23,63)) -> corner (23,64) up -> corner (22,64) -> arrow (22,65) on BL 1 left border; label placed in free space at (24,65-67)",
+      "direction_preserved": true
+    },
+    {
+      "relation": "fw2 -> bl2",
+      "from": "fw2",
+      "to": "bl2",
+      "label": "stby",
+      "view": "view3",
+      "visible_evidence": "run (28,57-64) -> arrow (28,65) on BL 2 left border; label (27,59-62)",
+      "direction_preserved": true
+    },
+    {
+      "relation": "bl1 -> sp1",
+      "from": "bl1",
+      "to": "sp1",
+      "label": "ECMP",
+      "view": "view4",
+      "visible_evidence": "right port (25,13) -> run (25,14-27) -> corner (25,28) up col 28 -> corner (13,28) -> arrow (13,27)\u25c0 into Spine 1 right border",
+      "direction_preserved": true
+    },
+    {
+      "relation": "bl1 -> sp2",
+      "from": "bl1",
+      "to": "sp2",
+      "label": "ECMP",
+      "view": "view4",
+      "visible_evidence": "right port (27,13) -> run (27,14-15) -> corner (27,16) up col 16 -> jog (14,16)->(14,15) -> up col 15 -> corner (10,15) -> top wrap run (10,16-54) -> corner (10,55) down col 55 -> corner (13,55) -> arrow (13,54)\u25c0 into Spine 2 right border",
+      "direction_preserved": true
+    },
+    {
+      "relation": "bl2 -> sp1",
+      "from": "bl2",
+      "to": "sp1",
+      "label": "ECMP",
+      "view": "view4",
+      "visible_evidence": "left port (25,31) -> run (25,30) -> corner (25,29) up col 29 -> corner (23,29) -> run (23,15-28) (crossing hops (23,16),(23,28); label ECMP inside the run at (23,20-23)) -> corner (23,15) -> jog (22,15)->(22,13) -> up col 13 -> corner (13,13) -> run (13,14-16) (crossing hop (13,15)) -> arrow (13,17)\u25b6 into Spine 1 left border",
+      "direction_preserved": true
+    },
+    {
+      "relation": "bl2 -> sp2",
+      "from": "bl2",
+      "to": "sp2",
+      "label": "ECMP",
+      "view": "view4",
+      "visible_evidence": "right port (25,36) -> run (25,37-43) -> corner (25,44) up col 44 (crossing hop (22,44)) -> corner (21,44) -> run (21,45-54) (crossing hop (21,49)) -> corner (21,55) up col 55 -> corner (15,55) -> arrow (15,54)\u25c0 into Spine 2 right border",
+      "direction_preserved": true
+    },
+    {
+      "relation": "sp1 -> leaf1",
+      "from": "sp1",
+      "to": "leaf1",
+      "label": "ECMP",
+      "view": "view4",
+      "visible_evidence": "bottom port (15,19) down col 19 -> corner (22,19) -> run (22,20-46) (crossing hops (22,28),(22,44)) -> corner (22,47) down -> arrow (23,47)\u25bc on Leaf 1 top border",
+      "direction_preserved": true
+    },
+    {
+      "relation": "sp1 -> leaf2",
+      "from": "sp1",
+      "to": "leaf2",
+      "label": "ECMP",
+      "view": "view4",
+      "visible_evidence": "bottom port (15,21) down col 21 -> corner (20,21) -> run (20,22-62) (crossing hops (20,28),(20,49),(20,55)) -> corner (20,63) down -> arrow (23,63)\u25bc on Leaf 2 top border",
+      "direction_preserved": true
+    },
+    {
+      "relation": "sp2 -> leaf1",
+      "from": "sp2",
+      "to": "leaf1",
+      "label": "ECMP",
+      "view": "view4",
+      "visible_evidence": "bottom port (16,46) down col 46 -> corner (19,46) -> run (19,47-48) -> corner (19,49) down -> arrow (23,49)\u25bc on Leaf 1 top border",
+      "direction_preserved": true
+    },
+    {
+      "relation": "sp2 -> leaf2",
+      "from": "sp2",
+      "to": "leaf2",
+      "label": "ECMP",
+      "view": "view4",
+      "visible_evidence": "bottom port (16,48) down col 48 -> corner (18,48) -> run (18,49-64) (crossing hop (18,55)) -> corner (18,65) down -> arrow (23,65)\u25bc on Leaf 2 top border",
+      "direction_preserved": true
+    },
+    {
+      "relation": "leaf1 -> rack1",
+      "from": "leaf1",
+      "to": "rack1",
+      "label": "dual",
+      "view": "view4",
+      "visible_evidence": "bottom port (27,47) down col 47 -> corner (31,47) -> run (31,20-46) (crossing hop (31,22)) -> corner (31,20) down col 20 -> arrow (33,20)\u25bc on Rack 1 top border; label 'dual' free-space (28,32-35)",
+      "direction_preserved": true
+    },
+    {
+      "relation": "leaf2 -> rack1",
+      "from": "leaf2",
+      "to": "rack1",
+      "label": "dual",
+      "view": "view4",
+      "visible_evidence": "bottom port (27,63) down col 63 -> corner (30,63) -> run (30,45-62) (crossing hops (30,47),(30,49)) -> corner (30,45) up col 45 -> corner (29,45) -> run (29,22-44) -> corner (29,22) down col 22 -> arrow (33,22)\u25bc on Rack 1 top border; label (30,32-35)",
+      "direction_preserved": true
+    },
+    {
+      "relation": "leaf1 -> rack2",
+      "from": "leaf1",
+      "to": "rack2",
+      "label": "dual",
+      "view": "view4",
+      "visible_evidence": "bottom port (27,49) down col 49 -> corner (31,49) -> jog (31,48) -> down col 48 -> corner (32,48) -> jog (32,47) -> down col 47 -> arrow (33,47)\u25bc on Rack 2 top border; label (29,51-54)",
+      "direction_preserved": true
+    },
+    {
+      "relation": "leaf2 -> rack2",
+      "from": "leaf2",
+      "to": "rack2",
+      "label": "dual",
+      "view": "view4",
+      "visible_evidence": "bottom port (27,65) down col 65 -> corner (32,65) -> run (32,49-64) -> corner (32,49) down -> arrow (33,49)\u25bc on Rack 2 top border; label (31,55-58)",
+      "direction_preserved": true
+    }
+  ],
+  "coverage_summary": {
+    "source_relations": 28,
+    "covered": 28,
+    "dropped": 0,
+    "reversed": 0,
+    "per_view": {
+      "view1": 4,
+      "view2": 4,
+      "view3": 8,
+      "view4": 12
+    },
+    "user_corrections_honoured": {
+      "independent_links_not_merged": "every redundant pair leaves separate ports and keeps a separate route in view1-view4 (no shared bus glyph in any capture)",
+      "border_leaf_and_leaf_same_level": "view4 row 24 top edges identical",
+      "spines_above_leaves": "view4 spines rows 12-16, leaves row 24",
+      "no_flow_dots": "flows=0 in all four specs; header reads '0 flows'; the two frames stored per view are byte-identical, so nothing animates",
+      "compactness": "extents 45x14, 45x12, 67x12, 63x28 against a 77x47 viewport"
+    }
+  },
+  "arrow_convention": {
+    "stated": "arrows point from the recorded link endpoint to the other endpoint (the historical from -> to order); every link is physical connectivity and is not one-way traffic, and no endpoint pair was reversed to make layout easier",
+    "mux_core_note": "spine and border-leaf links therefore point upward (bl -> spine) as recorded; that backward direction is what forces the wrap routes in view4"
+  },
+  "source_pointers": [
+    {
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+      "role": "case brief: chat excerpt lines 126/134/142/150/158/166/248/270 plus the 18 node and 28 relationship facts"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/generator-task.md",
+      "role": "round rules (frozen inputs, isolation, capture and output requirements)"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/SKILL.md",
+      "role": "candidate skill snapshot that governs visualization behaviour in this round"
+    }
+  ],
+  "abbreviations": {
+    "x-conn": "x-connect (the historical label for mux -> core links)",
+    "act": "active (firewall-side link)",
+    "stby": "standby (firewall-side link)",
+    "ECMP": "equal-cost multipath (recorded fabric label)",
+    "dual": "dual-homed (recorded rack attachment label)",
+    "BL": "border leaf"
+  },
+  "attempts": [
+    {
+      "view": "view1 (ISP -> MUX)",
+      "specs": [
+        "attempts/v1-a1-wan.json",
+        "attempts/v1-a2-aligned.json"
+      ],
+      "renders": [
+        {
+          "tag": "view1-wan-mux-core",
+          "pane_id": "w7E:p3J",
+          "ts": "20261102T082635Z",
+          "verdict": "superseded: 4-column ISP row forced long horizontal jogs and the two mux boxes sat far from their ISP pair"
+        },
+        {
+          "tag": "view1-final",
+          "pane_id": "w7E:p3Y",
+          "ts": "20261102T082736Z",
+          "verdict": "superseded: same 4-column layout, kept only as evidence"
+        },
+        {
+          "tag": "view1-a2-aligned",
+          "pane_id": "w7E:p42",
+          "ts": "20261102T082753Z",
+          "verdict": "adopted: empty '' slots align each MUX under its ISP pair; short doglegs, 4 separate arrowheads"
+        }
+      ],
+      "spec_attempts_used": 2,
+      "check": "attempts/v1-a1-wan.json check warned '2 edge label(s) had no free slot'; the adopted spec has no edge labels and checks clean"
+    },
+    {
+      "view": "view2 (MUX -> core)",
+      "specs": [
+        "attempts/v2-a1-fw.json",
+        "attempts/v2-a2-wide.json",
+        "attempts/v2-a3-lr.json"
+      ],
+      "renders": [
+        {
+          "tag": "view2-final",
+          "pane_id": "w7E:p49",
+          "ts": "20261102T082834Z",
+          "verdict": "superseded: tb 21x23, all four 'x-conn' labels floated between risers and the crossing cluster read as a false branch"
+        },
+        {
+          "tag": "view2-a2-wide",
+          "pane_id": "w7E:p4E",
+          "ts": "20261102T082850Z",
+          "verdict": "superseded: tb 47x14, labels still detached from runs"
+        },
+        {
+          "tag": "view2-a3-lr",
+          "pane_id": "w7E:p4G",
+          "ts": "20261102T082903Z",
+          "verdict": "adopted: lr 45x12, every label sits directly above its own run"
+        }
+      ],
+      "spec_attempts_used": 3
+    },
+    {
+      "view": "view3 (core -> FW -> BL)",
+      "specs": [
+        "attempts/v2-a1-fw.json",
+        "attempts/v3-a2-lr.json",
+        "attempts/v3-a3-lr-wide.json"
+      ],
+      "renders": [
+        {
+          "tag": "view3-final",
+          "pane_id": "w7E:p4M",
+          "ts": "20261102T082931Z",
+          "verdict": "superseded: tb 28x41, act/stby labels fragmented to the left of risers, two torn corner clusters"
+        },
+        {
+          "tag": "view3-a2-lr",
+          "pane_id": "w7E:p4R",
+          "ts": "20261102T082946Z",
+          "verdict": "superseded in favour of the wider lr variant"
+        },
+        {
+          "tag": "view3-a3-lr-wide",
+          "pane_id": "w7E:p4Y",
+          "ts": "20261102T083020Z",
+          "verdict": "adopted: lr 67x12, eight independent routes with eight arrowheads"
+        }
+      ],
+      "spec_attempts_used": 3
+    },
+    {
+      "view": "view4 (fabric)",
+      "specs": [
+        "attempts/v3-a1-fabric.json",
+        "attempts/v4-a2-spaced.json",
+        "attempts/v4-a3-blright.json",
+        "attempts/vfab-a1-W1.json",
+        "attempts/vfab-a2-center.json",
+        "attempts/superseded-specs/view3-fabric-uplinks.json",
+        "attempts/superseded-specs/view4-fabric-downlinks.json"
+      ],
+      "renders": [
+        {
+          "tag": "view4-final",
+          "pane_id": "w7E:p4Z",
+          "ts": "20261102T083034Z",
+          "verdict": "adopted: tb 63x28, all 12 links and all 12 labels present; route crowding documented in defects"
+        },
+        {
+          "tag": "view4-a2-spaced",
+          "pane_id": "w7E:p53",
+          "ts": "20261102T083137Z",
+          "verdict": "rejected: 63x40 with a spacer layer; same wrap routes plus a longer top frame"
+        },
+        {
+          "tag": "view4-a3-blright",
+          "pane_id": "w7E:p5F",
+          "ts": "20261102T083314Z",
+          "verdict": "rejected: border leaves on the right; the wrap frame grew a second nested frame"
+        },
+        {
+          "tag": "viewC-fabric-uplinks",
+          "pane_id": "w7E:p59",
+          "ts": "20261102T083216Z",
+          "verdict": "rejected split: 4-edge bl->spine-only view still needed wrap routes and 4 crossing hops, and left the leaves unconnected"
+        },
+        {
+          "tag": "viewFab-a1-W1",
+          "pane_id": "w7E:p5C",
+          "ts": "20261102T083240Z",
+          "verdict": "rejected split: 8-edge view, hops inside label runs"
+        },
+        {
+          "tag": "viewFab-a2-center",
+          "pane_id": "w7E:p5E",
+          "ts": "20261102T083256Z",
+          "verdict": "rejected split: 8-edge centred BLs, chained hops '\u2312\u2500\u2312\u2500\u2312' across two rows"
+        }
+      ],
+      "spec_attempts_used": "3 for the single 12-edge fabric view, plus 3 exploratory split variants that were rejected and are kept as attempts",
+      "note": "the fabric is the only region where the frozen router cannot avoid wrap routes; splitting the fabric did not reduce the crowding, so the complete 12-edge view was kept"
+    },
+    {
+      "view": "merged WAN+core (explored, not used)",
+      "specs": [
+        "attempts/va-a1-merged-lr.json"
+      ],
+      "renders": [
+        {
+          "tag": "viewA-a1-merged-lr",
+          "pane_id": "w7E:p51",
+          "ts": "20261102T083057Z",
+          "verdict": "rejected: merging ISP->MUX and MUX->core into one lr view re-introduced detached labels and three crossing hops, so the two clean views were kept"
+        }
+      ],
+      "spec_attempts_used": 1
+    },
+    {
+      "view": "single-view reference",
+      "specs": [
+        "specs/full-topology-reference.json",
+        "specs/full-topology-reference-layered.json"
+      ],
+      "renders": [
+        {
+          "tag": "ref-full-singleview",
+          "pane_id": "w7E:p5R",
+          "ts": "20261102T083508Z",
+          "verdict": "evidence only: the one-view canvas shows the 'graph overflows \u00b7 drag to pan' badge"
+        }
+      ],
+      "note": "auto layout refuses to route the 28-edge graph (exit 1); explicit 7-layer placement gives extent 54x71 plus two --check warnings, i.e. taller than the 47-row viewport"
+    }
+  ],
+  "defects": [
+    {
+      "id": "D1",
+      "view": "view4",
+      "severity": "high",
+      "kind": "wrap route",
+      "detail": "bl1 -> sp2 is routed across the top of the drawing (row 10, cols 15-55) and back down col 55, so a stroke frames the two spine boxes and runs one row above Spine 2's top border. Cause: the recorded direction bl -> sp is a backward edge in a tb layout that must place the spines above the border leaves.",
+      "mitigation": "route traced end-to-end and arrowhead (13,54) verified; direction kept as recorded per the case constraints"
+    },
+    {
+      "id": "D2",
+      "view": "view4",
+      "severity": "medium",
+      "kind": "crossings",
+      "detail": "14 crossing-hop glyphs '\u2312' inside rows 13-31; each pair of routes stays separate, but a reader must follow hops to trace a link.",
+      "mitigation": "every edge ports/arrowhead pair verified individually"
+    },
+    {
+      "id": "D3",
+      "view": "view3",
+      "severity": "medium",
+      "kind": "label attribution",
+      "detail": "the two fw -> bl labels for the crossing pair (fw1 -> bl2 'act', fw2 -> bl1 'stby') are placed in free cells at (24,56-59) and (24,65-67), two rows away from their routes, so act/stby cannot be attributed to a specific link by position alone.",
+      "mitigation": "the firewall node labels ('FW1 active', 'FW2 stdby') still state which tier is active; both labels are present, none were dropped"
+    },
+    {
+      "id": "D4",
+      "view": "view4",
+      "severity": "medium",
+      "kind": "label placement",
+      "detail": "labels are drawn inside route runs (row 23 'ECMP' at 20-23 interrupts the stroke) or in free cells far from their route (e.g. (17,56-59), (21,14-17)); association is unreadable.",
+      "mitigation": "all eight ECMP labels are the same text, so the shared meaning is not lost; dual labels are likewise identical"
+    },
+    {
+      "id": "D5",
+      "view": "view4",
+      "severity": "low",
+      "kind": "box height",
+      "detail": "BL 1 is five rows tall (24-28) because it carries two ports, while BL 2 and both leaves are four rows (24-27). Top edges align on row 24, so the requested same-level placement holds, but the centres differ by half a row."
+    },
+    {
+      "id": "D6",
+      "view": "view2",
+      "severity": "low",
+      "kind": "tight corners",
+      "detail": "at row 22 cols 50-51 the mux1 -> core2 descent and the mux2 -> core1 ascent share adjacent opposing corners '\u256e\u256d', and the crossing at (23,50) is a hop cell.",
+      "mitigation": "both routes and both arrowheads at (22,52) and (26,52) were traced separately"
+    },
+    {
+      "id": "D7",
+      "view": "view1",
+      "severity": "low",
+      "kind": "tight adjacency",
+      "detail": "the ISP A run at row 25 ends at (25,29) one row below ISP B's dogleg corner (24,29), so the two corners stack vertically; each route keeps its own arrowhead."
+    },
+    {
+      "id": "D8",
+      "view": "all",
+      "severity": "info",
+      "kind": "selection colour",
+      "detail": "in view1 the first Tab selection lands on ISP A, whose normal border colour already equals the selection accent (216;166;87), so that capture shows no visible change; a second Tab (ISP B) changes the border and is stored as final-view1c."
+    }
+  ],
+  "blockers": [
+    {
+      "id": "B1",
+      "kind": "renderer limitation",
+      "status": "open, recorded not worked around",
+      "detail": "the frozen renderer has no clean route for backward (child -> parent) edges in a tb layout: it wraps them around the top and inserts crossing hops. Both case constraints (arrows follow the recorded bl -> sp direction; spines drawn above the leaves) force this geometry, so view4 carries the wrap route.",
+      "evidence": [
+        "attempts/v3-a1-fabric.json",
+        "attempts/v4-a2-spaced.json",
+        "attempts/v4-a3-blright.json",
+        "attempts/superseded-specs/view3-fabric-uplinks.json",
+        "attempts/vfab-a1-W1.json",
+        "attempts/vfab-a2-center.json"
+      ],
+      "not_done": "no renderer or skill change, no build, no install"
+    },
+    {
+      "id": "B2",
+      "kind": "viewport",
+      "status": "closed",
+      "detail": "single-view canvas for all 28 relations is 54x71 cells and reports the overflow badge in a 47x77 pane; four views were used instead (allowed by the round rules)."
+    }
+  ],
+  "cleanup": {
+    "panes_created": [
+      "w7E:p37",
+      "w7E:p3J",
+      "w7E:p3M",
+      "w7E:p3Y",
+      "w7E:p42",
+      "w7E:p49",
+      "w7E:p4E",
+      "w7E:p4G",
+      "w7E:p4M",
+      "w7E:p4R",
+      "w7E:p4Y",
+      "w7E:p4Z",
+      "w7E:p51",
+      "w7E:p53",
+      "w7E:p59",
+      "w7E:p5C",
+      "w7E:p5E",
+      "w7E:p5F",
+      "w7E:p5G",
+      "w7E:p5H",
+      "w7E:p5J",
+      "w7E:p5N",
+      "w7E:p5P",
+      "w7E:p5Q",
+      "w7E:p5R"
+    ],
+    "close_path": "self-closing launch command 'rataflow-view <spec>; herdr pane close <pane>' plus a final 'q' keystroke",
+    "verified": "herdr pane layout --pane w7E:p20 afterwards lists only w7E:p20 in tab w7E:tS",
+    "failures": "none",
+    "captain_pane_touched": "no (the captain's tab and pane were never used and no raw tmux was used)"
+  },
+  "unmet_needs": [
+    "none for the four delivered views; the fabric wrap route and label placement are renderer limitations recorded as D1-D4 and B1",
+    "animation was requested off by the source (line 134) so every view is static; two frames per view are stored as evidence that no dots move"
+  ],
+  "artifacts": {
+    "specs_dir": "specs",
+    "attempts_dir": "attempts",
+    "checks_dir": "checks",
+    "captures_dir": "captures",
+    "capture_log": "captures/capture-log.jsonl",
+    "capture_script": "scripts/capture.sh"
+  }
+}

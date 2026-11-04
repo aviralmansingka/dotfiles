@@ -1,0 +1,229 @@
+{
+ "round": 10,
+ "case_id": "gb300-rack-software",
+ "protocol_version": 1,
+ "overall": "fail",
+ "categories": {
+  "semantic_fidelity": {
+   "applicable": true,
+   "status": "fail",
+   "reason": "The direct nv-rms API paths to the compute BMC, NVSwitch BMC, and power shelf are absent; the OOB client edge and the physical bus do not substitute for those controller relationships (round-09 defect, repeated).",
+   "source_refs": [
+    "docs/visualize-eval/cases/gb300-rack-software/source.md",
+    "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+   ],
+   "evidence_ids": [
+    "source",
+    "expected",
+    "spec-v2",
+    "text",
+    "blind"
+   ]
+  },
+  "arrow_traceability": {
+   "applicable": true,
+   "status": "pass",
+   "reason": "The requested single-split OOB bus is visible and traceable.",
+   "source_refs": [
+    "docs/visualize-eval/cases/gb300-rack-software/source.md",
+    "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+   ],
+   "evidence_ids": [
+    "spec-v1",
+    "text",
+    "pinned-v1"
+   ]
+  },
+  "layout_fit": {
+   "applicable": true,
+   "status": "fail",
+   "reason": "Physical fit is proven, but split-view source coverage is incomplete.",
+   "source_refs": [
+    "docs/visualize-eval/cases/gb300-rack-software/source.md",
+    "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+   ],
+   "evidence_ids": [
+    "pinned-v1",
+    "pinned-v2",
+    "pinned-v3",
+    "text"
+   ]
+  },
+  "conceptual_grouping_color": {
+   "applicable": true,
+   "status": "pass",
+   "reason": "Group tags resolve to distinct families within views.",
+   "source_refs": [
+    "docs/visualize-eval/cases/gb300-rack-software/source.md",
+    "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+   ],
+   "evidence_ids": [
+    "ansi-v1",
+    "ansi-v2",
+    "ansi-v3"
+   ]
+  },
+  "category_fit": {
+   "applicable": true,
+   "status": "fail",
+   "reason": "placement-planes family correctly named; the coverage recipe is incomplete (the missing API relations leave the plane story partial).",
+   "source_refs": [
+    "docs/visualize-eval/cases/gb300-rack-software/source.md",
+    "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+   ],
+   "evidence_ids": [
+    "source",
+    "generation"
+   ]
+  },
+  "border_integrity": {
+   "applicable": true,
+   "status": "pass",
+   "reason": "Node borders complete and color-continuous in select-all captures.",
+   "source_refs": [
+    "docs/visualize-eval/cases/gb300-rack-software/source.md",
+    "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+   ],
+   "evidence_ids": [
+    "selected-v1",
+    "selected-v2",
+    "selected-v3"
+   ]
+  },
+  "workflow_evidence": {
+   "applicable": true,
+   "status": "blocked",
+   "reason": "Blocked; see blockers.",
+   "source_refs": [
+    "docs/visualize-eval/cases/gb300-rack-software/source.md",
+    "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+   ],
+   "evidence_ids": [
+    "attempts-log",
+    "validator-v1",
+    "validator-v2",
+    "validator-v3"
+   ]
+  },
+  "animation": {
+   "applicable": false,
+   "status": "not_applicable",
+   "reason": "Static case; the source requests no motion.",
+   "source_refs": [
+    "docs/visualize-eval/cases/gb300-rack-software/source.md",
+    "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+   ],
+   "evidence_ids": []
+  }
+ },
+ "findings": [
+  {
+   "id": "F1",
+   "category": "semantic_fidelity",
+   "edge_ids": [],
+   "severity": "critical",
+   "description": "Defect: the direct nv-rms API paths to Compute BMC x18, NVSwitch BMC, and Power shelf are absent despite the generator's claim they are drawn in v2.",
+   "source_refs": [
+    "docs/visualize-eval/cases/gb300-rack-software/source.md",
+    "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+   ],
+   "locations": [
+    {
+     "evidence_id": "spec-v2",
+     "region": [
+      1,
+      1,
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F2",
+   "category": "layout_fit",
+   "edge_ids": [],
+   "severity": "high",
+   "description": "Defect: split-view coverage incomplete; required relations not all visible across the three plane views.",
+   "source_refs": [
+    "docs/visualize-eval/cases/gb300-rack-software/source.md",
+    "docs/visualize-eval/cases/gb300-rack-software/expected.json"
+   ],
+   "locations": []
+  }
+ ],
+ "blockers": [
+  "Workflow evidence blocked; the judge session expired before writing its critique files, so blocker detail beyond the category decision is unavailable; deliverables reconstructed verbatim from the delivered verdict by the captain."
+ ],
+ "generator": {
+  "worker_id": "viz-ds10-8",
+  "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+ },
+ "reviewer": {
+  "worker_id": "viz-judge10-gb300",
+  "model": "openai/gpt-6.1-terra:high"
+ },
+ "spec_sha256": "b7c039e06dc6293f6f4b2a8a05232b3b7c18de7b382b56a079b68f46ab329ba7",
+ "blind_observation_sha256": "d665c9ac97c7eb75d2359523064856ae80f251152f126e2e6c642028d32461de",
+ "provenance_note": "judge session expired after delivering its verdict; files reconstructed verbatim from the verdict by the captain.",
+ "candidate_sha256": "9c1256791069e27207db2e5138527e45587e7096955f5ed4f86c79d46f77e56d",
+ "renderer_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+ "rubric_sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+ "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+ "viewport": {
+  "columns": 77,
+  "rows": 47,
+  "zoom_percent": 100,
+  "verified": true
+ },
+ "live_pane": {
+  "columns": 82,
+  "rows": 51
+ },
+ "observed_first": {
+  "evidence_id": "blind",
+  "saved_before_expected_reveal": true
+ },
+ "edge_audit": [],
+ "cleanup": {
+  "status": "documented_in_generation_json",
+  "note": "generator reported all capture panes confirmed_closed; judge session expired before full cleanup record captured"
+ },
+ "evidence": [
+  {
+   "id": "blind",
+   "path": "docs/visualize-eval/rounds/10/reviews/gb300-rack-software/observed-first.md",
+   "sha256": "86f2130ccb8cbf57c637a1025dff33b2e18f9b1be0dfaf931db6fbe9ef7eb638",
+   "description": "Captain reconstruction of the judge's stage-A scorecard (original session expired; original hash d665c9ac\u2026)",
+   "capture": null
+  },
+  {
+   "id": "spec-v1",
+   "path": "docs/visualize-eval/rounds/10/gb300-rack-software/spec-v1.json",
+   "sha256": "fc9618173b3070474f19d47817d272e66c76ee7b1e1262781ee317228267c2c1",
+   "description": "Final v1 spec (OOB plane + single-split trunk)",
+   "capture": null
+  },
+  {
+   "id": "spec-v2",
+   "path": "docs/visualize-eval/rounds/10/gb300-rack-software/spec-v2.json",
+   "sha256": "2026351a4125f57c9cf637e694e7b43a881a69fc1dbdaf60cd6728d14190923e",
+   "description": "Final v2 spec (nv-rms + API edges)",
+   "capture": null
+  },
+  {
+   "id": "spec-v3",
+   "path": "docs/visualize-eval/rounds/10/gb300-rack-software/spec-v3.json",
+   "sha256": "d98426a8ef06ce1d5e5fdbc750b52d35737b3f5e6f8081a373c806d4dda7330d",
+   "description": "Final v3 spec (controller paths)",
+   "capture": null
+  },
+  {
+   "id": "validator-v1",
+   "path": "docs/visualize-eval/rounds/10/gb300-rack-software/validation/v1-validator.txt",
+   "sha256": "967fecee84224c9fb0d3ef8e404fde0978c8dc2a680b5ee095c076a8599ebe60",
+   "description": "v1 validator output",
+   "capture": null
+  }
+ ]
+}

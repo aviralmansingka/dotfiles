@@ -1,0 +1,1 @@
+{"direction":"lr","nodes":[{"id":"a","label":"alpha"},{"id":"b","label":"beta"},{"id":"c","label":"gamma"},{"id":"d","label":"delta"},{"id":"e","label":"eps"}],"edges":[{"from":"a","to":"b","label":"012345"},{"from":"b","to":"c","label":"012345"},{"from":"c","to":"d","label":"012345"},{"from":"d","to":"e","label":"012345"}]}

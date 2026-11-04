@@ -1,0 +1,19 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "q", "label": "River queue", "group": "queue" },
+    { "id": "mch", "label": "machines", "group": "machines" },
+    { "id": "s3", "label": "S3 store", "group": "state" },
+    { "id": "agent", "label": "machine-agent", "group": "machines" },
+    { "id": "pub", "label": "public gRPC", "group": "control" },
+    { "id": "db", "label": "Postgres", "group": "state" }
+  ],
+  "edges": [
+    { "from": "mch", "to": "s3", "label": "pull boot image", "dots": 1, "flow": true },
+    { "from": "q", "to": "s3", "label": "diagnose uploads", "dots": 1, "flow": true },
+    { "from": "mch", "to": "agent", "label": "runs on host", "dots": 1, "flow": true },
+    { "from": "agent", "to": "pub", "label": "register/heartbeat", "dots": 1, "flow": true },
+    { "from": "pub", "to": "db", "label": "machine state", "dots": 1, "flow": true }
+  ]
+}

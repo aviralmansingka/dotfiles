@@ -1,0 +1,31 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "worker",
+      "label": "modal-worker",
+      "group": "seams"
+    },
+    {
+      "id": "runtime",
+      "label": "modal-runtime",
+      "group": "control"
+    }
+  ],
+  "edges": [
+    {
+      "from": "worker",
+      "to": "runtime",
+      "label": "task in + ctrl gRPC",
+      "dots": 0,
+      "minlen": 2
+    },
+    {
+      "from": "runtime",
+      "to": "worker",
+      "label": "events + mgmt gRPC",
+      "dots": 0
+    }
+  ]
+}

@@ -1,0 +1,2651 @@
+{
+  "protocol_version": 1,
+  "round": 1,
+  "case_id": "modal-machine-manager",
+  "candidate_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+  "renderer_sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+  "rubric_sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "adb055e4066576a4492dc6219cf4252a2da129d85727437242916b2a174f4979",
+  "generator": {
+    "worker_id": "viz-ds01-modal-machine-manager",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge01-modal-machine-manager",
+    "model": "openai/gpt-6-astra"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 77,
+    "rows": 47
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/01/reviews/modal-machine-manager/observed-first.md",
+      "sha256": "d5e69e8f615137443e6e62047bc467c3e69312645b766552f1d0300b331c94b9",
+      "description": "Immutable blind Stage A; hash reverified before expected reveal and after Stage B.",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/01/metadata.json",
+      "sha256": "b99735d09760e77b21a21c7491e7e03663c20e1787ad8ac900d319c4d7ad240a",
+      "description": "Frozen round01 identities, input hashes, and new renderer baseline qualification.",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/01/rubric.json",
+      "sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "description": "Frozen seven-category rubric and result schema.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen dataset manifest; machine-manager requires animation.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/source.md",
+      "sha256": "a41065d9ceca1ed035bfd6282f0e937abbd0034ad497a33637a76f2d8a9ebab3",
+      "description": "Qualified historical relations and overriding human corrections; not independent Modal implementation verification.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/expected.json",
+      "sha256": "c6d14814bcfa0f41e7401df3b57ea1400e15050b9fb4db3d2e12980d6fde9764",
+      "description": "Frozen 17-concept, 23-relation coverage reference.",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/01/SKILL.md",
+      "sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "description": "Frozen candidate skill; not modified during review.",
+      "capture": null
+    },
+    {
+      "id": "renderer",
+      "path": "../../../../../../tmp/visualize-eval/round-01/bin/rataflow-view",
+      "sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "description": "Frozen executed binary; repository-relative path resolves outside checkout; hash verified without executing it.",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/01/reviews/modal-machine-manager/spec-manifest.json",
+      "sha256": "adb055e4066576a4492dc6219cf4252a2da129d85727437242916b2a174f4979",
+      "description": "Sorted [repository-relative spec path, actual SHA256] pairs; hash is result spec_sha256.",
+      "capture": null
+    },
+    {
+      "id": "verification",
+      "path": "docs/visualize-eval/rounds/01/reviews/modal-machine-manager/evidence-verification.json",
+      "sha256": "b77ae953a24f7e1d6e46ab04272f7c554af83d45f5d2c222172487a7c2f22759",
+      "description": "47 matching frozen/recorded hashes and actual reviewer identity environment.",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/generation.json",
+      "sha256": "d687f6a31e0b9c652ae7454f5f412e85ecd9907abfb32273a171388813489bfe",
+      "description": "Generator identity, coverage assertions, selected routes, and claimed cleanup; assertions independently checked where records permit.",
+      "capture": null
+    },
+    {
+      "id": "generation-md",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/generation.md",
+      "sha256": "5d28ceaccdd18c15d02b130cfee2183abe0466d38a3fe031afa5ab9be5467247",
+      "description": "Generator narrative; not accepted as a readability verdict.",
+      "capture": null
+    },
+    {
+      "id": "capture-script",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/scripts/capture-view.sh",
+      "sha256": "6b7af2d106bbcf7485cedc1be239a01c05c7eb7dcec648fea8a559fa2ebc47f4",
+      "description": "Recorded capture procedure, actual launch command, selection and quit keys; read only, not executed.",
+      "capture": null
+    },
+    {
+      "id": "capture-notes",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/README.txt",
+      "sha256": "23940d00f0aa9e077a287c7033dfa6c2c2099e8798051c76490dd88ef4235e61",
+      "description": "Capture narrative contains inaccurate timeout claim; raw header responses are authoritative.",
+      "capture": null
+    },
+    {
+      "id": "attempt-index",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/attempts/attempts.md",
+      "sha256": "e3e4cb302eef6e95ebc6e78081b2e25e601b81c0016cb9df64924c8886d30c75",
+      "description": "Same-round rejected attempts and claimed cleanup context; no earlier-round evidence used.",
+      "capture": null
+    },
+    {
+      "id": "v1-spec",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/specs/v1-provisioning.json",
+      "sha256": "312446362348afbe5b28a7b4833f989494c52ad42288b6f34dafa2e9e99f61e3",
+      "description": "Final generated spec.",
+      "capture": null
+    },
+    {
+      "id": "v1-commands.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v1-provisioning.commands.txt",
+      "sha256": "d4ff693e2d9608053240b037ce2dba4fbbb749a6f35242db0b2cb5dd02b37318",
+      "description": "Raw executed command / size / header-wait record, not a render verdict.",
+      "capture": null
+    },
+    {
+      "id": "v1-dimensions.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v1-provisioning.dimensions.txt",
+      "sha256": "0aa75ea9c3ef6831254e091f7cb026a8f0e7aa0ec277942199378abec67ccfb5",
+      "description": "Raw executed command / size / header-wait record, not a render verdict.",
+      "capture": null
+    },
+    {
+      "id": "v1-header.json",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v1-provisioning.header.json",
+      "sha256": "ae8676f69973654bbae2ed865abe85c850b91ac43bb5e4c0b325c78552c93d47",
+      "description": "Raw executed command / size / header-wait record, not a render verdict.",
+      "capture": null
+    },
+    {
+      "id": "v1-unselected-txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v1-provisioning.unselected.txt",
+      "sha256": "bff43316d45195e7a48058b82e3958ac69900d50c9ea8c07da3e8427dab2e9a0",
+      "description": "Actual final pane capture; timestamp is explicitly a bounded interval.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-provisioning",
+        "frame": "unselected",
+        "timestamp": "2026-11-02T08:29:44Z/2026-11-02T08:29:53Z (acquisition interval; exact capture instant not logged)",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-unselected-ansi",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v1-provisioning.unselected.ansi",
+      "sha256": "5a38b33de9cead01af60b6e3a93d1768d30641e762982a90a02dda20395dd4cf",
+      "description": "Actual final pane capture; timestamp is explicitly a bounded interval.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-provisioning",
+        "frame": "unselected",
+        "timestamp": "2026-11-02T08:29:44Z/2026-11-02T08:29:53Z (acquisition interval; exact capture instant not logged)",
+        "state": "unselected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-selected-txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v1-provisioning.selected.txt",
+      "sha256": "8ed7213945fbcdbff1ccd501059bde6c8f8063d1ba4c698de9959de0dac2fe50",
+      "description": "Actual final pane capture; timestamp is explicitly a bounded interval.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-provisioning",
+        "frame": "selected",
+        "timestamp": "2026-11-02T08:29:44Z/2026-11-02T08:29:53Z (acquisition interval; exact capture instant not logged)",
+        "state": "selected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-selected-ansi",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v1-provisioning.selected.ansi",
+      "sha256": "ed4c86dbb4e1e0d8287795bd7250dbc4165c19f037757b7b81886169957f0462",
+      "description": "Actual final pane capture; timestamp is explicitly a bounded interval.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-provisioning",
+        "frame": "selected",
+        "timestamp": "2026-11-02T08:29:44Z/2026-11-02T08:29:53Z (acquisition interval; exact capture instant not logged)",
+        "state": "selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frame1",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v1-provisioning.frame1.txt",
+      "sha256": "bff43316d45195e7a48058b82e3958ac69900d50c9ea8c07da3e8427dab2e9a0",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-provisioning",
+        "frame": "frame1",
+        "timestamp": "2026-11-02T08:29:45Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frame2",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v1-provisioning.frame2.txt",
+      "sha256": "23aad1b85467f74584fdde04c066c434f71129cd4513837486b439f3a5c6adfd",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-provisioning",
+        "frame": "frame2",
+        "timestamp": "2026-11-02T08:29:46Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frame3",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v1-provisioning.frame3.txt",
+      "sha256": "5c144640159ce3808172066e5001e341430424e51fb4a8396a6c478d804781bd",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-provisioning",
+        "frame": "frame3",
+        "timestamp": "2026-11-02T08:29:47Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frame4",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v1-provisioning.frame4.txt",
+      "sha256": "09e91cc3ad66f7606c6cbd244d82ae4779aaef084193c986f6b5b978fa6e0858",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-provisioning",
+        "frame": "frame4",
+        "timestamp": "2026-11-02T08:29:48Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frame5",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v1-provisioning.frame5.txt",
+      "sha256": "cea4aa7d185a1fb06cf291866ef016f9b3e7dca0f3e5e250b6f0d90aeb4bf42e",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1-provisioning",
+        "frame": "frame5",
+        "timestamp": "2026-11-02T08:29:49Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-capture.sha256",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v1-provisioning.capture.sha256",
+      "sha256": "8b5b314d21bc557ab959611582451599dca7264e93af4def3dc0de2a314647b2",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v1-check.err",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v1-provisioning.check.err",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v1-check.exit",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v1-provisioning.check.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v1-check.out",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v1-provisioning.check.out",
+      "sha256": "6079c1813566cde6c83f8feb859ec508b8fcca6dcab45494a6a61afbc87c53ee",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v1-cleanup.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v1-provisioning.cleanup.txt",
+      "sha256": "8eb303feb1f4b1ca03158d3c83a590930a9d1fa98830b4f5e38ddc2b1d2cd9ac",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v1-frames.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v1-provisioning.frames.txt",
+      "sha256": "802a3fd0f30cd84202acbe9fcd6582ed858ecb8206df092dabe2233eced86b2b",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v1-header.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v1-provisioning.header.txt",
+      "sha256": "c85a0cc5e78667dd9f2d30d4b7c57f4928d37531e5a904825f0b0c48136ea2b2",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v1-spec.sha256",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v1-provisioning.spec.sha256",
+      "sha256": "1f10aac59b800efed60c8ba4e229f93c43ae1710452c9054bd5ce752b70dee47",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v2-spec",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/specs/v2-boot-image.json",
+      "sha256": "f38501e19e235bfde82ac489c7b9dadb1f7972e4e0d53eae99d3bf1deb135709",
+      "description": "Final generated spec.",
+      "capture": null
+    },
+    {
+      "id": "v2-commands.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v2-boot-image.commands.txt",
+      "sha256": "c05b1f0593cde9fcab553ee0efe16fa0fdecc6554ba20203642d65aab2399562",
+      "description": "Raw executed command / size / header-wait record, not a render verdict.",
+      "capture": null
+    },
+    {
+      "id": "v2-dimensions.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v2-boot-image.dimensions.txt",
+      "sha256": "dc6ac7b98c31f3507995c0f1be8adb3fa83ed84bb728d1085ab0f685f3023f4e",
+      "description": "Raw executed command / size / header-wait record, not a render verdict.",
+      "capture": null
+    },
+    {
+      "id": "v2-header.json",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v2-boot-image.header.json",
+      "sha256": "bb29c5a95afebc0bba2a33deca4f0ef48da62a92e40d39802e07bb4a79ec80e8",
+      "description": "Raw executed command / size / header-wait record, not a render verdict.",
+      "capture": null
+    },
+    {
+      "id": "v2-unselected-txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v2-boot-image.unselected.txt",
+      "sha256": "b0ce357b85b173157c82dc44d0ca0e044248f2b3289a4c7b5e7c1e61e0454c45",
+      "description": "Actual final pane capture; timestamp is explicitly a bounded interval.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-boot-image",
+        "frame": "unselected",
+        "timestamp": "2026-11-02T08:29:54Z/2026-11-02T08:30:04Z (acquisition interval; exact capture instant not logged)",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-unselected-ansi",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v2-boot-image.unselected.ansi",
+      "sha256": "9b63c6253925573d8fe51ddb41da18bae54e09db7c9255ebe770b9d439b4a4d4",
+      "description": "Actual final pane capture; timestamp is explicitly a bounded interval.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-boot-image",
+        "frame": "unselected",
+        "timestamp": "2026-11-02T08:29:54Z/2026-11-02T08:30:04Z (acquisition interval; exact capture instant not logged)",
+        "state": "unselected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-selected-txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v2-boot-image.selected.txt",
+      "sha256": "98b6b5ee7a328e2a7ad9dc1c15e0d78a291d66cf4d940dc1eaa56258bffbc6ef",
+      "description": "Actual final pane capture; timestamp is explicitly a bounded interval.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-boot-image",
+        "frame": "selected",
+        "timestamp": "2026-11-02T08:29:54Z/2026-11-02T08:30:04Z (acquisition interval; exact capture instant not logged)",
+        "state": "selected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-selected-ansi",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v2-boot-image.selected.ansi",
+      "sha256": "9c7517ec7177e436a7f971e8a4679066cf2e7712ecc37de8be8601bbadf6fd46",
+      "description": "Actual final pane capture; timestamp is explicitly a bounded interval.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-boot-image",
+        "frame": "selected",
+        "timestamp": "2026-11-02T08:29:54Z/2026-11-02T08:30:04Z (acquisition interval; exact capture instant not logged)",
+        "state": "selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frame1",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v2-boot-image.frame1.txt",
+      "sha256": "b0ce357b85b173157c82dc44d0ca0e044248f2b3289a4c7b5e7c1e61e0454c45",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-boot-image",
+        "frame": "frame1",
+        "timestamp": "2026-11-02T08:29:55Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frame2",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v2-boot-image.frame2.txt",
+      "sha256": "98b6b5ee7a328e2a7ad9dc1c15e0d78a291d66cf4d940dc1eaa56258bffbc6ef",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-boot-image",
+        "frame": "frame2",
+        "timestamp": "2026-11-02T08:29:57Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frame3",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v2-boot-image.frame3.txt",
+      "sha256": "01b251e111ef681e1e80b6c476609ae26b9754ada8d5051d6ee317409064525d",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-boot-image",
+        "frame": "frame3",
+        "timestamp": "2026-11-02T08:29:58Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frame4",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v2-boot-image.frame4.txt",
+      "sha256": "b0ce357b85b173157c82dc44d0ca0e044248f2b3289a4c7b5e7c1e61e0454c45",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-boot-image",
+        "frame": "frame4",
+        "timestamp": "2026-11-02T08:29:59Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frame5",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v2-boot-image.frame5.txt",
+      "sha256": "560aea0119280bd701c8025e907ca11d91ab47c1e3cbd251ab55144773841f01",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-boot-image",
+        "frame": "frame5",
+        "timestamp": "2026-11-02T08:30:00Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-capture.sha256",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v2-boot-image.capture.sha256",
+      "sha256": "a0fc1276566bfb910eeee0a1a61d2064c1be8cbd1353f0682ae3e6fba8769483",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v2-check.err",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v2-boot-image.check.err",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v2-check.exit",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v2-boot-image.check.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v2-check.out",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v2-boot-image.check.out",
+      "sha256": "aaf007302c58be68d4f43ffc9327d9edeff4a19b23790915863cda558e36f554",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v2-cleanup.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v2-boot-image.cleanup.txt",
+      "sha256": "275854359d06c11f85f49cec6323a147dc088a855d309bb9fd9eb77100978ac5",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v2-frames.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v2-boot-image.frames.txt",
+      "sha256": "a1e0c7cc3efe57e404fc52094b129a3eb2fb59773c64d9c25e40c7269e286a7d",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v2-header.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v2-boot-image.header.txt",
+      "sha256": "058823b59eb926bd7f254cbab3dea59f0523dc07f02723f14189054d9af23731",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v2-spec.sha256",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v2-boot-image.spec.sha256",
+      "sha256": "461cc3b1c91fbecfc5e8795f95b7f7e6870d5cfb9742698992f43ef0faaffe68",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v3-spec",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/specs/v3-state-writes.json",
+      "sha256": "2e46a0ee1a1a4772cd86cd3d34faac8d1fa1ca0890e490fb6f9b94b974c6549f",
+      "description": "Final generated spec.",
+      "capture": null
+    },
+    {
+      "id": "v3-commands.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v3-state-writes.commands.txt",
+      "sha256": "e2650a34dc4a0dade8040b757051acbd05148f495c944567681f398c1e02f1a0",
+      "description": "Raw executed command / size / header-wait record, not a render verdict.",
+      "capture": null
+    },
+    {
+      "id": "v3-dimensions.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v3-state-writes.dimensions.txt",
+      "sha256": "2b084bbb1d390f4224ef753a40186d59b45464efeaeca9b8e518703e5e1afcef",
+      "description": "Raw executed command / size / header-wait record, not a render verdict.",
+      "capture": null
+    },
+    {
+      "id": "v3-header.json",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v3-state-writes.header.json",
+      "sha256": "1940398b1a2b6fda6a331e05d90790b2a0fa7d24bcb65c9bbb794d8f479c8ab1",
+      "description": "Raw executed command / size / header-wait record, not a render verdict.",
+      "capture": null
+    },
+    {
+      "id": "v3-unselected-txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v3-state-writes.unselected.txt",
+      "sha256": "4c07a4f48e6407868a0ecab768eac8442b4375e46fd5120109c6f8cb6af8b018",
+      "description": "Actual final pane capture; timestamp is explicitly a bounded interval.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-state-writes",
+        "frame": "unselected",
+        "timestamp": "2026-11-02T08:30:04Z/2026-11-02T08:30:14Z (acquisition interval; exact capture instant not logged)",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-unselected-ansi",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v3-state-writes.unselected.ansi",
+      "sha256": "7a64584d5b2bb5e5fee3a96609657dcf5e0aaa16b6c5e5ad01e7ad4072c5a825",
+      "description": "Actual final pane capture; timestamp is explicitly a bounded interval.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-state-writes",
+        "frame": "unselected",
+        "timestamp": "2026-11-02T08:30:04Z/2026-11-02T08:30:14Z (acquisition interval; exact capture instant not logged)",
+        "state": "unselected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-selected-txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v3-state-writes.selected.txt",
+      "sha256": "bdc1880ce4122a3976d25d43e0ace2aab1b449873451aa2ea672141db80f3f43",
+      "description": "Actual final pane capture; timestamp is explicitly a bounded interval.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-state-writes",
+        "frame": "selected",
+        "timestamp": "2026-11-02T08:30:04Z/2026-11-02T08:30:14Z (acquisition interval; exact capture instant not logged)",
+        "state": "selected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-selected-ansi",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v3-state-writes.selected.ansi",
+      "sha256": "6e5783f155bf047a48ab4c2def5ab1cf43b5a4f7e2904c140adfeb797abd25f5",
+      "description": "Actual final pane capture; timestamp is explicitly a bounded interval.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-state-writes",
+        "frame": "selected",
+        "timestamp": "2026-11-02T08:30:04Z/2026-11-02T08:30:14Z (acquisition interval; exact capture instant not logged)",
+        "state": "selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-frame1",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v3-state-writes.frame1.txt",
+      "sha256": "6e5aa2f042c684519508730d512118032071ba3adacb8c94c22965f8aa69cb2f",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-state-writes",
+        "frame": "frame1",
+        "timestamp": "2026-11-02T08:30:06Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frame2",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v3-state-writes.frame2.txt",
+      "sha256": "aad44dae0dbbfe3c50352c5317b68e874bd47844209b8c589c2cd6275b8c8b5f",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-state-writes",
+        "frame": "frame2",
+        "timestamp": "2026-11-02T08:30:07Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frame3",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v3-state-writes.frame3.txt",
+      "sha256": "bdc1880ce4122a3976d25d43e0ace2aab1b449873451aa2ea672141db80f3f43",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-state-writes",
+        "frame": "frame3",
+        "timestamp": "2026-11-02T08:30:08Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frame4",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v3-state-writes.frame4.txt",
+      "sha256": "7c8d216e292496874fd735d35392fc5fe71d920e388a86d577cc655ccbb83eb8",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-state-writes",
+        "frame": "frame4",
+        "timestamp": "2026-11-02T08:30:09Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frame5",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v3-state-writes.frame5.txt",
+      "sha256": "6e5aa2f042c684519508730d512118032071ba3adacb8c94c22965f8aa69cb2f",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-state-writes",
+        "frame": "frame5",
+        "timestamp": "2026-11-02T08:30:10Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-capture.sha256",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v3-state-writes.capture.sha256",
+      "sha256": "f449194f1f0707ea42a1d70b149c87fdbfafa5d1fc73560088dfbf2373654c20",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v3-check.err",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v3-state-writes.check.err",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v3-check.exit",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v3-state-writes.check.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v3-check.out",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v3-state-writes.check.out",
+      "sha256": "941fe66296231215c549d90d6de767517099f65c726e1ecc797da434ff2eb3f6",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v3-cleanup.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v3-state-writes.cleanup.txt",
+      "sha256": "5292fb2e322e0274841184b525894606dee9b8c53a84c8537c8632db3d60c80e",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v3-frames.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v3-state-writes.frames.txt",
+      "sha256": "bd333220ca607a11ca436d59916ea60a1a38a81c565f90cdc1dcb2d20077c038",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v3-header.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v3-state-writes.header.txt",
+      "sha256": "551340100c20ce59acae682ebd6236d502a5e2a1ee637413545b6c79812107a5",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v3-spec.sha256",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v3-state-writes.spec.sha256",
+      "sha256": "7b4638f8ac99f47fbd5673caa904a32c39c3fd58368efd980fcc7493d1e7b185",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v4-spec",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/specs/v4-ops-diagnostics.json",
+      "sha256": "fc58a0f4dedddb8adba2abb9795c2e113987ba63f9e98c9d75d9fed2f4ec3085",
+      "description": "Final generated spec.",
+      "capture": null
+    },
+    {
+      "id": "v4-commands.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v4-ops-diagnostics.commands.txt",
+      "sha256": "a2a8e959f004482c84b9ab86c142ef5a1945710907ec473963667fe2442a1250",
+      "description": "Raw executed command / size / header-wait record, not a render verdict.",
+      "capture": null
+    },
+    {
+      "id": "v4-dimensions.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v4-ops-diagnostics.dimensions.txt",
+      "sha256": "57d1b49afb14e6ed8c9b58ed930f31e8e4efd8ed10c13dde868d9c24159cbdb7",
+      "description": "Raw executed command / size / header-wait record, not a render verdict.",
+      "capture": null
+    },
+    {
+      "id": "v4-header.json",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v4-ops-diagnostics.header.json",
+      "sha256": "a0363a6195606160622eacee8c0942250422571d3812c9d3854a9670d2921c87",
+      "description": "Raw executed command / size / header-wait record, not a render verdict.",
+      "capture": null
+    },
+    {
+      "id": "v4-unselected-txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v4-ops-diagnostics.unselected.txt",
+      "sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "description": "Actual final pane capture; timestamp is explicitly a bounded interval.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-ops-diagnostics",
+        "frame": "unselected",
+        "timestamp": "2026-11-02T08:30:15Z/2026-11-02T08:30:25Z (acquisition interval; exact capture instant not logged)",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-unselected-ansi",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v4-ops-diagnostics.unselected.ansi",
+      "sha256": "ad6d85e3850a8dce91406b716c57d04137bd63f10238aa5ddf8fd3cb3aa07dad",
+      "description": "Actual final pane capture; timestamp is explicitly a bounded interval.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-ops-diagnostics",
+        "frame": "unselected",
+        "timestamp": "2026-11-02T08:30:15Z/2026-11-02T08:30:25Z (acquisition interval; exact capture instant not logged)",
+        "state": "unselected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-selected-txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v4-ops-diagnostics.selected.txt",
+      "sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "description": "Actual final pane capture; timestamp is explicitly a bounded interval.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-ops-diagnostics",
+        "frame": "selected",
+        "timestamp": "2026-11-02T08:30:15Z/2026-11-02T08:30:25Z (acquisition interval; exact capture instant not logged)",
+        "state": "selected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-selected-ansi",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v4-ops-diagnostics.selected.ansi",
+      "sha256": "84d9d99ef95698129749a30d54df03092ac1a5d9ca0b0bbb94deb026a6f02655",
+      "description": "Actual final pane capture; timestamp is explicitly a bounded interval.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-ops-diagnostics",
+        "frame": "selected",
+        "timestamp": "2026-11-02T08:30:15Z/2026-11-02T08:30:25Z (acquisition interval; exact capture instant not logged)",
+        "state": "selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-frame1",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v4-ops-diagnostics.frame1.txt",
+      "sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-ops-diagnostics",
+        "frame": "frame1",
+        "timestamp": "2026-11-02T08:30:16Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-frame2",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v4-ops-diagnostics.frame2.txt",
+      "sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-ops-diagnostics",
+        "frame": "frame2",
+        "timestamp": "2026-11-02T08:30:17Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-frame3",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v4-ops-diagnostics.frame3.txt",
+      "sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-ops-diagnostics",
+        "frame": "frame3",
+        "timestamp": "2026-11-02T08:30:18Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-frame4",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v4-ops-diagnostics.frame4.txt",
+      "sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-ops-diagnostics",
+        "frame": "frame4",
+        "timestamp": "2026-11-02T08:30:19Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-frame5",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v4-ops-diagnostics.frame5.txt",
+      "sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "description": "Actual timestamped animation sample; timing is second-resolution and may alias.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4-ops-diagnostics",
+        "frame": "frame5",
+        "timestamp": "2026-11-02T08:30:21Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-capture.sha256",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v4-ops-diagnostics.capture.sha256",
+      "sha256": "1d90848d235aeacae50f9bdd52dea0305f57b5d582d17f8d08fe3cc81c3a9031",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v4-check.err",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v4-ops-diagnostics.check.err",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v4-check.exit",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v4-ops-diagnostics.check.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v4-check.out",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v4-ops-diagnostics.check.out",
+      "sha256": "e13d3381699dc2d70c6acc0bd4e36416a5e1e2baa700d6d09f2ec841e1bf0d67",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v4-cleanup.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v4-ops-diagnostics.cleanup.txt",
+      "sha256": "59bd452b018e2dfae607c2c7002caf19268ab53a7bb0667e8d15732cd517ff9d",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v4-frames.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v4-ops-diagnostics.frames.txt",
+      "sha256": "5a6dd72b52f572d22103843dc9948d6ccbdc4eebc7d74b9a6be99a661e3b499d",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v4-header.txt",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v4-ops-diagnostics.header.txt",
+      "sha256": "df5ba40d4d8117932eac78977d707fe8d20b25f3348c7fbaf7a885eae11f25e8",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    },
+    {
+      "id": "v4-spec.sha256",
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/checks/v4-ops-diagnostics.spec.sha256",
+      "sha256": "142542d151b9551bbb9a09d9c4d582a1edb06421cd59e27a97ad2975b57076fe",
+      "description": "Verbatim final check, exit/stderr, hash, frame timestamp, header or cleanup record.",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 17 component IDs and all 23 unique directed endpoint pairs occur in the four specs (24 instances because mch->agent repeats). Only 17/23 relations preserve both readable identity and full required label meaning: repair, reprovision, S3 boot arguments, machine state and verify-reimage meaning are lost, and private-gRPC machine-rows association is uncertain. No reversed or unexpected endpoint pair was found. Historical claims remain qualified, not independently verified architecture facts.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json",
+        "docs/visualize-eval/rounds/01/rubric.json"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "blind",
+        "v1-spec",
+        "v2-spec",
+        "v3-spec",
+        "v4-spec",
+        "v1-unselected-txt",
+        "v1-unselected-ansi",
+        "v1-selected-txt",
+        "v1-selected-ansi",
+        "v2-unselected-txt",
+        "v2-unselected-ansi",
+        "v2-selected-txt",
+        "v2-selected-ansi",
+        "v3-unselected-txt",
+        "v3-unselected-ansi",
+        "v3-selected-txt",
+        "v3-selected-ansi",
+        "v4-unselected-txt",
+        "v4-unselected-ansi",
+        "v4-selected-txt",
+        "v4-selected-ansi"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "22/23 unique endpoint directions can be traced; the remaining pgrpc->db route is interrupted by machine rows and the row-31 crossover. Separate ports and no-shared-corridor checks do not resolve blind uncertainty. No false connected branch or extra endpoint pair is asserted.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json",
+        "docs/visualize-eval/rounds/01/rubric.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "v3-unselected-txt",
+        "v3-selected-ansi",
+        "v3-spec"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All four actual panes are 77x47; launch/script records establish natural 100% with no pan/zoom/fit keys. All 27 displayed boxes fit, but full-label and complete rendered-coverage gates fail because v2 boot response and v3 machine state labels are omitted. Controls do not occlude the graph. Cropped application help alone is not scored as a graph-fit defect.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json",
+        "docs/visualize-eval/rounds/01/rubric.json"
+      ],
+      "evidence_ids": [
+        "capture-script",
+        "v1-dimensions.txt",
+        "v2-dimensions.txt",
+        "v3-dimensions.txt",
+        "v4-dimensions.txt",
+        "v1-commands.txt",
+        "v2-commands.txt",
+        "v3-commands.txt",
+        "v4-commands.txt",
+        "v2-check.out",
+        "v3-check.out",
+        "v1-unselected-txt",
+        "v1-unselected-ansi",
+        "v1-selected-txt",
+        "v1-selected-ansi",
+        "v2-unselected-txt",
+        "v2-unselected-ansi",
+        "v2-selected-txt",
+        "v2-selected-ansi",
+        "v3-unselected-txt",
+        "v3-unselected-ansi",
+        "v3-selected-txt",
+        "v3-selected-ansi",
+        "v4-unselected-txt",
+        "v4-unselected-ansi",
+        "v4-selected-txt",
+        "v4-selected-ansi"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Layout respects local chain order, but per-depth hues create unsupported mixed conceptual groups and inconsistent identities across views. Shared host/agent and gRPC concepts do not retain related hues while unrelated same-depth nodes are presented as one family. Source-defined concepts are not replaced by geometric rank merely because the renderer colors rank.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json",
+        "docs/visualize-eval/rounds/01/rubric.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "generation",
+        "skill",
+        "v1-unselected-ansi",
+        "v2-unselected-ansi",
+        "v3-unselected-ansi",
+        "v4-unselected-ansi"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Raw ANSI proves complete uniformly colored unselected borders for all 27 node occurrences and correct selected borders only for v1 Control plane [45,3,15,4], v2 machine-agent [55,27,15,4], v3 machine-agent [11,18,15,4], and v4 janitor app [56,19,13,4], in each corresponding selected.ansi capture. No selected-state evidence exists for the other 23 occurrences. Their unselected appearance in a selected capture is not proof of their own selected border. Every-node selected-state coverage is therefore blocked; no observed border defect is alleged. This corrects the superseded report's pass without altering the blind observations.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json",
+        "docs/visualize-eval/rounds/01/rubric.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "v1-unselected-ansi",
+        "v1-selected-ansi",
+        "v2-unselected-ansi",
+        "v2-selected-ansi",
+        "v3-unselected-ansi",
+        "v3-selected-ansi",
+        "v4-unselected-ansi",
+        "v4-selected-ansi"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Frozen skill/binary/rubric/dataset/case/spec/capture/frame hashes verify; actual reviewer identity is Astra and frozen generator evidence names the separate DeepSeek worker. Blind file is unchanged and predates reveal; final commands, complete checks, text+ANSI, sizes, frame timestamps and final pane closure records exist. Selected-state coverage is only 4/27 node occurrences; the remaining 23 lack their own selected ANSI/buffer evidence. Also, eight earlier probe panes and the owned tab/base pane are only reported closed by generator narrative; no raw close/get confirmation or exact probe cleanup command log is preserved. Both incomplete state coverage and unverified cleanup block this category. No border defect or actual pane leak is inferred from missing evidence.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json",
+        "docs/visualize-eval/rounds/01/rubric.json"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "verification",
+        "generation",
+        "attempt-index",
+        "capture-script",
+        "blind",
+        "v1-cleanup.txt",
+        "v2-cleanup.txt",
+        "v3-cleanup.txt",
+        "v4-cleanup.txt",
+        "v1-commands.txt",
+        "v2-commands.txt",
+        "v3-commands.txt",
+        "v4-commands.txt"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Animation is required. All eight selected animated routes violate the last human correction (one live dot per line): every route has a multi-dot sample, with four dots on each long v1 line. Twenty timestamped samples exist, but second-scale sampling aliases repeated short routes and cannot prove their direction/speed; configured flow=0.15 is not actual-render proof. No border dots or dot-over-label damage observed. v4 static is allowed because source requests selected communication edges, not every edge.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json",
+        "docs/visualize-eval/rounds/01/rubric.json"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "dataset",
+        "blind",
+        "v1-frames.txt",
+        "v2-frames.txt",
+        "v3-frames.txt",
+        "v4-frames.txt",
+        "v1-frame1",
+        "v1-frame2",
+        "v1-frame3",
+        "v1-frame4",
+        "v1-frame5",
+        "v2-frame1",
+        "v2-frame2",
+        "v2-frame3",
+        "v2-frame4",
+        "v2-frame5",
+        "v3-frame1",
+        "v3-frame2",
+        "v3-frame3",
+        "v3-frame4",
+        "v3-frame5",
+        "v4-frame1",
+        "v4-frame2",
+        "v4-frame3",
+        "v4-frame4",
+        "v4-frame5"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "cp-pgrpc",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/0",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "cp -> pgrpc: create / terminate / repair",
+      "observed": "Spec coverage: [('v1-provisioning', 'create/terminate')]. Rendered source cp -> pgrpc; first source cell [46, 7, 1, 1]; target arrow [47, 10, 1, 1]; visible label 'create/terminate'. Down column 46 with row-9 dogleg; distinct source and target, no crossing. Repair omitted. Selected animation is independently noncompliant: multiple simultaneous dots on this route (F09).",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            46,
+            7,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            47,
+            10,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            29,
+            8,
+            16,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F09"
+      ]
+    },
+    {
+      "edge_id": "web-wapi",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/1",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "web -> wapi: http",
+      "observed": "Spec coverage: [('v1-provisioning', 'http')]. Rendered source web -> wapi; first source cell [20, 7, 1, 1]; target arrow [21, 10, 1, 1]; visible label 'http'. Short row-9 dogleg; no crossing or junction. No animation requested on this individual route by the final spec; source permits selected communication routes.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            20,
+            7,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            21,
+            10,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            22,
+            7,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "pgrpc-q",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/2",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "pgrpc -> q: enqueue job",
+      "observed": "Spec coverage: [('v1-provisioning', 'enqueue job')]. Rendered source pgrpc -> q; first source cell [47, 15, 1, 1]; target arrow [22, 18, 1, 1]; visible label 'enqueue job'. Left along row 17 to its own queue port; separate from adjacent webapi bend, no shared run. Selected animation is independently noncompliant: multiple simultaneous dots on this route (F09).",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            47,
+            15,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            22,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            30,
+            18,
+            11,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F09"
+      ]
+    },
+    {
+      "edge_id": "wapi-q",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/3",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "wapi -> q: reinstall / reprovision",
+      "observed": "Spec coverage: [('v1-provisioning', 'reinstall')]. Rendered source wapi -> q; first source cell [21, 15, 1, 1]; target arrow [20, 18, 1, 1]; visible label 'reinstall'. Short left dogleg next to, but separate from, private-gRPC queue route; reprovision omitted. No animation requested on this individual route by the final spec; source permits selected communication routes.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            21,
+            15,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            20,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            23,
+            16,
+            9,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F02"
+      ]
+    },
+    {
+      "edge_id": "q-reg",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/4",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "q -> reg: provision job",
+      "observed": "Spec coverage: [('v1-provisioning', 'provision job')]. Rendered source q -> reg; first source cell [20, 23, 1, 1]; target arrow [19, 26, 1, 1]; visible label 'provision job'. Down then left on row 25; distinct path. Selected animation is independently noncompliant: multiple simultaneous dots on this route (F09).",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            20,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            19,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            22,
+            24,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F09"
+      ]
+    },
+    {
+      "edge_id": "reg-prov",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/5",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "reg -> prov: provider API",
+      "observed": "Spec coverage: [('v1-provisioning', 'provider API')]. Rendered source reg -> prov; first source cell [19, 31, 1, 1]; target arrow [17, 34, 1, 1]; visible label 'provider API'. Left on row 32 then down; separate from reconcile approach. Selected animation is independently noncompliant: multiple simultaneous dots on this route (F09).",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            19,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            17,
+            34,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            21,
+            31,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F09"
+      ]
+    },
+    {
+      "edge_id": "prov-mch",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/6",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "prov -> mch: allocate instance",
+      "observed": "Spec coverage: [('v1-provisioning', 'allocate')]. Rendered source prov -> mch; first source cell [17, 39, 1, 1]; target arrow [43, 42, 1, 1]; visible label 'allocate'. Rightward row-41 run and down into machines. Allocate instance meaning recoverable from endpoint. Selected animation is independently noncompliant: multiple simultaneous dots on this route (F09).",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            17,
+            39,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            43,
+            42,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            26,
+            40,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F09"
+      ]
+    },
+    {
+      "edge_id": "mch-boot",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/7",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "mch -> boot: iPXE request",
+      "observed": "Spec coverage: [('v2-boot-image', 'iPXE request')]. Rendered source mch -> boot; first source cell [10, 22, 1, 1]; target arrow [14, 26, 1, 1]; visible label 'iPXE request'. Down then right on row 25; distinct from return loop. Selected animation is independently noncompliant: multiple simultaneous dots on this route (F09).",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-unselected-txt",
+          "region": [
+            10,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-unselected-txt",
+          "region": [
+            14,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-unselected-txt",
+          "region": [
+            16,
+            25,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F09"
+      ]
+    },
+    {
+      "edge_id": "boot-mch",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/8",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "boot -> mch: boot.ipxe + S3 args",
+      "observed": "Spec coverage: [('v2-boot-image', 'boot.ipxe')]. Rendered source boot -> mch; first source cell [12, 28, 1, 1]; target arrow [8, 19, 1, 1]; visible label None. Leaves boot leftward, goes up column 7, then right-pointing arrow into machine left side. Topology clear, response meaning missing. No animation requested on this individual route by the final spec; source permits selected communication routes.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-unselected-txt",
+          "region": [
+            12,
+            28,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-unselected-txt",
+          "region": [
+            8,
+            19,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F03",
+        "F07"
+      ]
+    },
+    {
+      "edge_id": "mch-agent",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/9",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "mch -> agent: runs on host",
+      "observed": "Spec coverage: [('v2-boot-image', 'runs on host'), ('v3-state-writes', 'runs on host')]. Rendered source mch -> agent; first source cell [14, 22, 1, 1]; target arrow [56, 26, 1, 1]; visible label 'runs on host'. Row-23 rightward run to agent; independent source port. Also repeated in v3: source [9,14,1,1], row-16 dogleg, arrow [12,17,1,1], label [11,14,12,1]; same relationship, not an extra semantic edge. No animation requested on this individual route by the final spec; source permits selected communication routes.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-unselected-txt",
+          "region": [
+            14,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-unselected-txt",
+          "region": [
+            56,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-unselected-txt",
+          "region": [
+            29,
+            22,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            9,
+            14,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            12,
+            17,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            11,
+            14,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "agent-pub",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/10",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "agent -> pub: register + heartbeat",
+      "observed": "Spec coverage: [('v3-state-writes', 'register+hb')]. Rendered source agent -> pub; first source cell [12, 22, 1, 1]; target arrow [13, 25, 1, 1]; visible label 'register+hb'. Short row-24 dogleg; heartbeat abbreviation preserves meaning. Selected animation is independently noncompliant: multiple simultaneous dots on this route (F09).",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            12,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            13,
+            25,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            14,
+            22,
+            11,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F09"
+      ]
+    },
+    {
+      "edge_id": "pub-db",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/11",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "pub -> db: machine state",
+      "observed": "Spec coverage: [('v3-state-writes', 'machine state')]. Rendered source pub -> db; first source cell [13, 30, 1, 1]; target arrow [15, 34, 1, 1]; visible label None. Down column 13 then right on row 33 into first Postgres port; machine state label missing although specified. Selected animation is independently noncompliant: multiple simultaneous dots on this route (F09).",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            13,
+            30,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            15,
+            34,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F04",
+        "F07",
+        "F09"
+      ]
+    },
+    {
+      "edge_id": "pgrpc-db",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/12",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "pgrpc -> db: machine rows",
+      "observed": "Spec coverage: [('v3-state-writes', 'machine rows')]. Rendered source pgrpc -> candidate db (uncertain); first source cell [36, 22, 1, 1]; target candidate arrow [19, 34, 1, 1]; visible label 'machine rows'. Down to row 24, left to column 26, down to row 29; label overwrites continuation and bridge at [26,31,1,1] prevents a blind continuous trace. Lower row-32 segment reaches candidate arrow; target and label association remain uncertain, not corrected using expected data. No animation requested on this individual route by the final spec; source permits selected communication routes.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            36,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            19,
+            34,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            20,
+            30,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            17,
+            29,
+            18,
+            5
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F06"
+      ]
+    },
+    {
+      "edge_id": "q-db",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/13",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "q -> db: job rows",
+      "observed": "Spec coverage: [('v3-state-writes', 'job rows')]. Rendered source q -> db; first source cell [34, 30, 1, 1]; target arrow [17, 34, 1, 1]; visible label 'job rows'. Left along row 31, over nonjoining-looking bridge [26,31,1,1], down column 17 to second Postgres port. Horizontal route recoverable; no T-junction inferred. No animation requested on this individual route by the final spec; source permits selected communication routes.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            34,
+            30,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            17,
+            34,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            36,
+            30,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "q-ssh",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/14",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "q -> ssh: audit / verify reimage",
+      "observed": "Spec coverage: [('v4-ops-diagnostics', 'audit/reimage')]. Rendered source q -> ssh; first source cell [13, 14, 1, 1]; target arrow [14, 18, 1, 1]; visible label 'audit/reimage'. Short row-17 dogleg from its own queue stem; verify qualifier lost. No animation requested on this individual route by the final spec; source permits selected communication routes.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-unselected-txt",
+          "region": [
+            13,
+            14,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-unselected-txt",
+          "region": [
+            14,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-unselected-txt",
+          "region": [
+            16,
+            17,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F05"
+      ]
+    },
+    {
+      "edge_id": "ssh-mch",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/15",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "ssh -> mch: run machine-audit",
+      "observed": "Spec coverage: [('v4-ops-diagnostics', 'machine-audit')]. Rendered source ssh -> mch; first source cell [14, 23, 1, 1]; target arrow [11, 26, 1, 1]; visible label 'machine-audit'. Leftward row-25 dogleg; run machine-audit meaning retained by directed operation edge. No animation requested on this individual route by the final spec; source permits selected communication routes.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-unselected-txt",
+          "region": [
+            14,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-unselected-txt",
+          "region": [
+            11,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-unselected-txt",
+          "region": [
+            16,
+            24,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "mch-s3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/16",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "mch -> s3: pull boot image",
+      "observed": "Spec coverage: [('v2-boot-image', 'pull image')]. Rendered source mch -> s3; first source cell [12, 22, 1, 1]; target arrow [35, 26, 1, 1]; visible label 'pull image'. Row-24 label interrupts its own horizontal stroke but both ends uniquely align; boot-image context preserves meaning. Distinct from River diagnostic upload in v4. No animation requested on this individual route by the final spec; source permits selected communication routes.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-unselected-txt",
+          "region": [
+            12,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-unselected-txt",
+          "region": [
+            35,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-unselected-txt",
+          "region": [
+            18,
+            24,
+            10,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "q-s3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/17",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "q -> s3: diagnose uploads",
+      "observed": "Spec coverage: [('v4-ops-diagnostics', 'upload diags')]. Rendered source q -> s3; first source cell [15, 14, 1, 1]; target arrow [36, 18, 1, 1]; visible label 'upload diags'. Row-16 label overlays its own horizontal stroke with uniquely aligned ends; source stem and target distinct from queue-to-janitor and machine image pull. No animation requested on this individual route by the final spec; source permits selected communication routes.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-unselected-txt",
+          "region": [
+            15,
+            14,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-unselected-txt",
+          "region": [
+            36,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-unselected-txt",
+          "region": [
+            19,
+            16,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "q-jan",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/18",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "q -> jan: diagnostic events",
+      "observed": "Spec coverage: [('v4-ops-diagnostics', 'diag events')]. Rendered source q -> jan; first source cell [17, 14, 1, 1]; target arrow [57, 18, 1, 1]; visible label 'diag events'. Right along row 15 then down; separate fan-out stem, no bus or crossing. No animation requested on this individual route by the final spec; source permits selected communication routes.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-unselected-txt",
+          "region": [
+            17,
+            14,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-unselected-txt",
+          "region": [
+            57,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-unselected-txt",
+          "region": [
+            32,
+            14,
+            11,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "jan-wapi",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/19",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "jan -> wapi: proposed actions",
+      "observed": "Spec coverage: [('v4-ops-diagnostics', 'propose action')]. Rendered source jan -> wapi; first source cell [57, 23, 1, 1]; target arrow [37, 26, 1, 1]; visible label 'propose action'. Left along row 25 then down; required proposal direction preserved. No animation requested on this individual route by the final spec; source permits selected communication routes.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-unselected-txt",
+          "region": [
+            57,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-unselected-txt",
+          "region": [
+            37,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-unselected-txt",
+          "region": [
+            40,
+            24,
+            14,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "wapi-slack",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/20",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "wapi -> slack: confirm + alerts",
+      "observed": "Spec coverage: [('v4-ops-diagnostics', 'confirm/alerts')]. Rendered source wapi -> slack; first source cell [37, 31, 1, 1]; target arrow [18, 34, 1, 1]; visible label 'confirm/alerts'. Left along row 33 then down; confirmation and alert semantics retained. No animation requested on this individual route by the final spec; source permits selected communication routes.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-unselected-txt",
+          "region": [
+            37,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-unselected-txt",
+          "region": [
+            18,
+            34,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v4-unselected-txt",
+          "region": [
+            21,
+            32,
+            14,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "rec-prov",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/21",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "rec -> prov: gcore sync, 1 min",
+      "observed": "Spec coverage: [('v1-provisioning', 'gcore sync 1m')]. Rendered source rec -> prov; first source cell [46, 31, 1, 1]; target arrow [19, 34, 1, 1]; visible label 'gcore sync 1m'. Left along row 33 to second provider port; independent of registry edge. Minute cadence retained. No animation requested on this individual route by the final spec; source permits selected communication routes.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            46,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            19,
+            34,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            27,
+            32,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "rec-db",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#historical_reference/edges/22",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "rec -> db: cluster state",
+      "observed": "Spec coverage: [('v3-state-writes', 'cluster state')]. Rendered source rec -> db; first source cell [55, 30, 1, 1]; target arrow [21, 34, 1, 1]; visible label 'cluster state'. Left along row 33 to fourth Postgres port; separate from other writer stems and arrowheads. No animation requested on this individual route by the final spec; source permits selected communication routes.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            55,
+            30,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            21,
+            34,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            32,
+            32,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F01",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "cp-pgrpc"
+      ],
+      "severity": "critical",
+      "description": "Control-plane create/terminate/repair became create/terminate in both spec and pane. Repair is a distinct required operation, not an abbreviation present elsewhere.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            29,
+            8,
+            16,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F02",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "wapi-q"
+      ],
+      "severity": "critical",
+      "description": "Reinstall/reprovision became reinstall in both spec and pane. Reprovision is not stated anywhere in the final views.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-unselected-txt",
+          "region": [
+            23,
+            16,
+            9,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F03",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "boot-mch"
+      ],
+      "severity": "critical",
+      "description": "Boot response topology exists, but spec shortens boot.ipxe + S3 args to boot.ipxe, losing the S3-argument payload; renderer then omits even boot.ipxe. A bare return arrow does not convey the required response meaning.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-unselected-txt",
+          "region": [
+            7,
+            19,
+            7,
+            10
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F04",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "pub-db"
+      ],
+      "severity": "high",
+      "description": "machine state exists in JSON but is entirely absent from the public-gRPC-to-Postgres rendered path; nearby machine rows is a different writer label and cannot substitute.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            13,
+            30,
+            19,
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F05",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "q-ssh"
+      ],
+      "severity": "critical",
+      "description": "audit / verify reimage is shortened to audit/reimage. The verification qualifier is lost, allowing a reimage operation rather than verification of reimage; no visible legend preserves the distinction.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v4-unselected-txt",
+          "region": [
+            16,
+            17,
+            13,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F06",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "pgrpc-db"
+      ],
+      "severity": "high",
+      "description": "The private-gRPC stem at column 26 is overwritten by machine rows on row 30 and meets a bridge glyph on row 31. Stage A could not establish an uninterrupted unique trace to the candidate Postgres arrow at [19,34,1,1]. Expected JSON now identifies intent but cannot retroactively make that link readable. No false connected branch is asserted.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            17,
+            29,
+            18,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            26,
+            30,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            19,
+            34,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F07",
+      "category": "layout_fit",
+      "edge_ids": [
+        "boot-mch",
+        "pub-db"
+      ],
+      "severity": "high",
+      "description": "Boxes fit 77x47 at natural zoom, but full required edge labels do not: boot.ipxe and machine state are omitted by placement. Final checks each report one skipped label in v2 and v3. Complete-label gate fails despite spare exterior whitespace and exit status 0.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-unselected-txt",
+          "region": [
+            7,
+            18,
+            23,
+            13
+          ]
+        },
+        {
+          "evidence_id": "v3-unselected-txt",
+          "region": [
+            12,
+            26,
+            23,
+            13
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F08",
+      "category": "conceptual_grouping_color",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Layer hues encode geometric depth rather than stable source concepts: v2 puts host agent with boot server and S3 while its host has another hue; v3 puts private gRPC with agent and public gRPC with queue/reconcile. Bare-metal machines changes from orange (v1) to gold (v2/v3) to pink (v4). No displayed legend/group explanation makes these source-backed conceptual categories; generation explicitly claims per-layer color grouping.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/01/rubric.json",
+        "docs/visualize-eval/rounds/01/modal-machine-manager/generation.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-unselected-ansi",
+          "region": [
+            42,
+            43,
+            21,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-unselected-ansi",
+          "region": [
+            9,
+            18,
+            61,
+            13
+          ]
+        },
+        {
+          "evidence_id": "v3-unselected-ansi",
+          "region": [
+            11,
+            18,
+            59,
+            12
+          ]
+        },
+        {
+          "evidence_id": "v4-unselected-ansi",
+          "region": [
+            10,
+            27,
+            21,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F09",
+      "category": "animation",
+      "edge_ids": [
+        "cp-pgrpc",
+        "pgrpc-q",
+        "q-reg",
+        "reg-prov",
+        "prov-mch",
+        "mch-boot",
+        "agent-pub",
+        "pub-db"
+      ],
+      "severity": "high",
+      "description": "Every selected animated route has a sample with more than one simultaneous dot, contradicting the final human correction to keep one dot alive per line. Long v1 runs show four dots each. Slow flow=0.15 is not a dot-count control. Samples prove phase changes, not reliable direction/speed on short aliased routes; no border or label dots were observed.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#original-line-217-user",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json",
+        "docs/visualize-eval/rounds/01/rubric.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-frame1",
+          "region": [
+            46,
+            8,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-frame1",
+          "region": [
+            22,
+            17,
+            26,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-frame1",
+          "region": [
+            19,
+            24,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-frame2",
+          "region": [
+            17,
+            32,
+            3,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-frame1",
+          "region": [
+            17,
+            41,
+            27,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-frame1",
+          "region": [
+            10,
+            25,
+            5,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-frame1",
+          "region": [
+            12,
+            23,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v3-frame2",
+          "region": [
+            13,
+            31,
+            3,
+            3
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "Missing selected-state ANSI/buffer coverage for 23/27 node occurrences: v1 Humans + mmctl, webapi server, private gRPC, River job queue, Provider registry, Reconcile loop, Bare-metal providers, Bare-metal machines; v2 Bare-metal machines, Boot server, S3 object store; v3 Bare-metal machines, private gRPC, public gRPC, River job queue, Reconcile loop, Postgres; v4 River job queue, SSH + BMC ops, S3 object store, Bare-metal machines, webapi server, Slack. Existing selected captures prove only v1 Control plane, v2/v3 machine-agent, and v4 janitor app. Unselected appearances cannot fill this coverage gap. No new rendering performed.",
+    "Missing executed cleanup evidence for eight earlier probe panes and dedicated tab w7E:tT/base pane w7E:p31. Generation asserts closure, but only the four final pane_not_found responses are recorded. No live pane operations were performed to fill the gap.",
+    "Timestamped samples are too sparse to disambiguate phase/direction/speed on the short repeated-dot routes. The known multi-dot violation remains fail regardless of this evidence gap.",
+    "Frozen documented spec supports flow speed but exposes no evidenced one-dot-count control; reducing speed alone does not enforce the source request. A supported way to produce one live dot per route has not been demonstrated. No renderer capability change was attempted."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:p31",
+      "w7E:p32",
+      "w7E:p3C",
+      "w7E:p3P",
+      "w7E:p3X",
+      "w7E:p48",
+      "w7E:p4A",
+      "w7E:p4F",
+      "w7E:p4H",
+      "w7E:p4Q",
+      "w7E:p4T",
+      "w7E:p4W",
+      "w7E:p4X"
+    ],
+    "closed_pane_ids": [
+      "w7E:p4Q",
+      "w7E:p4T",
+      "w7E:p4W",
+      "w7E:p4X"
+    ],
+    "status": "blocked",
+    "reason": "Final viewer panes independently confirmed absent in their four raw cleanup records. Eight probe closures and dedicated tab/base-pane closure are generator assertions only; not verified. Reviewer opened no panes."
+  },
+  "overall": "fail"
+}

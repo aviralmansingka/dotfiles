@@ -1,0 +1,1 @@
+rataflow-view: no obstacle-safe route for gw -> airtel, silent -> l2q; increase node/layer spacing

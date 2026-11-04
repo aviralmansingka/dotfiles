@@ -1,0 +1,18 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "layers": [["nic"], ["gw"], ["airtel"], ["bb"], ["cf"]],
+  "nodes": [
+    { "id": "nic", "label": "eno16595np0 103.19.91.58", "group": "host" },
+    { "id": "gw", "label": "Arista ToR 103.19.91.57 AS132717", "group": "nxtgen" },
+    { "id": "airtel", "label": "Airtel 14.143.x", "group": "transit" },
+    { "id": "bb", "label": "Airtel bb 14.141.x", "group": "transit" },
+    { "id": "cf", "label": "Cloudflare 1.1.1.1 AS13335", "group": "internet" }
+  ],
+  "edges": [
+    { "from": "nic", "to": "gw", "label": "0.1 ms", "dots": 0 },
+    { "from": "gw", "to": "airtel", "label": "1.8 ms", "dots": 0 },
+    { "from": "airtel", "to": "bb", "label": "7.1 ms", "dots": 0 },
+    { "from": "bb", "to": "cf", "label": "8.3-8.6 ms", "dots": 0 }
+  ]
+}

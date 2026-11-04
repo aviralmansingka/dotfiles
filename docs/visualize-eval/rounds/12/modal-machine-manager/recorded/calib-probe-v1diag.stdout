@@ -1,0 +1,12 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=13 edges=15 flows=15 direction=tb theme=gruvbox
+extent=81x50 cells
+crossings: 6 bridges, 1 touching bends
+warning: 13 nodes / 15 edges is above the readable budget (12/16); split it into an overview and detail graphs
+labels: 15/15 placed, 0 on route cells, 0 skipped, 3 ambiguous owners
+warning: 3 label(s) have an ambiguous owner: another route is as close to the text as its own edge
+groups: control(4) humans(2) ops(3) fleet(2) state(2)
+trunks:
+dots: 15 single-dot routes, 0 periodic routes, 0 violations, 15 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 15/15 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

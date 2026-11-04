@@ -1,0 +1,35 @@
+PASS manifest_readable
+PASS binary_path_absolute
+PASS binary_hash_recorded
+PASS artifact_hashes
+PASS check_output_present
+PASS check_exit_zero
+PASS check_warnings_absent
+PASS labels_parsed
+PASS labels_complete
+PASS labels_off_routes
+PASS labels_not_skipped
+PASS dots_parsed
+PASS dots_no_violations
+PASS origins_reported
+PASS origins_complete
+PASS dots_sync_reported
+PASS arrivals_reported
+PASS arrivals_complete
+PASS labels_ownership_reported
+PASS labels_ownership_clear
+FAIL routes_economy_reported — no 'routes: N/M near-minimal, K detours' line; route economy cannot be checked
+PASS crossings_reported
+PASS viewport_proven
+PASS viewport_proven_measurable
+FAIL viewport_matches_target — measured 83x51, target is 77x47
+PASS cleanup_confirmed
+PASS select_all_frame
+PASS select_all_artifact
+PASS frames_artifact
+PASS frames_timestamped
+PASS attempts_readable
+PASS attempts_view_budget
+PASS attempts_spec_budget
+
+2 check(s) failed: routes_economy_reported, viewport_matches_target

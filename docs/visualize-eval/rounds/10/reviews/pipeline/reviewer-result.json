@@ -1,0 +1,806 @@
+{
+  "protocol_version": 1,
+  "round": 10,
+  "case_id": "pipeline",
+  "candidate_sha256": "9c1256791069e27207db2e5138527e45587e7096955f5ed4f86c79d46f77e56d",
+  "renderer_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+  "rubric_sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "3e812eaacb7daa6f6b4e10b50cd6dadad35775face9d30dd1bcdad23d34a25f6",
+  "generator": {
+    "worker_id": "viz-ds10-1",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge10-pipeline",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 82,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/10/reviews/pipeline/observed-first.md",
+      "sha256": "b4b2cf06164c481bcd5919b749b4211cee92f38356ff230e10133ff46cfe30f7",
+      "description": "Blind record saved before expected reveal",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/10/SKILL.md",
+      "sha256": "9c1256791069e27207db2e5138527e45587e7096955f5ed4f86c79d46f77e56d",
+      "description": "skill frozen input or recorded artifact",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/10/rubric.json",
+      "sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+      "description": "rubric frozen input or recorded artifact",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/10/metadata.json",
+      "sha256": "0ad93b431a5d91320b90787734b3adef1d3606920d5c16e9336dad299a6ab0f4",
+      "description": "metadata frozen input or recorded artifact",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "dataset frozen input or recorded artifact",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/pipeline/source.md",
+      "sha256": "68aa197fdc597c3a22d1b8ca88a3ebee861dcda34684da15ae69b6946b741e58",
+      "description": "source frozen input or recorded artifact",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/pipeline/expected.json",
+      "sha256": "ea177d01af818876ff04bf707b923326b153185fd425f21ea96250486b504ec3",
+      "description": "expected frozen input or recorded artifact",
+      "capture": null
+    },
+    {
+      "id": "variants",
+      "path": "docs/visualize-eval/cases/pipeline/historical-variants.json",
+      "sha256": "5d351c45f055d2ca115036d10ab4bd50fb1d22ccd87f31e018f01c3039b48659",
+      "description": "variants frozen input or recorded artifact",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/10/pipeline/generation.json",
+      "sha256": "727c41a9dca4b02a88876a8259d260c4c1b69e2189e9b08004f1da5cd83aa232",
+      "description": "generation frozen input or recorded artifact",
+      "capture": null
+    },
+    {
+      "id": "report",
+      "path": "docs/visualize-eval/rounds/10/pipeline/generation.md",
+      "sha256": "c1fce8fb32f91eb8c2243cff9ffb3fca1817a5f221225bec685351b5e4afd0bb",
+      "description": "report frozen input or recorded artifact",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/10/pipeline/attempts.json",
+      "sha256": "24a2b87f256c1b6bcb3fb903beb4f3c52dd3df07db340c1a1502746781e7345d",
+      "description": "attempts frozen input or recorded artifact",
+      "capture": null
+    },
+    {
+      "id": "records",
+      "path": "docs/visualize-eval/rounds/10/pipeline/attempts-log.jsonl",
+      "sha256": "88e1b6fd5371a683a3a13f56479b56c0854ab009e4562adee548980e719ebacb",
+      "description": "records frozen input or recorded artifact",
+      "capture": null
+    },
+    {
+      "id": "validator",
+      "path": "docs/visualize-eval/rounds/10/pipeline/validation-v1.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "validator frozen input or recorded artifact",
+      "capture": null
+    },
+    {
+      "id": "manifest",
+      "path": "docs/visualize-eval/rounds/10/pipeline/evidence/v1/manifest.json",
+      "sha256": "187ab6df37bd7ffb9d827e8bdb9143b3bc65811d1376416408b9cfb3f9ad2e21",
+      "description": "manifest frozen input or recorded artifact",
+      "capture": null
+    },
+    {
+      "id": "binary-hash",
+      "path": "docs/visualize-eval/rounds/10/pipeline/evidence/v1/bin.sha256",
+      "sha256": "d70e8ea3bb8149f3dc64e07eee15048aec287592055089d0c6f2dbedeebc37d9",
+      "description": "binary-hash frozen input or recorded artifact",
+      "capture": null
+    },
+    {
+      "id": "check",
+      "path": "docs/visualize-eval/rounds/10/pipeline/evidence/v1/check.txt",
+      "sha256": "b2ba2b045dd6fb71e3b03ce55c68dd0d5d33c9894865550532ef85293124a02a",
+      "description": "check frozen input or recorded artifact",
+      "capture": null
+    },
+    {
+      "id": "motion-table",
+      "path": "docs/visualize-eval/rounds/10/pipeline/analysis/lockstep-check.txt",
+      "sha256": "4ecbf291ade4913a28e3e273a148281c2cd695cf016db36d5a88857b72d7f1a8",
+      "description": "motion-table frozen input or recorded artifact",
+      "capture": null
+    },
+    {
+      "id": "spec-v1-draft1-tb-rejected",
+      "path": "docs/visualize-eval/rounds/10/pipeline/specs/v1-draft1-tb-rejected.json",
+      "sha256": "a66a1fe2a49805e2d177223f726e21e4d018a33985226e422cb338a06a14e42e",
+      "description": "Preserved spec bytes; v1.json is final",
+      "capture": null
+    },
+    {
+      "id": "spec-v1-draft2-tb-autorder-rejected",
+      "path": "docs/visualize-eval/rounds/10/pipeline/specs/v1-draft2-tb-autorder-rejected.json",
+      "sha256": "a36281909d62e45bdc84e108743be18ca8092df56e087a06efe0152a947799f1",
+      "description": "Preserved spec bytes; v1.json is final",
+      "capture": null
+    },
+    {
+      "id": "spec-v1-enqfirst-probe",
+      "path": "docs/visualize-eval/rounds/10/pipeline/specs/v1-enqfirst-probe.json",
+      "sha256": "3e812eaacb7daa6f6b4e10b50cd6dadad35775face9d30dd1bcdad23d34a25f6",
+      "description": "Preserved spec bytes; v1.json is final",
+      "capture": null
+    },
+    {
+      "id": "spec-v1-layers-queue-left-probe",
+      "path": "docs/visualize-eval/rounds/10/pipeline/specs/v1-layers-queue-left-probe.json",
+      "sha256": "83d0849f235f1051fd224c14788c4ce90a92c042d49354a2ade2001391a8d822",
+      "description": "Preserved spec bytes; v1.json is final",
+      "capture": null
+    },
+    {
+      "id": "spec-v1-minlen-probe",
+      "path": "docs/visualize-eval/rounds/10/pipeline/specs/v1-minlen-probe.json",
+      "sha256": "b00990c9066f547a4578ab219893e3945eeb88a9aea892aa308bb7096688193f",
+      "description": "Preserved spec bytes; v1.json is final",
+      "capture": null
+    },
+    {
+      "id": "spec-v1-noslot-probe",
+      "path": "docs/visualize-eval/rounds/10/pipeline/specs/v1-noslot-probe.json",
+      "sha256": "b4a37af2b1cf490d5a514fec2ffd7efa641b70e26ebd769ec73770bda01de924",
+      "description": "Preserved spec bytes; v1.json is final",
+      "capture": null
+    },
+    {
+      "id": "spec-v1",
+      "path": "docs/visualize-eval/rounds/10/pipeline/specs/v1.json",
+      "sha256": "3e812eaacb7daa6f6b4e10b50cd6dadad35775face9d30dd1bcdad23d34a25f6",
+      "description": "Preserved spec bytes; v1.json is final",
+      "capture": null
+    },
+    {
+      "id": "spec-v1a-lr",
+      "path": "docs/visualize-eval/rounds/10/pipeline/specs/v1a-lr.json",
+      "sha256": "89cd344f1fd917b250dfceeada4b0eba70bfb813fbf4285ca576d5003eb117f7",
+      "description": "Preserved spec bytes; v1.json is final",
+      "capture": null
+    },
+    {
+      "id": "spec-v1b-lr-slot",
+      "path": "docs/visualize-eval/rounds/10/pipeline/specs/v1b-lr-slot.json",
+      "sha256": "c936d2099c7b1a6021062b34241c6559140d68d52b696f8baccb9d0d4d4f5a3f",
+      "description": "Preserved spec bytes; v1.json is final",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-attempt1-lr-stdout",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-attempt1-lr.stdout",
+      "sha256": "eed86321103bcb7ef8b9b077dbcbcfd4424c39c8020c07a42f7be37fb251c9f6",
+      "description": "Recorded stdout; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-attempt1-lr-stderr",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-attempt1-lr.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded stderr; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-attempt2-lr-label-slot-stdout",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-attempt2-lr-label-slot.stdout",
+      "sha256": "31b601e0772423df26e57611e11680ea783ec630517dc449bebe935ffa6ea3df",
+      "description": "Recorded stdout; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-attempt2-lr-label-slot-stderr",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-attempt2-lr-label-slot.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded stderr; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-tb-draft-frames-probe-stdout",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-tb-draft-frames-probe.stdout",
+      "sha256": "1c2f740bce37ef4252632caec1a5343fa03c11be5f8223214c703d6f22971d0e",
+      "description": "Recorded stdout; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-tb-draft-frames-probe-stderr",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-tb-draft-frames-probe.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded stderr; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-attempt3-tb-final-stdout",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-attempt3-tb-final.stdout",
+      "sha256": "62376e74ea142a30d674e9355611b1a555db6007a9305e4f98f867858c3b0500",
+      "description": "Recorded stdout; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-attempt3-tb-final-stderr",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-attempt3-tb-final.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded stderr; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-attempt2-tb-fan-swapped-stdout",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-attempt2-tb-fan-swapped.stdout",
+      "sha256": "4558b78f4f3509f3b0b0c34515e4c2d1fc8b96c069dbd384aa2e5d355c06cf26",
+      "description": "Recorded stdout; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-attempt2-tb-fan-swapped-stderr",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-attempt2-tb-fan-swapped.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded stderr; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-swapped-frames-probe-stdout",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-swapped-frames-probe.stdout",
+      "sha256": "dd0be68b9d10f39bfee540d622b75f5b2f0e0ff683a141ea9776443566a76bd4",
+      "description": "Recorded stdout; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-swapped-frames-probe-stderr",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-swapped-frames-probe.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded stderr; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-attempt3-tb-layers-queue-left-stdout",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-attempt3-tb-layers-queue-left.stdout",
+      "sha256": "6e1849a59242799e5bbfea38ee409c5570920459f63b3a8697cb5fc090e042ed",
+      "description": "Recorded stdout; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-attempt3-tb-layers-queue-left-stderr",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-attempt3-tb-layers-queue-left.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded stderr; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-layers-frames-probe-stdout",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-layers-frames-probe.stdout",
+      "sha256": "dd0be68b9d10f39bfee540d622b75f5b2f0e0ff683a141ea9776443566a76bd4",
+      "description": "Recorded stdout; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-layers-frames-probe-stderr",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-layers-frames-probe.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded stderr; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-minlen-channel-probe-stdout",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-minlen-channel-probe.stdout",
+      "sha256": "241fd96d0666f0e33c9ed6084f79feda971fea0819676612ec3c1765632a6b04",
+      "description": "Recorded stdout; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-minlen-channel-probe-stderr",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-minlen-channel-probe.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded stderr; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-minlen-frames-probe-stdout",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-minlen-frames-probe.stdout",
+      "sha256": "2dc00c697ac57023f9b47c22091367d083781652bc54a8e64e58b8124aa4f851",
+      "description": "Recorded stdout; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-minlen-frames-probe-stderr",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-minlen-frames-probe.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded stderr; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-fan-gap-no-slot-probe-stdout",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-fan-gap-no-slot-probe.stdout",
+      "sha256": "b2043593216fdfe825fc5d9648f1cdb8dc4f8b86d5aef8f61622caaf74ccfbba",
+      "description": "Recorded stdout; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-fan-gap-no-slot-probe-stderr",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-fan-gap-no-slot-probe.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded stderr; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-enqueue-first-probe-stdout",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-enqueue-first-probe.stdout",
+      "sha256": "b2ba2b045dd6fb71e3b03ce55c68dd0d5d33c9894865550532ef85293124a02a",
+      "description": "Recorded stdout; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-enqueue-first-probe-stderr",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-enqueue-first-probe.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded stderr; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-pinned-77x47-final-dump-stdout",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-pinned-77x47-final-dump.stdout",
+      "sha256": "a298524b6f45f753cbabf9764e70dd837f9f46cfaa8b5defb435da6bd072e04a",
+      "description": "Recorded stdout; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-pinned-77x47-final-dump-stderr",
+      "path": "docs/visualize-eval/rounds/10/pipeline/recorded/v1-pinned-77x47-final-dump.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded stderr; command and exit are in attempts log",
+      "capture": null
+    },
+    {
+      "id": "text",
+      "path": "docs/visualize-eval/rounds/10/pipeline/evidence/v1/v1-text.txt",
+      "sha256": "7cb324c9f8cf23b56dfcdcc1c664077426ce3f76cc8f75a0879a202eebea0394",
+      "description": "Final-view captured text",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "initial",
+        "timestamp": "2026-11-02T23:45:02Z–2026-11-02T23:45:06Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi",
+      "path": "docs/visualize-eval/rounds/10/pipeline/evidence/v1/v1-ansi.ansi",
+      "sha256": "72eb423f61a3fc1d799db1d481388b6fc805586000125b1ec1465d67f7c32548",
+      "description": "Final-view captured ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "initial",
+        "timestamp": "2026-11-02T23:45:02Z–2026-11-02T23:45:06Z",
+        "state": "unselected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected",
+      "path": "docs/visualize-eval/rounds/10/pipeline/evidence/v1/v1-selected.ansi",
+      "sha256": "454b65934cfbfaad01f5f03f9d29205bd7a6b05e799ab9dff13f4b3d7d7b637f",
+      "description": "Final-view captured selected",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T23:45:02Z–2026-11-02T23:45:06Z",
+        "state": "selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "pane-frames",
+      "path": "docs/visualize-eval/rounds/10/pipeline/evidence/v1/v1-frames.txt",
+      "sha256": "95b1071053213fdb9e18cf9f7eb662e27e24f898b47795ac9d24f3cce129a54e",
+      "description": "Final-view captured pane-frames",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "19 timestamped frames",
+        "timestamp": "2026-11-02T23:45:02Z–2026-11-02T23:45:06Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "pane-frames-ansi",
+      "path": "docs/visualize-eval/rounds/10/pipeline/evidence/v1/v1-frames.ansi",
+      "sha256": "ae0f113683a6a2b90396ec49b8502536fa632ffbd9192d7dc6b31ebd74a18f3d",
+      "description": "Final-view captured pane-frames-ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "19 timestamped frames",
+        "timestamp": "2026-11-02T23:45:02Z–2026-11-02T23:45:06Z",
+        "state": "animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "pinned",
+      "path": "docs/visualize-eval/rounds/10/pipeline/evidence/v1/v1-pinned-77x47-frames.txt",
+      "sha256": "a298524b6f45f753cbabf9764e70dd837f9f46cfaa8b5defb435da6bd072e04a",
+      "description": "Final-view captured pinned",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0–43 at 100 ms intervals",
+        "timestamp": "2026-11-02T23:44:03Z–2026-11-02T23:44:06Z",
+        "state": "animated",
+        "format": "text"
+      }
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All six named components and six historical directed relations, four verb labels and separate auth-read / worker-write routes are visible; no source relationship invented or lost.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "spec-v1",
+        "text",
+        "blind"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Six independent routes have visible origin stems and distinct downward heads, no shared junction, crossing or avoidable detour; Postgres receives separate read/write ports.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "evidence_ids": [
+        "text",
+        "pinned",
+        "check",
+        "blind"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Final spec pinned dump is 77×47 natural 100%, with no overflow, clipping, or palette occlusion; separately the real pane header measures 82×51. Extent 31×36; zero bridges/touching bends.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "text",
+        "check",
+        "manifest",
+        "records"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Client, gateway, auth, jobs and data use five distinct ANSI hues, with job queue and worker in related shades and proximity. Tags paint no group enclosure; stage order is preserved.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "evidence_ids": [
+        "spec-v1",
+        "ansi",
+        "text",
+        "blind"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Normal and selected ANSI show every one of six occurrences with complete corners and sides in consistent colors; select-all is simultaneous, not individual selection captures. Palette does not cover node borders.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "evidence_ids": [
+        "ansi",
+        "selected",
+        "text",
+        "pinned",
+        "blind"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Frozen canonical metadata, actual hashes, capture manifest, final spec, separate reviewer, blind record, 13 log entries and their hash-verified raw output identify the run; validator records all checks passing; panes recorded closed. Generator dataset digest contains a transcription mismatch, reconciled against independently frozen metadata and actual index; see critique.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "skill",
+        "rubric",
+        "dataset",
+        "generation",
+        "spec-v1",
+        "records",
+        "validator",
+        "manifest",
+        "binary-hash",
+        "text",
+        "ansi",
+        "selected",
+        "pane-frames",
+        "pinned",
+        "blind"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Six dots start at true first route cells, one per route, advance one eligible position each 200 ms including diagonal corner skips, wrap independently and avoid corners/heads/labels; full 15-position read lap frame 0→30 is visible at 77×47. Verify is 8 positions, not the generator’s claimed 7; equal rate remains demonstrable.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "evidence_ids": [
+        "source",
+        "check",
+        "pinned",
+        "pane-frames",
+        "motion-table",
+        "blind"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "flow-chains is source-backed: 6 nodes, 6 edges, shallow animated processing chain. Short ranks/corridors and one dot per live traffic link are visible; secondary distinct target ports are visible. Recorded LR attempts 89×9 and 79×10 exceed 77 columns and establish an evidenced yield to TB.",
+      "judged_family": "flow-chains",
+      "generator_family": "flow-chains",
+      "generator_evidence_line": "six nodes and six relations (E = N) form one shallow pipeline — CLI -> API gateway -> {Auth, Job queue -> Worker pool} -> Postgres — and the task asks for 'slow, sparse motion for traffic', the chain family's animated signature.",
+      "recipe_facts": [
+        "Five ranks with source fork; only long read skips worker tier",
+        "Independent labeled corridors and one dot per animated route",
+        "Secondary mesh-style distinct target-aligned Postgres ports",
+        "Recorded LR extents 89x9 and 79x10 exceed 77-column budget"
+      ],
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "evidence_ids": [
+        "generation",
+        "report",
+        "text",
+        "pinned",
+        "attempts",
+        "raw-v1-attempt1-lr-stdout",
+        "raw-v1-attempt2-lr-label-slot-stdout"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "expected": "CLI → API gateway, unlabeled",
+      "observed": "CLI bottom [42,13] to head [42,16], straight down; no junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text",
+          "region": [
+            42,
+            13,
+            1,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "expected": "API gateway → Auth, verify",
+      "observed": "Stem [41,21], left via bends [41,23] and [34,23], head [34,24]; verify at [34,21]; no junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text",
+          "region": [
+            34,
+            21,
+            8,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "expected": "API gateway → Job queue, enqueue",
+      "observed": "Stem [43,21], right via [43,23] and [46,23], head [46,24]; enqueue at [44,21]; no junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text",
+          "region": [
+            43,
+            21,
+            8,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "expected": "Job queue → Worker pool, unlabeled",
+      "observed": "Stem [46,29], bends [46,31] and [44,31], head [44,32]; no junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text",
+          "region": [
+            44,
+            29,
+            3,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "expected": "Worker pool → Postgres, write",
+      "observed": "Stem [44,37], bends [44,39] and [42,39], head [42,40]; write at [46,37]; no shared junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text",
+          "region": [
+            42,
+            37,
+            9,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "expected": "Auth → Postgres, read",
+      "observed": "Stem [34,29] down to [34,39], right to [40,39], head [40,40]; read at [37,29]; distinct from write, no junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text",
+          "region": [
+            34,
+            29,
+            7,
+            12
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [],
+  "blockers": [],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pRN",
+      "w7E:pRD"
+    ],
+    "closed_pane_ids": [
+      "w7E:pRN",
+      "w7E:pRD"
+    ],
+    "status": "done",
+    "reason": "Manifest confirms harness pane closed; generation.json reports manual probe pane get returned pane_not_found after close."
+  },
+  "overall": "pass"
+}

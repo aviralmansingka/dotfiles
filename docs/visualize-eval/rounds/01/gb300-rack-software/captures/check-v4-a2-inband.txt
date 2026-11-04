@@ -1,0 +1,6 @@
+$ rataflow-view --check specs/v4-a2-inband.json
+2026-11-02T08:29:32Z
+ok: nodes=6 edges=5 flows=0 direction=tb theme=gruvbox
+layers=5 (explicit placement, sugiyama skipped)
+extent=37x37 cells
+exit=0

@@ -1,0 +1,62 @@
+viewport: 120x60 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 120x60 @100% · v1-a.json · 9 nodes · 9 edges · q quit
+                                                  │                 │                     graph overflows · drag to pan
+                                                  │ enqueue job     │
+                                                  │reinstall+reprov │
+                                                  │                 │
+                                                  │                 │
+                                                  │                 │
+                                                  │                 │
+                                                  │                 │
+                                                  │                 │
+                                                  │                 │
+                                                  ╰────────╮ ╭──────╯
+                                                           ▼ ▼
+                                                      ╭───────────╮
+                                                      │River queue│
+                                                      │           │
+                                                      ╰───────────╯
+                                                            ●
+                                                            │
+                                                            │
+                                                            │
+                                                            │
+                                                            │
+                                                            │
+                                                            │ provision job
+                                                            │
+                                                            │
+                                                            │
+                                                            │
+                                                            │
+                                                            │
+                                                            │
+                                                            ▼
+                                                   ╭─────────────────╮
+                                                   │provider registry│
+                                                   │                 │
+                                                   ╰─────────────────╯
+                                                            ●
+                                                            │
+                                                            │
+                                                            │
+                                                            │
+                                                            │
+                                                            │ provider API
+                                                            │
+                                                            │
+                                                            │
+                                                            │
+                                                            │
+                                                            │
+                                                   ╭────────╯                                            █▐▌
+                                                   ▼
+                                         ╭────────────────────╮   ╭───────────╮                           ▄
+ ┌───────┐                               │bare-metal providers│   │boot server│
+ │ + [+] │                               │                    │   │           │                          ▝▀
+ │ − [-] │                               ╰────────────────────╯   ╰───────────╯                          ▄▄▖
+ │ ⊡ [f] │                                         ●       iPXE request▲ ●
+ │ □ [i] │                                         │        ╭──────────╯ │                               ▗▄
+ └───────┘                                         │        │            │
+                                                   │        │            │

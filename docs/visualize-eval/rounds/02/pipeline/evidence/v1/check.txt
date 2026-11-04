@@ -1,0 +1,7 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=6 edges=6 flows=6 direction=tb theme=gruvbox
+extent=36x40 cells
+labels: 4/4 placed, 0 on route cells, 0 skipped
+groups: client(1) service(2) async work(2) state(1)
+trunks:
+dots: 6 single-dot routes, 0 periodic routes, 0 violations

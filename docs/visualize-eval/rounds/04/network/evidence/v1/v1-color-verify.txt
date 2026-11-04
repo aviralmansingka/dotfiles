@@ -1,0 +1,40 @@
+sources: docs/visualize-eval/rounds/04/network/evidence/v1/v1-ansi.ansi (visible pane) and docs/visualize-eval/rounds/04/network/evidence/v1/v1-selected.ansi (--select-all)
+coordinates are (column, graph row); graph row 0 = file line 1 of the capture.
+
+node          border cell   plain border fg   --select-all border fg   group
+------------------------------------------------------------------------------------
+WAN           (33, 1)     #d8a657          #d8a657                  wan
+Firewall      (31, 9)     #7daea3          #d8a657                  edge
+Core switch   (29,17)     #d3869b          #d8a657                  core
+Web tier      (31,25)     #a9b665          #d8a657                  compute
+Redis         (18,34)     #7da0b8          #d8a657                  data
+DB tier       (50,42)     #97b8ce          #d8a657                  data
+
+group -> border colour family (different groups, different families):
+  wan      ['#d8a657']
+  edge     ['#7daea3']
+  core     ['#d3869b']
+  compute  ['#a9b665']
+  data     ['#7da0b8', '#97b8ce']
+
+SELECTION vs GROUP COLOUR COLLISION:
+  the selection accent is #d8a657; WAN's group colour is also #d8a657, so its border looks
+  identical before and after --select-all (cells (33,1)..(37,4)). The other five nodes
+  switch to #d8a657 under --select-all, which is how the selected frame proves them.
+
+edge, dot and label colours in the plain frame:
+  flow dot on wan->fw (corner cell)  (34, 5) glyph='│' fg=#7c6f64 bg=#282828
+  bend / route cell wan->fw          (33, 7) glyph=' ' fg=None bg=#282828
+  arrowhead wan->fw                  (32, 7) glyph='▼' fg=#7c6f64 bg=#282828
+  flow dot on cache->db              (19,39) glyph='╰' fg=#7c6f64 bg=#282828
+  edge label "1 GbE" text            (36, 5) glyph='1' fg=#ebdbb2 bg=#282828
+  node label "WAN" text              (34, 1) glyph='W' fg=#ebdbb2 bg=#282828
+
+flow dots in the live frame are accent-coloured (route glyphs are muted #7c6f64):
+  dot cell (32, 6) glyph='●' fg=#d8a657
+  dot cell (30,14) glyph='●' fg=#d8a657
+  dot cell (32,21) glyph='●' fg=#d8a657
+  dot cell (28,22) glyph='●' fg=#d8a657
+  dot cell (31,31) glyph='●' fg=#d8a657
+  dot cell (34,31) glyph='●' fg=#d8a657
+  dot cell (21,39) glyph='●' fg=#d8a657

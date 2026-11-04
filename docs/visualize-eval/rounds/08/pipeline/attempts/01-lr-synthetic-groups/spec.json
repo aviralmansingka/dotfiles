@@ -1,0 +1,20 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "a", "label": "AAA", "group": "tier-one" },
+    { "id": "b", "label": "BBBBBBBBBBB", "group": "tier-one" },
+    { "id": "c", "label": "CCCC", "group": "tier-two" },
+    { "id": "d", "label": "DDDDD", "group": "tier-two" },
+    { "id": "e", "label": "EEEEEEEEEEE", "group": "tier-two" },
+    { "id": "f", "label": "FFFFFFFF", "group": "tier-three" }
+  ],
+  "edges": [
+    { "from": "a", "to": "b" },
+    { "from": "b", "to": "c", "label": "verify" },
+    { "from": "b", "to": "d", "label": "enqueue" },
+    { "from": "d", "to": "e" },
+    { "from": "e", "to": "f", "label": "write" },
+    { "from": "c", "to": "f", "label": "read" }
+  ]
+}

@@ -1,0 +1,291 @@
+{
+  "identity": {
+    "PI_PROVIDER": "openai",
+    "PI_MODEL": "gpt-6-astra",
+    "PI_SUBAGENT_NAME": "viz-judge01-modal-machine-manager"
+  },
+  "hash_checks": [
+    {
+      "path": "docs/visualize-eval/rounds/01/SKILL.md",
+      "expected_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "actual_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "match": true
+    },
+    {
+      "path": "/tmp/visualize-eval/round-01/bin/rataflow-view",
+      "expected_sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "actual_sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/rubric.json",
+      "expected_sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "actual_sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/cases.json",
+      "expected_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "actual_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/cases/modal-machine-manager/source.md",
+      "expected_sha256": "a41065d9ceca1ed035bfd6282f0e937abbd0034ad497a33637a76f2d8a9ebab3",
+      "actual_sha256": "a41065d9ceca1ed035bfd6282f0e937abbd0034ad497a33637a76f2d8a9ebab3",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/cases/modal-machine-manager/expected.json",
+      "expected_sha256": "c6d14814bcfa0f41e7401df3b57ea1400e15050b9fb4db3d2e12980d6fde9764",
+      "actual_sha256": "c6d14814bcfa0f41e7401df3b57ea1400e15050b9fb4db3d2e12980d6fde9764",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/reviews/modal-machine-manager/observed-first.md",
+      "expected_sha256": "d5e69e8f615137443e6e62047bc467c3e69312645b766552f1d0300b331c94b9",
+      "actual_sha256": "d5e69e8f615137443e6e62047bc467c3e69312645b766552f1d0300b331c94b9",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v1-provisioning.unselected.txt",
+      "expected_sha256": "bff43316d45195e7a48058b82e3958ac69900d50c9ea8c07da3e8427dab2e9a0",
+      "actual_sha256": "bff43316d45195e7a48058b82e3958ac69900d50c9ea8c07da3e8427dab2e9a0",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v1-provisioning.unselected.ansi",
+      "expected_sha256": "5a38b33de9cead01af60b6e3a93d1768d30641e762982a90a02dda20395dd4cf",
+      "actual_sha256": "5a38b33de9cead01af60b6e3a93d1768d30641e762982a90a02dda20395dd4cf",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v1-provisioning.selected.txt",
+      "expected_sha256": "8ed7213945fbcdbff1ccd501059bde6c8f8063d1ba4c698de9959de0dac2fe50",
+      "actual_sha256": "8ed7213945fbcdbff1ccd501059bde6c8f8063d1ba4c698de9959de0dac2fe50",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v1-provisioning.selected.ansi",
+      "expected_sha256": "ed4c86dbb4e1e0d8287795bd7250dbc4165c19f037757b7b81886169957f0462",
+      "actual_sha256": "ed4c86dbb4e1e0d8287795bd7250dbc4165c19f037757b7b81886169957f0462",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/specs/v1-provisioning.json",
+      "expected_sha256": "312446362348afbe5b28a7b4833f989494c52ad42288b6f34dafa2e9e99f61e3",
+      "actual_sha256": "312446362348afbe5b28a7b4833f989494c52ad42288b6f34dafa2e9e99f61e3",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v2-boot-image.unselected.txt",
+      "expected_sha256": "b0ce357b85b173157c82dc44d0ca0e044248f2b3289a4c7b5e7c1e61e0454c45",
+      "actual_sha256": "b0ce357b85b173157c82dc44d0ca0e044248f2b3289a4c7b5e7c1e61e0454c45",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v2-boot-image.unselected.ansi",
+      "expected_sha256": "9b63c6253925573d8fe51ddb41da18bae54e09db7c9255ebe770b9d439b4a4d4",
+      "actual_sha256": "9b63c6253925573d8fe51ddb41da18bae54e09db7c9255ebe770b9d439b4a4d4",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v2-boot-image.selected.txt",
+      "expected_sha256": "98b6b5ee7a328e2a7ad9dc1c15e0d78a291d66cf4d940dc1eaa56258bffbc6ef",
+      "actual_sha256": "98b6b5ee7a328e2a7ad9dc1c15e0d78a291d66cf4d940dc1eaa56258bffbc6ef",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v2-boot-image.selected.ansi",
+      "expected_sha256": "9c7517ec7177e436a7f971e8a4679066cf2e7712ecc37de8be8601bbadf6fd46",
+      "actual_sha256": "9c7517ec7177e436a7f971e8a4679066cf2e7712ecc37de8be8601bbadf6fd46",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/specs/v2-boot-image.json",
+      "expected_sha256": "f38501e19e235bfde82ac489c7b9dadb1f7972e4e0d53eae99d3bf1deb135709",
+      "actual_sha256": "f38501e19e235bfde82ac489c7b9dadb1f7972e4e0d53eae99d3bf1deb135709",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v3-state-writes.unselected.txt",
+      "expected_sha256": "4c07a4f48e6407868a0ecab768eac8442b4375e46fd5120109c6f8cb6af8b018",
+      "actual_sha256": "4c07a4f48e6407868a0ecab768eac8442b4375e46fd5120109c6f8cb6af8b018",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v3-state-writes.unselected.ansi",
+      "expected_sha256": "7a64584d5b2bb5e5fee3a96609657dcf5e0aaa16b6c5e5ad01e7ad4072c5a825",
+      "actual_sha256": "7a64584d5b2bb5e5fee3a96609657dcf5e0aaa16b6c5e5ad01e7ad4072c5a825",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v3-state-writes.selected.txt",
+      "expected_sha256": "bdc1880ce4122a3976d25d43e0ace2aab1b449873451aa2ea672141db80f3f43",
+      "actual_sha256": "bdc1880ce4122a3976d25d43e0ace2aab1b449873451aa2ea672141db80f3f43",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v3-state-writes.selected.ansi",
+      "expected_sha256": "6e5783f155bf047a48ab4c2def5ab1cf43b5a4f7e2904c140adfeb797abd25f5",
+      "actual_sha256": "6e5783f155bf047a48ab4c2def5ab1cf43b5a4f7e2904c140adfeb797abd25f5",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/specs/v3-state-writes.json",
+      "expected_sha256": "2e46a0ee1a1a4772cd86cd3d34faac8d1fa1ca0890e490fb6f9b94b974c6549f",
+      "actual_sha256": "2e46a0ee1a1a4772cd86cd3d34faac8d1fa1ca0890e490fb6f9b94b974c6549f",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v4-ops-diagnostics.unselected.txt",
+      "expected_sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "actual_sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v4-ops-diagnostics.unselected.ansi",
+      "expected_sha256": "ad6d85e3850a8dce91406b716c57d04137bd63f10238aa5ddf8fd3cb3aa07dad",
+      "actual_sha256": "ad6d85e3850a8dce91406b716c57d04137bd63f10238aa5ddf8fd3cb3aa07dad",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v4-ops-diagnostics.selected.txt",
+      "expected_sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "actual_sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/captures/v4-ops-diagnostics.selected.ansi",
+      "expected_sha256": "84d9d99ef95698129749a30d54df03092ac1a5d9ca0b0bbb94deb026a6f02655",
+      "actual_sha256": "84d9d99ef95698129749a30d54df03092ac1a5d9ca0b0bbb94deb026a6f02655",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/specs/v4-ops-diagnostics.json",
+      "expected_sha256": "fc58a0f4dedddb8adba2abb9795c2e113987ba63f9e98c9d75d9fed2f4ec3085",
+      "actual_sha256": "fc58a0f4dedddb8adba2abb9795c2e113987ba63f9e98c9d75d9fed2f4ec3085",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v1-provisioning.frame1.txt",
+      "expected_sha256": "bff43316d45195e7a48058b82e3958ac69900d50c9ea8c07da3e8427dab2e9a0",
+      "actual_sha256": "bff43316d45195e7a48058b82e3958ac69900d50c9ea8c07da3e8427dab2e9a0",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v1-provisioning.frame2.txt",
+      "expected_sha256": "23aad1b85467f74584fdde04c066c434f71129cd4513837486b439f3a5c6adfd",
+      "actual_sha256": "23aad1b85467f74584fdde04c066c434f71129cd4513837486b439f3a5c6adfd",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v1-provisioning.frame3.txt",
+      "expected_sha256": "5c144640159ce3808172066e5001e341430424e51fb4a8396a6c478d804781bd",
+      "actual_sha256": "5c144640159ce3808172066e5001e341430424e51fb4a8396a6c478d804781bd",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v1-provisioning.frame4.txt",
+      "expected_sha256": "09e91cc3ad66f7606c6cbd244d82ae4779aaef084193c986f6b5b978fa6e0858",
+      "actual_sha256": "09e91cc3ad66f7606c6cbd244d82ae4779aaef084193c986f6b5b978fa6e0858",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v1-provisioning.frame5.txt",
+      "expected_sha256": "cea4aa7d185a1fb06cf291866ef016f9b3e7dca0f3e5e250b6f0d90aeb4bf42e",
+      "actual_sha256": "cea4aa7d185a1fb06cf291866ef016f9b3e7dca0f3e5e250b6f0d90aeb4bf42e",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v2-boot-image.frame1.txt",
+      "expected_sha256": "b0ce357b85b173157c82dc44d0ca0e044248f2b3289a4c7b5e7c1e61e0454c45",
+      "actual_sha256": "b0ce357b85b173157c82dc44d0ca0e044248f2b3289a4c7b5e7c1e61e0454c45",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v2-boot-image.frame2.txt",
+      "expected_sha256": "98b6b5ee7a328e2a7ad9dc1c15e0d78a291d66cf4d940dc1eaa56258bffbc6ef",
+      "actual_sha256": "98b6b5ee7a328e2a7ad9dc1c15e0d78a291d66cf4d940dc1eaa56258bffbc6ef",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v2-boot-image.frame3.txt",
+      "expected_sha256": "01b251e111ef681e1e80b6c476609ae26b9754ada8d5051d6ee317409064525d",
+      "actual_sha256": "01b251e111ef681e1e80b6c476609ae26b9754ada8d5051d6ee317409064525d",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v2-boot-image.frame4.txt",
+      "expected_sha256": "b0ce357b85b173157c82dc44d0ca0e044248f2b3289a4c7b5e7c1e61e0454c45",
+      "actual_sha256": "b0ce357b85b173157c82dc44d0ca0e044248f2b3289a4c7b5e7c1e61e0454c45",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v2-boot-image.frame5.txt",
+      "expected_sha256": "560aea0119280bd701c8025e907ca11d91ab47c1e3cbd251ab55144773841f01",
+      "actual_sha256": "560aea0119280bd701c8025e907ca11d91ab47c1e3cbd251ab55144773841f01",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v3-state-writes.frame1.txt",
+      "expected_sha256": "6e5aa2f042c684519508730d512118032071ba3adacb8c94c22965f8aa69cb2f",
+      "actual_sha256": "6e5aa2f042c684519508730d512118032071ba3adacb8c94c22965f8aa69cb2f",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v3-state-writes.frame2.txt",
+      "expected_sha256": "aad44dae0dbbfe3c50352c5317b68e874bd47844209b8c589c2cd6275b8c8b5f",
+      "actual_sha256": "aad44dae0dbbfe3c50352c5317b68e874bd47844209b8c589c2cd6275b8c8b5f",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v3-state-writes.frame3.txt",
+      "expected_sha256": "bdc1880ce4122a3976d25d43e0ace2aab1b449873451aa2ea672141db80f3f43",
+      "actual_sha256": "bdc1880ce4122a3976d25d43e0ace2aab1b449873451aa2ea672141db80f3f43",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v3-state-writes.frame4.txt",
+      "expected_sha256": "7c8d216e292496874fd735d35392fc5fe71d920e388a86d577cc655ccbb83eb8",
+      "actual_sha256": "7c8d216e292496874fd735d35392fc5fe71d920e388a86d577cc655ccbb83eb8",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v3-state-writes.frame5.txt",
+      "expected_sha256": "6e5aa2f042c684519508730d512118032071ba3adacb8c94c22965f8aa69cb2f",
+      "actual_sha256": "6e5aa2f042c684519508730d512118032071ba3adacb8c94c22965f8aa69cb2f",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v4-ops-diagnostics.frame1.txt",
+      "expected_sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "actual_sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v4-ops-diagnostics.frame2.txt",
+      "expected_sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "actual_sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v4-ops-diagnostics.frame3.txt",
+      "expected_sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "actual_sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v4-ops-diagnostics.frame4.txt",
+      "expected_sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "actual_sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "match": true
+    },
+    {
+      "path": "docs/visualize-eval/rounds/01/modal-machine-manager/frames/v4-ops-diagnostics.frame5.txt",
+      "expected_sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "actual_sha256": "e9d6985d3fb4c7654d6bef71487b6bfde0e97aaccf44314414d1d37dd4498e45",
+      "match": true
+    }
+  ]
+}

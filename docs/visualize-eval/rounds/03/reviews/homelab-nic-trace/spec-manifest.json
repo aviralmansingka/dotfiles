@@ -1,0 +1,14 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v1-virtual-nets.json",
+    "sha256": "f6dcb5d64b17f49f3ef41668682a0b876e1802183ed9fec52c9342d0d45ca9e5"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v2-overlay-uplinks.json",
+    "sha256": "6610bdef07888a59b0b93513dc4ba5984cf7b79cae9a355f7273c54a3db3ea6c"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v3-wan-egress.json",
+    "sha256": "03d008a8804140b0b07e39f13c27787fcd5c202d61c9387520a0fcb16b915cb8"
+  }
+]

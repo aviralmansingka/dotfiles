@@ -1,0 +1,1652 @@
+{
+  "protocol_version": 1,
+  "round": 5,
+  "case_id": "server-nic-layout",
+  "candidate_sha256": "ff4a9d3f32ba0bf86e54ee6bfbac02fdea3fac3b95b82a958b3411accef0a949",
+  "renderer_sha256": "b1ab9f2e78af11c2f2b005eea083a999079d184bf550e8d0b6d9c51867f22404",
+  "rubric_sha256": "039b96252d25ad2078a539fdb1d081ebdb6c09d6f7a3487b96ffbbf3b082e292",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "79d82af7d2941b291f1840955fd440305cf5e62591d9d8fbb7fdfd3a4e08915e",
+  "generator": {
+    "worker_id": "viz-ds05-server-nic-layout",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge05-server",
+    "model": "openai/gpt-6.1-sol"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 83,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/05/reviews/server-nic-layout/observed-first.md",
+      "sha256": "ffc7db3b1f380a01e8f509408cf73916d7343be1d59fb23abab55bedca9aa587",
+      "description": "Immutable blind stage-A observations, saved before expected-data reveal; hash reverified.",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/05/reviews/server-nic-layout/spec-manifest.json",
+      "sha256": "79d82af7d2941b291f1840955fd440305cf5e62591d9d8fbb7fdfd3a4e08915e",
+      "description": "Deterministic path-sorted manifest of the three actual final-spec hashes.",
+      "capture": null
+    },
+    {
+      "id": "verification",
+      "path": "docs/visualize-eval/rounds/05/reviews/server-nic-layout/verification.json",
+      "sha256": "2999529fe8c69416016c00c5a864c6fe42d1d690b160db20639ca1212adc5f4b",
+      "description": "Independent hash/identity verification, including the malformed rejected-attempt digest and missing raw status fields.",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/05/metadata.json",
+      "sha256": "edaec7c938fa0a27dbd04a44c1932ff9ef03c05f9270951fbb39a4fe7bced84d",
+      "description": "Frozen round identities, hashes, and pre-generation harness correction notes.",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/05/SKILL.md",
+      "sha256": "ff4a9d3f32ba0bf86e54ee6bfbac02fdea3fac3b95b82a958b3411accef0a949",
+      "description": "Frozen candidate skill; verified against frozen metadata.",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/05/rubric.json",
+      "sha256": "039b96252d25ad2078a539fdb1d081ebdb6c09d6f7a3487b96ffbbf3b082e292",
+      "description": "Frozen seven-category rubric and result schema; verified against metadata.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen dataset manifest; only this case is evaluated.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/server-nic-layout/source.md",
+      "sha256": "235d296fef435710c8a49bcd247455c8c82b844e71726f146c4cedf227d0308b",
+      "description": "Source excerpts and qualifications; historical chat/credentials not accessed.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/server-nic-layout/expected.json",
+      "sha256": "ada8d8b1b8a3dfda4221b22fd1bb785327d6eeda69834c35ab5ab17b0678afb4",
+      "description": "Historical reference relationships and binding source qualifications, not independent fact verification.",
+      "capture": null
+    },
+    {
+      "id": "historical-variants",
+      "path": "docs/visualize-eval/cases/server-nic-layout/historical-variants.json",
+      "sha256": "40f060941014aeaf83ee591346e9950f71c02bf9a68c5693804877bfbcbd9eb8",
+      "description": "This case only: historical generated spec, not an authoritative correction.",
+      "capture": null
+    },
+    {
+      "id": "judge-stage-a",
+      "path": "docs/visualize-eval/rounds/05/judge-blind-task.md",
+      "sha256": "483b236201d2d0d1c968dc1974004f6778135b4473ce959a730cc8b71a649d46",
+      "description": "Blind-stage instructions.",
+      "capture": null
+    },
+    {
+      "id": "judge-stage-b",
+      "path": "docs/visualize-eval/rounds/05/judge-full-task.md",
+      "sha256": "02fb17c7e297255181dfe82bc82db3505c5f657ab74dc2669e41fbb13341d07f",
+      "description": "Full-stage instructions and identity conventions.",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/generation.json",
+      "sha256": "53fce5dcc6a0a37da3638599f3dde60fa45e3d1f67d713aa3e925a0d6801c58c",
+      "description": "Generator provenance, meaning ledger, relationship map, trunk rationale, commands, limitations and cleanup.",
+      "capture": null
+    },
+    {
+      "id": "generation-notes",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/generation.md",
+      "sha256": "c931be5b1d9d988e84a28070239bf641a19a44ee1537590515d1f2fd9b41abe3",
+      "description": "Human-readable generation commands, drops, trunk rationale and cleanup notes.",
+      "capture": null
+    },
+    {
+      "id": "attempt-index",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/attempts.json",
+      "sha256": "b55d637781cccacc9e8bac3cb8fcc77b5774919a5ebc946f43ef16fe6eb49da2",
+      "description": "Nine attempts and raw-output paths; contains the 63-character v1-a1 digest and omits raw status fields.",
+      "capture": null
+    },
+    {
+      "id": "spec-v1-a1",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/specs/v1-a1.json",
+      "sha256": "8aa57bddccd34e2cbbe569af3f6f9a0ba6b6c5a9659024e1d01d52c8e83cf6a2",
+      "description": "Preserved rejected/fallback candidate spec; actual digest, not the possibly stale index digest.",
+      "capture": null
+    },
+    {
+      "id": "check-v1-a1",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v1-a1.check.txt",
+      "sha256": "0ee9f02ead0243aaed7855b00a6bf64dd7be0fd09f1ca3a9a82d0ca5440d4b96",
+      "description": "Preserved raw check output; no embedded command/status record. Final-view check status is separately in its evidence manifest.",
+      "capture": null
+    },
+    {
+      "id": "spec-v1-a2",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/specs/v1-a2.json",
+      "sha256": "9c5ade09f99ec65af6788c41805a45d6af89cf935dc60fe11b7ec5995e372452",
+      "description": "Preserved rejected/fallback candidate spec; actual digest, not the possibly stale index digest.",
+      "capture": null
+    },
+    {
+      "id": "check-v1-a2",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v1-a2.check.txt",
+      "sha256": "0ee9f02ead0243aaed7855b00a6bf64dd7be0fd09f1ca3a9a82d0ca5440d4b96",
+      "description": "Preserved raw check output; no embedded command/status record. Final-view check status is separately in its evidence manifest.",
+      "capture": null
+    },
+    {
+      "id": "spec-v1-a3",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/specs/v1-a3.json",
+      "sha256": "9a168877e235238ef065eeeddf3c3424273ac85a9d1a745d23f73aff62b5e19e",
+      "description": "Final spec.",
+      "capture": null
+    },
+    {
+      "id": "check-v1-a3",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v1-a3.check.txt",
+      "sha256": "4bc5abba5a1a62f4e92ff9547e35a742b8ce71b5e882f23fa4718e4af470e3cd",
+      "description": "Preserved raw check output; no embedded command/status record. Final-view check status is separately in its evidence manifest.",
+      "capture": null
+    },
+    {
+      "id": "v1-manifest",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v1/manifest.json",
+      "sha256": "43c38baafc09ef83b92d1a4738ce69b4901d5ea5a60041745692c367bfa334ff",
+      "description": "Live 83x51 app-header measurement, exact binary/spec hashes, final check exit, wall-clock capture window, and confirmed pane closure.",
+      "capture": null
+    },
+    {
+      "id": "v1-bin-hash",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v1/bin.sha256",
+      "sha256": "93a87351efa820a41a27baf97e90d9945ff00a10f4b64913524cd83ec5757f8b",
+      "description": "Frozen absolute binary path and its recorded SHA-256; actual binary independently rehashed.",
+      "capture": null
+    },
+    {
+      "id": "v1-check",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v1/check.txt",
+      "sha256": "4bc5abba5a1a62f4e92ff9547e35a742b8ce71b5e882f23fa4718e4af470e3cd",
+      "description": "Final check capture: stdout/stderr content, crossings/labels/static-dot facts; status 0 from manifest.",
+      "capture": null
+    },
+    {
+      "id": "v1-text",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v1/v1-text.txt",
+      "sha256": "a03cff98585710c716cd97ec98538192625997d6fd034bac9f790d876ad6aae6",
+      "description": "Normal live-pane text capture, right-padding/final-blank-row trimmed.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "capture window 2026-11-02T15:54:12Z to 2026-11-02T15:54:16Z; individual state wall-clock time not separately preserved",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-ansi",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v1/v1-ansi.ansi",
+      "sha256": "6bc031db6cd2ddabbc7f4c38c72b76b531579b52ca24e5d9085341ed543f92ea",
+      "description": "Normal live-pane ANSI grid; border foreground continuity verified cell by cell.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "capture window 2026-11-02T15:54:12Z to 2026-11-02T15:54:16Z; individual state wall-clock time not separately preserved",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-selected",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v1/v1-selected.ansi",
+      "sha256": "4cc76ed4480832ac0765e410a4d4785976e1173d182f8d2df61e2e8828379f85",
+      "description": "All-selected live-pane ANSI grid; each node occurrence has its own full selected border.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "capture window 2026-11-02T15:54:12Z to 2026-11-02T15:54:16Z; individual state wall-clock time not separately preserved",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frames-text",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v1/v1-frames.txt",
+      "sha256": "a056fea7664d0b405b3bc5ec0f6842c88da20e866a9a6ee1d980f66e76269a54",
+      "description": "Five timestamped static frame grids; locations refer to embedded frame 0, excluding the shell preamble.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0–4 at 0,100,200,300,400 ms",
+        "timestamp": "capture window 2026-11-02T15:54:12Z to 2026-11-02T15:54:16Z; individual state wall-clock time not separately preserved",
+        "state": "normal static",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frames-ansi",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v1/v1-frames.ansi",
+      "sha256": "1dc334d77b7c11be514bf7e7f003c332def7ddd0f476a56046cb11b8b8e87703",
+      "description": "Five timestamped static frame grids; locations refer to embedded frame 0, excluding the shell preamble.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0–4 at 0,100,200,300,400 ms",
+        "timestamp": "capture window 2026-11-02T15:54:12Z to 2026-11-02T15:54:16Z; individual state wall-clock time not separately preserved",
+        "state": "normal static",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-pinned",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/pinned77/v1-frames-77x47.txt",
+      "sha256": "c1c13bdfe2db1580c29e42727e8e139e4dfb6719dc0991a09cf80bf7b7d5a349",
+      "description": "Final-spec direct renderer dump pinned by COLUMNS=77 LINES=47; viewport line and five identical frames, not a 77x47 live-pane or ANSI capture. Locations refer to frame 0.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0–4 at 0,100,200,300,400 ms",
+        "timestamp": "relative 0–400 ms; dump wall-clock timestamp not preserved",
+        "state": "normal static",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-validator",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/validators/v1.txt",
+      "sha256": "4be0c39477e38fd598b0bc4072f92e31698dc61662c00e705baf95d07dabd6d2",
+      "description": "Preserved validator output, not rerun: historical failures for missing routes telemetry and live-pane size; see frozen metadata correction notes.",
+      "capture": null
+    },
+    {
+      "id": "spec-v2-a1",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/specs/v2-a1.json",
+      "sha256": "293c1514bf0bec55e2ca13a1d940c81aa772e9ad1343bd32384f45920f1443fd",
+      "description": "Preserved rejected/fallback candidate spec; actual digest, not the possibly stale index digest.",
+      "capture": null
+    },
+    {
+      "id": "check-v2-a1",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v2-a1.check.txt",
+      "sha256": "fef6fcf96b63f7c887fe0ce8a9500eb6f62e29fa1542a78261ec9240217b5592",
+      "description": "Preserved raw check output; no embedded command/status record. Final-view check status is separately in its evidence manifest.",
+      "capture": null
+    },
+    {
+      "id": "spec-v2-a2",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/specs/v2-a2.json",
+      "sha256": "36288a634dbcb7c4a832f4e63576f8c831059ba17e6575b2b3c9c926270813c6",
+      "description": "Final spec.",
+      "capture": null
+    },
+    {
+      "id": "check-v2-a2",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v2-a2.check.txt",
+      "sha256": "788f7be60ee726281e91adfa1fb75fbe02c71c334794f2450fae97e64e2667b4",
+      "description": "Preserved raw check output; no embedded command/status record. Final-view check status is separately in its evidence manifest.",
+      "capture": null
+    },
+    {
+      "id": "spec-v2-a3",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/specs/v2-a3.json",
+      "sha256": "6dae9bfaf9bfd9e43d2ab686212471d4f91c9b11ca0d688c625323505ef0e5d6",
+      "description": "Preserved rejected/fallback candidate spec; actual digest, not the possibly stale index digest.",
+      "capture": null
+    },
+    {
+      "id": "check-v2-a3",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v2-a3.check.txt",
+      "sha256": "fcb57a3da521c695d8a4822d6edec740ad2b2344591ead009f388caf0baff9b6",
+      "description": "Preserved raw check output; no embedded command/status record. Final-view check status is separately in its evidence manifest.",
+      "capture": null
+    },
+    {
+      "id": "v2-manifest",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v2/manifest.json",
+      "sha256": "bbac0c9981a9000d7fd9b8fa84b5b2c14e3bca87d0e99b0e0fc2a04f6866a374",
+      "description": "Live 83x51 app-header measurement, exact binary/spec hashes, final check exit, wall-clock capture window, and confirmed pane closure.",
+      "capture": null
+    },
+    {
+      "id": "v2-bin-hash",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v2/bin.sha256",
+      "sha256": "93a87351efa820a41a27baf97e90d9945ff00a10f4b64913524cd83ec5757f8b",
+      "description": "Frozen absolute binary path and its recorded SHA-256; actual binary independently rehashed.",
+      "capture": null
+    },
+    {
+      "id": "v2-check",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v2/check.txt",
+      "sha256": "788f7be60ee726281e91adfa1fb75fbe02c71c334794f2450fae97e64e2667b4",
+      "description": "Final check capture: stdout/stderr content, crossings/labels/static-dot facts; status 0 from manifest.",
+      "capture": null
+    },
+    {
+      "id": "v2-text",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v2/v2-text.txt",
+      "sha256": "8952e9d25a182c0ecd0ef31984eb45766cf037f661f6fd9695ece27139f3226c",
+      "description": "Normal live-pane text capture, right-padding/final-blank-row trimmed.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "single",
+        "timestamp": "capture window 2026-11-02T15:54:29Z to 2026-11-02T15:54:33Z; individual state wall-clock time not separately preserved",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-ansi",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v2/v2-ansi.ansi",
+      "sha256": "fe807d821ea91dc1dada8c1fd6bb1d86dd02abd202c9eda393d32534c2a2cbe2",
+      "description": "Normal live-pane ANSI grid; border foreground continuity verified cell by cell.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "single",
+        "timestamp": "capture window 2026-11-02T15:54:29Z to 2026-11-02T15:54:33Z; individual state wall-clock time not separately preserved",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-selected",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v2/v2-selected.ansi",
+      "sha256": "2770021a63e77b8375f84f1b403e4f215e0200804b852de6d2fe14625060cd18",
+      "description": "All-selected live-pane ANSI grid; each node occurrence has its own full selected border.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "single",
+        "timestamp": "capture window 2026-11-02T15:54:29Z to 2026-11-02T15:54:33Z; individual state wall-clock time not separately preserved",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frames-text",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v2/v2-frames.txt",
+      "sha256": "fe50493d7035cec7c8d900b91d8e1fea3cb3fffa2338b478d6064a1753cfda58",
+      "description": "Five timestamped static frame grids; locations refer to embedded frame 0, excluding the shell preamble.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "0–4 at 0,100,200,300,400 ms",
+        "timestamp": "capture window 2026-11-02T15:54:29Z to 2026-11-02T15:54:33Z; individual state wall-clock time not separately preserved",
+        "state": "normal static",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frames-ansi",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v2/v2-frames.ansi",
+      "sha256": "bcf89bc0cba32e10ad25a24f80359d9766be052383e52d726b73f89c5dfa47a9",
+      "description": "Five timestamped static frame grids; locations refer to embedded frame 0, excluding the shell preamble.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "0–4 at 0,100,200,300,400 ms",
+        "timestamp": "capture window 2026-11-02T15:54:29Z to 2026-11-02T15:54:33Z; individual state wall-clock time not separately preserved",
+        "state": "normal static",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-pinned",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/pinned77/v2-frames-77x47.txt",
+      "sha256": "61679abe3e92e0df3fa6e7c997556b7ce200b3a1ad5982637c39c0939a0afc69",
+      "description": "Final-spec direct renderer dump pinned by COLUMNS=77 LINES=47; viewport line and five identical frames, not a 77x47 live-pane or ANSI capture. Locations refer to frame 0.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0–4 at 0,100,200,300,400 ms",
+        "timestamp": "relative 0–400 ms; dump wall-clock timestamp not preserved",
+        "state": "normal static",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-validator",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/validators/v2.txt",
+      "sha256": "4be0c39477e38fd598b0bc4072f92e31698dc61662c00e705baf95d07dabd6d2",
+      "description": "Preserved validator output, not rerun: historical failures for missing routes telemetry and live-pane size; see frozen metadata correction notes.",
+      "capture": null
+    },
+    {
+      "id": "spec-v3-a1",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/specs/v3-a1.json",
+      "sha256": "0fc94f9a4225f32aaf4a50e96533475272abdf891f024b17656beee34894bbdf",
+      "description": "Preserved rejected/fallback candidate spec; actual digest, not the possibly stale index digest.",
+      "capture": null
+    },
+    {
+      "id": "check-v3-a1",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v3-a1.check.txt",
+      "sha256": "e14ef279353649980d32e49d99c6b0d5cba96af96e29265e9b9e5f4e15ef1215",
+      "description": "Preserved raw check output; no embedded command/status record. Final-view check status is separately in its evidence manifest.",
+      "capture": null
+    },
+    {
+      "id": "spec-v3-a2",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/specs/v3-a2.json",
+      "sha256": "8c706f780a81b943b3839ada69c7fd791118fa0d85cea1b14514101a87629a67",
+      "description": "Preserved rejected/fallback candidate spec; actual digest, not the possibly stale index digest.",
+      "capture": null
+    },
+    {
+      "id": "check-v3-a2",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v3-a2.check.txt",
+      "sha256": "a6f14bf2cc5589e25e1855cb16b8d4c0153f8d742ca37c5c44ea6aba2ee04c21",
+      "description": "Preserved raw check output; no embedded command/status record. Final-view check status is separately in its evidence manifest.",
+      "capture": null
+    },
+    {
+      "id": "spec-v3-a3",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/specs/v3-a3.json",
+      "sha256": "e763922cf2b57393818e9c176ee697d63a25fc6906bd40ba7d0fd5cb8e9131a6",
+      "description": "Final spec.",
+      "capture": null
+    },
+    {
+      "id": "check-v3-a3",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v3-a3.check.txt",
+      "sha256": "74ab256ce4a150a8dcb25cbe2a7ab6f5ba927d81952099dee136774cd20da382",
+      "description": "Preserved raw check output; no embedded command/status record. Final-view check status is separately in its evidence manifest.",
+      "capture": null
+    },
+    {
+      "id": "v3-manifest",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v3/manifest.json",
+      "sha256": "9de4fb8045e782713f1ddf6d7806bb6d9065665a23e569ef76f82f07f876eeca",
+      "description": "Live 83x51 app-header measurement, exact binary/spec hashes, final check exit, wall-clock capture window, and confirmed pane closure.",
+      "capture": null
+    },
+    {
+      "id": "v3-bin-hash",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v3/bin.sha256",
+      "sha256": "93a87351efa820a41a27baf97e90d9945ff00a10f4b64913524cd83ec5757f8b",
+      "description": "Frozen absolute binary path and its recorded SHA-256; actual binary independently rehashed.",
+      "capture": null
+    },
+    {
+      "id": "v3-check",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v3/check.txt",
+      "sha256": "74ab256ce4a150a8dcb25cbe2a7ab6f5ba927d81952099dee136774cd20da382",
+      "description": "Final check capture: stdout/stderr content, crossings/labels/static-dot facts; status 0 from manifest.",
+      "capture": null
+    },
+    {
+      "id": "v3-text",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v3/v3-text.txt",
+      "sha256": "c211312bf51a250e775a2a4bebf93c664b8f365730f97c913e79beaa5d5d2d06",
+      "description": "Normal live-pane text capture, right-padding/final-blank-row trimmed.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "single",
+        "timestamp": "capture window 2026-11-02T15:54:36Z to 2026-11-02T15:54:39Z; individual state wall-clock time not separately preserved",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-ansi",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v3/v3-ansi.ansi",
+      "sha256": "8eb1b885c495868b65825125e5da35d7cec34b1d79dbaa3f03d139717e30d649",
+      "description": "Normal live-pane ANSI grid; border foreground continuity verified cell by cell.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "single",
+        "timestamp": "capture window 2026-11-02T15:54:36Z to 2026-11-02T15:54:39Z; individual state wall-clock time not separately preserved",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-selected",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v3/v3-selected.ansi",
+      "sha256": "8e9a8b16d2971136e12781e2d1839acca0df23330a2743c6359b259671c75ec7",
+      "description": "All-selected live-pane ANSI grid; each node occurrence has its own full selected border.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "single",
+        "timestamp": "capture window 2026-11-02T15:54:36Z to 2026-11-02T15:54:39Z; individual state wall-clock time not separately preserved",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-frames-text",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v3/v3-frames.txt",
+      "sha256": "e717cc330c6a17d33b01a543aaf19d43ef51a041491f5e67a62a90416bd95d43",
+      "description": "Five timestamped static frame grids; locations refer to embedded frame 0, excluding the shell preamble.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "0–4 at 0,100,200,300,400 ms",
+        "timestamp": "capture window 2026-11-02T15:54:36Z to 2026-11-02T15:54:39Z; individual state wall-clock time not separately preserved",
+        "state": "normal static",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frames-ansi",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/evidence/v3/v3-frames.ansi",
+      "sha256": "e3b221f5413f8b7cc7860e170b9da3e7e228cba1d8c4eba711058ee2b9270eea",
+      "description": "Five timestamped static frame grids; locations refer to embedded frame 0, excluding the shell preamble.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "0–4 at 0,100,200,300,400 ms",
+        "timestamp": "capture window 2026-11-02T15:54:36Z to 2026-11-02T15:54:39Z; individual state wall-clock time not separately preserved",
+        "state": "normal static",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-pinned",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/pinned77/v3-frames-77x47.txt",
+      "sha256": "91428cd837ae0f9077ea6e29c295adea7d2280fef11bb126a297076451419858",
+      "description": "Final-spec direct renderer dump pinned by COLUMNS=77 LINES=47; viewport line and five identical frames, not a 77x47 live-pane or ANSI capture. Locations refer to frame 0.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "0–4 at 0,100,200,300,400 ms",
+        "timestamp": "relative 0–400 ms; dump wall-clock timestamp not preserved",
+        "state": "normal static",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-validator",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/validators/v3.txt",
+      "sha256": "4be0c39477e38fd598b0bc4072f92e31698dc61662c00e705baf95d07dabd6d2",
+      "description": "Preserved validator output, not rerun: historical failures for missing routes telemetry and live-pane size; see frozen metadata correction notes.",
+      "capture": null
+    },
+    {
+      "id": "probe-v2-a3",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v2-a3.pinned-frames-77x47.txt",
+      "sha256": "1598d9ae2bb8f99c714b19ed52d89765428bd3df6330c0c13d4fb08b9af47433",
+      "description": "Preserved two-frame rejected-candidate probe: overflow for v2-a3; missing isolated L2 caveat node for v3-a1.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2-a3",
+        "frame": "0–1",
+        "timestamp": "relative timestamps in file; wall-clock timestamp not preserved",
+        "state": "rejected draft",
+        "format": "text"
+      }
+    },
+    {
+      "id": "probe-v3-a1",
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v3-a1.pinned-frames-77x47.txt",
+      "sha256": "6b96a5ace090bee9942d3501fbef9449c91f69f9e47f48a0ec32da909c3c84be",
+      "description": "Preserved two-frame rejected-candidate probe: overflow for v2-a3; missing isolated L2 caveat node for v3-a1.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3-a1",
+        "frame": "0–1",
+        "timestamp": "relative timestamps in file; wall-clock timestamp not preserved",
+        "state": "rejected draft",
+        "format": "text"
+      }
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "The nine historical topology entities and all eight source relationships survive, with the nic→gateway pair repeated across two views to carry latency versus address semantics. The /29, full gateway address, .58/.59 suffixes, active port, dark count, AS identifiers, hop order and text qualifiers are readable. Historical ToR/no-cable/free claims are qualified or not promoted. The latency label is an uncertainty envelope of the conflicting supplied 8.3 and 8.6 values, not an exact source quotation or a newly measured distribution. Solid address-membership and observed egress links do not erase the free? and latency qualifiers; uncertainty in state/measurement is not uncertainty about those link endpoints. Documented incidental provisioning/location drops do not delete any task-required topology entity or relation.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md#Task",
+        "docs/visualize-eval/cases/server-nic-layout/source.md#Fixed constraints",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference",
+        "docs/visualize-eval/rounds/05/server-nic-layout/generation.json#/coverage_map"
+      ],
+      "evidence_ids": [
+        "blind",
+        "source",
+        "expected",
+        "generation",
+        "v1-text",
+        "v2-text",
+        "v3-text",
+        "v1-pinned",
+        "v2-pinned",
+        "v3-pinned"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Ten drawn arrows are traceable stem-to-unique-head, including the duplicated nic→gateway span and one clearly qualified annotation. The two thin v2 risers are separate incoming routes, not a bus or fake fork. Zero crossings or connected touching bends; the adjacent v2 bend cells do not connect. Every route is monotone and attains the Manhattan lower bound between its assigned drawn endpoints, so no loop/detour is observed despite missing route-economy telemetry. The source does not request a named trunk, and generation.json now supplies an honest source-direction rationale for no trunks; the empty check line is not a topology defect.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md#Relationship facts from the historical attempt",
+        "docs/visualize-eval/rounds/05/server-nic-layout/generation.json#/trunk_decision",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/arrow_traceability"
+      ],
+      "evidence_ids": [
+        "blind",
+        "generation",
+        "v1-text",
+        "v2-text",
+        "v3-text",
+        "v1-pinned",
+        "v2-pinned",
+        "v3-pinned",
+        "v1-check",
+        "v2-check",
+        "v3-check",
+        "metadata"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All three actual final specs have app-produced pinned 77x47 natural-100% frame grids with complete boxes, full labels, zero visible crossings and no palette occlusion. Frozen metadata explicitly accepts this pinned-dump fallback as fit proof; the skill permits pinned direct --frames dumps. The distinct live panes were 83x51, not 77x47, and are recorded separately rather than relabelled. This passes rendered target-grid geometry, not a claim that the terminal pane itself measured 77x47.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/05/rubric.json#/required_viewport",
+        "docs/visualize-eval/rounds/05/metadata.json#/harness_corrections_before_generation",
+        "docs/visualize-eval/rounds/05/SKILL.md#Step 8 — Check, then capture"
+      ],
+      "evidence_ids": [
+        "blind",
+        "metadata",
+        "skill",
+        "v1-pinned",
+        "v2-pinned",
+        "v3-pinned",
+        "v1-manifest",
+        "v2-manifest",
+        "v3-manifest"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "v1 server1 concepts and v2 address-pool concepts have honest proximity and hue families. However, within v3 the separate trace-caveat group has exactly the same pink RGB(211,134,155) border as the Airtel transit node, while the second Airtel hop uses a related pink. This colors a non-device uncertainty annotation as if it belongs to the upstream carrier group, although its subject is the unresolved NxtGen fabric. The dashed label keeps routing readable but does not repair this source-unsupported color grouping. A within-view hash collision is a renderer-level defect, not evidence of semantic grouping by the skill.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md#Original line 125 (assistant)",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/conceptual_grouping_color",
+        "docs/visualize-eval/rounds/05/SKILL.md#Step 3 — Group by concept, not by geometry"
+      ],
+      "evidence_ids": [
+        "blind",
+        "spec-v3-a3",
+        "v3-ansi",
+        "v3-selected",
+        "generation"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All fourteen node occurrences have complete sides/corners; normal ANSI proves uniform per-node border color and all-selected ANSI proves uniform bold RGB(216,166,87) borders for 14/14. Target-size pinned text independently verifies complete border geometry and zero palette-overwritten border cells. Pinned target-size color/selection is not separately captured; the color proof is the actual ANSI capture of each final view at its measured live size, not an inference from plain text. Identical colors on different groups fail grouping, not per-node border continuity.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/border_integrity"
+      ],
+      "evidence_ids": [
+        "blind",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v1-selected",
+        "v2-selected",
+        "v3-selected",
+        "v1-pinned",
+        "v2-pinned",
+        "v3-pinned"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "A known reproducibility defect remains: attempts.json records a malformed 63-character SHA-256 for v1-a1, different from its actual 64-character digest (F01). In addition, exact executed commands and raw exit-status records for six rejected/fallback attempts are missing (F02); raw output alone and narrative status claims cannot fill that gap. Final spec hashes, 21 capture artifact hashes, frozen skill/binary/rubric/dataset/case hashes, separate DeepSeek/Sol identities, blind-first record, all-view frames, measured live size, target-grid dumps, and closure of all three owned panes are otherwise verified. Missing records are blockers, not passes; the known bad digest makes this category fail rather than merely blocked.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/05/SKILL.md#Step 8 — Check, then capture",
+        "docs/visualize-eval/rounds/05/server-nic-layout/attempts.json#/views/0/attempts/0/spec_sha256"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "verification",
+        "attempt-index",
+        "generation",
+        "blind",
+        "spec-manifest",
+        "v1-manifest",
+        "v2-manifest",
+        "v3-manifest",
+        "v1-frames-text",
+        "v2-frames-text",
+        "v3-frames-text",
+        "probe-v2-a3",
+        "probe-v3-a1"
+      ]
+    },
+    "animation": {
+      "applicable": false,
+      "status": null,
+      "reason": "Source task/excerpts never request or show animation; frozen cases.json and expected.json explicitly mark this case optional, unlike the animation-required cases. Static rendering is source-backed N/A, not a passed animation test. Every edge has dots:0 and all five timestamped frames at both recorded sizes show zero route dots. There is no origin/speed/arrival claim to infer from 0/0 check counters.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md#Task",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/animation",
+        "docs/visualize-eval/cases.json#/cases/3/animation",
+        "docs/visualize-eval/rounds/05/SKILL.md#Step 6 — Motion rules"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "dataset",
+        "blind",
+        "v1-frames-text",
+        "v2-frames-text",
+        "v3-frames-text",
+        "v1-pinned",
+        "v2-pinned",
+        "v3-pinned"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference/edges/0",
+        "docs/visualize-eval/cases/server-nic-layout/source.md#Fixed constraints"
+      ],
+      "expected": "dark → server1: seven dark physical NICs; a no-cable interpretation must remain unconfirmed.",
+      "observed": "7 of 8 dark → server1 R7725 .58 downward; first dashed cell [30,19], then [30,20–21], unique ▼ [30,22]. Label no cable? at [32,20,9,1]. Complete source/target borders, no crossing/junction. Question mark plus dash qualify no-cable; inactivity itself is stated, not erased.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            29,
+            15,
+            13,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            29,
+            23,
+            19,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            30,
+            19,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            32,
+            20,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-pinned",
+          "region": [
+            27,
+            17,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-pinned",
+          "region": [
+            29,
+            18,
+            9,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference/edges/1",
+        "docs/visualize-eval/cases/server-nic-layout/source.md#Original line 120 (assistant)"
+      ],
+      "expected": "server1 → eno16595np0 25 GbE: the only active uplink out of eight physical NICs.",
+      "observed": "server1 R7725 .58 → eno16595np0 25 GbE downward from [30,27] to unique ▼ [30,30]; only uplink at [32,28,11,1]. Straight, complete and uniquely owned; no crossing or extra branch.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            29,
+            23,
+            19,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            29,
+            31,
+            20,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            30,
+            27,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            32,
+            28,
+            11,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-pinned",
+          "region": [
+            27,
+            25,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-pinned",
+          "region": [
+            29,
+            26,
+            11,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference/edges/2"
+      ],
+      "expected": "eno16595np0 → gateway 103.19.91.57: default gateway, 0.1 ms; OUI vendor must not be promoted to proven ToR role.",
+      "observed": "eno16595np0 25 GbE → Arista 103.19.91.57 AS132717 downward from [30,35] to unique ▼ [30,38]; def gw 0.1 ms at [32,36,13,1]. Straight, no crossing/junction. Vendor and AS survive; no unproven ToR/leaf device is drawn.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            29,
+            31,
+            20,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            29,
+            39,
+            30,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            30,
+            35,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            32,
+            36,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-pinned",
+          "region": [
+            27,
+            33,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-pinned",
+          "region": [
+            29,
+            34,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference/edges/2",
+        "docs/visualize-eval/cases/server-nic-layout/source.md#Original line 120 (assistant)"
+      ],
+      "expected": "Same nic → gateway relation as e3, restated in pool view to carry /29, no NAT and no IPv6; not a second physical uplink.",
+      "observed": "eno16595np0 → 103.19.91.57/29: source stem [28,12] east to ╮ [51,12], thin riser downward to ╰ [51,26], unique eastward ▶ [52,26]. no NAT, no v6 at [33,11,13,1]. No crossing/junction. This riser stays separate from e5 and e6; fixed-endpoint path is Manhattan-minimal. Repeated port name joins v1 to v2 without inventing another link.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            15,
+            11,
+            13,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            53,
+            25,
+            17,
+            7
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            28,
+            12,
+            25,
+            15
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            33,
+            11,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-pinned",
+          "region": [
+            25,
+            10,
+            25,
+            15
+          ]
+        },
+        {
+          "evidence_id": "v2-pinned",
+          "region": [
+            30,
+            9,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference/edges/3"
+      ],
+      "expected": "server2 R7725 .59 → gateway .57: same /29 segment.",
+      "observed": "server2 R7725 .59 → 103.19.91.57/29 rightward from [34,26] to ╮ [50,26], down to ╰ [50,28], then ▶ [52,28]. same /29 at [38,25,8,1]. The adjacent e4 corner [51,26] is not connected to the e5 corner [50,26]. No shared cell, crossing, fake branch or missing arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            15,
+            25,
+            19,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            53,
+            25,
+            17,
+            7
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            34,
+            26,
+            19,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            38,
+            25,
+            8,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-pinned",
+          "region": [
+            31,
+            24,
+            19,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v2-pinned",
+          "region": [
+            35,
+            23,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference/edges/4",
+        "docs/visualize-eval/cases/server-nic-layout/source.md#Fixed constraints"
+      ],
+      "expected": ".60–.62 addresses → gateway /29 membership; free status is unconfirmed, not established by nonresponse.",
+      "observed": ".60-.62 free? → 103.19.91.57/29 rightward from [30,40] to ╯ [51,40], thin riser upward to ╭ [51,30], then unique eastward ▶ [52,30]. free? in /29 at [34,39,12,1]. Solid line asserts address-pool membership, while both question marks qualify free status. No crossing/junction; separate from upper e4 riser, with Manhattan-minimal fixed-endpoint route.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            15,
+            39,
+            15,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            53,
+            25,
+            17,
+            7
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            30,
+            30,
+            23,
+            11
+          ]
+        },
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            34,
+            39,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-pinned",
+          "region": [
+            27,
+            28,
+            23,
+            11
+          ]
+        },
+        {
+          "evidence_id": "v2-pinned",
+          "region": [
+            31,
+            37,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference/edges/5",
+        "docs/visualize-eval/cases/server-nic-layout/source.md#Original line 120 (assistant)"
+      ],
+      "expected": "Arista gateway → Airtel 14.143.x: observed upstream transit, 1.8 ms and one visible ISP.",
+      "observed": "Arista 103.19.91.57 → Airtel 14.143.x: [34,17] down to ╯ [34,19], west to ╭ [13,19], down to unique ▼ [13,20]. 1.8 ms, 1 ISP at [18,18,13,1]. Independent departure from a1, no Y junction, crossing or invisible fabric device. Source order preserved.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            33,
+            13,
+            21,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            12,
+            21,
+            17,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            13,
+            17,
+            22,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            18,
+            18,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-pinned",
+          "region": [
+            10,
+            15,
+            22,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-pinned",
+          "region": [
+            15,
+            16,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference/edges/6"
+      ],
+      "expected": "Airtel 14.143.x → Airtel backbone 14.141.x: 7.1 ms.",
+      "observed": "Airtel 14.143.x → Airtel BB 14.141.x downward from [13,25] to unique ▼ [13,28]; 7.1 ms at [15,26,6,1]. BB abbreviates backbone without changing hop or order. Straight, complete, no crossing/junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            12,
+            21,
+            17,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            12,
+            29,
+            20,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            13,
+            25,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            15,
+            26,
+            6,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-pinned",
+          "region": [
+            10,
+            23,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-pinned",
+          "region": [
+            12,
+            24,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e9",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/expected.json#/historical_reference/edges/7",
+        "docs/visualize-eval/cases/server-nic-layout/source.md#Original line 120 (assistant)"
+      ],
+      "expected": "Airtel backbone → Cloudflare 1.1.1.1 AS13335. Preserve the supplied disagreement: historical edge says 8.3 ms, later prose says 8.6 ms; do not silently pick one as verified.",
+      "observed": "Airtel BB 14.141.x → 1.1.1.1 AS13335 downward from [13,33] to unique ▼ [13,36]; 8.3-8.6 ms at [15,34,10,1]. Solid observed egress route with text-carried uncertain latency envelope. The range preserves both supplied values; it is not read here as independent measurements of every intermediate value. No crossing/junction or missing qualifier. Prefer explicit alternatives in future for literal provenance clarity, but do not invent a dashed-link requirement for a confirmed hop.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            12,
+            29,
+            20,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            12,
+            37,
+            17,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            13,
+            33,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            15,
+            34,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-pinned",
+          "region": [
+            10,
+            31,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-pinned",
+          "region": [
+            12,
+            32,
+            10,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "a1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md#Original line 125 (assistant)",
+        "docs/visualize-eval/cases/server-nic-layout/source.md#Fixed constraints"
+      ],
+      "expected": "Source-backed annotation attached to gateway/upstream context: silent hops 3 and 6 do not prove L2. Not a physical gateway-to-switch relation.",
+      "observed": "Arista 103.19.91.57 ⇢ L2? hops 3,6 nil: dashed ╎ at [36,17–18], ╰ [36,19], dashed ╌ to ╮ [55,19], unique ▼ [55,20]. unproven at [41,18,8,1]. Distinct source port from e7, no shared trunk/junction/crossing. Its question mark and explicit unproven label distinguish annotation from a device hop; color-group collision is separately failed as F03, not treated as a reversed or untraceable edge.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            33,
+            13,
+            21,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            54,
+            21,
+            18,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            36,
+            17,
+            20,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            41,
+            18,
+            8,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v3-pinned",
+          "region": [
+            33,
+            15,
+            20,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-pinned",
+          "region": [
+            38,
+            16,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "x1_fresh_dark_adjacency",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md#Original line 120 (assistant)"
+      ],
+      "expected": null,
+      "observed": "No extra arrow is drawn: the isolated fresh 1.5d, no GPUs box bottom row 14 immediately precedes the dark-port box top row 15. Both borders are complete and no stem/head joins them. Proximity and server1 hue family attribute a host-state annotation, not a fresh→dark physical relation.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            25,
+            11,
+            21,
+            8
+          ]
+        },
+        {
+          "evidence_id": "v1-pinned",
+          "region": [
+            22,
+            9,
+            21,
+            8
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F01",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "DEFECT (known, not merely missing evidence): attempts.json /views/0/attempts/0/spec_sha256 is the 63-character value 8aa57bddccd34e2cbbe569af3f6f9a0ba6b6c5a9659024e1d01d52c8e8cf6a2. The preserved v1-a1.json actually hashes to 8aa57bddccd34e2cbbe569af3f6f9a0ba6b6c5a9659024e1d01d52c8e83cf6a2 (64 characters). Therefore the rejected-attempt provenance does not faithfully identify its actual input. All final-spec and capture-artifact hashes do match. Nonvisual JSON/hash finding; no fabricated screen region is assigned.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/05/server-nic-layout/attempts.json#/views/0/attempts/0/spec_sha256",
+        "docs/visualize-eval/rounds/05/server-nic-layout/specs/v1-a1.json",
+        "docs/visualize-eval/rounds/05/reviews/server-nic-layout/verification.json#/attempt_spec_hashes/0",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/workflow_evidence"
+      ],
+      "locations": []
+    },
+    {
+      "id": "F02",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "EVIDENCE GAP / BLOCKER: the six rejected/fallback attempts have preserved output text but no preserved raw executed command plus stdout/stderr/exit-status record. attempts.json has no exit/status field for any attempt. Final-view manifest check_exit=0 covers the three finals only; a prose assertion that v3-a2 exited 1 does not recover the missing raw status. Exact rejected commands and raw statuses cannot be independently established from this bundle. Missing evidence is blocked, not passed; F01 separately makes workflow_evidence a known failure. This is a nonvisual absence, so locations are empty rather than invented.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/05/server-nic-layout/attempts.json",
+        "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v3-a2.check.txt",
+        "docs/visualize-eval/rounds/05/server-nic-layout/generation.json#/raw_attempt_checks",
+        "docs/visualize-eval/rounds/05/reviews/server-nic-layout/verification.json#/missing_rejected_attempt_raw_command_status",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/workflow_evidence"
+      ],
+      "locations": []
+    },
+    {
+      "id": "F03",
+      "category": "conceptual_grouping_color",
+      "edge_ids": [
+        "e7",
+        "e8",
+        "a1"
+      ],
+      "severity": "medium",
+      "description": "DEFECT: in one v3 view, Airtel 14.143.x (isp transit group) and L2? hops 3,6 nil (trace caveats group) have exactly the same normal border foreground RGB(211,134,155), and Airtel BB uses related RGB(226,156,175). This places the fabric-layer uncertainty annotation in the ISP color family despite different source semantics and explicit different groups. Text/dashes preserve the caveat and edge traceability, but cannot waive the unsupported hue grouping. This is a within-view renderer hash collision, not the harmless cross-view server1/Cloudflare reuse noted by the generator.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md#Original line 125 (assistant)",
+        "docs/visualize-eval/rounds/05/server-nic-layout/specs/v3-a3.json#/nodes",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/conceptual_grouping_color",
+        "docs/visualize-eval/rounds/05/SKILL.md#Step 3 — Group by concept, not by geometry"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            12,
+            21,
+            17,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            54,
+            21,
+            18,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v3-ansi",
+          "region": [
+            12,
+            29,
+            20,
+            4
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "F02: exact rejected/fallback --check commands and their raw stdout/stderr/exit-status records are missing for v1-a1, v1-a2, v2-a1, v2-a3, v3-a1 and v3-a2; no independent recovery is permitted by launching new sessions.",
+    "Evidence scope: no live 77x47 pane, target-sized ANSI/selected capture, pane rectangle, or wall-clock timestamp for pinned dumps is preserved. Frozen metadata permits final-spec pinned 77x47 dump fit proof; actual 83x51 ANSI proves per-view colors. Do not claim that these narrower records establish a 77x47 live-pane/color capture.",
+    "Capability limitation (nonblocking for the manually audited monotone paths): the frozen renderer emits no near-minimal routes telemetry. Old validator failures remain in the bundle; metadata records removal of that telemetry requirement before generation. No route-economy claim is inferred from a nonexistent check line."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pGB",
+      "w7E:pGE",
+      "w7E:pGG"
+    ],
+    "closed_pane_ids": [
+      "w7E:pGB",
+      "w7E:pGE",
+      "w7E:pGG"
+    ],
+    "status": "done",
+    "reason": "Each corresponding evidence manifest records cleanup=\"confirmed_closed\"; generation.json repeats those three exact IDs with no failures. The judge created no panes and did not rerun cleanup."
+  },
+  "overall": "fail"
+}

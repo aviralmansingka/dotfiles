@@ -1,0 +1,14 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "ts", "label": "tailscale0 100.113.153.49", "group": "overlay" },
+    { "id": "h", "label": "homelab ~/rack-bench", "group": "host" },
+    { "id": "bond0", "label": "bond0 192.168.1.197", "group": "phys" }
+  ],
+  "layers": [["ts"], ["h", "bond0"]],
+  "edges": [
+    { "from": "ts", "to": "h", "label": "overlay", "dots": 1, "flow": true },
+    { "from": "ts", "to": "bond0", "label": "UDP encap", "dots": 1, "flow": true }
+  ]
+}

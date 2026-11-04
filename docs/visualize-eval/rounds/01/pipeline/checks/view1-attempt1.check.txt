@@ -1,0 +1,6 @@
+# cmd: /tmp/visualize-eval/round-01/bin/rataflow-view --check attempts/view1-attempt1.json
+# date: 2026-11-02T08:24:36Z
+ok: nodes=6 edges=6 flows=6 direction=tb theme=gruvbox
+layers=5 (explicit placement, sugiyama skipped)
+extent=31x37 cells
+# exit=0

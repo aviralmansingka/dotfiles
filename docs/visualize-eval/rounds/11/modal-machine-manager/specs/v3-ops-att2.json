@@ -1,0 +1,65 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "q",
+      "label": "River jobs",
+      "group": "control"
+    },
+    {
+      "id": "ssh",
+      "label": "SSH + BMC ops",
+      "group": "ops"
+    },
+    {
+      "id": "jan",
+      "label": "janitor app",
+      "group": "ops"
+    },
+    {
+      "id": "mch",
+      "label": "bare-metal machines",
+      "group": "machines"
+    },
+    {
+      "id": "s3",
+      "label": "S3 object store",
+      "group": "state"
+    }
+  ],
+  "edges": [
+    {
+      "from": "q",
+      "to": "ssh",
+      "label": "audit / verify reimage",
+      "label_slot": true,
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "ssh",
+      "to": "mch",
+      "label": "run machine-audit",
+      "label_slot": true,
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "q",
+      "to": "s3",
+      "label": "diagnose uploads",
+      "label_slot": true,
+      "dots": 1,
+      "flow": true
+    },
+    {
+      "from": "q",
+      "to": "jan",
+      "label": "diagnostic events",
+      "label_slot": true,
+      "dots": 1,
+      "flow": true
+    }
+  ]
+}

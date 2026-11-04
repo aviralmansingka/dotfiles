@@ -1,0 +1,20 @@
+{
+  "specs": [
+    {
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/v1.json",
+      "sha256": "98e8ba90854d81d8fae0f5de5ca7d772462d9a17c7e083a36dff6377ab9d1ccb"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/v2.json",
+      "sha256": "9a8b1950a7595b958fd6b2cbc6892a59cd48b04d1c0c4e9bb8c6833aac0577f2"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/v3.json",
+      "sha256": "c6bdfb415415e794cdd6cc2d85fd10dcb2f2b7d842f2b65ec59f2de7b4a25429"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/datacenter-redundancy/v4.json",
+      "sha256": "44cbe30cb0574e53ac01f5e3cd547ee05bb3687397a140e703d790e5346a619a"
+    }
+  ]
+}

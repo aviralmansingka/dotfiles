@@ -1,0 +1,328 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "diagrams": [
+    {
+      "id": "uplinks",
+      "title": "ISP uplinks and core cross-connect",
+      "description": "Four ISP handoffs, two per MUX; each MUX reaches both cores.",
+      "nodes": [
+        {
+          "id": "ispA",
+          "label": "ISP A",
+          "group": "isp"
+        },
+        {
+          "id": "ispB",
+          "label": "ISP B",
+          "group": "isp"
+        },
+        {
+          "id": "ispC",
+          "label": "ISP C",
+          "group": "isp"
+        },
+        {
+          "id": "ispD",
+          "label": "ISP D",
+          "group": "isp"
+        },
+        {
+          "id": "mux1",
+          "label": "MUX appliance 1",
+          "group": "mux"
+        },
+        {
+          "id": "mux2",
+          "label": "MUX appliance 2",
+          "group": "mux"
+        },
+        {
+          "id": "core1",
+          "label": "Core router 1",
+          "group": "core"
+        },
+        {
+          "id": "core2",
+          "label": "Core router 2",
+          "group": "core"
+        }
+      ],
+      "layers": [
+        [
+          "ispA",
+          "ispB",
+          "ispC",
+          "ispD"
+        ],
+        [
+          "mux1",
+          "mux2"
+        ],
+        [
+          "core1",
+          "core2"
+        ]
+      ],
+      "edges": [
+        {
+          "from": "ispA",
+          "to": "mux1"
+        },
+        {
+          "from": "ispB",
+          "to": "mux1"
+        },
+        {
+          "from": "ispC",
+          "to": "mux2"
+        },
+        {
+          "from": "ispD",
+          "to": "mux2"
+        },
+        {
+          "from": "mux1",
+          "to": "core1",
+          "label": "x-connect"
+        },
+        {
+          "from": "mux1",
+          "to": "core2",
+          "label": "x-connect"
+        },
+        {
+          "from": "mux2",
+          "to": "core1",
+          "label": "x-connect"
+        },
+        {
+          "from": "mux2",
+          "to": "core2",
+          "label": "x-connect"
+        }
+      ],
+      "direction": "tb"
+    },
+    {
+      "id": "security",
+      "title": "Active/standby firewall pair",
+      "description": "FW1 active, FW2 standby, fed by both cores, feeding both border leaves.",
+      "nodes": [
+        {
+          "id": "core1",
+          "label": "Core router 1",
+          "group": "core"
+        },
+        {
+          "id": "core2",
+          "label": "Core router 2",
+          "group": "core"
+        },
+        {
+          "id": "fw1",
+          "label": "FW1 active",
+          "group": "firewall"
+        },
+        {
+          "id": "fw2",
+          "label": "FW2 standby",
+          "group": "firewall"
+        },
+        {
+          "id": "bl1",
+          "label": "Border leaf 1",
+          "group": "border-leaf"
+        },
+        {
+          "id": "bl2",
+          "label": "Border leaf 2",
+          "group": "border-leaf"
+        }
+      ],
+      "layers": [
+        [
+          "core1",
+          "core2"
+        ],
+        [
+          "fw1",
+          "fw2"
+        ],
+        [
+          "bl1",
+          "bl2"
+        ]
+      ],
+      "edges": [
+        {
+          "from": "core1",
+          "to": "fw1",
+          "label": "active"
+        },
+        {
+          "from": "core2",
+          "to": "fw1",
+          "label": "active"
+        },
+        {
+          "from": "core1",
+          "to": "fw2",
+          "label": "standby"
+        },
+        {
+          "from": "core2",
+          "to": "fw2",
+          "label": "standby"
+        },
+        {
+          "from": "fw1",
+          "to": "bl1",
+          "label": "active"
+        },
+        {
+          "from": "fw1",
+          "to": "bl2",
+          "label": "active"
+        },
+        {
+          "from": "fw2",
+          "to": "bl1",
+          "label": "standby"
+        },
+        {
+          "from": "fw2",
+          "to": "bl2",
+          "label": "standby"
+        }
+      ],
+      "direction": "tb"
+    },
+    {
+      "id": "fabric",
+      "title": "Dual-spine fabric and dual-homed racks",
+      "description": "Each leaf reaches both spines; both leaves dual-home both racks.",
+      "nodes": [
+        {
+          "id": "sp1",
+          "label": "Spine 1",
+          "group": "spine"
+        },
+        {
+          "id": "sp2",
+          "label": "Spine 2",
+          "group": "spine"
+        },
+        {
+          "id": "bl1",
+          "label": "Border leaf 1",
+          "group": "border-leaf"
+        },
+        {
+          "id": "bl2",
+          "label": "Border leaf 2",
+          "group": "border-leaf"
+        },
+        {
+          "id": "leaf1",
+          "label": "Rack leaf 1",
+          "group": "rack-leaf"
+        },
+        {
+          "id": "leaf2",
+          "label": "Rack leaf 2",
+          "group": "rack-leaf"
+        },
+        {
+          "id": "rack1",
+          "label": "Rack 1",
+          "group": "rack"
+        },
+        {
+          "id": "rack2",
+          "label": "Rack 2",
+          "group": "rack"
+        }
+      ],
+      "layers": [
+        [
+          "sp1",
+          "sp2"
+        ],
+        [
+          "bl1",
+          "bl2",
+          "leaf1",
+          "leaf2"
+        ],
+        [
+          "rack1",
+          "rack2"
+        ]
+      ],
+      "edges": [
+        {
+          "from": "bl1",
+          "to": "sp1",
+          "label": "ECMP"
+        },
+        {
+          "from": "bl1",
+          "to": "sp2",
+          "label": "ECMP"
+        },
+        {
+          "from": "bl2",
+          "to": "sp1",
+          "label": "ECMP"
+        },
+        {
+          "from": "bl2",
+          "to": "sp2",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp1",
+          "to": "leaf1",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp1",
+          "to": "leaf2",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp2",
+          "to": "leaf1",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp2",
+          "to": "leaf2",
+          "label": "ECMP"
+        },
+        {
+          "from": "leaf1",
+          "to": "rack1",
+          "label": "dual"
+        },
+        {
+          "from": "leaf2",
+          "to": "rack1",
+          "label": "dual"
+        },
+        {
+          "from": "leaf1",
+          "to": "rack2",
+          "label": "dual"
+        },
+        {
+          "from": "leaf2",
+          "to": "rack2",
+          "label": "dual"
+        }
+      ],
+      "direction": "tb"
+    }
+  ]
+}

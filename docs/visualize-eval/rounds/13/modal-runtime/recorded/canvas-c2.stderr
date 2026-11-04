@@ -1,0 +1,2 @@
+warning: edge d1:e0 label "task input + control RPCs" had no clear cell; shorten it or add routing space
+warning: edge d1:e1 label "events + management RPCs" had no clear cell; shorten it or add routing space

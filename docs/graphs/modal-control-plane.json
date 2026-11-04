@@ -1,0 +1,89 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "cp",
+      "label": "control plane"
+    },
+    {
+      "id": "web",
+      "label": "mmctl"
+    },
+    {
+      "id": "pgrpc",
+      "label": "private gRPC"
+    },
+    {
+      "id": "wapi",
+      "label": "webapi"
+    },
+    {
+      "id": "q",
+      "label": "River jobs"
+    },
+    {
+      "id": "slack",
+      "label": "Slack"
+    },
+    {
+      "id": "db",
+      "label": "Postgres"
+    }
+  ],
+  "layers": [
+    [
+      "cp",
+      "web"
+    ],
+    [
+      "pgrpc",
+      "wapi"
+    ],
+    [
+      "q",
+      "slack"
+    ],
+    [
+      "",
+      "db"
+    ]
+  ],
+  "edges": [
+    {
+      "from": "cp",
+      "to": "pgrpc",
+      "label": "create"
+    },
+    {
+      "from": "web",
+      "to": "wapi",
+      "label": "http"
+    },
+    {
+      "from": "pgrpc",
+      "to": "q",
+      "label": "enqueue"
+    },
+    {
+      "from": "wapi",
+      "to": "q",
+      "label": "reinstall"
+    },
+    {
+      "from": "wapi",
+      "to": "slack",
+      "label": "alerts"
+    },
+    {
+      "from": "q",
+      "to": "db",
+      "label": "job rows"
+    },
+    {
+      "from": "pgrpc",
+      "to": "db",
+      "label": "writes"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "prov", "label": "bare-metal providers", "group": "provision" },
+    { "id": "mch", "label": "bare-metal machines", "group": "machines" },
+    { "id": "boot", "label": "boot server", "group": "machines" },
+    { "id": "agent", "label": "machine-agent", "group": "machines" },
+    { "id": "pub", "label": "public gRPC", "group": "api" },
+    { "id": "db", "label": "Postgres", "group": "state" }
+  ],
+  "edges": [
+    { "from": "prov", "to": "mch", "label": "allocate instance", "dots": 1, "flow": true },
+    { "from": "mch", "to": "boot", "label": "iPXE request", "dots": 1, "flow": true },
+    { "from": "boot", "to": "mch", "label": "boot.ipxe + S3 args", "dots": 1, "flow": true },
+    { "from": "mch", "to": "agent", "label": "runs on host", "dots": 1, "flow": true },
+    { "from": "agent", "to": "pub", "label": "register + heartbeat", "dots": 1, "flow": true },
+    { "from": "pub", "to": "db", "label": "machine state", "dots": 1, "flow": true }
+  ]
+}

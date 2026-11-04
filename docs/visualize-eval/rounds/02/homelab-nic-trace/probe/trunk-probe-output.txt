@@ -1,0 +1,16 @@
+# trunk capability preflight (offline --check / --frames, no pane opened)
+## 1. trunk plus an edge touching the same pair (auto layout)
+rataflow-view: no obstacle-safe route for rtr -> wlp; increase node/layer spacing
+
+## 2. trunk with an empty spacer layer before the branch layer
+viewport: unknown zoom: 1.00 natural
+ok: nodes=4 edges=1 flows=0 direction=tb theme=gruvbox
+layers=4 (explicit placement, sugiyama skipped)
+extent=48x27 cells
+labels: 2/2 placed, 0 on route cells, 0 skipped
+groups: demarc(1) nat(1) nic(2)
+trunks: lan from rtr to bond0, 1 branches
+dots: 1 single-dot routes, 0 periodic routes, 0 violations
+
+## 3. trunk with no declared edge
+rataflow-view: the spec needs at least one edge, e.g. {"from": "a", "to": "b"}

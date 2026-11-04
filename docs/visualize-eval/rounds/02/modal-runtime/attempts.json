@@ -1,0 +1,34 @@
+{
+  "case_id": "modal-runtime",
+  "round": "02",
+  "views": [
+    {
+      "view": "v1",
+      "carries": "all 8 components and all 8 directed relations, with group membership",
+      "attempts": [
+        { "spec": "specs/v1.attempt1.json", "spec_sha256": "ce1f37c6e89bdaf4dd45a4faa513929d34e5742872883612bb973ea31b381677", "note": "sugiyama auto layout, 106x32 cells: over the 77-column target, rejected before capture" },
+        { "spec": "specs/v1.attempt2.json", "spec_sha256": "e380c9f263600dba99361880ac157ab9468224bccf4482fc5266327e8ec2685b", "note": "explicit layers, 46x37 cells, but label 'task+ctrl RPCs' (14 chars) had no free cell beside the parallel worker<->runtime corridors; 1 of 8 labels skipped" },
+        { "spec": "specs/v1.json", "spec_sha256": "53a86b1d722acb74679adb5627cf3fd7a535fcc367b9c8058eba6767452123a8", "note": "same layout, worker->runtime label shortened to 'task+ctrl' (9); 8/8 labels placed, 0 dot violations, 46x37 cells" }
+      ]
+    },
+    {
+      "view": "v2",
+      "carries": "the three RPC seams distinguished by protocol: worker gRPC both ways, engine dispatch, filesystem HTTP over UDS",
+      "attempts": [
+        { "spec": "specs/v2.attempt1.json", "spec_sha256": "75b77f2901a2ee2e64920f31296da675e5f1dbd939f61b26c9f6bf07f6698815", "note": "tb, full-phrase labels (26-32 chars). The two parallel worker<->runtime corridors cannot host a long label; 2 of 4 skipped" },
+        { "spec": "specs/v2.attempt2.json", "spec_sha256": "50954a7e0c775651738f16be792dbda23b74e2ed91065d1a0bd4ea160218a079", "note": "lr, full-phrase labels: all 4 placed but extent 102x13, over the 77-column target, rejected before capture" },
+        { "spec": "specs/v2.json", "spec_sha256": "52c03e043dabe566efca4302b9760c3310095f3c56b153e6f00b5c5ad564a326", "note": "tb, protocol-first short labels (gRPC call / gRPC events / dispatch / HTTP over UDS); 4/4 labels placed, 34x21 cells" }
+      ]
+    },
+    {
+      "view": "v3",
+      "carries": "task execution and storage detail with full action verbs",
+      "attempts": [
+        { "spec": "specs/v3.attempt1.json", "spec_sha256": "6afe665dc80bb72126f671a485d73cedbb1f80bac8332dc25b386660ca624a18", "note": "first attempt already clean: 4/4 labels placed, 0 dot violations, 46x21 cells; promoted to specs/v3.json unchanged" }
+      ]
+    }
+  ],
+  "probes": {
+    "note": "throwaway 2-4 node specs in /tmp/vizprobe were used to measure renderer label capacity before composing a view; they are geometry probes of the frozen binary, not candidate views, and none of them was captured."
+  }
+}

@@ -1,0 +1,577 @@
+viewport: 77x47 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 77x47 @100% · canvas 64x95 · canvas-v3.json · 14 nodes · 8 e
+OOB hardware-control plane
+one OOB trunk to the BMCs and power shelf; nv-rms source is free
+
+              ╭─────────────────╮
+              │nv-rms (free src)│
+              │                 │
+              ╰─────────────────╯
+                       │
+                       │
+                       │
+                       │
+                       │ client
+                       │
+                       │
+                       │
+                       ▼
+                   ╭───────╮
+                   │OOB LAN│
+                   │       │
+                   ╰───────╯
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │ Redfish/HTTPS
+                       │
+                       │
+                       │
+                       │
+                       │
+              ╭────────⌒
+              │       ╭┴──────╮
+              │       ▼       │
+╭───────────╮ │ ╭───────────╮ │ ╭────────────╮               ▀▘
+│Compute BMC│◀╯ │Power shelf│ ╰▶│NVSwitch BMC│               ▝▘
+│           │   │           │   │            │
+╰┌───────┐──╯   ╰───────────╯   ╰────────────╯              ▜▟▛▘
+ │ + [+] │                                                  ▗▖▖
+ │ − [-] │                                                  ▗▗▖
+─│ ⊡ [f]─│─────────────────────────────────────────         ▄▄▖
+I│ □ [i]c│mpute and NVSwitch software                        ▄
+c└───────┘ain plus NVSwitch software; the OOB LAN r
+
+frame 1 at 100ms
+ rataflow-view · 77x47 @100% · canvas 64x95 · canvas-v3.json · 14 nodes · 8 e
+OOB hardware-control plane
+one OOB trunk to the BMCs and power shelf; nv-rms source is free
+
+              ╭─────────────────╮
+              │nv-rms (free src)│
+              │                 │
+              ╰─────────────────╯
+                       │
+                       │
+                       │
+                       │
+                       │ client
+                       │
+                       │
+                       │
+                       ▼
+                   ╭───────╮
+                   │OOB LAN│
+                   │       │
+                   ╰───────╯
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │ Redfish/HTTPS
+                       │
+                       │
+                       │
+                       │
+                       │
+              ╭────────⌒
+              │       ╭┴──────╮
+              │       ▼       │
+╭───────────╮ │ ╭───────────╮ │ ╭────────────╮               ▀▘
+│Compute BMC│◀╯ │Power shelf│ ╰▶│NVSwitch BMC│               ▝▘
+│           │   │           │   │            │
+╰┌───────┐──╯   ╰───────────╯   ╰────────────╯              ▜▟▛▘
+ │ + [+] │                                                  ▗▖▖
+ │ − [-] │                                                  ▗▗▖
+─│ ⊡ [f]─│─────────────────────────────────────────         ▄▄▖
+I│ □ [i]c│mpute and NVSwitch software                        ▄
+c└───────┘ain plus NVSwitch software; the OOB LAN r
+
+frame 2 at 200ms
+ rataflow-view · 77x47 @100% · canvas 64x95 · canvas-v3.json · 14 nodes · 8 e
+OOB hardware-control plane
+one OOB trunk to the BMCs and power shelf; nv-rms source is free
+
+              ╭─────────────────╮
+              │nv-rms (free src)│
+              │                 │
+              ╰─────────────────╯
+                       │
+                       │
+                       │
+                       │
+                       │ client
+                       │
+                       │
+                       │
+                       ▼
+                   ╭───────╮
+                   │OOB LAN│
+                   │       │
+                   ╰───────╯
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │ Redfish/HTTPS
+                       │
+                       │
+                       │
+                       │
+                       │
+              ╭────────⌒
+              │       ╭┴──────╮
+              │       ▼       │
+╭───────────╮ │ ╭───────────╮ │ ╭────────────╮               ▀▘
+│Compute BMC│◀╯ │Power shelf│ ╰▶│NVSwitch BMC│               ▝▘
+│           │   │           │   │            │
+╰┌───────┐──╯   ╰───────────╯   ╰────────────╯              ▜▟▛▘
+ │ + [+] │                                                  ▗▖▖
+ │ − [-] │                                                  ▗▗▖
+─│ ⊡ [f]─│─────────────────────────────────────────         ▄▄▖
+I│ □ [i]c│mpute and NVSwitch software                        ▄
+c└───────┘ain plus NVSwitch software; the OOB LAN r
+
+frame 3 at 300ms
+ rataflow-view · 77x47 @100% · canvas 64x95 · canvas-v3.json · 14 nodes · 8 e
+OOB hardware-control plane
+one OOB trunk to the BMCs and power shelf; nv-rms source is free
+
+              ╭─────────────────╮
+              │nv-rms (free src)│
+              │                 │
+              ╰─────────────────╯
+                       │
+                       │
+                       │
+                       │
+                       │ client
+                       │
+                       │
+                       │
+                       ▼
+                   ╭───────╮
+                   │OOB LAN│
+                   │       │
+                   ╰───────╯
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │ Redfish/HTTPS
+                       │
+                       │
+                       │
+                       │
+                       │
+              ╭────────⌒
+              │       ╭┴──────╮
+              │       ▼       │
+╭───────────╮ │ ╭───────────╮ │ ╭────────────╮               ▀▘
+│Compute BMC│◀╯ │Power shelf│ ╰▶│NVSwitch BMC│               ▝▘
+│           │   │           │   │            │
+╰┌───────┐──╯   ╰───────────╯   ╰────────────╯              ▜▟▛▘
+ │ + [+] │                                                  ▗▖▖
+ │ − [-] │                                                  ▗▗▖
+─│ ⊡ [f]─│─────────────────────────────────────────         ▄▄▖
+I│ □ [i]c│mpute and NVSwitch software                        ▄
+c└───────┘ain plus NVSwitch software; the OOB LAN r
+
+frame 4 at 400ms
+ rataflow-view · 77x47 @100% · canvas 64x95 · canvas-v3.json · 14 nodes · 8 e
+OOB hardware-control plane
+one OOB trunk to the BMCs and power shelf; nv-rms source is free
+
+              ╭─────────────────╮
+              │nv-rms (free src)│
+              │                 │
+              ╰─────────────────╯
+                       │
+                       │
+                       │
+                       │
+                       │ client
+                       │
+                       │
+                       │
+                       ▼
+                   ╭───────╮
+                   │OOB LAN│
+                   │       │
+                   ╰───────╯
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │ Redfish/HTTPS
+                       │
+                       │
+                       │
+                       │
+                       │
+              ╭────────⌒
+              │       ╭┴──────╮
+              │       ▼       │
+╭───────────╮ │ ╭───────────╮ │ ╭────────────╮               ▀▘
+│Compute BMC│◀╯ │Power shelf│ ╰▶│NVSwitch BMC│               ▝▘
+│           │   │           │   │            │
+╰┌───────┐──╯   ╰───────────╯   ╰────────────╯              ▜▟▛▘
+ │ + [+] │                                                  ▗▖▖
+ │ − [-] │                                                  ▗▗▖
+─│ ⊡ [f]─│─────────────────────────────────────────         ▄▄▖
+I│ □ [i]c│mpute and NVSwitch software                        ▄
+c└───────┘ain plus NVSwitch software; the OOB LAN r
+
+frame 5 at 500ms
+ rataflow-view · 77x47 @100% · canvas 64x95 · canvas-v3.json · 14 nodes · 8 e
+OOB hardware-control plane
+one OOB trunk to the BMCs and power shelf; nv-rms source is free
+
+              ╭─────────────────╮
+              │nv-rms (free src)│
+              │                 │
+              ╰─────────────────╯
+                       │
+                       │
+                       │
+                       │
+                       │ client
+                       │
+                       │
+                       │
+                       ▼
+                   ╭───────╮
+                   │OOB LAN│
+                   │       │
+                   ╰───────╯
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │ Redfish/HTTPS
+                       │
+                       │
+                       │
+                       │
+                       │
+              ╭────────⌒
+              │       ╭┴──────╮
+              │       ▼       │
+╭───────────╮ │ ╭───────────╮ │ ╭────────────╮               ▀▘
+│Compute BMC│◀╯ │Power shelf│ ╰▶│NVSwitch BMC│               ▝▘
+│           │   │           │   │            │
+╰┌───────┐──╯   ╰───────────╯   ╰────────────╯              ▜▟▛▘
+ │ + [+] │                                                  ▗▖▖
+ │ − [-] │                                                  ▗▗▖
+─│ ⊡ [f]─│─────────────────────────────────────────         ▄▄▖
+I│ □ [i]c│mpute and NVSwitch software                        ▄
+c└───────┘ain plus NVSwitch software; the OOB LAN r
+
+frame 6 at 600ms
+ rataflow-view · 77x47 @100% · canvas 64x95 · canvas-v3.json · 14 nodes · 8 e
+OOB hardware-control plane
+one OOB trunk to the BMCs and power shelf; nv-rms source is free
+
+              ╭─────────────────╮
+              │nv-rms (free src)│
+              │                 │
+              ╰─────────────────╯
+                       │
+                       │
+                       │
+                       │
+                       │ client
+                       │
+                       │
+                       │
+                       ▼
+                   ╭───────╮
+                   │OOB LAN│
+                   │       │
+                   ╰───────╯
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │ Redfish/HTTPS
+                       │
+                       │
+                       │
+                       │
+                       │
+              ╭────────⌒
+              │       ╭┴──────╮
+              │       ▼       │
+╭───────────╮ │ ╭───────────╮ │ ╭────────────╮               ▀▘
+│Compute BMC│◀╯ │Power shelf│ ╰▶│NVSwitch BMC│               ▝▘
+│           │   │           │   │            │
+╰┌───────┐──╯   ╰───────────╯   ╰────────────╯              ▜▟▛▘
+ │ + [+] │                                                  ▗▖▖
+ │ − [-] │                                                  ▗▗▖
+─│ ⊡ [f]─│─────────────────────────────────────────         ▄▄▖
+I│ □ [i]c│mpute and NVSwitch software                        ▄
+c└───────┘ain plus NVSwitch software; the OOB LAN r
+
+frame 7 at 700ms
+ rataflow-view · 77x47 @100% · canvas 64x95 · canvas-v3.json · 14 nodes · 8 e
+OOB hardware-control plane
+one OOB trunk to the BMCs and power shelf; nv-rms source is free
+
+              ╭─────────────────╮
+              │nv-rms (free src)│
+              │                 │
+              ╰─────────────────╯
+                       │
+                       │
+                       │
+                       │
+                       │ client
+                       │
+                       │
+                       │
+                       ▼
+                   ╭───────╮
+                   │OOB LAN│
+                   │       │
+                   ╰───────╯
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │ Redfish/HTTPS
+                       │
+                       │
+                       │
+                       │
+                       │
+              ╭────────⌒
+              │       ╭┴──────╮
+              │       ▼       │
+╭───────────╮ │ ╭───────────╮ │ ╭────────────╮               ▀▘
+│Compute BMC│◀╯ │Power shelf│ ╰▶│NVSwitch BMC│               ▝▘
+│           │   │           │   │            │
+╰┌───────┐──╯   ╰───────────╯   ╰────────────╯              ▜▟▛▘
+ │ + [+] │                                                  ▗▖▖
+ │ − [-] │                                                  ▗▗▖
+─│ ⊡ [f]─│─────────────────────────────────────────         ▄▄▖
+I│ □ [i]c│mpute and NVSwitch software                        ▄
+c└───────┘ain plus NVSwitch software; the OOB LAN r
+
+frame 8 at 800ms
+ rataflow-view · 77x47 @100% · canvas 64x95 · canvas-v3.json · 14 nodes · 8 e
+OOB hardware-control plane
+one OOB trunk to the BMCs and power shelf; nv-rms source is free
+
+              ╭─────────────────╮
+              │nv-rms (free src)│
+              │                 │
+              ╰─────────────────╯
+                       │
+                       │
+                       │
+                       │
+                       │ client
+                       │
+                       │
+                       │
+                       ▼
+                   ╭───────╮
+                   │OOB LAN│
+                   │       │
+                   ╰───────╯
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │ Redfish/HTTPS
+                       │
+                       │
+                       │
+                       │
+                       │
+              ╭────────⌒
+              │       ╭┴──────╮
+              │       ▼       │
+╭───────────╮ │ ╭───────────╮ │ ╭────────────╮               ▀▘
+│Compute BMC│◀╯ │Power shelf│ ╰▶│NVSwitch BMC│               ▝▘
+│           │   │           │   │            │
+╰┌───────┐──╯   ╰───────────╯   ╰────────────╯              ▜▟▛▘
+ │ + [+] │                                                  ▗▖▖
+ │ − [-] │                                                  ▗▗▖
+─│ ⊡ [f]─│─────────────────────────────────────────         ▄▄▖
+I│ □ [i]c│mpute and NVSwitch software                        ▄
+c└───────┘ain plus NVSwitch software; the OOB LAN r
+
+frame 9 at 900ms
+ rataflow-view · 77x47 @100% · canvas 64x95 · canvas-v3.json · 14 nodes · 8 e
+OOB hardware-control plane
+one OOB trunk to the BMCs and power shelf; nv-rms source is free
+
+              ╭─────────────────╮
+              │nv-rms (free src)│
+              │                 │
+              ╰─────────────────╯
+                       │
+                       │
+                       │
+                       │
+                       │ client
+                       │
+                       │
+                       │
+                       ▼
+                   ╭───────╮
+                   │OOB LAN│
+                   │       │
+                   ╰───────╯
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │ Redfish/HTTPS
+                       │
+                       │
+                       │
+                       │
+                       │
+              ╭────────⌒
+              │       ╭┴──────╮
+              │       ▼       │
+╭───────────╮ │ ╭───────────╮ │ ╭────────────╮               ▀▘
+│Compute BMC│◀╯ │Power shelf│ ╰▶│NVSwitch BMC│               ▝▘
+│           │   │           │   │            │
+╰┌───────┐──╯   ╰───────────╯   ╰────────────╯              ▜▟▛▘
+ │ + [+] │                                                  ▗▖▖
+ │ − [-] │                                                  ▗▗▖
+─│ ⊡ [f]─│─────────────────────────────────────────         ▄▄▖
+I│ □ [i]c│mpute and NVSwitch software                        ▄
+c└───────┘ain plus NVSwitch software; the OOB LAN r
+
+frame 10 at 1000ms
+ rataflow-view · 77x47 @100% · canvas 64x95 · canvas-v3.json · 14 nodes · 8 e
+OOB hardware-control plane
+one OOB trunk to the BMCs and power shelf; nv-rms source is free
+
+              ╭─────────────────╮
+              │nv-rms (free src)│
+              │                 │
+              ╰─────────────────╯
+                       │
+                       │
+                       │
+                       │
+                       │ client
+                       │
+                       │
+                       │
+                       ▼
+                   ╭───────╮
+                   │OOB LAN│
+                   │       │
+                   ╰───────╯
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │ Redfish/HTTPS
+                       │
+                       │
+                       │
+                       │
+                       │
+              ╭────────⌒
+              │       ╭┴──────╮
+              │       ▼       │
+╭───────────╮ │ ╭───────────╮ │ ╭────────────╮               ▀▘
+│Compute BMC│◀╯ │Power shelf│ ╰▶│NVSwitch BMC│               ▝▘
+│           │   │           │   │            │
+╰┌───────┐──╯   ╰───────────╯   ╰────────────╯              ▜▟▛▘
+ │ + [+] │                                                  ▗▖▖
+ │ − [-] │                                                  ▗▗▖
+─│ ⊡ [f]─│─────────────────────────────────────────         ▄▄▖
+I│ □ [i]c│mpute and NVSwitch software                        ▄
+c└───────┘ain plus NVSwitch software; the OOB LAN r
+
+frame 11 at 1100ms
+ rataflow-view · 77x47 @100% · canvas 64x95 · canvas-v3.json · 14 nodes · 8 e
+OOB hardware-control plane
+one OOB trunk to the BMCs and power shelf; nv-rms source is free
+
+              ╭─────────────────╮
+              │nv-rms (free src)│
+              │                 │
+              ╰─────────────────╯
+                       │
+                       │
+                       │
+                       │
+                       │ client
+                       │
+                       │
+                       │
+                       ▼
+                   ╭───────╮
+                   │OOB LAN│
+                   │       │
+                   ╰───────╯
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │
+                       │ Redfish/HTTPS
+                       │
+                       │
+                       │
+                       │
+                       │
+              ╭────────⌒
+              │       ╭┴──────╮
+              │       ▼       │
+╭───────────╮ │ ╭───────────╮ │ ╭────────────╮               ▀▘
+│Compute BMC│◀╯ │Power shelf│ ╰▶│NVSwitch BMC│               ▝▘
+│           │   │           │   │            │
+╰┌───────┐──╯   ╰───────────╯   ╰────────────╯              ▜▟▛▘
+ │ + [+] │                                                  ▗▖▖
+ │ − [-] │                                                  ▗▗▖
+─│ ⊡ [f]─│─────────────────────────────────────────         ▄▄▖
+I│ □ [i]c│mpute and NVSwitch software                        ▄
+c└───────┘ain plus NVSwitch software; the OOB LAN r
+

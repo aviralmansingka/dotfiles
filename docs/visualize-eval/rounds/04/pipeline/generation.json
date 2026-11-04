@@ -1,0 +1,424 @@
+{
+  "case_id": "pipeline",
+  "paths_relative_to": "docs/visualize-eval/rounds/04/pipeline/",
+  "round": "04",
+  "task_doc_note": "rounds/04/generator-task.md's Output section literally says round: \"03\"; this bundle is round 04 (docs/visualize-eval/rounds/04/), so round is recorded as 04.",
+  "generator": {
+    "identity": "fresh diagram generator, round 04, isolated worker subagent (viz-ds04-1)",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "provider": "fireworks",
+    "reasoning_level": "high",
+    "model_switched": false,
+    "judges_spawned": 0,
+    "reviewer_spawned": false,
+    "session_file": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-dotfiles-fix-visualize-skill--/2026-11-02T12-36-50-159Z_350db293-434f2dac-802c8b1b-cb16.jsonl"
+  },
+  "frozen_inputs": {
+    "candidate_skill": {
+      "path": "docs/visualize-eval/rounds/04/SKILL.md",
+      "sha256": "ac431c6d3035e466e29136f36d9579c551c2e070a354dc5df72999b1bb1beb3c",
+      "verified_with": "shasum -a 256"
+    },
+    "renderer": {
+      "path": "/tmp/visualize-eval/round-04/bin/rataflow-view",
+      "sha256": "0da16d8d8ed46e2a25eb773fc71ecad4de9e310cd33e303a4c7fe77231ad95bc",
+      "verified_with": "shasum -a 256 and evidence/v1/bin.sha256",
+      "rebuilt_or_substituted": false
+    },
+    "case_source": "docs/visualize-eval/cases/pipeline/source.md"
+  },
+  "views": [
+    {
+      "view": "v1",
+      "title": "Job pipeline: entry, auth split, async worker tier, Postgres",
+      "spec": "specs/v1-final.json",
+      "spec_sha256": "fd8c35436a83da8412417e3a72037092fa4800d17ed6eced13779290979159ad",
+      "accepted_attempt": 2,
+      "attempts_used": 3,
+      "attempt_budget": 3,
+      "direction": "tb",
+      "theme": "gruvbox",
+      "evidence": {
+        "bundle": "evidence/v1",
+        "manifest": "evidence/v1/manifest.json",
+        "text": "evidence/v1/v1-text.txt",
+        "ansi": "evidence/v1/v1-ansi.ansi",
+        "selected_ansi": "evidence/v1/v1-selected.ansi",
+        "check": "evidence/v1/check.txt",
+        "frames_pane": "evidence/v1/v1-frames.txt",
+        "frames_ansi_pane": "evidence/v1/v1-frames.ansi",
+        "frames_direct_full_cycle": "captures/v1-frames-direct.txt",
+        "validator_output": "evidence/v1/validator.txt",
+        "binary_binding": "evidence/v1/bin.sha256"
+      },
+      "measured": {
+        "viewport_token": "77x47 @100%",
+        "viewport_token_source": "evidence/v1/v1-text.txt line 0: ' rataflow-view \u00b7 77x47 @100% \u00b7 v1-final.json \u00b7 6 nodes \u00b7 6 edges \u00b7 q quit'",
+        "viewport_line": null,
+        "viewport_line_note": "the live pane's alternate screen erased the startup 'viewport:' line; the app's own header token is the measurement, as the rubric allows",
+        "pane_rect": null,
+        "pane_rect_note": "viz-evidence.sh's 'herdr pane layout' rect probe returned no rect for the split pane (pane_cols null, pane_rows 47 from pane viewport_rows). Recorded as-is; the header token is the authority on 77x47 at 100%.",
+        "extent_cells": "36x40",
+        "extent_source": "evidence/v1/check.txt 'extent=36x40 cells'",
+        "measured_graph_bbox_in_capture": "x 22..53, y 6..41 (evidence/v1/v1-text.txt)",
+        "zoom": "1.00 natural",
+        "pan_or_zoom_applied": false,
+        "direct_dump_pin": "COLUMNS=77 LINES=47 /tmp/visualize-eval/round-04/bin/rataflow-view --frames 21 --step-ms 100 specs/v1-final.json"
+      },
+      "check_lines": {
+        "extent": "extent=36x40 cells",
+        "crossings": "crossings: 0 bridges, 0 touching bends",
+        "labels": "labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups": "groups: client(1) control(1) identity(1) async(2) storage(1)",
+        "trunks": "trunks: (none declared \u2014 no shared bus in this source)",
+        "routes": "routes: 6/6 near-minimal, 0 detours, 0 shortened",
+        "dots": "dots: 6 single-dot routes, 0 periodic routes, 0 violations, 6 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins": "origins: 6/6 routes start at their arrow origin",
+        "arrivals": "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step",
+        "warnings": "none (validator check_warnings_absent PASS)"
+      },
+      "motion": {
+        "mode": "constant (default)",
+        "flow": true,
+        "dots_per_route": 1,
+        "rate_reported": "0.5 cells per 100 ms step",
+        "same_arrival_used": false,
+        "duration_ms_used": false,
+        "measured_travel": "all six dots change cell on exactly 10 of the 20 transitions and never move more than one cell per transition, i.e. 0.5 cells per 100 ms step. Manhattan travel over frames 0->20 is 10 cells for the two straight vertical routes (dot0 cli->api, dot3 queue->worker) and 11 for the four routes carrying one diagonal step. Distinct cells visited: 11 for dot1/dot2/dot4/dot5, but only 2 for dot0 and dot3 (see known defect d1).",
+        "measured_travel_source": "captures/v1-frames-direct.txt, frames 0..20"
+      },
+      "group_colors_measured": {
+        "source": "evidence/v1/v1-ansi.ansi (truecolor SGR 38;2;r;g;b per cell)",
+        "client:CLI": "rgb(216,166,87) \u2014 border cells x35..39, y6..9",
+        "control:API gateway": "rgb(125,174,163) \u2014 border cells x35..47, y14..17",
+        "identity:Auth": "rgb(211,134,155) \u2014 border cells x48..53, y22..25",
+        "async:Job queue": "rgb(169,182,101) \u2014 border cells x22..32, y22..25",
+        "async:Worker pool": "rgb(189,201,124) \u2014 border cells x22..34, y30..33",
+        "storage:Postgres": "rgb(125,160,184) \u2014 border cells x35..44, y38..41",
+        "families": "5 hue families for 5 groups; the two async nodes share the green family in two related shades (169,182,101 / 189,201,124)",
+        "background": "uniform rgb(40,40,40) for all 221 background cells in both the normal and selected frames \u2014 one plain background, box interiors share it",
+        "node_rectangles_measured": "CLI x35..39 y6..9; API gateway x35..47 y14..17; Job queue x22..32 y22..25; Auth x48..53 y22..25; Worker pool x22..34 y30..33; Postgres x35..44 y38..41 (all 4 rows tall, measured from evidence/v1/v1-text.txt)"
+      }
+    }
+  ],
+  "meaning_ledger": [
+    {
+      "fact": "node `cli` = CLI",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "v1 node cli"
+    },
+    {
+      "fact": "node `api` = API gateway",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "v1 node api"
+    },
+    {
+      "fact": "node `auth` = Auth",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "v1 node auth"
+    },
+    {
+      "fact": "node `queue` = Job queue",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "v1 node queue"
+    },
+    {
+      "fact": "node `worker` = Worker pool",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "v1 node worker"
+    },
+    {
+      "fact": "node `db` = Postgres",
+      "kind": "identifier",
+      "fate": "drawn",
+      "where": "v1 node db"
+    },
+    {
+      "fact": "cli -> api, unlabeled historical relation (no protocol named)",
+      "kind": "relation + qualifier",
+      "fate": "drawn",
+      "where": "v1 e1, arrowheads only, no label invented"
+    },
+    {
+      "fact": "api -> auth with action `verify`",
+      "kind": "verb",
+      "fate": "drawn",
+      "where": "v1 e2 label 'verify'"
+    },
+    {
+      "fact": "api -> queue with action `enqueue`",
+      "kind": "verb",
+      "fate": "drawn",
+      "where": "v1 e3 label 'enqueue'"
+    },
+    {
+      "fact": "queue -> worker, unlabeled historical relation (no protocol named)",
+      "kind": "relation + qualifier",
+      "fate": "drawn",
+      "where": "v1 e4, arrowheads only, no label invented"
+    },
+    {
+      "fact": "worker -> db with action `write`",
+      "kind": "verb",
+      "fate": "drawn",
+      "where": "v1 e5 label 'write'"
+    },
+    {
+      "fact": "auth -> db with action `read`",
+      "kind": "verb",
+      "fate": "drawn",
+      "where": "v1 e6 label 'read'"
+    },
+    {
+      "fact": "the read path and the write path are separate facts and must not be confused",
+      "kind": "qualifier",
+      "fate": "drawn",
+      "where": "v1: e6 (read) enters Postgres from the right, e5 (write) from the left; distinct labels, distinct routes, 0 ambiguous owners"
+    },
+    {
+      "fact": "authentication path and queue path split at the gateway",
+      "kind": "structure",
+      "fate": "drawn",
+      "where": "v1: api has two outbound edges, left to Job queue, right to Auth"
+    },
+    {
+      "fact": "use slow, sparse motion for traffic",
+      "kind": "presentation requirement",
+      "fate": "drawn",
+      "where": "v1: flow true at the constant default rate (0.5 cells/100 ms) with dots:1 \u2014 one dot per route, 6 on the whole canvas"
+    },
+    {
+      "fact": "semantic tiers with related color shades",
+      "kind": "presentation requirement",
+      "fate": "drawn",
+      "where": "v1: 5 declared groups, 5 hue families, async pair in related green shades"
+    },
+    {
+      "fact": "plain background, boxes sharing the background, borders that do not look blocky",
+      "kind": "presentation requirement",
+      "fate": "drawn",
+      "where": "v1: single background rgb(40,40,40) everywhere; 1-cell rounded box borders, no filled interiors"
+    },
+    {
+      "fact": "no dots on box borders",
+      "kind": "presentation requirement",
+      "fate": "drawn",
+      "where": "v1: 126 dot-cell samples across frames 0..20, none inside any node rectangle"
+    },
+    {
+      "fact": "historical chat also asked for an even pane split (line 48)",
+      "kind": "harness constraint",
+      "fate": "dropped with reason",
+      "where": "not a diagram fact; the evidence pane is the harness's own half split (ratio 0.5) and this bundle claims nothing about it"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "cli",
+      "to": "api",
+      "verb_tech": "unlabeled historical relation",
+      "label_owner": "none (no label drawn)",
+      "view": "v1"
+    },
+    {
+      "id": "e2",
+      "from": "api",
+      "to": "auth",
+      "verb_tech": "verify",
+      "label_owner": "e2",
+      "view": "v1"
+    },
+    {
+      "id": "e3",
+      "from": "api",
+      "to": "queue",
+      "verb_tech": "enqueue",
+      "label_owner": "e3",
+      "view": "v1"
+    },
+    {
+      "id": "e4",
+      "from": "queue",
+      "to": "worker",
+      "verb_tech": "unlabeled historical relation",
+      "label_owner": "none (no label drawn)",
+      "view": "v1"
+    },
+    {
+      "id": "e5",
+      "from": "worker",
+      "to": "db",
+      "verb_tech": "write",
+      "label_owner": "e5",
+      "view": "v1"
+    },
+    {
+      "id": "e6",
+      "from": "auth",
+      "to": "db",
+      "verb_tech": "read",
+      "label_owner": "e6",
+      "view": "v1"
+    }
+  ],
+  "relationship_mapping": [
+    {
+      "source_relation": "cli -> api",
+      "view_relation": "v1 e1 (cli box top layer -> API gateway), arrowhead at API gateway top, no label",
+      "evidence": "evidence/v1/v1-text.txt rows 6-13 (CLI box y6..9, stem y10..12, arrowhead y13 at x36)"
+    },
+    {
+      "source_relation": "api -> auth verify",
+      "view_relation": "v1 e2 (API gateway -> Auth, right-hand branch), label 'verify' at x40..45, row 19",
+      "evidence": "evidence/v1/v1-text.txt rows 18-21: api stem (38,18)-(38,19), arm \u2570 x38 -> \u256e x49 on row 20, arrowhead \u25bc (49,21) above the Auth box x48..53 y22..25"
+    },
+    {
+      "source_relation": "api -> queue enqueue",
+      "view_relation": "v1 e3 (API gateway -> Job queue, left-hand branch), label 'enqueue' at x27..33, row 19",
+      "evidence": "evidence/v1/v1-text.txt rows 18-21: api stem (36,18)-(36,19), arm \u256d x23 -> \u256f x36 on row 20, arrowhead \u25bc (23,21) above the Job queue box x22..32 y22..25"
+    },
+    {
+      "source_relation": "queue -> worker",
+      "view_relation": "v1 e4 (Job queue -> Worker pool, vertical), no label",
+      "evidence": "evidence/v1/v1-text.txt rows 26-29 (x23 stem, arrowhead y29 above Worker pool at y30..33)"
+    },
+    {
+      "source_relation": "worker -> db write",
+      "view_relation": "v1 e5 (Worker pool -> Postgres, left approach), label 'write' at x27..31, row 35",
+      "evidence": "evidence/v1/v1-text.txt rows 34-37 (stem x23, elbow \u2570 at (23,36), run to \u256e x36, arrowhead (36,37))"
+    },
+    {
+      "source_relation": "auth -> db read",
+      "view_relation": "v1 e6 (Auth -> Postgres, right approach), label 'read' at x42..45, row 35",
+      "evidence": "evidence/v1/v1-text.txt rows 26-37 (x49 stem, elbow \u256f at (49,36), run left to \u256d x38, arrowhead (38,37))"
+    }
+  ],
+  "coverage_map": {
+    "v1": "single view; all 6 nodes, all 6 audited edges (e1..e6), all 4 verbs, both unlabeled-relation qualifiers, and all three presentation requirements (slow sparse motion, semantic tiers, plain background) are visible. No fact is split across views because the graph fits one 77x47 view at 100%.",
+    "edges_covered": [
+      "e1",
+      "e2",
+      "e3",
+      "e4",
+      "e5",
+      "e6"
+    ],
+    "qualifiers_covered": [
+      "cli->api unlabeled",
+      "queue->worker unlabeled",
+      "read separate from write"
+    ],
+    "identifiers_covered": [
+      "cli",
+      "api",
+      "auth",
+      "queue",
+      "worker",
+      "db",
+      "verify",
+      "enqueue",
+      "write",
+      "read"
+    ]
+  },
+  "source_pointers": [
+    "docs/visualize-eval/cases/pipeline/source.md \u2014 Task section (live job-pipeline diagram; separate read/write and auth/queue paths; slow sparse motion)",
+    "docs/visualize-eval/cases/pipeline/source.md \u2014 Relationship facts list (6 nodes, 6 relations, 2 unlabeled)",
+    "docs/visualize-eval/cases/pipeline/source.md \u2014 Fixed constraints (keep every relation; do not confuse auth read with worker write; semantic tiers, related shades, plain background, no border dots)",
+    "docs/visualize-eval/cases/pipeline/source.md \u2014 Original line 5 and line 48 (historical user statements; treated as evidence for presentation requirements only)"
+  ],
+  "abbreviations": [
+    {
+      "drawn": "API gateway",
+      "source": "API gateway",
+      "note": "verbatim"
+    },
+    {
+      "drawn": "Job queue",
+      "source": "Job queue",
+      "note": "verbatim"
+    },
+    {
+      "drawn": "Worker pool",
+      "source": "Worker pool",
+      "note": "verbatim"
+    },
+    {
+      "drawn": "CLI / Auth / Postgres",
+      "source": "CLI / Auth / Postgres",
+      "note": "verbatim; no identifier was shortened in the final spec"
+    }
+  ],
+  "deliberate_drops": [
+    {
+      "dropped": "any protocol or technology name on e1 (cli->api) and e4 (queue->worker)",
+      "reason": "the source marks both as unlabeled historical relations and forbids inventing a protocol; the edges keep their arrowheads and draw no label"
+    },
+    {
+      "dropped": "the historical line-48 pane-split request",
+      "reason": "a harness/pane-geometry request, not a graph fact; not representable in a spec"
+    },
+    {
+      "dropped": "trunks",
+      "reason": "the source describes no shared bus; declaring one would fabricate parallelism that does not exist"
+    }
+  ],
+  "known_defects": [
+    {
+      "id": "d1",
+      "severity": "minor (motion reading)",
+      "defect": "The two purely vertical hops (cli->api and queue->worker) have only a 2-cell traversable path, so their dots oscillate between two adjacent cells instead of travelling. This is the renderer's constant-rate dot on a short route, not a detour or a lost relation.",
+      "evidence": "captures/v1-frames-direct.txt: the cli->api dot visits only (36,11) and (36,12) across frames 0..20 while the gap between the CLI box (bottom border y9) and the API gateway box (top border y14) is four rows y10..13; the queue->worker dot likewise visits only (23,27) and (23,28) between the Job queue box (bottom y25) and the Worker pool box (top y30).",
+      "attempted_fix": "attempt 3 reserved a layout slot to offset the Worker pool, turning both hops into elbows; it was rejected because it introduced 1 ambiguous label owner and a 51-cell forced wrap on e5 (attempts/v1-attempt3-tb-offset.check.txt). Budget was then exhausted.",
+      "not_fixed_because": "spec attempts exhausted (3 of 3 used); the defect does not hide a relationship, a label, or a direction."
+    },
+    {
+      "id": "d2",
+      "severity": "minor (color, not fixable in spec)",
+      "defect": "The `client` group's colour family is the same gruvbox accent rgb(216,166,87) that the viewer uses for selection, so CLI's selected border is indistinguishable from its unselected border in the --select-all frame.",
+      "evidence": "evidence/v1/v1-ansi.ansi CLI border rgb(216,166,87) at x35..39,y6..9; evidence/v1/v1-selected.ansi CLI border is the same rgb(216,166,87) at the same cells, while the other five boxes switch from their group colour to rgb(216,166,87).",
+      "not_fixed_because": "the palette assignment gives the accent to the first group; avoiding it would mean inventing or merging a semantic group, which the skill forbids. Selection of the other five nodes is still proven."
+    },
+    {
+      "id": "d3",
+      "severity": "measurement disagreement (report, do not hide)",
+      "defect": "`origins: 6/6` and the capture agree only if the 1-cell port stem is excluded from a route: at 0 ms every dot sits on the second drawn cell of its route, and the stem cell adjacent to the source box is never traversed.",
+      "evidence": "captures/v1-frames-direct.txt frame 0 dots at (36,11) while the cli->api stem cell (36,10) holds the route glyph and never a dot; the same +1 offset holds at (36,18)->(36,19), (38,18)->(38,19), (23,26)->(23,27), (49,26)->(49,27), (23,34)->(23,35).",
+      "not_fixed_because": "not spec-controllable; recorded so the reader can judge the check line against the frames."
+    },
+    {
+      "id": "d4",
+      "severity": "capture (harness scrollback)",
+      "defect": "evidence/v1/v1-frames.txt begins mid-frame: the pane scrollback dropped the `frame 0 at 0ms` timestamp line, so the timestamped pane capture holds frames 1..20.",
+      "evidence": "evidence/v1/v1-frames.txt: first line is a partial dot/route row with no timestamp; the first 'frame N at Nms' marker is 'frame 1 at 100ms'; the last is 'frame 20 at 2000ms'.",
+      "mitigation": "captures/v1-frames-direct.txt is the complete 21-frame cycle (frame 0 at 0ms .. frame 20 at 2000ms) dumped directly at the pinned COLUMNS=77 LINES=47 size, as an out-of-pane direct dump is documented to be equivalent for motion proof."
+    }
+  ],
+  "blockers": [],
+  "capabilities_used": {
+    "group": "5 semantic groups with distinct hue families",
+    "flow": "true (constant default), dots: 1 per route",
+    "style_dashed": "not used \u2014 the source confirms every relation",
+    "trunks": "not used \u2014 no shared bus in the source"
+  },
+  "cleanup": {
+    "status": "confirmed_closed",
+    "pane_id": "w7E:pDJ",
+    "source": "evidence/v1/manifest.json \"cleanup\": \"confirmed_closed\", pane_id w7E:pDJ",
+    "panes_owned_and_closed": 1,
+    "notes": "exactly one pane was split (by scripts/viz-evidence.sh from my own tab, --no-focus) and it was closed and probed gone; no other pane was created and no raw tmux was used"
+  },
+  "validator": {
+    "command": "uv run scripts/viz-validate.py docs/visualize-eval/rounds/04/pipeline/evidence/v1 --require-select --require-frames --attempts docs/visualize-eval/rounds/04/pipeline/attempts.json",
+    "verdict": "all checks passed (34 PASS, 0 FAIL)",
+    "output": "evidence/v1/validator.txt",
+    "failing_checks": []
+  },
+  "self_assessment": "not green, not independently reviewed. Per the generator task, no reviewer was spawned; the captain starts a separate Sol judge. Defects d1-d4 remain as listed."
+}

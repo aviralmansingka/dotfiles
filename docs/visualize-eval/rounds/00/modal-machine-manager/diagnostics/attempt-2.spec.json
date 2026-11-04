@@ -1,0 +1,91 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "q",
+      "label": "River jobs"
+    },
+    {
+      "id": "ssh",
+      "label": "SSH + BMC"
+    },
+    {
+      "id": "jan",
+      "label": "Janitor"
+    },
+    {
+      "id": "s3",
+      "label": "S3"
+    },
+    {
+      "id": "mch",
+      "label": "BM machines"
+    },
+    {
+      "id": "wapi",
+      "label": "Webapi"
+    },
+    {
+      "id": "slack",
+      "label": "Slack"
+    }
+  ],
+  "layers": [
+    [
+      "",
+      "",
+      "q"
+    ],
+    [
+      "ssh",
+      "",
+      "jan",
+      "",
+      "s3"
+    ],
+    [
+      "mch",
+      "",
+      "wapi"
+    ],
+    [
+      "",
+      "",
+      "slack"
+    ]
+  ],
+  "edges": [
+    {
+      "to": "ssh",
+      "label": "audit/verify",
+      "from": "q"
+    },
+    {
+      "to": "mch",
+      "label": "machine-audit",
+      "from": "ssh"
+    },
+    {
+      "to": "s3",
+      "label": "diag uploads",
+      "from": "q"
+    },
+    {
+      "to": "jan",
+      "label": "diag events",
+      "from": "q"
+    },
+    {
+      "to": "wapi",
+      "label": "propose action",
+      "from": "jan",
+      "flow": 0.1
+    },
+    {
+      "to": "slack",
+      "label": "confirm/alerts",
+      "from": "wapi"
+    }
+  ]
+}

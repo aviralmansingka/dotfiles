@@ -1,0 +1,606 @@
+{
+ "direction": "lr",
+ "theme": "gruvbox",
+ "diagrams": [
+  {
+   "id": "l0",
+   "title": "L0 · System context",
+   "description": "System context: the machine manager is one box. The control plane and ops call it, it drives Gcore and Latitude, it boots and audits the fleet, which pulls boot artefacts from S3, and it exchanges diagnostic events and proposed actions with the janitor service.",
+   "nodes": [
+    {
+     "id": "cp",
+     "label": "Modal control plane",
+     "group": "modal"
+    },
+    {
+     "id": "mm",
+     "label": "Machine manager",
+     "group": "manager"
+    },
+    {
+     "id": "ops",
+     "label": "ops + mmctl",
+     "group": "operators"
+    },
+    {
+     "id": "agent",
+     "label": "machine-agent",
+     "group": "machines"
+    },
+    {
+     "id": "providers",
+     "label": "bare-metal providers",
+     "group": "providers"
+    },
+    {
+     "id": "mach",
+     "label": "bare-metal machines",
+     "group": "machines"
+    },
+    {
+     "id": "slackapi",
+     "label": "Slack API",
+     "group": "tooling"
+    },
+    {
+     "id": "s3",
+     "label": "S3 buckets",
+     "group": "storage"
+    },
+    {
+     "id": "janitorsvc",
+     "label": "machine-janitor",
+     "group": "tooling"
+    }
+   ],
+   "edges": [
+    {
+     "from": "cp",
+     "to": "mm",
+     "label": "provisioning",
+     "dots": 0
+    },
+    {
+     "from": "ops",
+     "to": "mm",
+     "label": "http",
+     "dots": 0
+    },
+    {
+     "from": "agent",
+     "to": "mm",
+     "label": "register + heartbeat",
+     "dots": 0
+    },
+    {
+     "from": "mm",
+     "to": "providers",
+     "label": "provider API",
+     "dots": 0,
+     "label_slot": true
+    },
+    {
+     "from": "mm",
+     "to": "mach",
+     "label": "boot + audit",
+     "dots": 0
+    },
+    {
+     "from": "mm",
+     "to": "slackapi",
+     "label": "confirm + alerts",
+     "dots": 0
+    },
+    {
+     "from": "mach",
+     "to": "s3",
+     "label": "boot image",
+     "dots": 0
+    },
+    {
+     "from": "mm",
+     "to": "janitorsvc",
+     "label": "diagnostic events",
+     "dots": 0
+    },
+    {
+     "from": "janitorsvc",
+     "to": "mm",
+     "label": "proposed actions + reads",
+     "dots": 0
+    }
+   ],
+   "layers": [
+    [
+     "cp",
+     "ops",
+     "agent",
+     "janitorsvc"
+    ],
+    [
+     "mm"
+    ],
+    [
+     "mach",
+     "providers",
+     "slackapi"
+    ],
+    [
+     "s3"
+    ]
+   ]
+  },
+  {
+   "id": "l1",
+   "title": "L1 · Boundary — requests and machines",
+   "description": "L0's box opened once: private and public gRPC, webapi, the boot server, SSH and BMC ops sit inside. The control plane, ops, the fleet, the agent and the BMC endpoints stay outside. One arrow carries each RPC family; the queue and store are opened at L2.",
+   "containers": [
+    {
+     "label": "Machine manager",
+     "members": [
+      "pgrpc",
+      "pubgrpc",
+      "web",
+      "boot",
+      "sshx",
+      "bmcs"
+     ]
+    }
+   ],
+   "nodes": [
+    {
+     "id": "cp",
+     "label": "Modal control plane",
+     "group": "modal"
+    },
+    {
+     "id": "pgrpc",
+     "label": "private gRPC",
+     "group": "manager"
+    },
+    {
+     "id": "ops",
+     "label": "ops + mmctl",
+     "group": "operators"
+    },
+    {
+     "id": "web",
+     "label": "webapi",
+     "group": "manager"
+    },
+    {
+     "id": "agent",
+     "label": "machine-agent",
+     "group": "machines"
+    },
+    {
+     "id": "pubgrpc",
+     "label": "public gRPC",
+     "group": "manager"
+    },
+    {
+     "id": "mach",
+     "label": "bare-metal machines",
+     "group": "machines"
+    },
+    {
+     "id": "boot",
+     "label": "boot server",
+     "group": "manager"
+    },
+    {
+     "id": "sshx",
+     "label": "SSH executor",
+     "group": "manager"
+    },
+    {
+     "id": "bmcs",
+     "label": "BMC service",
+     "group": "manager"
+    },
+    {
+     "id": "bmcout",
+     "label": "BMC endpoints",
+     "group": "machines"
+    }
+   ],
+   "edges": [
+    {
+     "from": "cp",
+     "to": "pgrpc",
+     "label": "create / terminate / repair",
+     "dots": 0
+    },
+    {
+     "from": "ops",
+     "to": "web",
+     "label": "http + spa",
+     "dots": 0
+    },
+    {
+     "from": "agent",
+     "to": "pubgrpc",
+     "label": "register + heartbeat, 1 min",
+     "dots": 0
+    },
+    {
+     "from": "mach",
+     "to": "boot",
+     "label": "agent download + callback",
+     "dots": 0
+    },
+    {
+     "from": "sshx",
+     "to": "mach",
+     "label": "launch, audit, reimage (ssh)",
+     "dots": 0
+    },
+    {
+     "from": "bmcs",
+     "to": "bmcout",
+     "label": "redfish power + boot",
+     "dots": 0
+    }
+   ],
+   "layers": [
+    [
+     "cp",
+     "ops",
+     "agent"
+    ],
+    [
+     "pgrpc",
+     "pubgrpc",
+     "web"
+    ],
+    [
+     "sshx",
+     "bmcs"
+    ],
+    [
+     "boot"
+    ],
+    [
+     "mach",
+     "bmcout"
+    ]
+   ]
+  },
+  {
+   "id": "l1b",
+   "title": "L1b · Boundary — providers and egress",
+   "description": "The outward side of the box: webapi calls Latitude to reinstall servers and confirms in Slack, the secrets cache reads the SSH key and Slack token from Secrets Manager, the provider adapter drives Gcore, and telemetry exports traces and metrics to the collector.",
+   "containers": [
+    {
+     "label": "Machine manager",
+     "members": [
+      "web",
+      "prov",
+      "sec",
+      "otel"
+     ]
+    }
+   ],
+   "nodes": [
+    {
+     "id": "prov",
+     "label": "provider adapter",
+     "group": "providers"
+    },
+    {
+     "id": "gcore",
+     "label": "Gcore API",
+     "group": "providers"
+    },
+    {
+     "id": "web",
+     "label": "webapi",
+     "group": "manager"
+    },
+    {
+     "id": "lat",
+     "label": "Latitude API",
+     "group": "providers"
+    },
+    {
+     "id": "slackapi",
+     "label": "Slack API",
+     "group": "tooling"
+    },
+    {
+     "id": "sec",
+     "label": "secrets cache",
+     "group": "manager"
+    },
+    {
+     "id": "aws",
+     "label": "AWS Secrets Manager",
+     "group": "storage"
+    },
+    {
+     "id": "otel",
+     "label": "telemetry",
+     "group": "manager"
+    },
+    {
+     "id": "otelp",
+     "label": "OTel collector",
+     "group": "tooling"
+    }
+   ],
+   "edges": [
+    {
+     "from": "prov",
+     "to": "gcore",
+     "label": "cluster + machine api",
+     "dots": 0
+    },
+    {
+     "from": "web",
+     "to": "lat",
+     "label": "reinstall server",
+     "dots": 0
+    },
+    {
+     "from": "web",
+     "to": "slackapi",
+     "label": "confirm + alerts",
+     "dots": 0
+    },
+    {
+     "from": "sec",
+     "to": "aws",
+     "label": "ssh key + slack token",
+     "dots": 0
+    },
+    {
+     "from": "otel",
+     "to": "otelp",
+     "label": "traces + metrics",
+     "dots": 0
+    }
+   ],
+   "layers": [
+    [
+     "web",
+     "prov",
+     "sec",
+     "otel"
+    ],
+    [
+     "gcore",
+     "lat",
+     "slackapi",
+     "aws",
+     "otelp"
+    ]
+   ]
+  },
+  {
+   "id": "l2",
+   "title": "L2 · Inside — the request path",
+   "description": "Inside the box, the request path: listeners enqueue into the River queue, the worker chains follow-up jobs back into it, and the queue's work reaches the provider adapter and the reconcile loop, which creates and resizes clusters every minute.",
+   "containers": [
+    {
+     "label": "Machine manager",
+     "members": [
+      "pgrpc",
+      "pubgrpc",
+      "web",
+      "riverq",
+      "riverw",
+      "prov",
+      "recon"
+     ]
+    }
+   ],
+   "nodes": [
+    {
+     "id": "pgrpc",
+     "label": "private gRPC",
+     "group": "manager"
+    },
+    {
+     "id": "riverq",
+     "label": "River queue",
+     "group": "manager"
+    },
+    {
+     "id": "pubgrpc",
+     "label": "public gRPC",
+     "group": "manager"
+    },
+    {
+     "id": "web",
+     "label": "webapi",
+     "group": "manager"
+    },
+    {
+     "id": "riverw",
+     "label": "River workers",
+     "group": "manager"
+    },
+    {
+     "id": "prov",
+     "label": "provider adapter",
+     "group": "providers"
+    },
+    {
+     "id": "recon",
+     "label": "reconcile loop",
+     "group": "manager"
+    }
+   ],
+   "edges": [
+    {
+     "from": "pgrpc",
+     "to": "riverq",
+     "label": "enqueue launch / terminate",
+     "dots": 0
+    },
+    {
+     "from": "pubgrpc",
+     "to": "riverq",
+     "label": "enqueue audit / retry",
+     "dots": 0
+    },
+    {
+     "from": "web",
+     "to": "riverq",
+     "label": "reinstall / reprovision",
+     "dots": 0
+    },
+    {
+     "from": "riverw",
+     "to": "riverq",
+     "label": "chain follow-up jobs",
+     "dots": 0
+    },
+    {
+     "from": "riverw",
+     "to": "prov",
+     "label": "poll + patch gcore",
+     "dots": 0
+    },
+    {
+     "from": "pubgrpc",
+     "to": "prov",
+     "label": "verify claimed ip",
+     "dots": 0
+    },
+    {
+     "from": "recon",
+     "to": "prov",
+     "label": "cluster create / resize, 1 min",
+     "dots": 0
+    }
+   ],
+   "layers": [
+    [
+     "pgrpc",
+     "pubgrpc",
+     "web"
+    ],
+    [
+     "riverq"
+    ],
+    [
+     "riverw",
+     "recon"
+    ],
+    [
+     "prov"
+    ]
+   ]
+  },
+  {
+   "id": "l2b",
+   "title": "L2b · Inside — the state writes",
+   "description": "Inside the box, the state writes: each listener persists its own rows - machine rows, machine state, reads and proposed actions, download validation - the worker writes job rows and transitions, and the store issues all SQL to Postgres.",
+   "containers": [
+    {
+     "label": "Machine manager",
+     "members": [
+      "pgrpc",
+      "pubgrpc",
+      "web",
+      "boot",
+      "riverw",
+      "store",
+      "pg"
+     ]
+    }
+   ],
+   "nodes": [
+    {
+     "id": "pgrpc",
+     "label": "private gRPC",
+     "group": "manager"
+    },
+    {
+     "id": "store",
+     "label": "store (SQL)",
+     "group": "manager"
+    },
+    {
+     "id": "pubgrpc",
+     "label": "public gRPC",
+     "group": "manager"
+    },
+    {
+     "id": "web",
+     "label": "webapi",
+     "group": "manager"
+    },
+    {
+     "id": "boot",
+     "label": "boot server",
+     "group": "manager"
+    },
+    {
+     "id": "riverw",
+     "label": "River workers",
+     "group": "manager"
+    },
+    {
+     "id": "pg",
+     "label": "Postgres",
+     "group": "manager"
+    }
+   ],
+   "edges": [
+    {
+     "from": "pgrpc",
+     "to": "store",
+     "label": "machine rows",
+     "dots": 0
+    },
+    {
+     "from": "pubgrpc",
+     "to": "store",
+     "label": "machine state",
+     "dots": 0
+    },
+    {
+     "from": "web",
+     "to": "store",
+     "label": "reads + proposed actions",
+     "dots": 0
+    },
+    {
+     "from": "boot",
+     "to": "store",
+     "label": "validate download",
+     "dots": 0
+    },
+    {
+     "from": "riverw",
+     "to": "store",
+     "label": "job rows + transitions",
+     "dots": 0
+    },
+    {
+     "from": "store",
+     "to": "pg",
+     "label": "all sql over pgx",
+     "dots": 0
+    }
+   ],
+   "layers": [
+    [
+     "pgrpc",
+     "pubgrpc",
+     "web",
+     "boot",
+     "riverw"
+    ],
+    [
+     "store"
+    ],
+    [
+     "pg"
+    ]
+   ]
+  }
+ ]
+}

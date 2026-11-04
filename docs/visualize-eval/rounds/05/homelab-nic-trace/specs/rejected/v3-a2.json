@@ -1,0 +1,17 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "ts", "label": "tailscale0 100.113.153.49", "group": "overlay" },
+    { "id": "bond0", "label": "bond0 192.168.1.197/24", "group": "nic" },
+    { "id": "wlp", "label": "wlp8s0 192.168.1.213", "group": "nic" },
+    { "id": "rtr", "label": "rtr 192.168.1.1 WNC·claimed", "group": "ToR spine border FW · NAT+DHCP" },
+    { "id": "pool", "label": "pool 71.251.12.240" }
+  ],
+  "edges": [
+    { "from": "ts", "to": "bond0", "label": "encap over UDP" },
+    { "from": "bond0", "to": "rtr", "label": "def gw 0.5 ms" },
+    { "from": "wlp", "to": "rtr", "label": "metric 600" },
+    { "from": "rtr", "to": "pool", "label": "NAT egress" }
+  ]
+}

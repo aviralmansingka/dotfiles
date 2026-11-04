@@ -1,0 +1,34 @@
+{
+  "spec_path": "/tmp/e11/v3.json",
+  "spec_sha256": "3ed2a72689920d7c89b2abf05198d5465e84e19569118944040242edae39e7d8",
+  "binary_path": "/tmp/e11/rv",
+  "binary_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+  "pane_id": "w7E:pWD",
+  "pane_rect": null,
+  "pane_cols": null,
+  "pane_rows": 51,
+  "viewport_line": null,
+  "viewport_token": "82x51 @100%",
+  "check_exit": 0,
+  "check_window": [
+    "2026-11-03T00:30:28Z",
+    "2026-11-03T00:30:28Z"
+  ],
+  "capture_window": [
+    "2026-11-03T00:30:30Z",
+    "2026-11-03T00:30:49Z"
+  ],
+  "cleanup": "confirmed_closed",
+  "select_all_frame": true,
+  "frames": 3,
+  "frame_step_ms": 100,
+  "artifacts": {
+    "bin.sha256": "df815873c91eeb5bd9794f19233a47a70bcb2e3cd424d158368ab3ae7375698d",
+    "check.txt": "5ca128355b4889e91252331e9c3fc141c725e9633bfcfdda0fa3a4e53c979a6b",
+    "v3-ansi.ansi": "85e87f2b48f4f29f15c74e1cd8083932a506d646d2d529997f2110ff047c7bd3",
+    "v3-frames.ansi": "70d562d073e6e23b7d879f54ebe87589cb5af66e2042831cbc1aadbfa826a81e",
+    "v3-frames.txt": "ea554fd7844bb79e67ccac138286a130ece63f28d1d6249185b0cbe82c858eb2",
+    "v3-selected.ansi": "c87ea952fbe946ecfe785d46fbbfe860cf1c383bc489b21343c9def69d44835a",
+    "v3-text.txt": "57e7a1a5bb1f06dd0ca98db481d9d33cb775bce6ba70271857b3928a18568d4c"
+  }
+}

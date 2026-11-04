@@ -1,0 +1,26 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=18 edges=28 flows=0 direction=tb theme=gruvbox
+layers=7 (18 pinned, within-rank order automatic)
+pins: 18 pinned, 0 conflict(s)
+extent=60x82 cells
+crossings: 32 bridges, 16 touching bends
+warning: 18 nodes / 28 edges is above the readable budget (12/16); split it into an overview and detail graphs
+near-misses: 31 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)
+passes-near-unrelated-node: 31
+near-miss: route e17 passes 8 cell(s) at ring 2 of node 'bl2' (nearest cell 18,61)
+near-miss: route e19 passes 8 cell(s) at ring 2 of node 'leaf1' (nearest cell 30,61)
+near-miss: route e22 passes 5 cell(s) at ring 2 of node 'leaf2' (nearest cell 44,61)
+near-miss: route e26 passes 10 cell(s) at ring 2 of node 'rack1' (nearest cell 29,79)
+warning: 31 route cell(s) hug a node their relation does not serve; move the affected relations or let them route around
+labels: 24/24 placed, 0 leader-ticked, 0 on route, 0 skipped, 4 ambiguous owners
+unowned label: e5 "x-connect"
+unowned label: e6 "x-connect"
+unowned label: e24 "dual"
+unowned label: e27 "dual"
+warning: 4 label(s) have an ambiguous owner: another route is as close to the text as its own edge
+groups: isp(4) mux(2) core(2) firewall(2) border-leaf(2) spine(2) rack-leaf(2) rack(2)
+trunks:
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 0 by source, 0 by destination, 0 shared-hue pair(s) (source-only 0, destination-only 0)
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

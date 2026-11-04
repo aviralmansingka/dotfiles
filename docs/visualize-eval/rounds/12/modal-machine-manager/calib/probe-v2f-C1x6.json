@@ -1,0 +1,152 @@
+{
+ "direction": "tb",
+ "theme": "gruvbox",
+ "nodes": [
+  {
+   "id": "q",
+   "label": "River job queue",
+   "group": "ops"
+  },
+  {
+   "id": "prov",
+   "label": "bare-metal providers",
+   "group": "fleet"
+  },
+  {
+   "id": "ssh",
+   "label": "SSH + BMC ops",
+   "group": "ops"
+  },
+  {
+   "id": "jan",
+   "label": "janitor app",
+   "group": "ops"
+  },
+  {
+   "id": "mch",
+   "label": "bare-metal machines",
+   "group": "fleet"
+  },
+  {
+   "id": "wapi",
+   "label": "webapi server",
+   "group": "control"
+  },
+  {
+   "id": "boot",
+   "label": "boot server",
+   "group": "state"
+  },
+  {
+   "id": "s3",
+   "label": "S3",
+   "group": "state"
+  },
+  {
+   "id": "agent",
+   "label": "machine-agent",
+   "group": "fleet"
+  },
+  {
+   "id": "slack",
+   "label": "Slack",
+   "group": "humans"
+  },
+  {
+   "id": "pub",
+   "label": "public gRPC",
+   "group": "control"
+  }
+ ],
+ "edges": [
+  {
+   "from": "boot",
+   "to": "mch",
+   "label": "boot.ipxe + S3 args",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "mch",
+   "to": "boot",
+   "label": "iPXE request",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true,
+   "minlen": 2
+  },
+  {
+   "from": "q",
+   "to": "ssh",
+   "label": "audit/verify reimage",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "ssh",
+   "to": "mch",
+   "label": "run machine-audit",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "q",
+   "to": "jan",
+   "label": "diagnostic events",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "jan",
+   "to": "wapi",
+   "label": "proposals",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "wapi",
+   "to": "slack",
+   "label": "x",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "prov",
+   "to": "mch",
+   "label": "allocate inst",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "mch",
+   "to": "s3",
+   "label": "pull boot image",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "mch",
+   "to": "agent",
+   "label": "runs on host",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "agent",
+   "to": "pub",
+   "label": "heartbeat",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  }
+ ]
+}

@@ -1,0 +1,92 @@
+{
+  "case_id": "server-nic-layout",
+  "round": "11",
+  "notes": "Three final views, three spec candidates for v1 and v2, two for v3. Every candidate spec is preserved in this directory and every --check run is recorded in attempts-log.jsonl (labels match the 'record_label' fields below). The family hint (identity-probe-maps) oriented the view split by fact cluster; the source's own structure set each view's shape.",
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "spec": "v1-attempt1.json",
+          "spec_sha256": "2b6278bbc8092ebe19bdcbe5b89f73372fc6bbf480c54ee4a2f12066f300d623",
+          "record_label": "v1-attempt1",
+          "checked_extent": "76x35",
+          "note": "Merged ports + /29 pool into one tb view (6 nodes, 5 edges) to keep the case inside two views. --check read clean (0 crossings, 5/5 labels) but the pinned 77x47 dump showed the '.60-.62 free' edge label clipped to 'free · unpr' at the right canvas edge: the pool fan plus a 25-cell NIC box plus the s1 label exceeds the target width. Rejected on the capture, not on --check."
+        },
+        {
+          "spec": "v1-attempt2.json",
+          "spec_sha256": "faf08565d5a96f198b53dafca39544eeba11e4bcbb03a16589399bda3c6639bd",
+          "record_label": "v1-attempt2",
+          "checked_extent": "58x28",
+          "note": "Ports-only chain (dark -> s1 -> nic -> gw) at tb. Clean at 58x28, but the ledger still had two uncovered rows: the full public address 103.19.91.58 (only the '.58/29' suffix appeared) and the source's MAC-OUI caveat ('MAC OUI does not prove a ToR role'). Rejected for coverage, not geometry."
+        },
+        {
+          "spec": "v1.json",
+          "spec_sha256": "467e2e905830dc6730bafbe07bc2baf568a50c489ff527ecd1258bfa53d39797",
+          "record_label": "v1",
+          "checked_extent": "63x28",
+          "note": "CHOSEN. Full address on the host node, MAC-OUI basis with its 'role unproven' caveat on the gateway node. 0 crossings, 3/3 labels placed, 0 ambiguous owners."
+        }
+      ],
+      "chosen": "v1.json",
+      "crossings_chosen": 0
+    },
+    {
+      "view": "v2",
+      "attempts": [
+        {
+          "spec": "v2-attempt1.json",
+          "spec_sha256": "552cacdc5e032de261defee8c692f24d0c2f92f28703a50e6abe715164ce29ce",
+          "record_label": "v2-attempt1",
+          "checked_extent": "68x16",
+          "note": "Pool star at lr with label_slot on the spare edge (15-cell label). --check clean, but the 77x47 dump put 'free · unprobed' three rows BELOW the .60-.62 box, detached from its own dashed route (dashed run on one row, text on another). Rejected on the capture."
+        },
+        {
+          "spec": "v2-attempt2.json",
+          "spec_sha256": "31b2bfafe4d8899a95a2cfc377137cb7549a71b56f5f8d4154c25495550ecd50",
+          "record_label": "v2-attempt2",
+          "checked_extent": "75x14",
+          "note": "Same star, label_slot removed: label search now lands 'free · unprobed' directly above its dashed run. Clean geometry, but the access edge read only 'routed /29 · no NAT/v6' while the source states no NAT, no proxy AND no v6. Rejected for coverage."
+        },
+        {
+          "spec": "v2.json",
+          "spec_sha256": "f9a161e554c6c7f9707661d99b3d30da2a4bd16db4a46a95094ac01cd55daf97",
+          "record_label": "v2",
+          "checked_extent": "75x14",
+          "note": "CHOSEN. Adds 'proxy' to the public-access label. 0 crossings, 3/3 labels placed, 0 ambiguous owners, extent 75 of 77 columns (2 columns of margin)."
+        }
+      ],
+      "chosen": "v2.json",
+      "crossings_chosen": 0
+    },
+    {
+      "view": "v3",
+      "attempts": [
+        {
+          "spec": "v3-attempt1.json",
+          "spec_sha256": "e6ea2611edc23b85af1755dba86abae8682cfd61fc7ebf6e02ef5a85e89c8f11",
+          "record_label": "v3-attempt1",
+          "checked_extent": "66x28",
+          "note": "Upstream chain with the long label '1.8 ms · unseen bridge/tunnel/silent'. --check clean, but the label line reached column 76 of 77 in the pinned dump: zero margin, and the role rows (routed L3 leaf) were still undrawn while the gateway label spent its width on the vendor qualifier. Rejected."
+        },
+        {
+          "spec": "v3.json",
+          "spec_sha256": "3ed2a72689920d7c89b2abf05198d5465e84e19569118944040242edae39e7d8",
+          "record_label": "v3",
+          "checked_extent": "56x28",
+          "note": "CHOSEN. Shorter fabric label ('bridge|tunnel|silent', the source's own three options) and the gateway label now carries the role the source names (L3 leaf) plus site/AS/city; MAX-OUI basis stays in v1/v2. Longest canvas line 69 of 77. 0 crossings, 3/3 labels placed."
+        }
+      ],
+      "chosen": "v3.json",
+      "crossings_chosen": 0
+    }
+  ],
+  "abandoned_shapes": [],
+  "abandoned_shapes_note": "No separate shape experiments were run: every probe on this case was a per-view spec candidate and is listed above with its record label. The per-view three-candidate budget was reached exactly.",
+  "budget": {
+    "views": 3,
+    "max_views": 4,
+    "attempts_per_view": { "v1": 3, "v2": 3, "v3": 2 },
+    "max_attempts_per_view": 3
+  }
+}

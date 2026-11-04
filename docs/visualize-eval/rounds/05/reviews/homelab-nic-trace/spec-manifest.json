@@ -1,0 +1,18 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/05/homelab-nic-trace/specs/v1.json",
+    "sha256": "7c23ec5bf060ea5e18cff4d08738773990bb1b787e438a7d3b004ec2363e8a1c"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/05/homelab-nic-trace/specs/v2.json",
+    "sha256": "97b91fd312b17b2fdfa9b4890d9c8ff1be54c6ced7a6131ed440dbd0afcf89a0"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/05/homelab-nic-trace/specs/v3.json",
+    "sha256": "4409b833c5f2d213918e2795b4a944c7035cfc29c1e36f3b0adbd03e3d04d31e"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/05/homelab-nic-trace/specs/v4.json",
+    "sha256": "922b3f7fb40b25fbf7698d8caa5061b2a4434f24404249f9a9c3948066de9017"
+  }
+]

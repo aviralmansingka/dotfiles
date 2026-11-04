@@ -1,0 +1,733 @@
+{
+  "case_id": "datacenter-redundancy",
+  "round": "04",
+  "round_note": "the round-04 task template copies `round: \"03\"` from round 03; this sample is round 04",
+  "generator": {
+    "identity": "fresh round-04 diagram generator (pi worker subagent, isolated context)",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "skill_read": "docs/visualize-eval/rounds/04/SKILL.md"
+  },
+  "candidate_skill": {
+    "path": "docs/visualize-eval/rounds/04/SKILL.md",
+    "sha256": "ac431c6d3035e466e29136f36d9579c551c2e070a354dc5df72999b1bb1beb3c"
+  },
+  "renderer": {
+    "path": "/tmp/visualize-eval/round-04/bin/rataflow-view",
+    "sha256": "0da16d8d8ed46e2a25eb773fc71ecad4de9e310cd33e303a4c7fe77231ad95bc",
+    "rebuilt": false,
+    "substituted": false
+  },
+  "arrow_convention": "An arrow runs from the endpoint named first in the historical relationship facts to the endpoint named second. These are physical connectivity links, not proof of one-way traffic: an arrow means 'this port/cable reaches that device in the recorded direction', never 'traffic flows only this way'.",
+  "motion": "No edge is animated. Every edge carries \"dots\": 0 and no \"flow\" field, because the source forbids flowing dots (chat line 134). Motion-mode questions (constant vs same-arrival) therefore do not arise: --check reports 0 single-dot, 0 periodic, 0 violations, 0 constant, 0 same-arrival and origins 0/0 for all four views.",
+  "views": [
+    {
+      "view": "v1",
+      "role": "ISP carriers -> MUX appliances -> core routers (day-one cross-connect)",
+      "spec": "specs/v1.json",
+      "spec_sha256": "f6d20a5ffb5ec6d4452a49df144762a7a102f0c6e284a97b4a4e7ea859818c67",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "check": "evidence/v1/check.txt",
+      "frames": null,
+      "frames_note": "static view: no animated route, so no frame dump was taken; dot absence is visible in the plain-text and ANSI captures",
+      "manifest": "evidence/v1/manifest.json",
+      "validator": "evidence/v1/validator.txt",
+      "measured_viewport_line": null,
+      "measured_header_token": "77x47 @100%",
+      "measured_dimensions": "77x47 at natural zoom (app header token)",
+      "pane_id": "w7E:pE5",
+      "cleanup": "confirmed_closed",
+      "check_lines": {
+        "extent": "extent=64x22 cells",
+        "crossings": "crossings: 3 bridges, 3 touching bends",
+        "labels": "labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "routes": "routes: 8/8 near-minimal, 0 detours, 0 shortened",
+        "dots": "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins": "origins: 0/0 routes start at their arrow origin",
+        "arrivals": "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      },
+      "warnings": "none: --check printed no warning line for this view",
+      "validator_verdict": "all checks passed",
+      "measured_viewport_line_note": "null: the live pane's alternate screen erases the startup 'viewport:' line; the app's own header token in the same capture is the accepted measurement",
+      "frame_citation": "frames: null (static view - no animated route to prove)"
+    },
+    {
+      "view": "v2",
+      "role": "core routers -> active/passive firewall pair -> border leaves",
+      "spec": "specs/v2.json",
+      "spec_sha256": "31050fecd83fd229ce45507503fa20878de66ca1c37d92590f4d4376f47d4ade",
+      "text": "evidence/v2/v2-text.txt",
+      "ansi": "evidence/v2/v2-ansi.ansi",
+      "selected_ansi": "evidence/v2/v2-selected.ansi",
+      "check": "evidence/v2/check.txt",
+      "frames": null,
+      "frames_note": "static view: no animated route, so no frame dump was taken; dot absence is visible in the plain-text and ANSI captures",
+      "manifest": "evidence/v2/manifest.json",
+      "validator": "evidence/v2/validator.txt",
+      "measured_viewport_line": null,
+      "measured_header_token": "77x47 @100%",
+      "measured_dimensions": "77x47 at natural zoom (app header token)",
+      "pane_id": "w7E:pE6",
+      "cleanup": "confirmed_closed",
+      "check_lines": {
+        "extent": "extent=64x12 cells",
+        "crossings": "crossings: 2 bridges, 2 touching bends",
+        "labels": "labels: 8/8 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "routes": "routes: 8/8 near-minimal, 0 detours, 0 shortened",
+        "dots": "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins": "origins: 0/0 routes start at their arrow origin",
+        "arrivals": "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      },
+      "warnings": "none: --check printed no warning line for this view",
+      "validator_verdict": "all checks passed",
+      "measured_viewport_line_note": "null: the live pane's alternate screen erases the startup 'viewport:' line; the app's own header token in the same capture is the accepted measurement",
+      "frame_citation": "frames: null (static view - no animated route to prove)"
+    },
+    {
+      "view": "v3",
+      "role": "fabric: both spines above the border-leaf/rack-leaf row, racks below",
+      "spec": "specs/v3.json",
+      "spec_sha256": "e9333a549c32be67377ed247a4ffb080dd6c30a32c1d3902b6c7d281510ad65b",
+      "text": "evidence/v3/v3-text.txt",
+      "ansi": "evidence/v3/v3-ansi.ansi",
+      "selected_ansi": "evidence/v3/v3-selected.ansi",
+      "check": "evidence/v3/check.txt",
+      "frames": null,
+      "frames_note": "static view: no animated route, so no frame dump was taken; dot absence is visible in the plain-text and ANSI captures",
+      "manifest": "evidence/v3/manifest.json",
+      "validator": "evidence/v3/validator.txt",
+      "measured_viewport_line": null,
+      "measured_header_token": "77x47 @100%",
+      "measured_dimensions": "77x47 at natural zoom (app header token)",
+      "pane_id": "w7E:pE7",
+      "cleanup": "confirmed_closed",
+      "check_lines": {
+        "extent": "extent=65x35 cells",
+        "crossings": "crossings: 4 bridges, 2 touching bends",
+        "labels": "labels: 8/8 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "routes": "routes: 8/8 near-minimal, 0 detours, 0 shortened",
+        "dots": "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins": "origins: 0/0 routes start at their arrow origin",
+        "arrivals": "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      },
+      "warnings": "none: --check printed no warning line for this view",
+      "validator_verdict": "all checks passed",
+      "measured_viewport_line_note": "null: the live pane's alternate screen erases the startup 'viewport:' line; the app's own header token in the same capture is the accepted measurement",
+      "frame_citation": "frames: null (static view - no animated route to prove)"
+    },
+    {
+      "view": "v4",
+      "role": "spine -> rack-leaf ECMP detail fan",
+      "spec": "specs/v4.json",
+      "spec_sha256": "073654cac1f354f54b2841c5474b154aafda8984cab35cea2c2d1131ce169c49",
+      "text": "evidence/v4/v4-text.txt",
+      "ansi": "evidence/v4/v4-ansi.ansi",
+      "selected_ansi": "evidence/v4/v4-selected.ansi",
+      "check": "evidence/v4/check.txt",
+      "frames": null,
+      "frames_note": "static view: no animated route, so no frame dump was taken; dot absence is visible in the plain-text and ANSI captures",
+      "manifest": "evidence/v4/manifest.json",
+      "validator": "evidence/v4/validator.txt",
+      "measured_viewport_line": null,
+      "measured_header_token": "77x47 @100%",
+      "measured_dimensions": "77x47 at natural zoom (app header token)",
+      "pane_id": "w7E:pE8",
+      "cleanup": "confirmed_closed",
+      "check_lines": {
+        "extent": "extent=43x12 cells",
+        "crossings": "crossings: 1 bridges, 1 touching bends",
+        "labels": "labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "routes": "routes: 4/4 near-minimal, 0 detours, 0 shortened",
+        "dots": "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins": "origins: 0/0 routes start at their arrow origin",
+        "arrivals": "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      },
+      "warnings": "none: --check printed no warning line for this view",
+      "validator_verdict": "all checks passed",
+      "measured_viewport_line_note": "null: the live pane's alternate screen erases the startup 'viewport:' line; the app's own header token in the same capture is the accepted measurement",
+      "frame_citation": "frames: null (static view - no animated route to prove)"
+    }
+  ],
+  "coverage_map": {
+    "v1": "ispA,ispB -> mux1; ispC,ispD -> mux2; mux1,mux2 -> core1,core2 (x-connect x4)",
+    "v2": "core1,core2 -> fw1,fw2 (active x2, standby x2); fw1,fw2 -> bl1,bl2 (active x2, standby x2)",
+    "v3": "bl1,bl2 -> sp1,sp2 (ECMP x4); leaf1,leaf2 -> rack1,rack2 (dual x4); spines are drawn above and racks below the single border-leaf/rack-leaf row",
+    "v4": "sp1,sp2 -> leaf1,leaf2 (ECMP x4)"
+  },
+  "meaning_ledger": [
+    {
+      "fact": "ISP A / ISP B / ISP C / ISP D",
+      "kind": "identifier (4 carrier identities)",
+      "fate": "drawn as nodes ISP A..ISP D in v1"
+    },
+    {
+      "fact": "MUX 1 / MUX 2",
+      "kind": "identifier",
+      "fate": "drawn as nodes in v1"
+    },
+    {
+      "fact": "Core 1 / Core 2",
+      "kind": "identifier",
+      "fate": "drawn as nodes in v1 and v2"
+    },
+    {
+      "fact": "FW1 active / FW2 standby",
+      "kind": "residency + state",
+      "fate": "abbreviated: nodes read FW1 / FW2 in v2; the residency is carried by all four of each appliance's link labels (active / standby)"
+    },
+    {
+      "fact": "BL 1 / BL 2",
+      "kind": "identifier",
+      "fate": "drawn as nodes in v2, v3"
+    },
+    {
+      "fact": "Spine 1 / Spine 2",
+      "kind": "identifier",
+      "fate": "drawn as nodes in v3, v4"
+    },
+    {
+      "fact": "Leaf 1 / Leaf 2",
+      "kind": "identifier",
+      "fate": "drawn as nodes in v3, v4"
+    },
+    {
+      "fact": "Rack 1 / Rack 2",
+      "kind": "identifier",
+      "fate": "drawn as nodes in v3"
+    },
+    {
+      "fact": "ispA->mux1, ispB->mux1, ispC->mux2, ispD->mux2",
+      "kind": "relation (no verb in source)",
+      "fate": "drawn in v1 as four plain edges with no label - the source gives no protocol or verb, so none was invented"
+    },
+    {
+      "fact": "mux1/2 -> core1/2 (4 links)",
+      "kind": "verb x-connect",
+      "fate": "drawn in v1, labelled 'x-connect' on each link"
+    },
+    {
+      "fact": "core1/2 -> fw1/2 (4 links)",
+      "kind": "state active / standby",
+      "fate": "drawn in v2, labelled per link"
+    },
+    {
+      "fact": "fw1/2 -> bl1/2 (4 links)",
+      "kind": "state active / standby",
+      "fate": "drawn in v2, labelled per link"
+    },
+    {
+      "fact": "bl1/2 -> sp1/2 (4 links)",
+      "kind": "tech ECMP",
+      "fate": "drawn in v3, labelled ECMP"
+    },
+    {
+      "fact": "sp1/2 -> leaf1/2 (4 links)",
+      "kind": "tech ECMP",
+      "fate": "drawn in v4, labelled ECMP"
+    },
+    {
+      "fact": "leaf1/2 -> rack1/2 (4 links)",
+      "kind": "verb dual",
+      "fate": "drawn in v3, labelled 'dual'"
+    },
+    {
+      "fact": "cross-connect at every adjacent redundant tier",
+      "kind": "relationship shape",
+      "fate": "drawn: four links per tier in every view; no tier collapsed"
+    },
+    {
+      "fact": "'remove the dots flowing' (chat line 134)",
+      "kind": "qualifier: no motion",
+      "fate": "drawn: every one of the 28 edges carries dots: 0 and no flow field; no dot exists in any capture"
+    },
+    {
+      "fact": "'don't merge the arrows from core1 and core2 / mux1 and mux2' (line 270)",
+      "kind": "constraint",
+      "fate": "drawn: 28 independent edges, no trunks declared"
+    },
+    {
+      "fact": "'border leaf and leaf at the same height, spine above the leaf' (line 248)",
+      "kind": "layout constraint",
+      "fate": "drawn in v3: one row holds BL 1, BL 2, Leaf 1, Leaf 2 and both spines sit above it"
+    },
+    {
+      "fact": "physical links, not one-way traffic",
+      "kind": "qualifier",
+      "fate": "stated as an arrow convention below; no endpoint was reversed to make a layout easier"
+    },
+    {
+      "fact": "historical chat evidence (line 126 excerpt)",
+      "kind": "provenance",
+      "fate": "carried here and in generation.md; the graph is regenerated, not replayed"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "ispA",
+      "to": "mux1",
+      "verb": "(unlabelled in source)",
+      "label_owner": "e1",
+      "view": "v1",
+      "drawn_label": null
+    },
+    {
+      "id": "e2",
+      "from": "ispB",
+      "to": "mux1",
+      "verb": "(unlabelled in source)",
+      "label_owner": "e2",
+      "view": "v1",
+      "drawn_label": null
+    },
+    {
+      "id": "e3",
+      "from": "ispC",
+      "to": "mux2",
+      "verb": "(unlabelled in source)",
+      "label_owner": "e3",
+      "view": "v1",
+      "drawn_label": null
+    },
+    {
+      "id": "e4",
+      "from": "ispD",
+      "to": "mux2",
+      "verb": "(unlabelled in source)",
+      "label_owner": "e4",
+      "view": "v1",
+      "drawn_label": null
+    },
+    {
+      "id": "e5",
+      "from": "mux1",
+      "to": "core1",
+      "verb": "x-connect",
+      "label_owner": "e5",
+      "view": "v1",
+      "drawn_label": "x-connect"
+    },
+    {
+      "id": "e6",
+      "from": "mux1",
+      "to": "core2",
+      "verb": "x-connect",
+      "label_owner": "e6",
+      "view": "v1",
+      "drawn_label": "x-connect"
+    },
+    {
+      "id": "e7",
+      "from": "mux2",
+      "to": "core1",
+      "verb": "x-connect",
+      "label_owner": "e7",
+      "view": "v1",
+      "drawn_label": "x-connect"
+    },
+    {
+      "id": "e8",
+      "from": "mux2",
+      "to": "core2",
+      "verb": "x-connect",
+      "label_owner": "e8",
+      "view": "v1",
+      "drawn_label": "x-connect"
+    },
+    {
+      "id": "e9",
+      "from": "core1",
+      "to": "fw1",
+      "verb": "active",
+      "label_owner": "e9",
+      "view": "v2",
+      "drawn_label": "active"
+    },
+    {
+      "id": "e10",
+      "from": "core2",
+      "to": "fw1",
+      "verb": "active",
+      "label_owner": "e10",
+      "view": "v2",
+      "drawn_label": "active"
+    },
+    {
+      "id": "e11",
+      "from": "core1",
+      "to": "fw2",
+      "verb": "standby",
+      "label_owner": "e11",
+      "view": "v2",
+      "drawn_label": "standby"
+    },
+    {
+      "id": "e12",
+      "from": "core2",
+      "to": "fw2",
+      "verb": "standby",
+      "label_owner": "e12",
+      "view": "v2",
+      "drawn_label": "standby"
+    },
+    {
+      "id": "e13",
+      "from": "fw1",
+      "to": "bl1",
+      "verb": "active",
+      "label_owner": "e13",
+      "view": "v2",
+      "drawn_label": "active"
+    },
+    {
+      "id": "e14",
+      "from": "fw1",
+      "to": "bl2",
+      "verb": "active",
+      "label_owner": "e14",
+      "view": "v2",
+      "drawn_label": "active"
+    },
+    {
+      "id": "e15",
+      "from": "fw2",
+      "to": "bl1",
+      "verb": "standby",
+      "label_owner": "e15",
+      "view": "v2",
+      "drawn_label": "standby"
+    },
+    {
+      "id": "e16",
+      "from": "fw2",
+      "to": "bl2",
+      "verb": "standby",
+      "label_owner": "e16",
+      "view": "v2",
+      "drawn_label": "standby"
+    },
+    {
+      "id": "e17",
+      "from": "bl1",
+      "to": "sp1",
+      "verb": "ECMP",
+      "label_owner": "e17",
+      "view": "v3",
+      "drawn_label": "ECMP"
+    },
+    {
+      "id": "e18",
+      "from": "bl1",
+      "to": "sp2",
+      "verb": "ECMP",
+      "label_owner": "e18",
+      "view": "v3",
+      "drawn_label": "ECMP"
+    },
+    {
+      "id": "e19",
+      "from": "bl2",
+      "to": "sp1",
+      "verb": "ECMP",
+      "label_owner": "e19",
+      "view": "v3",
+      "drawn_label": "ECMP"
+    },
+    {
+      "id": "e20",
+      "from": "bl2",
+      "to": "sp2",
+      "verb": "ECMP",
+      "label_owner": "e20",
+      "view": "v3",
+      "drawn_label": "ECMP"
+    },
+    {
+      "id": "e21",
+      "from": "leaf1",
+      "to": "rack1",
+      "verb": "dual",
+      "label_owner": "e21",
+      "view": "v3",
+      "drawn_label": "dual"
+    },
+    {
+      "id": "e22",
+      "from": "leaf2",
+      "to": "rack1",
+      "verb": "dual",
+      "label_owner": "e22",
+      "view": "v3",
+      "drawn_label": "dual"
+    },
+    {
+      "id": "e23",
+      "from": "leaf1",
+      "to": "rack2",
+      "verb": "dual",
+      "label_owner": "e23",
+      "view": "v3",
+      "drawn_label": "dual"
+    },
+    {
+      "id": "e24",
+      "from": "leaf2",
+      "to": "rack2",
+      "verb": "dual",
+      "label_owner": "e24",
+      "view": "v3",
+      "drawn_label": "dual"
+    },
+    {
+      "id": "e25",
+      "from": "sp1",
+      "to": "leaf1",
+      "verb": "ECMP",
+      "label_owner": "e25",
+      "view": "v4",
+      "drawn_label": "ECMP"
+    },
+    {
+      "id": "e26",
+      "from": "sp1",
+      "to": "leaf2",
+      "verb": "ECMP",
+      "label_owner": "e26",
+      "view": "v4",
+      "drawn_label": "ECMP"
+    },
+    {
+      "id": "e27",
+      "from": "sp2",
+      "to": "leaf1",
+      "verb": "ECMP",
+      "label_owner": "e27",
+      "view": "v4",
+      "drawn_label": "ECMP"
+    },
+    {
+      "id": "e28",
+      "from": "sp2",
+      "to": "leaf2",
+      "verb": "ECMP",
+      "label_owner": "e28",
+      "view": "v4",
+      "drawn_label": "ECMP"
+    }
+  ],
+  "relationship_to_view": {
+    "total_source_relationships": 28,
+    "drawn_exactly_once": 28,
+    "map": {
+      "ispA->mux1": {
+        "edge": "e1",
+        "view": "v1",
+        "label": null
+      },
+      "ispB->mux1": {
+        "edge": "e2",
+        "view": "v1",
+        "label": null
+      },
+      "ispC->mux2": {
+        "edge": "e3",
+        "view": "v1",
+        "label": null
+      },
+      "ispD->mux2": {
+        "edge": "e4",
+        "view": "v1",
+        "label": null
+      },
+      "mux1->core1": {
+        "edge": "e5",
+        "view": "v1",
+        "label": "x-connect"
+      },
+      "mux1->core2": {
+        "edge": "e6",
+        "view": "v1",
+        "label": "x-connect"
+      },
+      "mux2->core1": {
+        "edge": "e7",
+        "view": "v1",
+        "label": "x-connect"
+      },
+      "mux2->core2": {
+        "edge": "e8",
+        "view": "v1",
+        "label": "x-connect"
+      },
+      "core1->fw1": {
+        "edge": "e9",
+        "view": "v2",
+        "label": "active"
+      },
+      "core2->fw1": {
+        "edge": "e10",
+        "view": "v2",
+        "label": "active"
+      },
+      "core1->fw2": {
+        "edge": "e11",
+        "view": "v2",
+        "label": "standby"
+      },
+      "core2->fw2": {
+        "edge": "e12",
+        "view": "v2",
+        "label": "standby"
+      },
+      "fw1->bl1": {
+        "edge": "e13",
+        "view": "v2",
+        "label": "active"
+      },
+      "fw1->bl2": {
+        "edge": "e14",
+        "view": "v2",
+        "label": "active"
+      },
+      "fw2->bl1": {
+        "edge": "e15",
+        "view": "v2",
+        "label": "standby"
+      },
+      "fw2->bl2": {
+        "edge": "e16",
+        "view": "v2",
+        "label": "standby"
+      },
+      "bl1->sp1": {
+        "edge": "e17",
+        "view": "v3",
+        "label": "ECMP"
+      },
+      "bl1->sp2": {
+        "edge": "e18",
+        "view": "v3",
+        "label": "ECMP"
+      },
+      "bl2->sp1": {
+        "edge": "e19",
+        "view": "v3",
+        "label": "ECMP"
+      },
+      "bl2->sp2": {
+        "edge": "e20",
+        "view": "v3",
+        "label": "ECMP"
+      },
+      "leaf1->rack1": {
+        "edge": "e21",
+        "view": "v3",
+        "label": "dual"
+      },
+      "leaf2->rack1": {
+        "edge": "e22",
+        "view": "v3",
+        "label": "dual"
+      },
+      "leaf1->rack2": {
+        "edge": "e23",
+        "view": "v3",
+        "label": "dual"
+      },
+      "leaf2->rack2": {
+        "edge": "e24",
+        "view": "v3",
+        "label": "dual"
+      },
+      "sp1->leaf1": {
+        "edge": "e25",
+        "view": "v4",
+        "label": "ECMP"
+      },
+      "sp1->leaf2": {
+        "edge": "e26",
+        "view": "v4",
+        "label": "ECMP"
+      },
+      "sp2->leaf1": {
+        "edge": "e27",
+        "view": "v4",
+        "label": "ECMP"
+      },
+      "sp2->leaf2": {
+        "edge": "e28",
+        "view": "v4",
+        "label": "ECMP"
+      }
+    },
+    "note": "every historical relationship appears in exactly one view, with one edge and one label owner; no relationship is duplicated or merged"
+  },
+  "source_pointers": [
+    "docs/visualize-eval/cases/datacenter-redundancy/source.md line 126 (user request)",
+    "line 134 (remove dots)",
+    "line 142 (cross-connect at each layer)",
+    "lines 150-166 (compactness)",
+    "line 248 (border leaf and leaf at one height, spines above)",
+    "line 270 (do not merge arrows from core1/core2 or mux1/mux2)",
+    "historical attempt line 151 / tool call chatcmpl-tool-be19bcbf0f891dc0"
+  ],
+  "abbreviations": [
+    "FW1 / FW2 node labels stand for 'FW1 active' / 'FW2 standby'; the state word lives on all four links of each appliance (v2)",
+    "BL 1 / BL 2 stand for border leaf 1 / 2; Leaf 1 / Leaf 2 for rack leaf 1 / 2",
+    "ECMP and dual are the source's own words, kept verbatim"
+  ],
+  "deliberate_drops": [
+    {
+      "fact": "compactness wishes from the historical chat (lines 150-166)",
+      "reason": "those were corrections to a different, denser rendering; this sample is a fresh set of views and the compactness target is the 77x47 pane, which all four views fit at natural zoom"
+    },
+    {
+      "fact": "the historical run's own node names/layout",
+      "reason": "fresh generation; the historical graph is evidence for the relationship facts only"
+    }
+  ],
+  "known_defects": [
+    "v1: 3 bridges, 3 touching bends. The mux cross-connect forces one crossing, and the two ISP pairs feeding two MUXes weave around the MUX boxes. Reducing further would need a different split, and the per-view spec budget (3 candidates) was spent.",
+    "v2: 2 bridges, one per cross-connected tier. Each tier is a complete 2x2 fan, so one bridge per tier is structural, not sloppiness.",
+    "v3: 4 bridges. The border-leaf -> spine fan enters the spine boxes through side ports, so two routes cross near Spine 1 and two near Spine 2.",
+    "v3: the border-leaf -> spine and leaf -> rack links share the view, while the spine -> rack-leaf ECMP fan lives in v4. A reader who opens only v3 sees the spines connected to border leaves only; the coverage map names v4 for the rest.",
+    "v4: orientation is lr (spines in the source column), because the same fan rendered tb needed reserved spacer rows and still produced 2 ambiguous label owners. v3 owns the vertical spine-above-leaf layout the source asked for.",
+    "v1 and v2 are lr for the same reason: the tb renderings of both left a label with no unambiguous owner at the canvas edge (v1 attempt 1 and 2).",
+    "Group hues are not stable across views: core is pink in v1 and yellow in v2, edge is pink in v2 and aqua in v3, leaf is pink in v3 and aqua in v4. The spec format has no color field (only a group name), so cross-view color identity is not expressible; inside each view the families are distinct."
+  ],
+  "blockers": [],
+  "environment_notes": [
+    "herdr pane layout returned no rect for the split pane, so manifest pane_rect/pane_cols are null in all four bundles; size and zoom are proven by the running app's own header token '77x47 @100%', which the validator accepts.",
+    "v1 attempt 1 was first written straight to specs/v1.json; when the chosen spec took that name its bytes were overwritten. specs/v1-a1.json is the preserved copy and reproduces the recorded check output byte for byte (verified by re-running --check and diffing against attempts/v1-a1-check.txt)."
+  ],
+  "cleanup": "4 panes split and closed; every manifest records cleanup=confirmed_closed and the pane id",
+  "validator_summary": {
+    "v1": "all checks passed",
+    "v2": "all checks passed",
+    "v3": "all checks passed",
+    "v4": "all checks passed"
+  },
+  "validator_output": {
+    "v1": "PASS manifest_readable\nPASS binary_path_absolute\nPASS binary_hash_recorded\nPASS artifact_hashes\nPASS check_output_present\nPASS check_exit_zero\nPASS check_warnings_absent\nPASS labels_parsed\nPASS labels_complete\nPASS labels_off_routes\nPASS labels_not_skipped\nPASS dots_parsed\nPASS dots_no_violations\nPASS origins_reported\nPASS origins_complete\nPASS dots_sync_reported\nPASS arrivals_reported\nPASS arrivals_complete\nPASS labels_ownership_reported\nPASS labels_ownership_clear\nPASS routes_economy_reported\nPASS routes_no_detours\nPASS crossings_reported\nPASS viewport_proven\nPASS viewport_proven_measurable\nPASS viewport_matches_target\nPASS cleanup_confirmed\nPASS select_all_frame\nPASS select_all_artifact\nPASS attempts_readable\nPASS attempts_view_budget\nPASS attempts_spec_budget\n\nall checks passed\n",
+    "v2": "PASS manifest_readable\nPASS binary_path_absolute\nPASS binary_hash_recorded\nPASS artifact_hashes\nPASS check_output_present\nPASS check_exit_zero\nPASS check_warnings_absent\nPASS labels_parsed\nPASS labels_complete\nPASS labels_off_routes\nPASS labels_not_skipped\nPASS dots_parsed\nPASS dots_no_violations\nPASS origins_reported\nPASS origins_complete\nPASS dots_sync_reported\nPASS arrivals_reported\nPASS arrivals_complete\nPASS labels_ownership_reported\nPASS labels_ownership_clear\nPASS routes_economy_reported\nPASS routes_no_detours\nPASS crossings_reported\nPASS viewport_proven\nPASS viewport_proven_measurable\nPASS viewport_matches_target\nPASS cleanup_confirmed\nPASS select_all_frame\nPASS select_all_artifact\nPASS attempts_readable\nPASS attempts_view_budget\nPASS attempts_spec_budget\n\nall checks passed\n",
+    "v3": "PASS manifest_readable\nPASS binary_path_absolute\nPASS binary_hash_recorded\nPASS artifact_hashes\nPASS check_output_present\nPASS check_exit_zero\nPASS check_warnings_absent\nPASS labels_parsed\nPASS labels_complete\nPASS labels_off_routes\nPASS labels_not_skipped\nPASS dots_parsed\nPASS dots_no_violations\nPASS origins_reported\nPASS origins_complete\nPASS dots_sync_reported\nPASS arrivals_reported\nPASS arrivals_complete\nPASS labels_ownership_reported\nPASS labels_ownership_clear\nPASS routes_economy_reported\nPASS routes_no_detours\nPASS crossings_reported\nPASS viewport_proven\nPASS viewport_proven_measurable\nPASS viewport_matches_target\nPASS cleanup_confirmed\nPASS select_all_frame\nPASS select_all_artifact\nPASS attempts_readable\nPASS attempts_view_budget\nPASS attempts_spec_budget\n\nall checks passed\n",
+    "v4": "PASS manifest_readable\nPASS binary_path_absolute\nPASS binary_hash_recorded\nPASS artifact_hashes\nPASS check_output_present\nPASS check_exit_zero\nPASS check_warnings_absent\nPASS labels_parsed\nPASS labels_complete\nPASS labels_off_routes\nPASS labels_not_skipped\nPASS dots_parsed\nPASS dots_no_violations\nPASS origins_reported\nPASS origins_complete\nPASS dots_sync_reported\nPASS arrivals_reported\nPASS arrivals_complete\nPASS labels_ownership_reported\nPASS labels_ownership_clear\nPASS routes_economy_reported\nPASS routes_no_detours\nPASS crossings_reported\nPASS viewport_proven\nPASS viewport_proven_measurable\nPASS viewport_matches_target\nPASS cleanup_confirmed\nPASS select_all_frame\nPASS select_all_artifact\nPASS attempts_readable\nPASS attempts_view_budget\nPASS attempts_spec_budget\n\nall checks passed\n"
+  },
+  "attempts": "attempts.json",
+  "approval": "none claimed: this sample was not marked green and no reviewer or judge was run (the captain starts the separate Sol judge)",
+  "capture_citations": {
+    "no_dots": "evidence/<view>/<view>-text.txt in all four views contains no '\u25cf' glyph (grep count 0); every edge carries dots: 0 and no flow field",
+    "fit_and_zoom": "line 1 of every <view>-text.txt reads ' rataflow-view \u00b7 77x47 @100% \u00b7 <view>.json \u00b7 N nodes \u00b7 M edges \u00b7 q quit'; no 'graph overflows \u00b7 drag to pan' line appears in any capture (it does appear in probes/v2-a1-frames.txt, which is what an overflow looks like)",
+    "fabric_height_rule": "evidence/v3/v3-text.txt: spines at rows 8-11 (cols 8-16 and 25-33); one row at rows 28-31 holds BL 1 (cols 10-15), BL 2 (27-32), Leaf 1 (46-53), Leaf 2 (62-69); racks at rows 38-41 (cols 46-53 and 62-69)",
+    "independent_links": "evidence/v1/v1-text.txt: MUX 1 (box cols 21-27, rows 14-18) sends two separate arrows out of its right border at rows 15 and 17, into Core 1 (cols 63-70) and Core 2; MUX 2 (rows 20-24) does the same at rows 21 and 23",
+    "standby_dashed": "evidence/v2/v2-text.txt rows 22, 26 and 28: every standby route is drawn with '\u254c' through its bends, every active route solid, and the word rides its own route",
+    "group_colors": "cell-by-cell SGR read of evidence/<view>/<view>-ansi.ansi at each node's top-left corner: v1 carrier yellows 216,166,87 / 228,184,111 / 200,147,68 / 239,202,138, agg aquas 125,174,163 / 147,194,183, core pinks 211,134,155 / 226,156,175; v2 core yellows, firewall aquas, edge pinks; v3 spine yellows, edge aquas, leaf pinks, racks greens 169,182,101 / 189,201,124; v4 spine yellows, leaf aquas",
+    "selection": "evidence/<view>/<view>-selected.ansi captured with --select-all: v1 shows 56 bold rgb(216,166,87) border segments, i.e. every node's selected border, distinct from the plain frame's per-group hues"
+  },
+  "preflight": {
+    "probes": 5,
+    "where": "preflight/",
+    "disclosure": "five 4-8 node capability/label probes ran --check before any case view was written (skill step 4 preflight); they are not case-view candidates and are listed in attempts.json -> preflight_probes with their raw logs"
+  }
+}

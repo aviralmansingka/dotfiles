@@ -1,0 +1,54 @@
+{
+ "case_id": "pipeline",
+ "round": "05",
+ "worker": "viz-ds05-1",
+ "worker_model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+ "provenance": "records assembled by the captain after the generator session crashed twice on a full disk (ENOSPC); every fact is drawn from the worker's preserved artifacts: attempts.json, evidence/v1, motion/. No generation-side conclusions were invented.",
+ "frozen_inputs": {
+  "skill_sha256": "ff4a9d3f32ba0bf86e54ee6bfbac02fdea3fac3b95b82a958b3411accef0a949",
+  "binary_sha256": "b1ab9f2e78af11c2f2b005eea083a999079d184bf550e8d0b6d9c51867f22404",
+  "binary_path": "/tmp/visualize-eval/round-05/bin/rataflow-view"
+ },
+ "views": [
+  {
+   "view": "v1",
+   "spec": "spec-v1.json",
+   "spec_sha256": "fdb8c42f6810b541b8a5367d9572d2d47ced3e756598658ff61f1c833a935f2f",
+   "extent": "36x40",
+   "pane_token": "83x51 @100%",
+   "pinned_77x47": "motion/v1-frames-lap-77x47.txt",
+   "lap_frames": 53
+  }
+ ],
+ "attempts": {
+  "views": [
+   {
+    "view": "v1",
+    "attempts": [
+     {
+      "spec_sha256": "fdb8c42f6810b541b8a5367d9572d2d47ced3e756598658ff61f1c833a935f2f",
+      "spec": "attempts/attempt1-tb/spec.json",
+      "raw_check": "attempts/attempt1-tb/check.txt",
+      "note": "chosen and only spec candidate: tb orientation with four semantic groups (client/edge/work/state). --check reports extent 36x40, crossings 0 bridges 0 touching bends, labels 4/4 placed 0 on route 0 skipped 0 ambiguous owners, dots 6 single-dot constant routes 0 violations, origins 6/6. Kept because crossings are already at the structural minimum (0) and every label has an unambiguous slot; lr was not attempted because a 5-rank lr layout budgets ~75 columns for boxes-plus-label-slots before group borders, i.e. it cannot fit 77 columns at 100% zoom, and the skill forbids pan/zoom-out as fit."
+     }
+    ]
+   }
+  ]
+ },
+ "check_lines": "viewport: unknown zoom: 1.00 natural\nok: nodes=6 edges=6 flows=6 direction=tb theme=gruvbox\nextent=36x40 cells\ncrossings: 0 bridges, 0 touching bends\nlabels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners\ngroups: client(1) edge(2) work(2) state(1)\ntrunks:\ndots: 6 single-dot routes, 0 periodic routes, 0 violations, 6 constant at 0.5c/step, 0 same-arrival at 2000ms\norigins: 6/6 routes start at their arrow origin\narrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step",
+ "motion": {
+  "mode": "constant 0.5 cells/100ms step",
+  "dots": "6 single-dot routes",
+  "lap_analysis": "motion/lap-analysis.txt",
+  "note": "frames 0 and 1 are identical (0.5-rate alternation); lap closes at frame 53"
+ },
+ "defects": [
+  "frame-0 origin reading was never recorded by the worker (crashed before report); the pinned dump carries the coordinates - the judge measures against the pinned first-drawn-cell definition",
+  "pane measures 83x51; fit at 77x47 proven by the pinned lap dump only",
+  "no routes: line in this build (expected per the round-05 baseline)"
+ ],
+ "blockers": [],
+ "cleanup": "confirmed_closed",
+ "incident": "the generator session crashed twice on a full disk caused by its own pane-geometry probe: pipeline/geometry.txt grew to 359 GB in a runaway append loop. The file was deleted by the captain at 2026-11-02T16:3xZ (head sampled above into this record); it was probe junk, not evidence, and is referenced by no manifest. This also explains both exit-1 failures and the disk refilling after the captain's earlier cargo-cache cleanup.",
+ "geometry_probe_sample": "# pane geometry record - pane_id=w7E:pFF; repeated herdr pane-layout JSON appended in a loop (split right ratio 0.5 reproduction)"
+}

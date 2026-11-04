@@ -1,0 +1,14 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/09/gb300-rack-software/v1-oob-plane.json",
+    "sha256": "5b95958275d1241b5fcd693eaf4d90c6a3f53b9bf4808a776fbef564b6947aee"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/09/gb300-rack-software/v2-nvswitch-plane.json",
+    "sha256": "6b75ed623d4b6e38c22443109dc769a0f7d64cb4c8cfaaabe81e7002b2397a25"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/09/gb300-rack-software/v3-inband-compute-plane.json",
+    "sha256": "bf459786a799941c86e4b07a708b38bcbe22add714bb880ce5b80c5d8595c130"
+  }
+]

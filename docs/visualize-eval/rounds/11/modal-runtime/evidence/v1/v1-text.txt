@@ -1,0 +1,50 @@
+ rataflow-view · 82x51 @100% · v1-seam-pair.json · 2 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        ╭─────────────╮    ╭────────────╮
+                        │             │◀───│            │
+                        │modal-runtime│    │modal-worker│
+                        │             │───▶│            │
+                        ╰─────────────╯    ╰────────────╯
+                              task input + ctrl RPCs
+                               events + mgmt RPCs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘

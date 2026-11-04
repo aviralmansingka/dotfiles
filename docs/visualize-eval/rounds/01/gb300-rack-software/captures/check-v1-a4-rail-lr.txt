@@ -1,0 +1,6 @@
+$ rataflow-view --check specs/v1-a4-rail-lr.json
+2026-11-02T08:29:32Z
+ok: nodes=5 edges=4 flows=0 direction=lr theme=gruvbox
+layers=3 (explicit placement, sugiyama skipped)
+extent=69x18 cells
+exit=0

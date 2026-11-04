@@ -1,0 +1,390 @@
+[
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-modal-learn-runtime-arch--/2026-10-14T20-36-14-065Z_01a13c21-3e70-754d-a101-f5817da3e05a.jsonl",
+    "line": 55,
+    "call_id": "call_KfPSNBd2yyDv7opUAXFM86v8|fc_0bc8bde248d91e7d016acfe9bb22b087d0a1ac21927a3569fb",
+    "path": "/tmp/modal-runtime-architecture.json",
+    "spec": {
+      "direction": "lr",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "worker",
+          "label": "modal-worker"
+        },
+        {
+          "id": "runtime",
+          "label": "modal-runtime"
+        },
+        {
+          "id": "engine",
+          "label": "Task engine"
+        },
+        {
+          "id": "backend",
+          "label": "Container backend"
+        },
+        {
+          "id": "container",
+          "label": "Task container"
+        },
+        {
+          "id": "filesystem",
+          "label": "Filesystem + volumes"
+        },
+        {
+          "id": "blobnet",
+          "label": "Blobnet"
+        },
+        {
+          "id": "daemon",
+          "label": "modal-daemon"
+        }
+      ],
+      "edges": [
+        {
+          "from": "worker",
+          "to": "runtime",
+          "label": "task input + control RPCs"
+        },
+        {
+          "from": "runtime",
+          "to": "worker",
+          "label": "events + management RPCs"
+        },
+        {
+          "from": "runtime",
+          "to": "engine",
+          "label": "dispatches tasks"
+        },
+        {
+          "from": "engine",
+          "to": "backend",
+          "label": "starts / manages"
+        },
+        {
+          "from": "backend",
+          "to": "container",
+          "label": "runs user process"
+        },
+        {
+          "from": "engine",
+          "to": "filesystem",
+          "label": "mounts / snapshots"
+        },
+        {
+          "from": "filesystem",
+          "to": "blobnet",
+          "label": "image + volume data"
+        },
+        {
+          "from": "runtime",
+          "to": "daemon",
+          "label": "filesystem HTTP over UDS"
+        }
+      ]
+    }
+  },
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-modal-learn-runtime-arch--/2026-10-14T20-36-14-065Z_01a13c21-3e70-754d-a101-f5817da3e05a.jsonl",
+    "line": 67,
+    "call_id": "call_3VpbIixQjohFYZl6WtdXtNS3|fc_0bc8bde248d91e7d016acfea03181487d0ab21478c9a18ee63",
+    "path": "/tmp/modal-runtime-architecture.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "worker",
+          "label": "Worker"
+        },
+        {
+          "id": "runtime",
+          "label": "modal-runtime"
+        },
+        {
+          "id": "engine",
+          "label": "Task engine"
+        },
+        {
+          "id": "backend",
+          "label": "Container backend"
+        },
+        {
+          "id": "container",
+          "label": "Task container"
+        },
+        {
+          "id": "filesystem",
+          "label": "Filesystem + volumes"
+        },
+        {
+          "id": "blobnet",
+          "label": "Blobnet"
+        },
+        {
+          "id": "daemon",
+          "label": "modal-daemon"
+        }
+      ],
+      "edges": [
+        {
+          "from": "worker",
+          "to": "runtime",
+          "label": "task input + RPCs"
+        },
+        {
+          "from": "runtime",
+          "to": "worker",
+          "label": "events + RPCs"
+        },
+        {
+          "from": "runtime",
+          "to": "engine",
+          "label": "dispatches"
+        },
+        {
+          "from": "engine",
+          "to": "backend",
+          "label": "starts"
+        },
+        {
+          "from": "backend",
+          "to": "container",
+          "label": "runs"
+        },
+        {
+          "from": "engine",
+          "to": "filesystem",
+          "label": "mounts"
+        },
+        {
+          "from": "filesystem",
+          "to": "blobnet",
+          "label": "blob I/O"
+        },
+        {
+          "from": "runtime",
+          "to": "daemon",
+          "label": "HTTP UDS fs"
+        }
+      ]
+    }
+  },
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-modal-learn-runtime-arch--/2026-10-14T20-36-14-065Z_01a13c21-3e70-754d-a101-f5817da3e05a.jsonl",
+    "line": 79,
+    "call_id": "call_561lMdqwU3ovFb8aL1UoJtD5|fc_0bc8bde248d91e7d016acfea59ac9487d08ae0fa2231ddd682",
+    "path": "/tmp/modal-runtime-architecture.json",
+    "spec": {
+      "direction": "lr",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "worker",
+          "label": "Worker"
+        },
+        {
+          "id": "runtime",
+          "label": "modal-runtime"
+        },
+        {
+          "id": "engine",
+          "label": "Task engine"
+        },
+        {
+          "id": "backend",
+          "label": "Container backend"
+        },
+        {
+          "id": "container",
+          "label": "Task container"
+        },
+        {
+          "id": "filesystem",
+          "label": "Filesystem + volumes"
+        },
+        {
+          "id": "blobnet",
+          "label": "Blobnet"
+        },
+        {
+          "id": "daemon",
+          "label": "modal-daemon"
+        }
+      ],
+      "edges": [
+        {
+          "from": "worker",
+          "to": "runtime",
+          "label": "task input; replies + mgmt back"
+        },
+        {
+          "from": "runtime",
+          "to": "engine",
+          "label": "runs Builder / Runner"
+        },
+        {
+          "from": "engine",
+          "to": "backend",
+          "label": "container lifecycle"
+        },
+        {
+          "from": "backend",
+          "to": "container",
+          "label": "starts process"
+        },
+        {
+          "from": "engine",
+          "to": "filesystem",
+          "label": "mounts / snapshots"
+        },
+        {
+          "from": "filesystem",
+          "to": "blobnet",
+          "label": "image / volume I/O"
+        },
+        {
+          "from": "runtime",
+          "to": "daemon",
+          "label": "fs requests over HTTP UDS"
+        }
+      ]
+    }
+  },
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-modal-learn-runtime-arch--/2026-10-14T20-36-14-065Z_01a13c21-3e70-754d-a101-f5817da3e05a.jsonl",
+    "line": 91,
+    "call_id": "call_MuJMFMWbc8joPQOn0bKFTiK3|fc_0bc8bde248d91e7d016acfeab25c4487d08a29cb219930a4fa",
+    "path": "/tmp/modal-runtime-architecture.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "worker",
+          "label": "Worker"
+        },
+        {
+          "id": "runtime",
+          "label": "modal-runtime"
+        },
+        {
+          "id": "engine",
+          "label": "Task engine"
+        },
+        {
+          "id": "backend",
+          "label": "Container backend"
+        },
+        {
+          "id": "filesystem",
+          "label": "Filesystem + volumes"
+        },
+        {
+          "id": "blobnet",
+          "label": "Blobnet"
+        },
+        {
+          "id": "daemon",
+          "label": "modal-daemon"
+        }
+      ],
+      "edges": [
+        {
+          "from": "worker",
+          "to": "runtime",
+          "label": "task / control; returns too"
+        },
+        {
+          "from": "runtime",
+          "to": "engine",
+          "label": "Builder / Runner"
+        },
+        {
+          "from": "runtime",
+          "to": "daemon",
+          "label": "fs HTTP UDS"
+        },
+        {
+          "from": "engine",
+          "to": "backend",
+          "label": "container lifecycle"
+        },
+        {
+          "from": "engine",
+          "to": "filesystem",
+          "label": "mount / snapshot"
+        },
+        {
+          "from": "filesystem",
+          "to": "blobnet",
+          "label": "image / volume data"
+        }
+      ]
+    }
+  },
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-modal-learn-runtime-arch--/2026-10-14T20-36-14-065Z_01a13c21-3e70-754d-a101-f5817da3e05a.jsonl",
+    "line": 112,
+    "call_id": "call_KA2aFhLxkaa4KIcklFbscf1G|fc_0bc8bde248d91e7d016acfeb4ac95c87d0b87bd005dd5ddb24",
+    "path": "/tmp/modal-runtime-architecture.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "worker",
+          "label": "Worker"
+        },
+        {
+          "id": "runtime",
+          "label": "Runtime"
+        },
+        {
+          "id": "tasks",
+          "label": "Tasks"
+        },
+        {
+          "id": "backend",
+          "label": "Backend"
+        },
+        {
+          "id": "storage",
+          "label": "Storage"
+        },
+        {
+          "id": "daemon",
+          "label": "Daemon"
+        }
+      ],
+      "edges": [
+        {
+          "from": "worker",
+          "to": "runtime",
+          "label": "task / control RPCs; replies back"
+        },
+        {
+          "from": "runtime",
+          "to": "tasks",
+          "label": "Builder / Runner"
+        },
+        {
+          "from": "tasks",
+          "to": "backend",
+          "label": "container lifecycle"
+        },
+        {
+          "from": "tasks",
+          "to": "storage",
+          "label": "filesystem + blob I/O"
+        },
+        {
+          "from": "runtime",
+          "to": "daemon",
+          "label": "filesystem HTTP UDS"
+        }
+      ]
+    }
+  }
+]

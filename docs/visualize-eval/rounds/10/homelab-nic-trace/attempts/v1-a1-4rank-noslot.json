@@ -1,0 +1,21 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "vm", "label": "VM vnet0", "group": "libvirt" },
+    { "id": "ctr", "label": "ctr veth", "group": "docker" },
+    { "id": "ts", "label": "tailscale0", "group": "overlay" },
+    { "id": "virbr", "label": "virbr0", "group": "libvirt" },
+    { "id": "dkbr", "label": "docker0", "group": "docker" },
+    { "id": "box", "label": "homelab rack-bench · no global v6", "group": "host" },
+    { "id": "bond0", "label": "bond0", "group": "wired" }
+  ],
+  "edges": [
+    { "from": "vm", "to": "virbr", "label": "192.168.122.x" },
+    { "from": "ctr", "to": "dkbr", "label": "172.18.2.x" },
+    { "from": "virbr", "to": "box", "label": "libvirt NAT" },
+    { "from": "dkbr", "to": "box", "label": "docker bridge" },
+    { "from": "ts", "to": "box", "label": "100.113.153.49" },
+    { "from": "ts", "to": "bond0", "label": "UDP encap" }
+  ]
+}

@@ -1,0 +1,15 @@
+warning: edge e1 label "create/terminate/repair" had no clear cell; shorten it or add routing space
+viewport: unknown zoom: 1.00 natural
+ok: nodes=5 edges=4 flows=4 direction=tb theme=gruvbox
+layers=4 (explicit placement, sugiyama skipped)
+extent=36x29 cells
+crossings: 0 bridges, 0 touching bends
+warning: 1 edge label(s) had no free slot; shorten the labels or split the graph
+labels: 3/4 placed, 0 on route cells, 1 skipped, 1 ambiguous owners
+warning: 1 label(s) have an ambiguous owner: another route is as close to the label as its own edge, so a reader cannot tell which edge the label names
+groups: people(1) control(3) rpc(1)
+trunks:
+routes: 4/4 near-minimal, 0 detours, 0 shortened
+dots: 4 single-dot routes, 0 periodic routes, 0 violations, 4 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 4/4 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

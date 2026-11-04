@@ -1,0 +1,49 @@
+viewport: 77x47 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 77x47 @100% · v2-a.json · 5 nodes · 4 edges · q quit
+                                     │ │       graph overflows · drag to pan
+                                     │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                    starts / manages │ │ mounts / snapshots
+                                     │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                                     │ │
+                         ╭───────────╯ ╰────────╮
+                         ▼                      ▼
+                ╭─────────────────╮   ╭────────────────────╮
+                │Container backend│   │Filesystem + volumes│
+                │                 │   │                    │
+                ╰─────────────────╯   ╰────────────────────╯
+                         │                      │
+                         │                      │
+                         │                      │
+                         │                      │
+                         │                      │
+                         │                      │
+                         │                      │
+                         │                      │
+                         │                      │
+                         │   image + volume data│
+                         │ runs user process    │
+                         │                      │
+                         │                      │             ▝▀▘
+                         │                      │
+                         │                      │
+ ┌───────┐               │                      │           ▄▄▄▗▄▄▖
+ │ + [+] │               │                      │
+ │ − [-] │               │                      │
+ │ ⊡ [f] │               │                      │
+ │ □ [i] │               │                      │            ▀▀▘▀▘
+ └───────┘               ╰─────╮               ╭╯
+                               ▼               ▼

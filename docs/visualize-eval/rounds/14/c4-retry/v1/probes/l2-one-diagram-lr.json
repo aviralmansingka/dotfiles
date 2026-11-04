@@ -1,0 +1,215 @@
+{
+  "theme": "gruvbox",
+  "diagrams": [
+    {
+      "id": "l2-one",
+      "title": "L2 · Containers — all 17 containers in one diagram",
+      "description": "Probe: the whole C4 container level drawn as ONE section, to measure the engine's readable budget.",
+      "direction": "lr",
+      "nodes": [
+        {
+          "id": "web",
+          "label": "humans + mmctl",
+          "group": "humans"
+        },
+        {
+          "id": "cp",
+          "label": "control plane",
+          "group": "control"
+        },
+        {
+          "id": "wapi",
+          "label": "webapi server",
+          "group": "control"
+        },
+        {
+          "id": "pgrpc",
+          "label": "private gRPC",
+          "group": "control"
+        },
+        {
+          "id": "pub",
+          "label": "public gRPC",
+          "group": "control"
+        },
+        {
+          "id": "q",
+          "label": "River queue",
+          "group": "async"
+        },
+        {
+          "id": "rec",
+          "label": "reconcile loop",
+          "group": "async"
+        },
+        {
+          "id": "reg",
+          "label": "provider registry",
+          "group": "async"
+        },
+        {
+          "id": "ssh",
+          "label": "SSH + BMC ops",
+          "group": "hostops"
+        },
+        {
+          "id": "boot",
+          "label": "boot server",
+          "group": "hostops"
+        },
+        {
+          "id": "agent",
+          "label": "machine-agent",
+          "group": "hostops"
+        },
+        {
+          "id": "db",
+          "label": "Postgres",
+          "group": "state"
+        },
+        {
+          "id": "jan",
+          "label": "janitor app",
+          "group": "ops"
+        },
+        {
+          "id": "prov",
+          "label": "providers (BM)",
+          "group": "external"
+        },
+        {
+          "id": "mch",
+          "label": "machines (BM)",
+          "group": "external"
+        },
+        {
+          "id": "s3",
+          "label": "S3 object store",
+          "group": "external"
+        },
+        {
+          "id": "slack",
+          "label": "Slack",
+          "group": "external"
+        }
+      ],
+      "edges": [
+        {
+          "from": "cp",
+          "to": "pgrpc",
+          "label": "create/term/repair"
+        },
+        {
+          "from": "web",
+          "to": "wapi",
+          "label": "http"
+        },
+        {
+          "from": "pgrpc",
+          "to": "q",
+          "label": "enqueue job"
+        },
+        {
+          "from": "wapi",
+          "to": "q",
+          "label": "reinstall/reprov"
+        },
+        {
+          "from": "q",
+          "to": "reg",
+          "label": "provision job"
+        },
+        {
+          "from": "reg",
+          "to": "prov",
+          "label": "provider API"
+        },
+        {
+          "from": "prov",
+          "to": "mch",
+          "label": "allocate inst"
+        },
+        {
+          "from": "mch",
+          "to": "boot",
+          "label": "iPXE request"
+        },
+        {
+          "from": "boot",
+          "to": "mch",
+          "label": "boot.ipxe + S3"
+        },
+        {
+          "from": "mch",
+          "to": "agent",
+          "label": "runs on host"
+        },
+        {
+          "from": "agent",
+          "to": "pub",
+          "label": "register+beat"
+        },
+        {
+          "from": "pub",
+          "to": "db",
+          "label": "machine state"
+        },
+        {
+          "from": "pgrpc",
+          "to": "db",
+          "label": "machine rows"
+        },
+        {
+          "from": "q",
+          "to": "db",
+          "label": "job rows"
+        },
+        {
+          "from": "q",
+          "to": "ssh",
+          "label": "audit/verify"
+        },
+        {
+          "from": "ssh",
+          "to": "mch",
+          "label": "machine-audit"
+        },
+        {
+          "from": "mch",
+          "to": "s3",
+          "label": "pull boot image"
+        },
+        {
+          "from": "q",
+          "to": "s3",
+          "label": "diag uploads"
+        },
+        {
+          "from": "q",
+          "to": "jan",
+          "label": "diag events"
+        },
+        {
+          "from": "jan",
+          "to": "wapi",
+          "label": "proposed acts"
+        },
+        {
+          "from": "wapi",
+          "to": "slack",
+          "label": "confirm+alerts"
+        },
+        {
+          "from": "rec",
+          "to": "prov",
+          "label": "gcore sync 1m"
+        },
+        {
+          "from": "rec",
+          "to": "db",
+          "label": "cluster state"
+        }
+      ]
+    }
+  ]
+}

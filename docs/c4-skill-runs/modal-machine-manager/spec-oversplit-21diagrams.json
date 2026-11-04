@@ -1,0 +1,1516 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "diagrams": [
+    {
+      "id": "l0",
+      "title": "L0 · System context",
+      "description": "System context, control-plane world: the manager is one box. The control plane, operator, janitor, provider APIs, S3, Secrets Manager, Slack and OTel stay outside it.",
+      "nodes": [
+        {
+          "id": "mm",
+          "label": "machine-manager (1 pod)"
+        },
+        {
+          "id": "cp",
+          "label": "Modal control plane"
+        },
+        {
+          "id": "browser",
+          "label": "operator browser"
+        },
+        {
+          "id": "janitorsvc",
+          "label": "machine-janitor"
+        },
+        {
+          "id": "gcore",
+          "label": "Gcore API"
+        },
+        {
+          "id": "lat",
+          "label": "Latitude API"
+        },
+        {
+          "id": "s3",
+          "label": "S3 buckets"
+        },
+        {
+          "id": "aws",
+          "label": "AWS Secrets Mgr"
+        },
+        {
+          "id": "slackapi",
+          "label": "Slack API"
+        },
+        {
+          "id": "otelp",
+          "label": "OTel collector"
+        }
+      ],
+      "edges": [
+        {
+          "from": "cp",
+          "to": "mm",
+          "label": "provision machines"
+        },
+        {
+          "from": "browser",
+          "to": "mm",
+          "label": "web UI + mmctl"
+        },
+        {
+          "from": "mm",
+          "to": "gcore",
+          "label": "clusters + tasks"
+        },
+        {
+          "from": "mm",
+          "to": "lat",
+          "label": "import + BMC creds"
+        },
+        {
+          "from": "mm",
+          "to": "s3",
+          "label": "boot + job logs"
+        },
+        {
+          "from": "mm",
+          "to": "aws",
+          "label": "SSH + Slack keys"
+        },
+        {
+          "from": "mm",
+          "to": "slackapi",
+          "label": "operator alerts"
+        },
+        {
+          "from": "mm",
+          "to": "otelp",
+          "label": "traces, metrics"
+        },
+        {
+          "from": "mm",
+          "to": "janitorsvc",
+          "label": "post events"
+        },
+        {
+          "from": "janitorsvc",
+          "to": "mm",
+          "label": "proposed action"
+        }
+      ],
+      "layers": [
+        [
+          "cp",
+          "browser"
+        ],
+        [
+          "mm"
+        ],
+        [
+          "gcore",
+          "lat",
+          "s3",
+          "aws",
+          "slackapi",
+          "otelp",
+          "janitorsvc"
+        ]
+      ]
+    },
+    {
+      "id": "l0b",
+      "title": "L0b · System context: fleet world",
+      "description": "System context, fleet world: the machines the manager provisions, their agent and the object store they boot from. The manager is one plain box here too.",
+      "nodes": [
+        {
+          "id": "mm",
+          "label": "machine-manager (1 pod)"
+        },
+        {
+          "id": "agent",
+          "label": "machine-agent"
+        },
+        {
+          "id": "mach",
+          "label": "bare-metal machine"
+        },
+        {
+          "id": "s3",
+          "label": "S3 buckets"
+        },
+        {
+          "id": "sshxio",
+          "label": "sshx.io"
+        }
+      ],
+      "edges": [
+        {
+          "from": "mach",
+          "to": "s3",
+          "label": "wget bootloader",
+          "minlen": 1
+        },
+        {
+          "from": "mach",
+          "to": "s3",
+          "label": "wget machine image",
+          "minlen": 2
+        },
+        {
+          "from": "mach",
+          "to": "sshxio",
+          "label": "install sshx"
+        },
+        {
+          "from": "mach",
+          "to": "agent",
+          "label": "systemd starts it"
+        },
+        {
+          "from": "agent",
+          "to": "mach",
+          "label": "metadata UUID",
+          "minlen": 1
+        },
+        {
+          "from": "agent",
+          "to": "mach",
+          "label": "serial + unit state",
+          "minlen": 2
+        },
+        {
+          "from": "mach",
+          "to": "mm",
+          "label": "boot + fetch agent"
+        },
+        {
+          "from": "agent",
+          "to": "mm",
+          "label": "enroll + heartbeat"
+        }
+      ],
+      "layers": [
+        [
+          "sshxio"
+        ],
+        [
+          "mm"
+        ],
+        [
+          "agent"
+        ],
+        [
+          "mach"
+        ],
+        [
+          "s3"
+        ]
+      ]
+    },
+    {
+      "id": "l1",
+      "title": "L1 · Control plane: mutating calls + janitor",
+      "description": "L0's box opened, control-plane end: the mutating private gRPC calls and the janitor edge. Members sit inside the box; the control plane, janitor and operator stay outside.",
+      "nodes": [
+        {
+          "id": "cp",
+          "label": "Modal control plane"
+        },
+        {
+          "id": "pgrpc",
+          "label": "private gRPC :50053"
+        },
+        {
+          "id": "janc",
+          "label": "janitor client"
+        },
+        {
+          "id": "janitorsvc",
+          "label": "machine-janitor"
+        },
+        {
+          "id": "web",
+          "label": "web API :8082"
+        },
+        {
+          "id": "browser",
+          "label": "operator browser"
+        }
+      ],
+      "edges": [
+        {
+          "from": "cp",
+          "to": "pgrpc",
+          "label": "CreateInstance",
+          "minlen": 1
+        },
+        {
+          "from": "cp",
+          "to": "pgrpc",
+          "label": "TerminateInstance",
+          "minlen": 2
+        },
+        {
+          "from": "cp",
+          "to": "pgrpc",
+          "label": "RepairInstance",
+          "minlen": 3
+        },
+        {
+          "from": "janc",
+          "to": "janitorsvc",
+          "label": "POST /event"
+        },
+        {
+          "from": "janitorsvc",
+          "to": "web",
+          "label": "proposed action",
+          "minlen": 1
+        },
+        {
+          "from": "janitorsvc",
+          "to": "web",
+          "label": "read machines",
+          "minlen": 2
+        },
+        {
+          "from": "browser",
+          "to": "web",
+          "label": "SPA + JSON API"
+        }
+      ],
+      "layers": [
+        [
+          "cp",
+          "janitorsvc",
+          "browser"
+        ],
+        [
+          "pgrpc",
+          "janc",
+          "web"
+        ]
+      ],
+      "containers": [
+        {
+          "label": "machine-manager pod",
+          "members": [
+            "pgrpc",
+            "janc",
+            "web"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l1b",
+      "title": "L1b · Control plane: observation + cloud edges",
+      "description": "Second control-plane slice: the observation calls plus every outbound cloud edge — Slack, Secrets Manager, OTel. All remote endpoints stay outside the box.",
+      "nodes": [
+        {
+          "id": "cp",
+          "label": "Modal control plane"
+        },
+        {
+          "id": "pgrpc",
+          "label": "private gRPC :50053"
+        },
+        {
+          "id": "slackc",
+          "label": "Slack client"
+        },
+        {
+          "id": "slackapi",
+          "label": "Slack API"
+        },
+        {
+          "id": "sec",
+          "label": "secret keystore"
+        },
+        {
+          "id": "aws",
+          "label": "AWS Secrets Mgr"
+        },
+        {
+          "id": "otel",
+          "label": "OTel telemetry"
+        },
+        {
+          "id": "otelp",
+          "label": "OTel collector"
+        }
+      ],
+      "edges": [
+        {
+          "from": "cp",
+          "to": "pgrpc",
+          "label": "DescribeInstances",
+          "minlen": 1
+        },
+        {
+          "from": "cp",
+          "to": "pgrpc",
+          "label": "dial gRPC channel",
+          "minlen": 1
+        },
+        {
+          "from": "slackc",
+          "to": "slackapi",
+          "label": "chat.postMessage"
+        },
+        {
+          "from": "slackc",
+          "to": "aws",
+          "label": "Slack bot token"
+        },
+        {
+          "from": "sec",
+          "to": "aws",
+          "label": "SSH private key"
+        },
+        {
+          "from": "otel",
+          "to": "otelp",
+          "label": "OTLP traces + metrics"
+        }
+      ],
+      "containers": [
+        {
+          "label": "machine-manager pod",
+          "members": [
+            "pgrpc",
+            "slackc",
+            "sec",
+            "otel"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l1c",
+      "title": "L1c · Fleet ingress: boot + registration",
+      "description": "Fleet-end ingress: the machine fetches its boot script and agent, then registers and heartbeats over public gRPC. Host and agent stay outside; both listeners are members.",
+      "nodes": [
+        {
+          "id": "mach",
+          "label": "bare-metal machine"
+        },
+        {
+          "id": "agent",
+          "label": "machine-agent"
+        },
+        {
+          "id": "boot",
+          "label": "boot server :8080"
+        },
+        {
+          "id": "pubgrpc",
+          "label": "public gRPC :50054"
+        }
+      ],
+      "edges": [
+        {
+          "from": "mach",
+          "to": "boot",
+          "label": "GET agent download",
+          "minlen": 1
+        },
+        {
+          "from": "mach",
+          "to": "boot",
+          "label": "POST boot-callback",
+          "minlen": 2
+        },
+        {
+          "from": "agent",
+          "to": "pubgrpc",
+          "label": "RegisterMachine",
+          "minlen": 1
+        },
+        {
+          "from": "agent",
+          "to": "pubgrpc",
+          "label": "MachineHeartbeat 1/min",
+          "minlen": 2
+        }
+      ],
+      "containers": [
+        {
+          "label": "machine-manager pod",
+          "members": [
+            "boot",
+            "pubgrpc"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l1d",
+      "title": "L1d · Provisioning over SSH",
+      "description": "Fleet end, provisioning slice: the worker fleet launches, audits and reflashes a host over SSH. The host stays outside the box; only the workers are members.",
+      "nodes": [
+        {
+          "id": "river",
+          "label": "River workers"
+        },
+        {
+          "id": "mach",
+          "label": "bare-metal machine"
+        }
+      ],
+      "edges": [
+        {
+          "from": "river",
+          "to": "mach",
+          "label": "launch: startup.sh",
+          "minlen": 1
+        },
+        {
+          "from": "river",
+          "to": "mach",
+          "label": "audit: scp + run",
+          "minlen": 2
+        },
+        {
+          "from": "river",
+          "to": "mach",
+          "label": "s3 boot: install.sh",
+          "minlen": 3
+        }
+      ],
+      "containers": [
+        {
+          "label": "machine-manager pod",
+          "members": [
+            "river"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l1e",
+      "title": "L1e · Verification over SSH",
+      "description": "Fleet end, verification slice: reimage checks, the host benchmark and the whitefiber reboot run over SSH. The host stays outside the box.",
+      "nodes": [
+        {
+          "id": "river",
+          "label": "River workers"
+        },
+        {
+          "id": "mach",
+          "label": "bare-metal machine"
+        }
+      ],
+      "edges": [
+        {
+          "from": "river",
+          "to": "mach",
+          "label": "verify: cloud-init, DNS",
+          "minlen": 1
+        },
+        {
+          "from": "river",
+          "to": "mach",
+          "label": "upload hostbench",
+          "minlen": 2
+        },
+        {
+          "from": "river",
+          "to": "mach",
+          "label": "whitefiber reboot",
+          "minlen": 3
+        }
+      ],
+      "containers": [
+        {
+          "label": "machine-manager pod",
+          "members": [
+            "river"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l1f",
+      "title": "L1f · Operations over SSH",
+      "description": "Fleet end, operations slice: terminate, diagnostics capture and diagnose polling run over SSH. The host stays outside the box.",
+      "nodes": [
+        {
+          "id": "river",
+          "label": "River workers"
+        },
+        {
+          "id": "mach",
+          "label": "bare-metal machine"
+        }
+      ],
+      "edges": [
+        {
+          "from": "river",
+          "to": "mach",
+          "label": "stop worker units",
+          "minlen": 1
+        },
+        {
+          "from": "river",
+          "to": "mach",
+          "label": "capture diagnostics",
+          "minlen": 2
+        },
+        {
+          "from": "river",
+          "to": "mach",
+          "label": "collect diagnose",
+          "minlen": 3
+        }
+      ],
+      "containers": [
+        {
+          "label": "machine-manager pod",
+          "members": [
+            "river"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l1g",
+      "title": "L1g · Provider and BMC control",
+      "description": "Provider and BMC control: the adapters reach Gcore and Latitude, and the BMC service drives Redfish on the host. Every API endpoint stays outside the box.",
+      "nodes": [
+        {
+          "id": "bmcs",
+          "label": "BMC service"
+        },
+        {
+          "id": "prov",
+          "label": "provider adapters"
+        },
+        {
+          "id": "web",
+          "label": "web API :8082"
+        },
+        {
+          "id": "mach",
+          "label": "bare-metal machine"
+        },
+        {
+          "id": "gcore",
+          "label": "Gcore API"
+        },
+        {
+          "id": "lat",
+          "label": "Latitude API"
+        }
+      ],
+      "edges": [
+        {
+          "from": "bmcs",
+          "to": "mach",
+          "label": "Redfish power + boot"
+        },
+        {
+          "from": "prov",
+          "to": "gcore",
+          "label": "cluster CRUD + poll",
+          "minlen": 1
+        },
+        {
+          "from": "prov",
+          "to": "gcore",
+          "label": "machine details",
+          "minlen": 2
+        },
+        {
+          "from": "web",
+          "to": "lat",
+          "label": "reinstall, deploy cfg"
+        },
+        {
+          "from": "bmcs",
+          "to": "lat",
+          "label": "mint BMC credentials"
+        }
+      ],
+      "layers": [
+        [
+          "prov",
+          "web",
+          "bmcs"
+        ],
+        [
+          "gcore",
+          "lat",
+          "mach"
+        ]
+      ],
+      "containers": [
+        {
+          "label": "machine-manager pod",
+          "members": [
+            "bmcs",
+            "prov",
+            "web"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l2a",
+      "title": "L2 · Private gRPC: allocate + enqueue",
+      "description": "Inside the box: CreateInstance and TerminateInstance lock a machine row and enqueue the job in the same transaction. Store and queue are members.",
+      "nodes": [
+        {
+          "id": "pgrpc",
+          "label": "private gRPC :50053"
+        },
+        {
+          "id": "store",
+          "label": "store / sqlc"
+        },
+        {
+          "id": "q",
+          "label": "River queue"
+        }
+      ],
+      "edges": [
+        {
+          "from": "pgrpc",
+          "to": "store",
+          "label": "lock + insert instance"
+        },
+        {
+          "from": "pgrpc",
+          "to": "q",
+          "label": "enqueue LaunchInstance"
+        },
+        {
+          "from": "pgrpc",
+          "to": "q",
+          "label": "cancel LaunchInstance"
+        },
+        {
+          "from": "pgrpc",
+          "to": "q",
+          "label": "enqueue TerminateInstance"
+        }
+      ],
+      "layers": [
+        [
+          "store"
+        ],
+        [
+          "pgrpc"
+        ],
+        [
+          "q"
+        ]
+      ],
+      "containers": [
+        {
+          "label": "machine-manager pod",
+          "members": [
+            "pgrpc",
+            "store",
+            "q"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l2b",
+      "title": "L2b · Private gRPC: describe + repair",
+      "description": "Inside the box: the remaining private gRPC paths — list instances, repair events and instance state transitions, all on the component's own store.",
+      "nodes": [
+        {
+          "id": "pgrpc",
+          "label": "private gRPC :50053"
+        },
+        {
+          "id": "store",
+          "label": "store / sqlc"
+        }
+      ],
+      "edges": [
+        {
+          "from": "pgrpc",
+          "to": "store",
+          "label": "insert hardware_event"
+        },
+        {
+          "from": "pgrpc",
+          "to": "store",
+          "label": "list instances"
+        },
+        {
+          "from": "pgrpc",
+          "to": "store",
+          "label": "instance + job"
+        }
+      ],
+      "layers": [
+        [
+          "store"
+        ],
+        [
+          "pgrpc"
+        ]
+      ],
+      "containers": [
+        {
+          "label": "machine-manager pod",
+          "members": [
+            "pgrpc",
+            "store"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l2c",
+      "title": "L2c · Public gRPC: register + heartbeat",
+      "description": "Inside the box: registration and heartbeat write machine rows, snooze or retry jobs, and ask the provider adapter to verify the instance against Gcore.",
+      "nodes": [
+        {
+          "id": "pubgrpc",
+          "label": "public gRPC :50054"
+        },
+        {
+          "id": "store",
+          "label": "store / sqlc"
+        },
+        {
+          "id": "q",
+          "label": "River queue"
+        },
+        {
+          "id": "prov",
+          "label": "provider adapters"
+        }
+      ],
+      "edges": [
+        {
+          "from": "pubgrpc",
+          "to": "store",
+          "label": "machine by serial"
+        },
+        {
+          "from": "pubgrpc",
+          "to": "store",
+          "label": "heartbeat update"
+        },
+        {
+          "from": "pubgrpc",
+          "to": "store",
+          "label": "snoozed job"
+        },
+        {
+          "from": "pubgrpc",
+          "to": "q",
+          "label": "enqueue audit job"
+        },
+        {
+          "from": "pubgrpc",
+          "to": "q",
+          "label": "retry reimage job"
+        },
+        {
+          "from": "pubgrpc",
+          "to": "prov",
+          "label": "gcore instance"
+        }
+      ],
+      "layers": [
+        [
+          "store"
+        ],
+        [
+          "pubgrpc"
+        ],
+        [
+          "q"
+        ],
+        [
+          "prov"
+        ]
+      ],
+      "containers": [
+        {
+          "label": "machine-manager pod",
+          "members": [
+            "pubgrpc",
+            "store",
+            "q",
+            "prov"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l2d",
+      "title": "L2d · Boot server",
+      "description": "Inside the box: the boot server validates the requesting machine, checks the instance with the provider adapter, presigns the agent and redirects the download.",
+      "nodes": [
+        {
+          "id": "boot",
+          "label": "boot server :8080"
+        },
+        {
+          "id": "store",
+          "label": "store / sqlc"
+        },
+        {
+          "id": "prov",
+          "label": "provider adapters"
+        },
+        {
+          "id": "obj",
+          "label": "S3 object client"
+        },
+        {
+          "id": "web",
+          "label": "web API :8082"
+        }
+      ],
+      "edges": [
+        {
+          "from": "boot",
+          "to": "store",
+          "label": "machine by id",
+          "minlen": 1
+        },
+        {
+          "from": "boot",
+          "to": "prov",
+          "label": "gcore instance",
+          "minlen": 1
+        },
+        {
+          "from": "boot",
+          "to": "obj",
+          "label": "presign agent GET",
+          "minlen": 1
+        },
+        {
+          "from": "boot",
+          "to": "web",
+          "label": "307 redirect",
+          "minlen": 1
+        }
+      ],
+      "layers": [
+        [
+          "boot"
+        ],
+        [
+          "store"
+        ],
+        [
+          "prov"
+        ],
+        [
+          "obj"
+        ],
+        [
+          "web"
+        ]
+      ],
+      "containers": [
+        {
+          "label": "machine-manager pod",
+          "members": [
+            "boot",
+            "store",
+            "prov",
+            "obj",
+            "web"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l2e",
+      "title": "L2e · Operator API and BMC service",
+      "description": "Inside the box: the operator API writes state, presigns objects, enqueues jobs and hands Slack posts and BMC work to its clients; the BMC service reads, tunnels and signs.",
+      "nodes": [
+        {
+          "id": "web",
+          "label": "web API :8082"
+        },
+        {
+          "id": "store",
+          "label": "store / sqlc"
+        },
+        {
+          "id": "obj",
+          "label": "S3 object client"
+        },
+        {
+          "id": "q",
+          "label": "River queue"
+        },
+        {
+          "id": "slackc",
+          "label": "Slack client"
+        },
+        {
+          "id": "bmcs",
+          "label": "BMC service"
+        },
+        {
+          "id": "sshx",
+          "label": "SSH + s3boot"
+        },
+        {
+          "id": "sec",
+          "label": "secret keystore"
+        }
+      ],
+      "edges": [
+        {
+          "from": "web",
+          "to": "store",
+          "label": "record action",
+          "minlen": 1
+        },
+        {
+          "from": "web",
+          "to": "store",
+          "label": "machine CRUD",
+          "minlen": 2
+        },
+        {
+          "from": "web",
+          "to": "obj",
+          "label": "presign event GET",
+          "minlen": 1
+        },
+        {
+          "from": "web",
+          "to": "obj",
+          "label": "presign job logs",
+          "minlen": 2
+        },
+        {
+          "from": "web",
+          "to": "slackc",
+          "label": "post proposal"
+        },
+        {
+          "from": "web",
+          "to": "q",
+          "label": "enqueue audit",
+          "minlen": 1
+        },
+        {
+          "from": "web",
+          "to": "q",
+          "label": "enqueue diagnose",
+          "minlen": 2
+        },
+        {
+          "from": "web",
+          "to": "q",
+          "label": "enqueue reprovision",
+          "minlen": 3
+        },
+        {
+          "from": "web",
+          "to": "bmcs",
+          "label": "bmc discover/power"
+        },
+        {
+          "from": "bmcs",
+          "to": "store",
+          "label": "bmc config + lookups"
+        },
+        {
+          "from": "bmcs",
+          "to": "sshx",
+          "label": "bastion SSH tunnel"
+        },
+        {
+          "from": "bmcs",
+          "to": "sec",
+          "label": "bastion private key"
+        }
+      ],
+      "containers": [
+        {
+          "label": "machine-manager pod",
+          "members": [
+            "web",
+            "store",
+            "obj",
+            "q",
+            "slackc",
+            "bmcs",
+            "sshx",
+            "sec"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l2f",
+      "title": "L2f · Workers write state and enqueue",
+      "description": "Inside the box: worker jobs write machine and job state, then enqueue the next job in the same transaction. Store and queue are members.",
+      "nodes": [
+        {
+          "id": "river",
+          "label": "River workers"
+        },
+        {
+          "id": "store",
+          "label": "store / sqlc"
+        },
+        {
+          "id": "q",
+          "label": "River queue"
+        }
+      ],
+      "edges": [
+        {
+          "from": "river",
+          "to": "store",
+          "label": "write audit rows"
+        },
+        {
+          "from": "river",
+          "to": "store",
+          "label": "state transitions"
+        },
+        {
+          "from": "river",
+          "to": "store",
+          "label": "claim + complete jobs"
+        },
+        {
+          "from": "river",
+          "to": "q",
+          "label": "enqueue RunS3Boot"
+        },
+        {
+          "from": "river",
+          "to": "q",
+          "label": "enqueue VerifyReimage"
+        },
+        {
+          "from": "river",
+          "to": "q",
+          "label": "enqueue audit job"
+        }
+      ],
+      "layers": [
+        [
+          "store"
+        ],
+        [
+          "river"
+        ],
+        [
+          "q"
+        ]
+      ],
+      "containers": [
+        {
+          "label": "machine-manager pod",
+          "members": [
+            "river",
+            "store",
+            "q"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l2g",
+      "title": "L2g · Workers: provider state + sweeper",
+      "description": "Inside the box: provider and inventory workers persist cluster ids and imported machines, the sweeper reads transient states, and two hand-offs are enqueued.",
+      "nodes": [
+        {
+          "id": "river",
+          "label": "River workers"
+        },
+        {
+          "id": "store",
+          "label": "store / sqlc"
+        },
+        {
+          "id": "q",
+          "label": "River queue"
+        }
+      ],
+      "edges": [
+        {
+          "from": "river",
+          "to": "store",
+          "label": "write external_id"
+        },
+        {
+          "from": "river",
+          "to": "store",
+          "label": "create machine rows"
+        },
+        {
+          "from": "river",
+          "to": "store",
+          "label": "scan transient states"
+        },
+        {
+          "from": "river",
+          "to": "q",
+          "label": "enqueue benchmark"
+        },
+        {
+          "from": "river",
+          "to": "q",
+          "label": "enqueue CollectDiag"
+        }
+      ],
+      "layers": [
+        [
+          "store"
+        ],
+        [
+          "river"
+        ],
+        [
+          "q"
+        ]
+      ],
+      "containers": [
+        {
+          "label": "machine-manager pod",
+          "members": [
+            "river",
+            "store",
+            "q"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l2h",
+      "title": "L2h · Workers stage S3 objects",
+      "description": "Inside the box: workers stage audit JSON and boot objects in S3; the janitor client writes its event row and uploads the event payload.",
+      "nodes": [
+        {
+          "id": "river",
+          "label": "River workers"
+        },
+        {
+          "id": "obj",
+          "label": "S3 object client"
+        },
+        {
+          "id": "janc",
+          "label": "janitor client"
+        },
+        {
+          "id": "store",
+          "label": "store / sqlc"
+        }
+      ],
+      "edges": [
+        {
+          "from": "river",
+          "to": "obj",
+          "label": "upload audit JSON"
+        },
+        {
+          "from": "river",
+          "to": "obj",
+          "label": "list image versions"
+        },
+        {
+          "from": "river",
+          "to": "obj",
+          "label": "presign boot URLs"
+        },
+        {
+          "from": "janc",
+          "to": "store",
+          "label": "insert event row"
+        },
+        {
+          "from": "janc",
+          "to": "obj",
+          "label": "upload event body"
+        }
+      ],
+      "layers": [
+        [
+          "river"
+        ],
+        [
+          "obj"
+        ],
+        [
+          "janc"
+        ],
+        [
+          "store"
+        ]
+      ],
+      "containers": [
+        {
+          "label": "machine-manager pod",
+          "members": [
+            "river",
+            "obj",
+            "janc",
+            "store"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l2i",
+      "title": "L2i · Workers: benchmark + diagnose artifacts",
+      "description": "Inside the box: benchmark and diagnose workers mint presigned URLs and poll the result objects they wrote, all through the S3 client.",
+      "nodes": [
+        {
+          "id": "river",
+          "label": "River workers"
+        },
+        {
+          "id": "obj",
+          "label": "S3 object client"
+        }
+      ],
+      "edges": [
+        {
+          "from": "river",
+          "to": "obj",
+          "label": "presign bench URLs"
+        },
+        {
+          "from": "river",
+          "to": "obj",
+          "label": "poll results"
+        },
+        {
+          "from": "river",
+          "to": "obj",
+          "label": "presign bootloader"
+        }
+      ],
+      "layers": [
+        [
+          "river"
+        ],
+        [
+          "obj"
+        ]
+      ],
+      "containers": [
+        {
+          "label": "machine-manager pod",
+          "members": [
+            "river",
+            "obj"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l2j",
+      "title": "L2j · Workers drive provider adapters",
+      "description": "Inside the box: workers poll and patch provider cluster state through the adapters, and post failure diagnostics through the janitor client.",
+      "nodes": [
+        {
+          "id": "river",
+          "label": "River workers"
+        },
+        {
+          "id": "prov",
+          "label": "provider adapters"
+        },
+        {
+          "id": "janc",
+          "label": "janitor client"
+        }
+      ],
+      "edges": [
+        {
+          "from": "river",
+          "to": "prov",
+          "label": "poll gcore task"
+        },
+        {
+          "from": "river",
+          "to": "prov",
+          "label": "patch user_data"
+        },
+        {
+          "from": "river",
+          "to": "prov",
+          "label": "list latitude servers"
+        },
+        {
+          "from": "river",
+          "to": "janc",
+          "label": "post failure events"
+        }
+      ],
+      "layers": [
+        [
+          "prov"
+        ],
+        [
+          "river"
+        ],
+        [
+          "janc"
+        ]
+      ],
+      "containers": [
+        {
+          "label": "machine-manager pod",
+          "members": [
+            "river",
+            "prov",
+            "janc"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l2k",
+      "title": "L2k · Cluster reconcile",
+      "description": "Inside the box: the reconcile loop reads desired clusters, diffs and creates or resizes them on Gcore, then enqueues the follow-up jobs.",
+      "nodes": [
+        {
+          "id": "recon",
+          "label": "cluster reconcile"
+        },
+        {
+          "id": "store",
+          "label": "store / sqlc"
+        },
+        {
+          "id": "prov",
+          "label": "provider adapters"
+        },
+        {
+          "id": "q",
+          "label": "River queue"
+        }
+      ],
+      "edges": [
+        {
+          "from": "recon",
+          "to": "store",
+          "label": "desired clusters"
+        },
+        {
+          "from": "recon",
+          "to": "prov",
+          "label": "cluster exists"
+        },
+        {
+          "from": "recon",
+          "to": "prov",
+          "label": "create cluster"
+        },
+        {
+          "from": "recon",
+          "to": "prov",
+          "label": "resize cluster"
+        },
+        {
+          "from": "recon",
+          "to": "q",
+          "label": "enqueue gcore poll"
+        },
+        {
+          "from": "recon",
+          "to": "q",
+          "label": "enqueue userdata"
+        }
+      ],
+      "layers": [
+        [
+          "store"
+        ],
+        [
+          "prov"
+        ],
+        [
+          "recon"
+        ],
+        [
+          "q"
+        ]
+      ],
+      "containers": [
+        {
+          "label": "machine-manager pod",
+          "members": [
+            "recon",
+            "store",
+            "prov",
+            "q"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l2l",
+      "title": "L2l · Store to Postgres",
+      "description": "Inside the box, last hop: the queue UI reads job rows and the store runs every query over the pgx pool to the Postgres instance it migrates at boot.",
+      "nodes": [
+        {
+          "id": "riverui",
+          "label": "River UI :8081"
+        },
+        {
+          "id": "store",
+          "label": "store / sqlc"
+        },
+        {
+          "id": "pg",
+          "label": "Postgres machinemanager"
+        }
+      ],
+      "edges": [
+        {
+          "from": "riverui",
+          "to": "store",
+          "label": "queue introspection",
+          "minlen": 1
+        },
+        {
+          "from": "store",
+          "to": "pg",
+          "label": "SQL over pgx pool",
+          "minlen": 1
+        }
+      ],
+      "layers": [
+        [
+          "riverui"
+        ],
+        [
+          "store"
+        ],
+        [
+          "pg"
+        ]
+      ],
+      "containers": [
+        {
+          "label": "machine-manager pod",
+          "members": [
+            "riverui",
+            "store",
+            "pg"
+          ]
+        }
+      ]
+    }
+  ]
+}

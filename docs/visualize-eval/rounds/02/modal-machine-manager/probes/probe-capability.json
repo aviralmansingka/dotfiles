@@ -1,0 +1,17 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "a", "label": "alpha node", "group": "g1" },
+    { "id": "b", "label": "beta node", "group": "g1" },
+    { "id": "c", "label": "gamma node", "group": "g2" },
+    { "id": "d", "label": "delta node", "group": "g2" }
+  ],
+  "layers": [["a"], ["b", "c"], ["d"]],
+  "trunks": [
+    { "id": "t", "label": "shared bus", "from": "a", "to": "d", "branches": ["b", "c"] }
+  ],
+  "edges": [
+    { "from": "b", "to": "d", "label": "create/term/repair", "dots": 1, "flow": 0.5 }
+  ]
+}

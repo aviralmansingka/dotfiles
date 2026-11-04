@@ -1,0 +1,971 @@
+{
+  "case_id": "modal-machine-manager",
+  "round": "02",
+  "worker_id": "viz-ds02-modal-machine-manager",
+  "tab_label": "viz-ds02-undefined-6",
+  "generator": {
+    "kind": "pi coding agent (DeepSeek generator sample)",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "reviewer_subagent_spawned": false,
+    "note": "No Sol reviewer was spawned; the captain runs separate judges after all eight generators finish."
+  },
+  "candidate_skill": {
+    "path": "docs/visualize-eval/rounds/02/SKILL.md",
+    "sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70"
+  },
+  "renderer": {
+    "path": "/tmp/visualize-eval/round-02/bin/rataflow-view",
+    "sha256": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+    "global_binary_used": false
+  },
+  "target": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100
+  },
+  "view_count": 4,
+  "views": {
+    "v1": {
+      "role": "provisioning request path",
+      "spec": "v1.json",
+      "spec_sha256": "00b5d6a0084fe359f1695d8ca2bef82ab41ff0d6d3c95d9e706c8a4b904f4f03",
+      "evidence_dir": "evidence/v1",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "check": "evidence/v1/check.txt",
+      "frames": "evidence/v1/v1-frames.txt",
+      "frames_ansi": "evidence/v1/v1-frames.ansi",
+      "manifest": "evidence/v1/manifest.json",
+      "validator_output": "evidence/v1/validator.txt",
+      "frames_count": 5,
+      "frame_step_ms": 100,
+      "measured": {
+        "target": "77x47",
+        "measured": "77x47",
+        "zoom": "1.00 natural",
+        "source": "app header token in the captured pane text",
+        "viewport_line": null,
+        "viewport_token": "77x47 @100%"
+      },
+      "pane_id": "w7E:p7J",
+      "cleanup": "confirmed_closed",
+      "binary_sha256_in_manifest": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+      "check_facts": {
+        "summary": "nodes=8 edges=7 flows=7 direction=tb theme=gruvbox",
+        "layers": "layers=6 (explicit placement, sugiyama skipped)",
+        "extent": "48x45",
+        "labels": "7/7 placed, 0 on route cells, 0 skipped",
+        "groups": "humans(1) control(3) jobs(1) cloud(2) metal(1)",
+        "trunks": "none declared",
+        "dots": "7 single-dot routes, 0 periodic routes, 0 violations"
+      },
+      "validator": {
+        "passed": true,
+        "failed_checks": [],
+        "all_checks": [
+          "PASS manifest_readable",
+          "PASS binary_path_absolute",
+          "PASS binary_hash_recorded",
+          "PASS artifact_hashes",
+          "PASS check_output_present",
+          "PASS check_exit_zero",
+          "PASS check_warnings_absent",
+          "PASS labels_parsed",
+          "PASS labels_complete",
+          "PASS labels_off_routes",
+          "PASS labels_not_skipped",
+          "PASS dots_parsed",
+          "PASS dots_no_violations",
+          "PASS viewport_proven",
+          "PASS viewport_proven_measurable",
+          "PASS viewport_matches_target",
+          "PASS cleanup_confirmed",
+          "PASS select_all_frame",
+          "PASS select_all_artifact",
+          "PASS frames_artifact",
+          "PASS frames_timestamped",
+          "PASS attempts_readable",
+          "PASS attempts_view_budget",
+          "PASS attempts_spec_budget"
+        ]
+      }
+    },
+    "v2": {
+      "role": "boot exchange + heartbeat",
+      "spec": "v2.json",
+      "spec_sha256": "8b908f1b38de152a082615adf30cc55a34feb6aa219da4eac0b18463fe074daf",
+      "evidence_dir": "evidence/v2",
+      "text": "evidence/v2/v2-text.txt",
+      "ansi": "evidence/v2/v2-ansi.ansi",
+      "selected_ansi": "evidence/v2/v2-selected.ansi",
+      "check": "evidence/v2/check.txt",
+      "frames": "evidence/v2/v2-frames.txt",
+      "frames_ansi": "evidence/v2/v2-frames.ansi",
+      "manifest": "evidence/v2/manifest.json",
+      "validator_output": "evidence/v2/validator.txt",
+      "frames_count": 5,
+      "frame_step_ms": 100,
+      "measured": {
+        "target": "77x47",
+        "measured": "77x47",
+        "zoom": "1.00 natural",
+        "source": "app header token in the captured pane text",
+        "viewport_line": null,
+        "viewport_token": "77x47 @100%"
+      },
+      "pane_id": "w7E:p7P",
+      "cleanup": "confirmed_closed",
+      "binary_sha256_in_manifest": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+      "check_facts": {
+        "summary": "nodes=5 edges=5 flows=5 direction=tb theme=gruvbox",
+        "layers": "layers=4 (explicit placement, sugiyama skipped)",
+        "extent": "42x30",
+        "labels": "4/5 placed, 0 on route cells, 1 skipped",
+        "groups": "metal(2) artifact(1) control(1) state(1)",
+        "trunks": "none declared",
+        "dots": "5 single-dot routes, 0 periodic routes, 0 violations"
+      },
+      "validator": {
+        "passed": false,
+        "failed_checks": [
+          "check_warnings_absent",
+          "labels_complete",
+          "labels_not_skipped"
+        ],
+        "all_checks": [
+          "PASS manifest_readable",
+          "PASS binary_path_absolute",
+          "PASS binary_hash_recorded",
+          "PASS artifact_hashes",
+          "PASS check_output_present",
+          "PASS check_exit_zero",
+          "FAIL check_warnings_absent \u2014 warning: edge e1 label \"boot.ipxe+S3\" had no clear cell; shorten it or add routing space; warning: 1 edge label(s) had no free slot; shorten the labels or split the graph",
+          "PASS labels_parsed",
+          "FAIL labels_complete \u2014 4/5 labels placed",
+          "PASS labels_off_routes",
+          "FAIL labels_not_skipped \u2014 1 labels had no free slot",
+          "PASS dots_parsed",
+          "PASS dots_no_violations",
+          "PASS viewport_proven",
+          "PASS viewport_proven_measurable",
+          "PASS viewport_matches_target",
+          "PASS cleanup_confirmed",
+          "PASS select_all_frame",
+          "PASS select_all_artifact",
+          "PASS frames_artifact",
+          "PASS frames_timestamped",
+          "PASS attempts_readable",
+          "PASS attempts_view_budget",
+          "PASS attempts_spec_budget"
+        ]
+      }
+    },
+    "v3": {
+      "role": "ops, diagnostics and image pull",
+      "spec": "v3.json",
+      "spec_sha256": "f6f0e6741ead65180717d803a24f1dcaab45790978748acd2ea109be5d856616",
+      "evidence_dir": "evidence/v3",
+      "text": "evidence/v3/v3-text.txt",
+      "ansi": "evidence/v3/v3-ansi.ansi",
+      "selected_ansi": "evidence/v3/v3-selected.ansi",
+      "check": "evidence/v3/check.txt",
+      "frames": "evidence/v3/v3-frames.txt",
+      "frames_ansi": "evidence/v3/v3-frames.ansi",
+      "manifest": "evidence/v3/manifest.json",
+      "validator_output": "evidence/v3/validator.txt",
+      "frames_count": 5,
+      "frame_step_ms": 100,
+      "measured": {
+        "target": "77x47",
+        "measured": "77x47",
+        "zoom": "1.00 natural",
+        "source": "app header token in the captured pane text",
+        "viewport_line": null,
+        "viewport_token": "77x47 @100%"
+      },
+      "pane_id": "w7E:p7S",
+      "cleanup": "confirmed_closed",
+      "binary_sha256_in_manifest": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+      "check_facts": {
+        "summary": "nodes=7 edges=7 flows=7 direction=tb theme=gruvbox",
+        "layers": "layers=4 (explicit placement, sugiyama skipped)",
+        "extent": "42x32",
+        "labels": "7/7 placed, 0 on route cells, 0 skipped",
+        "groups": "jobs(1) ops(2) artifact(1) metal(1) control(1) humans(1)",
+        "trunks": "none declared",
+        "dots": "7 single-dot routes, 0 periodic routes, 0 violations"
+      },
+      "validator": {
+        "passed": true,
+        "failed_checks": [],
+        "all_checks": [
+          "PASS manifest_readable",
+          "PASS binary_path_absolute",
+          "PASS binary_hash_recorded",
+          "PASS artifact_hashes",
+          "PASS check_output_present",
+          "PASS check_exit_zero",
+          "PASS check_warnings_absent",
+          "PASS labels_parsed",
+          "PASS labels_complete",
+          "PASS labels_off_routes",
+          "PASS labels_not_skipped",
+          "PASS dots_parsed",
+          "PASS dots_no_violations",
+          "PASS viewport_proven",
+          "PASS viewport_proven_measurable",
+          "PASS viewport_matches_target",
+          "PASS cleanup_confirmed",
+          "PASS select_all_frame",
+          "PASS select_all_artifact",
+          "PASS frames_artifact",
+          "PASS frames_timestamped",
+          "PASS attempts_readable",
+          "PASS attempts_view_budget",
+          "PASS attempts_spec_budget"
+        ]
+      }
+    },
+    "v4": {
+      "role": "state writers and reconcile loop",
+      "spec": "v4.json",
+      "spec_sha256": "08c68a5c52191cb8064f9c837137d6af8715650c8093d13388b1a6a17e27d83e",
+      "evidence_dir": "evidence/v4",
+      "text": "evidence/v4/v4-text.txt",
+      "ansi": "evidence/v4/v4-ansi.ansi",
+      "selected_ansi": "evidence/v4/v4-selected.ansi",
+      "check": "evidence/v4/check.txt",
+      "frames": "evidence/v4/v4-frames.txt",
+      "frames_ansi": "evidence/v4/v4-frames.ansi",
+      "manifest": "evidence/v4/manifest.json",
+      "validator_output": "evidence/v4/validator.txt",
+      "frames_count": 5,
+      "frame_step_ms": 100,
+      "measured": {
+        "target": "77x47",
+        "measured": "77x47",
+        "zoom": "1.00 natural",
+        "source": "app header token in the captured pane text",
+        "viewport_line": null,
+        "viewport_token": "77x47 @100%"
+      },
+      "pane_id": "w7E:p7V",
+      "cleanup": "confirmed_closed",
+      "binary_sha256_in_manifest": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+      "check_facts": {
+        "summary": "nodes=5 edges=4 flows=4 direction=lr theme=gruvbox",
+        "layers": "layers=2 (explicit placement, sugiyama skipped)",
+        "extent": "66x19",
+        "labels": "4/4 placed, 0 on route cells, 0 skipped",
+        "groups": "control(1) jobs(2) state(1) cloud(1)",
+        "trunks": "none declared",
+        "dots": "4 single-dot routes, 0 periodic routes, 0 violations"
+      },
+      "validator": {
+        "passed": true,
+        "failed_checks": [],
+        "all_checks": [
+          "PASS manifest_readable",
+          "PASS binary_path_absolute",
+          "PASS binary_hash_recorded",
+          "PASS artifact_hashes",
+          "PASS check_output_present",
+          "PASS check_exit_zero",
+          "PASS check_warnings_absent",
+          "PASS labels_parsed",
+          "PASS labels_complete",
+          "PASS labels_off_routes",
+          "PASS labels_not_skipped",
+          "PASS dots_parsed",
+          "PASS dots_no_violations",
+          "PASS viewport_proven",
+          "PASS viewport_proven_measurable",
+          "PASS viewport_matches_target",
+          "PASS cleanup_confirmed",
+          "PASS select_all_frame",
+          "PASS select_all_artifact",
+          "PASS frames_artifact",
+          "PASS frames_timestamped",
+          "PASS attempts_readable",
+          "PASS attempts_view_budget",
+          "PASS attempts_spec_budget"
+        ]
+      }
+    }
+  },
+  "coverage_map": {
+    "v1": {
+      "nodes": [
+        "web",
+        "cp",
+        "wapi",
+        "pgrpc",
+        "q",
+        "reg",
+        "prov",
+        "mch"
+      ],
+      "edges": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6",
+        "e7"
+      ]
+    },
+    "v2": {
+      "nodes": [
+        "mch",
+        "agent",
+        "boot",
+        "pub",
+        "db"
+      ],
+      "edges": [
+        "e8",
+        "e9",
+        "e10",
+        "e11",
+        "e12"
+      ]
+    },
+    "v3": {
+      "nodes": [
+        "q",
+        "ssh",
+        "s3",
+        "jan",
+        "mch",
+        "wapi",
+        "slack"
+      ],
+      "edges": [
+        "e15",
+        "e16",
+        "e17",
+        "e18",
+        "e19",
+        "e20",
+        "e21"
+      ]
+    },
+    "v4": {
+      "nodes": [
+        "pgrpc",
+        "q",
+        "rec",
+        "db",
+        "prov"
+      ],
+      "edges": [
+        "e13",
+        "e14",
+        "e22",
+        "e23"
+      ]
+    },
+    "node_cover": {
+      "web": "v1",
+      "cp": "v1",
+      "pgrpc": "v1,v4",
+      "wapi": "v1,v3",
+      "pub": "v2",
+      "boot": "v2",
+      "q": "v1,v3,v4",
+      "rec": "v4",
+      "ssh": "v3",
+      "db": "v2,v4",
+      "s3": "v3",
+      "reg": "v1",
+      "prov": "v1,v4",
+      "mch": "v1,v2,v3",
+      "agent": "v2",
+      "jan": "v3",
+      "slack": "v3"
+    },
+    "totals": {
+      "components_drawn": 17,
+      "relations_drawn": 23
+    }
+  },
+  "groups": {
+    "humans": [
+      "web",
+      "slack"
+    ],
+    "control": [
+      "cp",
+      "wapi",
+      "pgrpc",
+      "pub"
+    ],
+    "jobs": [
+      "q",
+      "rec"
+    ],
+    "cloud": [
+      "reg",
+      "prov"
+    ],
+    "metal": [
+      "mch",
+      "agent"
+    ],
+    "artifact": [
+      "boot",
+      "s3"
+    ],
+    "state": [
+      "db"
+    ],
+    "ops": [
+      "ssh",
+      "jan"
+    ]
+  },
+  "source": {
+    "case_brief": "docs/visualize-eval/cases/modal-machine-manager/source.md",
+    "case_brief_sha256_note": "read from the working tree; the round metadata records source_sha256 for this case",
+    "pointers": [
+      "source.md 'Task' \u2014 preserve request, jobs, provisioning, boot, heartbeat, diagnostics, reconciliation paths",
+      "source.md 'Original line 31' \u2014 the three relationship sentences (request, heartbeat, ops) and the reconcile loop",
+      "source.md 'Relationship facts' \u2014 17 nodes and 23 directed relations",
+      "source.md 'Fixed constraints' \u2014 coverage of all 17 components and 23 relations, boot request AND response, janitor->webapi, jobs->S3 diagnostics separate",
+      "source.md 'Original line 50/64/148/217' \u2014 human corrections: slow dots, one live dot per line, no dots at arrow attachments"
+    ],
+    "not_read": [
+      "expected.json",
+      "historical-variants.json",
+      "other cases",
+      "round-01 output"
+    ]
+  },
+  "meaning_ledger": [
+    {
+      "fact": "cp \u2014 Modal control plane",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v1 node"
+    },
+    {
+      "fact": "web \u2014 humans + mmctl",
+      "kind": "actor",
+      "fate": "drawn",
+      "where": "v1 node 'humans + mmctl'"
+    },
+    {
+      "fact": "pgrpc \u2014 private gRPC",
+      "kind": "protocol",
+      "fate": "drawn",
+      "where": "v1, v4 node"
+    },
+    {
+      "fact": "wapi \u2014 webapi server",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v1, v3 node"
+    },
+    {
+      "fact": "pub \u2014 public gRPC",
+      "kind": "protocol",
+      "fate": "drawn",
+      "where": "v2 node"
+    },
+    {
+      "fact": "boot \u2014 boot server",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v2 node"
+    },
+    {
+      "fact": "q \u2014 River job queue",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v1, v3, v4 node"
+    },
+    {
+      "fact": "rec \u2014 cluster reconcile loop",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v4 node"
+    },
+    {
+      "fact": "ssh \u2014 SSH + BMC ops",
+      "kind": "protocol+role",
+      "fate": "drawn",
+      "where": "v3 node"
+    },
+    {
+      "fact": "db \u2014 Postgres",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v2, v4 node"
+    },
+    {
+      "fact": "s3 \u2014 S3 object store",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v3 node"
+    },
+    {
+      "fact": "reg \u2014 provider registry",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v1 node"
+    },
+    {
+      "fact": "prov \u2014 bare-metal providers",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v1, v4 node"
+    },
+    {
+      "fact": "mch \u2014 bare-metal machines",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v1, v2, v3 node"
+    },
+    {
+      "fact": "agent \u2014 machine-agent",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v2 node"
+    },
+    {
+      "fact": "jan \u2014 janitor app",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v3 node"
+    },
+    {
+      "fact": "slack \u2014 Slack",
+      "kind": "actor surface",
+      "fate": "drawn",
+      "where": "v3 node"
+    },
+    {
+      "fact": "machine-agent runs on each host (residency)",
+      "kind": "residency",
+      "fate": "drawn",
+      "where": "v2 edge e10 'runs on host' + shared 'metal' group"
+    },
+    {
+      "fact": "create / terminate / repair are distinct actions",
+      "kind": "verb list",
+      "fate": "abbreviated",
+      "where": "e1 label 'create/term/repair'"
+    },
+    {
+      "fact": "reinstall / reprovision",
+      "kind": "verb list",
+      "fate": "abbreviated",
+      "where": "e4 label 'reinstall/reprov'"
+    },
+    {
+      "fact": "register + heartbeat",
+      "kind": "verbs",
+      "fate": "abbreviated",
+      "where": "e11 label 'register+heartbeat'"
+    },
+    {
+      "fact": "audit / verify reimage",
+      "kind": "verb list",
+      "fate": "abbreviated",
+      "where": "e15 label 'audit + reimage'"
+    },
+    {
+      "fact": "run machine-audit",
+      "kind": "payload",
+      "fate": "drawn",
+      "where": "e16 label 'machine-audit'"
+    },
+    {
+      "fact": "boot.ipxe + S3 args (boot response payload)",
+      "kind": "payload",
+      "fate": "abbreviated",
+      "where": "e9 label 'boot.ipxe+S3' \u2014 NOT rendered (label slot skipped, see defects/blockers)"
+    },
+    {
+      "fact": "pull boot image",
+      "kind": "payload",
+      "fate": "drawn",
+      "where": "e17 label 'pull boot image'"
+    },
+    {
+      "fact": "diagnostics upload to S3 is separate from providers, janitor and image pull",
+      "kind": "distinct relation",
+      "fate": "drawn",
+      "where": "e18 kept on its own edge q->s3 in v3, separate from e17/e19/e5"
+    },
+    {
+      "fact": "diagnostic events to janitor",
+      "kind": "payload",
+      "fate": "drawn",
+      "where": "e19 label 'diagnostic events'"
+    },
+    {
+      "fact": "proposed actions back through webapi",
+      "kind": "payload + direction",
+      "fate": "drawn",
+      "where": "e20 label 'proposed actions' (jan->wapi)"
+    },
+    {
+      "fact": "webapi confirms via Slack (confirmation is human-mediated; the transport is not specified)",
+      "kind": "qualifier/uncertainty",
+      "fate": "drawn, qualified",
+      "where": "e21 dashed route wapi->slack"
+    },
+    {
+      "fact": "gcore sync every 1 minute",
+      "kind": "payload + cadence",
+      "fate": "abbreviated",
+      "where": "e22 label 'gcore sync 1min'"
+    },
+    {
+      "fact": "cluster state written by the reconcile loop",
+      "kind": "payload",
+      "fate": "drawn",
+      "where": "e23 label 'cluster state'"
+    },
+    {
+      "fact": "relative path speeds: heartbeat 'fastest', ops 'slow', request path",
+      "kind": "qualifier",
+      "fate": "dropped",
+      "reason": "the human corrections at source lines 50/64/148/217 replaced speed semantics with slow, sparse motion; every route now carries exactly one slow dot (flow 0.5, dots 1), so relative speed is no longer a rendered dimension. The path split survives as the view split v1/v2/v3."
+    },
+    {
+      "fact": "the three named paths (Request path, Heartbeat path, Ops path)",
+      "kind": "grouping",
+      "fate": "drawn as structure",
+      "where": "view split v1 (request), v2 (heartbeat + boot), v3 (ops) \u2014 recorded in the coverage map"
+    },
+    {
+      "fact": "historical chat commands and credentials/host-access discussion",
+      "kind": "out of scope",
+      "fate": "dropped",
+      "reason": "the brief restricts reading to the excerpts and forbids replaying commands"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "cp",
+      "to": "pgrpc",
+      "verb_tech": "create / terminate / repair",
+      "label_owner": "e1",
+      "view": "v1"
+    },
+    {
+      "id": "e2",
+      "from": "web",
+      "to": "wapi",
+      "verb_tech": "http",
+      "label_owner": "e2",
+      "view": "v1"
+    },
+    {
+      "id": "e3",
+      "from": "pgrpc",
+      "to": "q",
+      "verb_tech": "enqueue job",
+      "label_owner": "e3",
+      "view": "v1"
+    },
+    {
+      "id": "e4",
+      "from": "wapi",
+      "to": "q",
+      "verb_tech": "reinstall / reprovision",
+      "label_owner": "e4",
+      "view": "v1"
+    },
+    {
+      "id": "e5",
+      "from": "q",
+      "to": "reg",
+      "verb_tech": "provision job",
+      "label_owner": "e5",
+      "view": "v1"
+    },
+    {
+      "id": "e6",
+      "from": "reg",
+      "to": "prov",
+      "verb_tech": "provider API",
+      "label_owner": "e6",
+      "view": "v1"
+    },
+    {
+      "id": "e7",
+      "from": "prov",
+      "to": "mch",
+      "verb_tech": "allocate instance",
+      "label_owner": "e7",
+      "view": "v1"
+    },
+    {
+      "id": "e8",
+      "from": "mch",
+      "to": "boot",
+      "verb_tech": "iPXE request",
+      "label_owner": "e8",
+      "view": "v2"
+    },
+    {
+      "id": "e9",
+      "from": "boot",
+      "to": "mch",
+      "verb_tech": "boot.ipxe + S3 args",
+      "label_owner": "e9",
+      "view": "v2",
+      "rendered_label": false
+    },
+    {
+      "id": "e10",
+      "from": "mch",
+      "to": "agent",
+      "verb_tech": "runs on host (residency)",
+      "label_owner": "e10",
+      "view": "v2"
+    },
+    {
+      "id": "e11",
+      "from": "agent",
+      "to": "pub",
+      "verb_tech": "register + heartbeat",
+      "label_owner": "e11",
+      "view": "v2"
+    },
+    {
+      "id": "e12",
+      "from": "pub",
+      "to": "db",
+      "verb_tech": "machine state",
+      "label_owner": "e12",
+      "view": "v2"
+    },
+    {
+      "id": "e13",
+      "from": "pgrpc",
+      "to": "db",
+      "verb_tech": "machine rows",
+      "label_owner": "e13",
+      "view": "v4"
+    },
+    {
+      "id": "e14",
+      "from": "q",
+      "to": "db",
+      "verb_tech": "job rows",
+      "label_owner": "e14",
+      "view": "v4"
+    },
+    {
+      "id": "e15",
+      "from": "q",
+      "to": "ssh",
+      "verb_tech": "audit / verify reimage",
+      "label_owner": "e15",
+      "view": "v3"
+    },
+    {
+      "id": "e16",
+      "from": "ssh",
+      "to": "mch",
+      "verb_tech": "run machine-audit",
+      "label_owner": "e16",
+      "view": "v3"
+    },
+    {
+      "id": "e17",
+      "from": "mch",
+      "to": "s3",
+      "verb_tech": "pull boot image",
+      "label_owner": "e17",
+      "view": "v3"
+    },
+    {
+      "id": "e18",
+      "from": "q",
+      "to": "s3",
+      "verb_tech": "diagnose uploads",
+      "label_owner": "e18",
+      "view": "v3"
+    },
+    {
+      "id": "e19",
+      "from": "q",
+      "to": "jan",
+      "verb_tech": "diagnostic events",
+      "label_owner": "e19",
+      "view": "v3"
+    },
+    {
+      "id": "e20",
+      "from": "jan",
+      "to": "wapi",
+      "verb_tech": "proposed actions",
+      "label_owner": "e20",
+      "view": "v3"
+    },
+    {
+      "id": "e21",
+      "from": "wapi",
+      "to": "slack",
+      "verb_tech": "confirm + alerts (human-mediated, transport unstated)",
+      "label_owner": "e21",
+      "view": "v3",
+      "style": "dashed"
+    },
+    {
+      "id": "e22",
+      "from": "rec",
+      "to": "prov",
+      "verb_tech": "gcore sync, 1 min",
+      "label_owner": "e22",
+      "view": "v4"
+    },
+    {
+      "id": "e23",
+      "from": "rec",
+      "to": "db",
+      "verb_tech": "cluster state",
+      "label_owner": "e23",
+      "view": "v4"
+    }
+  ],
+  "abbreviations": [
+    {
+      "text": "create/term/repair",
+      "source": "create / terminate / repair",
+      "reason": "label width; verbs kept in order"
+    },
+    {
+      "text": "reinstall/reprov",
+      "source": "reinstall / reprovision",
+      "reason": "label width"
+    },
+    {
+      "text": "register+heartbeat",
+      "source": "register + heartbeat",
+      "reason": "label width"
+    },
+    {
+      "text": "audit + reimage",
+      "source": "audit / verify reimage",
+      "reason": "label width; 'verify' implied by reimage"
+    },
+    {
+      "text": "boot.ipxe+S3",
+      "source": "boot.ipxe + S3 args",
+      "reason": "label width; the 'args' word is the dropped half \u2014 and the label is not rendered at all (see defects)"
+    },
+    {
+      "text": "gcore sync 1min",
+      "source": "gcore sync, every 1 minute",
+      "reason": "label width"
+    },
+    {
+      "text": "humans + mmctl",
+      "source": "humans + mmctl",
+      "reason": "verbatim from the node list"
+    }
+  ],
+  "deliberate_drops": [
+    {
+      "fact": "relative path speeds (heartbeat fastest, ops slow)",
+      "reason": "replaced by the human correction (slow, one dot per line); speed is uniform at flow 0.5"
+    },
+    {
+      "fact": "'args' in the boot response payload",
+      "reason": "first width abbreviation, then the whole label was skipped by the router \u2014 reported as a defect, not hidden"
+    },
+    {
+      "fact": "the port/address layer (no IPs or ports exist in this source)",
+      "reason": "nothing to draw"
+    }
+  ],
+  "known_defects": [
+    {
+      "view": "v2",
+      "defect": "edge e9 (boot server -> machines, 'boot.ipxe+S3') carries no visible label: --check reports 'labels: 4/5 placed, 1 skipped' and a warning. The route (and its arrowhead into the machine box) is drawn, so the relation is visible; its payload text is not.",
+      "cause": "renderer label slot gap for reverse (upward) tb routes \u2014 see blockers[0]",
+      "validator_effect": "check_warnings_absent, labels_complete, labels_not_skipped FAIL for evidence/v2"
+    },
+    {
+      "view": "v3",
+      "defect": "the dashed edge e21 label reads 'confirm + alerts'; the uncertainty qualifier itself is not repeated in the text (SKILL Step 5 asks for both the dashed style and the qualifier in the label).",
+      "cause": "label width budget on a crowded bottom band",
+      "validator_effect": "none (style and label both render)"
+    },
+    {
+      "view": "v1",
+      "defect": "the two parallel columns web->wapi and cp->pgrpc put their labels in the same inter-layer band; 'create/term/repair' sits one blank cell from its own line and four from the neighbouring one. Traceable, but a reader must follow the column, not the label position.",
+      "cause": "two parallel edges between one pair of layers",
+      "validator_effect": "none"
+    },
+    {
+      "view": "v4",
+      "defect": "rec's two edges leave the same side and their labels ('cluster state' above its run, 'gcore sync 1min' between the two runs) are close; 'gcore sync 1min' is one blank row from each run, so ownership needs the audit table.",
+      "cause": "parallel runs from one source",
+      "validator_effect": "none"
+    },
+    {
+      "view": "all",
+      "defect": "manifest pane_rect/pane_cols are null because this herdr build's 'pane layout' JSON did not expose the split pane's rect to the capture script's jq filter; pane_rows fell back to viewport_rows (47). Measured size therefore comes from the app's own header token '77x47 @100%', which the validator accepts.",
+      "cause": "harness/manifest gap, not a renderer defect",
+      "validator_effect": "none (viewport_proven / viewport_matches_target PASS via the header token)"
+    }
+  ],
+  "blockers": [
+    {
+      "capability": "label slot for a reverse (upward) edge route in tb",
+      "status": "missing",
+      "evidence": [
+        "probes/probe-pair.json (2 nodes, reverse edge) -> probes/probe-pair.check.txt: 'labels: 1/2 placed, 0 on route cells, 1 skipped'",
+        "probes/probe-pair-short.json (same pair, reverse label shortened to 9 chars 'boot.ipxe') -> probes/probe-pair-short.check.txt: still '1 skipped'",
+        "probes/probe-pair-lr.json (same pair, direction lr) -> probes/probe-pair-lr.check.txt: 'labels: 2/2 placed, 0 skipped'"
+      ],
+      "impact": "v2's request/response pair cannot both be labelled in a tb composition; e9's payload is lost. The fix (lr) needs a composition change that the 3-attempt-per-view budget no longer allowed."
+    },
+    {
+      "capability": "routing a reverse edge that skips a layer in lr",
+      "status": "missing (hard error)",
+      "evidence": [
+        "attempts/v3-attempt1.json -> renderer aborted: 'no obstacle-safe route for mch -> s3; increase node/layer spacing'"
+      ],
+      "impact": "v3 had to be recomposed in tb so every edge runs forward"
+    },
+    {
+      "capability": "trunks (shared bus)",
+      "status": "available but not needed",
+      "evidence": [
+        "probes/probe-capability.json -> 'trunks: t from a to d, 2 branches' renders and checks clean"
+      ],
+      "impact": "this source declares no single shared corridor: q fan-out (e15/e18/e19), the db sinks (e12/e13/e14/e23) and the boot exchange (e8/e9) each carry distinct per-branch semantics, so a trunk would merge differently-labelled relations into one label \u2014 refused per SKILL Steps 3/5 rather than faked."
+    }
+  ],
+  "commands": [
+    "scripts/viz-evidence.sh --spec <case>/vN.json --bin /tmp/visualize-eval/round-02/bin/rataflow-view --out <case>/evidence/vN --label vN --frames 5",
+    "scripts/viz-validate.py <case>/evidence/vN --require-select --require-frames --attempts <case>/attempts.json",
+    "/tmp/visualize-eval/round-02/bin/rataflow-view --check <spec>   (offline, before capture)",
+    "COLUMNS=77 LINES=47 /tmp/visualize-eval/round-02/bin/rataflow-view --frames 1 --spec <spec>   (pane-free preview at the target size)"
+  ],
+  "cleanup": {
+    "panes_opened": 4,
+    "panes_closed": 4,
+    "close_results": {
+      "v1": "confirmed_closed",
+      "v2": "confirmed_closed",
+      "v3": "confirmed_closed",
+      "v4": "confirmed_closed"
+    },
+    "panes_opened_for_probes": 0,
+    "probe_method": "offline --check / --frames only, no pane",
+    "tab_panes_after": 1,
+    "failures": []
+  }
+}

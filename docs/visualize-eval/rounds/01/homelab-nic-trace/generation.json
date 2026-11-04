@@ -1,0 +1,625 @@
+{
+  "case_id": "homelab-nic-trace",
+  "round": "01",
+  "generated_utc": "2026-11-02T08:31:58Z",
+  "generator": {
+    "role": "fresh diagram generator (no reuse of earlier rounds or other cases)",
+    "harness": "pi worker subagent, session 01a19b5b-df9f-71fc-8aa3-540bc3465404",
+    "agent_name": "viz-ds01-homelab-nic-trace",
+    "provider": "fireworks",
+    "model_env": "accounts/fireworks/routers/deepseek-flash-latest",
+    "model_exact": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "reasoning_level": "high",
+    "model_declared_in_task": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "inputs": {
+    "candidate_skill": {
+      "path": "../SKILL.md",
+      "sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92"
+    },
+    "renderer": {
+      "path": "/tmp/visualize-eval/round-01/bin/rataflow-view",
+      "sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8"
+    },
+    "source_brief": {
+      "path": "../../../cases/homelab-nic-trace/source.md",
+      "sha256": "abe8b376eccd7d0027f2985aab55ed656603b2094c275ee66ed223a57421b4c4"
+    },
+    "frozen_binary_used_for_every_command": true
+  },
+  "measured_viewport": {
+    "target": "77 columns x 47 rows at natural 100% zoom",
+    "measured": "47 rows x 77 columns of terminal content",
+    "method": "herdr pane split --current --direction right --ratio 0.5 --no-focus, then 'stty size' inside each viewer pane before the viewer started; pane rect is 79x49 because the pane chrome takes the rest",
+    "match": true,
+    "per_view": {
+      "v1": "47 77",
+      "v2": "47 77",
+      "v3": "47 77"
+    },
+    "pan_or_zoom_used": false,
+    "fit_key_used": false
+  },
+  "views": {
+    "v1": {
+      "title": "host-local virtual networks into the host (libvirt NAT + Docker bridge)",
+      "spec": "specs/v1-local-nets.json",
+      "spec_sha256": "75f8726b25bdfb82e1e748ab24b020b41d0e3c67828035d28fa38b4c228dae29",
+      "check": {
+        "file": "checks/v1-check.txt",
+        "sha256": "d62a2a7c153a8e2a6082bbdf9e105a5d93cb21fc72a63b8caf6ff1953b7ea2a5",
+        "exit_code": 0,
+        "warnings": [],
+        "extent_cells": "35x21"
+      },
+      "pane": {
+        "id": "w7E:p4V",
+        "tab": "w7E:tM",
+        "split": "no-focus, --direction right --ratio 0.5 (my own tab, not the captain's)",
+        "measured_size": "47 rows x 77 cols (stty size)",
+        "commands_log": "captures/v1-commands.txt",
+        "size_log": "captures/v1-size.txt"
+      },
+      "direction": "tb",
+      "nodes": [
+        "vm",
+        "ctr",
+        "virbr",
+        "dkbr",
+        "box"
+      ],
+      "edges": [
+        {
+          "from": "vm",
+          "to": "virbr",
+          "label": "192.168.122.x"
+        },
+        {
+          "from": "ctr",
+          "to": "dkbr",
+          "label": "172.18.2.x"
+        },
+        {
+          "from": "virbr",
+          "to": "box",
+          "label": "NAT bridge"
+        },
+        {
+          "from": "dkbr",
+          "to": "box",
+          "label": "Docker bridge"
+        }
+      ],
+      "captures": {
+        "unselected_text": "captures/v1-unselected.txt",
+        "unselected_ansi": "captures/v1-unselected.ansi",
+        "selected_text": "captures/v1-selected.txt",
+        "selected_ansi": "captures/v1-selected.ansi",
+        "selected_node": "homelab host (box) \u2014 rows 31-34, cols 22-35, bold accent",
+        "frames": [
+          "frames/v1-frame01.txt",
+          "frames/v1-frame01.ansi",
+          "frames/v1-frame02.txt",
+          "frames/v1-frame02.ansi",
+          "frames/v1-frame03.txt",
+          "frames/v1-frame03.ansi"
+        ],
+        "frame_hashes": {
+          "v1-frame01.txt": "1e82a74c82a9fc4789470b962c5cff0ae729b10b82096a91872888b14c3c50a2",
+          "v1-frame02.txt": "efb1ecaa6aa31f1ed2c342a94b90e01fb1a65c1b1edc3402269efb3a0f26ca91",
+          "v1-frame03.txt": "09034972d04c713f268bcf62de90214257b2a575f264e845f8e6c11e83642507"
+        }
+      },
+      "border_color_check": {
+        "file": "checks/v1-borders.json",
+        "result": "all node boxes have four complete sides, one uniform border color per box, and no arrow or flow dot on a border cell"
+      },
+      "selection_diff": "checks/v1-selection-diff.json",
+      "attempt_captures": [
+        "attempts/v1-a1-captures/"
+      ]
+    },
+    "v2": {
+      "title": "overlay and host NIC attachments (wired primary, Wi-Fi standby)",
+      "spec": "specs/v2-host-nics.json",
+      "spec_sha256": "c74d69c2e9ca5caffa1656a61aa13629c1a7f0bb2bc6f87023b7c78ce827721f",
+      "check": {
+        "file": "checks/v2-check.txt",
+        "sha256": "d7fdf126f6a29143ecf221fb33d084f8568a6973f575dcded8ebe69b817aff29",
+        "exit_code": 0,
+        "warnings": [],
+        "extent_cells": "76x12"
+      },
+      "pane": {
+        "id": "w7E:p4N",
+        "tab": "w7E:tM",
+        "split": "no-focus, --direction right --ratio 0.5 (my own tab, not the captain's)",
+        "measured_size": "47 rows x 77 cols (stty size)",
+        "commands_log": "captures/v2-commands.txt",
+        "size_log": "captures/v2-size.txt"
+      },
+      "direction": "lr",
+      "nodes": [
+        "ts",
+        "box",
+        "bond0",
+        "wlp"
+      ],
+      "edges": [
+        {
+          "from": "ts",
+          "to": "box",
+          "label": "overlay"
+        },
+        {
+          "from": "ts",
+          "to": "bond0",
+          "label": "UDP encap"
+        },
+        {
+          "from": "box",
+          "to": "bond0",
+          "label": "eno1 2.5 GbE"
+        },
+        {
+          "from": "box",
+          "to": "wlp",
+          "label": "backup"
+        }
+      ],
+      "captures": {
+        "unselected_text": "captures/v2-unselected.txt",
+        "unselected_ansi": "captures/v2-unselected.ansi",
+        "selected_text": "captures/v2-selected.txt",
+        "selected_ansi": "captures/v2-selected.ansi",
+        "selected_node": "bond0 .1.197 \u2014 rows 20-24, cols 63-76, bold accent",
+        "frames": [
+          "frames/v2-frame01.txt",
+          "frames/v2-frame01.ansi",
+          "frames/v2-frame02.txt",
+          "frames/v2-frame02.ansi",
+          "frames/v2-frame03.txt",
+          "frames/v2-frame03.ansi"
+        ],
+        "frame_hashes": {
+          "v2-frame01.txt": "dd19a13ae16cd988c63b39d02ff2724625beec976e31f23ad3b51f6c2603b910",
+          "v2-frame02.txt": "1bad9de8964a815e0471c77bd8fc34075b35311ac743d750b6efe7a3ccedc9af",
+          "v2-frame03.txt": "d3d4bc994b53d87fae8fa61be39d8a52c0c108535d51fac28fb08f5fd3e3d15f"
+        }
+      },
+      "border_color_check": {
+        "file": "checks/v2-borders.json",
+        "result": "all node boxes have four complete sides, one uniform border color per box, and no arrow or flow dot on a border cell"
+      },
+      "selection_diff": "checks/v2-selection-diff.json",
+      "attempt_captures": [
+        "attempts/v2-a2-captures/"
+      ]
+    },
+    "v3": {
+      "title": "LAN gateway, WAN transit and egress (qualified device roles)",
+      "spec": "specs/v3-lan-wan.json",
+      "spec_sha256": "454a27aa771de81413696af518f94c97f024fa9556f4c518f5c5410400f33213",
+      "check": {
+        "file": "checks/v3-check.txt",
+        "sha256": "bbb136c8d7d20e8edbf0bf80a0c266f0003ffd15b0dcec0dea6c810e70913d16",
+        "exit_code": 0,
+        "warnings": [],
+        "extent_cells": "43x45"
+      },
+      "pane": {
+        "id": "w7E:p4S",
+        "tab": "w7E:tM",
+        "split": "no-focus, --direction right --ratio 0.5 (my own tab, not the captain's)",
+        "measured_size": "47 rows x 77 cols (stty size)",
+        "commands_log": "captures/v3-commands.txt",
+        "size_log": "captures/v3-size.txt"
+      },
+      "direction": "tb",
+      "nodes": [
+        "bond0",
+        "wlp",
+        "rtr",
+        "ont",
+        "vzagg",
+        "vzbb",
+        "cf"
+      ],
+      "edges": [
+        {
+          "from": "bond0",
+          "to": "rtr",
+          "label": "default gw 0.5 ms"
+        },
+        {
+          "from": "wlp",
+          "to": "rtr",
+          "label": "metric 600"
+        },
+        {
+          "from": "rtr",
+          "to": "ont",
+          "label": "NAT out"
+        },
+        {
+          "from": "ont",
+          "to": "vzagg",
+          "label": "4.5 ms"
+        },
+        {
+          "from": "vzagg",
+          "to": "vzbb",
+          "label": "6.6 ms"
+        },
+        {
+          "from": "vzbb",
+          "to": "cf",
+          "label": "6-9 ms"
+        }
+      ],
+      "captures": {
+        "unselected_text": "captures/v3-unselected.txt",
+        "unselected_ansi": "captures/v3-unselected.ansi",
+        "selected_text": "captures/v3-selected.txt",
+        "selected_ansi": "captures/v3-selected.ansi",
+        "selected_node": "bond0 .1.197 \u2014 rows 3-6, cols 24-37, bold accent",
+        "frames": [
+          "frames/v3-frame01.txt",
+          "frames/v3-frame01.ansi",
+          "frames/v3-frame02.txt",
+          "frames/v3-frame02.ansi",
+          "frames/v3-frame03.txt",
+          "frames/v3-frame03.ansi"
+        ],
+        "frame_hashes": {
+          "v3-frame01.txt": "faa5828e902477d997d5cb76875328e4ef2d91dc0a7bc73d199c17e576ed24bb",
+          "v3-frame02.txt": "0263cf39758b58b4ed407ffddcd7fc619c5dcd580808b9df70a957de82db954b",
+          "v3-frame03.txt": "d44460592a1a63b90a713281bead41b54250263d3320276cbdc969bc309849db"
+        }
+      },
+      "border_color_check": {
+        "file": "checks/v3-borders.json",
+        "result": "all node boxes have four complete sides, one uniform border color per box, and no arrow or flow dot on a border cell"
+      },
+      "selection_diff": "checks/v3-selection-diff.json",
+      "attempt_captures": [
+        "attempts/v3-a1-unselected.txt",
+        "attempts/v3-a2-captures/"
+      ]
+    }
+  },
+  "relationship_coverage": [
+    {
+      "source": "vm -> virbr",
+      "source_label": "192.168.122.x",
+      "view": "v1",
+      "visible": "edge vm -> virbr, label '192.168.122.x' at row 20 cols 27-40, arrow (22,24) into virbr0 NAT top border"
+    },
+    {
+      "source": "virbr -> box",
+      "source_label": "NAT bridge",
+      "view": "v1",
+      "visible": "edge virbr0 NAT -> homelab host, label 'NAT bridge' at row 28 cols 26-40, arrow (30,23) into host top border"
+    },
+    {
+      "source": "ctr -> dkbr",
+      "source_label": "172.18.2.x",
+      "view": "v1",
+      "visible": "edge Container veth -> docker0, label '172.18.2.x' at row 20 cols 43-52, arrow (22,41) into docker0 top border"
+    },
+    {
+      "source": "dkbr -> box",
+      "source_label": "Docker bridge",
+      "view": "v1",
+      "visible": "edge docker0 -> homelab host, label 'Docker bridge' at row 30 cols 27-39, arrow (30,25) into host top border"
+    },
+    {
+      "source": "ts -> box",
+      "source_label": "overlay",
+      "view": "v2",
+      "visible": "edge tailscale0 -> homelab host, label 'overlay' at row 22 cols 20-26, arrow (21,30) into host left border"
+    },
+    {
+      "source": "ts -> bond0",
+      "source_label": "encap over UDP",
+      "view": "v2",
+      "visible": "edge tailscale0 -> bond0 drawn over the host, label 'UDP encap' at row 20 cols 51-59, arrow (21,62) into bond0 left border; label shortened from 'encap over UDP', meaning preserved"
+    },
+    {
+      "source": "box -> bond0",
+      "source_label": "eno1 2.5 GbE",
+      "view": "v2",
+      "visible": "edge homelab host -> bond0, label 'eno1 2.5 GbE' at row 22 cols 47-58, arrow (23,62) into bond0 left border"
+    },
+    {
+      "source": "box -> wlp",
+      "source_label": "backup path",
+      "view": "v2",
+      "visible": "edge homelab host -> wlp8s0, label 'backup' at row 24 cols 49-54, arrow (27,62) into wlp8s0 left border; label shortened from 'backup path', meaning preserved"
+    },
+    {
+      "source": "bond0 -> rtr",
+      "source_label": "default gw 0.5 ms",
+      "view": "v3",
+      "visible": "edge bond0 -> Fios router?, label 'default gw 0.5 ms' at row 7 cols 27-47, arrow (10,22) into router top border"
+    },
+    {
+      "source": "wlp -> rtr",
+      "source_label": "metric 600",
+      "view": "v3",
+      "visible": "edge wlp8s0 -> Fios router?, label 'metric 600' at row 8 cols 31-47, arrow (10,24) into router top border"
+    },
+    {
+      "source": "rtr -> ont",
+      "source_label": "NAT out",
+      "view": "v3",
+      "visible": "edge Fios router? -> ONT?, label 'NAT out' at row 15 cols 24-30, arrow (18,23) into ONT top border"
+    },
+    {
+      "source": "ont -> vzagg",
+      "source_label": "4.5 ms",
+      "view": "v3",
+      "visible": "edge ONT? -> VZ agg (hop), label '4.5 ms' at row 24 cols 25-30, arrow (26,20) into VZ agg top border"
+    },
+    {
+      "source": "vzagg -> vzbb",
+      "source_label": "6.6 ms",
+      "view": "v3",
+      "visible": "edge VZ agg (hop) -> VZ backbone AS701 (hop), label '6.6 ms' at row 32 cols 22-27, arrow (34,19) into backbone top border"
+    },
+    {
+      "source": "vzbb -> cf",
+      "source_label": "6-9 ms",
+      "view": "v3",
+      "visible": "edge VZ backbone AS701 (hop) -> Cloudflare, label '6-9 ms' at row 39 cols 21-26, arrow (42,22) into Cloudflare top border"
+    }
+  ],
+  "source_pointers": [
+    "docs/visualize-eval/cases/homelab-nic-trace/source.md \u2014 'Relationship facts from the historical attempt' (13 nodes, 14 edges), 'What the probes found', and 'Fixed constraints'",
+    "same file, quoting historical chat line 48 (user: do it for the rack-bench host) and line 68 (assistant summary of the live graph)"
+  ],
+  "abbreviations": {
+    "bond0 .1.197": "bond0, 192.168.1.197 on the 192.168.1.0/24 LAN (source node 'bond0 192.168.1.197')",
+    "wlp8s0 .213": "wlp8s0, 192.168.1.213 on the same LAN (source: 'wlp8s0 wifi .213')",
+    "tailscale0 .49": "tailscale0, 100.113.153.49 (source: 'tailscale0 100.113.153.49'); the 100.64/10 overlay prefix is implied",
+    "Fios router? .1.1": "claimed Verizon Fios gateway at 192.168.1.1; '?' = role taken from MAC OUI and the historical chat, not verified",
+    "ONT? 169.254.3.1": "claimed ONT/demarc at 169.254.3.1; '?' = historical interpretation of a link-local first hop, not verified physical topology",
+    "VZ": "Verizon",
+    "VZ agg 100.41.x (hop)": "Verizon aggregation hop 100.41.x; '(hop)' = traceroute hop, not a verified device",
+    "VZ backbone AS701 (hop)": "Verizon backbone in AS701 as seen from traceroute; '(hop)' = traceroute hop, not a verified device",
+    "UDP encap": "the source phrase 'encap over UDP' (Tailscale encapsulation over the wired path)",
+    "backup": "the source phrase 'backup path' (Wi-Fi standby route; metric failover, not ECMP)"
+  },
+  "qualified_evidence": [
+    "'Fios router?' and 'ONT?' carry a '?' because the source brief says to treat MAC-vendor roles and traceroute hops as historical interpretations, not verified physical topology.",
+    "'VZ agg 100.41.x (hop)' and 'VZ backbone AS701 (hop)' are labelled '(hop)' because they are traceroute hops from the historical attempt.",
+    "The Fios router's NAT/DHCP role and the single shared Fios pool IP 71.251.12.240 are not drawn as nodes; the egress claim lives in the source summary and in the 'NAT out' edge.",
+    "IPv6: the source says the host has ULA prefixes only and no reachable global IPv6. That fact has no edge in the historical relationship list, so it is not drawn; it is recorded here rather than invented as a node."
+  ],
+  "known_defects": {
+    "v1": [
+      "vm -> virbr and virbr -> box each make a one-cell left jog just above the arrowhead (row 21 and row 29); the route is continuous but reads as a step rather than a straight drop.",
+      "The virbr -> box turn glyph at (29,24) and the docker0 -> box turn glyph at (29,25) are vertically adjacent, so the two separate routes touch corner-to-corner. They do not share a cell and the labels are distinct, but a fast look can read the pair as one junction.",
+      "'Docker bridge' sits on row 30, one row below its route segment on row 29 and one row above the host's top border, because the free slot is between route and box."
+    ],
+    "v2": [
+      "At row 21 cols 28-31 the 'UDP encap' route turns up at (21,28) immediately beside the 'overlay' route's arrival corner and arrowhead at (21,29)-(21,30): '\u2500\u2500\u256f\u256d\u25b6'. The two edges are separate (different source ports at rows 21 and 23, no shared cell) and both arrowheads are visible, but the collinear stub can be misread as a branch into the host.",
+      "At row 23 cols 59-62 the 'backup' route turns down at (23,59) immediately beside the 'eno1' arrival corner at (23,60): '\u256e\u2570\u2500\u25b6'. Same adjacency class as above.",
+      "Extent is 76 cells wide in a 77-column pane, i.e. one spare column. The graph itself never overflows, but there is no width budget left for a longer label.",
+      "Direction is lr while v1 and v3 are tb (forced by the dropped-label warning in tb); the three views therefore do not share an orientation.",
+      "Flow dots overwrite the corner glyph of the cell they sit on (e.g. the encap corner at (21,28) in some frames), so a frame can momentarily show a bare dot where a turn was."
+    ],
+    "v3": [
+      "Each rung of the WAN ladder steps one or two cells sideways before its arrowhead (e.g. 'NAT out' jog at (17,22)-(18,23), '4.5 ms' step at (25,20)-(25,21), '6-9 ms' step at (41,22)-(41,23)); every last segment is vertical and every arrowhead is visible, but the ladder is not a straight column.",
+      "The graph reaches row 46, the last row of the 47-row pane, so there is no bottom margin below the Cloudflare box. The bottom-left control palette (cols 2-10, rows 41-46) is clear of it.",
+      "The 'metric 600' label sits at row 8, one row above the wlp route it names (row 9), directly under the 'default gw 0.5 ms' label of the other ingress; it is not beside its source stem.",
+      "The header line is clipped by the 77-column pane ('... \u00b7 drag'); renderer chrome, not graph content."
+    ]
+  },
+  "blockers": [
+    "None for rendering: the frozen binary accepted every final spec and --check exited 0 with no warnings.",
+    "Not a blocker but unmet: the skill's 'Independent readability review' section cannot be satisfied by this generator (it must not spawn an Astra judge; the captain owns that review), so no pass/fail visual verdict exists in this output.",
+    "Planar-view limitation, not a renderer bug: 13 nodes and 14 edges do not fit one 77x47 pane at 100% zoom without crowding, so the layout is split into three views and the host is repeated as a bridge node in v1 and v2 (bond0/wlp repeat in v2 and v3)."
+  ],
+  "attempts": [
+    {
+      "view": "v1",
+      "attempt": 1,
+      "spec": "specs/v1-local-nets.json",
+      "result": "accepted",
+      "note": "first draft; tb with 3 explicit layers; check clean at 35x21"
+    },
+    {
+      "view": "v1",
+      "attempt": 2,
+      "spec": "attempts/v1-a2-lr.json",
+      "check": "checks/attempt-v1-a2-lr-check.txt",
+      "result": "rejected",
+      "note": "lr variant; extent 81x11 exceeds the 77-column pane, and no warning was hiding a defect - simply too wide"
+    },
+    {
+      "view": "v2",
+      "attempt": 1,
+      "spec": "attempts/v2-a1-tb-reconstructed.json",
+      "check": "checks/attempt-v2-a1-tb-reconstructed-check.txt",
+      "result": "rejected",
+      "note": "tb with the 14-character source labels; '1 edge label(s) had no free slot' at 34x22. The draft file was overwritten when the winning variant was promoted to specs/v2-host-nics.json; this file is a faithful reconstruction (same nodes, layers, labels, direction) whose re-check reproduces the same warning. It is marked reconstructed, not a captured original."
+    },
+    {
+      "view": "v2",
+      "attempt": 2,
+      "spec": "attempts/v2-a2-lr.json",
+      "check": "checks/attempt-v2-a2-lr-check.txt",
+      "result": "accepted",
+      "note": "lr, short edge labels ('UDP encap', 'backup'); no warnings, 76x12. Promoted to specs/v2-host-nics.json (identical bytes, sha256 c74d69c2...)."
+    },
+    {
+      "view": "v2",
+      "attempt": 3,
+      "spec": "attempts/v2-a3-tb.json",
+      "check": "checks/attempt-v2-a3-tb-check.txt",
+      "result": "rejected",
+      "note": "tb with the same short labels still reported '1 edge label(s) had no free slot' at 34x22; the missing slot is structural (skip edge over the host row), not a label-length problem"
+    },
+    {
+      "view": "v3",
+      "attempt": 1,
+      "spec": "attempts/v3-a1-lan-wan.json",
+      "check": "checks/attempt-v3-a1-lan-wan-check.txt",
+      "result": "superseded",
+      "note": "check clean at 38x45; replaced because it did not mark the two Verizon traceroute hops as hops"
+    },
+    {
+      "view": "v3",
+      "attempt": 2,
+      "spec": "attempts/v3-a2-lan-wan-hops.json",
+      "check": "checks/attempt-v3-a2-lan-wan-hops-check.txt",
+      "result": "accepted",
+      "note": "adds '(hop)' to 'VZ agg 100.41.x' and 'VZ backbone AS701'; check clean at 43x45. Promoted to specs/v3-lan-wan.json (identical bytes, sha256 454a27aa...)."
+    }
+  ],
+  "attempt_policy": "at most three local spec attempts per view; v2 used all three, v1 and v3 used two",
+  "cleanup": {
+    "panes_created": [
+      "w7E:p34",
+      "w7E:p3T",
+      "w7E:p45",
+      "w7E:p4D",
+      "w7E:p4N",
+      "w7E:p4S",
+      "w7E:p4V"
+    ],
+    "panes_closed": [
+      "w7E:p34",
+      "w7E:p3T",
+      "w7E:p45",
+      "w7E:p4D",
+      "w7E:p4N",
+      "w7E:p4S",
+      "w7E:p4V"
+    ],
+    "method": "every viewer ran the skill's self-closing command ('rataflow-view <spec>; herdr pane close <pane>') and was quit with 'q'; each pane id was then re-queried with 'herdr pane get' and returned pane_not_found",
+    "failures": []
+  },
+  "independent_review": {
+    "status": "not run by this generator",
+    "reason": "the visual verdict is captain-owned and uses a separate Astra judge; this generator did not spawn one",
+    "claims_green": false
+  },
+  "tools": {
+    "render_view.sh": "repeatable pane split + stty measurement + viewer launch + capture + cleanup",
+    "ansi_grid.py": "ANSI pane capture -> cell grid (char, fg, bold); diff mode for selected vs unselected",
+    "validate_grid.py": "detects node boxes and checks four complete sides, uniform border color, and arrow/dot glyphs on border cells"
+  },
+  "file_hashes": {
+    "generation.md": "f098e3a3c5b5b55dba8d0d77e10a2033d267c98b6f6b33c1d66ff838615ffeda",
+    "captures/v1-commands.txt": "c665f1c823dc8b4a830f35304986c567dbd36be1cf5dbb6296f04e00a116c9fa",
+    "captures/v1-selected.ansi": "0e6fa0f7702d35cd801bc82d18ec6e57f335196a248a0fbeede04a01a157b12d",
+    "captures/v1-selected.txt": "1e596a8bfa11bb826ae80974e86d5dca5cae5e0acf4c90e9791b517f99cbb5f4",
+    "captures/v1-size.txt": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+    "captures/v1-unselected.ansi": "d0bfef295e083a0c30d326290a1d566ee4500235bc0b8e2339e84bbba05f028f",
+    "captures/v1-unselected.txt": "1e82a74c82a9fc4789470b962c5cff0ae729b10b82096a91872888b14c3c50a2",
+    "captures/v2-commands.txt": "4671462209b9549592d01df9fbae5f1b4b8cf0e1d395373a870e11572f0d302e",
+    "captures/v2-selected.ansi": "8560f39f9a44769e1b1b8ef959ff1dd17d1fb688af2c4c2c0001d6c66c1ac736",
+    "captures/v2-selected.txt": "e3fa3f99d2f8aecffaeba2676e9a270252498ed47127018241eb95325f1af249",
+    "captures/v2-size.txt": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+    "captures/v2-unselected.ansi": "ef5468a4fd79efdf3567085cef317e796b32860038a1d5d0151380410f99b1d1",
+    "captures/v2-unselected.txt": "dd19a13ae16cd988c63b39d02ff2724625beec976e31f23ad3b51f6c2603b910",
+    "captures/v3-commands.txt": "27c8361d11dc41e498d8d5bb410b32e25277e2be3eac03b765077c7fda36dfe3",
+    "captures/v3-selected.ansi": "ff62ee0a3d47dc8492351c6279ef20306b8c23b8799f71250b9c26746f9eee4a",
+    "captures/v3-selected.txt": "2991152eeb2b2e80703fc8fcb71e4988800aa446e144ed8ef758916872009464",
+    "captures/v3-size.txt": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+    "captures/v3-unselected.ansi": "49fc76079b9a6c458563c231ae08effe89362e420613181c101e9dfe5f678670",
+    "captures/v3-unselected.txt": "faa5828e902477d997d5cb76875328e4ef2d91dc0a7bc73d199c17e576ed24bb",
+    "tools/ansi_grid.py": "ec26dd33b7015e52a9177e1a08284320f8bb890075baa9fabdad4c56e276d364",
+    "tools/make_manifest.py": "f9a1a36fbc12b1409f128cf0ff6734eaf537980af59eba84704464c75e23d1a7",
+    "tools/render_view.sh": "42725b8d8784a0e8b024aa8bb1d05a30f65d00619085ee266b31421a5caef5c6",
+    "tools/validate_grid.py": "b51bb9a30016a2be7328cde060f32f1b1c2959649fdb30f60c7fac25c78ac45e",
+    "specs/v1-local-nets.json": "75f8726b25bdfb82e1e748ab24b020b41d0e3c67828035d28fa38b4c228dae29",
+    "specs/v2-host-nics.json": "c74d69c2e9ca5caffa1656a61aa13629c1a7f0bb2bc6f87023b7c78ce827721f",
+    "specs/v3-lan-wan.json": "454a27aa771de81413696af518f94c97f024fa9556f4c518f5c5410400f33213",
+    "checks/attempt-v1-a2-lr-check.txt": "f1ef90e573aa2838cc26c869c97f7f2a201e51e2132180c42559f5a799965473",
+    "checks/attempt-v2-a1-tb-reconstructed-check.txt": "c543968474741ed5e5535e6fcad0f74d4b5251b3fccf30e410eab5ec4dd815b1",
+    "checks/attempt-v2-a2-lr-check.txt": "56c5a79743bee2052d1cd9ffb8715f36e1bf39b29b7bb3aba0f791ea3e2b524d",
+    "checks/attempt-v2-a3-tb-check.txt": "a94bc43840890aac2dbc23a39bfcf655ded6423f24f37bb3813cfc757ebf648f",
+    "checks/attempt-v3-a1-lan-wan-check.txt": "abf369bc0444f04a9ac9fb37533da7e0838df77633b3054bc207f82a0099a42b",
+    "checks/attempt-v3-a2-lan-wan-hops-check.txt": "fd1f985b72c051d6d0141321d22777bbdcf098187a74c5bf600eab607b2eb760",
+    "checks/v1-borders.json": "69ec92c444d9844879e1327d8ef17c2b464d56e89c191e5b9df28771abb84a3e",
+    "checks/v1-check.txt": "d62a2a7c153a8e2a6082bbdf9e105a5d93cb21fc72a63b8caf6ff1953b7ea2a5",
+    "checks/v1-selection-diff.json": "da657e7eb4eb6233072abaec6ddab10e241aaab3caad76dba59001adceba410c",
+    "checks/v2-borders.json": "f45e9a89861c6c5716856bba02ec917531463144d12892b1b50d4d698514e2c2",
+    "checks/v2-check.txt": "d7fdf126f6a29143ecf221fb33d084f8568a6973f575dcded8ebe69b817aff29",
+    "checks/v2-selection-diff.json": "a81ed357bfbd91ff755800a47f8c4728500b4f0c0fa81100ec544bf868b15365",
+    "checks/v3-borders.json": "5ac1bc0855fb809251ac882e12873b0a2372cbeda157635e53e7261ecbd2da61",
+    "checks/v3-check.txt": "bbb136c8d7d20e8edbf0bf80a0c266f0003ffd15b0dcec0dea6c810e70913d16",
+    "checks/v3-selection-diff.json": "757d8a352d55b47e6dd2ec625ead02cbb633234296a414b854dc8fb437bfde97",
+    "frames/v1-frame01.ansi": "d0bfef295e083a0c30d326290a1d566ee4500235bc0b8e2339e84bbba05f028f",
+    "frames/v1-frame01.txt": "1e82a74c82a9fc4789470b962c5cff0ae729b10b82096a91872888b14c3c50a2",
+    "frames/v1-frame02.ansi": "dbe6bd81108a3dd685c1db9021f958c9a27b34d0076cc09e6ae18201246f1de7",
+    "frames/v1-frame02.txt": "efb1ecaa6aa31f1ed2c342a94b90e01fb1a65c1b1edc3402269efb3a0f26ca91",
+    "frames/v1-frame03.ansi": "e883028e58869e18069d8a6ecad0051225f1e5d6d1e1662c1ec9aee3b8743dd2",
+    "frames/v1-frame03.txt": "09034972d04c713f268bcf62de90214257b2a575f264e845f8e6c11e83642507",
+    "frames/v2-frame01.ansi": "ef5468a4fd79efdf3567085cef317e796b32860038a1d5d0151380410f99b1d1",
+    "frames/v2-frame01.txt": "dd19a13ae16cd988c63b39d02ff2724625beec976e31f23ad3b51f6c2603b910",
+    "frames/v2-frame02.ansi": "4f8af766a734d102f483c038a6bd03604a89dfacbed6a27dcdde965567dfd601",
+    "frames/v2-frame02.txt": "1bad9de8964a815e0471c77bd8fc34075b35311ac743d750b6efe7a3ccedc9af",
+    "frames/v2-frame03.ansi": "3aeda8b963c180fc0dfe9c89fe957c2fe2fe2c10a59895851ebc4eb432d0613f",
+    "frames/v2-frame03.txt": "d3d4bc994b53d87fae8fa61be39d8a52c0c108535d51fac28fb08f5fd3e3d15f",
+    "frames/v3-frame01.ansi": "49fc76079b9a6c458563c231ae08effe89362e420613181c101e9dfe5f678670",
+    "frames/v3-frame01.txt": "faa5828e902477d997d5cb76875328e4ef2d91dc0a7bc73d199c17e576ed24bb",
+    "frames/v3-frame02.ansi": "5a794afc39cfcc1333834e4e29459e0593b831590fbce31389a8b03f97b4d7af",
+    "frames/v3-frame02.txt": "0263cf39758b58b4ed407ffddcd7fc619c5dcd580808b9df70a957de82db954b",
+    "frames/v3-frame03.ansi": "743814e055328e3ec9649883ffacf13df3653fecc560228ffb2f60bb92f465e3",
+    "frames/v3-frame03.txt": "d44460592a1a63b90a713281bead41b54250263d3320276cbdc969bc309849db",
+    "attempts/v1-a2-lr.json": "c1c180533b61fd8869577c1dfc41a457625a901f86b6dd929786281fa8c905d8",
+    "attempts/v2-a1-tb-reconstructed.json": "1a00d00c174297df53f24d147035a8ebf10eddb0d2b54b2a9fe3b0616272f824",
+    "attempts/v2-a2-lr.json": "c74d69c2e9ca5caffa1656a61aa13629c1a7f0bb2bc6f87023b7c78ce827721f",
+    "attempts/v2-a3-tb.json": "6ab6214fc6d0dda4758ccb364d3af7a75fc713b8edf9efe96e86191c69d85cc8",
+    "attempts/v3-a1-lan-wan.json": "91da822fe310193bf7629622bd024809cb9b74bf001cecd18544f321aa3e1933",
+    "attempts/v3-a1-unselected.txt": "b007450e41166c3b677aa90ae85aeff36adccc03806c5776521c31b73123efca",
+    "attempts/v3-a2-lan-wan-hops.json": "454a27aa771de81413696af518f94c97f024fa9556f4c518f5c5410400f33213",
+    "attempts/v1-a1-captures/v1-frame01.ansi": "4e9be5d49a8a033bc3af45115455e9800bd9fa615fe43e99521b588cb0aed9c4",
+    "attempts/v1-a1-captures/v1-frame01.txt": "6c194348ba87b90ad596490f746ba9dd56fb7c3291e0476bcf52a9140187dd40",
+    "attempts/v1-a1-captures/v1-frame02.ansi": "b76633ec9e71e69664225ce1768bfdbabcf1d5adda886f761bf3f7f867fe16c6",
+    "attempts/v1-a1-captures/v1-frame02.txt": "932e1f56ed35a81e58ccc5c798a6ebf5b8df89b18b480618b145a34fa69385e9",
+    "attempts/v1-a1-captures/v1-frame03.ansi": "afecafe6e589e69ee2f7924f68f827a30a16c34fb9b03c7f92a3cb9dc5a890a2",
+    "attempts/v1-a1-captures/v1-frame03.txt": "9bebcb452ce7ad9fa4255269cbb612ac957280a08d6fa487f4bd800687040395",
+    "attempts/v1-a1-captures/v1-frames.log": "1c8af190aec829ca3d4b0c7ec8ca6d4c3d230037a53c9b63ca6cbbff08e3b06e",
+    "attempts/v1-a1-captures/v1-selected.ansi": "2c6883b9426a9c617fe0a36b4d7fb0032f744f547ae585dbe3d937fe6f37fba0",
+    "attempts/v1-a1-captures/v1-selected.txt": "8da5ee9ecc9af30f15e26fa6fd6d0b72706ac8b2120edd9f847e8fe3f0d91e08",
+    "attempts/v1-a1-captures/v1-unselected.ansi": "9ab65999e57755a24500ad6919466314ebe3ac4d8c792427ee68af0331c53f56",
+    "attempts/v1-a1-captures/v1-unselected.txt": "ac3cf9407d00c519493794fd7dcfed4d64bf62789124f1a5ca9cfdd5579e75cc",
+    "attempts/v3-a2-captures/v3-frame01.ansi": "3ee05bf1dc9309d2149396ba7e8255b700fc709753790509c41e0b545bf2ee2f",
+    "attempts/v3-a2-captures/v3-frame01.txt": "7b178036ac1f917e7297a33c172c9fd586fce9c9d6e242f3824fe43293370e67",
+    "attempts/v3-a2-captures/v3-frame02.ansi": "1ca8ce890ff8a6fccbf518404b24b66ba275d63f30dfeb9804f9be19726d27be",
+    "attempts/v3-a2-captures/v3-frame02.txt": "82934e018d8156e8b894023d94f9e8472dd6341674d3a0810121b842c08e0971",
+    "attempts/v3-a2-captures/v3-frame03.ansi": "1f089848e0ffdf748b0a9b3102944c65b4987b8755ac94f1d10c4230dc8aafe7",
+    "attempts/v3-a2-captures/v3-frame03.txt": "e5209c823bbb17c3ff9d06419a313f7202fd77e659adf177c088f04a938c629f",
+    "attempts/v3-a2-captures/v3-frames.log": "1a3614d886784da049f6bd2f955e645914a22387bff425e2b8ce7f13a893c23d",
+    "attempts/v3-a2-captures/v3-selected.ansi": "ccb4803141ffb070bd969deafd2e51d5c5443c1c42e563492f504f71b98fc49d",
+    "attempts/v3-a2-captures/v3-selected.txt": "fd79c7d0b65371a8ce72f57334d14a169d98b2ed57b23f14217ef9f9d9b2a411",
+    "attempts/v3-a2-captures/v3-unselected.ansi": "1f089848e0ffdf748b0a9b3102944c65b4987b8755ac94f1d10c4230dc8aafe7",
+    "attempts/v3-a2-captures/v3-unselected.txt": "fd79c7d0b65371a8ce72f57334d14a169d98b2ed57b23f14217ef9f9d9b2a411",
+    "attempts/adhoc-pane-logs/v1-t0.txt": "e3cb3abe464e05f71a761691015d0ea6ab4004a238480bdc3a6ff0af92fc53b3",
+    "attempts/adhoc-pane-logs/v1-unselected-borders.json": "54e24d33f215af804077ac90bf5ad38d98a665d8cb28f3978eddac3110d8c060",
+    "attempts/adhoc-pane-logs/v2-pane.txt": "9c9429938aea233d6f3fe1175d8824748c486b62932aab23a52934742f355d99",
+    "attempts/adhoc-pane-logs/v2-stty.txt": "a88ebaac86378aab6cfb9bf12563898f51853903d0008660af95cfbdc7066aae",
+    "attempts/adhoc-pane-logs/v2-unselected-borders.json": "ba0e2b0b6ca8f9133b5e10553fee741ac8fc0748813d4671cf42b2b212a2fe29",
+    "attempts/adhoc-pane-logs/v3-pane-final.txt": "aa6cf6cd27a6a4459a279f306a0a9ae0742d66be25964215320da1f4c3a325d6",
+    "attempts/adhoc-pane-logs/v3-pane.txt": "6752273fc5f58974a1241cd2a8839911b6eab7dce62520b5e16965ac72303a88",
+    "attempts/adhoc-pane-logs/v3-stty-final.txt": "a88ebaac86378aab6cfb9bf12563898f51853903d0008660af95cfbdc7066aae",
+    "attempts/adhoc-pane-logs/v3-stty.txt": "a88ebaac86378aab6cfb9bf12563898f51853903d0008660af95cfbdc7066aae",
+    "attempts/adhoc-pane-logs/v3-unselected-borders.json": "1062455a32babbeab84c62adadf29e38b6c11fd940d7e0472af0c9492cf9497a",
+    "attempts/v2-a2-captures/v2-frame01.ansi": "60111cf1cda844a048eafc61a53d3521fcabfc85e7b6c07dd680efee849c7771",
+    "attempts/v2-a2-captures/v2-frame01.txt": "9eeefc0ed7f49b0abc7598cc4f2d11f8d4e8aa56f1e48ddb9de8cf8b7c0f2908",
+    "attempts/v2-a2-captures/v2-frame02.ansi": "2835d7dac928b0cd50af7e5c378f36d895d17cb5e39489b5fd4f411ac4c7a77d",
+    "attempts/v2-a2-captures/v2-frame02.txt": "ef5e145b90712d856bf4e18e3d9a5ff26d390dd2886f5c1efd8264a2bf535104",
+    "attempts/v2-a2-captures/v2-frame03.ansi": "994597cd38e62264c15e1f57dd9ce73bb5c2b80c5cc0629aaf5c32d7ca729bf8",
+    "attempts/v2-a2-captures/v2-frame03.txt": "2363c6c00f001f582864bd95e2fb2eb9af8fcc56d7ce8c924be149015fbe01d1",
+    "attempts/v2-a2-captures/v2-frames.log": "122db82b03c0f9e027e5c50f45a5cf3906c675f6161138d3d2fb5162b26833b8",
+    "attempts/v2-a2-captures/v2-selected.ansi": "2a2fbf795cd873ce809559b559dec034e7a3034cca93eb1bd9b9d9ea3abc78a9",
+    "attempts/v2-a2-captures/v2-selected.txt": "442d6f12ca9cf94c14f2a4f1f0863a2d78242591d228db5e9fdb03ead87488a7",
+    "attempts/v2-a2-captures/v2-unselected.ansi": "60111cf1cda844a048eafc61a53d3521fcabfc85e7b6c07dd680efee849c7771",
+    "attempts/v2-a2-captures/v2-unselected.txt": "ad249acc0c79a63c665081535a7d1b08df3a0779e3b8cb7434035b9ba1a0a155"
+  }
+}

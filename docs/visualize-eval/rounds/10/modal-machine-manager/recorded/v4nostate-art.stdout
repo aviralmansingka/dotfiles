@@ -1,0 +1,46 @@
+viewport: 90x44 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 90x44 @100% · v4-no-state.json · 7 nodes · 7 edges · q quit
+
+
+
+
+
+
+                                    ╭───────────╮
+                                    │River queue│
+                                    │           │
+                                    ╰───────────╯
+                                        ● ● ●
+                         audit / verify │ │ │
+                       ╭────────────────⌒─╯ │
+                       │diag uploads╭───╯   ╰────────╮
+                       │            ▼     diagnostics▼
+                       │     ╭─────────────╮   ╭───────────╮
+                       │     │SSH + BMC ops│   │janitor app│
+                       │     │             │   │           │
+                       │     ╰─────────────╯   ╰───────────╯
+                       │            ●                ●
+                       │            │ run audit      │ proposals
+                       │            │                │
+                       │           ╭╯                ╰──╮
+                       │           ▼                    ▼
+                       │ ╭───────────────────╮   ╭─────────────╮
+                       │ │bare-metal machines│   │webapi server│
+                       │ │                   │   │             │
+                       │ ╰───────────────────╯   ╰─────────────╯
+                       │           ● pull image         ● confirm+alerts
+                       │           │                    │
+                       ╰───────────⌒──╮                 │
+                                   ╰╮ │             ╭───╯
+                                    ▼ ▼             ▼
+                             ╭───────────────╮   ╭─────╮
+                             │S3 object store│   │Slack│
+                             │               │   │     │
+ ┌───────┐                   ╰───────────────╯   ╰─────╯
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+

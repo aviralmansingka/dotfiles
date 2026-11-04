@@ -1,0 +1,80 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "diagrams": [
+    {
+      "id": "l2b",
+      "title": "L2b · Inside the box — the writes into Postgres",
+      "description": "Every write into the manager's state store: job rows from the queue, machine rows and heartbeats from the API surfaces, cluster state from reconcile.",
+      "containers": [
+        {
+          "label": "Machine manager",
+          "members": [
+            "q",
+            "pgrpc",
+            "pub",
+            "rec",
+            "db"
+          ]
+        }
+      ],
+      "nodes": [
+        {
+          "id": "q",
+          "label": "River job queue",
+          "group": "manager"
+        },
+        {
+          "id": "pgrpc",
+          "label": "private gRPC",
+          "group": "manager"
+        },
+        {
+          "id": "pub",
+          "label": "public gRPC",
+          "group": "manager"
+        },
+        {
+          "id": "rec",
+          "label": "cluster reconcile",
+          "group": "manager"
+        },
+        {
+          "id": "db",
+          "label": "Postgres",
+          "group": "storage"
+        }
+      ],
+      "edges": [
+        {
+          "from": "q",
+          "to": "db",
+          "label": "job rows",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "pgrpc",
+          "to": "db",
+          "label": "machine rows",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "pub",
+          "to": "db",
+          "label": "machine state",
+          "flow": true,
+          "dots": 1
+        },
+        {
+          "from": "rec",
+          "to": "db",
+          "label": "cluster state",
+          "flow": true,
+          "dots": 1
+        }
+      ]
+    }
+  ]
+}

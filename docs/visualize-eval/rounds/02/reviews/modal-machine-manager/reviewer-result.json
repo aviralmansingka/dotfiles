@@ -1,0 +1,2042 @@
+{
+  "protocol_version": 1,
+  "round": 2,
+  "case_id": "modal-machine-manager",
+  "candidate_sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+  "renderer_sha256": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+  "rubric_sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "f59257fc3d7a1fcb84aa32e709ff2984853188a723c0a0b704ff117931caaed2",
+  "generator": {
+    "worker_id": "viz-ds02-modal-machine-manager",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge02-modal-machine-manager",
+    "model": "openai/gpt-6.1-sol"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": null,
+  "evidence": [
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/02/metadata.json",
+      "sha256": "e40d17b02025d270a79fe0dd437fb908ed07c048ea6cbe043d4e17ccaf94bc45",
+      "description": "Frozen round-02 identities, hashes, and explicit pane-column limitation.",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/02/rubric.json",
+      "sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f",
+      "description": "Frozen seven-category rubric and result schema; stale Astra phrase is superseded by round-02 model identity.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen case manifest; dataset_sha256 hashes this file.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/source.md",
+      "sha256": "a41065d9ceca1ed035bfd6282f0e937abbd0034ad497a33637a76f2d8a9ebab3",
+      "description": "Only this case source excerpt, including final human motion corrections.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/expected.json",
+      "sha256": "c6d14814bcfa0f41e7401df3b57ea1400e15050b9fb4db3d2e12980d6fde9764",
+      "description": "Source-backed 17 components and 23 directed reference relations.",
+      "capture": null
+    },
+    {
+      "id": "candidate",
+      "path": "docs/visualize-eval/rounds/02/SKILL.md",
+      "sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+      "description": "Frozen candidate skill, distinct from renderer baseline.",
+      "capture": null
+    },
+    {
+      "id": "capture-harness",
+      "path": "scripts/viz-evidence.sh",
+      "sha256": "2a804dea703e5a9da9cdd788d4eb89690860a02606ec681948670dfe19e8e069",
+      "description": "Frozen capture implementation binds exact check/launch commands, combined streams, statuses, windows and cleanup probes.",
+      "capture": null
+    },
+    {
+      "id": "observed-first",
+      "path": "docs/visualize-eval/rounds/02/reviews/modal-machine-manager/observed-first.md",
+      "sha256": "49df0489ee31bf29c8ac56cb0e9352068052982ee06bb01719f6ac331501e323",
+      "description": "Immutable blind Stage-A record saved before expectations were revealed.",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/02/reviews/modal-machine-manager/spec-manifest.json",
+      "sha256": "f59257fc3d7a1fcb84aa32e709ff2984853188a723c0a0b704ff117931caaed2",
+      "description": "Deterministic sorted path/hash pairs for the four final executed specs.",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/generation.json",
+      "sha256": "4693a3d337a5e0a1491306b42321a2f02504af6c4efca6736bcd35d057546221",
+      "description": "Generator identity, complete split coverage map, provenance, commands, cleanup and self-report; not visual proof.",
+      "capture": null
+    },
+    {
+      "id": "generation-md",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/generation.md",
+      "sha256": "f207888974ce53d5c6648f27eb81d4af54fff62bfaed7219f16283ea6aef5598",
+      "description": "Generator narrative; used only for disclosed limitations, not visual proof.",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/attempts.json",
+      "sha256": "a5d06e7e6b58a8b1f2664cb4990f86bf9c894a763a07b7eb772a480a90d67a49",
+      "description": "Attempt ledger; superseded drafts are explicitly reconstructed, not exact executed bytes.",
+      "capture": null
+    },
+    {
+      "id": "validator-all",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/validator-all.txt",
+      "sha256": "5e454cfae026e9727ca7be95bcf852766a585e26606f461982abc03c038ffbd2",
+      "description": "Recorded harness outcomes; v2 fails warnings/completeness/skipped-label checks.",
+      "capture": null
+    },
+    {
+      "id": "v1-spec",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/v1.json",
+      "sha256": "00b5d6a0084fe359f1695d8ca2bef82ab41ff0d6d3c95d9e706c8a4b904f4f03",
+      "description": "Final executed spec; hash verified against capture manifest.",
+      "capture": null
+    },
+    {
+      "id": "v1-manifest",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v1/manifest.json",
+      "sha256": "0c1b505c791bcf1880f2755f01b5a102c35c11c2f8db9e476e24e949a0d44322",
+      "description": "Capture/check windows, executed hashes, exit status, pane ownership and confirmed closure.",
+      "capture": null
+    },
+    {
+      "id": "v1-check",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v1/check.txt",
+      "sha256": "eaad6d4ac594928eedb9cdec46065572e093245f00e40091c014e30911a01d10",
+      "description": "Recorded combined --check output; exit 0 recorded in manifest, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "v1-bin-record",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v1/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "description": "Captured binary hash record; frozen binary was independently re-hashed without executing it.",
+      "capture": null
+    },
+    {
+      "id": "v1-validator",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v1/validator.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6",
+      "description": "Recorded validation outcome, not a substitute for capture reading.",
+      "capture": null
+    },
+    {
+      "id": "v1-text",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v1/v1-text.txt",
+      "sha256": "518734aed0681cf9553171d550bb55c31306806af2065dfae8b11a6fa089ac4f",
+      "description": "Base visible text layout.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "base",
+        "timestamp": "2026-11-02T10:02:10Z to 2026-11-02T10:02:14Z",
+        "state": "base",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-ansi",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v1/v1-ansi.ansi",
+      "sha256": "2372bfd6e93fb10030099cf5f35564ef503c2fc873837f410b8e8c4090b5703c",
+      "description": "Base ANSI cell foreground/background evidence.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "base",
+        "timestamp": "2026-11-02T10:02:10Z to 2026-11-02T10:02:14Z",
+        "state": "base",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-selected",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v1/v1-selected.ansi",
+      "sha256": "3cca5c601f8fa36a322064871b4aac85333051e8f650c64c097073e7ee158c0e",
+      "description": "All-selected ANSI frame; every occurrence has its complete selected perimeter.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T10:02:10Z to 2026-11-02T10:02:14Z",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frames-text",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v1/v1-frames.txt",
+      "sha256": "668d3d885e632ef9ac066e8c65533dd7d2e394c066bf452c41c534e836a40505",
+      "description": "Recorded startup viewport and five timestamped actual-render diagram frames.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0..4",
+        "timestamp": "2026-11-02T10:02:10Z to 2026-11-02T10:02:14Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v1/v1-frames.ansi",
+      "sha256": "81a148639907948cb3a1ebfd3d3d0b60e940b94be2bdcc3ec1d9b6db518aa7ca",
+      "description": "ANSI log: preamble is colored, but timed diagram frames themselves have no foreground color data.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0..4",
+        "timestamp": "2026-11-02T10:02:10Z to 2026-11-02T10:02:14Z",
+        "state": "animated; diagram portions uncolored",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frame0",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v1/v1-frames.txt",
+      "sha256": "668d3d885e632ef9ac066e8c65533dd7d2e394c066bf452c41c534e836a40505",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0",
+        "timestamp": "frame 0 at 0ms relative; capture window 2026-11-02T10:02:10Z to 2026-11-02T10:02:14Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frame1",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v1/v1-frames.txt",
+      "sha256": "668d3d885e632ef9ac066e8c65533dd7d2e394c066bf452c41c534e836a40505",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "1",
+        "timestamp": "frame 1 at 100ms relative; capture window 2026-11-02T10:02:10Z to 2026-11-02T10:02:14Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frame2",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v1/v1-frames.txt",
+      "sha256": "668d3d885e632ef9ac066e8c65533dd7d2e394c066bf452c41c534e836a40505",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "2",
+        "timestamp": "frame 2 at 200ms relative; capture window 2026-11-02T10:02:10Z to 2026-11-02T10:02:14Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frame3",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v1/v1-frames.txt",
+      "sha256": "668d3d885e632ef9ac066e8c65533dd7d2e394c066bf452c41c534e836a40505",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "3",
+        "timestamp": "frame 3 at 300ms relative; capture window 2026-11-02T10:02:10Z to 2026-11-02T10:02:14Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frame4",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v1/v1-frames.txt",
+      "sha256": "668d3d885e632ef9ac066e8c65533dd7d2e394c066bf452c41c534e836a40505",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "4",
+        "timestamp": "frame 4 at 400ms relative; capture window 2026-11-02T10:02:10Z to 2026-11-02T10:02:14Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-spec",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/v2.json",
+      "sha256": "8b908f1b38de152a082615adf30cc55a34feb6aa219da4eac0b18463fe074daf",
+      "description": "Final executed spec; hash verified against capture manifest.",
+      "capture": null
+    },
+    {
+      "id": "v2-manifest",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v2/manifest.json",
+      "sha256": "942c099ce85ae1ebd30edf7c9d46314d66f5c036dcf878b693477d3302e85c0a",
+      "description": "Capture/check windows, executed hashes, exit status, pane ownership and confirmed closure.",
+      "capture": null
+    },
+    {
+      "id": "v2-check",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v2/check.txt",
+      "sha256": "1cf3aea1de54ae8e047fd50bf66df8395923d29a469004349abd6a957e551df9",
+      "description": "Recorded combined --check output; exit 0 recorded in manifest, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "v2-bin-record",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v2/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "description": "Captured binary hash record; frozen binary was independently re-hashed without executing it.",
+      "capture": null
+    },
+    {
+      "id": "v2-validator",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v2/validator.txt",
+      "sha256": "d7fdc9d8b949fd05b2c563ca7bf3b6dfc0f41e50c7c013e2a636e21a3d554b4f",
+      "description": "Recorded validation outcome, not a substitute for capture reading.",
+      "capture": null
+    },
+    {
+      "id": "v2-text",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v2/v2-text.txt",
+      "sha256": "b02201fb80c7754ea9c72421e59e9ab836e74a614a16b565851a02d43f3d85ca",
+      "description": "Base visible text layout.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "base",
+        "timestamp": "2026-11-02T10:02:27Z to 2026-11-02T10:02:31Z",
+        "state": "base",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-ansi",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v2/v2-ansi.ansi",
+      "sha256": "16e4e1af6596c5e68684eed5ce59628a6483958bf68605a89c3a21c482f1eca4",
+      "description": "Base ANSI cell foreground/background evidence.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "base",
+        "timestamp": "2026-11-02T10:02:27Z to 2026-11-02T10:02:31Z",
+        "state": "base",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-selected",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v2/v2-selected.ansi",
+      "sha256": "8f7a4bbff39f4744030f0ba039f7d02990b0ddfbe5d0672a0b6048455968daf2",
+      "description": "All-selected ANSI frame; every occurrence has its complete selected perimeter.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T10:02:27Z to 2026-11-02T10:02:31Z",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frames-text",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v2/v2-frames.txt",
+      "sha256": "81d82efba750fbf6b7203cfbe8ca4c4b18af62fafeddf47956450af7a22beab1",
+      "description": "Recorded startup viewport and five timestamped actual-render diagram frames.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0..4",
+        "timestamp": "2026-11-02T10:02:27Z to 2026-11-02T10:02:31Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v2/v2-frames.ansi",
+      "sha256": "33f601f4803084fed1b9f4d41e726e91608412fe3d9fbdbce633d96d380d07e3",
+      "description": "ANSI log: preamble is colored, but timed diagram frames themselves have no foreground color data.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0..4",
+        "timestamp": "2026-11-02T10:02:27Z to 2026-11-02T10:02:31Z",
+        "state": "animated; diagram portions uncolored",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frame0",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v2/v2-frames.txt",
+      "sha256": "81d82efba750fbf6b7203cfbe8ca4c4b18af62fafeddf47956450af7a22beab1",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0",
+        "timestamp": "frame 0 at 0ms relative; capture window 2026-11-02T10:02:27Z to 2026-11-02T10:02:31Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frame1",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v2/v2-frames.txt",
+      "sha256": "81d82efba750fbf6b7203cfbe8ca4c4b18af62fafeddf47956450af7a22beab1",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "1",
+        "timestamp": "frame 1 at 100ms relative; capture window 2026-11-02T10:02:27Z to 2026-11-02T10:02:31Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frame2",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v2/v2-frames.txt",
+      "sha256": "81d82efba750fbf6b7203cfbe8ca4c4b18af62fafeddf47956450af7a22beab1",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "2",
+        "timestamp": "frame 2 at 200ms relative; capture window 2026-11-02T10:02:27Z to 2026-11-02T10:02:31Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frame3",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v2/v2-frames.txt",
+      "sha256": "81d82efba750fbf6b7203cfbe8ca4c4b18af62fafeddf47956450af7a22beab1",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "3",
+        "timestamp": "frame 3 at 300ms relative; capture window 2026-11-02T10:02:27Z to 2026-11-02T10:02:31Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frame4",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v2/v2-frames.txt",
+      "sha256": "81d82efba750fbf6b7203cfbe8ca4c4b18af62fafeddf47956450af7a22beab1",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "4",
+        "timestamp": "frame 4 at 400ms relative; capture window 2026-11-02T10:02:27Z to 2026-11-02T10:02:31Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-spec",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/v3.json",
+      "sha256": "f6f0e6741ead65180717d803a24f1dcaab45790978748acd2ea109be5d856616",
+      "description": "Final executed spec; hash verified against capture manifest.",
+      "capture": null
+    },
+    {
+      "id": "v3-manifest",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v3/manifest.json",
+      "sha256": "203b50b635c7ce4e5d04851e1d72e8248055abd5e116a663d46c4d9bd8c67f23",
+      "description": "Capture/check windows, executed hashes, exit status, pane ownership and confirmed closure.",
+      "capture": null
+    },
+    {
+      "id": "v3-check",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v3/check.txt",
+      "sha256": "6f5597080da0ca1c62f8680f8c4715b5d5cbe58495a3b7ce3019c848c885efed",
+      "description": "Recorded combined --check output; exit 0 recorded in manifest, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "v3-bin-record",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v3/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "description": "Captured binary hash record; frozen binary was independently re-hashed without executing it.",
+      "capture": null
+    },
+    {
+      "id": "v3-validator",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v3/validator.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6",
+      "description": "Recorded validation outcome, not a substitute for capture reading.",
+      "capture": null
+    },
+    {
+      "id": "v3-text",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v3/v3-text.txt",
+      "sha256": "51809837ca7b333edb10f174b0cf62a7b79a16842ad2d845eeb25941848645dc",
+      "description": "Base visible text layout.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "base",
+        "timestamp": "2026-11-02T10:02:37Z to 2026-11-02T10:02:41Z",
+        "state": "base",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-ansi",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v3/v3-ansi.ansi",
+      "sha256": "b13147a17bece1de439dcbe987fa1fcfc08a3a41ffecc334dc5cd6aa8b323dec",
+      "description": "Base ANSI cell foreground/background evidence.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "base",
+        "timestamp": "2026-11-02T10:02:37Z to 2026-11-02T10:02:41Z",
+        "state": "base",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-selected",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v3/v3-selected.ansi",
+      "sha256": "bf557d97dd4b4b18b81d3a19d6fc2dd796d81571b64563dfd67a1e9062c25207",
+      "description": "All-selected ANSI frame; every occurrence has its complete selected perimeter.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T10:02:37Z to 2026-11-02T10:02:41Z",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-frames-text",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v3/v3-frames.txt",
+      "sha256": "a56d9565e86768a3549c070158ba916092537c758df9386a0e191e0107d70dcc",
+      "description": "Recorded startup viewport and five timestamped actual-render diagram frames.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "0..4",
+        "timestamp": "2026-11-02T10:02:37Z to 2026-11-02T10:02:41Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v3/v3-frames.ansi",
+      "sha256": "d095f58f9a06c82d5e13e78c3d2b71c845ff198f3c149e231109c89401439167",
+      "description": "ANSI log: preamble is colored, but timed diagram frames themselves have no foreground color data.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "0..4",
+        "timestamp": "2026-11-02T10:02:37Z to 2026-11-02T10:02:41Z",
+        "state": "animated; diagram portions uncolored",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-frame0",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v3/v3-frames.txt",
+      "sha256": "a56d9565e86768a3549c070158ba916092537c758df9386a0e191e0107d70dcc",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "0",
+        "timestamp": "frame 0 at 0ms relative; capture window 2026-11-02T10:02:37Z to 2026-11-02T10:02:41Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frame1",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v3/v3-frames.txt",
+      "sha256": "a56d9565e86768a3549c070158ba916092537c758df9386a0e191e0107d70dcc",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "1",
+        "timestamp": "frame 1 at 100ms relative; capture window 2026-11-02T10:02:37Z to 2026-11-02T10:02:41Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frame2",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v3/v3-frames.txt",
+      "sha256": "a56d9565e86768a3549c070158ba916092537c758df9386a0e191e0107d70dcc",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "2",
+        "timestamp": "frame 2 at 200ms relative; capture window 2026-11-02T10:02:37Z to 2026-11-02T10:02:41Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frame3",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v3/v3-frames.txt",
+      "sha256": "a56d9565e86768a3549c070158ba916092537c758df9386a0e191e0107d70dcc",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "3",
+        "timestamp": "frame 3 at 300ms relative; capture window 2026-11-02T10:02:37Z to 2026-11-02T10:02:41Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-frame4",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v3/v3-frames.txt",
+      "sha256": "a56d9565e86768a3549c070158ba916092537c758df9386a0e191e0107d70dcc",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "4",
+        "timestamp": "frame 4 at 400ms relative; capture window 2026-11-02T10:02:37Z to 2026-11-02T10:02:41Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-spec",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/v4.json",
+      "sha256": "08c68a5c52191cb8064f9c837137d6af8715650c8093d13388b1a6a17e27d83e",
+      "description": "Final executed spec; hash verified against capture manifest.",
+      "capture": null
+    },
+    {
+      "id": "v4-manifest",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v4/manifest.json",
+      "sha256": "f61056722d72ce1145004f35d51e12d1287ba93d53100d2b512a6c89d888f814",
+      "description": "Capture/check windows, executed hashes, exit status, pane ownership and confirmed closure.",
+      "capture": null
+    },
+    {
+      "id": "v4-check",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v4/check.txt",
+      "sha256": "6088e407db77e6f4f90dc5ceec175130dfc26b83e3e5b144a6e958d80f349696",
+      "description": "Recorded combined --check output; exit 0 recorded in manifest, not a visual pass.",
+      "capture": null
+    },
+    {
+      "id": "v4-bin-record",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v4/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "description": "Captured binary hash record; frozen binary was independently re-hashed without executing it.",
+      "capture": null
+    },
+    {
+      "id": "v4-validator",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v4/validator.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6",
+      "description": "Recorded validation outcome, not a substitute for capture reading.",
+      "capture": null
+    },
+    {
+      "id": "v4-text",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v4/v4-text.txt",
+      "sha256": "829d64ca49a6fadc3a452b38ea75dd601a8a05db5699137200be9ea61d26692c",
+      "description": "Base visible text layout.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "base",
+        "timestamp": "2026-11-02T10:02:44Z to 2026-11-02T10:02:48Z",
+        "state": "base",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-ansi",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v4/v4-ansi.ansi",
+      "sha256": "b61371eb7c2c83cb1e8eae1f5c0a5d630a30f38f0f5cc557fcc6fcb79311f38c",
+      "description": "Base ANSI cell foreground/background evidence.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "base",
+        "timestamp": "2026-11-02T10:02:44Z to 2026-11-02T10:02:48Z",
+        "state": "base",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-selected",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v4/v4-selected.ansi",
+      "sha256": "197e5d24b5bd5895f9e2465beec37d3615204cbd4e8698230ac6846c55bb9a15",
+      "description": "All-selected ANSI frame; every occurrence has its complete selected perimeter.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T10:02:44Z to 2026-11-02T10:02:48Z",
+        "state": "all nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-frames-text",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v4/v4-frames.txt",
+      "sha256": "460d1855f233ff313214d5b1d220ca53eacb529a1e8a5b5fa8ad37c66a55b4ed",
+      "description": "Recorded startup viewport and five timestamped actual-render diagram frames.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "0..4",
+        "timestamp": "2026-11-02T10:02:44Z to 2026-11-02T10:02:48Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v4/v4-frames.ansi",
+      "sha256": "c0b80e2d2b39c87c9f82d4cc10e38491de167d9d5ee1667abf7e348e67f69a45",
+      "description": "ANSI log: preamble is colored, but timed diagram frames themselves have no foreground color data.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "0..4",
+        "timestamp": "2026-11-02T10:02:44Z to 2026-11-02T10:02:48Z",
+        "state": "animated; diagram portions uncolored",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-frame0",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v4/v4-frames.txt",
+      "sha256": "460d1855f233ff313214d5b1d220ca53eacb529a1e8a5b5fa8ad37c66a55b4ed",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "0",
+        "timestamp": "frame 0 at 0ms relative; capture window 2026-11-02T10:02:44Z to 2026-11-02T10:02:48Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-frame1",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v4/v4-frames.txt",
+      "sha256": "460d1855f233ff313214d5b1d220ca53eacb529a1e8a5b5fa8ad37c66a55b4ed",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "1",
+        "timestamp": "frame 1 at 100ms relative; capture window 2026-11-02T10:02:44Z to 2026-11-02T10:02:48Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-frame2",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v4/v4-frames.txt",
+      "sha256": "460d1855f233ff313214d5b1d220ca53eacb529a1e8a5b5fa8ad37c66a55b4ed",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "2",
+        "timestamp": "frame 2 at 200ms relative; capture window 2026-11-02T10:02:44Z to 2026-11-02T10:02:48Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-frame3",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v4/v4-frames.txt",
+      "sha256": "460d1855f233ff313214d5b1d220ca53eacb529a1e8a5b5fa8ad37c66a55b4ed",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "3",
+        "timestamp": "frame 3 at 300ms relative; capture window 2026-11-02T10:02:44Z to 2026-11-02T10:02:48Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-frame4",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/evidence/v4/v4-frames.txt",
+      "sha256": "460d1855f233ff313214d5b1d220ca53eacb529a1e8a5b5fa8ad37c66a55b4ed",
+      "description": "Same recorded frame-log file; region coordinates refer to this diagram frame, not shell-log rows.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "4",
+        "timestamp": "frame 4 at 400ms relative; capture window 2026-11-02T10:02:44Z to 2026-11-02T10:02:48Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "probe-pair-spec",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/probes/probe-pair.json",
+      "sha256": "db54886632f8fe052b29abadf5f734288f0a63d277707fd79cb69e39757fbfa2",
+      "description": "Archived label-slot probe input; not a newly executed reproduction.",
+      "capture": null
+    },
+    {
+      "id": "probe-pair-check",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/probes/probe-pair.check.txt",
+      "sha256": "14e15d345620462a83caf14c5dd1575520538dd7799c99d904537ef8e7d35833",
+      "description": "Archived probe stdout/stderr; not independently bound to an execution manifest.",
+      "capture": null
+    },
+    {
+      "id": "probe-pair-short-spec",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/probes/probe-pair-short.json",
+      "sha256": "c783c7632ed96d554cad5217dbe046a9487de2357c0b3b32054eea994239a0cb",
+      "description": "Archived label-slot probe input; not a newly executed reproduction.",
+      "capture": null
+    },
+    {
+      "id": "probe-pair-short-check",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/probes/probe-pair-short.check.txt",
+      "sha256": "df5288aa5f896b322875ef97d32ef49403b02617d161eb1dd947dc5b661ed918",
+      "description": "Archived probe stdout/stderr; not independently bound to an execution manifest.",
+      "capture": null
+    },
+    {
+      "id": "probe-pair-lr-spec",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/probes/probe-pair-lr.json",
+      "sha256": "1efe1ab3832035b824f17a34d21da0e9597ff07dc85e95f3b76ff8c545d4fb85",
+      "description": "Archived label-slot probe input; not a newly executed reproduction.",
+      "capture": null
+    },
+    {
+      "id": "probe-pair-lr-check",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/probes/probe-pair-lr.check.txt",
+      "sha256": "79d345c6bf0d3d58aae7380f6963a10b976c9e2ca1630da4a709f026e47a5296",
+      "description": "Archived probe stdout/stderr; not independently bound to an execution manifest.",
+      "capture": null
+    },
+    {
+      "id": "draft-v2-attempt1",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/attempts/v2-attempt1.json",
+      "sha256": "839d80ad96ebde0ffcbbe07a19f519fbc81c2e69f2303be8bb52dda2521281e9",
+      "description": "Reconstructed superseded draft, not proof of exact executed input or a captured rendering.",
+      "capture": null
+    },
+    {
+      "id": "draft-v2-attempt2",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/attempts/v2-attempt2.json",
+      "sha256": "c546c51cc945c016fef91772662d3375237e1336299b3776c570df0f0c4a680a",
+      "description": "Reconstructed superseded draft, not proof of exact executed input or a captured rendering.",
+      "capture": null
+    },
+    {
+      "id": "draft-v3-attempt1",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/attempts/v3-attempt1.json",
+      "sha256": "64a8a9441fcbc20f26cd3548170b371cd89617406d1df1a7bcda53f676c85b5c",
+      "description": "Reconstructed superseded draft, not proof of exact executed input or a captured rendering.",
+      "capture": null
+    },
+    {
+      "id": "draft-v4-attempt1",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/attempts/v4-attempt1.json",
+      "sha256": "0c74ddfd7f4aab6e4b14a201294cde19e45e4195fbf288a917cf44413fbbe3c0",
+      "description": "Reconstructed superseded draft, not proof of exact executed input or a captured rendering.",
+      "capture": null
+    },
+    {
+      "id": "draft-v4-attempt2",
+      "path": "docs/visualize-eval/rounds/02/modal-machine-manager/attempts/v4-attempt2.json",
+      "sha256": "7383b701de5cd82e93b7098fc1cfcb88488377faac06924e23d2d6a41c197335",
+      "description": "Reconstructed superseded draft, not proof of exact executed input or a captured rendering.",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "observed-first",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 17 component titles and all 23 directed endpoint pairs occur across four views, but boot response payload is absent, River-to-S3 diagnostics caption is visually attached to the machine-image route, and audit/verify reimage is changed to audit + reimage. Directed geometry alone does not preserve required meaning.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "observed-first",
+        "v2-text",
+        "v3-text",
+        "expected",
+        "generation"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 23 stems reach distinct correct arrowheads. Tight touching bends are resolvable by their turn glyphs. Bridges at v4 (45,25) and (47,21) distinguish the two independent crossings from connections; no actual bus or fake route branch is drawn. Caption ownership failures remain semantic defects, not missing endpoint traces.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "observed-first",
+        "v1-text",
+        "v2-text",
+        "v3-text",
+        "v4-text",
+        "v4-ansi"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All four actual captured grids are 77x47 at natural 100%, with complete visible boxes and no overlay occlusion or viewport clipping. Nevertheless the required boot-response caption is entirely omitted, so the full-label/complete-source-coverage gate fails. Physical pane columns are unrecorded, not invented; app viewport evidence is authoritative under frozen metadata.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "observed-first",
+        "metadata",
+        "v1-text",
+        "v2-text",
+        "v3-text",
+        "v4-text",
+        "v2-check",
+        "v2-manifest",
+        "v2-frames-text"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Actual base ANSI evidence shows related within-view hue families and proximity: v1 control teal/cloud green, v2 host+agent yellow, v3 SSH+janitor teal, v4 queue+reconcile teal. This is source-role grouping, not geometric depth. Cross-view hue changes are not an additional gate.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "observed-first",
+        "v1-ansi",
+        "v2-ansi",
+        "v3-ansi",
+        "v4-ansi"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 25 node occurrences have complete sides/corners, one continuous base perimeter color and one continuous bold accent selected perimeter. Coverage is 25/25 in all-selected captures; isolated selection and transitions are not claimed. Uncolored timed frames do not erase the separate ANSI still evidence.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "observed-first",
+        "v1-ansi",
+        "v1-selected",
+        "v2-ansi",
+        "v2-selected",
+        "v3-ansi",
+        "v3-selected",
+        "v4-ansi",
+        "v4-selected"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Frozen skill, renderer, rubric, dataset, source, expected data, final specs and all manifest-bound artifacts were hash-verified. Separate DeepSeek generator/Sol judge identities, blind-first record, concrete launch commands, combined final --check outputs/exit statuses, captures, timestamps and four confirmed pane closures are preserved. Null external pane columns are the frozen acknowledged harness limitation, not substituted dimensions. Historical reconstructed attempts/probe logs are explicitly lower-confidence and are not credited as exact failure reproductions.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "candidate",
+        "capture-harness",
+        "rubric",
+        "dataset",
+        "source",
+        "expected",
+        "spec-manifest",
+        "observed-first",
+        "generation",
+        "attempts",
+        "v1-manifest",
+        "v2-manifest",
+        "v3-manifest",
+        "v4-manifest",
+        "v1-check",
+        "v2-check",
+        "v3-check",
+        "v4-check"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Motion is source-required. All 23 routes have one safe visible dot per frame, but e2/e4/e5/e7 show no displacement in the entire supplied five-frame sequence. e6/e12/e15/e20 alternate between two positions, so intended direction/cadence is blocked on those four rather than assumed. Fifteen routes demonstrate forward sampled progression; zero forbidden-position/count violations do not establish 23 live directed routes.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json"
+      ],
+      "evidence_ids": [
+        "source",
+        "dataset",
+        "observed-first",
+        "v1-frames-text",
+        "v2-frames-text",
+        "v3-frames-text",
+        "v4-frames-text"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/0"
+      ],
+      "expected": "cp -> pgrpc: create / terminate / repair; independent directed relation, no source-named bus.",
+      "observed": "Modal control plane -> private gRPC; source stem (43, 7), ordered turns/arrow path [(43, 9), (47, 9), (47, 10)], visible ▼ at (47, 10). Caption: 'create/term/repair'. Blind route 1b. Caption owner resolved to the nearer Modal route: its right end at column 41 has one blank cell before column 43, versus three blanks from the humans line at column 20 to caption start 24.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            43,
+            7,
+            5,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/1"
+      ],
+      "expected": "web -> wapi: http; independent directed relation, no source-named bus.",
+      "observed": "humans + mmctl -> webapi server; source stem (20, 7), ordered turns/arrow path [(20, 9), (21, 9), (21, 10)], visible ▼ at (21, 10). Caption: 'http'. Blind route 1a. Static sampled dot; geometric direction remains clear.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            20,
+            7,
+            2,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F05"
+      ]
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/2"
+      ],
+      "expected": "pgrpc -> q: enqueue job; independent directed relation, no source-named bus.",
+      "observed": "private gRPC -> River job queue; source stem (47, 15), ordered turns/arrow path [(47, 17), (22, 17), (22, 18)], visible ▼ at (22, 18). Caption: 'enqueue job'. Blind route 1d. Adjacent to e4 bend but separate port and arrowhead; no junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            22,
+            15,
+            26,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/3"
+      ],
+      "expected": "wapi -> q: reinstall / reprovision; independent directed relation, no source-named bus.",
+      "observed": "webapi server -> River job queue; source stem (21, 15), ordered turns/arrow path [(21, 17), (20, 17), (20, 18)], visible ▼ at (20, 18). Caption: 'reinstall/reprov'. Blind route 1c. Touching bend cluster with e3 does not create a branch; static sampled dot.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            20,
+            15,
+            2,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F05"
+      ]
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/4"
+      ],
+      "expected": "q -> reg: provision job; independent directed relation, no source-named bus.",
+      "observed": "River job queue -> provider registry; source stem (20, 23), ordered turns/arrow path [(20, 25), (19, 25), (19, 26)], visible ▼ at (19, 26). Caption: 'provision job'. Blind route 1e. Static sampled dot.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            19,
+            23,
+            2,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F05"
+      ]
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/5"
+      ],
+      "expected": "reg -> prov: provider API; independent directed relation, no source-named bus.",
+      "observed": "provider registry -> bare-metal providers; source stem (19, 31), ordered turns/arrow path [(19, 33), (17, 33), (17, 34)], visible ▼ at (17, 34). Caption: 'provider API'. Blind route 1f. Two-position samples do not prove intended motion direction.",
+      "status": "blocked",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            17,
+            31,
+            3,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F06"
+      ]
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/6"
+      ],
+      "expected": "prov -> mch: allocate instance; independent directed relation, no source-named bus.",
+      "observed": "bare-metal providers -> bare-metal machines; source stem (17, 39), ordered turns/arrow path [(17, 41), (18, 41), (18, 42)], visible ▼ at (18, 42). Caption: 'allocate instance'. Blind route 1g. Static sampled dot.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            17,
+            39,
+            2,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F05"
+      ]
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/7"
+      ],
+      "expected": "mch -> boot: iPXE request; independent directed relation, no source-named bus.",
+      "observed": "bare-metal machines -> boot server; source stem (20, 14), ordered turns/arrow path [(20, 17), (24, 17), (24, 18)], visible ▼ at (24, 18). Caption: 'iPXE request'. Blind route 2a. Forward down/right sampled motion; separate from reverse response.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            20,
+            14,
+            5,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e9",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/8"
+      ],
+      "expected": "boot -> mch: boot.ipxe + S3 args; independent directed relation, no source-named bus.",
+      "observed": "boot server -> bare-metal machines; source stem (22, 20), ordered turns/arrow path [(17, 20), (17, 11), (18, 11)], visible ▶ at (18, 11). Caption: None. Blind route 2b. Correct return geometry and arrowhead, but no visible payload caption.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            17,
+            11,
+            6,
+            10
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F04"
+      ]
+    },
+    {
+      "edge_id": "e10",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/9"
+      ],
+      "expected": "mch -> agent: runs on host; independent directed relation, no source-named bus.",
+      "observed": "bare-metal machines -> machine-agent; source stem (22, 14), ordered turns/arrow path [(22, 15), (45, 15), (45, 18)], visible ▼ at (45, 18). Caption: 'runs on host'. Blind route 2c. Separate machines bottom port; source-backed host residency readable.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            22,
+            14,
+            24,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e11",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/10"
+      ],
+      "expected": "agent -> pub: register + heartbeat; independent directed relation, no source-named bus.",
+      "observed": "machine-agent -> public gRPC; source stem (45, 23), ordered turns/arrow path [(45, 25), (24, 25), (24, 26)], visible ▼ at (24, 26). Caption: 'register+heartbeat'. Blind route 2d. Forward down/left sampled motion.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            24,
+            23,
+            22,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e12",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/11"
+      ],
+      "expected": "pub -> db: machine state; independent directed relation, no source-named bus.",
+      "observed": "public gRPC -> Postgres; source stem (24, 31), ordered turns/arrow path [(24, 33), (26, 33), (26, 34)], visible ▼ at (26, 34). Caption: 'machine state'. Blind route 2e. Two-position samples do not prove intended motion direction.",
+      "status": "blocked",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            24,
+            31,
+            3,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F06"
+      ]
+    },
+    {
+      "edge_id": "e13",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/12"
+      ],
+      "expected": "pgrpc -> db: machine rows; independent directed relation, no source-named bus.",
+      "observed": "private gRPC -> Postgres; source stem (21, 19), ordered turns/arrow path [(47, 19), (47, 17), (49, 17)], visible ▶ at (49, 17). Caption: 'machine rows'. Blind route 4a. Tight corner adjacency to e14 at row 19, but independent Postgres entry at row 17.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            21,
+            17,
+            29,
+            3
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e14",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/13"
+      ],
+      "expected": "q -> db: job rows; independent directed relation, no source-named bus.",
+      "observed": "River job queue -> Postgres; source stem (24, 25), ordered turns/arrow path [(47, 25), (47, 20), (48, 20), (48, 19), (49, 19)], visible ▶ at (49, 19). Caption: 'job rows'. Blind route 4b. Crosses e23 at bridge (45,25) horizontally and (47,21) vertically; no connection. Distinct Postgres entry row 19.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            24,
+            19,
+            26,
+            7
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e15",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/14"
+      ],
+      "expected": "q -> ssh: audit / verify reimage; independent directed relation, no source-named bus.",
+      "observed": "River job queue -> SSH + BMC ops; source stem (24, 13), ordered turns/arrow path [(24, 16), (23, 16), (23, 17)], visible ▼ at (23, 17). Caption: 'audit + reimage'. Blind route 3a. Weaker owner ambiguity resolved to the immediately adjacent SSH arrow, not the janitor run above. However verify is lost, and motion direction is unproven.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            23,
+            13,
+            2,
+            5
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F03",
+        "F06"
+      ]
+    },
+    {
+      "edge_id": "e16",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/15"
+      ],
+      "expected": "ssh -> mch: run machine-audit; independent directed relation, no source-named bus.",
+      "observed": "SSH + BMC ops -> bare-metal machines; source stem (23, 22), ordered turns/arrow path [(23, 25), (20, 25), (20, 26)], visible ▼ at (20, 26). Caption: 'machine-audit'. Blind route 3d. run is recoverable from directed link plus named command; forward down/left sampled motion.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            20,
+            22,
+            4,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e17",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/16"
+      ],
+      "expected": "mch -> s3: pull boot image; independent directed relation, no source-named bus.",
+      "observed": "bare-metal machines -> S3 object store; source stem (20, 31), ordered turns/arrow path [(20, 32), (24, 32), (24, 35)], visible ▼ at (24, 35). Caption: 'pull boot image'. Blind route 3e. Required retrieval caption and route are readable. The extra apparent diagnostics caption is audited separately, not silently assigned correctly.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            20,
+            31,
+            5,
+            5
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F02"
+      ]
+    },
+    {
+      "edge_id": "e18",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/17"
+      ],
+      "expected": "q -> s3: diagnose uploads; independent directed relation, no source-named bus.",
+      "observed": "River job queue -> S3 object store; source stem (22, 13), ordered turns/arrow path [(22, 15), (17, 15), (17, 34), (22, 34), (22, 35)], visible ▼ at (22, 35). Caption: 'diagnose uploads'. Blind route 3b. Outer River-to-S3 geometry is intact, but caption sits beside the other S3 route. No visible owner marker resolves it.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            17,
+            13,
+            6,
+            23
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F02"
+      ]
+    },
+    {
+      "edge_id": "e19",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/18"
+      ],
+      "expected": "q -> jan: diagnostic events; independent directed relation, no source-named bus.",
+      "observed": "River job queue -> janitor app; source stem (26, 13), ordered turns/arrow path [(26, 16), (46, 16), (46, 17)], visible ▼ at (46, 17). Caption: 'diagnostic events'. Blind route 3c. Separate River bottom port and janitor arrow; no trunk.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            26,
+            13,
+            21,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e20",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/19"
+      ],
+      "expected": "jan -> wapi: proposed actions; independent directed relation, no source-named bus.",
+      "observed": "janitor app -> webapi server; source stem (46, 22), ordered turns/arrow path [(46, 25), (45, 25), (45, 26)], visible ▼ at (45, 26). Caption: 'proposed actions'. Blind route 3f. Janitor-to-webapi proposal relation survives; two-position motion is unproven.",
+      "status": "blocked",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            45,
+            22,
+            2,
+            5
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F06"
+      ]
+    },
+    {
+      "edge_id": "e21",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/20"
+      ],
+      "expected": "wapi -> slack: confirm + alerts; independent directed relation, no source-named bus.",
+      "observed": "webapi server -> Slack; source stem (45, 31), ordered turns/arrow path [(45, 34), (49, 34), (49, 35)], visible ▼ at (49, 35). Caption: 'confirm + alerts'. Blind route 3g. Dashed line remains followable through solid corners to Slack; no protocol is invented. No additional uncertainty qualifier is required by this source.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            45,
+            31,
+            5,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e22",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/21"
+      ],
+      "expected": "rec -> prov: gcore sync, 1 min; independent directed relation, no source-named bus.",
+      "observed": "cluster reconcile loop -> bare-metal providers; source stem (31, 32), ordered turns/arrow path [(48, 32), (48, 25), (49, 25)], visible ▶ at (49, 25). Caption: 'gcore sync 1min'. Blind route 4d. Lower cluster-loop exit row 32; its caption is directly above that run at row 31, below the state run at row 30. Distinct providers entry.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            31,
+            25,
+            19,
+            8
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e23",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/22"
+      ],
+      "expected": "rec -> db: cluster state; independent directed relation, no source-named bus.",
+      "observed": "cluster reconcile loop -> Postgres; source stem (31, 30), ordered turns/arrow path [(45, 30), (45, 21), (49, 21)], visible ▶ at (49, 21). Caption: 'cluster state'. Blind route 4c. Crosses e14 at bridge (45,25) vertically and (47,21) horizontally; no connection. Distinct Postgres entry row 21.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            31,
+            21,
+            19,
+            10
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "extra-diagnostics-on-machines",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/16",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/17"
+      ],
+      "expected": null,
+      "observed": "No additional geometric arrow is drawn. However diagnose uploads at [25,34,16,1] appears to label machines -> S3, whose vertical stroke/dot is immediately at (24,34). This apparent payload relationship contradicts the specifically separate River-jobs diagnostics relation; it is audited rather than hidden by spec intent.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            24,
+            33,
+            17,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v3-frame4",
+          "region": [
+            24,
+            34,
+            17,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F02"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F01",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e9"
+      ],
+      "severity": "high",
+      "description": "The boot server -> machines return arrow is visible, but its required boot.ipxe + S3 args payload is absent from every v2 diagram state. The final spec also abbreviates away args. Recorded final --check and validator confirm one skipped caption; neither the warning nor the spec supplies visible label proof.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/8"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            17,
+            11,
+            7,
+            10
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            17,
+            11,
+            7,
+            10
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F02",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e18",
+        "e17",
+        "extra-diagnostics-on-machines"
+      ],
+      "severity": "critical",
+      "description": "diagnose uploads [25,34,16,1] sits flush against machines -> S3 at (24,34), while River -> S3 turns at (22,34) on the other side of that route. It reads as a second machines -> S3 caption, defeating the explicit separate jobs-diagnostics relation. Intended ownership in JSON does not resolve the visible misattachment.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/16",
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/17",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#fixed-constraints"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            17,
+            31,
+            25,
+            5
+          ]
+        },
+        {
+          "evidence_id": "v3-frame4",
+          "region": [
+            24,
+            34,
+            17,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F03",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e15"
+      ],
+      "severity": "critical",
+      "description": "audit + reimage [25,17,15,1] loses verify from audit / verify reimage. Reimage is not an abbreviation for verify reimage: it reads as an operation instead of verification. Its most plausible owner is the River -> SSH arrow, but the payload is changed even after resolving that weaker ownership ambiguity.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/14"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            23,
+            17,
+            17,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F04",
+      "category": "layout_fit",
+      "edge_ids": [
+        "e9"
+      ],
+      "severity": "high",
+      "description": "The full-label fit gate fails because the boot response caption is omitted, despite ample unclipped grid and complete visible boxes. This is label-placement loss, not cropping at a viewport boundary. A correctly sized capture cannot rescue absent required text.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/expected.json#/historical_reference/edges/8",
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/layout_fit"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            17,
+            11,
+            7,
+            10
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F05",
+      "category": "animation",
+      "edge_ids": [
+        "e2",
+        "e4",
+        "e5",
+        "e7"
+      ],
+      "severity": "high",
+      "description": "Across 0/100/200/300/400ms, dots remain at e2 (20,8), e4 (21,16), e5 (20,24), and e7 (17,40). The supplied required motion sequence shows static markers on four requested animated lines. flow:0.5 and dots:1 are not proof of live movement.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#original-line-217-user",
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#original-line-148-user"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-frame0",
+          "region": [
+            20,
+            8,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-frame4",
+          "region": [
+            20,
+            8,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-frame0",
+          "region": [
+            21,
+            16,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-frame4",
+          "region": [
+            21,
+            16,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-frame0",
+          "region": [
+            20,
+            24,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-frame4",
+          "region": [
+            20,
+            24,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-frame0",
+          "region": [
+            17,
+            40,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-frame4",
+          "region": [
+            17,
+            40,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F06",
+      "category": "animation",
+      "edge_ids": [
+        "e6",
+        "e12",
+        "e15",
+        "e20"
+      ],
+      "severity": "high",
+      "description": "Direction/cadence remains unproven on four two-position sequences: e6 (19,32)<->(18,33); e12 (24,32)<->(25,33); e15 (24,14)<->(24,15); e20 (46,23)<->(46,24). Samples may reflect legitimate short-cycle wrapping, but they cannot establish forward live travel without assumptions. This is an evidence blocker, not a proven reverse-motion defect.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md#original-line-217-user",
+        "docs/visualize-eval/rounds/02/rubric.json#/categories/animation"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-frame0",
+          "region": [
+            18,
+            32,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-frame1",
+          "region": [
+            18,
+            32,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v2-frame0",
+          "region": [
+            24,
+            32,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v2-frame1",
+          "region": [
+            24,
+            32,
+            2,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v3-frame0",
+          "region": [
+            24,
+            14,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v3-frame1",
+          "region": [
+            24,
+            14,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v3-frame0",
+          "region": [
+            46,
+            23,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v3-frame1",
+          "region": [
+            46,
+            23,
+            1,
+            2
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "Renderer label-placement gap in the executed v2 tb boot-response return route: payload caption is missing. Archived two-node tb checks, including a shorter reverse label, each report 1/2 labels, while the archived lr check reports 2/2. This supports a local upward-tb label-slot defect, not universal inability to render the exchange; lr is a recorded possible workaround, not a validated replacement final view.",
+    "Required per-route motion proof remains incomplete: four routes are visibly stationary in the supplied sequence, four show only two-position alternation. Longer/non-aliased captures and usable visible travel on short routes are required; dots:1/flow:0.5 cannot remove this blocker. The evidence does not establish a universal renderer animation incapability."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:p7J",
+      "w7E:p7P",
+      "w7E:p7S",
+      "w7E:p7V"
+    ],
+    "closed_pane_ids": [
+      "w7E:p7J",
+      "w7E:p7P",
+      "w7E:p7S",
+      "w7E:p7V"
+    ],
+    "status": "done",
+    "reason": "Each of the four preserved evidence manifests records confirmed_closed for its own pane; generation records four opened/four closed. Judge opened no viewer panes and changed no renderer/spec/capture."
+  },
+  "overall": "fail"
+}

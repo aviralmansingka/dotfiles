@@ -1,0 +1,150 @@
+{
+  "theme": "gruvbox",
+  "direction": "tb",
+  "diagrams": [
+    {
+      "id": "oob",
+      "title": "OOB hardware-control plane",
+      "description": "one OOB trunk to the BMCs and power shelf; nv-rms source is free",
+      "direction": "tb",
+      "nodes": [
+        {
+          "id": "rms",
+          "label": "nv-rms (free src)",
+          "group": "oob-mgmt"
+        },
+        {
+          "id": "oob",
+          "label": "OOB LAN",
+          "group": "oob-lan"
+        },
+        {
+          "id": "bmc_c",
+          "label": "Compute BMC",
+          "group": "oob-lan"
+        },
+        {
+          "id": "pwr",
+          "label": "Power shelf",
+          "group": "oob-lan"
+        },
+        {
+          "id": "bmc_s",
+          "label": "NVSwitch BMC",
+          "group": "oob-lan"
+        }
+      ],
+      "trunks": [
+        {
+          "id": "lane",
+          "label": "Redfish/HTTPS",
+          "from": "oob",
+          "to": "pwr",
+          "branches": [
+            "bmc_c",
+            "bmc_s"
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "from": "rms",
+          "to": "oob",
+          "label": "client",
+          "label_slot": true
+        }
+      ]
+    },
+    {
+      "id": "inband",
+      "title": "In-band compute and NVSwitch software",
+      "description": "compute chain and NVSwitch software; the OOB LAN reaches NVOS",
+      "direction": "tb",
+      "nodes": [
+        {
+          "id": "oob",
+          "label": "OOB LAN",
+          "group": "oob-lan"
+        },
+        {
+          "id": "nvos",
+          "label": "NVOS",
+          "group": "switch"
+        },
+        {
+          "id": "nmxc",
+          "label": "NMX-C/T",
+          "group": "switch"
+        },
+        {
+          "id": "k8s",
+          "label": "Kubernetes",
+          "group": "inband"
+        },
+        {
+          "id": "gpuop",
+          "label": "GPU Operator",
+          "group": "inband"
+        },
+        {
+          "id": "dcgm",
+          "label": "DCGM",
+          "group": "inband"
+        },
+        {
+          "id": "dcgmx",
+          "label": "dcgm-exporter",
+          "group": "inband"
+        },
+        {
+          "id": "drvk",
+          "label": "Driver+CUDA",
+          "group": "inband"
+        },
+        {
+          "id": "fm",
+          "label": "Fabric Mgr",
+          "group": "inband"
+        }
+      ],
+      "edges": [
+        {
+          "from": "oob",
+          "to": "nvos"
+        },
+        {
+          "from": "nvos",
+          "to": "nmxc",
+          "label": "hosts",
+          "label_slot": true
+        },
+        {
+          "from": "k8s",
+          "to": "gpuop"
+        },
+        {
+          "from": "gpuop",
+          "to": "dcgm",
+          "label": "DaemonSet",
+          "label_slot": true
+        },
+        {
+          "from": "dcgm",
+          "to": "dcgmx",
+          "label": "metrics :9400",
+          "label_slot": true
+        },
+        {
+          "from": "dcgm",
+          "to": "drvk",
+          "label": "NVML",
+          "label_slot": true
+        },
+        {
+          "from": "drvk",
+          "to": "fm"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,184 @@
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/10/server-nic-layout/specs/v2.
+json
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+󰂃 6% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/10/server-nic-layout/sp
+ecs/v2.json
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+󰂃 6% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/10/server-nic-layout/sp
+ecs/v2.json --select-all
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+󰂃 6% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/10/server-nic-layout/sp
+ecs/v2.json --frames 3 --step-ms 100
+viewport: 82x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 82x51 @100% · v2.json · 4 nodes · 3 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            ╭───────────────╮   ╭─────────────────╮   ╭─────────────╮
+            │eno16595np0 25G│   │server2 R7725 .59│   │spare .60-.62│
+            │               │   │                 │   │             │
+            ╰───────────────╯   ╰─────────────────╯   ╰─────────────╯
+                    │ no NAT no v6       │ same /29          ╎ free? unprobed
+                    │                    │                   ╎
+                    │                    │                   ╎
+                    ╰─────────────────╮ ╭╯╭╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯
+                                      ▼ ▼ ▼
+                              ╭────────────────────╮
+                              │gw .57 Arista? 0.1ms│
+                              │                    │
+                              ╰────────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 82x51 @100% · v2.json · 4 nodes · 3 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            ╭───────────────╮   ╭─────────────────╮   ╭─────────────╮
+            │eno16595np0 25G│   │server2 R7725 .59│   │spare .60-.62│
+            │               │   │                 │   │             │
+            ╰───────────────╯   ╰─────────────────╯   ╰─────────────╯
+                    │ no NAT no v6       │ same /29          ╎ free? unprobed
+                    │                    │                   ╎
+                    │                    │                   ╎
+                    ╰─────────────────╮ ╭╯╭╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯
+                                      ▼ ▼ ▼
+                              ╭────────────────────╮
+                              │gw .57 Arista? 0.1ms│
+                              │                    │
+                              ╰────────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 82x51 @100% · v2.json · 4 nodes · 3 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            ╭───────────────╮   ╭─────────────────╮   ╭─────────────╮
+            │eno16595np0 25G│   │server2 R7725 .59│   │spare .60-.62│
+            │               │   │                 │   │             │
+            ╰───────────────╯   ╰─────────────────╯   ╰─────────────╯
+                    │ no NAT no v6       │ same /29          ╎ free? unprobed
+                    │                    │                   ╎
+                    │                    │                   ╎
+                    ╰─────────────────╮ ╭╯╭╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯
+                                      ▼ ▼ ▼
+                              ╭────────────────────╮
+                              │gw .57 Arista? 0.1ms│
+                              │                    │
+                              ╰────────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+󰂃 6% ❯

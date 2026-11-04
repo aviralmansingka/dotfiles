@@ -1,0 +1,34 @@
+{
+  "spec_path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/10/homelab-nic-trace/specs/v3-lan-gateway.json",
+  "spec_sha256": "1439e2d086e7eb027b964a426a8fff27fdd05a9236ba8af1c4cf2735b902e90e",
+  "binary_path": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+  "binary_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+  "pane_id": "w7E:pR4",
+  "pane_rect": null,
+  "pane_cols": null,
+  "pane_rows": 51,
+  "viewport_line": null,
+  "viewport_token": "82x51 @100%",
+  "check_exit": 0,
+  "check_window": [
+    "2026-11-02T23:41:54Z",
+    "2026-11-02T23:41:54Z"
+  ],
+  "capture_window": [
+    "2026-11-02T23:41:54Z",
+    "2026-11-02T23:41:58Z"
+  ],
+  "cleanup": "confirmed_closed",
+  "select_all_frame": true,
+  "frames": 3,
+  "frame_step_ms": 100,
+  "artifacts": {
+    "bin.sha256": "d70e8ea3bb8149f3dc64e07eee15048aec287592055089d0c6f2dbedeebc37d9",
+    "check.txt": "04fcb92815218f126c629cef2d16f2287a71ddd6fdf82092397f6845cea0067b",
+    "v3-ansi.ansi": "64976181fa8b8e9e192559c2998826d8cfe57acb6e3532ba28ec451b777e2683",
+    "v3-frames.ansi": "eaaf57afa8e6e2491ed27844577d97d3250ed0fb86c3d695907fff9eac169e22",
+    "v3-frames.txt": "ca626703343ea9d97599d83e128dd6bf0cdfebf6be24b559d0de6793dda68f99",
+    "v3-selected.ansi": "aa8dbfcb03ca09829032af60d1807d2fe52d3e91e479971be66b3f270330c914",
+    "v3-text.txt": "520678508c66d7ce14247bc07d97ed7f3dd2fcad207860d5c972e750b7e3b927"
+  }
+}

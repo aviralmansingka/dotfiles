@@ -1,0 +1,1 @@
+rataflow-view: no obstacle-safe route for mux2 -> core1; increase node/layer spacing

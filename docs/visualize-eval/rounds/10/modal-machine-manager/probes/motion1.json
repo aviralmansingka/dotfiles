@@ -1,0 +1,1 @@
+{"direction":"tb","nodes":[{"id":"a","label":"alpha"},{"id":"b","label":"beta"}],"edges":[{"from":"a","to":"b","label":"ab","dots":1,"flow":true}]}

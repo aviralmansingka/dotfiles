@@ -1,0 +1,14 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/03/server-nic-layout/specs/v1-attempt3.json",
+    "sha256": "3fcecbcfdcfb1dd15fdf72f4cf771f465bf22d2ac056ec7544071c79404da9d0"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/03/server-nic-layout/specs/v2-attempt2.json",
+    "sha256": "9da8685bf2abf8944b7c78307f5690dcb6c829e06288408e1ad07bc40cc17574"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/03/server-nic-layout/specs/v3-attempt1.json",
+    "sha256": "12110a71ab2acbb6b8d2b75a02fe4ab2083e1879900d70e824532734a7d9b4df"
+  }
+]

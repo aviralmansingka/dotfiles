@@ -1,0 +1,104 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "core1",
+      "label": "Core 1",
+      "group": "core"
+    },
+    {
+      "id": "core2",
+      "label": "Core 2",
+      "group": "core"
+    },
+    {
+      "id": "fw1",
+      "label": "FW1 active",
+      "group": "fw"
+    },
+    {
+      "id": "fw2",
+      "label": "FW2 standby",
+      "group": "fw"
+    },
+    {
+      "id": "bl1",
+      "label": "BL 1",
+      "group": "bl"
+    },
+    {
+      "id": "bl2",
+      "label": "BL 2",
+      "group": "bl"
+    }
+  ],
+  "layers": [
+    [
+      "core2",
+      "core1"
+    ],
+    [
+      "fw2",
+      "fw1"
+    ],
+    [
+      "bl2",
+      "bl1"
+    ]
+  ],
+  "edges": [
+    {
+      "from": "core1",
+      "to": "fw1",
+      "label": "active",
+      "dots": 0
+    },
+    {
+      "from": "core2",
+      "to": "fw1",
+      "label": "active",
+      "dots": 0
+    },
+    {
+      "from": "core1",
+      "to": "fw2",
+      "label": "standby?",
+      "style": "dashed",
+      "dots": 0
+    },
+    {
+      "from": "core2",
+      "to": "fw2",
+      "label": "standby?",
+      "style": "dashed",
+      "dots": 0
+    },
+    {
+      "from": "fw1",
+      "to": "bl1",
+      "label": "active",
+      "dots": 0
+    },
+    {
+      "from": "fw1",
+      "to": "bl2",
+      "label": "active",
+      "dots": 0
+    },
+    {
+      "from": "fw2",
+      "to": "bl1",
+      "label": "standby?",
+      "style": "dashed",
+      "dots": 0
+    },
+    {
+      "from": "fw2",
+      "to": "bl2",
+      "label": "standby?",
+      "style": "dashed",
+      "dots": 0
+    }
+  ]
+}

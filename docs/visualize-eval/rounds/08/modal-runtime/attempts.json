@@ -1,0 +1,179 @@
+{
+  "case_id": "modal-runtime",
+  "round": "08",
+  "binary": {
+    "path": "/tmp/visualize-eval/round-08/bin/rataflow-view",
+    "sha256": "ea24593b0f80c1617573eef4766f2bacaaf4315a8133a65d5331e9daec1c1f30"
+  },
+  "skill": {
+    "path": "docs/visualize-eval/rounds/08/SKILL.md",
+    "sha256": "b1bdb4d3d38336cb7783db34da7f9f19edf80704a890de32285d9e582b4221eb"
+  },
+  "budget_note": "Final views each used one spec candidate except v3 (2). The split search that preceded the final four views is recorded under rejected_candidates, with every raw --check output kept in attempts-raw/. No spec was re-checked to game the budget.",
+  "views": [
+    {
+      "view": "v1-return-seams",
+      "spec": "specs/v1-return-seams.json",
+      "attempts": [
+        {
+          "spec_sha256": "f1c33e595f47d09da91681533ff1136c0307018c035f9f7417d2bcac48999463",
+          "spec": "specs/v1-return-seams.json",
+          "raw_check": "attempts-raw/v1-return-seams-a-check.txt",
+          "result": "clean: extent 56x9, labels 2/2, 0 ambiguous, 0 crossings",
+          "note": "runtime->worker (events+mg RPC) + runtime->daemon (HTTP over UDS); lr keeps both labels inside the channel column. Chosen first time."
+        }
+      ]
+    },
+    {
+      "view": "v2-task-intake",
+      "spec": "specs/v2-task-intake.json",
+      "attempts": [
+        {
+          "spec_sha256": "2bdfa72af4b82a7610aae0ba97a103688c617184dd0d04d0d96810ef1c706392",
+          "spec": "specs/v2-task-intake.json",
+          "raw_check": "attempts-raw/v2-task-intake-a-check.txt",
+          "result": "clean: extent 56x4, labels 1/1, 0 ambiguous, 0 crossings",
+          "note": "worker->runtime (task+ctrl RPC) alone: the return direction lives in v1, so no anti-parallel pair shares this channel."
+        }
+      ]
+    },
+    {
+      "view": "v3-dispatch-fan",
+      "spec": "specs/v3-dispatch-fan.json",
+      "attempts": [
+        {
+          "spec_sha256": "6ff7cac160c32852ada09ec6f18ec722fa81a81ec8fdf6c24e51cf97bdd8ce2f",
+          "spec": "attempts-raw/v3-dispatch-fan-a.json",
+          "raw_check": "attempts-raw/v3-dispatch-fan-a-check.txt",
+          "result": "rejected: extent 57x48 (1 row over the 47-row target) with label 'dispatch tasks' (14 cells)",
+          "note": "a tb rank gap is sized to the longest label in that gap, so one label cell costs one row."
+        },
+        {
+          "spec_sha256": "18378e04cdc0e90c1345527a397b7bdc42d2a050675f0f22b3fc15909ff2b432",
+          "spec": "specs/v3-dispatch-fan.json",
+          "raw_check": "attempts-raw/v3-dispatch-fan-b-check.txt",
+          "result": "clean: extent 57x47, labels 3/3, 0 ambiguous, 0 crossings, regions orchestration/compute/storage",
+          "note": "same structure, dispatch label shortened to 'task dispatch' (13) => 47 rows, fits at natural zoom."
+        }
+      ]
+    },
+    {
+      "view": "v4-data-plane",
+      "spec": "specs/v4-data-plane.json",
+      "attempts": [
+        {
+          "spec_sha256": "186f6bed8cb61e6dd18797e8583c3cda586913712eed6ec08a24e7664cf7e8f3",
+          "spec": "specs/v4-data-plane.json",
+          "raw_check": "attempts-raw/v3-data-plane-b-check.txt",
+          "result": "clean: extent 57x30, labels 2/2, 0 ambiguous, 0 crossings, regions compute/storage",
+          "note": "two rank rows, one labelled gap; both regions span the gap and still place their labels. Chosen first time."
+        }
+      ]
+    }
+  ],
+  "rejected_candidates": [
+    {
+      "candidate": "single-view overview, all 8 nodes",
+      "spec": null,
+      "raw_check": "attempts-raw/v1a-check.txt",
+      "result": "rejected: extent 52x74; labels 7/8, 1 ambiguous owner, 1 skipped ('events+mg RPC')",
+      "note": "spec bytes overwritten while probing (not preserved); raw check kept."
+    },
+    {
+      "candidate": "seam overview, 4 nodes, 5 declared groups",
+      "spec": null,
+      "raw_check": "attempts-raw/v1b-check.txt",
+      "result": "rejected: extent 60x27; 'events+mg RPC' skipped, 1 ambiguous owner",
+      "note": "the anti-parallel pair shares one tb channel: both labels sit beside two adjacent vertical lines."
+    },
+    {
+      "candidate": "seam overview, 4 nodes, only orchestration+host-agent groups",
+      "spec": "specs/overview-3-seam-ungrouped.json",
+      "raw_check": "attempts-raw/v1c-check.txt",
+      "result": "rejected: extent 59x27; 'events+mg RPC' skipped, 1 ambiguous owner",
+      "note": "dropping the region around the pair was not enough; both pair routes still run in one 2-cell gap."
+    },
+    {
+      "candidate": "pair only, 2 nodes, lr (both directions)",
+      "spec": "specs/pair-only-lr.json",
+      "raw_check": "attempts-raw/v1-seam-pair-a-check.txt",
+      "result": "rejected: extent 56x7; 'task+ctrl RPC' skipped (1/2 placed)",
+      "note": "the against-flow route detours onto the graph's top row where no free row is left for a 13-cell label."
+    },
+    {
+      "candidate": "runtime fan, 3 nodes, 3 regions",
+      "spec": "specs/fan-abandoned.json",
+      "raw_check": "attempts-raw/v2-runtime-fan-a-check.txt",
+      "result": "clean 43x27 but superseded",
+      "note": "kept as the fallback if the seam split across v1/v2 is judged worse."
+    },
+    {
+      "candidate": "seam fan, 3 edges out of runtime, lr",
+      "spec": "specs/v1-runtime-seams.json",
+      "raw_check": "attempts-raw/v1-runtime-seams-a-check.txt",
+      "result": "rejected: 3/3 labels but 1 ambiguous owner, 1 bridge, 1 touching bend"
+    },
+    {
+      "candidate": "same, minlen 2 on the UDS hop",
+      "spec": "specs/v1-runtime-seams.json",
+      "raw_check": "attempts-raw/v1-runtime-seams-b-check.txt",
+      "result": "rejected: extent 76x11, crossings 0, 1 ambiguous owner remains ('events+mg RPC' ties with the engine route)"
+    },
+    {
+      "candidate": "seam overview, 4 nodes, lr",
+      "spec": "specs/v1-seam-overview.json",
+      "raw_check": "attempts-raw/v1-seam-overview-b-check.txt",
+      "result": "rejected: hard error 'no obstacle-safe route for worker -> runtime'"
+    },
+    {
+      "candidate": "seam overview, 4 nodes, lr + minlen 2 on the UDS hop",
+      "spec": "specs/v1-seam-overview.json",
+      "raw_check": "attempts-raw/v1-seam-overview-c-check.txt",
+      "result": "rejected: same hard routing error"
+    },
+    {
+      "candidate": "seam overview, 4 nodes, tb, no groups",
+      "spec": null,
+      "raw_check": "attempts-raw/v1-seam-overview-a-check.txt",
+      "result": "rejected: extent 58x27; 'events+mg RPC' skipped, 1 ambiguous owner",
+      "note": "spec bytes overwritten by the lr variant of the same file; raw check kept."
+    },
+    {
+      "candidate": "execution + storage, 5 nodes tb",
+      "spec": "specs/overview-full-graph.json",
+      "raw_check": "attempts-raw/v3-execution-storage-a-check.txt",
+      "result": "rejected: extent 57x53; all labels placed, but two labelled gaps overflow the pane"
+    },
+    {
+      "candidate": "execution chain, 3 nodes tb",
+      "spec": "specs/abandoned-execution-chain.json",
+      "raw_check": "attempts-raw/v2-execution-a-check.txt",
+      "result": "rejected: extent 32x51; 'runs user process' skipped"
+    },
+    {
+      "candidate": "storage chain, 3 nodes tb",
+      "spec": "specs/abandoned-storage-chain.json",
+      "raw_check": "attempts-raw/v3-storage-a-check.txt",
+      "result": "rejected: extent 38x53"
+    },
+    {
+      "candidate": "intake + dispatch, 3 nodes lr",
+      "spec": "specs/abandoned-intake-dispatch-lr.json",
+      "raw_check": "attempts-raw/v2-intake-dispatch-a-check.txt",
+      "result": "rejected: extent 86x4 (too wide)"
+    },
+    {
+      "candidate": "intake + dispatch, 3 nodes tb",
+      "spec": null,
+      "raw_check": "attempts-raw/v2-intake-dispatch-b-check.txt",
+      "result": "rejected: extent 26x45 and 0/2 labels placed (a tb extent is only as wide as one box)",
+      "note": "the tb variant of the same file was overwritten by the lr attempt; raw check kept."
+    },
+    {
+      "candidate": "engine fan, 3 nodes tb",
+      "spec": "specs/fallback-engine-fan-2rank.json",
+      "raw_check": "attempts-raw/v2-engine-fan-b-check.txt",
+      "result": "clean 57x29 but superseded by v3, which also carries the dispatch hop"
+    }
+  ]
+}

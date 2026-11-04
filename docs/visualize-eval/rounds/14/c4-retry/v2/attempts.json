@@ -1,0 +1,113 @@
+{
+  "case_id": "modal-machine-manager-c4-retry",
+  "round": "14",
+  "run": "v2 (member-based enclosure, build b0282d3b); v1 artifacts kept under v1/",
+  "binary": "/tmp/visualize-eval/round-14/bin/rataflow-view",
+  "binary_sha256": "b0282d3bad98f42ffae5c8b76ec58a21c24d86412a3be218fa68238b6ae44146",
+  "skill": "docs/visualize-eval/proposals/13/SKILL.md",
+  "skill_sha256": "55c6f9d061d64f65762bac29affececd1b9c5c3025f8ce15fc44117943d5362b",
+  "records_log": "attempts-log.jsonl",
+  "views": [
+    {
+      "view": "canvas",
+      "spec": "specs/c4-canvas.json",
+      "spec_sha256": "82bc764164e1be2604a01fbc3c1f02b2f4bfa3d6d15f949cd117e1176478b8d5",
+      "bundle": "evidence/canvas",
+      "diagrams": [
+        "l1",
+        "l2a",
+        "l2b"
+      ],
+      "attempts": [
+        {
+          "id": "v2-canvas-attempt1",
+          "record_label": "v2-canvas-attempt1",
+          "spec": "specs/c4-canvas-attempt1.json",
+          "check": "binary killed at exec (exit 137) - OS signature-cache SIGKILL on the frozen path; same bytes re-materialised, sha unchanged",
+          "verdict": "blocked, then resolved (see generation.json blockers)"
+        },
+        {
+          "id": "v2-attempt-member-A",
+          "record_label": "(unrecorded - disclosed)",
+          "spec": "specs/v2-tryC.json",
+          "check": "first member-enclosure build: l2a 253x22, 36 near-miss cells (q->s3 hugging reg/db), l2b 4 cells near ssh",
+          "near_misses": 36,
+          "ambiguous_labels": 1,
+          "verdict": "rejected"
+        },
+        {
+          "id": "v2-canvas-final",
+          "record_label": "v2-canvas-final",
+          "spec": "specs/c4-canvas.json",
+          "check": "extent=253x74; 0 near-miss, 30/30 labels, 0 ambiguous, 0 dot violations, 9/9 origins, 28 pins/0 conflicts, enclosure-entrances 5, enclosure-crossings absent (=0)",
+          "near_misses": 0,
+          "ambiguous_labels": 0,
+          "verdict": "accepted"
+        }
+      ]
+    }
+  ],
+  "layout_probes": [
+    {
+      "label": "v2-tryA",
+      "spec": "specs/v2-tryA.json",
+      "result": "33 near-miss cells (l2a col4 crowding); rejected"
+    },
+    {
+      "label": "v2-tryB",
+      "spec": "specs/v2-tryB.json",
+      "result": "1 enclosure-crossing cell + 2 ambiguous labels; rejected"
+    },
+    {
+      "label": "v2-tryC",
+      "spec": "specs/v2-tryC.json",
+      "result": "36 near-miss (q->s3 spanning the reg/db column)"
+    },
+    {
+      "label": "v2-tryD",
+      "spec": "specs/v2-tryD.json",
+      "result": "no obstacle-safe route for ssh -> mch (span-2 back edge through a member column)"
+    },
+    {
+      "label": "v2-tryE",
+      "spec": "specs/v2-tryE.json",
+      "result": "label_slot on q->s3 did not move the route off reg/db; 32 near-miss"
+    },
+    {
+      "label": "v2-tryF",
+      "spec": "specs/v2-tryF.json",
+      "result": "0 near-miss; L1 'diagnose uploads' ambiguous"
+    },
+    {
+      "label": "v2-tryG",
+      "spec": "specs/v2-tryG.json",
+      "result": "no obstacle-safe route for mch -> mm (machine column paired with S3)"
+    },
+    {
+      "label": "v2-tryH",
+      "spec": "specs/v2-tryH.json",
+      "result": "no obstacle-safe route for mch -> mm (slack moved to the machine column)"
+    },
+    {
+      "label": "v2-tryI",
+      "spec": "specs/v2-tryI.json",
+      "result": "0 near-miss, 0 ambiguous - basis of the shipped spec"
+    },
+    {
+      "label": "v2-variant-band",
+      "spec": "specs/_v_band.json",
+      "result": "control: (enclosed:true) frame audit PASS 12/12 - isolates the dot-occlusion defect to boundary-crossing routes"
+    },
+    {
+      "label": "v2-variant-nocross",
+      "spec": "specs/_v_nocross.json",
+      "result": "shipped dot set: frame audit PASS 9/9"
+    },
+    {
+      "label": "v2-variant-others",
+      "spec": "specs/_v_no_l1_pair.json, _v_no_mm_prov.json, _v_no_mm_mch.json, _v_X.json, _v_l2a_only.json, _v_l2b_only.json",
+      "result": "frame-audit experiments that isolated the occlusion: every variant keeping a boundary-crossing dot still split routes"
+    }
+  ],
+  "disclosure": "Only v2-canvas-attempt1, v2-canvas-final and the two evidence runs were executed through scripts/viz-evidence.sh record. The nine layout probes and six frame-audit variants above were run directly with the frozen binary; their specs are bundled here so every check can be re-run, but they carry no record line. This is a process gap against the round-13 contract and is reported, not hidden: the member-enclosure geometry interleaves externals in the source's own chain (reg->prov->mch->boot, ssh->mch->agent), so each layout probe moved exactly one lever. Total: 3 in-view candidates plus 15 one-lever probes, far past the three-candidate guidance."
+}

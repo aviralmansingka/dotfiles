@@ -1,0 +1,140 @@
+{
+ "boxes": [
+  {
+   "label_hint": "bond0.1.197",
+   "rect": {
+    "top": 3,
+    "left": 24,
+    "height": 4,
+    "width": 14
+   },
+   "border_colors": [
+    {
+     "fg": "rgb(216,166,87)",
+     "bold": false,
+     "cells": 36
+    }
+   ],
+   "uniform_color": true,
+   "sides_complete": true,
+   "border_defects": []
+  },
+  {
+   "label_hint": "wlp8s0.213",
+   "rect": {
+    "top": 3,
+    "left": 47,
+    "height": 4,
+    "width": 13
+   },
+   "border_colors": [
+    {
+     "fg": "rgb(228,184,111)",
+     "bold": false,
+     "cells": 34
+    }
+   ],
+   "uniform_color": true,
+   "sides_complete": true,
+   "border_defects": []
+  },
+  {
+   "label_hint": "Fiosrouter?.1.1",
+   "rect": {
+    "top": 11,
+    "left": 21,
+    "height": 4,
+    "width": 19
+   },
+   "border_colors": [
+    {
+     "fg": "rgb(125,174,163)",
+     "bold": false,
+     "cells": 46
+    }
+   ],
+   "uniform_color": true,
+   "sides_complete": true,
+   "border_defects": []
+  },
+  {
+   "label_hint": "ONT?169.254.3.1",
+   "rect": {
+    "top": 19,
+    "left": 22,
+    "height": 4,
+    "width": 18
+   },
+   "border_colors": [
+    {
+     "fg": "rgb(211,134,155)",
+     "bold": false,
+     "cells": 44
+    }
+   ],
+   "uniform_color": true,
+   "sides_complete": true,
+   "border_defects": []
+  },
+  {
+   "label_hint": "VZagg100.41.x(hop)",
+   "rect": {
+    "top": 27,
+    "left": 19,
+    "height": 4,
+    "width": 23
+   },
+   "border_colors": [
+    {
+     "fg": "rgb(169,182,101)",
+     "bold": false,
+     "cells": 54
+    }
+   ],
+   "uniform_color": true,
+   "sides_complete": true,
+   "border_defects": []
+  },
+  {
+   "label_hint": "VZbackboneAS701(hop)",
+   "rect": {
+    "top": 35,
+    "left": 18,
+    "height": 4,
+    "width": 25
+   },
+   "border_colors": [
+    {
+     "fg": "rgb(125,160,184)",
+     "bold": false,
+     "cells": 58
+    }
+   ],
+   "uniform_color": true,
+   "sides_complete": true,
+   "border_defects": []
+  },
+  {
+   "label_hint": "Cloudflare1.1.1.1",
+   "rect": {
+    "top": 43,
+    "left": 21,
+    "height": 4,
+    "width": 20
+   },
+   "border_colors": [
+    {
+     "fg": "rgb(231,138,78)",
+     "bold": false,
+     "cells": 48
+    }
+   ],
+   "uniform_color": true,
+   "sides_complete": true,
+   "border_defects": []
+  }
+ ],
+ "failures": [],
+ "arrow_or_dot_on_border": [],
+ "ok": true
+}

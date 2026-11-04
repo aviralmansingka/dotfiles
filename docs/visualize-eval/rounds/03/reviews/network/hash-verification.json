@@ -1,0 +1,173 @@
+{
+  "method": "SHA-256 of actual file bytes; no renderer execution",
+  "checks": [
+    {
+      "name": "candidate skill",
+      "path": "docs/visualize-eval/rounds/03/SKILL.md",
+      "expected_sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+      "actual_sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+      "matches": true
+    },
+    {
+      "name": "executed frozen renderer",
+      "path": "/tmp/visualize-eval/round-03/bin/rataflow-view",
+      "expected_sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7",
+      "actual_sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7",
+      "matches": true
+    },
+    {
+      "name": "corrected frozen rubric",
+      "path": "docs/visualize-eval/rounds/03/rubric.json",
+      "expected_sha256": "5519fd84f6b75973dbf7b5f5544c909a8f32a8841a876c8e7af00a1fcb119335",
+      "actual_sha256": "5519fd84f6b75973dbf7b5f5544c909a8f32a8841a876c8e7af00a1fcb119335",
+      "matches": true
+    },
+    {
+      "name": "dataset manifest",
+      "path": "docs/visualize-eval/cases.json",
+      "expected_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "actual_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "matches": true
+    },
+    {
+      "name": "network source.md",
+      "path": "docs/visualize-eval/cases/network/source.md",
+      "expected_sha256": "9d23a7b50d1d26a69f95523a9586bab96ec588afb9628ae274c896992b147947",
+      "actual_sha256": "9d23a7b50d1d26a69f95523a9586bab96ec588afb9628ae274c896992b147947",
+      "matches": true
+    },
+    {
+      "name": "network expected.json",
+      "path": "docs/visualize-eval/cases/network/expected.json",
+      "expected_sha256": "8cb86d269c21176d775e79f8592f09067049031a0e581df38d66705e73a8caa9",
+      "actual_sha256": "8cb86d269c21176d775e79f8592f09067049031a0e581df38d66705e73a8caa9",
+      "matches": true
+    },
+    {
+      "name": "network historical-variants.json",
+      "path": "docs/visualize-eval/cases/network/historical-variants.json",
+      "expected_sha256": "6af06039e172f0ef75d83c87703f85541b24e61d8706c64d8bba31ce742c2cbe",
+      "actual_sha256": "6af06039e172f0ef75d83c87703f85541b24e61d8706c64d8bba31ce742c2cbe",
+      "matches": true
+    },
+    {
+      "name": "v1 spec",
+      "path": "docs/visualize-eval/rounds/03/network/specs/v1.json",
+      "expected_sha256": "fead45b1bab31f168dbbac73a67b5a8a32901fc6e666e0fc0ea963ed8e081b60",
+      "actual_sha256": "fead45b1bab31f168dbbac73a67b5a8a32901fc6e666e0fc0ea963ed8e081b60",
+      "matches": true
+    },
+    {
+      "name": "v1 artifact bin.sha256",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v1/bin.sha256",
+      "expected_sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "actual_sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "matches": true
+    },
+    {
+      "name": "v1 artifact check.txt",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v1/check.txt",
+      "expected_sha256": "7302737b189085928e7c3dba2c21ed3125eac9ced44154332a329c504aea3a48",
+      "actual_sha256": "7302737b189085928e7c3dba2c21ed3125eac9ced44154332a329c504aea3a48",
+      "matches": true
+    },
+    {
+      "name": "v1 artifact v1-ansi.ansi",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v1/v1-ansi.ansi",
+      "expected_sha256": "5cb4ed2ae46b205343d94653240383c6913d10b6e9753420624c29fe0d33b889",
+      "actual_sha256": "5cb4ed2ae46b205343d94653240383c6913d10b6e9753420624c29fe0d33b889",
+      "matches": true
+    },
+    {
+      "name": "v1 artifact v1-frames.ansi",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v1/v1-frames.ansi",
+      "expected_sha256": "4e3b998f610bef3916d4ee9639796e392ccfe87f3d145a75c52321672d8e64c2",
+      "actual_sha256": "4e3b998f610bef3916d4ee9639796e392ccfe87f3d145a75c52321672d8e64c2",
+      "matches": true
+    },
+    {
+      "name": "v1 artifact v1-frames.txt",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v1/v1-frames.txt",
+      "expected_sha256": "969b4648c9a1dea2ef2c2f94504935c044b4f67625b8a1798dfdce0297928262",
+      "actual_sha256": "969b4648c9a1dea2ef2c2f94504935c044b4f67625b8a1798dfdce0297928262",
+      "matches": true
+    },
+    {
+      "name": "v1 artifact v1-selected.ansi",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v1/v1-selected.ansi",
+      "expected_sha256": "8336da9d9086b34c90ad0cf26045464db3be0cf26b57979cd3c613c8e7e2f5b6",
+      "actual_sha256": "8336da9d9086b34c90ad0cf26045464db3be0cf26b57979cd3c613c8e7e2f5b6",
+      "matches": true
+    },
+    {
+      "name": "v1 artifact v1-text.txt",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v1/v1-text.txt",
+      "expected_sha256": "571fd3b9cf29a39e6a23a6618366828644a996407e09a490a3b5a0708b6a6902",
+      "actual_sha256": "571fd3b9cf29a39e6a23a6618366828644a996407e09a490a3b5a0708b6a6902",
+      "matches": true
+    },
+    {
+      "name": "v2 spec",
+      "path": "docs/visualize-eval/rounds/03/network/specs/v2.json",
+      "expected_sha256": "1babbfc8af2f71d751c58e9e5adbdf4b5f01a46973033e8db6802b3369a27510",
+      "actual_sha256": "1babbfc8af2f71d751c58e9e5adbdf4b5f01a46973033e8db6802b3369a27510",
+      "matches": true
+    },
+    {
+      "name": "v2 artifact bin.sha256",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v2/bin.sha256",
+      "expected_sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "actual_sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "matches": true
+    },
+    {
+      "name": "v2 artifact check.txt",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v2/check.txt",
+      "expected_sha256": "f9f912d13a89a8b0f1932a5b6630de415de027b26ad09fe2fb4fee7b92820414",
+      "actual_sha256": "f9f912d13a89a8b0f1932a5b6630de415de027b26ad09fe2fb4fee7b92820414",
+      "matches": true
+    },
+    {
+      "name": "v2 artifact v2-ansi.ansi",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v2/v2-ansi.ansi",
+      "expected_sha256": "8692396d72afcd4d10b8fb81901a1cc1da94fe8eb3da3a3f8271cfa83540703f",
+      "actual_sha256": "8692396d72afcd4d10b8fb81901a1cc1da94fe8eb3da3a3f8271cfa83540703f",
+      "matches": true
+    },
+    {
+      "name": "v2 artifact v2-frames.ansi",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v2/v2-frames.ansi",
+      "expected_sha256": "4c8198f287db5639e9799a7c0fccb53388b783b0689af32f506be7dd9b5db46a",
+      "actual_sha256": "4c8198f287db5639e9799a7c0fccb53388b783b0689af32f506be7dd9b5db46a",
+      "matches": true
+    },
+    {
+      "name": "v2 artifact v2-frames.txt",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v2/v2-frames.txt",
+      "expected_sha256": "4603addf7889dc58fa8f3532a75b06d75ad8af949c67644d93e8a9c955affb46",
+      "actual_sha256": "4603addf7889dc58fa8f3532a75b06d75ad8af949c67644d93e8a9c955affb46",
+      "matches": true
+    },
+    {
+      "name": "v2 artifact v2-selected.ansi",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v2/v2-selected.ansi",
+      "expected_sha256": "9fc59cfadf49062f5a343341bd661a08bded46605ddfe3c81d8b340d090201a1",
+      "actual_sha256": "9fc59cfadf49062f5a343341bd661a08bded46605ddfe3c81d8b340d090201a1",
+      "matches": true
+    },
+    {
+      "name": "v2 artifact v2-text.txt",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v2/v2-text.txt",
+      "expected_sha256": "96d7e1c7269e9293d4ac4b6c3bce4530b169aa528d58f855442d600f76be2836",
+      "actual_sha256": "96d7e1c7269e9293d4ac4b6c3bce4530b169aa528d58f855442d600f76be2836",
+      "matches": true
+    },
+    {
+      "name": "unchanged blind record",
+      "path": "docs/visualize-eval/rounds/03/reviews/network/observed-first.md",
+      "expected_sha256": "d87936682a613fa39925dc984e6310ce966e89b4d1b4dce46dd9030bccc62631",
+      "actual_sha256": "d87936682a613fa39925dc984e6310ce966e89b4d1b4dce46dd9030bccc62631",
+      "matches": true
+    }
+  ]
+}

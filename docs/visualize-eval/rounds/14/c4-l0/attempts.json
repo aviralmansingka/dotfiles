@@ -1,0 +1,193 @@
+{
+  "case_id": "modal-machine-manager",
+  "round": "14",
+  "view_set": "c4-l0",
+  "views": [
+    {
+      "view": "l0",
+      "diagram": "l0",
+      "concept": "system context: the machine manager as ONE ordinary box in its world",
+      "attempts": [
+        {
+          "id": "l0-a-four-exits",
+          "label": "l0-a-four-exits",
+          "design": "eight nodes, no container: callers left (cp, web, agent), the manager box in the middle, the four things it talks to on the right (providers, machines, S3, Slack), seven coarse arrows, four of them leaving the manager's right side",
+          "records": [
+            "v3-canvas-check",
+            "v4-canvas-check",
+            "l0-diagram-c2-check",
+            "l0-diagram-c3-label-slot",
+            "l0-diagram-c5-slots"
+          ],
+          "lever_sweep": [
+            "no lever: 1 ambiguous label owner (l0:e5 'images + diagnostics')",
+            "layers pin ['prov','mch','slack','s3']: unchanged, 1 ambiguous (layers pins ranks, not sibling order)",
+            "empty slots in the layer ('mch','','prov','','s3','','slack'): unchanged, 1 ambiguous",
+            "label_slot on the S3 edge: the S3 label is owned, the tie moves to 'provider API'",
+            "label_slot on all four right-side exits: 'provider API' gets no free slot at all"
+          ],
+          "verdict": "rejected: a manager box with four exits packs ports one row apart, so one label always ties with a neighbouring route. Measured: labels: 7/7 placed, 1 ambiguous owner."
+        },
+        {
+          "id": "l0-b-short-labels",
+          "label": "l0-b-short-labels",
+          "design": "same four-exit design with every arrow label shortened to one or two words (provisions / http / heartbeat / provider API / boot + audit / boot image / alerts)",
+          "records": ["l0-diagram-c4-short-labels"],
+          "verdict": "rejected: still 1 ambiguous owner ('provider API'); label length does not break the tie, the port spacing does"
+        },
+        {
+          "id": "l0-c-three-exits",
+          "label": "l0-c-three-exits",
+          "design": "the manager keeps three exits only (provider API, boot + audit, confirm + alerts); S3 is reached by the machines it serves ('pull boot image' is that source relation, drawn at its most-fitting level), so mch->s3 lives on L0 and L1 no longer redraws it. label_slot on the middle exit (provider API).",
+          "records": ["l0-diagram-c6-prov-slot", "final-canvas-check"],
+          "verdict": "SHIPPED: 7/7 labels placed, 0 ambiguous, 0 near-misses, 0 skipped"
+        }
+      ]
+    },
+    {
+      "view": "l1",
+      "diagram": "l1",
+      "concept": "the manager opened one level: its boundary services inside a labelled box, the externals outside",
+      "attempts": [
+        {
+          "id": "l1-a-carried-nine-edges",
+          "label": "l1-a-carried-nine-edges",
+          "design": "the liked previous L1 block carried unchanged: eleven nodes, container on six boundary services, five pinned ranks, nine edges including mch->s3",
+          "records": ["v3-canvas-check", "v4-canvas-check"],
+          "verdict": "clean check (0 near-misses, 0 ambiguous labels) but mch->s3 must not be drawn twice once L0 carries it, so the block changed for the coverage rule, not for a layout defect"
+        },
+        {
+          "id": "l1-b-s3-moved-out",
+          "label": "l1-b-s3-moved-out",
+          "design": "ten nodes, eight edges: the S3 corner removed (mch->s3 is on L0), container unchanged, five pinned ranks, externals cp/web/prov/mch outside the box",
+          "records": ["final-canvas-check"],
+          "verdict": "SHIPPED: 8/8 labels placed, 0 ambiguous, 0 near-misses"
+        }
+      ]
+    },
+    {
+      "view": "l1b",
+      "diagram": "l1b",
+      "concept": "the machine side: the fleet's own outward relations",
+      "attempts": [
+        {
+          "id": "l1b-a-carried",
+          "label": "l1b-a-carried",
+          "design": "the liked previous L1b block unchanged: seven nodes, container on q/wapi/pub, four pinned ranks, four edges",
+          "records": ["v3-canvas-check", "v4-canvas-check", "final-canvas-check"],
+          "verdict": "SHIPPED unchanged: 4/4 labels placed, 0 ambiguous, 0 near-misses"
+        }
+      ]
+    },
+    {
+      "view": "l2",
+      "diagrams": ["l2", "l2b"],
+      "concept": "the manager's inside: the container relationships",
+      "attempts": [
+        {
+          "id": "l2-a-merged-pinned",
+          "label": "l2-a-merged-pinned",
+          "design": "ONE diagram for all ten internal relations (nine nodes) with three pinned-rank orderings: [wapi,pgrpc,pub,rec]|[q]|[reg,ssh,jan,db]; [pgrpc,wapi]|[q,pub,rec]|[reg,ssh,jan,db]; [wapi,pub,rec,pgrpc]|[q]|[jan,reg,ssh,db]",
+          "records": ["v1-canvas-check", "v2-canvas-check", "l2-diagram-c3-check"],
+          "verdict": "rejected: every pinning fails validation with 'no obstacle-safe route for jan -> wapi' (the wapi->q->jan->wapi cycle has to cross the queue's rank)"
+        },
+        {
+          "id": "l2-b-merged-auto",
+          "label": "l2-b-merged-auto",
+          "design": "the same nine-node merged diagram with the engine's own ranking (no pins)",
+          "records": ["p4-l2-merged-auto"],
+          "verdict": "rejected: it routes, but with passes-near-unrelated-node: 14 (route l2:e4 hugs 'pub' and 'rec') and 1 ambiguous label owner, both rubric failures"
+        },
+        {
+          "id": "l2-c-split-yield",
+          "label": "l2-c-split-yield",
+          "design": "the L2 level yields to two diagrams, exactly the shapes the owner liked: L2 (queue and dispatch, six edges) and L2b (the state writes into Postgres, four edges). Every one of the ten internal relations is drawn once.",
+          "records": ["final-canvas-check"],
+          "verdict": "SHIPPED: 10/10 labels placed across the two diagrams, 0 ambiguous, 0 near-misses. Evidenced yield, records above."
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "label": "p0-same-rank-hop",
+      "shape": "two nodes of one rank joined by an edge",
+      "result": "rejected: 'no obstacle-safe route for q -> jan, q -> db'; same-rank hops are not routable, which is why the manager's inside cannot be folded into one rank band"
+    },
+    {
+      "label": "p1-desc-wrap-check",
+      "shape": "four two-node diagrams with 255-286 character descriptions",
+      "result": "the frozen build wraps a section description onto three 96-column rows; the canvas widens to 96 columns because the description band is wider than the drawing"
+    },
+    {
+      "label": "p2-newline-rejected",
+      "shape": "a description containing newlines",
+      "result": "rejected by the build: 'diagram \"nl\" has a multi-line \"description\"; it renders on ONE line under the title' — line breaks cannot be hand-placed"
+    },
+    {
+      "label": "p3-prev-l2-six-nodes",
+      "shape": "the previous run's six-node L2 alone, new binary",
+      "result": "still clean (extent 147x15, 0 near-misses): the back edge is routable at six nodes, so the failure above is caused by the merged node count, not by the cycle"
+    },
+    {
+      "label": "p5-container-1line",
+      "shape": "all-member container with a one-line description (container-geometry calibration)",
+      "result": "the box does not hug its members even at the natural fit"
+    },
+    {
+      "label": "p6-container-3line",
+      "shape": "same, three-line description",
+      "result": "same misalignment; the drift grows with the description row count"
+    },
+    {
+      "label": "p7-partial-1line",
+      "shape": "two-member container with pinned ranks, one-line description",
+      "result": "box top correct, bottom one row short of the lowest member"
+    },
+    {
+      "label": "p8-partial-3line",
+      "shape": "same diagram, three-line description",
+      "result": "box three rows below the member band"
+    },
+    {
+      "label": "p9-container-one",
+      "shape": "container on the middle node of a three-node chain",
+      "result": "the box is drawn far left of its member and spans rows the member does not occupy: member lookup and cell rect disagree"
+    },
+    {
+      "label": "p10-container-two",
+      "shape": "container on the first two declared nodes",
+      "result": "the box happens to hug them, which is why one probe alone would have missed the defect"
+    },
+    {
+      "label": "p11-l1-alone",
+      "shape": "the shipped L1 block as a single-diagram canvas",
+      "result": "the container is two rows low: its top border runs through the boot server's label row"
+    },
+    {
+      "label": "p12-l1-alone-1line",
+      "shape": "the same with a one-line description",
+      "result": "still one row low: the drift is not only the description height"
+    },
+    {
+      "label": "p13-l1-alone-nolayers",
+      "shape": "the same block without its rank pins",
+      "result": "rejected: mch -> boot needs the pinned ranks; removing them fails routing"
+    },
+    {
+      "label": "p14-partial-nolayers",
+      "shape": "partial container with automatic ranking",
+      "result": "box still detached from its members"
+    },
+    {
+      "label": "p15-partial-2line",
+      "shape": "partial container with a two-line description",
+      "result": "box still detached"
+    },
+    {
+      "label": "canvas-lap-173x128",
+      "shape": "whole-canvas 140-frame dump at the exact canvas size",
+      "result": "kept as evidence: the only frames capture that shows every dot (10 routes) for the frame audit"
+    }
+  ]
+}

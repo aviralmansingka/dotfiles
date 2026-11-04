@@ -1,0 +1,18 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/03/modal-machine-manager/specs/v1-attempt2.json",
+    "sha256": "7846cd75b300d13052f30651bc7dc50bc8f5aa17be829ccd99a9bfe650386368"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/03/modal-machine-manager/specs/v2-attempt3.json",
+    "sha256": "a35c41b69f31da13aef1256e0c798d9a6c9e432ba3b09ec64bcb2a00b7d2b0f1"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/03/modal-machine-manager/specs/v3-attempt3.json",
+    "sha256": "603a0d518e9c6950b59976a1d9005394ab8e69c0f6e54a1e469256764fc6f46a"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/03/modal-machine-manager/specs/v4-attempt2.json",
+    "sha256": "25a1971517889b3be13c45cc0e6e65a71d971976895ffbb0aae3f3e3da48f237"
+  }
+]

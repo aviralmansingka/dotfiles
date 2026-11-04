@@ -1,0 +1,27 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "layers": [
+    ["q", "wapi", "ssh", "pgrpc", "pub"],
+    ["jan", "slack", "mch", "db"]
+  ],
+  "nodes": [
+    { "id": "q", "label": "River job queue", "group": "control" },
+    { "id": "wapi", "label": "webapi server", "group": "control" },
+    { "id": "pgrpc", "label": "private gRPC", "group": "control" },
+    { "id": "pub", "label": "public gRPC", "group": "control" },
+    { "id": "ssh", "label": "SSH + BMC ops", "group": "ops" },
+    { "id": "jan", "label": "janitor app", "group": "ops" },
+    { "id": "slack", "label": "Slack", "group": "humans" },
+    { "id": "mch", "label": "bare-metal machines", "group": "hosts" },
+    { "id": "db", "label": "Postgres", "group": "state" }
+  ],
+  "edges": [
+    { "from": "q", "to": "jan", "label": "diagnostic events", "dots": 1, "flow": true },
+    { "from": "wapi", "to": "slack", "label": "confirm + alerts", "dots": 1, "flow": true },
+    { "from": "ssh", "to": "mch", "label": "run machine-audit", "dots": 1, "flow": true },
+    { "from": "pgrpc", "to": "db", "label": "machine rows", "dots": 1, "flow": true },
+    { "from": "pub", "to": "db", "label": "machine state", "dots": 1, "flow": true },
+    { "from": "jan", "to": "wapi", "label": "proposed actions", "dots": 1, "flow": true }
+  ]
+}

@@ -1,0 +1,298 @@
+{
+  "checks": [
+    {
+      "path": "docs/visualize-eval/rounds/02/reviews/network/observed-first.md",
+      "sha256": "34635aebb6fa253a585280dd95364320b3f1f2ad9650a237c279420ef6b6d4e8",
+      "expected_sha256": "34635aebb6fa253a585280dd95364320b3f1f2ad9650a237c279420ef6b6d4e8",
+      "match": true,
+      "kind": "immutable blind record"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/SKILL.md",
+      "sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+      "expected_sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+      "match": true,
+      "kind": "frozen baseline"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/rubric.json",
+      "sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f",
+      "expected_sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f",
+      "match": true,
+      "kind": "frozen baseline"
+    },
+    {
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "expected_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "match": true,
+      "kind": "frozen baseline"
+    },
+    {
+      "path": "/tmp/visualize-eval/round-02/bin/rataflow-view",
+      "sha256": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+      "expected_sha256": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+      "match": true,
+      "kind": "frozen baseline"
+    },
+    {
+      "path": "docs/visualize-eval/cases/network/source.md",
+      "sha256": "9d23a7b50d1d26a69f95523a9586bab96ec588afb9628ae274c896992b147947",
+      "expected_sha256": "9d23a7b50d1d26a69f95523a9586bab96ec588afb9628ae274c896992b147947",
+      "match": true,
+      "kind": "frozen case input"
+    },
+    {
+      "path": "docs/visualize-eval/cases/network/expected.json",
+      "sha256": "8cb86d269c21176d775e79f8592f09067049031a0e581df38d66705e73a8caa9",
+      "expected_sha256": "8cb86d269c21176d775e79f8592f09067049031a0e581df38d66705e73a8caa9",
+      "match": true,
+      "kind": "frozen case input"
+    },
+    {
+      "path": "scripts/viz-evidence.sh",
+      "sha256": "2a804dea703e5a9da9cdd788d4eb89690860a02606ec681948670dfe19e8e069",
+      "expected_sha256": "2a804dea703e5a9da9cdd788d4eb89690860a02606ec681948670dfe19e8e069",
+      "match": true,
+      "kind": "frozen harness hash only"
+    },
+    {
+      "path": "scripts/viz-validate.py",
+      "sha256": "0c8a5488c5b40d511d74c6470f076638d2baa33b384abfb398186497cbdf5e66",
+      "expected_sha256": "0c8a5488c5b40d511d74c6470f076638d2baa33b384abfb398186497cbdf5e66",
+      "match": true,
+      "kind": "frozen harness hash only"
+    },
+    {
+      "path": "scripts/viz-aggregate.py",
+      "sha256": "5ab3cfd4c1d84a01ae1aa3c166c2d5331bf6692e15e1d8fb97a2a0905192cffa",
+      "expected_sha256": "5ab3cfd4c1d84a01ae1aa3c166c2d5331bf6692e15e1d8fb97a2a0905192cffa",
+      "match": true,
+      "kind": "frozen harness hash only"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "expected_sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/check.txt",
+      "sha256": "35662a7d64150043e99207ecccd8c44a33e542c5b1aae7cfeb42201bef5d185d",
+      "expected_sha256": "35662a7d64150043e99207ecccd8c44a33e542c5b1aae7cfeb42201bef5d185d",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/v1-ansi.ansi",
+      "sha256": "d7ed82a3906d9b4ba854177b085f3c204a41cf5b2b94a31c8f6e48409b32c4eb",
+      "expected_sha256": "d7ed82a3906d9b4ba854177b085f3c204a41cf5b2b94a31c8f6e48409b32c4eb",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/v1-frames.ansi",
+      "sha256": "31628469683bb23e7ba2c958ddbb1f99c5b8138ae56fd7cff832943f3e128c2a",
+      "expected_sha256": "31628469683bb23e7ba2c958ddbb1f99c5b8138ae56fd7cff832943f3e128c2a",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/v1-frames.txt",
+      "sha256": "ea341136b245cd23b07aa01ac0cae9a24b1bf34f093d3dc462729cf653e1e6bd",
+      "expected_sha256": "ea341136b245cd23b07aa01ac0cae9a24b1bf34f093d3dc462729cf653e1e6bd",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/v1-selected.ansi",
+      "sha256": "b7286fe76f41a7ef895700d5427174eef4bf30b8cc6ce72f8f662ded1ab4c075",
+      "expected_sha256": "b7286fe76f41a7ef895700d5427174eef4bf30b8cc6ce72f8f662ded1ab4c075",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1/v1-text.txt",
+      "sha256": "82a1a0c38f94a9947a979ca4668b48748667d1968216adaedb3f57aed5ee7b97",
+      "expected_sha256": "82a1a0c38f94a9947a979ca4668b48748667d1968216adaedb3f57aed5ee7b97",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/v1.json",
+      "sha256": "6f4e4d15aab2ae01e539f78424a20176eec88f1bf0102738f21d6e75ba5893cd",
+      "expected_sha256": "6f4e4d15aab2ae01e539f78424a20176eec88f1bf0102738f21d6e75ba5893cd",
+      "match": true,
+      "kind": "captured spec binding"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "expected_sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/check.txt",
+      "sha256": "bb0b2f5b4131074e5f5021fcae43f6859fbe67042e562abb2489e02d64157390",
+      "expected_sha256": "bb0b2f5b4131074e5f5021fcae43f6859fbe67042e562abb2489e02d64157390",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/v2-ansi.ansi",
+      "sha256": "8e6ca81a97c09858797cc69163d5b50f60522831fcd2f375c47b75cf5297928d",
+      "expected_sha256": "8e6ca81a97c09858797cc69163d5b50f60522831fcd2f375c47b75cf5297928d",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/v2-frames.ansi",
+      "sha256": "9fb4423315dce84ee201b225c88967fd5490eb06186f19a178dc4ce41100a9e2",
+      "expected_sha256": "9fb4423315dce84ee201b225c88967fd5490eb06186f19a178dc4ce41100a9e2",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/v2-frames.txt",
+      "sha256": "4d5eda6ed5760ea0a0ea2e7a70e24d5cf5e2f07c38f178b288434b60ecbc6996",
+      "expected_sha256": "4d5eda6ed5760ea0a0ea2e7a70e24d5cf5e2f07c38f178b288434b60ecbc6996",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/v2-selected.ansi",
+      "sha256": "133b7b37ef1ede4a43291e38204fe69597104df0045b8f7857b04b5dfc259590",
+      "expected_sha256": "133b7b37ef1ede4a43291e38204fe69597104df0045b8f7857b04b5dfc259590",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v2/v2-text.txt",
+      "sha256": "df44ac9b26895b49a85551f135cfc95aa4cd31735fd585e9d92dfb948caec849",
+      "expected_sha256": "df44ac9b26895b49a85551f135cfc95aa4cd31735fd585e9d92dfb948caec849",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/v2.json",
+      "sha256": "73810910c94dbf26ace0ab263e3c4606b720395d865b56986ed0ce85e3b9d6f4",
+      "expected_sha256": "73810910c94dbf26ace0ab263e3c4606b720395d865b56986ed0ce85e3b9d6f4",
+      "match": true,
+      "kind": "captured spec binding"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1-pre-split/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "expected_sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1-pre-split/check.txt",
+      "sha256": "56f10876d95a02952a3ab77cf65915f2cdf668d65d2850c14f3b0650f29e5ab2",
+      "expected_sha256": "56f10876d95a02952a3ab77cf65915f2cdf668d65d2850c14f3b0650f29e5ab2",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1-pre-split/v1-ansi.ansi",
+      "sha256": "d01b4da6e5b82007670493b19b0424e0320b7d45332a4e1c54cc17bd21d1bdd5",
+      "expected_sha256": "d01b4da6e5b82007670493b19b0424e0320b7d45332a4e1c54cc17bd21d1bdd5",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1-pre-split/v1-frames.ansi",
+      "sha256": "44ed512bc472e26059b4b4f3ed711b55a745336c6814209033a21cd6a193a2d7",
+      "expected_sha256": "44ed512bc472e26059b4b4f3ed711b55a745336c6814209033a21cd6a193a2d7",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1-pre-split/v1-frames.txt",
+      "sha256": "15e050fceb07bb9124f418645dbdd55675cbcf83fcb31f4ccad6cf68dddd2b78",
+      "expected_sha256": "15e050fceb07bb9124f418645dbdd55675cbcf83fcb31f4ccad6cf68dddd2b78",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1-pre-split/v1-selected.ansi",
+      "sha256": "326089202405f4ff7c7f59074b991cd07e980c1bf265dfb2ba3e132df29911a2",
+      "expected_sha256": "326089202405f4ff7c7f59074b991cd07e980c1bf265dfb2ba3e132df29911a2",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/evidence/v1-pre-split/v1-text.txt",
+      "sha256": "052416fe57a4907aaff180c77dc78f22fea9347d9956a8a4afe0fd927a22f9ce",
+      "expected_sha256": "052416fe57a4907aaff180c77dc78f22fea9347d9956a8a4afe0fd927a22f9ce",
+      "match": true,
+      "kind": "capture artifact"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/attempts/v1-attempt2-allinone.json",
+      "sha256": "d8233ebbd41c1a077a374c1b4ea20fc5af7793ebdff8e3577bffef8322322157",
+      "expected_sha256": "d8233ebbd41c1a077a374c1b4ea20fc5af7793ebdff8e3577bffef8322322157",
+      "match": true,
+      "kind": "captured spec binding"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/attempts/v1-attempt1.json",
+      "sha256": "cc00ef4665938ca054b404fee449066884e70bb1f79cff51b60deb5fcccce16e",
+      "expected_sha256": "cc00ef4665938ca054b404fee449066884e70bb1f79cff51b60deb5fcccce16e",
+      "match": true,
+      "kind": "attempt binding"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/attempts/v1-attempt2-allinone.json",
+      "sha256": "d8233ebbd41c1a077a374c1b4ea20fc5af7793ebdff8e3577bffef8322322157",
+      "expected_sha256": "d8233ebbd41c1a077a374c1b4ea20fc5af7793ebdff8e3577bffef8322322157",
+      "match": true,
+      "kind": "attempt binding"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/v1.json",
+      "sha256": "6f4e4d15aab2ae01e539f78424a20176eec88f1bf0102738f21d6e75ba5893cd",
+      "expected_sha256": "6f4e4d15aab2ae01e539f78424a20176eec88f1bf0102738f21d6e75ba5893cd",
+      "match": true,
+      "kind": "attempt binding"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/attempts/v2-attempt1-auto.json",
+      "sha256": "e929f11fdf3a12070214b1113090de5874cbc8da569ce3913b4c4a711c8913b4",
+      "expected_sha256": "e929f11fdf3a12070214b1113090de5874cbc8da569ce3913b4c4a711c8913b4",
+      "match": true,
+      "kind": "attempt binding"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/v2.json",
+      "sha256": "73810910c94dbf26ace0ab263e3c4606b720395d865b56986ed0ce85e3b9d6f4",
+      "expected_sha256": "73810910c94dbf26ace0ab263e3c4606b720395d865b56986ed0ce85e3b9d6f4",
+      "match": true,
+      "kind": "attempt binding"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/v1.json",
+      "sha256": "6f4e4d15aab2ae01e539f78424a20176eec88f1bf0102738f21d6e75ba5893cd",
+      "expected_sha256": "6f4e4d15aab2ae01e539f78424a20176eec88f1bf0102738f21d6e75ba5893cd",
+      "match": true,
+      "kind": "generation final spec binding"
+    },
+    {
+      "path": "docs/visualize-eval/rounds/02/network/v2.json",
+      "sha256": "73810910c94dbf26ace0ab263e3c4606b720395d865b56986ed0ce85e3b9d6f4",
+      "expected_sha256": "73810910c94dbf26ace0ab263e3c4606b720395d865b56986ed0ce85e3b9d6f4",
+      "match": true,
+      "kind": "generation final spec binding"
+    }
+  ],
+  "all_matches": true,
+  "spec_manifest_sha256": "62fded1cd6c2da97d0068800604f475d4285fc59084831329747d6f5a9fd996e",
+  "notes": [
+    "The pre-split capture binds the preserved attempt spec, not current v1.json.",
+    "External binary was hashed only, never executed.",
+    "Harness scripts were hashed only; current source does not substitute for executed evidence."
+  ]
+}

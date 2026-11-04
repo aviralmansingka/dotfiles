@@ -1,0 +1,10 @@
+stty size | tee evidence/seams-v3.tty-size.txt
+
+rounds/01/modal-runtime on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on
+ ☁️  aviralmansingka@gmail.com
+❯ stty size | tee evidence/seams-v3.tty-size.txt
+47 77
+
+rounds/01/modal-runtime on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on
+ ☁️  aviralmansingka@gmail.com
+❯

@@ -1,0 +1,29 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "bond0", "label": "bond0 .1.197" },
+    { "id": "wlp", "label": "wlp8s0 .213" },
+    { "id": "rtr", "label": "Fios router? .1.1" },
+    { "id": "ont", "label": "ONT? 169.254.3.1" },
+    { "id": "vzagg", "label": "VZ edge 100.41.x" },
+    { "id": "vzbb", "label": "VZ backbone AS701" },
+    { "id": "cf", "label": "Cloudflare 1.1.1.1" }
+  ],
+  "layers": [
+    ["bond0", "wlp"],
+    ["rtr"],
+    ["ont"],
+    ["vzagg"],
+    ["vzbb"],
+    ["cf"]
+  ],
+  "edges": [
+    { "from": "bond0", "to": "rtr", "label": "default gw 0.5 ms", "flow": 0.25 },
+    { "from": "wlp", "to": "rtr", "label": "metric 600" },
+    { "from": "rtr", "to": "ont", "label": "NAT out", "flow": 0.25 },
+    { "from": "ont", "to": "vzagg", "label": "4.5 ms", "flow": 0.25 },
+    { "from": "vzagg", "to": "vzbb", "label": "6.6 ms", "flow": 0.25 },
+    { "from": "vzbb", "to": "cf", "label": "6-9 ms", "flow": 0.25 }
+  ]
+}

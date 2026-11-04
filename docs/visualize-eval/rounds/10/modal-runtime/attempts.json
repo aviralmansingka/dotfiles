@@ -1,0 +1,116 @@
+{
+  "case_id": "modal-runtime",
+  "round_dir": "10",
+  "binary": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+  "binary_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+  "spec_attempt_budget_per_view": 3,
+  "views": [
+    {
+      "view": "v1",
+      "carries": "modal-worker <-> modal-runtime anti-parallel gRPC pair, runtime -> Task engine dispatch, runtime -> modal-daemon filesystem HTTP-over-UDS seam",
+      "shipped_spec": "specs/v1-seams.json",
+      "shipped_spec_sha256": "ae21002480ab26a2d6a6770820f172feb10028fad89860c38667654bfbdcc9d2",
+      "attempts": [
+        {
+          "spec": "specs/v1a1-seams.json",
+          "spec_sha256": "05fffa368b5155f4f1576da32b8c202f8ccd44fe00f4bcbc6e6a637fec27357b",
+          "record_label": "v1a1-check",
+          "record_raw": "recorded/v1a1-check-1.stdout, recorded/v1a1-check-1.stderr (this label was already used by the merged 8-node probe, so the wrapper's duplicate-label guard wrote the -1 raw files; the log entry carries spec_sha256 05fffa36… for this spec)",
+          "check": {"extent": "73x14", "crossings": 0, "labels": "4/4 placed, 0 skipped, 2 ambiguous owners", "warnings": 1},
+          "note": "tb, no rank pin. Engine ranked the worker BELOW the runtime (the return edge closes the cycle), so all four runtime endpoints crowded one rank gap and two labels landed nearer a neighbouring route. Rejected: 2 ambiguous label owners."
+        },
+        {
+          "spec": "specs/v1a2-seams.json",
+          "spec_sha256": "4acb6a5a93623547e16bcd5b14e489cfa11adcb72d94200aad24c4d20ce2722e",
+          "record_label": "v1a2-seams-lr",
+          "check": {"extent": "46x17", "crossings": "2 bridges, 2 touching bends", "labels": "3/4 placed, 1 skipped", "warnings": 2},
+          "note": "lr, no rank pin. The worker again ranked after the runtime, so the return edge looped back around the stacked callees: 2 crossings plus a skipped 'dispatches tasks' label. Rejected."
+        },
+        {
+          "spec": "specs/v1a3-seams.json",
+          "spec_sha256": "ae21002480ab26a2d6a6770820f172feb10028fad89860c38667654bfbdcc9d2",
+          "record_label": "v1a3-seams-pinned",
+          "check": {"extent": "48x20", "crossings": 0, "labels": "4/4 placed, 0 skipped, 0 ambiguous owners", "warnings": 0},
+          "note": "tb with rank pins [worker][runtime][engine,daemon] (the source's own flow direction: the worker produces task input, the runtime's callees sit below it) and label_slot on every edge. 0 crossings, all labels placed, no warning. SHIPPED (copied verbatim to specs/v1-seams.json, identical sha256)."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "carries": "Task engine -> Container backend -> Task container, Task engine -> Filesystem + volumes -> Blobnet",
+      "shipped_spec": "specs/v2-exec-storage.json",
+      "shipped_spec_sha256": "2ce2ddb343d92f323dcf882248d321016500bfdd982c6b3442f26f6d7e33e301",
+      "attempts": [
+        {
+          "spec": "specs/v2a1-exec-storage.json",
+          "spec_sha256": "62e4443081e5927e8e1c03eeb890190cf0f0e458b08c333568e1c5b0064f8d8f",
+          "record_label": "v2a1-exec-storage",
+          "check": {"extent": "59x20", "crossings": 0, "labels": "4/4 placed, 0 skipped, 0 ambiguous owners", "warnings": 0},
+          "note": "tb. Mechanically clean, but the engine's two fan labels stacked in one left-hand band (rows 21-22 of the 77x47 dump), so neither label sits beside its own route. Rejected on readability, not on a check warning."
+        },
+        {
+          "spec": "specs/v2a2-exec-storage-lr.json",
+          "spec_sha256": "2ce2ddb343d92f323dcf882248d321016500bfdd982c6b3442f26f6d7e33e301",
+          "record_label": "v2a2-exec-storage-lr",
+          "check": {"extent": "70x11", "crossings": 0, "labels": "4/4 placed, 0 skipped, 0 ambiguous owners", "warnings": 0},
+          "note": "lr: each fan lane carries its label on its own row (starts/manages row 23, mount+snapshot row 31 of the 77x47 dump), 0 crossings. SHIPPED (copied verbatim to specs/v2-exec-storage.json, identical sha256)."
+        },
+        {
+          "spec": "specs/v2a3-exec-storage-noslot.json",
+          "spec_sha256": "b8fd03a5288da71e22dd46b5a9b1cbda60c6fb0ff3d5803f35b1466721ff2ef4",
+          "record_label": "v2a3-exec-storage-noslot",
+          "check": {"extent": "94x9", "crossings": 0, "labels": "4/4 placed, 0 skipped, 0 ambiguous owners", "warnings": 0},
+          "note": "lr with label_slot removed to force the honest proximity metric. The engine then reserved label room horizontally and the graph grew to 94 cells wide, i.e. it overflows the 77-column target ('graph overflows' banner in the pinned dump). Rejected: fit failure."
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "shape": "single merged view, all 8 nodes / 8 edges, tb",
+      "spec": "specs/v1a1.json",
+      "spec_sha256": "c7dcff0a5427432af4f01b0cc39138558fc505c6d0f8fffcdf7b52d439ffcd44",
+      "record_label": "v1a1-check",
+      "record_raw": "recorded/v1a1-check.stdout, recorded/v1a1-check.stderr",
+      "check": {"extent": "62x74", "crossings": 0, "labels": "8/8 placed, 2 ambiguous owners", "warnings": 1},
+      "note": "Five ranks with label-driven rank gaps: 74 rows tall (overflows 47) and 2 ambiguous label owners in the runtime fan. Abandoned: no honest fit at the target size."
+    },
+    {
+      "shape": "single merged view, label_slot on every edge",
+      "spec": "specs/v1a2.json",
+      "spec_sha256": "2adbae70976cb9723e3bef600120d7d0203f4a23b714652b9b2e16e9c1371d05",
+      "record_label": "v1a2-check",
+      "check": {"extent": "62x30", "crossings": 0, "labels": "8/8 placed, 2 ambiguous owners", "warnings": 1},
+      "note": "Slots fixed the height (30 rows) but the fan labels still shared a band beside a neighbouring route: 2 ambiguous owners. Abandoned in favour of the two-view split."
+    },
+    {
+      "shape": "two-node pair view (modal-worker, modal-runtime), lr, bare label placement",
+      "spec": "specs/v1a1-pair.json",
+      "spec_sha256": "20399fd0a6ad4f4eb1f119f798b06296bd74f3cb85cf2d970871f6a72aaecfac",
+      "record_label": "v1pair-a1-lr",
+      "check": {"extent": "61x5", "crossings": 0, "labels": "2/2 placed, 1 ambiguous owner", "warnings": 1},
+      "note": "The two pair lanes are 2 rows apart, so the first label took the row between them: exactly a tie with both routes. Abandoned (and it isolates the pair from the core, so the fan order would not be visible)."
+    },
+    {
+      "shape": "two-node pair view, lr, label_slot on both edges",
+      "spec": "specs/v1a2-pair.json",
+      "spec_sha256": "eaaf969cbc1f4a56ce9eff2d5dfb89dc1eb78953578f9beb4310da1edeef663b",
+      "record_label": "v1pair-a2-slots",
+      "check": {"extent": "44x7", "crossings": 0, "labels": "2/2 placed, 0 ambiguous owners (slot-reserved bands)", "warnings": 0},
+      "note": "Both slots were reserved BELOW both lanes, so the two labels stack in one band two rows from either route. Measured evidence that a bare two-node pair gives the label machinery no side to separate on. Abandoned."
+    },
+    {
+      "shape": "two-node pair view, tb, minlen 2 on the worker->runtime edge",
+      "spec": "specs/v1a3-pair.json",
+      "spec_sha256": "06d1937c55aa36ad971b6e6f764ae867c199378e608b7f64fe87c82575ef3a5d",
+      "record_label": "v1pair-a3-tb-minlen2",
+      "check": {"extent": "28x17", "crossings": 1, "labels": "1/2 placed, 1 skipped, 1 ambiguous owner", "warnings": 2},
+      "note": "minlen 2 opened a two-rank corridor, but the extent stayed 28 cells wide, so the 19-character label had no free cell at all. Abandoned."
+    }
+  ],
+  "probe_inventory": {
+    "distinct_specs_checked": 10,
+    "pinned_size_frames_dumps": 2,
+    "note": "Every --check run above is in attempts-log.jsonl with its command, exit status and raw stdout/stderr sha256s; the two pinned COLUMNS=77 LINES=47 --frames 3 dumps are recorded there too (labels v1-pinned-77x47, v2-pinned-77x47)."
+  }
+}

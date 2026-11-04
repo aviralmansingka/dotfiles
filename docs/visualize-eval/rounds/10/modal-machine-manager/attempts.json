@@ -1,0 +1,122 @@
+{
+  "case_id": "modal-machine-manager",
+  "round": "10",
+  "generator": "viz-ds10-6",
+  "generator_model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+  "binary": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+  "binary_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+  "skill_path": "docs/visualize-eval/rounds/10/SKILL.md",
+  "skill_sha256": "9c1256791069e27207db2e5138527e45587e7096955f5ed4f86c79d46f77e56d",
+  "views": [
+    {
+      "view": "v1",
+      "spec": "specs/v1.json",
+      "attempts": [
+        {
+          "spec_sha256": "c0bca624369dedf6ec6ee11e393183b0eabb72178dfff5497fec36977a48f01f",
+          "spec": "specs/v1-a.json",
+          "record_label": "v1-a",
+          "note": "intake in one tb view, control plane declared first: 44x20, 0 crossings, but the 23-char 'create/terminate/repair' gutter label was skipped (1 skipped label)"
+        },
+        {
+          "spec_sha256": "d8724b0e4378db44b26f004c2a3da7ab365d213c4c081e085d7c285a4124d957",
+          "spec": "specs/v1-b.json",
+          "record_label": "v1-b",
+          "note": "same intake with the node declaration order flipped so humans precede the control plane: engine keeps id order, still 44x20 with the same label skipped. Rejected: a same-rank neighbour blocks the right-hand label gutter."
+        },
+        {
+          "spec_sha256": "c84e1609aefa9b1f45f877e8b71bd2bde85194752f57992d7405e99acdb6648b",
+          "spec": "specs/v1.json",
+          "record_label": "probe-q4fan-console-15",
+          "note": "shipped: human entry node id 'console' sorts before 'cp', so the control-plane column moves right, its 23-char slot label fits, and 'reinstall/repro' (15 chars) reads unambiguous; adds humans->Slack confirm. 63x21, 0 crossings, 5/5 labels, 0 ambiguous."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "spec": "specs/v2.json",
+      "attempts": [
+        {
+          "spec_sha256": "cf02921006e6f1f749d61112f0d3c1cfd1048961b186b9ec7f3ddf78f7de4183",
+          "spec": "specs/v2-a.json",
+          "record_label": "v2-a",
+          "note": "provisioning plus reconcile plus Postgres in one 5-rank view: 64x30, 4 bridges, 4 touching bends, 1 ambiguous owner; q->catalog looped right around the labels"
+        },
+        {
+          "spec_sha256": "7245373d5e38442bb46357e00d7095640ff0c6e3629999725f58c74abdc707e3",
+          "spec": "specs/v2-b.json",
+          "record_label": "v2-b-a",
+          "note": "shipped: Postgres moved to the state view, leaving queue/registry/providers/machines/boot/reconcile. 64x29, 0 bridges, 7/7 labels placed, 0 ambiguous."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "spec": "specs/v3.json",
+      "attempts": [
+        {
+          "spec_sha256": "57cd1c967b2036c6d6e72460bbc0852b10faf45dc8ddaa02ba209fa8b40bcd3b",
+          "spec": "specs/v3-a.json",
+          "record_label": "v3-a",
+          "note": "heartbeat chain plus the two state writers, no queue: 57x29, 0 bridges, 5/5 labels, but job-rows writing was homeless and had to move to v4, which then carried an ambiguous label"
+        },
+        {
+          "spec_sha256": "a7bab030e711df85db0c37717cb5876652b09bc78aa4ede63981eefc38609958",
+          "spec": "specs/v3.json",
+          "record_label": "probe-v3-with-q",
+          "note": "shipped: adds River queue and job-rows (q->Postgres). 73x30, 0 bridges, 0 touching bends, 6/6 labels, 0 ambiguous - the widest shipped view, still 4 columns inside the 77 target"
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "spec": "specs/v4.json",
+      "attempts": [
+        {
+          "spec_sha256": "2b49bd7a7410d3fe0723a26fdee85a057a3589f731c04b7c17908daaee2ab92f",
+          "spec": "specs/v4-a.json",
+          "record_label": "v4-a",
+          "note": "ops view with ssh/janitor/Postgres hub of 8 nodes: 44x32, 1 bridge, 'confirm+alerts' skipped, 1 ambiguous owner"
+        },
+        {
+          "spec_sha256": "cdc1b21529168f9235b8abb56467d25fc257659808bae80cda1a999a97d72035",
+          "spec": "specs/v4-b.json",
+          "record_label": "v4-b",
+          "note": "ssh renamed to id 'bmc' so machines take the left column and webapi the right: 55x32, 0 bridges, 8/8 labels, but 'diagnostics' is equidistant from the queue->Postgres lane (1 ambiguous owner)"
+        },
+        {
+          "spec_sha256": "717d2f6900382b26b540fb325de478bc01377d6dbecaba230891d6485e1101fe",
+          "spec": "specs/v4.json",
+          "record_label": "probe-v4-j-no-slack",
+          "note": "shipped: Slack confirm moved to the intake view, Postgres job-rows to the state view, and rank pins put S3 beside machines (mch->s3 becomes one inside-rank hop). 70x24, 0 bridges, 6/6 labels placed, 0 ambiguous."
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "label": "v1-a (first run, spec sha 41f2aa43d58e28644d4f524bd8ead9d392c075edd8a2ba36424014277a9a45fb)",
+      "note": "whole lifecycle in ONE tb view (9 nodes, 9 edges): extent 49x103 - 103 rows against a 47-row target, 1 skipped label, 2 ambiguous owners. Proved the case must be split; the spec file was superseded in place, the raw check is recorded/logged."
+    },
+    {
+      "label": "probe-p2n / probe-p2l2 / probe-p2l13 / probe-p2l13slot / probe-p3l2",
+      "note": "calibration of the tb rank-gap cost: extent height grows by (label width - 1) for a gap label, and label_slot moves that cost to width (18x12 -> 18x24 -> 30x12)."
+    },
+    {
+      "label": "probe-l2n / probe-l2l13 / probe-l3l6 / probe-l5l6 / probe-t5slots",
+      "note": "orientation calibration: lr spends label width per rank (5 ranks x 6-char labels = 79 > 77) while tb with label_slot keeps 5 ranks at 36 rows, so tb was chosen for every view."
+    },
+    {
+      "label": "probe-q2l23 / probe-q4fan / probe-q4fan-noslot-http / probe-q4fan-short18 / probe-q4fan-short-edges / probe-q4fan-grouporder / probe-q4fan-idsort / probe-q4fan-idsort-B/C/D / probe-q4fan-no-0..3 / probe-q4fan-e4-short9/short13/short11/14/15/16b / probe-q4fan-layers / probe-q4fan-console-15 / probe-q4fan-console-16",
+      "note": "label-gutter placement experiments on the intake fan: a 23-char slot label needs free columns on the right of its run; group rename does not reorder siblings but node id order does; 16-char 'reinstall+reprov' stays ambiguous while 15-char 'reinstall/repro' is clean."
+    },
+    {
+      "label": "probe-v4-lbl16 / probe-v4-lbl7 / probe-v4-pull13 / probe-v4-both / probe-v4-drop0..7 / probe-v4-c-dbmid / probe-v4-d-dbright / probe-v4-e-noslot-jobrows / probe-v4-f-noslot-diag / probe-v4-g-jobrows-short / probe-v3-with-q / probe-v4-no-state / probe-v4-h-s3rank1 / probe-v4-i-s3rank2 / probe-v4-j-no-slack / probe-v1-with-slack",
+      "note": "ops/state split search: relabelling never removed the queue->Postgres lane ambiguity; moving job-rows to the state view and Slack to intake, plus rank pins placing S3 beside machines, removed both the bridge and the ambiguity."
+    },
+    {
+      "label": "lap-v1 / lap-v2 / lap-v3 / lap-v4",
+      "note": "200-frame dumps at COLUMNS=77 LINES=47 used to measure route lengths (probes/route-measure.py) before choosing the per-view frame counts."
+    }
+  ]
+}

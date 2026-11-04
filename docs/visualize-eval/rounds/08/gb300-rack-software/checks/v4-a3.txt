@@ -1,0 +1,12 @@
+# v4 attempt 3 (drop the multi-rank "compute host" region: its box rendered displaced/empty and its border cut the Fabric Mgr label)
+viewport: unknown zoom: 1.00 natural
+ok: nodes=7 edges=6 flows=0 direction=tb theme=gruvbox
+extent=50x44 cells
+crossings: 0 bridges, 0 touching bends
+labels: 2/2 placed, 0 on route cells, 0 skipped, 0 ambiguous owners
+groups: cluster(2) in-band(1)
+trunks:
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step
+exit=0

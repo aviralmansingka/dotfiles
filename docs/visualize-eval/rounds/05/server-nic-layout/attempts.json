@@ -1,0 +1,84 @@
+{
+  "case_id": "server-nic-layout",
+  "round": "05",
+  "binary": "/tmp/visualize-eval/round-05/bin/rataflow-view",
+  "binary_sha256": "b1ab9f2e78af11c2f2b005eea083a999079d184bf550e8d0b6d9c51867f22404",
+  "skill_sha256": "ff4a9d3f32ba0bf86e54ee6bfbac02fdea3fac3b95b82a958b3411accef0a949",
+  "views": [
+    {
+      "view": "v1",
+      "carries": "server1 8-port count, the one active uplink eno16595np0, the 7 dark ports with the no-cable caveat, the gateway address plus AS132717, and the fresh-handoff state",
+      "final_spec": "specs/v1-a3.json",
+      "attempts": [
+        {
+          "spec": "specs/v1-a1.json",
+          "spec_sha256": "8aa57bddccd34e2cbbe569af3f6f9a0ba6b6c5a9659024e1d01d52c8e8cf6a2",
+          "raw_check": "attempts/v1-a1.check.txt",
+          "note": "first candidate, tb: 5 nodes/3 edges, extent 25x32, crossings 0 bridges/0 bends, labels 3/3, 0 ambiguous. Rendered free of overlap but the /29 AS number and the 1.5-day uptime were missing from the view."
+        },
+        {
+          "spec": "specs/v1-a2.json",
+          "spec_sha256": "9c5ade09f99ec65af6788c41805a45d6af89cf935dc60fe11b7ec5995e372452",
+          "raw_check": "attempts/v1-a2.check.txt",
+          "note": "second candidate: relabel only (7 of 8 dark, fresh 1.5d no GPUs) to carry the 8-port count and uptime. extent 25x32, crossings 0/0, labels 3/3, 0 ambiguous. Kept as a fallback; the gateway still lacked AS132717."
+        },
+        {
+          "spec": "specs/v1-a3.json",
+          "spec_sha256": "9a168877e235238ef065eeeddf3c3424273ac85a9d1a745d23f73aff62b5e19e",
+          "raw_check": "attempts/v1-a3.check.txt",
+          "note": "FINAL. gw label widened to 'Arista 103.19.91.57 AS132717' because the /29 view could not carry the AS number (v2-a3 overflowed). extent 34x32, crossings 0 bridges/0 touching bends, labels 3/3 placed, 0 on route cells, 0 skipped, 0 ambiguous owners. Chosen over a2 for fact fidelity at no layout cost warning."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "carries": "the routed /29 pool: gateway .57, server1's .58 side, server2 R7725 .59 on the same /29, .60-.62 free, and the no-NAT/no-v6 attachment",
+      "final_spec": "specs/v2-a2.json",
+      "attempts": [
+        {
+          "spec": "specs/v2-a1.json",
+          "spec_sha256": "293c1514bf0bec55e2ca13a1d940c81aa772e9ad1343bd32384f45920f1443fd",
+          "raw_check": "attempts/v2-a1.check.txt",
+          "note": "REJECTED. tb star: extent 95x16 cells is 18 cells wider than the 77-column target, and the check reported 1 ambiguous owner (domain '.60-.62 free?' pool labels). Read, then changed direction only."
+        },
+        {
+          "spec": "specs/v2-a2.json",
+          "spec_sha256": "36288a634dbcb7c4a832f4e63576f8c831059ba17e6575b2b3c9c926270813c6",
+          "raw_check": "attempts/v2-a2.check.txt",
+          "note": "FINAL. Same nodes/edges, direction lr (a 2-rank star spends width in tb). extent 62x39, crossings 0 bridges/0 touching bends, labels 3/3 placed, 0 on route cells, 0 skipped, 0 ambiguous owners. Orientation change alone removed both the overflow and the ambiguous owner."
+        },
+        {
+          "spec": "specs/v2-a3.json",
+          "spec_sha256": "6dae9bfaf9bfd9e43d2ab686212471d4f91c9b11ca0d688c625323505ef0e5d6",
+          "raw_check": "attempts/v2-a3.check.txt",
+          "note": "REJECTED. Tried to add AS132717 to the gw label; extent 85x39 overflows 77 columns (preserved probe attempts/v2-a3.pinned-frames-77x47.txt prints 'graph overflows · drag to pan' at pinned 77x47). AS132717 moved to v1 instead; v2 stays at a2."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "carries": "observed upstream hops with latencies, the single visible ISP, Cloudflare's AS, and the trace caveats (silent hops, unresolved L2)",
+      "final_spec": "specs/v3-a3.json",
+      "attempts": [
+        {
+          "spec": "specs/v3-a1.json",
+          "spec_sha256": "0fc94f9a4225f32aaf4a50e96533475272abdf891f024b17656beee34894bbdf",
+          "raw_check": "attempts/v3-a1.check.txt",
+          "note": "REJECTED. --check was clean (extent 25x32, labels 3/3, 0 ambiguous) because it reports only edge labels, but the frame showed 5 of 6 nodes: the isolated caveat node 'L2? unproven' was never drawn (preserved probe attempts/v3-a1.pinned-frames-77x47.txt: header says 6 nodes, 5 box tops per frame, 0 'L2' hits). A required qualifier cannot live in an undrawn node."
+        },
+        {
+          "spec": "specs/v3-a2.json",
+          "spec_sha256": "8c706f780a81b943b3839ada69c7fd791118fa0d85cea1b14514101a87629a67",
+          "raw_check": "attempts/v3-a2.check.txt",
+          "note": "REJECTED. Gave the caveat pair an edge (silent -> l2q) so both would be placed; the router failed with 'no obstacle-safe route for gw -> airtel, silent -> l2q; increase node/layer spacing' (exit 1)."
+        },
+        {
+          "spec": "specs/v3-a3.json",
+          "spec_sha256": "e763922cf2b57393818e9c176ee697d63a25fc6906bd40ba7d0fd5cb8e9131a6",
+          "raw_check": "attempts/v3-a3.check.txt",
+          "note": "FINAL. One caveat node ('L2? hops 3,6 nil') on a dashed annotation spur from the gateway; extent 64x32, crossings 0 bridges/0 touching bends, labels 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners. Both caveat facts and the L2? qualifier draw."
+        }
+      ]
+    }
+  ]
+}

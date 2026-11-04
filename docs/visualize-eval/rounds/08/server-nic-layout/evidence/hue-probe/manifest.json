@@ -1,0 +1,34 @@
+{
+  "spec_path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/08/server-nic-layout/specs/probe-hues.json",
+  "spec_sha256": "2de46b6f1ca0266a51bba3dbdfc43c2ad4b0d3d0ae36dc60b87bbcc38ae27efe",
+  "binary_path": "/tmp/visualize-eval/round-08/bin/rataflow-view",
+  "binary_sha256": "ea24593b0f80c1617573eef4766f2bacaaf4315a8133a65d5331e9daec1c1f30",
+  "pane_id": "w7E:pKM",
+  "pane_rect": null,
+  "pane_cols": null,
+  "pane_rows": 51,
+  "viewport_line": null,
+  "viewport_token": "83x51 @100%",
+  "check_exit": 0,
+  "check_window": [
+    "2026-11-02T21:02:28Z",
+    "2026-11-02T21:02:28Z"
+  ],
+  "capture_window": [
+    "2026-11-02T21:02:28Z",
+    "2026-11-02T21:02:32Z"
+  ],
+  "cleanup": "confirmed_closed",
+  "select_all_frame": true,
+  "frames": 3,
+  "frame_step_ms": 100,
+  "artifacts": {
+    "bin.sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+    "check.txt": "34689f4b610ec86b0dacce2d10b677f011351c8561e0121b006a6e660dbd087f",
+    "hueprobe-ansi.ansi": "8869aab2da6e5e9aef3f0d9bf269e79998701217adc4d20b73caf30ea2e50efd",
+    "hueprobe-frames.ansi": "f34734a944e8efcbc0a6c576d19076e96bf4268f4e48c7756d2081306f0fbf8e",
+    "hueprobe-frames.txt": "6e7bf090503c230797bc4cd09bb98db0e90ea8a256c0422a80292ed2205ffa5f",
+    "hueprobe-selected.ansi": "2187c592a2edc7ee22c4c121b59043c0b7b34869b44465762361e434119d0249",
+    "hueprobe-text.txt": "91a906b8b1e0629d34ff67bece7ecf68fc4234e86ddfc4f46c723e5747588a92"
+  }
+}

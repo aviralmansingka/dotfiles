@@ -1,0 +1,18 @@
+[
+  [
+    "docs/visualize-eval/rounds/01/datacenter-redundancy/specs/view1-isp-mux.json",
+    "e2cd6d8e3c6fc18874a944a58d5b27270d0a125630b61868e4c3a14c51fc3f9d"
+  ],
+  [
+    "docs/visualize-eval/rounds/01/datacenter-redundancy/specs/view2-mux-core.json",
+    "bf534caf77d60058529824cc699659e5c3281045b0c2b3a30e22b41282f6a5f6"
+  ],
+  [
+    "docs/visualize-eval/rounds/01/datacenter-redundancy/specs/view3-fw-ha.json",
+    "196b286044375214c68e457d182a02a05323adcbf6741fb6941047217b91bd6b"
+  ],
+  [
+    "docs/visualize-eval/rounds/01/datacenter-redundancy/specs/view4-fabric.json",
+    "ff24f445d9e2ef696063142efbf63e18ab7d0756c4d4ce3be402b19a10093257"
+  ]
+]

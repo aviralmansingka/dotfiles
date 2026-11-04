@@ -1,0 +1,46 @@
+ rataflow-view · spec.json · 4 nodes · 3 edges · 0 flows · drag pan · scroll
+
+
+
+
+
+
+
+
+
+
+                     ╭─────────────╮
+                     │modal-runtime│
+                     │             │
+                     ╰─────────────╯
+                      │ dispatch tasks
+                      ╰╮
+                       │
+                      ╭───────────╮
+                      │Task engine│
+                      │           │
+                      ╰───────────╯
+                       │ start/manage
+                    ╭──╯
+                    │
+                   ╭─────────────────╮
+                   │Container backend│
+                   │                 │
+                   ╰─────────────────╯
+                    │    run user proc
+                    ╰──────────────────────╮
+                                           │
+                                          ╭──────────────╮
+                                          │Task container│
+                                          │              │
+                                          ╰──────────────╯
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘

@@ -1,0 +1,44 @@
+ rataflow-view · 68x44 @100% · canvas 171x91 · c4-containers.json ·
+
+────────────────────────────────────────────────────────────────────
+L1 · System context — the machine manager
+The manager's boundary services in one box; the control plane, human
+
+
+                                                  ╔═Machine manager═
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+╭───────────────────╮ create / terminate / repair ║╭────────────╮
+│Modal control plane│─────────────────────────────▶│private gRPC│
+│                   │                             ║│            │
+╰───────────────────╯                             ║╰────────────╯
+                                                  ║
+   ╭──────────────╮               http            ║   ╭──────╮
+   │humans + mmctl│──────────────────────────────────▶│webapi│
+   │              │                               ║   │      │
+   ╰──────────────╯                               ║   ╰──────╯
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ║
+                                                  ╚═════════════════
+
+
+────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatc
+═Machine manager══════════════════════════                         ═
+                                   ╭──────           ▄
+                             ╭────▶│webapi    ▝█▌  ▜▐█▖ ▜█  ██     ─
+                             │     │              ▖      ▄▖        n
+╭┌───────┐──╮proposed actions│     ╰──────    ▝▘ ▝▘  ▀▘  ▀▘
+││ + [+] │pp│────●───────────╯                 ▄  ▄
+││ − [-] │  │                   ╭─────────    ▗█▘ ▀
+╰│ ⊡ [f]─│──╯                   │private g           ▗▖            ─
+ │ □ [i] │                      │             ▝▀▘ ▀▘ ▐▀ ▝▀
+ └───────┘                      ╰─────────
+══════│═════════════════════════════════════════════════════════════

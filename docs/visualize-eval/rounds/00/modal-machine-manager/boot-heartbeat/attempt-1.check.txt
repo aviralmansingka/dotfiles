@@ -1,0 +1,4 @@
+ok: nodes=6 edges=6 flows=1 direction=tb theme=gruvbox
+layers=4 (explicit placement, sugiyama skipped)
+extent=41x26 cells
+warning: 3 edge label(s) had no free slot; shorten the labels or split the graph

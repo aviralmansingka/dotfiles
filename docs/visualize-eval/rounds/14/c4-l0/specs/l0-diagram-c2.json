@@ -1,0 +1,113 @@
+{
+ "direction": "lr",
+ "theme": "gruvbox",
+ "diagrams": [
+  {
+   "nodes": [
+    {
+     "id": "cp",
+     "label": "Modal control plane",
+     "group": "modal"
+    },
+    {
+     "id": "web",
+     "label": "humans + mmctl",
+     "group": "operators"
+    },
+    {
+     "id": "agent",
+     "label": "machine-agent",
+     "group": "machines"
+    },
+    {
+     "id": "mm",
+     "label": "Machine manager",
+     "group": "manager"
+    },
+    {
+     "id": "prov",
+     "label": "bare-metal providers",
+     "group": "providers"
+    },
+    {
+     "id": "mch",
+     "label": "bare-metal machines",
+     "group": "machines"
+    },
+    {
+     "id": "s3",
+     "label": "S3 object store",
+     "group": "storage"
+    },
+    {
+     "id": "slack",
+     "label": "Slack",
+     "group": "tooling"
+    }
+   ],
+   "edges": [
+    {
+     "from": "cp",
+     "to": "mm",
+     "label": "provisioning",
+     "dots": 0
+    },
+    {
+     "from": "web",
+     "to": "mm",
+     "label": "http",
+     "dots": 0
+    },
+    {
+     "from": "agent",
+     "to": "mm",
+     "label": "register + heartbeat",
+     "dots": 0
+    },
+    {
+     "from": "mm",
+     "to": "prov",
+     "label": "provider API",
+     "dots": 0
+    },
+    {
+     "from": "mm",
+     "to": "mch",
+     "label": "boot + audit",
+     "dots": 0
+    },
+    {
+     "from": "mm",
+     "to": "s3",
+     "label": "images + diagnostics",
+     "dots": 0
+    },
+    {
+     "from": "mm",
+     "to": "slack",
+     "label": "confirm + alerts",
+     "dots": 0
+    }
+   ],
+   "id": "l0",
+   "title": "L0 \u00b7 System context",
+   "description": "System context: the machine manager is one box. The control plane and humans + mmctl call it; it drives the bare-metal providers, boots and audits the machines, keeps images and diagnostics in S3, and alerts in Slack. Nothing inside is shown yet, so L1 opens it.",
+   "layers": [
+    [
+     "cp",
+     "web",
+     "agent"
+    ],
+    [
+     "mm"
+    ],
+    [
+     "prov",
+     "mch",
+     "slack",
+     "s3"
+    ]
+   ]
+  }
+ ]
+}

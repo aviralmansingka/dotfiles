@@ -1,0 +1,1 @@
+{"direction":"tb","nodes":[{"id":"a","label":"control plane"},{"id":"b","label":"private gRPC"}],"edges":[{"from":"a","to":"b","label":"create/terminate/repair","label_slot":true}]}

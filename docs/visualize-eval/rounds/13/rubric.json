@@ -1,0 +1,811 @@
+{
+ "protocol_version": 1,
+ "freeze": "Freeze this rubric and all eight source-backed cases before round 0. Changes require a labeled new baseline, never a skill-only success.",
+ "case_ids": [
+  "pipeline",
+  "network",
+  "homelab-nic-trace",
+  "server-nic-layout",
+  "datacenter-redundancy",
+  "modal-machine-manager",
+  "modal-runtime",
+  "gb300-rack-software"
+ ],
+ "required_generator_model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+ "required_reviewer_model": "openai/gpt-6.1-terra:high",
+ "required_viewport": {
+  "columns": 77,
+  "rows": 47,
+  "zoom_percent": 100
+ },
+ "categories": {
+  "semantic_fidelity": {
+   "pass_iff": "Every source-required concept, label meaning, directed relationship, order and tier is preserved; none is missing, reversed or invented. Human corrections take precedence over old generated specs. Every split has explicit complete coverage including cross-view relations. GB300 follows the last human free-software-only request."
+  },
+  "arrow_traceability": {
+   "pass_iff": "Every independent link can be traced from its source stem to its unique arrowhead, with correct direction, no fake branches and crossings distinguishable from connections. Intentional source-named buses remain traceable through their specified junctions. GB300 OOB uses the requested single trunk split once; redundant datacenter independent links are never bundled. A universal one-route-per-edge rule cannot override the explicit bus request. A dot that starts away from its arrow's origin makes that arrow's direction unproven. Routes take near-minimal obstacle-safe paths: a route that loops or detours beyond what obstacles force is a defect, and the check's route-economy warnings count against this category. The `passes-near-unrelated-node` class fails this category: a route must never run near, hug, or overlap a node that is neither its source nor its destination, because a route inside the ring that touches an unrelated node's box reads as a connection to that node even when the route itself is continuous. Judge it from the captures, and, where the frozen `--check` reports it, from its `near-miss: route eN passes <c> cell(s) at ring <r> of node '<id>' (nearest cell <x>,<y>)` lines and its `passes-near-unrelated-node` count, which must read 0 unless the source itself names that adjacency. The named instance is the gb300 a3 defect: `nvos -> nmxc` and the in-band routes hug the OOB LAN until they read as connected to it. A distinguishable dot hue never repairs such an ambiguity; the route must move."
+  },
+  "layout_fit": {
+   "pass_iff": "Fit is proven for each rendered surface in exactly one of two ways, and evidence for one of the two must exist. (A) PINNED NATURAL FIT: actual 77x47 half-pane captures at natural 100% zoom show every complete box and full label of the whole spec, without clipping or overlay occlusion. PINNED RULING: fit is proven either by a live pane's own measured header token at 77x47 @100% natural, or by a pinned direct dump of THIS view's FINAL spec at exactly 77x47 natural zoom with no overflow banner; one of the two must exist per view. Record actual live pane dimensions separately. Panning or zooming out cannot rescue the required view. (B) NAVIGABLE LARGE CANVAS: a spec that declares several concept-diagrams on one canvas (the `diagrams` form) passes when the whole canvas is drawn at natural 100% zoom on a surface the reader pans and zooms, and the evidence proves the reader can navigate it rather than that it was clipped away: `--check` prints `canvas: N diagrams on one canvas, drawn whole at 100%`, one `diagram <n> \"<title>\" at <x>,<y>: extent=<w>x<h> nodes=<n> edges=<n> routes=<n>` line per diagram, and the whole-canvas extent line; and every diagram carries a rendered title AND a one-line description above its own drawing. Branch B is open when the source has several concepts that separate cleanly or a graph that cannot fit 77x47 at natural zoom. It never rescues a single small concept that fitted branch A, and it never excuses a dropped, thinned or merged relation. All split views and canvases meet the same gate and have complete source coverage. Crossings are reported and kept to a minimum by layout: a candidate may not add avoidable crossing pairs, and may not reorder source groups, layers or tiers to reduce crossings. Reducing crossings never excuses lost, reversed or merged relations."
+  },
+  "navigation_clarity": {
+   "pass_iff": "Every diagram of a multi-diagram canvas carries a rendered title and a one-line description, and the description is true: it names the concept that diagram actually draws and the seam, scope or plane it covers, in words a reader can use to find a source fact. A description that promises a concept the diagram does not show, misnames its scope, is interchangeable boilerplate across unrelated diagrams, or is missing on a canvas diagram fails this category. Concepts are separable: each diagram carries one concept or theme, no two diagrams duplicate or contradict the same concept, and the canvas's diagram order tells a reader where in the source to look. A complex canvas is navigable: the reader can reach and identify every diagram from the drawing alone, titles and descriptions are not clipped or occluded, the check's per-diagram `at <x>,<y>: extent=<w>x<h>` lines agree with the capture, and the generation-time coverage map names, for every source relation, the titled diagram that carries it. A single-graph view that fits branch A of layout_fit is exempt: it needs no title line and passes on separability alone. Navigability is pan and zoom of a drawing still at natural zoom; a canvas whose text was shrunk to fit, or a description invented to cover a missing diagram, fails. Clarity outranks shaping: a reader must never need an external note, the chat history, or the source file to know what a diagram is for."
+  },
+  "conceptual_grouping_color": {
+   "pass_iff": "Related source concepts are near each other and use related hue families. Grouping is logical: the spec's group tags drive hue families and the global block order; drawn boxes, borders and titles around groups are NOT required and their absence is never a defect. When the source names tiers, tier membership must still be readable through hue families or a single non-boxed label line. Source-defined order and tiers are respected. No arbitrary alphabet cycling or color grouping unsupported by the source. Case-wide hue consistency: one `group` tag keeps ONE hue family in every diagram of a canvas and every view of the case; a shared tag that changes hue between diagrams (the round-12 `worker-plane` green in v1, orange in v2) fails, because the reader carries the grouping signal across the canvas by color. Two different groups may share a family only when the generator records the choice and the two never need to be told apart in one diagram."
+  },
+  "category_fit": {
+   "pass_iff": "The generator classifies the source into one of the six families (flow-chains, service-meshes, redundant-fabrics, lifecycle-machines, placement-planes, identity-probe-maps) and states its choice with one source-backed evidence line. The chosen family matches the source's actual structure as visible in the captures: density and fan shape, anti-parallel pairs, double-arrowhead targets, phase order, weakly-connected worlds with a bus, and identifier/qualifier density are the discriminating facts. That family's patterns then inform the layout \u2014 taken where they fit,\n deviated-with-recorded-reason wherever the source's structure demands\n it: chains keep short single-stage ranks with per-hop corridor room; meshes order the fan ports and keep an anti-parallel pair co-viewed as two distinct edges; fabrics pin the source's tiers and keep redundant links as independent parallel lanes without bundling or a trunk, with no dots unless the source animates them; lifecycle machines rank by source phase with the boot sequence readable in one direction and one dot per live transition; placement planes render each weakly-connected world as its own side-by-side area (spatial, not a drawn box) with one bus splitting once; identity maps cover every identifier and qualifier before layout is tuned. A recipe demand YIELDS when the generator records measured attempts proving the renderer structurally cannot satisfy it (for example one-view pairing under label sizing): a yield recorded in generation.json with that evidence cannot by itself fail this category, but the unmet recipe must then be satisfied as closely as the renderer allows. A wrong family, a missing or unsupported evidence line, or a deviation with no recorded reason fails this category; a straddling source passes when the dominant family is named and the borrowed secondary habits are stated and visible."
+  },
+  "border_integrity": {
+   "pass_iff": "Every node side and corner is complete and uses a consistent per-node border color, including handles and selected states. ANSI or buffer evidence proves color continuity; plain text alone cannot pass. Every node border must be complete and unobstructed in its own view: any node border cell overwritten by the control palette or any other floating UI is a border-integrity defect, in normal and selected states alike."
+  },
+  "workflow_evidence": {
+   "pass_iff": "Candidate skill bundle, frozen binary, rubric, dataset and spec hashes identify reproducible inputs. Fresh isolated generator identity and a separate independent critic identity on the rubric's required reviewer model, blind-first observation record, exact commands, full --check stdout/stderr/exit status, actual text plus ANSI/buffer pane captures, dimensions, states and coverage are preserved. Every probe and rejected draft is recorded through scripts/viz-evidence.sh record into attempts-log.jsonl (command, exit status, raw stdout/stderr, sha256s) and the log passes viz-validate.py --require-records; hand-kept or missing probe records are an evidence gap. No pane art is pasted into chat. Owned panes are cleaned up, including failures. Missing tools or models block rather than substitute. Live pane size is proven by the running app's own measured header token or a preserved pane-rectangle record; a hardcoded or invented pane geometry fails. A frames capture (at least 3 timestamped frames) is required for EVERY view, static ones included; its absence is an evidence gap, never a silent pass. Animated-view captures must cover a full lap of the longest route."
+  },
+  "animation": {
+   "pass_iff": "Dots appear only where the source animated them; an explicit source request for no dots removes them everywhere in that case. When dots are present, timestamped actual-render evidence shows sparse, slow dots at a constant shared speed: every dot moves at the same rate, starts together at t=0, and starts at the actual start of its own arrow \u2014 the FIRST DRAWN CELL after the source port, including when that cell is a corner glyph; the check line and the capture must agree on that cell. A dot may rest on its origin cell even when it is a corner, but must never rest on any other corner, bridge, or junction, and never obscures a label. Same-arrival timing applies only when the source or user specifies it, and that arrival must be visible at the arrowheads in one frame. Evaluate all animated routes, not a single attractive frame. Dot color binds its route: where parallel routes are dense, each dot carries the hue of its own route's source or destination node, at whichever end leaves fewer routes sharing one dot hue (the least-conflict end) - never an arbitrary accent, and never a per-view hue wheel. The check's `dot hues: N by source, M by destination, K shared-hue pair(s) (source-only S, destination-only D)` line must agree with the capture; a dot whose hue matches neither end, or a shared-hue pair the least-conflict end could have avoided, is a defect. Dot color never repairs a routing ambiguity: a route that passes near an unrelated node still fails arrow_traceability however distinct its dot.",
+   "not_applicable_iff": "The frozen source-backed manifest explicitly establishes that animation was not requested. Record the reason and source reference; unknown applicability is blocked."
+  }
+ },
+ "aggregation": {
+  "category_statuses": [
+   "pass",
+   "fail",
+   "blocked"
+  ],
+  "not_applicable": "Only animation may have applicable=false and status=null, with a source-backed reason. It adds no pass to the metric.",
+  "green": "All applicable categories and all audited required edges pass, with complete evidence, for every one of the eight fixed cases.",
+  "case_status": "fail if any known category/edge failure; otherwise blocked if any required evidence, capability or audit is missing; otherwise pass.",
+  "metric_lexicographic_max": [
+   "green_cases",
+   "passed_applicable_categories",
+   "negative_critical_defect_count",
+   "negative_high_defect_count"
+  ],
+  "guard": "No regressions on any green case; no dataset/rubric weakening; missing findings in blocked reviews cannot improve the metric. Gather all eight critiques before revision.",
+  "stop": "All green, unsupported required rendering/model capability, or the same blocker/no metric improvement after two consecutive candidate revisions. Report red matrix and exact blocker."
+ },
+ "severity": {
+  "critical": "A false, missing or reversed source relationship/concept, or a violation of an explicit human prohibition, changes the diagram's meaning.",
+  "high": "An untraceable link, unreadable required label, missing view, misleading grouping or broken required evidence prevents reliable interpretation or verification.",
+  "medium": "A localized rubric violation leaves meaning recoverable but still fails the category.",
+  "low": "A small observable rubric violation still fails the category; severity never waives a gate."
+ },
+ "result_schema": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Visualize independent case review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+   "protocol_version",
+   "round",
+   "case_id",
+   "candidate_sha256",
+   "renderer_sha256",
+   "rubric_sha256",
+   "dataset_sha256",
+   "spec_sha256",
+   "generator",
+   "reviewer",
+   "viewport",
+   "live_pane",
+   "evidence",
+   "observed_first",
+   "categories",
+   "edge_audit",
+   "findings",
+   "blockers",
+   "cleanup",
+   "overall"
+  ],
+  "properties": {
+   "protocol_version": {
+    "const": 1
+   },
+   "round": {
+    "type": "integer",
+    "minimum": 0
+   },
+   "case_id": {
+    "enum": [
+     "pipeline",
+     "network",
+     "homelab-nic-trace",
+     "server-nic-layout",
+     "datacenter-redundancy",
+     "modal-machine-manager",
+     "modal-runtime",
+     "gb300-rack-software"
+    ]
+   },
+   "candidate_sha256": {
+    "$ref": "#/$defs/hash"
+   },
+   "renderer_sha256": {
+    "$ref": "#/$defs/hash"
+   },
+   "rubric_sha256": {
+    "$ref": "#/$defs/hash"
+   },
+   "dataset_sha256": {
+    "$ref": "#/$defs/hash"
+   },
+   "spec_sha256": {
+    "$ref": "#/$defs/hash"
+   },
+   "generator": {
+    "allOf": [
+     {
+      "$ref": "#/$defs/worker"
+     },
+     {
+      "properties": {
+       "model": {
+        "enum": [
+         "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+         null
+        ]
+       }
+      }
+     }
+    ]
+   },
+   "reviewer": {
+    "allOf": [
+     {
+      "$ref": "#/$defs/worker"
+     },
+     {
+      "properties": {
+       "model": {
+        "const": "openai/gpt-6.1-terra:high"
+       }
+      }
+     }
+    ]
+   },
+   "viewport": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "columns",
+     "rows",
+     "zoom_percent",
+     "verified"
+    ],
+    "properties": {
+     "columns": {
+      "const": 77
+     },
+     "rows": {
+      "const": 47
+     },
+     "zoom_percent": {
+      "const": 100
+     },
+     "verified": {
+      "type": "boolean"
+     }
+    }
+   },
+   "live_pane": {
+    "$ref": "#/$defs/dimensions"
+   },
+   "evidence": {
+    "type": "array",
+    "items": {
+     "$ref": "#/$defs/evidence"
+    }
+   },
+   "observed_first": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "evidence_id",
+     "saved_before_expected_reveal"
+    ],
+    "properties": {
+     "evidence_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "saved_before_expected_reveal": {
+      "type": "boolean"
+     }
+    }
+   },
+   "categories": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "semantic_fidelity",
+     "arrow_traceability",
+     "layout_fit",
+     "navigation_clarity",
+     "conceptual_grouping_color",
+     "border_integrity",
+     "workflow_evidence",
+     "animation",
+     "category_fit"
+    ],
+    "properties": {
+     "semantic_fidelity": {
+      "$ref": "#/$defs/category"
+     },
+     "arrow_traceability": {
+      "$ref": "#/$defs/category"
+     },
+     "layout_fit": {
+      "$ref": "#/$defs/category"
+     },
+     "navigation_clarity": {
+      "$ref": "#/$defs/category"
+     },
+     "conceptual_grouping_color": {
+      "$ref": "#/$defs/category"
+     },
+     "border_integrity": {
+      "$ref": "#/$defs/category"
+     },
+     "workflow_evidence": {
+      "$ref": "#/$defs/category"
+     },
+     "animation": {
+      "oneOf": [
+       {
+        "$ref": "#/$defs/category"
+       },
+       {
+        "$ref": "#/$defs/notApplicable"
+       }
+      ]
+     },
+     "category_fit": {
+      "type": "object",
+      "required": [
+       "applicable",
+       "status"
+      ],
+      "properties": {
+       "applicable": {
+        "type": "boolean"
+       },
+       "status": {
+        "enum": [
+         "pass",
+         "fail",
+         "blocked"
+        ],
+        "type": "string"
+       },
+       "reason": {
+        "type": "string"
+       }
+      }
+     }
+    }
+   },
+   "edge_audit": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "edge_id",
+      "kind",
+      "source_refs",
+      "expected",
+      "observed",
+      "status",
+      "locations",
+      "finding_ids"
+     ],
+     "properties": {
+      "edge_id": {
+       "type": "string",
+       "minLength": 1
+      },
+      "kind": {
+       "enum": [
+        "independent_link",
+        "named_bus",
+        "bus_trunk",
+        "bus_branch",
+        "unexpected_link"
+       ]
+      },
+      "source_refs": {
+       "$ref": "#/$defs/strings"
+      },
+      "expected": {
+       "type": [
+        "string",
+        "null"
+       ],
+       "description": "Source, target, direction and source-backed bus semantics; null for an extra visible relationship."
+      },
+      "observed": {
+       "type": "string",
+       "minLength": 1,
+       "description": "Actual inferred endpoints/direction, stem-to-arrowhead trace, crossings and junctions; explain absence/ambiguity."
+      },
+      "status": {
+       "$ref": "#/$defs/status"
+      },
+      "locations": {
+       "type": "array",
+       "items": {
+        "$ref": "#/$defs/location"
+       }
+      },
+      "finding_ids": {
+       "$ref": "#/$defs/strings"
+      }
+     }
+    }
+   },
+   "findings": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "id",
+      "category",
+      "edge_ids",
+      "severity",
+      "description",
+      "source_refs",
+      "locations"
+     ],
+     "properties": {
+      "id": {
+       "type": "string",
+       "minLength": 1
+      },
+      "category": {
+       "enum": [
+        "semantic_fidelity",
+        "arrow_traceability",
+        "layout_fit",
+        "navigation_clarity",
+        "conceptual_grouping_color",
+        "border_integrity",
+        "workflow_evidence",
+        "animation",
+        "category_fit"
+       ]
+      },
+      "edge_ids": {
+       "$ref": "#/$defs/strings"
+      },
+      "severity": {
+       "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low"
+       ]
+      },
+      "description": {
+       "type": "string",
+       "minLength": 1
+      },
+      "source_refs": {
+       "$ref": "#/$defs/strings"
+      },
+      "locations": {
+       "type": "array",
+       "items": {
+        "$ref": "#/$defs/location"
+       }
+      }
+     }
+    }
+   },
+   "blockers": {
+    "$ref": "#/$defs/strings"
+   },
+   "cleanup": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "owned_pane_ids",
+     "closed_pane_ids",
+     "status",
+     "reason"
+    ],
+    "properties": {
+     "owned_pane_ids": {
+      "$ref": "#/$defs/strings"
+     },
+     "closed_pane_ids": {
+      "$ref": "#/$defs/strings"
+     },
+     "status": {
+      "enum": [
+       "done",
+       "not_started",
+       "blocked"
+      ]
+     },
+     "reason": {
+      "type": "string",
+      "minLength": 1
+     }
+    }
+   },
+   "overall": {
+    "$ref": "#/$defs/status"
+   }
+  },
+  "$defs": {
+   "hash": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "pattern": "^[0-9a-f]{64}$"
+   },
+   "status": {
+    "enum": [
+     "pass",
+     "fail",
+     "blocked"
+    ]
+   },
+   "strings": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1
+    },
+    "uniqueItems": true
+   },
+   "worker": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "worker_id",
+     "model"
+    ],
+    "properties": {
+     "worker_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "model": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    }
+   },
+   "dimensions": {
+    "oneOf": [
+     {
+      "type": "null"
+     },
+     {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "columns",
+       "rows"
+      ],
+      "properties": {
+       "columns": {
+        "type": "integer",
+        "minimum": 1
+       },
+       "rows": {
+        "type": "integer",
+        "minimum": 1
+       }
+      }
+     }
+    ]
+   },
+   "category": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "applicable",
+     "status",
+     "reason",
+     "source_refs",
+     "evidence_ids"
+    ],
+    "properties": {
+     "applicable": {
+      "const": true
+     },
+     "status": {
+      "$ref": "#/$defs/status"
+     },
+     "reason": {
+      "type": "string",
+      "minLength": 1
+     },
+     "source_refs": {
+      "$ref": "#/$defs/strings"
+     },
+     "evidence_ids": {
+      "$ref": "#/$defs/strings"
+     }
+    }
+   },
+   "notApplicable": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "applicable",
+     "status",
+     "reason",
+     "source_refs",
+     "evidence_ids"
+    ],
+    "properties": {
+     "applicable": {
+      "const": false
+     },
+     "status": {
+      "type": "null"
+     },
+     "reason": {
+      "type": "string",
+      "minLength": 1
+     },
+     "source_refs": {
+      "allOf": [
+       {
+        "$ref": "#/$defs/strings"
+       },
+       {
+        "minItems": 1
+       }
+      ]
+     },
+     "evidence_ids": {
+      "$ref": "#/$defs/strings"
+     }
+    }
+   },
+   "evidence": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "id",
+     "path",
+     "sha256",
+     "description",
+     "capture"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "minLength": 1
+     },
+     "path": {
+      "type": "string",
+      "minLength": 1
+     },
+     "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+     },
+     "description": {
+      "type": "string",
+      "minLength": 1
+     },
+     "capture": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "dimensions",
+         "view",
+         "frame",
+         "timestamp",
+         "state",
+         "format"
+        ],
+        "properties": {
+         "dimensions": {
+          "allOf": [
+           {
+            "$ref": "#/$defs/dimensions"
+           },
+           {
+            "type": "object"
+           }
+          ]
+         },
+         "view": {
+          "type": "string",
+          "minLength": 1
+         },
+         "frame": {
+          "type": "string",
+          "minLength": 1
+         },
+         "timestamp": {
+          "type": "string",
+          "minLength": 1
+         },
+         "state": {
+          "type": "string",
+          "minLength": 1
+         },
+         "format": {
+          "enum": [
+           "text",
+           "ansi",
+           "buffer",
+           "image",
+           "recording"
+          ]
+         }
+        }
+       }
+      ]
+     }
+    }
+   },
+   "location": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "evidence_id",
+     "region"
+    ],
+    "properties": {
+     "evidence_id": {
+      "type": "string",
+      "minLength": 1
+     },
+     "region": {
+      "type": "array",
+      "items": {
+       "type": "integer",
+       "minimum": 1
+      },
+      "minItems": 4,
+      "maxItems": 4,
+      "description": "1-based [column, row, width, height] in the referenced capture/frame."
+     }
+    }
+   }
+  }
+ },
+ "revisions": [
+  {
+   "revision": 2,
+   "round": "03",
+   "date": "2026-11-02",
+   "source": "human review of round 02",
+   "changes": [
+    "animation: dots start at their own arrow origin and arrive together unless the source specifies otherwise",
+    "layout_fit: crossing count is reported and minimized by layout, never by reordering source groups",
+    "arrow_traceability: a dot starting away from its origin makes the direction unproven"
+   ],
+   "note": "Criteria were strengthened, never weakened. Round 03 freezes its own copy; round 01 and round 02 copies stay unchanged."
+  },
+  {
+   "revision": 3,
+   "round": "03",
+   "date": "2026-11-02",
+   "source": "user instruction",
+   "changes": [
+    "generator endpoint is fireworks/accounts/fireworks/routers/deepseek-flash-latest for round 03 onward (the OpenGateway switch was reverted before any round ran)"
+   ],
+   "note": "Criteria, thresholds and the judge model were never changed. The OpenGateway endpoint was never used for a generation.",
+   "status": "reverted-before-use"
+  },
+  {
+   "revision": 4,
+   "round": "03",
+   "date": "2026-11-02",
+   "source": "clerical correction found by viz-judge03-runtime mid-stage-B",
+   "changes": [
+    "required_reviewer_model corrected from stale round-01 value openai/gpt-6-astra to openai/gpt-6.1-sol",
+    "result_schema reviewer model const corrected the same way (1 occurrence)"
+   ],
+   "note": "Criteria text, thresholds, and category rules are byte-identical with round 02 plus the revision-2 motion and crossing rules; only the reviewer identity left over from round 01 was stale. Round 02 judged on Sol; round 03 judges on Sol; corrected before any reviewer-result.json exists. No judge was asked to falsify identity."
+  },
+  {
+   "revision": 5,
+   "round": "04",
+   "date": "2026-11-02",
+   "source": "human review of round 03 (verbatim in rounds/03/human-review/feedback.md)",
+   "changes": [
+    "animation: constant shared speed is the default; same-arrival is opt-in and must show visible simultaneous arrival",
+    "animation: dots may be kept as flair by default; explicit source no-dots still overrides",
+    "arrow_traceability: near-minimal route paths; loops and avoidable detours are defects",
+    "workflow_evidence: pane size proven by app header token or preserved rectangle; hardcoded geometry fails; rejected-draft and probe records required"
+   ],
+   "note": "Direction change requested by the user after round 03: the round-03 same-arrival default is reversed to constant speed."
+  },
+  {
+   "revision": 6,
+   "round": "05",
+   "date": "2026-11-02",
+   "source": "round-04 judge splits recorded in rounds/04/decision.md",
+   "changes": [
+    "animation: origin defined as the first DRAWN cell after the source port (corner included); corner occupancy outside the origin cell is a violation",
+    "border_integrity: palette/UI overwriting any node border cell is a defect",
+    "workflow_evidence: frames capture required for every view, static included; full-lap length for animated views"
+   ],
+   "note": "Pins four definitions the round-04 judges ruled differently; criteria otherwise unchanged from revision 5."
+  },
+  {
+   "revision": 7,
+   "round": "09",
+   "date": "2026-11-02",
+   "source": "user directive 2026-11-02: add a round for the diagram categorization; taxonomy recorded in state.json diagram_taxonomy_2026_11_02",
+   "changes": [
+    "category_fit added as a rubric category: the generator's chosen family must match the source's structure, judged from the captures plus the stated one-line evidence, and that family's recipe must be applied; a wrong family or an unapplied recipe fails the category"
+   ],
+   "note": "Additive only: the seven existing categories, their pass_iff texts, thresholds, models and aggregation are unchanged. The passing bar moved up, never down."
+  },
+  {
+   "revision": 8,
+   "round": "08",
+   "date": "2026-11-02",
+   "source": "user directive: use gpt terra 6.1 high fast for the judges from now on",
+   "changes": [
+    "required_reviewer_model and its result_schema const set to openai/gpt-6.1-terra:high (was openai/gpt-6.1-sol)"
+   ],
+   "note": "Judge model change only; criteria and thresholds untouched. The in-flight round-07 judge (viz-judge07, mid-stage-B on sol) completes on sol; every judge spawned after this revision uses terra:high."
+  },
+  {
+   "revision": 9,
+   "round": "09",
+   "date": "2026-11-02",
+   "source": "user directive: remove drawn group regions; keep improvements without sacrificing; parallel round-09 plan",
+   "changes": [
+    "conceptual_grouping_color: grouping is logical (tags + hue families + block order); drawn boxes/titles not required, absence never a defect; source-named tiers still readable via hue or one non-boxed label line",
+    "category_fit: recipe-yield rule - a demand evidenced as structurally impossible in generation.json yields and cannot alone fail the category; placement-planes reworded to spatial side-by-side areas, not drawn boxes",
+    "layout_fit: pinned fit-proof ruling - live 77x47 header token OR pinned final-spec dump at 77x47 natural without overflow banner, one per view",
+    "workflow_evidence: probes and rejected drafts recorded via viz-evidence.sh record into attempts-log.jsonl, verified with viz-validate.py --require-records; stale astra critic wording replaced with the rubric's required reviewer model"
+   ],
+   "note": "Judge model frozen at openai/gpt-6.1-terra:high for comparability with round 08. Renderer work lands in parallel worktrees feat/region-removal and feat/dots-labels before the round-09 freeze."
+  },
+  {
+   "revision": 10,
+   "round": "11",
+   "date": "2026-11-02",
+   "source": "user directive: the family classification is a hint, not a hard constraint \u2014 take inspiration, never bind",
+   "changes": [
+    "Step 0 retitled 'Notice the source's shape (a hint, not a cage)'; recipes retitled 'Family patterns (reference shapes, not requirements)' in the round-11 candidate skill (proposal 10)",
+    "category_fit softened: family naming + one evidence line still required; deviations from patterns pass when recorded with reason in generation.json; deviations without a recorded reason fail"
+   ],
+   "note": "Engine binary unchanged from round 10 (db70722b) \u2014 round 11 isolates the skill-layer change. Only the six recipe-impacted cases rerun: network, homelab, server, runtime, machine-manager, gb300. Pipeline (PASS) and datacenter (failed on non-recipe grounds) keep their round-10 verdicts."
+  },
+  {
+   "revision": 11,
+   "round": "13",
+   "date": "2026-11-03",
+   "source": "owner review of round 12 (rounds/12/human-review/feedback.md) plus the defect classes rounds/12/decision.md carried into round 13",
+   "changes": [
+    "layout_fit: dual rule - a pinned 77x47 natural-zoom fit of the whole spec OR a navigable large canvas whose --check reports each diagram's own extent plus the whole-canvas total, with every diagram carrying a rendered title and description (feedback.md directive 1 ROUND-13 VIEW STRATEGY (b) 'Multiple concept-diagrams may share ONE LARGE CANVAS', (c) 'Every diagram carries a DESCRIPTION (title + what-it-shows line)', (d) the preference ladder, plus the owner addition 'if you feel that having a larger canvas is going to help with clarity, then go ahead and do that')",
+    "arrow_traceability: new violation class passes-near-unrelated-node - routes must not pass near, hug or overlap a node that is neither their source nor their destination; the gb300 a3 artifact is the named instance (feedback.md directive 2 OWNER REFINEMENT 'make sure that arrows don't overlap in a way that introduces ambiguity' and PRIMARY ROUND-13 ENGINE RULE / ambiguity-free routing)",
+    "navigation_clarity: new category - descriptions present and accurate, concepts separable, complex canvases navigable (feedback.md directive 1 (c) DESCRIPTION, (d) preference ladder, and 'Remember again, clarity is more important than shaping')",
+    "conceptual_grouping_color: case-wide hue consistency - one group tag keeps one hue across every diagram of a canvas (rounds/12/decision.md 'New defect class: cross-view hue inconsistency - runtime's worker-plane renders green in v1, orange in v2'; feedback.md directive 4 'case-wide hue-family assignment (cross-view consistency)')",
+    "animation: dot-color binding - where dots run, each dot takes its own route's source-or-destination hue by least-conflict choice, proved by the --check 'dot hues' line (feedback.md directive 2 DOT COLORING 'have the dots have either the color of their src or dest, depending on whichever one leads to the least conflicts')",
+    "result_schema: navigation_clarity added to the categories required list, its properties and the findings category enum; no other schema change"
+   ],
+   "note": "Additive and strengthening only: no existing pass condition relaxed, no threshold lowered, no model, viewport or case changed. The passing bar moves up, so round 13 reruns all eight cases instead of carrying round-11/12 greens."
+  }
+ ]
+}

@@ -1,0 +1,29 @@
+# Live pane capture, 2026-11-02T08:26:12Z (pane w7E:p38, 77x47, attempt 2 of the
+# compact link-path view). Rejected: labels detached from stems, corner clusters,
+# and core->web / core->cache enter side handles with no arrowhead.
+ rataflow-view · lp-a2.json · 5 nodes · 4 edges · 4 flows · drag pan · scroll
+                              ╭───╮
+                              │WAN│
+                              │   │
+                              ╰───╯
+                            1 GbE
+                             ╭●╯
+                             │
+                            ╭────────╮
+                            │Firewall│
+                            │        │
+                            ╰────────╯
+                             │ 10 GbE
+                           ╭●╯
+                           │
+                          ╭───────────╮
+                          │Core switch│
+                          │           │
+                          ╰───────────╯
+                           │───╮  25 GbE
+                           ╰●╮ ╰─●──────●───╮
+                             │              │
+                            ╭────────╮     ╭─────╮
+                            │Web tier│     │Redis│
+                            │        │     │     │
+                            ╰────────╯     ╰─────╯

@@ -1,0 +1,774 @@
+{
+  "protocol_version": 1,
+  "round": 10,
+  "case_id": "modal-runtime",
+  "candidate_sha256": "9c1256791069e27207db2e5138527e45587e7096955f5ed4f86c79d46f77e56d",
+  "renderer_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+  "rubric_sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "70dd0e791b28dd6a5535257ab6f87a6b5aaa1798ba5b4625e41b061de0811026",
+  "generator": {
+    "worker_id": "viz-ds10-7",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge10-modal-runtime",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 82,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/10/reviews/modal-runtime/observed-first.md",
+      "sha256": "a70a63f9c448ba82f7455808fbd4d67be49347c1cd13b53971793f82d96a8d91",
+      "description": "Blind record saved before expectations",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/10/reviews/modal-runtime/spec-manifest.json",
+      "sha256": "70dd0e791b28dd6a5535257ab6f87a6b5aaa1798ba5b4625e41b061de0811026",
+      "description": "Sorted final spec paths and actual SHA-256 pairs",
+      "capture": null
+    },
+    {
+      "id": "spec1",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/specs/v1-seams.json",
+      "sha256": "ae21002480ab26a2d6a6770820f172feb10028fad89860c38667654bfbdcc9d2",
+      "description": "Final view spec",
+      "capture": null
+    },
+    {
+      "id": "spec2",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/specs/v2-exec-storage.json",
+      "sha256": "2ce2ddb343d92f323dcf882248d321016500bfdd982c6b3442f26f6d7e33e301",
+      "description": "Final view spec",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/modal-runtime/source.md",
+      "sha256": "c6e4552d5842347bc9472e53a2351897c3624c92b5a14541aaa3c28216dc4a0d",
+      "description": "Frozen source facts",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/modal-runtime/expected.json",
+      "sha256": "fd3963e207e9c433b7e5825c8a1691766bb13d5df7322ac97a05e379d2cbba99",
+      "description": "Frozen expected relations",
+      "capture": null
+    },
+    {
+      "id": "variants",
+      "path": "docs/visualize-eval/cases/modal-runtime/historical-variants.json",
+      "sha256": "1e5a6add0f9d62670f8c884a2f4df679112e233df8539b3983d80c122bdcf8e7",
+      "description": "Historical attempts, not independent fact verification",
+      "capture": null
+    },
+    {
+      "id": "index",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen case index and animation applicability",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/10/rubric.json",
+      "sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+      "description": "Frozen rubric and result schema",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/10/metadata.json",
+      "sha256": "0ad93b431a5d91320b90787734b3adef1d3606920d5c16e9336dad299a6ab0f4",
+      "description": "Frozen input identity",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/10/SKILL.md",
+      "sha256": "9c1256791069e27207db2e5138527e45587e7096955f5ed4f86c79d46f77e56d",
+      "description": "Frozen candidate skill",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/generation.json",
+      "sha256": "dd2531ba5f5b13597573636513d36d3fb1d32c765e22b9e972ba112cf2512e9d",
+      "description": "Generator classification, measurement disclosures and cleanup",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/attempts.json",
+      "sha256": "2d87d3b328a4dc53e0aad57e53c482cdc18449dd123188b72f1dbd63e2f2fa60",
+      "description": "Attempt inventory and measured rejected shapes",
+      "capture": null
+    },
+    {
+      "id": "log",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/attempts-log.jsonl",
+      "sha256": "cb85be8c400f2a137c2b794df3be8ce8df03b81ce12c1400b41bab6454576286",
+      "description": "Recorded commands, exits, raw files and hashes",
+      "capture": null
+    },
+    {
+      "id": "v1-text",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/evidence/v1/v1-text.txt",
+      "sha256": "72a5a6f839a135ad7e54697af722ee20d2cf592a2b71b6f78f28f61f6b585ad0",
+      "description": "v1 normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "normal",
+        "timestamp": "2026-11-02 capture window",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-ansi",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/evidence/v1/v1-ansi.ansi",
+      "sha256": "52436ea269a06f1f183f3d3d43538620c6877e38e8d2ee565e12ec2b11509276",
+      "description": "v1 normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "normal",
+        "timestamp": "2026-11-02 capture window",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-selected",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/evidence/v1/v1-selected.ansi",
+      "sha256": "407de02952b3d21a43c09f573737075617772c5fc20377f4d70984bbe4a4ae83",
+      "description": "v1 select-all",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "select-all",
+        "timestamp": "2026-11-02 capture window",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frames",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/evidence/v1/v1-frames.txt",
+      "sha256": "aaf9b0b4ad14b213b633ed18526c99e275396c9a2fff8ee727ff6500be5d01d1",
+      "description": "v1 three frames",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "three frames",
+        "timestamp": "2026-11-02 capture window",
+        "state": "three frames",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-pinned",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/v1-77x47-frames.txt",
+      "sha256": "8e5b092054a78a8e62892431dc0eaed32a15e3a268f68471d073c99137203ebd",
+      "description": "Pinned target-size three frames",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "three frames",
+        "timestamp": "0ms, 100ms, 200ms",
+        "state": "three frames",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-check",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/evidence/v1/check.txt",
+      "sha256": "f420083574827973f9b33bbd41e367e9cbddf56677d3de7dec23e6c7be80d762",
+      "description": "Recorded final check",
+      "capture": null
+    },
+    {
+      "id": "v1-manifest",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/evidence/v1/manifest.json",
+      "sha256": "a86a7e2d926a4054a0aae66d8f5e349d59eb93cc83c57a7331dc33a46dd623db",
+      "description": "Capture manifest and cleanup",
+      "capture": null
+    },
+    {
+      "id": "v1-validator",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/validator-v1.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "Saved require-records validator output",
+      "capture": null
+    },
+    {
+      "id": "v2-text",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/evidence/v2/v2-text.txt",
+      "sha256": "b9c4486c17e12d67e8b74de962134ba894b5c3b5247116080b83c4ff435eca4e",
+      "description": "v2 normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "normal",
+        "timestamp": "2026-11-02 capture window",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-ansi",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/evidence/v2/v2-ansi.ansi",
+      "sha256": "482c74ad39ed8fdad771a7a4c32a52037e1fed907e6342566c4f83fbf15127f2",
+      "description": "v2 normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "normal",
+        "timestamp": "2026-11-02 capture window",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-selected",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/evidence/v2/v2-selected.ansi",
+      "sha256": "abe67d1ed08559a5516b899ec46fb8212ef5a1c7b4e3c1a81fe665aac328a151",
+      "description": "v2 select-all",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "select-all",
+        "timestamp": "2026-11-02 capture window",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frames",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/evidence/v2/v2-frames.txt",
+      "sha256": "7b5c26f147bdba6f8532d28fe9a2298addf6c3a1f472752ce0fc38382d14fb26",
+      "description": "v2 three frames",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "three frames",
+        "timestamp": "2026-11-02 capture window",
+        "state": "three frames",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-pinned",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/v2-77x47-frames.txt",
+      "sha256": "898aaf7e034c956213b076539a9d7b5de061c1641ed1314139518f426f9c8aeb",
+      "description": "Pinned target-size three frames",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "three frames",
+        "timestamp": "0ms, 100ms, 200ms",
+        "state": "three frames",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-check",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/evidence/v2/check.txt",
+      "sha256": "74b8c911617d79552ddeb833eee5a6eeb6702a2ce51f944570d629f7c3824887",
+      "description": "Recorded final check",
+      "capture": null
+    },
+    {
+      "id": "v2-manifest",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/evidence/v2/manifest.json",
+      "sha256": "296cfd71aa09a26d58d211eaff9e65458862365b4032105f357680313c0f7347",
+      "description": "Capture manifest and cleanup",
+      "capture": null
+    },
+    {
+      "id": "v2-validator",
+      "path": "docs/visualize-eval/rounds/10/modal-runtime/validator-v2.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "Saved require-records validator output",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All eight nodes and directional geometries occur, but labels on reciprocal links and user-process hop do not reliably identify their own relations in the capture; user process also omits the explicit runs verb.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-text",
+        "v2-text",
+        "generation"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Geometrical routes have distinct stems and arrowheads and no crossing, but label-to-route ownership fails for e1, e2 and e5; attempts do not prove no unambiguous fitting placement exists.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-text",
+        "v2-text",
+        "attempts"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Both final-spec direct dumps show 77x47 natural, no graph clipping, overflow banner or overlay. Actual headers show 82x51. Header q quit is clipped at target v2, not graph or border.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-pinned",
+        "v2-pinned",
+        "v1-text",
+        "v2-text"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Source-backed control, seams, execution and storage use coherent hue families and proximity; no drawn group outlines/titles, no source semantic tier lost. Engine-chosen sibling order is a recipe issue, not proof of an independently ordered tier.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-ansi",
+        "v2-ansi"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Correct family service-meshes; source-backed generation.json step0_classification.evidence: modal-runtime is the core with a fan of three callees (modal-worker, Task engine, modal-daemon) and the source states an anti-parallel pair on the same two boxes: `worker -> runtime` task input + control RPCs and `runtime -> worker` events + management RPCs. Secondary recipe: no secondary design driver; v2 borrows flow-chain rhythm. Pair is co-viewed as distinct directed geometries but not reliably distinct labelled edges; source-listing fan order engine before daemon is reversed. No evidenced yield for ordering or labelled pair; generation says yielded false. V2 two short chains and source-listing engine fan order are visible.",
+      "family_judged_correct": "service-meshes",
+      "family_stated": "service-meshes",
+      "evidence_line": "modal-runtime is the core with a fan of three callees (modal-worker, Task engine, modal-daemon) and the source states an anti-parallel pair on the same two boxes: `worker -> runtime` task input + control RPCs and `runtime -> worker` events + management RPCs.",
+      "recipe_verified": "Reciprocal routes co-viewed with two arrowheads; labels share a misleading band. Runtime callee siblings daemon then engine reverse source listing; execution/storage chains are short and source ordered."
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 9 node occurrences have complete normal and selected sides and corners, color continuous per node; palette does not overlap. Select-all proves simultaneous selected borders, not interactive navigation.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "evidence_ids": [
+        "v1-ansi",
+        "v2-ansi",
+        "v1-selected",
+        "v2-selected",
+        "v1-pinned",
+        "v2-pinned"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Frozen hashes, blind record, live header, checks, three frames, select-all and 13 log entries with verified raw hashes exist; saved validators each pass 33 checks. Generator discloses manual measurement probes and a discarded cold-start capture, but these executions and their raw output/exit status are not in the 13-entry record, so cannot establish every probe/rejected execution was preserved. Cleanup of manual probe is self-reported.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "skill",
+        "blind",
+        "log",
+        "attempts",
+        "generation",
+        "v1-manifest",
+        "v2-manifest",
+        "v1-validator",
+        "v2-validator"
+      ]
+    },
+    "animation": {
+      "applicable": false,
+      "status": null,
+      "reason": "Source requests no animation; frozen case manifest says optional, not required. Static chosen: 0 dots, three identical pinned frames each. Dot-origin and full-lap requirements do not apply.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "evidence_ids": [
+        "index",
+        "v1-pinned",
+        "v2-pinned",
+        "spec1",
+        "spec2"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "expected": "worker → runtime, task input + control RPCs",
+      "observed": "worker bottom → ▼ runtime top, lane x40–41; first label nearer opposing lane, ownership uncertain. No junction or crossing.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            35,
+            17,
+            28,
+            9
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "expected": "runtime → worker, events + management RPCs",
+      "observed": "runtime top → ▲ worker bottom, lane x42–43; shared label gutter does not unambiguously map text. No junction or crossing.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            35,
+            17,
+            28,
+            9
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "expected": "runtime → Task engine, dispatches tasks",
+      "observed": "runtime bottom → ▼ Task engine top, separate right-hand lane, dispatch label adjacent. No junction or crossing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            41,
+            28,
+            17,
+            9
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "expected": "Task engine → Container backend, starts / manages",
+      "observed": "engine right → ▶ backend left via upper elbow; label starts/manages. No junction or crossing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            12,
+            22,
+            38,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "expected": "Container backend → Task container, runs user process",
+      "observed": "backend right → ▶ container left; user process label is between lanes and nearer lower route, runs is omitted. No junction or crossing.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            31,
+            22,
+            41,
+            7
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "expected": "Task engine → Filesystem + volumes, mounts / snapshots",
+      "observed": "engine right → ▶ filesystem left via lower elbow; mount+snapshot indicates both operations. No junction or crossing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            12,
+            26,
+            40,
+            6
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "expected": "Filesystem + volumes → Blobnet, image + volume data",
+      "observed": "filesystem right → ▶ Blobnet left; image+volume names payload. No junction or crossing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            29,
+            27,
+            40,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "expected": "runtime → modal-daemon, filesystem HTTP over UDS",
+      "observed": "runtime bottom → ▼ daemon top, left-hand independent lane, fs HTTP over UDS preserves distinction from gRPC. No junction or crossing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            25,
+            28,
+            18,
+            9
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "e1",
+        "e2"
+      ],
+      "severity": "high",
+      "description": "Defect: two separate arrow directions are traceable but label-to-route mapping is visually ambiguous; first label starts x44 and its lane x40 is 4 cells away while the opposite lane x42 is 2 cells away. Both labels use same gutter. Checker reports 0 ambiguous despite this; recorded alternatives do not prove all valid layouts impossible.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            40,
+            21,
+            23,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e5"
+      ],
+      "severity": "high",
+      "description": "Defect: user process is three rows below its route at row 23 and two above the lower row 28; ownership is unclear and the source verb runs is not visible. The recorded no-slot overflow alone does not prove no fitting unambiguous placement.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            46,
+            23,
+            12,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "category": "category_fit",
+      "edge_ids": [
+        "e3",
+        "e8"
+      ],
+      "severity": "medium",
+      "description": "Defect: source lists runtime → engine before runtime → daemon, but engine-chosen rank siblings reverse that source order. The declared mesh recipe requires source-ordered fan ports and no recorded measured yield addresses order.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            27,
+            33,
+            29,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Evidence gap: generator reports manual measurement probe pane(s) and discards first cold-start capture but no corresponding preserved raw command/exit/output record appears in the attempt log. No assumption that the 33/33 validator proves these unlisted executions were recorded.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-runtime/source.md",
+        "docs/visualize-eval/cases/modal-runtime/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            1,
+            1,
+            74,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "Manual measurement probe command/exit/raw bytes and discarded cold-start capture are not preserved in attempts-log.jsonl; evidence gap.",
+    "Frozen label-slot rendering places three required label owners ambiguously despite zero-ambiguity check; no structural impossibility proof for all possible placements."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pRC",
+      "w7E:pRF",
+      "w7E:pR9"
+    ],
+    "closed_pane_ids": [
+      "w7E:pRC",
+      "w7E:pRF",
+      "w7E:pR9"
+    ],
+    "status": "done",
+    "reason": "Evidence-pane manifests say confirmed_closed; manual probe closure is disclosed in generation.json, not independently preserved. Reviewer opened no panes."
+  },
+  "overall": "fail"
+}

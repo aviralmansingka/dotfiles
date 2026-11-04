@@ -1,0 +1,39 @@
+{
+ "round": 3,
+ "status": "frozen",
+ "skill_sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+ "binary_sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7",
+ "binary_path": "/tmp/visualize-eval/round-03/bin/rataflow-view",
+ "rubric_sha256": "5519fd84f6b75973dbf7b5f5544c909a8f32a8841a876c8e7af00a1fcb119335",
+ "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+ "renderer_source_sha256": "8322f542af031ca03d687b523d86e14cb47960600e068be286183466920270fd",
+ "generator_model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+ "reviewer_model": "openai/gpt-6.1-sol",
+ "target": {
+  "columns": 77,
+  "rows": 47,
+  "zoom": 1.0
+ },
+ "worker_labels": {
+  "pipeline": "viz-ds03-1",
+  "network": "viz-ds03-2",
+  "homelab-nic-trace": "viz-ds03-3",
+  "server-nic-layout": "viz-ds03-4",
+  "datacenter-redundancy": "viz-ds03-5",
+  "modal-machine-manager": "viz-ds03-6",
+  "modal-runtime": "viz-ds03-7",
+  "gb300-rack-software": "viz-ds03-8"
+ },
+ "animation_default_ms": 2000,
+ "motion_evidence_frames": 21,
+ "cases": [
+  "pipeline",
+  "network",
+  "homelab-nic-trace",
+  "server-nic-layout",
+  "datacenter-redundancy",
+  "modal-machine-manager",
+  "modal-runtime",
+  "gb300-rack-software"
+ ]
+}

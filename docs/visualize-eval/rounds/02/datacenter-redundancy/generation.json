@@ -1,0 +1,1064 @@
+{
+  "case_id": "datacenter-redundancy",
+  "round": "02",
+  "generator": {
+    "worker_id": "viz-ds02-datacenter-redundancy",
+    "tab_label_note": "the spawn was dispatched with the literal case id 'undefined'; the captain corrected the assignment to datacenter-redundancy, so the Herdr tab label viz-ds02-undefined-5 is not the worker identity recorded here",
+    "agent_profile": "worker",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "harness_model_env": "PI_MODEL=accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "frozen_inputs": {
+    "candidate_skill": {
+      "path": "docs/visualize-eval/rounds/02/SKILL.md",
+      "sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+      "verified": true
+    },
+    "renderer": {
+      "path": "/tmp/visualize-eval/round-02/bin/rataflow-view",
+      "sha256": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+      "verified": true,
+      "note": "absolute path used in every --check, --frames, and capture command; the global rataflow-view was never invoked"
+    },
+    "target_viewport": {
+      "columns": 77,
+      "rows": 47,
+      "zoom_percent": 100
+    },
+    "source": {
+      "path": "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+      "sha256": "a3051af3eeeec31aee53558dafbbea5d061dc74253618fd6940eba5c39b5bb98",
+      "pointers_used": [
+        "Original line 126 (user): the full component list and tier order",
+        "Original line 134 (user): remove the flowing dots",
+        "Original line 142 (user): show the cross-connect at each layer",
+        "Original line 150, 158, 166 (user): more compact horizontally and vertically, readable at default zoom",
+        "Original line 248 (user): border leaf and leaf at the same height, spine above the leaf",
+        "Original line 270 (user): keep core/mux arrows independent, do not merge or overlap",
+        "Relationship facts list: 18 nodes and 28 relations with their verbs",
+        "Fixed constraints: cross-connect each tier, keep 28 links, never merge independent links into a bus, physical links not traffic, ISP identities only with explicit coverage"
+      ],
+      "not_read": [
+        "expected.json",
+        "historical-variants.json",
+        "other case sources",
+        "round-01 output",
+        "rubric.json"
+      ]
+    }
+  },
+  "capability_preflight": {
+    "group": {
+      "available": true,
+      "used": true,
+      "how": "six semantic groups: wan, mux, routing, security, leaf, compute"
+    },
+    "trunks": {
+      "available": true,
+      "used": false,
+      "why": "the source's line-270 correction and the fixed constraints forbid merging independent redundancy links into a shared bus; no real shared medium exists in this topology, so declaring a trunk would fake one"
+    },
+    "dots": {
+      "available": true,
+      "used": true,
+      "how": "dots: 1 on all 28 routes; captured frames hold exactly one dot per route (8/8/8/4 per view)"
+    },
+    "dashed": {
+      "available": true,
+      "used": true,
+      "how": "style dashed on the four standby paths (e11, e12, e15, e16); the state is also written in the label text 'standby'"
+    },
+    "select_all": {
+      "available": true,
+      "used": true,
+      "how": "one --select-all ANSI frame per view, artifact hashes differ from the plain ANSI frame"
+    },
+    "frames": {
+      "available": true,
+      "used": true,
+      "how": "--frames 5 --step-ms 100 per view, 5 timestamped frames each"
+    },
+    "viewport_line": {
+      "available": true,
+      "used": true,
+      "how": "the live alternate screen erases the startup line, so the header token '77x47 @100%' is the measured-size proof"
+    },
+    "layers": {
+      "available": true,
+      "used": true,
+      "how": "explicit placement everywhere; spacer rows used where the router needs vertical room"
+    },
+    "gaps": []
+  },
+  "views": {
+    "v1": {
+      "spec": "docs/visualize-eval/rounds/02/datacenter-redundancy/v1.json",
+      "spec_sha256": "98e8ba90854d81d8fae0f5de5ca7d772462d9a17c7e083a36dff6377ab9d1ccb",
+      "text": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-text.txt",
+      "ansi": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-selected.ansi",
+      "frames_text": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-frames.txt",
+      "frames_ansi": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/v1-frames.ansi",
+      "check": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/check.txt",
+      "manifest": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/manifest.json",
+      "bin_sha256_record": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1/bin.sha256",
+      "extent_cells": "43x41",
+      "nodes": 8,
+      "edges": 8,
+      "explicit_layers": 5,
+      "labels": {
+        "placed": 4,
+        "total": 4,
+        "on_route_cells": 0,
+        "skipped": 0
+      },
+      "dots": {
+        "single_dot_routes": 8,
+        "periodic_routes": 0,
+        "violations": 0
+      },
+      "groups": [
+        "wan(4)",
+        "mux(2)",
+        "routing(2)"
+      ],
+      "trunks": [],
+      "check_warnings": [],
+      "measured": {
+        "viewport_line": null,
+        "viewport_token": "77x47 @100%",
+        "pane_rows_from_herdr": 47,
+        "pane_cols_from_herdr": null,
+        "pane_rect_from_herdr": null,
+        "pane_id": "w7E:p7W",
+        "frames": 5,
+        "frame_step_ms": 100,
+        "select_all_frame": true
+      },
+      "cleanup": "confirmed_closed",
+      "validator": {
+        "command": "scripts/viz-validate.py docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v1 --require-select --require-frames --attempts docs/visualize-eval/rounds/02/datacenter-redundancy/attempts.json",
+        "output_file": "docs/visualize-eval/rounds/02/datacenter-redundancy/validation/v1.txt",
+        "result": "all checks passed",
+        "failing_checks": [],
+        "check_count": 24
+      }
+    },
+    "v2": {
+      "spec": "docs/visualize-eval/rounds/02/datacenter-redundancy/v2.json",
+      "spec_sha256": "9a8b1950a7595b958fd6b2cbc6892a59cd48b04d1c0c4e9bb8c6833aac0577f2",
+      "text": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-text.txt",
+      "ansi": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-ansi.ansi",
+      "selected_ansi": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-selected.ansi",
+      "frames_text": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-frames.txt",
+      "frames_ansi": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/v2-frames.ansi",
+      "check": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/check.txt",
+      "manifest": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/manifest.json",
+      "bin_sha256_record": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2/bin.sha256",
+      "extent_cells": "30x41",
+      "nodes": 6,
+      "edges": 8,
+      "explicit_layers": 5,
+      "labels": {
+        "placed": 8,
+        "total": 8,
+        "on_route_cells": 0,
+        "skipped": 0
+      },
+      "dots": {
+        "single_dot_routes": 8,
+        "periodic_routes": 0,
+        "violations": 0
+      },
+      "groups": [
+        "routing(2)",
+        "security(2)",
+        "leaf(2)"
+      ],
+      "trunks": [],
+      "check_warnings": [],
+      "measured": {
+        "viewport_line": null,
+        "viewport_token": "77x47 @100%",
+        "pane_rows_from_herdr": 47,
+        "pane_cols_from_herdr": null,
+        "pane_rect_from_herdr": null,
+        "pane_id": "w7E:p7X",
+        "frames": 5,
+        "frame_step_ms": 100,
+        "select_all_frame": true
+      },
+      "cleanup": "confirmed_closed",
+      "validator": {
+        "command": "scripts/viz-validate.py docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v2 --require-select --require-frames --attempts docs/visualize-eval/rounds/02/datacenter-redundancy/attempts.json",
+        "output_file": "docs/visualize-eval/rounds/02/datacenter-redundancy/validation/v2.txt",
+        "result": "all checks passed",
+        "failing_checks": [],
+        "check_count": 24
+      }
+    },
+    "v3": {
+      "spec": "docs/visualize-eval/rounds/02/datacenter-redundancy/v3.json",
+      "spec_sha256": "c6bdfb415415e794cdd6cc2d85fd10dcb2f2b7d842f2b65ec59f2de7b4a25429",
+      "text": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-text.txt",
+      "ansi": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-ansi.ansi",
+      "selected_ansi": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-selected.ansi",
+      "frames_text": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-frames.txt",
+      "frames_ansi": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/v3-frames.ansi",
+      "check": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/check.txt",
+      "manifest": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/manifest.json",
+      "bin_sha256_record": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3/bin.sha256",
+      "extent_cells": "46x20",
+      "nodes": 6,
+      "edges": 8,
+      "explicit_layers": 2,
+      "labels": {
+        "placed": 8,
+        "total": 8,
+        "on_route_cells": 0,
+        "skipped": 0
+      },
+      "dots": {
+        "single_dot_routes": 8,
+        "periodic_routes": 0,
+        "violations": 0
+      },
+      "groups": [
+        "routing(2)",
+        "leaf(4)"
+      ],
+      "trunks": [],
+      "check_warnings": [],
+      "measured": {
+        "viewport_line": null,
+        "viewport_token": "77x47 @100%",
+        "pane_rows_from_herdr": 47,
+        "pane_cols_from_herdr": null,
+        "pane_rect_from_herdr": null,
+        "pane_id": "w7E:p7B",
+        "frames": 5,
+        "frame_step_ms": 100,
+        "select_all_frame": true
+      },
+      "cleanup": "confirmed_closed",
+      "validator": {
+        "command": "scripts/viz-validate.py docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v3 --require-select --require-frames --attempts docs/visualize-eval/rounds/02/datacenter-redundancy/attempts.json",
+        "output_file": "docs/visualize-eval/rounds/02/datacenter-redundancy/validation/v3.txt",
+        "result": "all checks passed",
+        "failing_checks": [],
+        "check_count": 24
+      }
+    },
+    "v4": {
+      "spec": "docs/visualize-eval/rounds/02/datacenter-redundancy/v4.json",
+      "spec_sha256": "44cbe30cb0574e53ac01f5e3cd547ee05bb3687397a140e703d790e5346a619a",
+      "text": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-text.txt",
+      "ansi": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-ansi.ansi",
+      "selected_ansi": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-selected.ansi",
+      "frames_text": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-frames.txt",
+      "frames_ansi": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/v4-frames.ansi",
+      "check": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/check.txt",
+      "manifest": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/manifest.json",
+      "bin_sha256_record": "docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4/bin.sha256",
+      "extent_cells": "21x14",
+      "nodes": 4,
+      "edges": 4,
+      "explicit_layers": 2,
+      "labels": {
+        "placed": 4,
+        "total": 4,
+        "on_route_cells": 0,
+        "skipped": 0
+      },
+      "dots": {
+        "single_dot_routes": 4,
+        "periodic_routes": 0,
+        "violations": 0
+      },
+      "groups": [
+        "leaf(2)",
+        "compute(2)"
+      ],
+      "trunks": [],
+      "check_warnings": [],
+      "measured": {
+        "viewport_line": null,
+        "viewport_token": "77x47 @100%",
+        "pane_rows_from_herdr": 47,
+        "pane_cols_from_herdr": null,
+        "pane_rect_from_herdr": null,
+        "pane_id": "w7E:p7C",
+        "frames": 5,
+        "frame_step_ms": 100,
+        "select_all_frame": true
+      },
+      "cleanup": "confirmed_closed",
+      "validator": {
+        "command": "scripts/viz-validate.py docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/v4 --require-select --require-frames --attempts docs/visualize-eval/rounds/02/datacenter-redundancy/attempts.json",
+        "output_file": "docs/visualize-eval/rounds/02/datacenter-redundancy/validation/v4.txt",
+        "result": "all checks passed",
+        "failing_checks": [],
+        "check_count": 24
+      }
+    }
+  },
+  "view_count": 4,
+  "coverage_map": {
+    "v1": "WAN/aggregation tier: ISP A-D (wan), MUX 1/2 (mux), Core 1/2 (routing); e1-e8",
+    "v2": "security tier: Core 1/2 (routing), FW1 active / FW2 standby (security), BL 1/2 (leaf); e9-e16",
+    "v3": "fabric row: Spine 1/2 (routing) above, BL 1/2 and Leaf 1/2 (leaf) on one shared level; e17-e24",
+    "v4": "rack dual-homing: Leaf 1/2 (leaf) to Rack 1/2 (compute); e25-e28",
+    "edge_total": "e1-e28 = 8 + 8 + 8 + 4, every audited relation drawn exactly once across the four views",
+    "shared_nodes": "core1/core2 appear in v1 and v2, bl1/bl2 in v2 and v3, leaf1/leaf2 in v3 and v4 so each view is self-contained at its seam"
+  },
+  "meaning_ledger": [
+    {
+      "fact": "`ispA` = ISP A",
+      "kind": "identifier / node",
+      "fate": "drawn (v1)",
+      "view": "v1"
+    },
+    {
+      "fact": "`ispB` = ISP B",
+      "kind": "identifier / node",
+      "fate": "drawn (v1)",
+      "view": "v1"
+    },
+    {
+      "fact": "`ispC` = ISP C",
+      "kind": "identifier / node",
+      "fate": "drawn (v1)",
+      "view": "v1"
+    },
+    {
+      "fact": "`ispD` = ISP D",
+      "kind": "identifier / node",
+      "fate": "drawn (v1)",
+      "view": "v1"
+    },
+    {
+      "fact": "`mux1` = MUX 1",
+      "kind": "identifier / node",
+      "fate": "drawn (v1)",
+      "view": "v1"
+    },
+    {
+      "fact": "`mux2` = MUX 2",
+      "kind": "identifier / node",
+      "fate": "drawn (v1)",
+      "view": "v1"
+    },
+    {
+      "fact": "`core1` = Core 1",
+      "kind": "identifier / node",
+      "fate": "drawn (v1 + v2)",
+      "view": "v1 + v2"
+    },
+    {
+      "fact": "`core2` = Core 2",
+      "kind": "identifier / node",
+      "fate": "drawn (v1 + v2)",
+      "view": "v1 + v2"
+    },
+    {
+      "fact": "`fw1` = FW1 active",
+      "kind": "identifier / node",
+      "fate": "drawn (v2)",
+      "view": "v2"
+    },
+    {
+      "fact": "`fw2` = FW2 standby",
+      "kind": "identifier / node",
+      "fate": "drawn (v2)",
+      "view": "v2"
+    },
+    {
+      "fact": "`bl1` = BL 1",
+      "kind": "identifier / node",
+      "fate": "drawn (v2 + v3)",
+      "view": "v2 + v3"
+    },
+    {
+      "fact": "`bl2` = BL 2",
+      "kind": "identifier / node",
+      "fate": "drawn (v2 + v3)",
+      "view": "v2 + v3"
+    },
+    {
+      "fact": "`sp1` = Spine 1",
+      "kind": "identifier / node",
+      "fate": "drawn (v3)",
+      "view": "v3"
+    },
+    {
+      "fact": "`sp2` = Spine 2",
+      "kind": "identifier / node",
+      "fate": "drawn (v3)",
+      "view": "v3"
+    },
+    {
+      "fact": "`leaf1` = Leaf 1",
+      "kind": "identifier / node",
+      "fate": "drawn (v3 + v4)",
+      "view": "v3 + v4"
+    },
+    {
+      "fact": "`leaf2` = Leaf 2",
+      "kind": "identifier / node",
+      "fate": "drawn (v3 + v4)",
+      "view": "v3 + v4"
+    },
+    {
+      "fact": "`rack1` = Rack 1",
+      "kind": "identifier / node",
+      "fate": "drawn (v4)",
+      "view": "v4"
+    },
+    {
+      "fact": "`rack2` = Rack 2",
+      "kind": "identifier / node",
+      "fate": "drawn (v4)",
+      "view": "v4"
+    },
+    {
+      "fact": "4 ISPs, 2 per MUX (2 ISPs each)",
+      "kind": "residency / fan-in",
+      "fate": "drawn: four separate ISP boxes, two independent stems into each MUX",
+      "view": "v1"
+    },
+    {
+      "fact": "each MUX connects to both cores (2 for redundancy)",
+      "kind": "redundancy link set",
+      "fate": "drawn: MUX 1/2 each radiate two independent routes, one per core",
+      "view": "v1"
+    },
+    {
+      "fact": "each core connects to a firewall appliance, active-passive",
+      "kind": "role + state qualifier",
+      "fate": "drawn: node labels 'FW1 active' / 'FW2 standby', edge labels 'active' / 'standby', standby routes dashed",
+      "view": "v2"
+    },
+    {
+      "fact": "firewall appliance connects to the border leaf of the spine",
+      "kind": "relationship",
+      "fate": "drawn: FW1 active and FW2 standby each reach BL 1 and BL 2 on independent routes",
+      "view": "v2"
+    },
+    {
+      "fact": "other leaves connect to racks",
+      "kind": "relationship",
+      "fate": "drawn: Leaf 1/2 to Rack 1/2, labels 'dual'",
+      "view": "v3 + v4"
+    },
+    {
+      "fact": "2 spines above the leaves, both connected to each leaf",
+      "kind": "tier order + relationship",
+      "fate": "drawn: spine row above the leaf row, each spine to each leaf of BL/leaf pairs",
+      "view": "v3"
+    },
+    {
+      "fact": "cross-connect at each adjacent tier (human correction, line 142)",
+      "kind": "topology correction",
+      "fate": "drawn: every adjacent tier is complete bipartite (2x2), 4 routes per tier, each on its own corridor",
+      "view": "v1, v2, v3, v4"
+    },
+    {
+      "fact": "border leaf and rack leaf at the same height (line 248)",
+      "kind": "layout correction",
+      "fate": "drawn: BL 1/BL 2 and Leaf 1/Leaf 2 share one row in v3",
+      "view": "v3"
+    },
+    {
+      "fact": "spines above the leaf (line 248)",
+      "kind": "layout correction",
+      "fate": "drawn: Spine 1/2 occupy the row above BL/Leaf in v3",
+      "view": "v3"
+    },
+    {
+      "fact": "do not merge core/mux redundancy arrows, they stay independent (line 270)",
+      "kind": "arrow correction",
+      "fate": "drawn: no `trunks` used anywhere; every redundancy link is a separate route with its own label slot",
+      "view": "v1, v2, v3"
+    },
+    {
+      "fact": "make the diagram compact, readable at default zoom (lines 150, 158, 166)",
+      "kind": "layout correction",
+      "fate": "abbreviated: node labels kept to one short word pair, edge labels to 6-9 characters, tiers packed with three views instead of one dense overview",
+      "view": "v1-v4"
+    },
+    {
+      "fact": "remove the flowing dots for now (line 134)",
+      "kind": "animation instruction",
+      "fate": "abbreviated: `dots: 1` on every route (one live dot per route, no stream); measured one dot per route in every captured frame",
+      "view": "v1-v4"
+    },
+    {
+      "fact": "link protocol on ISP->MUX hops",
+      "kind": "protocol",
+      "fate": "dropped with reason: the source calls these unlabelled historical relations and forbids inventing a protocol; the four routes stay unlabelled",
+      "view": "v1"
+    },
+    {
+      "fact": "ISP identities folded into MUX labels (allowed by the fixed constraints)",
+      "kind": "compression option",
+      "fate": "dropped with reason: the constraint requires explicit coverage and legible identity, so ISP A-D stay their own boxes instead of being hidden inside MUX labels",
+      "view": "v1"
+    },
+    {
+      "fact": "physical connectivity, not proof of one-way traffic",
+      "kind": "qualifier",
+      "fate": "drawn as an arrow convention, not as traffic: arrowheads mark the audited `to` endpoint; links are bidirectional in fact",
+      "view": "v1-v4"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "ispA",
+      "to": "mux1",
+      "verb_or_tech": "unlabelled physical link",
+      "label_owner": null,
+      "view": "v1",
+      "visible_as": "ispA -> mux1 route in v1, no label"
+    },
+    {
+      "id": "e2",
+      "from": "ispB",
+      "to": "mux1",
+      "verb_or_tech": "unlabelled physical link",
+      "label_owner": null,
+      "view": "v1",
+      "visible_as": "ispB -> mux1 route in v1, no label"
+    },
+    {
+      "id": "e3",
+      "from": "ispC",
+      "to": "mux2",
+      "verb_or_tech": "unlabelled physical link",
+      "label_owner": null,
+      "view": "v1",
+      "visible_as": "ispC -> mux2 route in v1, no label"
+    },
+    {
+      "id": "e4",
+      "from": "ispD",
+      "to": "mux2",
+      "verb_or_tech": "unlabelled physical link",
+      "label_owner": null,
+      "view": "v1",
+      "visible_as": "ispD -> mux2 route in v1, no label"
+    },
+    {
+      "id": "e5",
+      "from": "mux1",
+      "to": "core1",
+      "verb_or_tech": "x-connect",
+      "label_owner": "e5",
+      "view": "v1",
+      "visible_as": "mux1 -> core1 route in v1, label 'e5'"
+    },
+    {
+      "id": "e6",
+      "from": "mux1",
+      "to": "core2",
+      "verb_or_tech": "x-connect",
+      "label_owner": "e6",
+      "view": "v1",
+      "visible_as": "mux1 -> core2 route in v1, label 'e6'"
+    },
+    {
+      "id": "e7",
+      "from": "mux2",
+      "to": "core1",
+      "verb_or_tech": "x-connect",
+      "label_owner": "e7",
+      "view": "v1",
+      "visible_as": "mux2 -> core1 route in v1, label 'e7'"
+    },
+    {
+      "id": "e8",
+      "from": "mux2",
+      "to": "core2",
+      "verb_or_tech": "x-connect",
+      "label_owner": "e8",
+      "view": "v1",
+      "visible_as": "mux2 -> core2 route in v1, label 'e8'"
+    },
+    {
+      "id": "e9",
+      "from": "core1",
+      "to": "fw1",
+      "verb_or_tech": "active",
+      "label_owner": "e9",
+      "view": "v2",
+      "visible_as": "core1 -> fw1 route in v2, label 'e9'"
+    },
+    {
+      "id": "e10",
+      "from": "core2",
+      "to": "fw1",
+      "verb_or_tech": "active",
+      "label_owner": "e10",
+      "view": "v2",
+      "visible_as": "core2 -> fw1 route in v2, label 'e10'"
+    },
+    {
+      "id": "e11",
+      "from": "core1",
+      "to": "fw2",
+      "verb_or_tech": "standby",
+      "label_owner": "e11",
+      "view": "v2",
+      "visible_as": "core1 -> fw2 route in v2, label 'e11' (dashed: standby path)"
+    },
+    {
+      "id": "e12",
+      "from": "core2",
+      "to": "fw2",
+      "verb_or_tech": "standby",
+      "label_owner": "e12",
+      "view": "v2",
+      "visible_as": "core2 -> fw2 route in v2, label 'e12' (dashed: standby path)"
+    },
+    {
+      "id": "e13",
+      "from": "fw1",
+      "to": "bl1",
+      "verb_or_tech": "active",
+      "label_owner": "e13",
+      "view": "v2",
+      "visible_as": "fw1 -> bl1 route in v2, label 'e13'"
+    },
+    {
+      "id": "e14",
+      "from": "fw1",
+      "to": "bl2",
+      "verb_or_tech": "active",
+      "label_owner": "e14",
+      "view": "v2",
+      "visible_as": "fw1 -> bl2 route in v2, label 'e14'"
+    },
+    {
+      "id": "e15",
+      "from": "fw2",
+      "to": "bl1",
+      "verb_or_tech": "standby",
+      "label_owner": "e15",
+      "view": "v2",
+      "visible_as": "fw2 -> bl1 route in v2, label 'e15' (dashed: standby path)"
+    },
+    {
+      "id": "e16",
+      "from": "fw2",
+      "to": "bl2",
+      "verb_or_tech": "standby",
+      "label_owner": "e16",
+      "view": "v2",
+      "visible_as": "fw2 -> bl2 route in v2, label 'e16' (dashed: standby path)"
+    },
+    {
+      "id": "e17",
+      "from": "bl1",
+      "to": "sp1",
+      "verb_or_tech": "ECMP",
+      "label_owner": "e17",
+      "view": "v3",
+      "visible_as": "bl1 -> sp1 route in v3, label 'e17'"
+    },
+    {
+      "id": "e18",
+      "from": "bl1",
+      "to": "sp2",
+      "verb_or_tech": "ECMP",
+      "label_owner": "e18",
+      "view": "v3",
+      "visible_as": "bl1 -> sp2 route in v3, label 'e18'"
+    },
+    {
+      "id": "e19",
+      "from": "bl2",
+      "to": "sp1",
+      "verb_or_tech": "ECMP",
+      "label_owner": "e19",
+      "view": "v3",
+      "visible_as": "bl2 -> sp1 route in v3, label 'e19'"
+    },
+    {
+      "id": "e20",
+      "from": "bl2",
+      "to": "sp2",
+      "verb_or_tech": "ECMP",
+      "label_owner": "e20",
+      "view": "v3",
+      "visible_as": "bl2 -> sp2 route in v3, label 'e20'"
+    },
+    {
+      "id": "e21",
+      "from": "sp1",
+      "to": "leaf1",
+      "verb_or_tech": "ECMP",
+      "label_owner": "e21",
+      "view": "v3",
+      "visible_as": "sp1 -> leaf1 route in v3, label 'e21'"
+    },
+    {
+      "id": "e22",
+      "from": "sp1",
+      "to": "leaf2",
+      "verb_or_tech": "ECMP",
+      "label_owner": "e22",
+      "view": "v3",
+      "visible_as": "sp1 -> leaf2 route in v3, label 'e22'"
+    },
+    {
+      "id": "e23",
+      "from": "sp2",
+      "to": "leaf1",
+      "verb_or_tech": "ECMP",
+      "label_owner": "e23",
+      "view": "v3",
+      "visible_as": "sp2 -> leaf1 route in v3, label 'e23'"
+    },
+    {
+      "id": "e24",
+      "from": "sp2",
+      "to": "leaf2",
+      "verb_or_tech": "ECMP",
+      "label_owner": "e24",
+      "view": "v3",
+      "visible_as": "sp2 -> leaf2 route in v3, label 'e24'"
+    },
+    {
+      "id": "e25",
+      "from": "leaf1",
+      "to": "rack1",
+      "verb_or_tech": "dual",
+      "label_owner": "e25",
+      "view": "v4",
+      "visible_as": "leaf1 -> rack1 route in v4, label 'e25'"
+    },
+    {
+      "id": "e26",
+      "from": "leaf2",
+      "to": "rack1",
+      "verb_or_tech": "dual",
+      "label_owner": "e26",
+      "view": "v4",
+      "visible_as": "leaf2 -> rack1 route in v4, label 'e26'"
+    },
+    {
+      "id": "e27",
+      "from": "leaf1",
+      "to": "rack2",
+      "verb_or_tech": "dual",
+      "label_owner": "e27",
+      "view": "v4",
+      "visible_as": "leaf1 -> rack2 route in v4, label 'e27'"
+    },
+    {
+      "id": "e28",
+      "from": "leaf2",
+      "to": "rack2",
+      "verb_or_tech": "dual",
+      "label_owner": "e28",
+      "view": "v4",
+      "visible_as": "leaf2 -> rack2 route in v4, label 'e28'"
+    }
+  ],
+  "relationship_mapping": {
+    "e1": {
+      "view": "v1",
+      "visible_as": "ispA -> mux1 route in v1, no label"
+    },
+    "e2": {
+      "view": "v1",
+      "visible_as": "ispB -> mux1 route in v1, no label"
+    },
+    "e3": {
+      "view": "v1",
+      "visible_as": "ispC -> mux2 route in v1, no label"
+    },
+    "e4": {
+      "view": "v1",
+      "visible_as": "ispD -> mux2 route in v1, no label"
+    },
+    "e5": {
+      "view": "v1",
+      "visible_as": "mux1 -> core1 route in v1, label 'e5'"
+    },
+    "e6": {
+      "view": "v1",
+      "visible_as": "mux1 -> core2 route in v1, label 'e6'"
+    },
+    "e7": {
+      "view": "v1",
+      "visible_as": "mux2 -> core1 route in v1, label 'e7'"
+    },
+    "e8": {
+      "view": "v1",
+      "visible_as": "mux2 -> core2 route in v1, label 'e8'"
+    },
+    "e9": {
+      "view": "v2",
+      "visible_as": "core1 -> fw1 route in v2, label 'e9'"
+    },
+    "e10": {
+      "view": "v2",
+      "visible_as": "core2 -> fw1 route in v2, label 'e10'"
+    },
+    "e11": {
+      "view": "v2",
+      "visible_as": "core1 -> fw2 route in v2, label 'e11' (dashed: standby path)"
+    },
+    "e12": {
+      "view": "v2",
+      "visible_as": "core2 -> fw2 route in v2, label 'e12' (dashed: standby path)"
+    },
+    "e13": {
+      "view": "v2",
+      "visible_as": "fw1 -> bl1 route in v2, label 'e13'"
+    },
+    "e14": {
+      "view": "v2",
+      "visible_as": "fw1 -> bl2 route in v2, label 'e14'"
+    },
+    "e15": {
+      "view": "v2",
+      "visible_as": "fw2 -> bl1 route in v2, label 'e15' (dashed: standby path)"
+    },
+    "e16": {
+      "view": "v2",
+      "visible_as": "fw2 -> bl2 route in v2, label 'e16' (dashed: standby path)"
+    },
+    "e17": {
+      "view": "v3",
+      "visible_as": "bl1 -> sp1 route in v3, label 'e17'"
+    },
+    "e18": {
+      "view": "v3",
+      "visible_as": "bl1 -> sp2 route in v3, label 'e18'"
+    },
+    "e19": {
+      "view": "v3",
+      "visible_as": "bl2 -> sp1 route in v3, label 'e19'"
+    },
+    "e20": {
+      "view": "v3",
+      "visible_as": "bl2 -> sp2 route in v3, label 'e20'"
+    },
+    "e21": {
+      "view": "v3",
+      "visible_as": "sp1 -> leaf1 route in v3, label 'e21'"
+    },
+    "e22": {
+      "view": "v3",
+      "visible_as": "sp1 -> leaf2 route in v3, label 'e22'"
+    },
+    "e23": {
+      "view": "v3",
+      "visible_as": "sp2 -> leaf1 route in v3, label 'e23'"
+    },
+    "e24": {
+      "view": "v3",
+      "visible_as": "sp2 -> leaf2 route in v3, label 'e24'"
+    },
+    "e25": {
+      "view": "v4",
+      "visible_as": "leaf1 -> rack1 route in v4, label 'e25'"
+    },
+    "e26": {
+      "view": "v4",
+      "visible_as": "leaf2 -> rack1 route in v4, label 'e26'"
+    },
+    "e27": {
+      "view": "v4",
+      "visible_as": "leaf1 -> rack2 route in v4, label 'e27'"
+    },
+    "e28": {
+      "view": "v4",
+      "visible_as": "leaf2 -> rack2 route in v4, label 'e28'"
+    }
+  },
+  "arrow_convention": "Arrowheads mark the audited `to` endpoint (from -> to, producer to consumer as recorded). These are physical cables, so every link is bidirectional in fact; no traffic direction is implied. In v3 the audit order is border leaf -> spine, so those four arrowheads point up into the spine row while the spine -> leaf arrows point down.",
+  "abbreviations": [
+    "BL 1 / BL 2 = border leaf 1 / border leaf 2 (mirrors the source's own node ids bl1/bl2)",
+    "FW1 active / FW2 standby = firewall 1 active, firewall 2 standby",
+    "ECMP = equal-cost multipath label exactly as the source states it",
+    "dual = the rack is dual-homed to both leaves, source wording",
+    "x-connect = cross-connect, source wording"
+  ],
+  "deliberate_drops": [
+    {
+      "fact": "protocol on the ISP -> MUX links",
+      "reason": "source says these are unlabelled historical relations and forbids inventing a protocol"
+    },
+    {
+      "fact": "ISP A-D folded into the MUX labels",
+      "reason": "allowed only with explicit coverage and legible identity; separate boxes are unambiguous, so the compression was not taken"
+    },
+    {
+      "fact": "single all-in-one fabric view",
+      "reason": "12 fabric edges in one frame measured 49x49, over the 47-row pane, and left a dot violation; split into v3 + v4 with every edge still drawn"
+    },
+    {
+      "fact": "trunk/bus shape for the cross-connects",
+      "reason": "the human explicitly rejected merged arrows; no shared medium exists in this topology"
+    }
+  ],
+  "known_defects": [
+    {
+      "view": "v3",
+      "defect": "one border-leaf cross-connect takes a long lane around the perimeter of the spine row instead of a direct elbow, so its trace is longer than the other three ECMP links",
+      "severity": "cosmetic, traceable, no shared cells and no dot violation"
+    },
+    {
+      "view": "v3",
+      "defect": "the ECMP labels sit in a busy crossing band between the spine row and the shared leaf row; every label is off route cells and adjacent to its own route, but the band is the densest in the set",
+      "severity": "cosmetic"
+    },
+    {
+      "view": "v1, v2",
+      "defect": "the spacer-row layouts use 41 of the 47 available rows and only 43 / 30 of 77 columns, so the graphs are tall and narrow rather than filling the pane",
+      "severity": "cosmetic; chosen because the dense 23-row variants produced fused edge labels that --check cannot report"
+    },
+    {
+      "view": "v4",
+      "defect": "small and sparse (21x14) as a single-purpose view of rack dual-homing",
+      "severity": "cosmetic"
+    },
+    {
+      "view": "all",
+      "defect": "no profile/paths: the source gives tiers, not per-link media or speeds, so no link-speed labels were invented",
+      "severity": "none, by source"
+    }
+  ],
+  "blockers": [
+    {
+      "id": "b1",
+      "what": "Herdr measurement of the split pane rect",
+      "detail": "scripts/viz-evidence.sh reads the split pane's rect with `herdr pane layout`, which returned only the focused tab, so manifest pane_rect and pane_cols are null and pane_rows came from the app's viewport_rows. The measured size is still proven by the app's own header token 77x47 @100%, and the validator passed viewport_matches_target on that token.",
+      "impact": "evidence bookkeeping only, not a fit or zoom blocker",
+      "type": "harness_measurement_gap"
+    }
+  ],
+  "cleanup": {
+    "panes_opened": [
+      "w7E:p78",
+      "w7E:p79",
+      "w7E:p7B",
+      "w7E:p7C",
+      "w7E:p7W",
+      "w7E:p7X",
+      "w7E:p76"
+    ],
+    "panes_closed": 7,
+    "close_proof": "every bundle manifest records cleanup=confirmed_closed (herdr pane get fails after the close); the probe captures that were discarded also reported confirmed_closed before their directories were removed",
+    "final_state": "herdr pane list shows exactly one pane, w7E:p6N, in my tab w7E:t1R; no pane of another tab was ever split and the captain's tab was never used",
+    "failures": []
+  },
+  "commands": [
+    "/tmp/visualize-eval/round-02/bin/rataflow-view --check docs/visualize-eval/rounds/02/datacenter-redundancy/v{1,2,3,4}.json",
+    "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/02/datacenter-redundancy/vN.json --bin /tmp/visualize-eval/round-02/bin/rataflow-view --out docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/vN --label vN --frames 5   (N = 1,2,3,4)",
+    "scripts/viz-validate.py docs/visualize-eval/rounds/02/datacenter-redundancy/evidence/vN --require-select --require-frames --attempts docs/visualize-eval/rounds/02/datacenter-redundancy/attempts.json   (N = 1,2,3,4)"
+  ],
+  "attempts_file": "attempts.json",
+  "attempts": [
+    {
+      "view": "v1",
+      "final_spec": "v1.json",
+      "final_spec_sha256": "98e8ba90854d81d8fae0f5de5ca7d772462d9a17c7e083a36dff6377ab9d1ccb",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "attempts/v1-a1.json",
+          "spec_sha256": "98e8ba90854d81d8fae0f5de5ca7d772462d9a17c7e083a36dff6377ab9d1ccb",
+          "note": "WAN tier: ISP A-D -> MUX 1/2 -> Core 1/2, 8 edges, explicit 5-layer placement with one spacer row between tiers (spacer rows added after a capability probe showed a two-tier K2,2 diamond can fail with 'no obstacle-safe route' in tb). check: extent 43x41, 4/4 labels, 0 on route, 0 skipped, 8 single-dot routes, 0 dot violations, no warnings. Selected as final after all three attempts were rendered: every ISP stem and every MUX->Core cross-connect keeps its own lane and each 'x-connect' label lands on its own corridor."
+        },
+        {
+          "attempt": 2,
+          "spec": "attempts/v1-a2-compact.json",
+          "spec_sha256": "7dda6d6f71a784b2d861a2a1b4492fa1f94a7876238574de1c07333b88064c4a",
+          "note": "Same 8 nodes and 8 edges with the spacer rows removed (3 explicit layers, tiers adjacent). check was clean (extent 43x23, 4/4 labels, 0 violations), but the captured frame showed a crowded label band at the MUX->Core crossing ('x-connect' texts sitting against the arrowheads) that the check cannot detect. Rejected."
+        },
+        {
+          "attempt": 3,
+          "spec": "attempts/v1-a3.json",
+          "spec_sha256": "cf242609e1b8cb00670db40fe6cd49a1ba4790db1e5ad5568b414942a4ee4a5c",
+          "note": "Middle ground: one spacer row only before the Core row. check clean (extent 43x32), but the captured frame kept the same crowded label band (the extra row lengthened the run without spreading the labels). Rejected."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "final_spec": "v2.json",
+      "final_spec_sha256": "9a8b1950a7595b958fd6b2cbc6892a59cd48b04d1c0c4e9bb8c6833aac0577f2",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "attempts/v2-a1.json",
+          "spec_sha256": "9a8b1950a7595b958fd6b2cbc6892a59cd48b04d1c0c4e9bb8c6833aac0577f2",
+          "note": "Core 1/2 -> FW1 active / FW2 standby -> BL 1/2, 8 edges, 5-layer placement with one spacer row between tiers. Standby paths carry style dashed plus the literal label 'standby'; active paths are solid and labelled 'active'. check: extent 30x41, 8/8 labels, 0 on route, 0 skipped, 8 single-dot routes, 0 dot violations, no warnings. Selected as final: no label collision, dashed standby routes are traceable end to end."
+        },
+        {
+          "attempt": 2,
+          "spec": "attempts/v2-a2-compact.json",
+          "spec_sha256": "0d601e589c78939588872ced97a44dc12090ecd5c81b8c16ba94301ea5b6d8eb",
+          "note": "Same edges with spacer rows removed (3 explicit layers). check clean (extent 30x23), but the captured frame showed two adjacent 'active' labels fused into the single token 'activeactive' at the Core->FW1 band, which makes label ownership ambiguous. Rejected."
+        },
+        {
+          "attempt": 3,
+          "spec": "attempts/v2-a3.json",
+          "spec_sha256": "8e9cc98003b6830a5e148c3669ef54f6b21b4042a039054bfcd85fb9caab246d",
+          "note": "Middle ground: one spacer row only before the FW row. check clean (extent 30x32); the Core->FW1 collision cleared but the same fused-label defect appeared in the FW->BL band. Rejected."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "final_spec": "v3.json",
+      "final_spec_sha256": "c6bdfb415415e794cdd6cc2d85fd10dcb2f2b7d842f2b65ec59f2de7b4a25429",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "attempts/v3-a1.json",
+          "spec_sha256": "6042babd3fa394082e9460549dea4fa346e2a90837349cc14aa24a2cde731924",
+          "note": "Single fabric view carrying all 12 fabric edges (BL->spine 4, spine->leaf 4, leaf->rack 4), spines on top, border leaves and rack leaves in one shared row, racks at the bottom. Rejected: extent 49x49 exceeds the 47-row pane height, and the 12 routes left 1 dot violation (a route dot on a cell two routes own)."
+        },
+        {
+          "attempt": 2,
+          "spec": "attempts/v3-a2.json",
+          "spec_sha256": "b86090b3b00474db5d0e0f1a9cab05d6f49a1414ad261eb84f3e5707febbb17b",
+          "note": "Rack edges moved to v4: spines above, border leaves + rack leaves in one shared row in the default order (bl1, bl2, leaf1, leaf2), 8 edges. Rejected: 2 dot violations from routes sharing corner cells between the upward BL->spine routes and the downward spine->leaf routes."
+        },
+        {
+          "attempt": 3,
+          "spec": "v3.json",
+          "spec_sha256": "c6bdfb415415e794cdd6cc2d85fd10dcb2f2b7d842f2b65ec59f2de7b4a25429",
+          "note": "Same 6-node fabric with the shared row ordered bl2, leaf1, leaf2, bl1 so the two border leaves sit at the row edges. check: extent 46x20, 8/8 labels, 0 on route, 0 skipped, 8 single-dot routes, 0 dot violations, no warnings. Kept as final; remaining visual defect recorded in generation.json (one cross-connect takes a long perimeter detour and the ECMP labels crowd the crossing band)."
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "final_spec": "v4.json",
+      "final_spec_sha256": "44cbe30cb0574e53ac01f5e3cd547ee05bb3687397a140e703d790e5346a619a",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "v4.json",
+          "spec_sha256": "44cbe30cb0574e53ac01f5e3cd547ee05bb3687397a140e703d790e5346a619a",
+          "note": "Dual-homed racks: Leaf 1/2 -> Rack 1/2, 4 edges, labels 'dual'. check: extent 21x14, 4/4 labels, 0 on route, 0 skipped, 4 single-dot routes, 0 dot violations, no warnings. Accepted."
+        }
+      ]
+    }
+  ],
+  "validator_summary": {
+    "bundles_run": 4,
+    "bundles_passing": 4,
+    "failing_checks": [],
+    "checks_per_bundle": 24,
+    "output_dir": "docs/visualize-eval/rounds/02/datacenter-redundancy/validation/"
+  },
+  "status": "generated, captured through the harness, and validator-clean; not judged, not approved",
+  "independent_review": "not run by design: the captain starts a separate Sol judge after this result arrives"
+}

@@ -1,0 +1,48 @@
+{
+ "direction": "lr",
+ "theme": "gruvbox",
+ "diagrams": [
+  {
+   "id": "x",
+   "title": "T",
+   "description": "short.",
+   "containers": [
+    {
+     "label": "Box",
+     "members": [
+      "a",
+      "b"
+     ]
+    }
+   ],
+   "nodes": [
+    {
+     "id": "a",
+     "label": "alpha"
+    },
+    {
+     "id": "b",
+     "label": "beta"
+    },
+    {
+     "id": "c",
+     "label": "gamma"
+    }
+   ],
+   "edges": [
+    {
+     "from": "a",
+     "to": "b",
+     "label": "x1",
+     "dots": 0
+    },
+    {
+     "from": "b",
+     "to": "c",
+     "label": "x2",
+     "dots": 0
+    }
+   ]
+  }
+ ]
+}

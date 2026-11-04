@@ -1,0 +1,19 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "wlp", "label": "wlp8s0 192.168.1.213", "group": "nic" },
+    { "id": "rtr", "label": "rtr WNC ToR/spine/BF claimed" },
+    { "id": "ont", "label": "ont 169.254.3.1 · claimed", "group": "historical traceroute" },
+    { "id": "vzagg", "label": "vz edge 100.41.x", "group": "historical traceroute" },
+    { "id": "vzbb", "label": "vz bb AS701", "group": "historical traceroute" },
+    { "id": "cf", "label": "cf 1.1.1.1 AS13335", "group": "historical traceroute" }
+  ],
+  "edges": [
+    { "from": "wlp", "to": "rtr", "label": "metric 600" },
+    { "from": "rtr", "to": "ont", "label": "NAT out" },
+    { "from": "ont", "to": "vzagg", "label": "4.5 ms hist", "style": "dashed" },
+    { "from": "vzagg", "to": "vzbb", "label": "6.6 ms hist", "style": "dashed" },
+    { "from": "vzbb", "to": "cf", "label": "6-9 ms hist", "style": "dashed" }
+  ]
+}

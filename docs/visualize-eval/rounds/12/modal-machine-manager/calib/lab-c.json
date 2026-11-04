@@ -1,0 +1,22 @@
+{
+ "direction": "tb",
+ "theme": "gruvbox",
+ "nodes": [
+  {
+   "id": "a",
+   "label": "cp"
+  },
+  {
+   "id": "c",
+   "label": "private gRPC"
+  }
+ ],
+ "edges": [
+  {
+   "from": "a",
+   "to": "c",
+   "label": "create/terminate/repair",
+   "label_slot": true
+  }
+ ]
+}

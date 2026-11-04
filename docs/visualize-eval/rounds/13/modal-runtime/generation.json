@@ -1,0 +1,791 @@
+{
+  "case_id": "modal-runtime",
+  "round": "13",
+  "generator": {
+    "label": "viz-ds13-6",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "candidate": {
+    "skill_path": "docs/visualize-eval/rounds/13/SKILL.md",
+    "skill_sha256": "65d826f0f1f9e61ddfd806628cb162827b0e6cf6d7df2490c9d75e6cbe485d2a",
+    "binary_path": "/tmp/visualize-eval/round-13/bin/rataflow-view",
+    "binary_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+    "rubric_revision": 11,
+    "rubric_sha256": "6bfd3733c8d08b66af9a92e71985a20846f954d7916eaf9685f86c8d2f96bcb8",
+    "target_viewport": "77x47 @100% natural"
+  },
+  "triage": {
+    "annex": "TRIAGE-modal-runtime",
+    "brief_framing": "\"Can you diagram modal-runtime for me? It keeps coming up and I don't have a clear picture of it.\"",
+    "questions_provoked": [
+      "Q1 scope: the whole runtime, or one seam?",
+      "Q2 reader's job: what should the reader be able to answer from the picture?",
+      "Q3 panes or one canvas?",
+      "Q4 motion: does anything animate?",
+      "Q5 is this a machine-manager diagram (the neighbouring case I already have)?",
+      "Q6 (made unnecessary by Q1): which components count as 'the runtime's internals' - all eight, or only the orchestration half?",
+      "Q7 (made unnecessary by Q2 and the source): should the worker pair be one bidirectional arrow or two directed ones?",
+      "Q8 (made unnecessary by Q4): slow sparse dots, or none?",
+      "Q9 (made unnecessary by Q1): do the historical qualifiers ('historical', 'unconfirmed') need dashed links?"
+    ],
+    "questions_used": [
+      {
+        "id": "TRIAGE-modal-runtime-1",
+        "question": "Scope: the whole runtime, or one seam?",
+        "answer": "All eight components and their eight relations - the seams, modules and RPCs. That's the point of the diagram.",
+        "answer_source": "annex answer TRIAGE-modal-runtime-1"
+      },
+      {
+        "id": "TRIAGE-modal-runtime-2",
+        "question": "What is the reader's job?",
+        "answer": "I want to know which seam carries which protocol. The worker gRPC and the filesystem HTTP over UDS must not blur.",
+        "answer_source": "annex answer TRIAGE-modal-runtime-2"
+      },
+      {
+        "id": "TRIAGE-modal-runtime-3",
+        "question": "Panes or one canvas?",
+        "answer": "One pane if the pair fits; a canvas with a described diagram per seam if the labels need room. Don't split just to make boxes smaller.",
+        "answer_source": "annex answer TRIAGE-modal-runtime-3"
+      },
+      {
+        "id": "TRIAGE-modal-runtime-4",
+        "question": "Motion?",
+        "answer": "The source never shows motion - keep it static.",
+        "answer_source": "annex answer TRIAGE-modal-runtime-4"
+      },
+      {
+        "id": "TRIAGE-modal-runtime-5",
+        "question": "Is this a machine-manager diagram?",
+        "answer": "No. It's the runtime's own internals; judge it by the runtime source, not by the machine-manager cases.",
+        "answer_source": "annex answer TRIAGE-modal-runtime-5"
+      },
+      {
+        "id": "OWN-1",
+        "question": "Which label text do the two worker seams carry?",
+        "answer": "The source's own wording, verbatim: \"task input + control RPCs\" and \"events + management RPCs\". Annex answer 2 makes the ownership of these two strings the point, so they are not paraphrased on the canvas.",
+        "answer_source": "own judgment",
+        "reason": "source.md's relationship facts name both strings; no annex answer may replace a source fact, and abbreviating them is exactly the blurring the reader forbade."
+      },
+      {
+        "id": "OWN-2",
+        "question": "Do any links need the uncertain (dashed) style?",
+        "answer": "No. source.md carries no 'unconfirmed'/'historical' qualifier on any of the eight relations, so every relation is drawn solid; the historical-chat caveat is provenance, not a qualifier on a link.",
+        "answer_source": "own judgment",
+        "reason": "source.md marks the chat as evidence 'not authority to replay commands' but attaches no uncertainty to a relation; adding dashes would invent a qualifier."
+      },
+      {
+        "id": "OWN-3",
+        "question": "How are the eight boxes grouped by concept?",
+        "answer": "orchestration (modal-runtime, Task engine), compute (Container backend, Task container), storage (Filesystem + volumes, Blobnet); modal-worker and modal-daemon carry no group because they are boundary peers, not members of an internal cluster.",
+        "answer_source": "own judgment",
+        "reason": "source.md's own summary line names 'task orchestration, container backends, storage, and three worker RPC seams'; the worker and the daemon are the two edge ends, so inventing a group for them would tidy the colours without a source fact."
+      }
+    ],
+    "converged_when": "After Q1-Q5 the picture was complete: scope = all eight components and eight relations; reader's job = which seam carries which protocol (so the pair must never blur and HTTP-over-UDS must not read as gRPC); shape = one pane if the anti-parallel pair fits, otherwise a described canvas; motion = none. Q6-Q9 were answered by Q1-Q4 and the source, so they were not asked again.",
+    "shape_decision": "canvas with 3 described diagrams (resolved by measurement, not by node count): the single view fits 77x47 but cannot give the anti-parallel pair unambiguous label owners"
+  },
+  "classification": {
+    "family": "service-meshes",
+    "evidence": "a core (modal-runtime) with a 2-3 edge fan and an anti-parallel pair (worker -> runtime / runtime -> worker) that the brief names as the case's recurring failure.",
+    "tie_breakers_considered": [
+      "density: E = N = 8, which the flow-chain rule (E ~ N) would also allow; rejected because the source's shape is a core with a fan plus a return pair, and the fixed constraints forbid collapsing that pair, so the mesh reading is the one that changes the layout.",
+      "identifier/qualifier content: no addresses, ports or uncertainty markers, so identity-probe-maps does not apply.",
+      "motion: none in the source and none requested, so lifecycle-machines does not apply (its signature is one dot per live transition)."
+    ],
+    "secondary_recipe": "flow-chain discipline for the two acyclic tails: runtime -> engine -> backend -> container (one hop per rank, left to right) and filesystem -> blobnet, which is why d2 is a straight lr chain rather than a fan.",
+    "reclassification": null
+  },
+  "view_shape_decision": {
+    "rung_chosen": "rung 2 - ONE canvas hosting 3 named, described concept-diagrams",
+    "source_facts_that_decided_it": [
+      "the source fixes eight components and eight relations, including an anti-parallel pair that must stay in one view with distinct labels",
+      "the two seam labels are long by nature (25 and 26 characters: 'task input + control RPCs', 'events + management RPCs'), and the reader's whole job is that these two strings keep one owner each",
+      "the source's own clusters (task orchestration / container backends / storage / the worker RPC seams) split cleanly into three concepts"
+    ],
+    "rejected_rungs": [
+      {
+        "rung": "rung 1 - one view beside the chat",
+        "reason": "measured three candidates (attempts/v1-a1..a3, recorded/v1-a1..a3.stdout). The best honest single view is 57x30 at natural zoom and fits, but keeps 1 ambiguous label owner on the anti-parallel pair (d1:e0) and 2 route cells inside the margin of a node they do not serve (e3 hugging 'filesystem'); both are round-13 failures, and the leader-tick rescue that could separate the pair emits a warning the round-13 validator counts as a failure (see known_defects[0]).",
+        "captures": [
+          "recorded/v1-a1.stdout",
+          "recorded/v1-a2.stdout",
+          "recorded/v1-a3.stdout"
+        ]
+      },
+      {
+        "rung": "one pane per seam (separate panes)",
+        "reason": "annex answer 3 prefers one pane or one navigated canvas; separate panes cannot be read side by side and would fragment the reader's job (which seam carries which protocol) into window switching."
+      }
+    ],
+    "split_coverage_map": [
+      {
+        "diagram": "d1",
+        "carries": "worker <-> runtime, both directions: e0, e1"
+      },
+      {
+        "diagram": "d2",
+        "carries": "runtime -> engine -> backend -> container: e2, e3, e4"
+      },
+      {
+        "diagram": "d3",
+        "carries": "engine -> filesystem, filesystem -> blobnet, runtime -> daemon: e5, e6, e7; plus the fixed constraint that this UDS/HTTP seam is not worker gRPC"
+      }
+    ]
+  },
+  "surfaces": [
+    {
+      "view": "canvas",
+      "form": "canvas",
+      "spec": "specs/modal-runtime-canvas.json",
+      "spec_sha256": "83d3c0cfd116348adc8f00b8ceb0ad6470f236e8c1cf008f34bd7c5b80c331e1",
+      "evidence": "evidence/canvas",
+      "text": "evidence/canvas/canvas-text.txt",
+      "ansi": "evidence/canvas/canvas-ansi.ansi",
+      "selected_ansi": "evidence/canvas/canvas-selected.ansi",
+      "check": "evidence/canvas/check.txt",
+      "frames": "evidence/canvas/canvas-frames.txt",
+      "frames_ansi": "evidence/canvas/canvas-frames.ansi",
+      "frames_count": 5,
+      "frame_step_ms": 100,
+      "pinned_77x47": "evidence/canvas/canvas-77x47-frames.txt",
+      "whole_canvas_dump": "evidence/canvas/canvas-whole-135x48-frames.txt",
+      "per_diagram_captures": [
+        "evidence/canvas/sections/d1-section.txt",
+        "evidence/canvas/sections/d2-section.txt",
+        "evidence/canvas/sections/d3-section.txt"
+      ],
+      "validator": "evidence/canvas/validator.txt",
+      "measured": {
+        "pane_viewport_token": "68x44 @100%",
+        "pane_header": " rataflow-view · 68x44 @100% · canvas 133x34 · modal-runtime-canvas.json",
+        "pinned_77x47_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "whole_canvas_dump_viewport_line": "viewport: 135x48 zoom: 1.00 natural",
+        "natural_zoom": "100%",
+        "note": "the pane is the worker tab's half pane (68 columns), so the 133-wide canvas is clipped in the pane capture and the reader pans; the canvas form's proof is the check's per-diagram extents plus the whole-canvas dump"
+      },
+      "check_extent": "extent=133x34 cells (whole canvas)",
+      "diagrams": [
+        {
+          "id": "d1",
+          "title": "worker and runtime: the two RPC seams",
+          "description": "Task input plus control RPCs down; events plus management RPCs back. Two directed seams, never one arrow.",
+          "direction": "lr",
+          "origin": [
+            0,
+            3
+          ],
+          "extent": [
+            75,
+            6
+          ],
+          "nodes": 2,
+          "edges": 2,
+          "routes": 2,
+          "edge_ids": [
+            "e0",
+            "e1"
+          ]
+        },
+        {
+          "id": "d2",
+          "title": "task dispatch down to the container",
+          "description": "modal-runtime dispatches to the Task engine, which starts a Container backend that runs the user process.",
+          "direction": "lr",
+          "origin": [
+            0,
+            14
+          ],
+          "extent": [
+            133,
+            5
+          ],
+          "nodes": 4,
+          "edges": 3,
+          "routes": 3,
+          "edge_ids": [
+            "e2",
+            "e3",
+            "e4"
+          ]
+        },
+        {
+          "id": "d3",
+          "title": "storage and daemon interfaces",
+          "description": "Engine mounts/snapshots Filesystem + volumes, then Blobnet; runtime to daemon: HTTP/UDS, not worker gRPC.",
+          "direction": "lr",
+          "origin": [
+            0,
+            24
+          ],
+          "extent": [
+            107,
+            10
+          ],
+          "nodes": 5,
+          "edges": 3,
+          "routes": 3,
+          "edge_ids": [
+            "e5",
+            "e6",
+            "e7"
+          ]
+        }
+      ],
+      "nodes_per_diagram": {
+        "d1": [
+          "modal-worker",
+          "modal-runtime"
+        ],
+        "d2": [
+          "modal-runtime",
+          "Task engine",
+          "Container backend",
+          "Task container"
+        ],
+        "d3": [
+          "Task engine",
+          "modal-runtime",
+          "Filesystem + volumes",
+          "modal-daemon",
+          "Blobnet"
+        ]
+      },
+      "node_labels_drawn": 11,
+      "distinct_components": 8,
+      "repeat_boxes": "modal-runtime appears in d1, d2 and d3; Task engine appears in d2 and d3 - each diagram is self-contained, which is what keeps the seam labels apart",
+      "canvas_totals": {
+        "nodes": 11,
+        "edges": 8,
+        "routes": 8,
+        "labels": "8/8 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners",
+        "crossings": "0 bridges, 0 touching bends",
+        "near_misses": "0 cell(s) inside the 2-margin of a node the route does not serve (0 on trunk buses); passes-near-unrelated-node: 0",
+        "trunks": "none declared",
+        "groups": "orchestration(5) compute(2) storage(2)",
+        "dots": "0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins": "0/0 (no routes are animated)",
+        "arrivals": "0/0 (no same-arrival routes)"
+      }
+    }
+  ],
+  "habits": [
+    {
+      "surface": "d1",
+      "borrowed": "service-mesh habit: keep the anti-parallel pair in ONE view, two edges with distinct labels and distinct ports, never one bidirectional arrow",
+      "capture": "evidence/canvas/sections/d1-section.txt rows 5-7: the worker->runtime run carries the left-pointing head into modal-runtime (row 5) and the runtime->worker run carries the right-pointing head into modal-worker (row 7); both labels are drawn"
+    },
+    {
+      "surface": "d1",
+      "deviation": "the pair's two long labels do not share one channel; the forward edge reserves its own label rank with minlen: 2",
+      "reason": "a 2-node diagram is ~15 cells wide in tb and ~6 rows tall in lr, so a 25-character label has no clear cell beside its run (measured: canvas-c1 skipped one label, canvas-c2 skipped both). The reserved rank is the only placement that keeps both labels drawn and owned.",
+      "capture": "evidence/canvas/sections/d1-section.txt rows 5-8"
+    },
+    {
+      "surface": "d2",
+      "borrowed": "flow-chain habit (secondary recipe): one hop per rank, left to right, label in each hop's own rank gap",
+      "capture": "evidence/canvas/sections/d2-section.txt rows 4-6"
+    },
+    {
+      "surface": "d2/d3",
+      "deviation": "the mesh's fan is split across two diagrams instead of one core-fan view",
+      "reason": "one diagram carrying all eight relations could not keep the seam labels unambiguous (attempts/v1-a3: 1 ambiguous owner, 2 near-miss cells), and the annex says a canvas with a described diagram per seam is preferred to a seam that reads as two things at once",
+      "capture": "recorded/v1-a3.stdout vs evidence/canvas/check.txt"
+    },
+    {
+      "surface": "canvas",
+      "deviation": "no dots anywhere",
+      "reason": "the source shows no motion and annex answer 4 says keep it static; the frames capture proves it (5 timestamped frames, identical bodies, only the timestamp line differs)",
+      "capture": "evidence/canvas/canvas-frames.txt (frames 0-4) and the body comparison in generation.md"
+    }
+  ],
+  "meaning_ledger": [
+    {
+      "fact": "modal-worker (node `worker`)",
+      "kind": "component",
+      "fate": "drawn in d1"
+    },
+    {
+      "fact": "modal-runtime (node `runtime`)",
+      "kind": "component",
+      "fate": "drawn in d1, d2 and d3"
+    },
+    {
+      "fact": "Task engine (node `engine`)",
+      "kind": "component",
+      "fate": "drawn in d2 and d3"
+    },
+    {
+      "fact": "Container backend (node `backend`)",
+      "kind": "component",
+      "fate": "drawn in d2"
+    },
+    {
+      "fact": "Task container (node `container`)",
+      "kind": "component",
+      "fate": "drawn in d2"
+    },
+    {
+      "fact": "Filesystem + volumes (node `filesystem`)",
+      "kind": "component",
+      "fate": "drawn in d3"
+    },
+    {
+      "fact": "Blobnet (node `blobnet`)",
+      "kind": "component",
+      "fate": "drawn in d3"
+    },
+    {
+      "fact": "modal-daemon (node `daemon`)",
+      "kind": "component",
+      "fate": "drawn in d3"
+    },
+    {
+      "fact": "worker -> runtime: task input + control RPCs",
+      "kind": "protocol/relation",
+      "fate": "drawn, label owned by e0"
+    },
+    {
+      "fact": "runtime -> worker: events + management RPCs",
+      "kind": "protocol/relation",
+      "fate": "drawn separately, label owned by e1"
+    },
+    {
+      "fact": "runtime -> engine: dispatches tasks",
+      "kind": "action verb",
+      "fate": "drawn, label owned by e2"
+    },
+    {
+      "fact": "engine -> backend: starts / manages",
+      "kind": "action verb",
+      "fate": "drawn, label owned by e3"
+    },
+    {
+      "fact": "backend -> container: runs user process",
+      "kind": "action verb",
+      "fate": "drawn, label owned by e4"
+    },
+    {
+      "fact": "engine -> filesystem: mounts / snapshots",
+      "kind": "action verb",
+      "fate": "drawn, label owned by e5"
+    },
+    {
+      "fact": "filesystem -> blobnet: image + volume data",
+      "kind": "payload",
+      "fate": "drawn, label owned by e6"
+    },
+    {
+      "fact": "runtime -> daemon: filesystem HTTP over UDS",
+      "kind": "protocol/path",
+      "fate": "drawn, label owned by e7"
+    },
+    {
+      "fact": "HTTP over Unix-domain sockets is not the worker gRPC interface",
+      "kind": "fixed constraint",
+      "fate": "drawn as separation (d1 vs d3) plus d3's description 'not worker gRPC'"
+    },
+    {
+      "fact": "the source's clusters: task orchestration, container backends, storage, three worker RPC seams",
+      "kind": "role/cluster",
+      "fate": "drawn as three diagram titles and three group hues"
+    },
+    {
+      "fact": "the ask was to keep the diagram readable and to name the seams, modules and RPCs",
+      "kind": "reader's job",
+      "fate": "drawn as titles + descriptions on the canvas"
+    },
+    {
+      "fact": "historical chat line references (5, 12, 55) and 'go and Rust runtime source discussed at lines 27-51', no remote execution required",
+      "kind": "provenance",
+      "fate": "dropped with reason: these are source pointers, not graph facts; they are recorded here and in generation.md, and no relation gains or loses a node because of them"
+    },
+    {
+      "fact": "the historical claims are 'historical claims' that must be read with the human corrections below them",
+      "kind": "qualifier",
+      "fate": "drawn: the corrections are the fixed constraints, which are honoured (pair separate, UDS/HTTP distinct); no uncertainty is left on a link because none is stated on one"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e0",
+      "from": "worker",
+      "to": "runtime",
+      "verb_tech": "task input + control RPCs",
+      "label_owner": "e0",
+      "diagram": "d1"
+    },
+    {
+      "id": "e1",
+      "from": "runtime",
+      "to": "worker",
+      "verb_tech": "events + management RPCs",
+      "label_owner": "e1",
+      "diagram": "d1"
+    },
+    {
+      "id": "e2",
+      "from": "runtime",
+      "to": "engine",
+      "verb_tech": "dispatches tasks",
+      "label_owner": "e2",
+      "diagram": "d2"
+    },
+    {
+      "id": "e3",
+      "from": "engine",
+      "to": "backend",
+      "verb_tech": "starts / manages",
+      "label_owner": "e3",
+      "diagram": "d2"
+    },
+    {
+      "id": "e4",
+      "from": "backend",
+      "to": "container",
+      "verb_tech": "runs user process",
+      "label_owner": "e4",
+      "diagram": "d2"
+    },
+    {
+      "id": "e5",
+      "from": "engine",
+      "to": "filesystem",
+      "verb_tech": "mounts / snapshots",
+      "label_owner": "e5",
+      "diagram": "d3"
+    },
+    {
+      "id": "e6",
+      "from": "filesystem",
+      "to": "blobnet",
+      "verb_tech": "image + volume data",
+      "label_owner": "e6",
+      "diagram": "d3"
+    },
+    {
+      "id": "e7",
+      "from": "runtime",
+      "to": "daemon",
+      "verb_tech": "filesystem HTTP over UDS",
+      "label_owner": "e7",
+      "diagram": "d3"
+    }
+  ],
+  "relationship_map": [
+    {
+      "source_relation": "`worker -> runtime`: task input + control RPCs",
+      "surface_relation": "d1 arrow from modal-worker into modal-runtime, label 'task input + control RPCs'",
+      "capture_ref": "evidence/canvas/sections/d1-section.txt rows 5-6 (arrowhead into modal-runtime on row 5, text on row 6)"
+    },
+    {
+      "source_relation": "`runtime -> worker`: events + management RPCs",
+      "surface_relation": "d1 arrow from modal-runtime into modal-worker, label 'events + management RPCs'",
+      "capture_ref": "evidence/canvas/sections/d1-section.txt row 7 (arrowhead into modal-worker, text inline)"
+    },
+    {
+      "source_relation": "`runtime -> engine`: dispatches tasks",
+      "surface_relation": "d2 arrow modal-runtime -> Task engine",
+      "capture_ref": "evidence/canvas/sections/d2-section.txt row 5"
+    },
+    {
+      "source_relation": "`engine -> backend`: starts / manages",
+      "surface_relation": "d2 arrow Task engine -> Container backend",
+      "capture_ref": "evidence/canvas/sections/d2-section.txt row 5"
+    },
+    {
+      "source_relation": "`backend -> container`: runs user process",
+      "surface_relation": "d2 arrow Container backend -> Task container",
+      "capture_ref": "evidence/canvas/sections/d2-section.txt row 5"
+    },
+    {
+      "source_relation": "`engine -> filesystem`: mounts / snapshots",
+      "surface_relation": "d3 arrow Task engine -> Filesystem + volumes",
+      "capture_ref": "evidence/canvas/sections/d3-section.txt rows 6-7"
+    },
+    {
+      "source_relation": "`filesystem -> blobnet`: image + volume data",
+      "surface_relation": "d3 arrow Filesystem + volumes -> Blobnet (short elbow to the right)",
+      "capture_ref": "evidence/canvas/sections/d3-section.txt rows 7-9"
+    },
+    {
+      "source_relation": "`runtime -> daemon`: filesystem HTTP over UDS",
+      "surface_relation": "d3 arrow modal-runtime -> modal-daemon, label 'filesystem HTTP over UDS'",
+      "capture_ref": "evidence/canvas/sections/d3-section.txt rows 10-11"
+    }
+  ],
+  "structural_levers": [
+    {
+      "lever": "diagrams (canvas form), 3 sections",
+      "source_fact": "source.md names four clusters - 'task orchestration, container backends, storage, and three worker RPC seams' - and annex answer 3 allows a described diagram per seam when labels need room",
+      "where": "spec root"
+    },
+    {
+      "lever": "minlen: 2 on e0 (worker -> runtime)",
+      "source_fact": "the fixed constraint keeps the two worker directions as different interfaces ('HTTP over Unix-domain sockets is not the same interface as worker gRPC', and the pair must not merge), so the seam owns its own corridor rank instead of sharing one channel with the return run",
+      "where": "d1.edges[0]"
+    },
+    {
+      "lever": "group tags (orchestration, compute, storage)",
+      "source_fact": "the source's own cluster names (task orchestration / container backends / storage)",
+      "where": "node groups in d1, d2, d3"
+    },
+    {
+      "lever": "not used: layers",
+      "reason": "the source states no tier or plane order; ranking already follows the relations"
+    },
+    {
+      "lever": "not used: trunks",
+      "reason": "the source describes no shared bus - every relation is its own interface, so a trunk would fuse relations the fixed constraints keep apart"
+    },
+    {
+      "lever": "not used: label_slot",
+      "reason": "measured in attempts/v1-a2: gutters fit the single view at 68x30 but produced 3 ambiguous owners; in the canvas the rank-gap channels already hold every label (8/8 placed)"
+    },
+    {
+      "lever": "not used: dots / flow / timing",
+      "reason": "the source shows no motion and annex answer 4 says keep it static; dots would be flair"
+    },
+    {
+      "lever": "not used: style dashed",
+      "reason": "no relation carries an uncertainty marker in source.md"
+    }
+  ],
+  "routing_record": [
+    {
+      "attempt": "v1-a1",
+      "near_miss_cells": 0,
+      "passes_near_unrelated_node": 0,
+      "labels": "5/8 placed, 3 skipped, 1 ambiguous",
+      "relief": "not applicable (labels failed first)"
+    },
+    {
+      "attempt": "v1-a2",
+      "near_miss_cells": 2,
+      "passes_near_unrelated_node": 2,
+      "miss": "route e3 passes 2 cell(s) at ring 2 of node 'filesystem'",
+      "labels": "8/8 placed, 3 ambiguous",
+      "relief": "none accepted in the single view; the shipped split removes it (e3 lives in d2, where 'filesystem' is not drawn)"
+    },
+    {
+      "attempt": "v1-a3",
+      "near_miss_cells": 2,
+      "passes_near_unrelated_node": 2,
+      "miss": "route e3 passes 2 cell(s) at ring 2 of node 'filesystem'",
+      "labels": "8/8 placed, 1 ambiguous (e0)",
+      "relief": "rejected attempt"
+    },
+    {
+      "attempt": "canvas-c1",
+      "near_miss_cells": 0,
+      "passes_near_unrelated_node": 0,
+      "labels": "7/8 placed, 1 skipped, 1 ambiguous"
+    },
+    {
+      "attempt": "canvas-c2",
+      "near_miss_cells": 0,
+      "passes_near_unrelated_node": 0,
+      "labels": "6/8 placed, 2 skipped, 0 ambiguous"
+    },
+    {
+      "attempt": "canvas-c3",
+      "near_miss_cells": 0,
+      "passes_near_unrelated_node": 0,
+      "labels": "8/8 placed, 0 ambiguous, 0 skipped",
+      "relief": "the split moved engine -> backend (e3) into d2 and the pair into its own section, so no route runs beside an unrelated box"
+    },
+    {
+      "attempt": "canvas-c3-final",
+      "near_miss_cells": 0,
+      "passes_near_unrelated_node": 0,
+      "labels": "8/8 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous",
+      "note": "shipped; layout identical to canvas-c3, descriptions shortened only"
+    }
+  ],
+  "hue_record": {
+    "group_table": [
+      {
+        "group": "orchestration",
+        "members_source": "modal-runtime, Task engine",
+        "boxes_on_canvas": 5,
+        "diagrams": "d1 (modal-runtime), d2 (modal-runtime, Task engine), d3 (Task engine, modal-runtime), one hue family across all three"
+      },
+      {
+        "group": "compute",
+        "members_source": "Container backend, Task container",
+        "boxes_on_canvas": 2,
+        "diagrams": "d2 only"
+      },
+      {
+        "group": "storage",
+        "members_source": "Filesystem + volumes, Blobnet",
+        "boxes_on_canvas": 2,
+        "diagrams": "d3 only"
+      },
+      {
+        "group": "(ungrouped)",
+        "members_source": "modal-worker, modal-daemon",
+        "boxes_on_canvas": 2,
+        "diagrams": "d1 (modal-worker), d3 (modal-daemon)"
+      }
+    ],
+    "check_line": "groups: orchestration(5) compute(2) storage(2)",
+    "family_consistency": "one family per group across the canvas; shades vary per box, which the engine documents as intended ('Related concepts may share a family; they never need identical colors')",
+    "capture_evidence": {
+      "source": "evidence/canvas/canvas-ansi.ansi",
+      "box_border_foregrounds_by_row": [
+        {
+          "row": 4,
+          "diagram": "d1",
+          "borders": [
+            "rgb(206,115,138) modal-runtime",
+            "rgb(125,174,163) modal-worker"
+          ]
+        },
+        {
+          "row": 15,
+          "diagram": "d2",
+          "borders": [
+            "rgb(219,153,170) modal-runtime",
+            "rgb(193,78,106) Task engine",
+            "rgb(115,161,206) Container backend"
+          ]
+        },
+        {
+          "row": 25,
+          "diagram": "d3",
+          "borders": [
+            "rgb(231,187,198) Task engine",
+            "rgb(183,206,115) Filesystem + volumes"
+          ]
+        },
+        {
+          "row": 30,
+          "diagram": "d3",
+          "borders": [
+            "rgb(197,89,116) modal-runtime",
+            "rgb(169,182,101) modal-daemon"
+          ]
+        }
+      ],
+      "reading": "every orchestration box on the canvas (d1 row 4, d2 row 15, d3 rows 25 and 30) is a rose/pink hue of one family, and the two compute/storage families are visibly different (blue; green), so the group signal survives the split"
+    },
+    "dot_hues": "not applicable: the canvas is static (0 animated routes). --check line: \"dot hues: 0 by source, 0 by destination, 0 shared-hue pair(s) (source-only 0, destination-only 0)\""
+  },
+  "recipe_yield": {
+    "demand": "service-mesh habit: the anti-parallel worker pair in ONE view with distinct labels and ports",
+    "status": "satisfied, not yielded - d1 draws both directions",
+    "related_yield": {
+      "demand": "rung 1 of the view ladder: everything on one 77x47 view",
+      "measured_attempts": [
+        "attempts/v1-a1.json (47x93)",
+        "attempts/v1-a2.json (68x30, 3 ambiguous)",
+        "attempts/v1-a3.json (57x30, 1 ambiguous + 2 near-miss cells)"
+      ],
+      "why_impossible": "the engine's only in-view ownership rescue is the leader tick, and a leader-ticked label makes --check print 'warning: N label(s) needed a leader tick', which viz-validate.py's check_warnings_absent treats as a failure (known_defects[0]); so a one-view spec that keeps both seam labels unambiguous cannot produce a valid bundle",
+      "how_close": "the shipped canvas carries every relation of that single view, split at the source's own clusters, with 8/8 labels owned and 0 near-miss cells"
+    }
+  },
+  "source_pointers": [
+    "docs/visualize-eval/cases/modal-runtime/source.md (source_sha256 c6e4552d5842347bc9472e53a2351897c3624c92b5a14541aaa3c28216dc4a0d)",
+    "source.md quotes chat 2026-10-14T20-36-14-065Z_01a13c21-3e70-754d-a101-f5817da3e05a.jsonl lines 5, 12, 55; go/Rust runtime source discussed at lines 27-51; no remote execution performed"
+  ],
+  "abbreviations": [
+    {
+      "drawn": "HTTP/UDS (d3 description only)",
+      "means": "filesystem HTTP over Unix-domain sockets; the edge label itself is spelled out in full"
+    }
+  ],
+  "deliberate_drops": [
+    {
+      "dropped": "historical chat line numbers and session path",
+      "reason": "provenance, not a graph fact; recorded here and in source_pointers instead of drawn"
+    }
+  ],
+  "known_defects": [
+    {
+      "id": "leader-tick-warning-blocks-the-feature",
+      "severity": "engine/validator contract",
+      "detail": "rataflow/src/main.rs prints 'warning: N label(s) needed a leader tick' whenever a label is placed via a leader tick (labels_leadered > 0). scripts/viz-validate.py's check_warnings_absent fails on any warning line except near-miss ones, so the round-13 leader-tick rescue cannot appear in a bundle that passes validation. Not triggered here (0 leader-ticked), but it removed the only one-view rescue for this case.",
+      "evidence": "rataflow/src/main.rs:395-400 (warning text) vs scripts/viz-validate.py:527-534 (warning filter)"
+    },
+    {
+      "id": "canvas-description-overflows-the-canvas",
+      "severity": "renderer",
+      "detail": "sections_extent() takes max(section.width), where section.width = max(drawing width, title length, description length), but each section's title/description is drawn at the section's x offset (dx). A description that is the widest element is therefore cut off at the canvas edge and cannot be panned into view. Measured: attempts/canvas-c3.json with a 163-char d3 description reported extent=163x34 and the drawn line ended '...filesystem HTTP on U' (recorded/canvas-full-dump.stdout line 27). Mitigation in the shipped spec: every description is 105 characters, drawn at x=22 inside a 133-wide canvas.",
+      "evidence": [
+        "recorded/canvas-full-dump.stdout line 27",
+        "recorded/canvas-c3.stdout (extent=163x34)"
+      ]
+    },
+    {
+      "id": "palette-overlap-at-small-viewports",
+      "severity": "viewer",
+      "detail": "When the drawing area barely exceeds the canvas height the palette box is drawn over d3's bottom-left node. At COLUMNS=135 LINES=40 the box overwrites modal-runtime's left border (recorded/canvas-whole-135x40.stdout rows 36-37: '│ + [+]─│───────────╯'). At the natural pane (68x44) and the pinned 77x47 dump the palette sits below the drawing and no border is overwritten.",
+      "evidence": [
+        "recorded/canvas-whole-135x40.stdout rows 36-37",
+        "evidence/canvas/canvas-77x47-frames.txt rows 43-48",
+        "evidence/canvas/canvas-text.txt rows 38-43"
+      ]
+    },
+    {
+      "id": "d1-pair-labels-tight",
+      "severity": "clarity risk for human review",
+      "detail": "In d1 the two seam labels occupy adjacent rows between two short parallel runs (d1-section.txt rows 6-7). Ownership is structural (e0's label sits in a reserved label rank, e1's label was judged Own by the router) and --check reports 0 ambiguous owners, but a reader sees 'task input + control RPCs' one row above 'events + management RPCs' with both runs in view.",
+      "evidence": [
+        "evidence/canvas/sections/d1-section.txt rows 6-7",
+        "evidence/canvas/check.txt labels line"
+      ]
+    },
+    {
+      "id": "ansi-hue-coverage-partial",
+      "severity": "evidence fidelity",
+      "detail": "The pane is 68 columns, so d2's Task container and d3's Blobnet boxes fall outside the ANSI capture; their hues are asserted from the group accounting (groups: compute(2) storage(2)) rather than cited from pixels.",
+      "evidence": [
+        "evidence/canvas/canvas-ansi.ansi"
+      ]
+    },
+    {
+      "id": "budget-note-description-revision",
+      "severity": "process disclosure",
+      "detail": "The shipped spec is canvas-c3 with descriptions shortened (label canvas-c3-final). That is a text-only revision of the third candidate: per-diagram extents, routes, ports and label placements are byte-identical to canvas-c3, so it is disclosed as a revision rather than counted as a fourth candidate in attempts.json.",
+      "evidence": [
+        "recorded/canvas-c3.stdout vs recorded/canvas-c3-final.stdout"
+      ]
+    }
+  ],
+  "blockers": [],
+  "cleanup": {
+    "panes": [
+      {
+        "pane_id": "w7E:pZ0",
+        "use": "evidence capture for the canvas surface",
+        "result": "confirmed_closed",
+        "proof": "evidence/canvas/manifest.json cleanup field"
+      }
+    ],
+    "failures": []
+  },
+  "validator": {
+    "command": "python3 scripts/viz-validate.py docs/visualize-eval/rounds/13/modal-runtime/evidence/canvas --require-select --require-frames --require-records --attempts docs/visualize-eval/rounds/13/modal-runtime/attempts.json",
+    "exit_status": 0,
+    "result": "all checks passed (40 PASS lines)",
+    "output": "evidence/canvas/validator.txt",
+    "notable": "note layout_fit_canvas_form - 3 diagram(s) on a 133x34 canvas, drawn whole at 100% and navigated by pan; the owner's navigable-canvas form",
+    "frame_audit": "not run: the case is static (0 animated routes, 0 dots), so scripts/viz-frame-audit.py has no route to track; the frames capture instead proves the drawing does not move (5 frames, identical bodies, only the 'frame N at Nms' line differs)"
+  },
+  "commands": [
+    "scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/13/modal-runtime/attempts-log.jsonl --label v1-a1 -- /tmp/visualize-eval/round-13/bin/rataflow-view --check docs/visualize-eval/rounds/13/modal-runtime/attempts/v1-a1.json",
+    "scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/13/modal-runtime/attempts-log.jsonl --label v1-a2 -- /tmp/visualize-eval/round-13/bin/rataflow-view --check docs/visualize-eval/rounds/13/modal-runtime/attempts/v1-a2.json",
+    "scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/13/modal-runtime/attempts-log.jsonl --label v1-a3 -- /tmp/visualize-eval/round-13/bin/rataflow-view --check docs/visualize-eval/rounds/13/modal-runtime/attempts/v1-a3.json",
+    "scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/13/modal-runtime/attempts-log.jsonl --label canvas-c1 -- /tmp/visualize-eval/round-13/bin/rataflow-view --check docs/visualize-eval/rounds/13/modal-runtime/attempts/canvas-c1.json",
+    "scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/13/modal-runtime/attempts-log.jsonl --label canvas-c2 -- /tmp/visualize-eval/round-13/bin/rataflow-view --check docs/visualize-eval/rounds/13/modal-runtime/attempts/canvas-c2.json",
+    "scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/13/modal-runtime/attempts-log.jsonl --label canvas-c3 -- /tmp/visualize-eval/round-13/bin/rataflow-view --check docs/visualize-eval/rounds/13/modal-runtime/attempts/canvas-c3.json",
+    "scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/13/modal-runtime/attempts-log.jsonl --label canvas-c3-final -- /tmp/visualize-eval/round-13/bin/rataflow-view --check docs/visualize-eval/rounds/13/modal-runtime/specs/modal-runtime-canvas.json",
+    "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/13/modal-runtime/specs/modal-runtime-canvas.json --bin /tmp/visualize-eval/round-13/bin/rataflow-view --out docs/visualize-eval/rounds/13/modal-runtime/evidence/canvas --label canvas --frames 5",
+    "COLUMNS=165 LINES=40 scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/13/modal-runtime/attempts-log.jsonl --raw-dir docs/visualize-eval/rounds/13/modal-runtime/recorded --label canvas-full-dump -- /tmp/visualize-eval/round-13/bin/rataflow-view --frames 3 docs/visualize-eval/rounds/13/modal-runtime/specs/modal-runtime-canvas.json",
+    "COLUMNS=135 LINES=40 scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/13/modal-runtime/attempts-log.jsonl --raw-dir docs/visualize-eval/rounds/13/modal-runtime/recorded --label canvas-whole-135x40 -- /tmp/visualize-eval/round-13/bin/rataflow-view --frames 3 docs/visualize-eval/rounds/13/modal-runtime/specs/modal-runtime-canvas.json",
+    "COLUMNS=135 LINES=48 scripts/viz-evidence.sh record --to docs/visualize-eval/rounds/13/modal-runtime/attempts-log.jsonl --raw-dir docs/visualize-eval/rounds/13/modal-runtime/recorded --label canvas-whole-135x48 -- /tmp/visualize-eval/round-13/bin/rataflow-view --frames 3 docs/visualize-eval/rounds/13/modal-runtime/specs/modal-runtime-canvas.json",
+    "python3 scripts/viz-validate.py docs/visualize-eval/rounds/13/modal-runtime/evidence/canvas --require-select --require-frames --require-records --attempts docs/visualize-eval/rounds/13/modal-runtime/attempts.json",
+    "evidence/canvas/sections/*: awk crops of evidence/canvas/canvas-whole-135x48-frames.txt (see evidence/canvas/sections/README.md)"
+  ]
+}

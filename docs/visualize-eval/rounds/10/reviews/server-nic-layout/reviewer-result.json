@@ -1,0 +1,1272 @@
+{
+  "protocol_version": 1,
+  "round": 10,
+  "case_id": "server-nic-layout",
+  "candidate_sha256": "9c1256791069e27207db2e5138527e45587e7096955f5ed4f86c79d46f77e56d",
+  "renderer_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+  "rubric_sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "bef6219babdb5e581ab179c5b30c90e05263db2fcd9fb224391ae6515b5cdbfb",
+  "generator": {
+    "worker_id": "viz-ds10-4",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge10-server-nic-layout",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 82,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/10/reviews/server-nic-layout/observed-first.md",
+      "sha256": "e8c57575f33aa3d6e1c5464a1e354d1bdd4fb8694c763276f5c5d3f6654f2d1c",
+      "description": "Blind record saved before expectations reveal",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/10/reviews/server-nic-layout/spec-manifest.json",
+      "sha256": "bef6219babdb5e581ab179c5b30c90e05263db2fcd9fb224391ae6515b5cdbfb",
+      "description": "Sorted manifest binding all three final specifications",
+      "capture": null
+    },
+    {
+      "id": "spec1",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/specs/v1.json",
+      "sha256": "1b8c431c260e32e40e76396c0ccf9c31a4a47803be85b426553631325a1ad1fa",
+      "description": "Final spec",
+      "capture": null
+    },
+    {
+      "id": "manifest1",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v1/manifest.json",
+      "sha256": "c051a8860db3449fdafb126e65bfb9ed97bc48bbd5b3934b13188e1869abe359",
+      "description": "Capture manifest including cleanup and hashes",
+      "capture": null
+    },
+    {
+      "id": "check1",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v1/check.txt",
+      "sha256": "12968e9fc0cb3d1b9a83f90ea82fc5e066dae41aee486bec368d0bb2e1eb7a40",
+      "description": "Check output",
+      "capture": null
+    },
+    {
+      "id": "validator1",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/validator/v1.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "Frozen all-pass validator output",
+      "capture": null
+    },
+    {
+      "id": "text1",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v1/v1-text.txt",
+      "sha256": "92ad8982a0b5753316bae5d4cbbf07f5c06f4101cc200284e7697b629367e921",
+      "description": "Measured live pane text",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "capture",
+        "timestamp": "2026-11-02 capture window",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi1",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v1/v1-ansi.ansi",
+      "sha256": "fa68eef138ad6cce2b89c4d7f866ff7767ad5d9dbc5ef257c7907b833f77b96a",
+      "description": "Measured live pane ANSI",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "capture",
+        "timestamp": "2026-11-02 capture window",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected1",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v1/v1-selected.ansi",
+      "sha256": "0c6682652fc7f0eedfc963f92697273a27017f04040d79371eb716108595dddb",
+      "description": "Select-all ANSI",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "capture",
+        "timestamp": "2026-11-02 capture window",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "frames1",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v1/v1-frames.txt",
+      "sha256": "cf5a23348a5a3ee0acfc0a8cb5c0c6b745cef4c5ffde9bf254764df0c4f0827e",
+      "description": "Three timestamped live frames",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0,1,2",
+        "timestamp": "0,100,200 ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "framesansi1",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v1/v1-frames.ansi",
+      "sha256": "b71f5360cbfd3c428fdb643a190c504be4fd69d13783d693317204d669f00826",
+      "description": "Three timestamped ANSI frames",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0,1,2",
+        "timestamp": "0,100,200 ms",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "pinned1",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/pinned/v1-final-77x47.txt",
+      "sha256": "9dc73ccadab5a3630af1b8f56e01de1a825f8b6e31e2607ecdb9f577ce6ef4bd",
+      "description": "Final-spec 77x47 natural pinned dump",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0,1,2",
+        "timestamp": "0,100,200 ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "spec2",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/specs/v2.json",
+      "sha256": "194c1baf3c3ca9b4ace3752d8007505e70d81675887b5a17a680951c608094be",
+      "description": "Final spec",
+      "capture": null
+    },
+    {
+      "id": "manifest2",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v2/manifest.json",
+      "sha256": "d27fda0a5dd84ac847733a649318158550b5fad0dbe1ef0c94128eb5fa0efa03",
+      "description": "Capture manifest including cleanup and hashes",
+      "capture": null
+    },
+    {
+      "id": "check2",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v2/check.txt",
+      "sha256": "b884f96f133440ddf16d9835fb05cec89eeaeb3aca92ddbcb7a5a06a49954773",
+      "description": "Check output",
+      "capture": null
+    },
+    {
+      "id": "validator2",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/validator/v2.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "Frozen all-pass validator output",
+      "capture": null
+    },
+    {
+      "id": "text2",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v2/v2-text.txt",
+      "sha256": "803a36080df63630933c1bf21b088aefe00ea02ac93b2ac6e2baa27520d2f8a3",
+      "description": "Measured live pane text",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "capture",
+        "timestamp": "2026-11-02 capture window",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi2",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v2/v2-ansi.ansi",
+      "sha256": "015cece6ff39eecaa55123312753e38ac57351d4c093c6ca52d71b4f84b82078",
+      "description": "Measured live pane ANSI",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "capture",
+        "timestamp": "2026-11-02 capture window",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected2",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v2/v2-selected.ansi",
+      "sha256": "86c98cf5f5ea0d95a314920c57fd5cfd688a3b153f780d6fca6172f685791886",
+      "description": "Select-all ANSI",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "capture",
+        "timestamp": "2026-11-02 capture window",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "frames2",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v2/v2-frames.txt",
+      "sha256": "ca97726092786cc6c0175126cb375238eaedc3729342f997b38f35936fa7de88",
+      "description": "Three timestamped live frames",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "0,1,2",
+        "timestamp": "0,100,200 ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "framesansi2",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v2/v2-frames.ansi",
+      "sha256": "154eb6b6b54283d2ffdff74a40652bf4a238e8423e788c0e3653e5c6334c83f4",
+      "description": "Three timestamped ANSI frames",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "0,1,2",
+        "timestamp": "0,100,200 ms",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "pinned2",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/pinned/v2-final-77x47.txt",
+      "sha256": "1aca4f1921169b0c485f035c8fcd4503af3a98ba0077c1c75ce62495b2ebff8f",
+      "description": "Final-spec 77x47 natural pinned dump",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0,1,2",
+        "timestamp": "0,100,200 ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "spec3",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/specs/v3.json",
+      "sha256": "cc12a2aed5f4936e1e05ed14251c16985ecc13ca14e51e85dec0e15a53b30916",
+      "description": "Final spec",
+      "capture": null
+    },
+    {
+      "id": "manifest3",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v3/manifest.json",
+      "sha256": "8021df1fbf76ee2e60547f4d41ef7619012598cbece9cefaba4af042971e2353",
+      "description": "Capture manifest including cleanup and hashes",
+      "capture": null
+    },
+    {
+      "id": "check3",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v3/check.txt",
+      "sha256": "fc855b9359c585d1326d0a08aa975fffc5f5582e7c933eea81b565cf1d16a75d",
+      "description": "Check output",
+      "capture": null
+    },
+    {
+      "id": "validator3",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/validator/v3.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "Frozen all-pass validator output",
+      "capture": null
+    },
+    {
+      "id": "text3",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v3/v3-text.txt",
+      "sha256": "e69628c72f58039c5804814157e3b457979b32d3f9005929021bf2449c0bcefc",
+      "description": "Measured live pane text",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "capture",
+        "timestamp": "2026-11-02 capture window",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi3",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v3/v3-ansi.ansi",
+      "sha256": "bfc19830d10b4229073916cac120eec5f76d6a4b74aa382a884765f12ed47780",
+      "description": "Measured live pane ANSI",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "capture",
+        "timestamp": "2026-11-02 capture window",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected3",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v3/v3-selected.ansi",
+      "sha256": "e15fd8b5826a8b185b9310019ea4479263059d308d8ba99c3ea6a083d06deb53",
+      "description": "Select-all ANSI",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "capture",
+        "timestamp": "2026-11-02 capture window",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "frames3",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v3/v3-frames.txt",
+      "sha256": "429aa5ff9c706ec8395fcd67977eca3e0cac2c10f76c76d3df5f0a063daef032",
+      "description": "Three timestamped live frames",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "0,1,2",
+        "timestamp": "0,100,200 ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "framesansi3",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/evidence/v3/v3-frames.ansi",
+      "sha256": "cfbde53ca161212b2bd2082a59f0bccbf1366190758c559d6520af6df939f4fa",
+      "description": "Three timestamped ANSI frames",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "0,1,2",
+        "timestamp": "0,100,200 ms",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "pinned3",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/pinned/v3-final-77x47.txt",
+      "sha256": "e5497ecae15864643b08fc49e6169434014568638d761e2a4f7010b451d8f4e5",
+      "description": "Final-spec 77x47 natural pinned dump",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "0,1,2",
+        "timestamp": "0,100,200 ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/generation.json",
+      "sha256": "d4c48d9b75f5d5ef96ecc478eea668ae8fef0707f4e9a0f56faa6e3a2b85b20e",
+      "description": "Frozen generation",
+      "capture": null
+    },
+    {
+      "id": "generation-md",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/generation.md",
+      "sha256": "129cd0378dba66ab87b57a6a68367fb06174429eb6c78810d40f72a7cba1ee7a",
+      "description": "Frozen generation-md",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/attempts.json",
+      "sha256": "f0691a10c3fbd474c9159c621957cd417cd246bf94996500e76911b6eff627d8",
+      "description": "Frozen attempts",
+      "capture": null
+    },
+    {
+      "id": "attempts-log",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/attempts-log.jsonl",
+      "sha256": "dc0d659cd71ad116eb002d1dcccbf9d3e040d32c0bc9e97f36c772530743f639",
+      "description": "Frozen attempts-log",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/server-nic-layout/source.md",
+      "sha256": "235d296fef435710c8a49bcd247455c8c82b844e71726f146c4cedf227d0308b",
+      "description": "Frozen source",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/server-nic-layout/expected.json",
+      "sha256": "ada8d8b1b8a3dfda4221b22fd1bb785327d6eeda69834c35ab5ab17b0678afb4",
+      "description": "Frozen expected",
+      "capture": null
+    },
+    {
+      "id": "variants",
+      "path": "docs/visualize-eval/cases/server-nic-layout/historical-variants.json",
+      "sha256": "40f060941014aeaf83ee591346e9950f71c02bf9a68c5693804877bfbcbd9eb8",
+      "description": "Frozen variants",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/10/metadata.json",
+      "sha256": "b532cd6b26f975b955c8aa05fc3b0534f122559c1f8f9e2c7694dd23bfd7c167",
+      "description": "Frozen metadata",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/10/rubric.json",
+      "sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+      "description": "Frozen rubric",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen dataset",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/10/SKILL.md",
+      "sha256": "9c1256791069e27207db2e5138527e45587e7096955f5ed4f86c79d46f77e56d",
+      "description": "Frozen skill",
+      "capture": null
+    },
+    {
+      "id": "draft-abandoned-6node-tb.json",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/specs/abandoned-6node-tb.json",
+      "sha256": "0d60ea2685ff2f92bf5d58d36a62e196965c8c1233b3aa0bb262a28e32b328a0",
+      "description": "Preserved rejected spec",
+      "capture": null
+    },
+    {
+      "id": "draft-abandoned-6node-lr.json",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/specs/abandoned-6node-lr.json",
+      "sha256": "a9dbd874fa4a7a694070c2df517675c71fb7b01d18852c5d69aeaee673e272c6",
+      "description": "Preserved rejected spec",
+      "capture": null
+    },
+    {
+      "id": "draft-v3-candidate1.json",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/specs/v3-candidate1.json",
+      "sha256": "d7cbe7ce0f39b0844a8cec260d481d3ac0c2104209282450203f4746ccde89f1",
+      "description": "Preserved rejected spec",
+      "capture": null
+    },
+    {
+      "id": "record-1-stdout",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/recorded/v1-a1-tb.stdout",
+      "sha256": "dcd71652aebd8a84133631b6fff070befb7031b0d4c065e24b0329af842efb65",
+      "description": "Recorded v1-a1-tb stdout",
+      "capture": null
+    },
+    {
+      "id": "record-1-stderr",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/recorded/v1-a1-tb.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v1-a1-tb stderr",
+      "capture": null
+    },
+    {
+      "id": "record-2-stdout",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/recorded/v2-a1-tb.stdout",
+      "sha256": "65312e2864717eab35cd542140cdca2f50c312b4c44e046cc7732ff671a215cf",
+      "description": "Recorded v2-a1-tb stdout",
+      "capture": null
+    },
+    {
+      "id": "record-2-stderr",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/recorded/v2-a1-tb.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v2-a1-tb stderr",
+      "capture": null
+    },
+    {
+      "id": "record-3-stdout",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/recorded/probe-v1-tb-dump.stdout",
+      "sha256": "ca54da4ab5d2a391c82d1b0bd140330e930bb0fc6c0466bc8711d66d178e2751",
+      "description": "Recorded probe-v1-tb-dump stdout",
+      "capture": null
+    },
+    {
+      "id": "record-3-stderr",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/recorded/probe-v1-tb-dump.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded probe-v1-tb-dump stderr",
+      "capture": null
+    },
+    {
+      "id": "record-4-stdout",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/recorded/v1-a2-lr.stdout",
+      "sha256": "da37397adf54dca0a522ae8f33eef957758ccf97ae5c475e697cd291f5d6f379",
+      "description": "Recorded v1-a2-lr stdout",
+      "capture": null
+    },
+    {
+      "id": "record-4-stderr",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/recorded/v1-a2-lr.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v1-a2-lr stderr",
+      "capture": null
+    },
+    {
+      "id": "record-5-stdout",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/recorded/v1-a1-tb-slots.stdout",
+      "sha256": "3f33525f24e844dd0510ab98e5a13d467839145997917b4ed5f21ae59511469a",
+      "description": "Recorded v1-a1-tb-slots stdout",
+      "capture": null
+    },
+    {
+      "id": "record-5-stderr",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/recorded/v1-a1-tb-slots.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v1-a1-tb-slots stderr",
+      "capture": null
+    },
+    {
+      "id": "record-6-stdout",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/recorded/v2-a1-tb-slots.stdout",
+      "sha256": "b884f96f133440ddf16d9835fb05cec89eeaeb3aca92ddbcb7a5a06a49954773",
+      "description": "Recorded v2-a1-tb-slots stdout",
+      "capture": null
+    },
+    {
+      "id": "record-6-stderr",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/recorded/v2-a1-tb-slots.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v2-a1-tb-slots stderr",
+      "capture": null
+    },
+    {
+      "id": "record-7-stdout",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/recorded/v3-a1-tb-slots.stdout",
+      "sha256": "fc855b9359c585d1326d0a08aa975fffc5f5582e7c933eea81b565cf1d16a75d",
+      "description": "Recorded v3-a1-tb-slots stdout",
+      "capture": null
+    },
+    {
+      "id": "record-7-stderr",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/recorded/v3-a1-tb-slots.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v3-a1-tb-slots stderr",
+      "capture": null
+    },
+    {
+      "id": "record-8-stdout",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/pinned/v1-77x47.stdout",
+      "sha256": "8077f0d686fc56a2f6d6fb7351b79995435dcd1ea559d48dbb0381addaa88231",
+      "description": "Recorded v1-77x47 stdout",
+      "capture": null
+    },
+    {
+      "id": "record-8-stderr",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/pinned/v1-77x47.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v1-77x47 stderr",
+      "capture": null
+    },
+    {
+      "id": "record-9-stdout",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/pinned/v2-77x47.stdout",
+      "sha256": "1aca4f1921169b0c485f035c8fcd4503af3a98ba0077c1c75ce62495b2ebff8f",
+      "description": "Recorded v2-77x47 stdout",
+      "capture": null
+    },
+    {
+      "id": "record-9-stderr",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/pinned/v2-77x47.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v2-77x47 stderr",
+      "capture": null
+    },
+    {
+      "id": "record-10-stdout",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/pinned/v3-77x47.stdout",
+      "sha256": "5ccf71d78e5ea81f3e2155abf92998bf06e9550f4a48db8b2fbfae7105a4b4a0",
+      "description": "Recorded v3-77x47 stdout",
+      "capture": null
+    },
+    {
+      "id": "record-10-stderr",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/pinned/v3-77x47.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v3-77x47 stderr",
+      "capture": null
+    },
+    {
+      "id": "record-11-stdout",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/recorded/v3-a3-no-l2-proof.stdout",
+      "sha256": "fc855b9359c585d1326d0a08aa975fffc5f5582e7c933eea81b565cf1d16a75d",
+      "description": "Recorded v3-a3-no-l2-proof stdout",
+      "capture": null
+    },
+    {
+      "id": "record-11-stderr",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/recorded/v3-a3-no-l2-proof.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v3-a3-no-l2-proof stderr",
+      "capture": null
+    },
+    {
+      "id": "record-12-stdout",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/pinned/v3-77x47-1.stdout",
+      "sha256": "e5497ecae15864643b08fc49e6169434014568638d761e2a4f7010b451d8f4e5",
+      "description": "Recorded v3-77x47 stdout",
+      "capture": null
+    },
+    {
+      "id": "record-12-stderr",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/pinned/v3-77x47-1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v3-77x47 stderr",
+      "capture": null
+    },
+    {
+      "id": "record-13-stdout",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/recorded/v1-a2-full-addr.stdout",
+      "sha256": "12968e9fc0cb3d1b9a83f90ea82fc5e066dae41aee486bec368d0bb2e1eb7a40",
+      "description": "Recorded v1-a2-full-addr stdout",
+      "capture": null
+    },
+    {
+      "id": "record-13-stderr",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/recorded/v1-a2-full-addr.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v1-a2-full-addr stderr",
+      "capture": null
+    },
+    {
+      "id": "record-14-stdout",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/pinned/v1-77x47-1.stdout",
+      "sha256": "9dc73ccadab5a3630af1b8f56e01de1a825f8b6e31e2607ecdb9f577ce6ef4bd",
+      "description": "Recorded v1-77x47 stdout",
+      "capture": null
+    },
+    {
+      "id": "record-14-stderr",
+      "path": "docs/visualize-eval/rounds/10/server-nic-layout/pinned/v1-77x47-1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v1-77x47 stderr",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Missing source qualifications and identities; cable absence is stated as an observation unsupported by dark interfaces.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "text1",
+        "text2",
+        "text3",
+        "generation"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All nine drawn edges trace source-to-arrowhead without crossing, junction or uncertain ownership; one historical route is split at the silent marker.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "text1",
+        "text2",
+        "text3",
+        "check1",
+        "check2",
+        "check3"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All three final pinned views fit at natural 77x47 without clipping, but the rubric also requires complete source coverage across splits, which fails.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "pinned1",
+        "pinned2",
+        "pinned3",
+        "text1",
+        "text2",
+        "text3"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Related tag members use related hues and meaningful ordering; unowned silent marker is ungrouped; no group boundary is drawn.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "ansi1",
+        "ansi2",
+        "ansi3",
+        "spec1",
+        "spec2",
+        "spec3"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 12 node occurrence borders have complete consistent-color perimeters in normal and select-all ANSI; no control overlap.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "ansi1",
+        "ansi2",
+        "ansi3",
+        "selected1",
+        "selected2",
+        "selected3"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Frozen hashes match; separate generator and reviewer; blind-first, 14 raw-hash-verified records, three all-pass validators, measured live headers, pinned final dumps, three frames and cleanup preserved. Intermediate spec bytes not retained, a limited replay gap.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "spec-manifest",
+        "generation",
+        "attempts-log",
+        "validator1",
+        "validator2",
+        "validator3",
+        "manifest1",
+        "manifest2",
+        "manifest3",
+        "frames1",
+        "frames2",
+        "frames3"
+      ]
+    },
+    "animation": {
+      "applicable": false,
+      "status": null,
+      "reason": "Frozen case manifest marks animation optional; source has no animation request. No dots occur in the three timestamped target-size frames.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases.json"
+      ],
+      "evidence_ids": [
+        "pinned1",
+        "pinned2",
+        "pinned3",
+        "check1",
+        "check2",
+        "check3"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Correct identity-probe-maps classification and supported evidence; coverage-first recipe fails because named ledger facts are not demonstrated in captures.",
+      "correct_family": "identity-probe-maps",
+      "generator_family": "identity-probe-maps",
+      "evidence_line": "The source is an identifier inventory, not a topology: one host's 29-bit address plan (103.19.91.58/29, gateway .57, .60-.62 free), a named NIC (eno16595np0 25 GbE), two Dell R7725 boxes, a ToR whose vendor comes only from a MAC OUI, and a probe caveat (hops 3 and 6 silent, hop 5 80% loss, 'a missing hop proves nothing about Layer 2').",
+      "recipe_verified": "Named ledger views exist and labels show NIC, address prefix across views, gateway, uncertain pool, no L2 proof and latency. They omit OUI basis, 80% loss, explicit Dell/bare metal and no proxy; text-only ledger is insufficient.",
+      "evidence_ids": [
+        "generation",
+        "text1",
+        "text2",
+        "text3"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "dark -> server1; inactive does not prove no cable",
+      "observed": "Dashed down from (42,21) to arrow (41,24), label no cable seen; route traceable but observed absence is unsupported.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "text1",
+          "region": [
+            41,
+            21,
+            16,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "server1 -> active NIC; only uplink",
+      "observed": "Solid down from (41,29) to arrow (42,32), only uplink; traceable.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text1",
+          "region": [
+            41,
+            29,
+            14,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "NIC -> default gateway .57, 0.1 ms",
+      "observed": "Solid from (21,24) to arrow (39,28); gateway box identifies role and latency; no NAT no v6.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text2",
+          "region": [
+            21,
+            24,
+            19,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "server2 -> gateway; same /29",
+      "observed": "Solid from (42,24) to arrow (41,28), same /29.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text2",
+          "region": [
+            41,
+            24,
+            11,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "spare .60-.62 -> gateway; free unproven",
+      "observed": "Dashed from (62,24) to arrow (43,28), free? unprobed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text2",
+          "region": [
+            43,
+            24,
+            35,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6a",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "gateway -> silent marker, first half of gateway -> Airtel transit 1.8 ms",
+      "observed": "Dashed from (41,13) to arrow (42,16), NxtGen AS132717 BLR. No invented switch.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text3",
+          "region": [
+            41,
+            13,
+            22,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6b",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "silent marker -> Airtel, second half of gateway -> Airtel transit 1.8 ms; missing hop not L2 proof",
+      "observed": "Dashed from (42,21) to arrow (42,24), 1.8 ms, no L2 proof.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text3",
+          "region": [
+            42,
+            21,
+            21,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "Airtel -> Airtel backbone 7.1 ms",
+      "observed": "Solid from (42,29) to arrow (42,32), 7.1 ms.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text3",
+          "region": [
+            42,
+            29,
+            8,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "expected": "Airtel backbone -> Cloudflare 8.3 ms, source also 8.6 ms",
+      "observed": "Solid from (42,37) to arrow (41,40), 8.3-8.6 ms.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text3",
+          "region": [
+            41,
+            37,
+            13,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e1"
+      ],
+      "severity": "critical",
+      "description": "Dashed no cable seen asserts a cable observation unsupported by the source; inactive ports alone cannot establish no cable.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "text1",
+          "region": [
+            44,
+            21,
+            13,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "semantic_fidelity",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Arista? does not convey that vendor attribution is based only on MAC OUI; 5 lossy drops the stated 80% measurement.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "text2",
+          "region": [
+            32,
+            30,
+            20,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text3",
+          "region": [
+            33,
+            18,
+            19,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "category": "semantic_fidelity",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "R7725 does not literally identify Dell/PowerEdge or prove bare metal; NxtGen is on a route rather than connected as host residency; no NAT does not entail no proxy.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "text1",
+          "region": [
+            29,
+            26,
+            26,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text2",
+          "region": [
+            34,
+            21,
+            17,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text2",
+          "region": [
+            23,
+            24,
+            12,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text3",
+          "region": [
+            44,
+            13,
+            19,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "category": "category_fit",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Identity map ledger marks identifiers and qualifiers covered but the capture omits OUI basis, 80% loss, explicit Dell/bare metal and no proxy; identity recipe is incomplete.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "text3",
+          "region": [
+            33,
+            18,
+            19,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text2",
+          "region": [
+            32,
+            30,
+            20,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F5",
+      "category": "layout_fit",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Despite proven geometric fit, split-view source coverage is incomplete, which fails the layout_fit category as written.",
+      "source_refs": [
+        "docs/visualize-eval/cases/server-nic-layout/source.md",
+        "docs/visualize-eval/cases/server-nic-layout/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "text2",
+          "region": [
+            32,
+            30,
+            20,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text3",
+          "region": [
+            33,
+            18,
+            19,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pQS",
+      "w7E:pQT",
+      "w7E:pQV",
+      "w7E:pQX",
+      "w7E:pQW"
+    ],
+    "closed_pane_ids": [
+      "w7E:pQS",
+      "w7E:pQT",
+      "w7E:pQV",
+      "w7E:pQX",
+      "w7E:pQW"
+    ],
+    "status": "done",
+    "reason": "Generator cleanup records and final evidence manifests report all capture panes confirmed closed; reviewer opened none."
+  },
+  "overall": "fail"
+}

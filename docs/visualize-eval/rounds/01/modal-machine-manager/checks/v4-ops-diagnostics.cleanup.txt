@@ -1,0 +1,2 @@
+{"error":{"code":"pane_not_found","message":"pane w7E:p4X not found"},"id":"cli:pane:get"}
+exit=1

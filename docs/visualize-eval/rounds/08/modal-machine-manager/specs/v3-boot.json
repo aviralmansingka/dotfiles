@@ -1,0 +1,22 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "q", "label": "River queue", "group": "jobs" },
+    { "id": "mch", "label": "machines", "group": "plant" },
+    { "id": "boot", "label": "boot server", "group": "plant" },
+    { "id": "s3", "label": "S3", "group": "state" },
+    { "id": "agent", "label": "machine-agent", "group": "plant" }
+  ],
+  "layers": [
+    ["q", "mch"],
+    ["boot", "s3", "agent"]
+  ],
+  "edges": [
+    { "from": "mch", "to": "boot", "label": "iPXE req", "flow": true, "dots": 1 },
+    { "from": "boot", "to": "mch", "label": "boot.ipxe + S3 args", "flow": true, "dots": 1 },
+    { "from": "mch", "to": "s3", "label": "pull image", "flow": true, "dots": 1 },
+    { "from": "q", "to": "s3", "label": "diagnose", "flow": true, "dots": 1 },
+    { "from": "mch", "to": "agent", "label": "on host", "flow": true, "dots": 1 }
+  ]
+}

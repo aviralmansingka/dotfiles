@@ -1,0 +1,63 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "k8s",
+      "label": "Kubernetes",
+      "group": "in-band ctrl"
+    },
+    {
+      "id": "gpuop",
+      "label": "GPU Operator",
+      "group": "in-band ctrl"
+    },
+    {
+      "id": "dcgm",
+      "label": "DCGM",
+      "group": "compute host"
+    },
+    {
+      "id": "dcgmx",
+      "label": "dcgm-exporter",
+      "group": "compute host"
+    },
+    {
+      "id": "drvk",
+      "label": "Driver+CUDA",
+      "group": "compute host"
+    },
+    {
+      "id": "fm",
+      "label": "Fabric Mgr",
+      "group": "compute host"
+    }
+  ],
+  "edges": [
+    {
+      "from": "k8s",
+      "to": "gpuop",
+      "dots": 0
+    },
+    {
+      "from": "gpuop",
+      "to": "dcgm",
+      "dots": 0
+    },
+    {
+      "from": "dcgm",
+      "to": "dcgmx",
+      "dots": 0
+    },
+    {
+      "from": "dcgm",
+      "to": "drvk",
+      "dots": 0
+    },
+    {
+      "from": "drvk",
+      "to": "fm",
+      "dots": 0
+    }
+  ]
+}

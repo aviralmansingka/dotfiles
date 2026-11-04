@@ -1,0 +1,45 @@
+{
+  "case_id": "modal-machine-manager-c4-retry",
+  "round": "14",
+  "run": "v3 (multi-box enclosures, paint-order fix, all live routes animated; build 9b3baf04)",
+  "binary": "/tmp/visualize-eval/round-14/bin/rataflow-view",
+  "binary_sha256": "9b3baf0496bb2b5d9a8e708ceea2830ec88bbd00fce52b28a4bd9aeb0cafee31",
+  "skill": "docs/visualize-eval/proposals/13/SKILL.md",
+  "skill_sha256": "72ea719752b6a955f357a087fe823d6a17266a03d341edaf0101dbb356bf3dff",
+  "records_log": "attempts-log.jsonl",
+  "views": [
+    {
+      "view": "canvas",
+      "spec": "specs/c4-canvas.json",
+      "spec_sha256": "187b43785109521872263f267d7f956d620a762f3c1eed4676b7e3a1e0ca3991",
+      "bundle": "evidence/canvas",
+      "diagrams": [
+        "l1",
+        "l2a",
+        "l2b"
+      ],
+      "attempts": [
+        {
+          "id": "v3-canvas-attempt1",
+          "record_label": "v3-canvas-attempt1",
+          "spec": "specs/c4-canvas-attempt1.json",
+          "check": "binary killed at exec (exit 137) - OS signature-cache SIGKILL on the freshly replaced frozen path",
+          "verdict": "blocked, resolved by re-materialising identical bytes (sha unchanged)"
+        },
+        {
+          "id": "v3-canvas-attempt1b",
+          "record_label": "v3-canvas-attempt1b",
+          "spec": "specs/c4-canvas-attempt1.json",
+          "check": "extent=253x74; 0 near-miss, 30/30 labels, 0 ambiguous, 12 dots, 12/12 origins; l2a reports TWO dotted boxes (131x16 at 23,31 and 15x7 at 237,36), l2b one (140x14 at 22,56); enclosure-entrances 7",
+          "verdict": "accepted (first candidate)"
+        }
+      ]
+    }
+  ],
+  "layout_probes": [],
+  "notes": "No layout probes were needed this round: the only changes were the enclosure group split and re-enabling three dots, and the first candidate checked clean.",
+  "superceded_runs": {
+    "v1": "v1/ (FAIL-partial: externals inside the dotted box, audit dropped from queue->SSH, L1 aggregate folded directions)",
+    "v2": "v2/ (FAIL-partial: boot server outside the L2a boundary, enclosure dots overwriting two label characters, three boundary-crossing routes static)"
+  }
+}

@@ -1,0 +1,13 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=7 edges=6 flows=0 direction=lr theme=gruvbox
+layers=5 (7 pinned, within-rank order automatic)
+pins: 7 pinned, 0 conflict(s)
+extent=81x28 cells
+crossings: 10 bridges, 6 touching bends
+warning: 1 edge label(s) had no free slot; shorten the labels or split the graph
+labels: 6/7 placed, 0 on route cells, 1 skipped, 0 ambiguous owners
+groups: mgmt(1) oob(1) bmc(3) nvsw(2)
+trunks: oob-bus from oob to nvos, 3 branches, 3 junctions
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

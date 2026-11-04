@@ -1,0 +1,18 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "rms",   "label": "nv-rms",          "group": "mgmt" },
+    { "id": "bmc_c", "label": "Compute BMC x18", "group": "bmc" },
+    { "id": "pwr",   "label": "Power shelf",     "group": "bmc" },
+    { "id": "nvos",  "label": "NVOS",            "group": "nvsw" },
+    { "id": "nmxc",  "label": "NMX-C/T",         "group": "nvsw" }
+  ],
+  "edges": [
+    { "from": "rms",  "to": "bmc_c", "label": "Redfish/HTTPS", "label_slot": true },
+    { "from": "rms",  "to": "pwr",   "label": "Redfish/HTTPS", "label_slot": true },
+    { "from": "rms",  "to": "nvos",  "label": "NVUE REST/SSH", "label_slot": true },
+    { "from": "rms",  "to": "nmxc",  "label": "NMX-C gRPC",    "label_slot": true },
+    { "from": "nvos", "to": "nmxc",  "label": "hosts" }
+  ]
+}

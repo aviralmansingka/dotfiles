@@ -1,0 +1,122 @@
+{
+  "case_id": "modal-runtime",
+  "round": "05",
+  "binary": "/tmp/visualize-eval/round-05/bin/rataflow-view",
+  "binary_sha256": "b1ab9f2e78af11c2f2b005eea083a999079d184bf550e8d0b6d9c51867f22404",
+  "views": [
+    {
+      "view": "v1",
+      "title": "seam 1 - modal-worker -> modal-runtime (task+ctrl RPC)",
+      "spec": "specs/v1-a5.json",
+      "attempts": [
+        {
+          "spec": "specs/v1-a5.json",
+          "spec_sha256": "729bbd45f3afb18e2eec2970fbc93478999e55b833b6b5a0997a3830d84c9b55",
+          "check": "evidence/v1/check.txt",
+          "check_exit": 0,
+          "note": "final view. 2 nodes, 1 edge, direction lr. Labels 1/1 placed, 0 ambiguous, extent 49x8. The lr orientation was chosen because in tb the same 2-node graph is a single column and the label has no cell beside it (proved by attempts/v1-a4)."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "title": "seams 2/3 - modal-runtime -> modal-worker (events+mg RPC) and modal-runtime -> modal-daemon (HTTP over UDS)",
+      "spec": "specs/v2-a4.json",
+      "attempts": [
+        {
+          "spec": "specs/v2-a4.json",
+          "spec_sha256": "89dc3b3a59735954b66eda8bd6fb38dab6c1490623eddcf03511891f3fa86b5e",
+          "check": "evidence/v2/check.txt",
+          "check_exit": 0,
+          "note": "final view. 3 nodes, 2 edges, direction lr. Labels 2/2 placed, 0 ambiguous, extent 49x19. Keeping worker->runtime out of this view is what lets both outbound seam labels hold a slot: with the anti-parallel pair in one view the two routes share one corridor and one label is skipped (proved by attempts/v1-a2)."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "title": "runtime internals - dispatch, container backend, storage",
+      "spec": "specs/v3-a1.json",
+      "attempts": [
+        {
+          "spec": "specs/v3-a1.json",
+          "spec_sha256": "2cb9289096cdf5672e4f6e86eac92c9a1074b9211e875002f793f2734c307ccb",
+          "check": "evidence/v3/check.txt",
+          "check_exit": 0,
+          "note": "final view. 6 nodes, 5 edges, direction tb. Labels 5/5 placed, 0 ambiguous owners, crossings 0 bridges / 0 touching bends, extent 64x32. The backend->container label is abbreviated to 9 cells ('user proc'): at 14 cells its centre sits 9 cells from its own route while the sibling branch corridor is 7 cells away, which --check reports as an ambiguous owner (attempts/v2-a1, v2-a2, v2-a3 all show that warning)."
+        }
+      ]
+    }
+  ],
+  "rejected_attempts": [
+    {
+      "spec": "specs/v1-a1.json",
+      "spec_sha256": "960562a56a8be9fd81152b874cb3dc4b2cfffd697f4dc601d2d4b4b7a2a6f385",
+      "check": "attempts/v1-a1/check.txt",
+      "check_exit": 0,
+      "composition": "seam plane in one view: modal-worker, modal-runtime, modal-daemon, Task engine; e1, e2, e3, e8; direction tb",
+      "result": "labels 4/4 placed, 0 ambiguous owners, but extent 78x16 overflows the 77-column target (the pane header reported 'graph overflows · drag to pan') and crossings: 3 bridges, 3 touching bends",
+      "reason_rejected": "does not fit 77 columns at natural zoom"
+    },
+    {
+      "spec": "specs/v1-a2.json",
+      "spec_sha256": "c1369e716824cab3350e92a8fafcbaac230b40407d2298f07096b2222977d8f9",
+      "check": "attempts/v1-a2/check.txt",
+      "check_exit": 0,
+      "composition": "seam plane, 3 nodes (modal-worker, modal-runtime, modal-daemon), e1, e2, e8, direction tb",
+      "result": "labels 2/3 placed: 'events+mg RPC' had no clear cell because worker->runtime and runtime->worker share one corridor; 1 bridge; extent 49x16",
+      "reason_rejected": "the source requires all three seam labels; the split remedy moved each direction into its own view (v1, v2)"
+    },
+    {
+      "spec": "specs/v1-a3.json",
+      "spec_sha256": "ec7b2c10d79405d7d8f0714f677221e2ecb34cae789105301632a7ae54933ad1",
+      "check": "attempts/v1-a3/check.txt",
+      "check_exit": 0,
+      "composition": "seam plane, 4 nodes, direction lr",
+      "result": "labels 4/4 placed, 1 ambiguous owner, crossings 2 bridges, extent 51x39",
+      "reason_rejected": "ambiguous label owner; worker->runtime wrapped a long detour around the daemon column"
+    },
+    {
+      "spec": "specs/v1-a4.json",
+      "spec_sha256": "ad418c64888ea36e256db1f7fc77c61fbeb1673a58c8508adad986616233bf07",
+      "check": "attempts/v1-a4/check.txt",
+      "check_exit": 0,
+      "composition": "modal-worker -> modal-runtime -> modal-daemon as one tb chain, e1 + e8",
+      "result": "labels 0/2 placed, 2 skipped; extent 19x24",
+      "reason_rejected": "a tb chain lays every route in one column, so a long label has no clear cell beside it; the final v1 keeps a single route in lr where the label rides above the arrow"
+    },
+    {
+      "spec": "specs/v2-a1.json",
+      "spec_sha256": "7eafa8cfe29ed30614fec5e69eb7b27f2cd7676edd3d4896d9eda566411204e5",
+      "check": "attempts/v2-a1/check.txt",
+      "check_exit": 0,
+      "composition": "runtime internals in one view: 6 nodes, e3, e4, e5, e6, e7, direction tb, label 'runs user proc' (14 cells)",
+      "result": "labels 5/5 placed, 1 ambiguous owner ('runs user proc' sits 9 cells from its own route, 7 from the sibling branch corridor), crossings 0 bridges, extent 64x32",
+      "reason_rejected": "ambiguous label owner; fixed in v3 by shortening that one label to 9 cells"
+    },
+    {
+      "spec": "specs/v2-a2.json",
+      "spec_sha256": "81e66acb2d9ec9de0f1c6b5521ca1d471308c4a8a92051a0ec3373f5724d1b29",
+      "check": "attempts/v2-a2/check.txt",
+      "check_exit": 0,
+      "composition": "same internals plane without modal-runtime (5 nodes, e4, e5, e6, e7), direction tb",
+      "result": "labels 4/4 placed, 1 ambiguous owner, 0 crossings, extent 64x24",
+      "reason_rejected": "removing the runtime root does not move the ambiguity; it belongs to the container branch label, not to the dispatch band"
+    },
+    {
+      "spec": "specs/v2-a3.json",
+      "spec_sha256": "00b3e18a4b4982f4ad56078081629b4306f616fa8190da1c994bf1fe3883e20e",
+      "check": "attempts/v2-a3/check.txt",
+      "check_exit": 0,
+      "composition": "same 6-node internals plane with the storage nodes declared before the compute nodes, to try to swap the branch sides",
+      "result": "labels 5/5 placed, 1 ambiguous owner, 0 crossings, extent 64x32; the group blocks kept their order (storage stayed right), so the geometry was unchanged",
+      "reason_rejected": "node declaration order does not move a group block; the label-length fix was used instead"
+    }
+  ],
+  "attempt_budget": {
+    "views": 3,
+    "final_view_attempts": [1, 1, 1],
+    "total_check_runs": 10,
+    "superseded_check_runs": 7,
+    "note": "The 7 rejected specs are compositions that were later split or re-lettered, not extra tries on a final view. Every run's raw --check output is preserved under attempts/ and listed above; none was deleted."
+  }
+}

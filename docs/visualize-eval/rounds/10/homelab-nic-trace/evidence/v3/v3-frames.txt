@@ -1,0 +1,184 @@
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/10/homelab-nic-trace/specs/v3-
+lan-gateway.json
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+󰂃 4% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/10/homelab-nic-trace/sp
+ecs/v3-lan-gateway.json
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+󰂃 4% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/10/homelab-nic-trace/sp
+ecs/v3-lan-gateway.json --select-all
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+󰂃 4% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/10/homelab-nic-trace/sp
+ecs/v3-lan-gateway.json --frames 3 --step-ms 100
+viewport: 82x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 82x51 @100% · v3-lan-gateway.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                ╭─────╮   ╭──────╮
+                                │bond0│   │wlp8s0│
+                                │     │   │      │
+                                ╰─────╯   ╰──────╯
+                                   │         │
+                  default gw 0.5 ms│         │  metric 600 · failover, no ECMP
+                                   ╰───╮ ╭───╯
+                                       ▼ ▼
+                 ╭─────────────────────────────────────────────╮
+                 │Fios rtr 192.168.1.1 · NAT+DHCP · WNC (hist.)│
+                 │                                             │
+                 ╰─────────────────────────────────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 82x51 @100% · v3-lan-gateway.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                ╭─────╮   ╭──────╮
+                                │bond0│   │wlp8s0│
+                                │     │   │      │
+                                ╰─────╯   ╰──────╯
+                                   │         │
+                  default gw 0.5 ms│         │  metric 600 · failover, no ECMP
+                                   ╰───╮ ╭───╯
+                                       ▼ ▼
+                 ╭─────────────────────────────────────────────╮
+                 │Fios rtr 192.168.1.1 · NAT+DHCP · WNC (hist.)│
+                 │                                             │
+                 ╰─────────────────────────────────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 82x51 @100% · v3-lan-gateway.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                ╭─────╮   ╭──────╮
+                                │bond0│   │wlp8s0│
+                                │     │   │      │
+                                ╰─────╯   ╰──────╯
+                                   │         │
+                  default gw 0.5 ms│         │  metric 600 · failover, no ECMP
+                                   ╰───╮ ╭───╯
+                                       ▼ ▼
+                 ╭─────────────────────────────────────────────╮
+                 │Fios rtr 192.168.1.1 · NAT+DHCP · WNC (hist.)│
+                 │                                             │
+                 ╰─────────────────────────────────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+󰂃 4% ❯

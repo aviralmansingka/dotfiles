@@ -1,0 +1,19 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {"id": "cp", "label": "control plane", "group": "control"},
+    {"id": "pgrpc", "label": "private gRPC", "group": "control"},
+    {"id": "q", "label": "River jobs", "group": "control"},
+    {"id": "reg", "label": "provider registry", "group": "providers"},
+    {"id": "prov", "label": "bare-metal providers", "group": "providers"},
+    {"id": "mch", "label": "bare-metal machines", "group": "machines"}
+  ],
+  "edges": [
+    {"from": "cp", "to": "pgrpc", "label": "create / terminate / repair", "label_slot": true, "dots": 1, "flow": true},
+    {"from": "pgrpc", "to": "q", "label": "enqueue job", "dots": 1, "flow": true},
+    {"from": "q", "to": "reg", "label": "provision job", "dots": 1, "flow": true},
+    {"from": "reg", "to": "prov", "label": "provider API", "dots": 1, "flow": true},
+    {"from": "prov", "to": "mch", "label": "allocate instance", "dots": 1, "flow": true}
+  ]
+}

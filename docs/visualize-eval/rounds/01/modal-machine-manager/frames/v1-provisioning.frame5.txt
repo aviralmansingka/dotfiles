@@ -1,0 +1,46 @@
+ rataflow-view · v1-provisioning.json · 9 nodes · 8 edges · 5 flows · drag pa
+
+                  ╭──────────────╮          ╭─────────────╮
+                  │Humans + mmctl│          │Control plane│
+                  │              │          │             │
+                  ╰──────────────╯          ╰─────────────╯
+                   │ http                    │
+                   │        create/terminate ●
+                   ╰╮                        ╰●
+                    ▼                         ▼
+                   ╭─────────────╮           ╭────────────╮
+                   │webapi server│           │private gRPC│
+                   │             │           │            │
+                   ╰─────────────╯           ╰────────────╯
+                    │                         │
+                    │ reinstall               │
+                   ╭╯╭───●──────●──────●──────●
+                   ▼ ▼       enqueue job
+                  ╭───────────────╮
+                  │River job queue│
+                  │               │
+                  ╰───────────────╯
+                   │
+                   ● provision job
+                  ●╯
+                  ▼
+                 ╭─────────────────╮        ╭──────────────╮
+                 │Provider registry│        │Reconcile loop│
+                 │                 │        │              │
+                 ╰─────────────────╯        ╰──────────────╯
+                  │ provider API             │
+                ╭─●       gcore sync 1m      │
+                ● ╭──────────────────────────╯
+                ▼ ▼
+               ╭────────────────────╮
+               │Bare-metal providers│
+               │                    │
+               ╰────────────────────╯
+                │
+                │        allocate
+ ┌───────┐      ●──────●──────●──────●────╮
+ │ + [+] │                                ▼
+ │ − [-] │                               ╭───────────────────╮
+ │ ⊡ [f] │                               │Bare-metal machines│
+ │ □ [i] │                               │                   │
+ └───────┘                               ╰───────────────────╯

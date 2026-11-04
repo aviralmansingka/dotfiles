@@ -1,0 +1,24 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=29 edges=35 flows=13 direction=mixed theme=gruvbox
+canvas: 3 diagrams on one canvas, drawn whole at 100%
+diagram l1 "L1 · System context — the machine manager" at 0,3: extent=58x45 nodes=6 edges=12 routes=12
+  description: One system box: humans and mmctl call it, providers allocate machines, S3 and Slack serve it.
+diagram l2a "L2 · Containers — request, provisioning and boot" at 0,53: extent=230x11 nodes=11 edges=12 routes=12
+  description: API actions (create/terminate/repair, reinstall/reprovision) become a River job, a provider allocation, then a boot.
+diagram l2b "L2 · Containers — heartbeat, audits and diagnostics" at 0,69: extent=179x23 nodes=12 edges=11 routes=11
+  description: Agent heartbeat, slow audit and diagnose jobs, janitor proposals, Slack alerts and the 1-minute sync.
+extent=230x92 cells (whole canvas)
+crossings: 10 bridges, 1 touching bends
+near-misses: 5 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)
+passes-near-unrelated-node: 5
+near-miss: route l1:e3 passes 5 cell(s) at ring 2 of node 's3' (nearest cell 29,41)
+warning: 5 route cell(s) hug a node their relation does not serve; move the affected relations or let them route around
+labels: 35/35 placed, 0 leader-ticked, 0 on route, 0 skipped, 1 ambiguous owners
+unowned label: l2b:e8 "diag uploads"
+warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge
+groups: humans(2) external(11) control(5) async(4) hostops(3) state(2) ops(1)
+trunks:
+dots: 13 single-dot routes, 0 periodic routes, 0 violations, 13 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 12 by source, 1 by destination, 1 shared-hue pair(s) (source-only 2, destination-only 4)
+origins: 13/13 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

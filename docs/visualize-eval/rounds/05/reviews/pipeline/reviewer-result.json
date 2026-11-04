@@ -1,0 +1,691 @@
+{
+  "protocol_version": 1,
+  "round": 5,
+  "case_id": "pipeline",
+  "candidate_sha256": "ff4a9d3f32ba0bf86e54ee6bfbac02fdea3fac3b95b82a958b3411accef0a949",
+  "renderer_sha256": "b1ab9f2e78af11c2f2b005eea083a999079d184bf550e8d0b6d9c51867f22404",
+  "rubric_sha256": "039b96252d25ad2078a539fdb1d081ebdb6c09d6f7a3487b96ffbbf3b082e292",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "fdb8c42f6810b541b8a5367d9572d2d47ced3e756598658ff61f1c833a935f2f",
+  "generator": {
+    "worker_id": "viz-ds05-pipeline",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge05-pipeline",
+    "model": "openai/gpt-6.1-sol"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": false
+  },
+  "live_pane": {
+    "columns": 83,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/05/reviews/pipeline/observed-first.md",
+      "sha256": "0ecc05ad42d8884fcb46ce6029688f8de415d975651e1574edd82511881044c1",
+      "description": "Immutable stage-A blind record; saved and hashed before expectations were revealed.",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/05/metadata.json",
+      "sha256": "edaec7c938fa0a27dbd04a44c1932ff9ef03c05f9270951fbb39a4fe7bced84d",
+      "description": "Frozen input hashes and pre-generation harness corrections; not an override of rubric category gates.",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/05/SKILL.md",
+      "sha256": "ff4a9d3f32ba0bf86e54ee6bfbac02fdea3fac3b95b82a958b3411accef0a949",
+      "description": "Frozen candidate skill, verified against metadata.",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/05/rubric.json",
+      "sha256": "039b96252d25ad2078a539fdb1d081ebdb6c09d6f7a3487b96ffbbf3b082e292",
+      "description": "Frozen revision-6 rubric, verified against metadata.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen case manifest; only pipeline source material was inspected.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/pipeline/source.md",
+      "sha256": "68aa197fdc597c3a22d1b8ca88a3ebee861dcda34684da15ae69b6946b741e58",
+      "description": "Qualified historical source facts and human constraints; no unrelated source chat was read.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/pipeline/expected.json",
+      "sha256": "ea177d01af818876ff04bf707b923326b153185fd425f21ea96250486b504ec3",
+      "description": "Six concepts, six required directed relations, four labels, animation required.",
+      "capture": null
+    },
+    {
+      "id": "variants",
+      "path": "docs/visualize-eval/cases/pipeline/historical-variants.json",
+      "sha256": "5d351c45f055d2ca115036d10ab4bd50fb1d22ccd87f31e018f01c3039b48659",
+      "description": "Historical rendering intent: five flow-marked edges; Auth-to-Postgres read is not flow-marked. Not independent factual verification.",
+      "capture": null
+    },
+    {
+      "id": "spec",
+      "path": "docs/visualize-eval/rounds/05/pipeline/spec-v1.json",
+      "sha256": "fdb8c42f6810b541b8a5367d9572d2d47ced3e756598658ff61f1c833a935f2f",
+      "description": "Single final spec; six nodes, six edges, flow true and dots 1 on all six edges.",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/05/pipeline/attempts.json",
+      "sha256": "39f357d34f257c788b9caa6a5b77aa3e75a0b503a045bc70cc9708dee204e55b",
+      "description": "One kept candidate, no rejected spec candidates; rationale for tb orientation.",
+      "capture": null
+    },
+    {
+      "id": "attempt-spec",
+      "path": "docs/visualize-eval/rounds/05/pipeline/attempts/attempt1-tb/spec.json",
+      "sha256": "fdb8c42f6810b541b8a5367d9572d2d47ced3e756598658ff61f1c833a935f2f",
+      "description": "Only attempted spec; byte-identical to final spec.",
+      "capture": null
+    },
+    {
+      "id": "attempt-check",
+      "path": "docs/visualize-eval/rounds/05/pipeline/attempts/attempt1-tb/check.txt",
+      "sha256": "e1db4fdd16189e54f0fe353610be8499c7fb2cc4f42f0f5c406b9feaa18b6a35",
+      "description": "Attempt check stdout; no separate stderr/exit transcript in this file.",
+      "capture": null
+    },
+    {
+      "id": "generation-json",
+      "path": "docs/visualize-eval/rounds/05/pipeline/generation.json",
+      "sha256": "e522fbf4ceeb1bacd3bea293fb9ad78327fa982b2fc13e4ba1e6d4ffc0ac0a52",
+      "description": "Captain-assembled recovery record explicitly names actual generator viz-ds05-1 and DeepSeek endpoint; not a raw generator/session transcript.",
+      "capture": null
+    },
+    {
+      "id": "generation-md",
+      "path": "docs/visualize-eval/rounds/05/pipeline/generation.md",
+      "sha256": "93d94ab71848c4aae38ccd441666de00c700be95da7a515d0d5d0f80893c1c0c",
+      "description": "Disclosed captain reconstruction; includes an unexpanded {spec_h[:16]} placeholder, not an authoritative spec hash.",
+      "capture": null
+    },
+    {
+      "id": "manifest",
+      "path": "docs/visualize-eval/rounds/05/pipeline/evidence/v1/manifest.json",
+      "sha256": "c7364013e5347750c2df69d8ba96f0f10dbdb3c273f77817cddd5658a6298bc7",
+      "description": "Capture window, check_exit 0, 19 short frames, capture pane w7E:pGD and confirmed_closed; null pane columns and rectangle.",
+      "capture": null
+    },
+    {
+      "id": "binary-hash-record",
+      "path": "docs/visualize-eval/rounds/05/pipeline/evidence/v1/bin.sha256",
+      "sha256": "93a87351efa820a41a27baf97e90d9945ff00a10f4b64913524cd83ec5757f8b",
+      "description": "Recorded binary identity; actual frozen binary was independently hashed, not executed.",
+      "capture": null
+    },
+    {
+      "id": "check",
+      "path": "docs/visualize-eval/rounds/05/pipeline/evidence/v1/check.txt",
+      "sha256": "e1db4fdd16189e54f0fe353610be8499c7fb2cc4f42f0f5c406b9feaa18b6a35",
+      "description": "Check reports 6/6 origins and zero violations; direct frame-0 evidence contradicts origins on six routes.",
+      "capture": null
+    },
+    {
+      "id": "normal-text",
+      "path": "docs/visualize-eval/rounds/05/pipeline/evidence/v1/v1-text.txt",
+      "sha256": "ac1dfba263a3a30acf1e0639cd3135832cd2ba06239217ee2e2f18a541a7939c",
+      "description": "Actual live 83x51 normal text capture; trailing padding/final empty row omitted.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "normal snapshot",
+        "timestamp": "2026-11-02T15:54:27Z through 2026-11-02T15:54:31Z; bundle window only, exact frame time not preserved",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "normal-ansi",
+      "path": "docs/visualize-eval/rounds/05/pipeline/evidence/v1/v1-ansi.ansi",
+      "sha256": "c77008c5b6712a5fb272f7dc25d5ba010c21849b8d2db231f129c1b7b3971f85",
+      "description": "Actual 83x51 padded ANSI normal capture proves all six complete, per-node color-continuous borders.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "normal snapshot",
+        "timestamp": "2026-11-02T15:54:27Z through 2026-11-02T15:54:31Z; bundle window only, exact frame time not preserved",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected-ansi",
+      "path": "docs/visualize-eval/rounds/05/pipeline/evidence/v1/v1-selected.ansi",
+      "sha256": "d0345adb6c4d3856cdcae3fd7dd9e86cbf28473ea64bb62f4b4cfdc9a2e5cb15",
+      "description": "All six final-view occurrences have their own complete bold-accent perimeter in this one all-selected 83x51 capture; no target-size selected capture.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "all-selected snapshot",
+        "timestamp": "2026-11-02T15:54:27Z through 2026-11-02T15:54:31Z; bundle window only, exact frame time not preserved",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "short-frames-text",
+      "path": "docs/visualize-eval/rounds/05/pipeline/evidence/v1/v1-frames.txt",
+      "sha256": "0ccae11f07bda71f4b3de83ccea3fb5b04b01bdd969740925a6d97bf33005b24",
+      "description": "19 timestamped frames at actual live 83x51, 0..1800 ms; insufficient alone for longest lap; command line preserved in wrapper.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0..18",
+        "timestamp": "relative 0..1800ms in 100ms steps; manifest bundle window above",
+        "state": "normal animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "short-frames-ansi",
+      "path": "docs/visualize-eval/rounds/05/pipeline/evidence/v1/v1-frames.ansi",
+      "sha256": "6dd9c1438641a7ad6252cd2580494e5da3429c2d7d14cc69785e6686a3646951",
+      "description": "Terminal-escaped 19-frame capture; graph dot cells have no retained foreground SGR, so this is not moving-dot color proof.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0..18",
+        "timestamp": "relative 0..1800ms in 100ms steps; manifest bundle window above",
+        "state": "normal animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "lap",
+      "path": "docs/visualize-eval/rounds/05/pipeline/motion/v1-frames-lap-77x47.txt",
+      "sha256": "1fbab246901b6c70f333558c1e3852a22edbce31268c081f2402f266e59bb761",
+      "description": "Pinned final-spec 77x47 natural-zoom render dump, 53 timestamped frames covering all laps; not a live target-size pane capture.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0..52",
+        "timestamp": "relative 0..5200ms in 100ms steps; wall-clock timestamp and exact invocation not preserved",
+        "state": "normal animated; pinned direct dump",
+        "format": "text"
+      }
+    },
+    {
+      "id": "lap-analysis",
+      "path": "docs/visualize-eval/rounds/05/pipeline/motion/lap-analysis.txt",
+      "sha256": "9f2acaccc58d1266053ff9e4e458de2c6a98679262ea0890b472ab57c09964b1",
+      "description": "Worker coordinate and lap report, (row,column); independently checked. Its word origin denotes frame-0 dot position, not rubric origin.",
+      "capture": null
+    },
+    {
+      "id": "lap-helper",
+      "path": "docs/visualize-eval/rounds/05/pipeline/motion/lap-analysis.py",
+      "sha256": "00e12d8b5259639b05d7913304a00a472b7d7ba58b1621779d290694f3d34e56",
+      "description": "Saved helper used for supplied coordinate analysis; read only, not executed by reviewer.",
+      "capture": null
+    },
+    {
+      "id": "geometry-excerpts",
+      "path": "docs/visualize-eval/rounds/05/reviews/pipeline/geometry-excerpts.json",
+      "sha256": "bf2fcd564db74930f92d9d94d1ead8a7bc3faee889cca461120a160fc2177f82",
+      "description": "Reviewer observation derivative from initial bounded head/tail reads of 385578044677-byte geometry.txt, which disappeared before report construction. Hash identifies these transcribed observations only, NOT original bytes or a raw source snapshot. Records live header, clamp probes, restored layout and ENOSPC.",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All six concepts and all six directed historical relations appear; verify/enqueue/read/write owners are correct and unlabeled links gain no invented protocol. tb preserves causal tiers, not the incidental historical lr orientation. No extra apparent relation or missing cross-view relation.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "spec",
+        "normal-text",
+        "normal-ansi",
+        "lap"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All six static stems and unique downward arrowheads are traceable, without crossings, fake branches or avoidable detours. However every animated arrow starts one cell after its true origin. The fixed rubric explicitly treats that as direction unproven; F01 fails all six required-edge audits despite recoverable static meaning.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/arrow_traceability"
+      ],
+      "evidence_ids": [
+        "blind",
+        "lap",
+        "check",
+        "normal-ansi"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Pinned final-spec 77x47 dump shows all content at natural 100% and no clipping/occlusion; actual live pane header is 83x51, with a separate 85x53 outer split probe. No actual live 77x47 half-pane capture is preserved. The validator acceptance of pinned dumps in metadata is not proof of the rubric actual-half-pane condition. Missing live target-size evidence blocks, not a claim that this graph overflows.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/rounds/05/rubric.json#/required_viewport",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/layout_fit"
+      ],
+      "evidence_ids": [
+        "lap",
+        "normal-ansi",
+        "manifest",
+        "geometry-excerpts",
+        "metadata"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "API gateway/Auth are nearby blue-family edge concepts; Job queue/Worker pool are adjacent pink-family work concepts; CLI and Postgres have distinct client/state hues. Source causal tiers are preserved. Plain identical node/background fill, no background dots or decorative border dots; no geometric-depth grouping claim needed.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "evidence_ids": [
+        "spec",
+        "normal-ansi",
+        "lap",
+        "blind"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All four sides and four corners of each of six v1 nodes are complete in normal and selected ANSI, each perimeter color-continuous. All-selected capture covers 6/6 final-view occurrences, not six interactions; no palette overwrite. Pinned text shows complete unobstructed target-size perimeters, but does not prove target-size color/selection independently; target live proof remains layout/workflow blocker, not an invented border defect.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/border_integrity"
+      ],
+      "evidence_ids": [
+        "normal-ansi",
+        "selected-ansi",
+        "lap",
+        "blind"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Frozen skill, binary, rubric, dataset, source and single spec hashes verified; blind record remains unchanged. Captain recovery is disclosed and useful, not fabricated worker testimony. Exact check/capture/pinned-dump/cleanup command-status provenance, separate check stderr, fresh-isolation/model-routing attestation and saved validator output are not fully preserved. Actual pane is 83x51; live full-lap proof at target is absent. geometry.txt was a 385 GB repeated ENOSPC-ended record, unreadable in full, then disappeared before report construction; a transcribed observation derivative is inventoried honestly. These missing verifications are blockers, not passes and not a reason to waive known origin failures.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/05/SKILL.md#step-8--check-then-capture"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "skill",
+        "rubric",
+        "dataset",
+        "spec",
+        "attempts",
+        "attempt-check",
+        "generation-json",
+        "generation-md",
+        "manifest",
+        "normal-ansi",
+        "selected-ansi",
+        "short-frames-text",
+        "lap",
+        "geometry-excerpts",
+        "blind"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Required slow sparse motion is present, one dot per route, common 200ms visited-cell cadence. F01: all six frame-0 dots miss the first drawn source cell and contradict check origins 6/6. F02: Auth-to-Postgres was not animated in the historical source variant but is animated here, violating round-05 source-only motion scope. Unequal lap times, skipping rather than resting on bends, and no constant-mode arrowhead visits are not separate failures under this rubric. No non-origin corner/bridge/junction/label occupancy.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json",
+        "docs/visualize-eval/cases/pipeline/historical-variants.json",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/animation"
+      ],
+      "evidence_ids": [
+        "spec",
+        "variants",
+        "lap",
+        "lap-analysis",
+        "check",
+        "blind"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "cli-api",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/pipeline/expected.json#/historical_reference/edges"
+      ],
+      "expected": "CLI -> API gateway; label absent; do not invent a protocol; independent directed link, not a shared bus.",
+      "observed": "Both endpoint boxes and correct unlabeled relation are visible. Unique stem starts at (37, 11), trace continues to intact downward head (37, 14) in pinned 77x47 view. No crossing, shared junction or ambiguous label owner. Route is monotone and obstacle-safe. Frame-0 dot at (37, 12) is one cell downstream from the true origin (37, 11). Static semantics pass; prescribed origin-based direction gate fails.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "lap",
+          "region": [
+            37,
+            11,
+            1,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01"
+      ]
+    },
+    {
+      "edge_id": "api-auth",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/pipeline/expected.json#/historical_reference/edges"
+      ],
+      "expected": "API gateway -> Auth; label 'verify'; independent directed link, not a shared bus.",
+      "observed": "Both endpoint boxes and correct verify label are visible. Unique stem starts at (39, 19), trace continues to intact downward head (50, 22) in pinned 77x47 view. No crossing, shared junction or ambiguous label owner. Route is monotone and obstacle-safe. Frame-0 dot at (39, 20) is one cell downstream from the true origin (39, 19). Static semantics pass; prescribed origin-based direction gate fails. API two-route fanout uses separate ports.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "lap",
+          "region": [
+            39,
+            19,
+            12,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01"
+      ]
+    },
+    {
+      "edge_id": "api-queue",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/pipeline/expected.json#/historical_reference/edges"
+      ],
+      "expected": "API gateway -> Job queue; label 'enqueue'; independent directed link, not a shared bus.",
+      "observed": "Both endpoint boxes and correct enqueue label are visible. Unique stem starts at (37, 19), trace continues to intact downward head (24, 22) in pinned 77x47 view. No crossing, shared junction or ambiguous label owner. Route is monotone and obstacle-safe. Frame-0 dot at (37, 20) is one cell downstream from the true origin (37, 19). Static semantics pass; prescribed origin-based direction gate fails. API two-route fanout uses separate ports.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "lap",
+          "region": [
+            24,
+            19,
+            14,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01"
+      ]
+    },
+    {
+      "edge_id": "queue-worker",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/pipeline/expected.json#/historical_reference/edges"
+      ],
+      "expected": "Job queue -> Worker pool; label absent; do not invent a protocol; independent directed link, not a shared bus.",
+      "observed": "Both endpoint boxes and correct unlabeled relation are visible. Unique stem starts at (24, 27), trace continues to intact downward head (24, 30) in pinned 77x47 view. No crossing, shared junction or ambiguous label owner. Route is monotone and obstacle-safe. Frame-0 dot at (24, 28) is one cell downstream from the true origin (24, 27). Static semantics pass; prescribed origin-based direction gate fails.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "lap",
+          "region": [
+            24,
+            27,
+            1,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01"
+      ]
+    },
+    {
+      "edge_id": "worker-db",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/pipeline/expected.json#/historical_reference/edges"
+      ],
+      "expected": "Worker pool -> Postgres; label 'write'; independent directed link, not a shared bus.",
+      "observed": "Both endpoint boxes and correct write label are visible. Unique stem starts at (24, 35), trace continues to intact downward head (37, 38) in pinned 77x47 view. No crossing, shared junction or ambiguous label owner. Route is monotone and obstacle-safe. Frame-0 dot at (24, 36) is one cell downstream from the true origin (24, 35). Static semantics pass; prescribed origin-based direction gate fails. Destination convergence uses distinct ports.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "lap",
+          "region": [
+            24,
+            35,
+            14,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01"
+      ]
+    },
+    {
+      "edge_id": "auth-db",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/pipeline/expected.json#/historical_reference/edges"
+      ],
+      "expected": "Auth -> Postgres; label 'read'; independent directed link, not a shared bus.",
+      "observed": "Both endpoint boxes and correct read label are visible. Unique stem starts at (50, 27), trace continues to intact downward head (39, 38) in pinned 77x47 view. No crossing, shared junction or ambiguous label owner. Route is monotone and obstacle-safe. Frame-0 dot at (50, 28) is one cell downstream from the true origin (50, 27). Static semantics pass; prescribed origin-based direction gate fails. Destination convergence uses distinct ports. Additional unrequested source-scope animation: F02.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "lap",
+          "region": [
+            39,
+            27,
+            12,
+            12
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F02"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F01",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "cli-api",
+        "api-auth",
+        "api-queue",
+        "queue-worker",
+        "worker-db",
+        "auth-db"
+      ],
+      "severity": "high",
+      "description": "DEFECT (also fails animation): all six frame-0 dots start on the SECOND drawn cell after their source border port, not the FIRST. None visits its true origin over a complete lap. Pinned origins -> observed frame0: CLI/API (37,11)->(37,12); API/Auth (39,19)->(39,20); API/queue (37,19)->(37,20); queue/worker (24,27)->(24,28); worker/DB (24,35)->(24,36); Auth/DB (50,27)->(50,28). check claims origins 6/6 and zero violations, so capture and check disagree. Under the explicit arrow rule these directions are unproven. One root cause affects both gates; do not count a separate defect for each gate.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/arrow_traceability",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/animation",
+        "docs/visualize-eval/rounds/05/SKILL.md#step-6--motion-rules"
+      ],
+      "locations": [
+        {
+          "evidence_id": "lap",
+          "region": [
+            37,
+            11,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "lap",
+          "region": [
+            39,
+            19,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "lap",
+          "region": [
+            37,
+            19,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "lap",
+          "region": [
+            24,
+            27,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "lap",
+          "region": [
+            24,
+            35,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "lap",
+          "region": [
+            50,
+            27,
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F02",
+      "category": "animation",
+      "edge_ids": [
+        "auth-db"
+      ],
+      "severity": "medium",
+      "description": "DEFECT: source-only motion scope is widened. The frozen historical variant marks CLI/API, API/Auth, API/queue, queue/worker and worker/DB with flow, but leaves Auth/DB read static. Final spec adds flow:true/dots:1 to Auth/DB and its dot is visible at frame0 (50,28), later descending and moving left. Required case-level motion does not authorize animating an additional source-static route under round-05 wording. No relationship itself is invented, so semantic fidelity remains pass.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/historical-variants.json#/0/spec/edges/5",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/animation",
+        "docs/visualize-eval/rounds/05/SKILL.md#step-6--motion-rules"
+      ],
+      "locations": [
+        {
+          "evidence_id": "lap",
+          "region": [
+            39,
+            27,
+            12,
+            12
+          ]
+        },
+        {
+          "evidence_id": "normal-ansi",
+          "region": [
+            53,
+            29,
+            1,
+            11
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "B01 — layout_fit/workflow_evidence: no actual live 77x47 half-pane capture. Live v1 header measures 83x51; pinned 77x47 text is valid target render/motion evidence, not an actual target-size pane. No target-size selected/ANSI capture or preserved live full-lap target recording exists. metadata validator policy is acknowledged, not substituted for the frozen category.",
+    "B02 — workflow_evidence: recovery records lack complete exact check/capture/pinned-dump/cleanup command-status transcripts, separate check stderr evidence, and a raw fresh-isolated worker/model-routing record. generation.json declares actual worker viz-ds05-1; result uses required canonical slot viz-ds05-pipeline with this discrepancy explicitly disclosed, not an assertion that a second generator existed. No saved validator result is present; it is not inferred green.",
+    "B03 — workflow_evidence/resource and frozen-record availability: geometry.txt initially measured logical size 385578044677 bytes and allocated size 385578045440 bytes. Read tool refused it over 2 GiB; Python inspected only first/last 4096 bytes, observing repeated records and terminal ENOSPC. Before report construction the file disappeared, causing FileNotFoundError. geometry-excerpts.json preserves transcribed measured observations, not original bytes. No full-file hash, raw snapshot or complete probe audit is claimed. Reviewer did not truncate, delete or repair any source artifact."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pGD",
+      "w7E:pGJ",
+      "w7E:pGK",
+      "w7E:pGM",
+      "w7E:pGN"
+    ],
+    "closed_pane_ids": [
+      "w7E:pGD",
+      "w7E:pGJ",
+      "w7E:pGK",
+      "w7E:pGM",
+      "w7E:pGN"
+    ],
+    "status": "done",
+    "reason": "Preserved manifest confirms capture pane w7E:pGD closed. Initial bounded geometry reads explicitly confirmed w7E:pGJ and w7E:pGN closed and showed restored layout containing only parent w7E:pFF, indirectly establishing other probe panes w7E:pGK/w7E:pGM absent. The raw geometry file subsequently disappeared; derivative retains these observations. These are record-based cleanup conclusions, not new live probes. Exact close command/status transcripts remain B02. Reviewer opened no panes."
+  },
+  "overall": "fail"
+}

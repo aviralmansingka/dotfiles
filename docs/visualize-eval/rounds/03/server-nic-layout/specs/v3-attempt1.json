@@ -1,0 +1,18 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "layers": [["oui", "dark", "pool", "hop"], ["hub"]],
+  "nodes": [
+    { "id": "oui", "label": "Arista OUI .57", "group": "observed" },
+    { "id": "dark", "label": "7 ports dark", "group": "observed" },
+    { "id": "pool", "label": ".60-.62 quiet", "group": "observed" },
+    { "id": "hop", "label": "hops 3,6 quiet, 5@80%", "group": "observed" },
+    { "id": "hub", "label": "still unproven", "group": "claim" }
+  ],
+  "edges": [
+    { "from": "oui", "to": "hub", "label": "ToR role?", "style": "dashed", "dots": 0 },
+    { "from": "dark", "to": "hub", "label": "no cable?", "style": "dashed", "dots": 0 },
+    { "from": "pool", "to": "hub", "label": "free?", "style": "dashed", "dots": 0 },
+    { "from": "hop", "to": "hub", "label": "layer 2?", "style": "dashed", "dots": 0 }
+  ]
+}

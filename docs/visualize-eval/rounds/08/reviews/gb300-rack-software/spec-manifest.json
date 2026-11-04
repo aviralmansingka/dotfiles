@@ -1,0 +1,18 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/08/gb300-rack-software/specs/v1-oob-bus.json",
+    "sha256": "a4f507b39e37ec25c857c201c421026782aa114759bba5defdbb72363ad46893"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/08/gb300-rack-software/specs/v2-oob-plant.json",
+    "sha256": "32d6b034f4870d5ea3a5270d3e3590dace94e4b9d54f8586da2351699cbd102b"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/08/gb300-rack-software/specs/v3-nvswitch-sw.json",
+    "sha256": "9b65a2818975fbaaab7454e04e242f7dc044e2707781a32e68ba1126c8690fb6"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/08/gb300-rack-software/specs/v4-inband-sw.json",
+    "sha256": "3761a61aff7058f0dc1b6aa5897be3e6d7113626cad7f0de7b1df72f31cd15b0"
+  }
+]

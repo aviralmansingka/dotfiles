@@ -1,0 +1,4 @@
+command: /tmp/visualize-eval/round-01/bin/rataflow-view --check specs/view3-fw-ha.json
+timestamp_utc: 20261102T083542Z
+exit: 0
+spec_sha256: 196b286044375214c68e457d182a02a05323adcbf6741fb6941047217b91bd6b

@@ -1,0 +1,70 @@
+{
+ "direction": "lr",
+ "theme": "gruvbox",
+ "diagrams": [
+  {
+   "id": "x",
+   "title": "T",
+   "description": "l0 box opened one level: its boundary services sit in the box while callers stay outside.",
+   "containers": [
+    {
+     "label": "Box",
+     "members": [
+      "b",
+      "c"
+     ]
+    }
+   ],
+   "layers": [
+    [
+     "a"
+    ],
+    [
+     "b",
+     "c"
+    ],
+    [
+     "e"
+    ]
+   ],
+   "nodes": [
+    {
+     "id": "a",
+     "label": "alpha"
+    },
+    {
+     "id": "b",
+     "label": "beta"
+    },
+    {
+     "id": "c",
+     "label": "gamma"
+    },
+    {
+     "id": "e",
+     "label": "omega"
+    }
+   ],
+   "edges": [
+    {
+     "from": "a",
+     "to": "b",
+     "label": "x1",
+     "dots": 0
+    },
+    {
+     "from": "a",
+     "to": "c",
+     "label": "x2",
+     "dots": 0
+    },
+    {
+     "from": "c",
+     "to": "e",
+     "label": "x3",
+     "dots": 0
+    }
+   ]
+  }
+ ]
+}

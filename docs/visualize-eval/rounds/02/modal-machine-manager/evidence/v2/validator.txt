@@ -1,0 +1,26 @@
+PASS manifest_readable
+PASS binary_path_absolute
+PASS binary_hash_recorded
+PASS artifact_hashes
+PASS check_output_present
+PASS check_exit_zero
+FAIL check_warnings_absent — warning: edge e1 label "boot.ipxe+S3" had no clear cell; shorten it or add routing space; warning: 1 edge label(s) had no free slot; shorten the labels or split the graph
+PASS labels_parsed
+FAIL labels_complete — 4/5 labels placed
+PASS labels_off_routes
+FAIL labels_not_skipped — 1 labels had no free slot
+PASS dots_parsed
+PASS dots_no_violations
+PASS viewport_proven
+PASS viewport_proven_measurable
+PASS viewport_matches_target
+PASS cleanup_confirmed
+PASS select_all_frame
+PASS select_all_artifact
+PASS frames_artifact
+PASS frames_timestamped
+PASS attempts_readable
+PASS attempts_view_budget
+PASS attempts_spec_budget
+
+3 check(s) failed: check_warnings_absent, labels_complete, labels_not_skipped

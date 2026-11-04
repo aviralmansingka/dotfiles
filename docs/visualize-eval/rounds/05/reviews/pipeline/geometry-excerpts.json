@@ -1,0 +1,59 @@
+{
+  "source_path": "docs/visualize-eval/rounds/05/pipeline/geometry.txt",
+  "source_logical_bytes_at_initial_inspection": 385578044677,
+  "source_allocated_bytes_at_initial_inspection": 385578045440,
+  "source_present_at_report_construction": false,
+  "source_full_sha256": null,
+  "provenance": "Derived observations transcribed from the successful reviewer read-only uv/python tool result. Initial read tool rejected geometry.txt over 2 GiB; Python read only first 4096 and last 4096 bytes. The file then disappeared before build-review.py ran, causing FileNotFoundError. Reviewer did not delete, truncate or modify it. This derivative is not a raw source snapshot.",
+  "observed_records": {
+    "record_timestamp": "2026-11-02T15:55:04Z",
+    "parent_pane": "w7E:pFF",
+    "parent_outer_area": {
+      "width": 170,
+      "height": 53
+    },
+    "half_split_probe": "w7E:pGJ",
+    "half_split_outer_rectangles": [
+      {
+        "pane": "w7E:pFF",
+        "width": 85,
+        "height": 53
+      },
+      {
+        "pane": "w7E:pGJ",
+        "width": 85,
+        "height": 53
+      }
+    ],
+    "app_header": "rataflow-view · 83x51 @100% · spec-v1.json · 6 nodes · 6 edges · q quit",
+    "probe_viewport_rows": 51,
+    "minimum_width_probe_panes": [
+      "w7E:pGK",
+      "w7E:pGM"
+    ],
+    "minimum_width_probe_rectangles": {
+      "parent_width": 153,
+      "probe_width": 17,
+      "height": 53
+    },
+    "vertical_probe": {
+      "pane": "w7E:pGN",
+      "parent_height": 48,
+      "probe_height": 5,
+      "width": 170
+    },
+    "explicit_cleanup_confirmations": [
+      "cleanup: confirmed_closed probe_pane=w7E:pGJ",
+      "cleanup: confirmed_closed w7E:pGN"
+    ],
+    "restored_layout_panes": [
+      "w7E:pFF"
+    ],
+    "restored_layout_area": {
+      "width": 170,
+      "height": 53
+    },
+    "head_and_tail_contained_repeated_geometry_records": true,
+    "terminal_error": "cat: stdout: No space left on device"
+  }
+}

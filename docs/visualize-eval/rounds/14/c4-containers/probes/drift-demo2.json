@@ -1,0 +1,23 @@
+{
+  "theme": "gruvbox",
+  "direction": "lr",
+  "diagrams": [
+    {"id": "l1", "title": "L1 · System context — the machine manager",
+     "description": "The manager box holds its four core services; the operator, providers and Slack sit outside it",
+     "direction": "lr",
+     "containers": [{"label": "Machine manager", "members": ["api","q","rec","db"]}],
+     "nodes": [
+       {"id": "ops", "label": "Operators", "group": "people"},
+       {"id": "api", "label": "webapi", "group": "system"},
+       {"id": "q", "label": "River queue", "group": "system"},
+       {"id": "rec", "label": "reconcile", "group": "system"},
+       {"id": "db", "label": "Postgres", "group": "store"}
+     ],
+     "edges": [
+       {"from": "ops", "to": "api", "label": "mmctl"},
+       {"from": "api", "to": "q", "label": "enqueue"},
+       {"from": "q", "to": "rec", "label": "dispatch"},
+       {"from": "rec", "to": "db", "label": "write"}
+     ]}
+  ]
+}

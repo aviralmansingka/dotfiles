@@ -1,0 +1,1231 @@
+{
+  "protocol_version": 1,
+  "round": 14,
+  "case_id": "c4-probe",
+  "candidate_sha256": "f514f96a9b011c0dd4fab318020fbc1d2b1ad7994b3873afb293fa0257a2f819",
+  "renderer_sha256": "2b1dd35301e19c03951c5ba7b546b4fdbcb18cec596dfe372526b2d83272abf0",
+  "rubric_sha256": "6bfd3733c8d08b66af9a92e71985a20846f954d7916eaf9685f86c8d2f96bcb8",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "f514f96a9b011c0dd4fab318020fbc1d2b1ad7994b3873afb293fa0257a2f819",
+  "blind_observation_sha256": "8eaac6dc8d326d21dd43dc1f12f9d80af12973c77f2e2d6cfaa475579f96c590",
+  "generator": {
+    "worker_id": "viz-ds13-c4",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge14-c4",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 244,
+    "rows": 62,
+    "zoom_percent": 100,
+    "verified": true,
+    "note": "branch B canvas"
+  },
+  "live_pane": {
+    "columns": 68,
+    "rows": 44
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/14/c4-retry/observed-first.md",
+      "sha256": "8eaac6dc8d326d21dd43dc1f12f9d80af12973c77f2e2d6cfaa475579f96c590",
+      "description": "observed-first.md",
+      "capture": null
+    },
+    {
+      "id": "spec",
+      "path": "docs/visualize-eval/rounds/14/c4-retry/specs/c4-canvas.json",
+      "sha256": "f514f96a9b011c0dd4fab318020fbc1d2b1ad7994b3873afb293fa0257a2f819",
+      "description": "specs/c4-canvas.json",
+      "capture": null
+    },
+    {
+      "id": "whole",
+      "path": "docs/visualize-eval/rounds/14/c4-retry/evidence/canvas/canvas-250x76-frames.txt",
+      "sha256": "e085e8a702f92e63a4df3a1541ff05b0add7642ab5f2d4cf5544ace476ca56a6",
+      "description": "evidence/canvas/canvas-250x76-frames.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 250,
+          "rows": 76
+        },
+        "view": "canvas",
+        "frame": "0",
+        "timestamp": "0ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "check",
+      "path": "docs/visualize-eval/rounds/14/c4-retry/evidence/canvas/check.txt",
+      "sha256": "afcd5c475aaeb68e875af61cde888ef0ef671f3a6d5810f58607c8f387482e8e",
+      "description": "evidence/canvas/check.txt",
+      "capture": null
+    },
+    {
+      "id": "ansi",
+      "path": "docs/visualize-eval/rounds/14/c4-retry/evidence/canvas/canvas-ansi.ansi",
+      "sha256": "c0173f116221aea591638458d9f41abbe95bf9fb81a210b84544e429bd3639da",
+      "description": "evidence/canvas/canvas-ansi.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "canvas",
+        "frame": "0",
+        "timestamp": "2026-11-03T17:09:24Z–17:09:29Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected",
+      "path": "docs/visualize-eval/rounds/14/c4-retry/evidence/canvas/canvas-selected.ansi",
+      "sha256": "4e0a74bd9f2b79bf69d8e8dac5d453b4f7767ab78931b3cbdc5c2f3e6db61383",
+      "description": "evidence/canvas/canvas-selected.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "canvas",
+        "frame": "select-all",
+        "timestamp": "2026-11-03T17:09:24Z–17:09:29Z",
+        "state": "selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "pane",
+      "path": "docs/visualize-eval/rounds/14/c4-retry/evidence/canvas/canvas-text.txt",
+      "sha256": "43aa6391a1995534ab75c087909a0bd89a0d6199718902e9e29ec59b64c41c0d",
+      "description": "evidence/canvas/canvas-text.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "canvas",
+        "frame": "0",
+        "timestamp": "2026-11-03T17:09:24Z–17:09:29Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "frames",
+      "path": "docs/visualize-eval/rounds/14/c4-retry/evidence/canvas/canvas-frames.txt",
+      "sha256": "0be7d86953fb4a833fc8264308ec00914454aa4cefbf401c39678d0a88ec1809",
+      "description": "evidence/canvas/canvas-frames.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "canvas",
+        "frame": "0",
+        "timestamp": "0ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "audit",
+      "path": "docs/visualize-eval/rounds/14/c4-retry/evidence/canvas/frame-audit.txt",
+      "sha256": "84cf434ce7c6cf3265e519c7d8ac5f0bbed474f58c87be3b4a72cc0f439d37f1",
+      "description": "evidence/canvas/frame-audit.txt",
+      "capture": null
+    },
+    {
+      "id": "validator",
+      "path": "docs/visualize-eval/rounds/14/c4-retry/evidence/canvas/validator.txt",
+      "sha256": "0b8030bada6c064d6b2b345154f7988491ddf1b5a2c6b454686673b5f96e76e0",
+      "description": "evidence/canvas/validator.txt",
+      "capture": null
+    },
+    {
+      "id": "manifest",
+      "path": "docs/visualize-eval/rounds/14/c4-retry/evidence/canvas/manifest.json",
+      "sha256": "ee73ceac9ca2a287a4124aeaa5c50bb59dc6e8d386ce894fdb42c796d15133ce",
+      "description": "evidence/canvas/manifest.json",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/14/c4-retry/generation.json",
+      "sha256": "47cb1d2083d76bb5b61b79454ac7235b51cbbe0356955e16f5040bdf6901f6c7",
+      "description": "generation.json",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/14/c4-retry/attempts.json",
+      "sha256": "e3b839392051ca24327c96b2586f1dab02a4f678648928dd9ce435055bc18e50",
+      "description": "attempts.json",
+      "capture": null
+    },
+    {
+      "id": "log",
+      "path": "docs/visualize-eval/rounds/14/c4-retry/attempts-log.jsonl",
+      "sha256": "cc5b6b080b51934351d4b4994d1758fe3e4ab91a1ab65672678983eeaaa85a64",
+      "description": "attempts-log.jsonl",
+      "capture": null
+    },
+    {
+      "id": "probe-lr",
+      "path": "docs/visualize-eval/rounds/14/c4-retry/recorded/probe-budget-lr.stderr",
+      "sha256": "46ed52072b33186dd60adefa9b13747ec4a256b2454221c8fef1984918645f74",
+      "description": "recorded/probe-budget-lr.stderr",
+      "capture": null
+    },
+    {
+      "id": "probe-tb",
+      "path": "docs/visualize-eval/rounds/14/c4-retry/recorded/probe-budget-tb.stdout",
+      "sha256": "a77e554fd4cf9fe2c840bed38db4efa9b72ae6037d4b6dbbe57b85bf7bb4a8e5",
+      "description": "recorded/probe-budget-tb.stdout",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All endpoint pairs appear at L2, but q → SSH has verify reimage and loses the separately stated audit action on that relation; neighboring SSH → machines audit suggests it but is not the same assertion. L1 manager → machines folds incoming iPXE and heartbeat into a misleading outgoing aggregate; BM is unkeyed. Enclosing externals inside the manager contents boundary also misstates ownership.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "evidence_ids": [
+        "whole",
+        "spec",
+        "generation"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "L2 routes and heads trace; one bridge and one touching bend are reported and no unrelated-node near misses. L1 direction loss is a semantic defect, not an untraceable route.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "evidence_ids": [
+        "whole",
+        "check"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Branch B is justified by a large multi-diagram canvas; titles, extents and labels are shown at natural scale but L2a far-right enclosure edge is clipped in the 250x76 capture and the original q → SSH relation is thinned. Branch B cannot waive thinning.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "evidence_ids": [
+        "whole",
+        "check",
+        "spec"
+      ]
+    },
+    "navigation_clarity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Titles distinguish L1 and the two L2 themes but descriptions say their dotted boxes are contents of the manager while both also contain external systems and actors. This misstates the seam and requires outside knowledge; pan is needed in the 68x44 pane.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "evidence_ids": [
+        "whole",
+        "pane",
+        "generation"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Full-canvas ANSI or buffer evidence is absent; cross-diagram group hue stability and group separability cannot be independently checked.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "evidence_ids": [
+        "ansi",
+        "whole",
+        "check"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Judged and stated family lifecycle-machines. Generator evidence: the source path list fans out of queue/machine spine with one live dot per line. Captures show request-to-boot phases and fan; distinct antiparallel boot routes are co-viewed. Split and mesh borrowing are recorded.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "evidence_ids": [
+        "whole",
+        "generation"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "The 68x44 pane control overlay overwrites L2a humans node border. Whole-canvas text shows node shapes but cannot establish their colors; selected full-canvas borders lack proof.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "evidence_ids": [
+        "pane",
+        "ansi",
+        "selected",
+        "whole"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Five canvas candidates and two additional probes exceed the three-candidate guidance even though they are recorded and validator passes. Triage Q6 attributes a previous-judge directive to the round-14 brief which contains no such words; the record also over-triages a mostly answered brief. Full-canvas ANSI/selected evidence is missing.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "evidence_ids": [
+        "attempts",
+        "log",
+        "validator",
+        "generation",
+        "selected"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "56-frame audit reports 11 dots at shared 0.500 cells/frame and check gives 11 origins, zero violations, 8 source and 3 destination hues, but whole-canvas ANSI is absent and not all prohibited-cell and hue bindings are independently demonstrated.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "evidence_ids": [
+        "audit",
+        "whole",
+        "check",
+        "ansi"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "source-01",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "cp → pgrpc: create / terminate / repair",
+      "observed": "l2a cp → pgrpc, visible 'create/terminate/repair' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            29,
+            37,
+            23,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-02",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "web → wapi: http",
+      "observed": "l2a web → wapi, visible 'http' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            37,
+            42,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-03",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "pgrpc → q: enqueue job",
+      "observed": "l2a pgrpc → q, visible 'enqueue job' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            73,
+            40,
+            11,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-04",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "wapi → q: reinstall / reprovision",
+      "observed": "l2a wapi → q, visible 'reinstall/reprovision' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            68,
+            42,
+            21,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-05",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "q → reg: provision job",
+      "observed": "l2a q → reg, visible 'provision job' with route and arrowhead. A bridge distinguishes the crossing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            106,
+            42,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-06",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "reg → prov: provider API",
+      "observed": "l2a reg → prov, visible 'provider API' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            140,
+            40,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-07",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "prov → mch: allocate instance",
+      "observed": "l2a prov → mch, visible 'allocate instance' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            176,
+            37,
+            17,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-08",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "mch → boot: iPXE request",
+      "observed": "l2a mch → boot, visible 'iPXE request' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            212,
+            39,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-09",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "boot → mch: boot.ipxe + S3 args",
+      "observed": "l2a boot → mch, visible 'boot.ipxe + S3 args' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            210,
+            44,
+            19,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-10",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "mch → agent: runs on host",
+      "observed": "l2b mch → agent, visible 'runs on host' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            118,
+            62,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-11",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "agent → pub: register + heartbeat",
+      "observed": "l2b agent → pub, visible 'register + heartbeat' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            149,
+            62,
+            20,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-12",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "pub → db: machine state",
+      "observed": "l2b pub → db, visible 'machine state' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            186,
+            60,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-13",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "pgrpc → db: machine rows",
+      "observed": "l2a pgrpc → db, visible 'machine rows' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            101,
+            35,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-14",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "q → db: job rows",
+      "observed": "l2a q → db, visible 'job rows' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            109,
+            37,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-15",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "q → ssh: audit / verify reimage",
+      "observed": "l2b q → ssh, visible 'verify reimage' with route and arrowhead. The source also says audit on this edge, not written here; SSH → machines separately says run machine-audit.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            47,
+            63,
+            14,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "edge_id": "source-16",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "ssh → mch: run machine-audit",
+      "observed": "l2b ssh → mch, visible 'run machine-audit' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            81,
+            62,
+            17,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-17",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "mch → s3: pull boot image",
+      "observed": "l2a mch → s3, visible 'pull boot image' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            179,
+            43,
+            15,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-18",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "q → s3: diagnose uploads",
+      "observed": "l2b q → s3, visible 'diagnose uploads' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            22,
+            65,
+            16,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-19",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "q → jan: diagnostic events",
+      "observed": "l2b q → jan, visible 'diagnostic events' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            45,
+            59,
+            17,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-20",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "jan → wapi: proposed actions",
+      "observed": "l2b jan → wapi, visible 'proposed actions' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            81,
+            59,
+            16,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-21",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "wapi → slack: confirm + alerts",
+      "observed": "l2b wapi → slack, visible 'confirm + alerts' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            118,
+            59,
+            16,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-22",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "rec → prov: gcore sync, 1 min",
+      "observed": "l2a rec → prov, visible 'gcore sync, 1 min' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            130,
+            47,
+            17,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "source-23",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "rec → db: cluster state",
+      "observed": "l2a rec → db, visible 'cluster state' with route and arrowhead.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            122,
+            41,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "context-e0",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "expected": "web → wapi http",
+      "observed": "web → mm http; context expansion, not an extra source relation.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            27,
+            21,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "context-e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "expected": "reg → prov provider API; rec → prov gcore sync",
+      "observed": "mm → prov prov API; context expansion, not an extra source relation.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            23,
+            20,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "context-e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "expected": "prov → mch allocate instance",
+      "observed": "prov → mch allocate instance; context expansion, not an extra source relation.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            36,
+            14,
+            17,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "context-e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "expected": "mch → boot iPXE; boot → mch response; ssh → mch audit; agent → pub heartbeat",
+      "observed": "mm → mch boot + audit + heartbeat; folds incoming machine → manager direction into outgoing aggregate.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            55,
+            16,
+            24,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2"
+      ]
+    },
+    {
+      "edge_id": "context-e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "expected": "q → s3 diagnose uploads",
+      "observed": "mm → s3 diagnose uploads; context expansion, not an extra source relation.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            56,
+            19,
+            16,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "context-e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "expected": "wapi → slack confirm + alerts",
+      "observed": "mm → slack confirm + alerts; context expansion, not an extra source relation.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            55,
+            23,
+            16,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "zoom-parent",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "expected": "Double border singles out the parent expanded next",
+      "observed": "Only the machine manager has ╔═╗ double border; two L2 headings describe manager expansion.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            34,
+            16,
+            17,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "zoom-enclosure",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "expected": "Dotted boundary denotes contents of the manager, not an extra node",
+      "observed": "Large dotted boundaries read as enclosures rather than nodes, but both also enclose external systems and actors; misleading as a manager ownership boundary.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            10,
+            32,
+            200,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "zoom-clearance",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "expected": "Routes and moving dots stay clear of dotted boundary",
+      "observed": "Visible boundary segments clear; far-right L2a boundary clipped in the pinned frame. Check omits enclosure-crossings; no complete visual proof.",
+      "status": "blocked",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            10,
+            32,
+            200,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "zoom-direction",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "expected": "Consistent left-to-right diagram direction",
+      "observed": "Canvas specifies lr once, no overrides; display maintains LR rank direction, notwithstanding valid individual reverse arrows.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            10,
+            30,
+            48,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "source-15"
+      ],
+      "severity": "critical",
+      "description": "The q → SSH action audit / verify reimage is thinned to verify reimage; separate SSH → machine audit does not explicitly restore the original q → SSH action.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            47,
+            63,
+            14,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "context-e3"
+      ],
+      "severity": "critical",
+      "description": "Context arrow points manager → machines while it aggregates incoming iPXE and heartbeat, obscuring or reversing direction at the context level.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            55,
+            16,
+            24,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "category": "navigation_clarity",
+      "edge_ids": [
+        "zoom-enclosure"
+      ],
+      "severity": "high",
+      "description": "Dotted contents-of-manager enclosures include external actors and systems, so their visible boundary communicates inaccurate ownership.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            10,
+            32,
+            200,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "category": "border_integrity",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "Control overlay overwrites L2a humans box border in the live pane.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pane",
+          "region": [
+            1,
+            38,
+            10,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F5",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "Five candidates plus two probes exceed the three-candidate guidance; Q6 misattributes earlier-judge qualifier instructions to the present brief.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "locations": []
+    },
+    {
+      "id": "F6",
+      "category": "layout_fit",
+      "edge_ids": [
+        "source-15"
+      ],
+      "severity": "high",
+      "description": "Branch B cannot excuse a thinned required relationship; additionally the pinned capture clips the rightmost enclosure.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/14/c4-retry/brief.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            47,
+            63,
+            14,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "Full-canvas ANSI and selected-state capture missing; hue stability, border colors and per-route dot hue binding unverified.",
+    "Far-right L2a enclosure boundary is clipped in the 250x76 pinned frame; no independent full-boundary clearance proof.",
+    "Single L2 LR probe failed for this tested layout; this is not a proof that all possible layouts are impossible.",
+    "Requested probe case_id, extra fields and branch B viewport differ from frozen schema: c4-probe is not in case enum, extra fields and viewport note are forbidden, and schema fixes 77x47."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:p11X"
+    ],
+    "closed_pane_ids": [
+      "w7E:p11X"
+    ],
+    "status": "done",
+    "reason": "Manifest says confirmed_closed; judge opened no panes."
+  },
+  "overall": "fail",
+  "retry_delta": {
+    "previous_round": 13,
+    "previous_overall": "fail",
+    "current_overall": "fail",
+    "improved": [
+      "verify reimage now visible",
+      "boot.ipxe + S3 args now visible",
+      "zoom parent double border and section enclosures introduced",
+      "uniform LR inherited at canvas level",
+      "larger pinned capture puts control legend below drawing"
+    ],
+    "remaining_or_new": [
+      "q → SSH audit action is no longer written on its own relation",
+      "incoming machine direction folded into outgoing L1 aggregate",
+      "both dotted boundaries include external actors",
+      "L2 split; insufficient whole-canvas color and selection evidence",
+      "attempt budget exceeded"
+    ],
+    "c4_ruling": "partial; dedicated C4 skill warranted if recurring, with renderer support for correct system boundaries"
+  }
+}

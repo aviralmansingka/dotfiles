@@ -1,0 +1,87 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "k8s",
+      "label": "Kubernetes",
+      "group": "inband"
+    },
+    {
+      "id": "gpuop",
+      "label": "GPU Operator",
+      "group": "inband"
+    },
+    {
+      "id": "dcgm",
+      "label": "DCGM",
+      "group": "inband"
+    },
+    {
+      "id": "drvk",
+      "label": "Driver+CUDA",
+      "group": "inband"
+    },
+    {
+      "id": "dcgmx",
+      "label": "dcgm-exporter",
+      "group": "inband"
+    },
+    {
+      "id": "fm",
+      "label": "Fabric Mgr",
+      "group": "inband"
+    }
+  ],
+  "edges": [
+    {
+      "from": "k8s",
+      "to": "gpuop",
+      "label": "deployed in",
+      "dots": 1
+    },
+    {
+      "from": "gpuop",
+      "to": "dcgm",
+      "label": "DaemonSet",
+      "dots": 1
+    },
+    {
+      "from": "dcgm",
+      "to": "drvk",
+      "label": "NVML read",
+      "dots": 1
+    },
+    {
+      "from": "drvk",
+      "to": "fm",
+      "label": "co-resident",
+      "dots": 1,
+      "style": "dashed"
+    },
+    {
+      "from": "dcgm",
+      "to": "dcgmx",
+      "label": "metrics :9400",
+      "dots": 1
+    }
+  ],
+  "layers": [
+    [
+      "k8s"
+    ],
+    [
+      "gpuop"
+    ],
+    [
+      "dcgm"
+    ],
+    [
+      "dcgmx",
+      "drvk"
+    ],
+    [
+      "fm"
+    ]
+  ]
+}

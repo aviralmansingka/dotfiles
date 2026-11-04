@@ -1,0 +1,54 @@
+{
+  "round": "12",
+  "baseline": "11",
+  "binary": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+  "opened_at": "2026-11-03T08:07:35Z",
+  "note": "Panes stay open for human review. Left pane is the baseline round, right pane is the evaluated round.",
+  "cases": [
+    {
+      "case": "modal-machine-manager",
+      "tab_id": "w7E:tBP",
+      "view": 1,
+      "before_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-machine-manager/specs/v1-provision-att3.json",
+      "after_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/12/modal-machine-manager/spec-v1-final.json",
+      "before_view_count": 4,
+      "after_view_count": 2,
+      "before_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-machine-manager/specs/v1-provision-att3.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-machine-manager/specs/v2-boot-heartbeat.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-machine-manager/specs/v3-ops-att3.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-machine-manager/specs/v4-humans-reconcile-att2.json"
+      ],
+      "after_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/12/modal-machine-manager/spec-v1-final.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/12/modal-machine-manager/spec-v2-final.json"
+      ],
+      "pane_ids": {
+        "before": "w7E:pYJ",
+        "after": "w7E:pYK"
+      }
+    },
+    {
+      "case": "modal-runtime",
+      "tab_id": "w7E:tBQ",
+      "view": 1,
+      "before_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/v1-seam-pair.json",
+      "after_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/12/modal-runtime/specs/v1.json",
+      "before_view_count": 3,
+      "after_view_count": 2,
+      "before_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/v1-seam-pair.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/v2-fan-final.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/v3-compute-final.json"
+      ],
+      "after_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/12/modal-runtime/specs/v1.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/12/modal-runtime/specs/v2.json"
+      ],
+      "pane_ids": {
+        "before": "w7E:pYM",
+        "after": "w7E:pYN"
+      }
+    }
+  ]
+}

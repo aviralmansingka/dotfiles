@@ -1,0 +1,40 @@
+{
+  "theme": "gruvbox",
+  "direction": "lr",
+  "diagrams": [
+    {
+      "id": "p1",
+      "title": "Probe plane one",
+      "description": "capability probe: canvas form, trunk with two branches plus a terminus",
+      "nodes": [
+        { "id": "a", "label": "nv-rms", "group": "plane-a" },
+        { "id": "b", "label": "OOB LAN", "group": "plane-a" },
+        { "id": "c", "label": "Compute BMC", "group": "plane-a" },
+        { "id": "d", "label": "NVSwitch BMC", "group": "plane-a" },
+        { "id": "e", "label": "Power shelf", "group": "plane-a" }
+      ],
+      "trunks": [
+        { "id": "t1", "label": "OOB", "from": "b", "to": "e", "branches": ["c", "d"] }
+      ],
+      "edges": [
+        { "from": "a", "to": "b" }
+      ]
+    },
+    {
+      "id": "p2",
+      "title": "Probe plane two",
+      "description": "capability probe: plain chain with one long crossing edge",
+      "nodes": [
+        { "id": "b", "label": "OOB LAN", "group": "plane-a" },
+        { "id": "f", "label": "NVOS", "group": "plane-b" },
+        { "id": "g", "label": "NMX-C/T", "group": "plane-b" },
+        { "id": "h", "label": "Kubernetes", "group": "plane-b" }
+      ],
+      "edges": [
+        { "from": "b", "to": "f" },
+        { "from": "f", "to": "g" },
+        { "from": "h", "to": "g" }
+      ]
+    }
+  ]
+}

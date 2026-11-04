@@ -1,0 +1,15 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "nic", "label": "103.19.91.58 s1 NIC", "group": "srv1" },
+    { "id": "s2", "label": "103.19.91.59 R7725", "group": "srv2" },
+    { "id": "spare", "label": ".60-.62 free?", "group": "address pool" },
+    { "id": "gw", "label": "103.19.91.57 Arista" }
+  ],
+  "edges": [
+    { "from": "nic", "to": "gw", "label": "0.1 ms no NAT" },
+    { "from": "s2", "to": "gw", "label": "same /29" },
+    { "from": "spare", "to": "gw", "label": "in /29 pool", "style": "dashed" }
+  ]
+}

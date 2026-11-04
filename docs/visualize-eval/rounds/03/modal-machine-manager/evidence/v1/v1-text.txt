@@ -1,0 +1,46 @@
+ rataflow-view · 77x47 @100% · v1-attempt2.json · 7 nodes · 6 edges · q quit
+
+
+
+
+
+        ╭───────────────────╮                       ╭──────────────╮
+        │Modal control plane│                       │humans + mmctl│
+        │                   │                       │              │
+        ╰───────────────────╯                       ╰──────────────╯
+         │                                           │
+         │ create/terminate/repair                   │ http
+         ●                                           ●
+         ▼                                           ▼
+        ╭────────────╮                              ╭─────────────╮
+        │private gRPC│                              │webapi server│
+        │            │                              │             │
+        ╰────────────╯                              ╰─────────────╯
+         │                                           │
+         │     enqueue job                           │
+         ╰──────●──────────────╮ ╭─────────────●─────╯
+                               ▼ ▼reinstall/reprovision
+                              ╭───────────────╮
+                              │River job queue│
+                              │               │
+                              ╰───────────────╯
+                               │
+                               │ provision job
+                               ●
+                               ▼
+                              ╭─────────────────╮
+                              │provider registry│
+                              │                 │
+                              ╰─────────────────╯
+                               │
+                               │ provider API
+                               ●
+                               ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+ ┌───────┐                    │                    │
+ │ + [+] │                    ╰────────────────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘

@@ -1,0 +1,724 @@
+{
+  "protocol_version": 1,
+  "round": 9,
+  "case_id": "network",
+  "candidate_sha256": "ba2878c5194cd6fc4bc1af5299a156064130de9be1b0ccf4c6eeb0236d431381",
+  "renderer_sha256": "405a61a674a7cc6271ae1276794eb270c9425dfc38585f4cbb1c48e9b6db495b",
+  "rubric_sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "3c5d4fc340a20dd4f727c3931dbb434a6e71e1fef7594ca718b6b818f75e6958",
+  "generator": {
+    "worker_id": "viz-ds09-2",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge09-network",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 82,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/09/reviews/network/observed-first.md",
+      "sha256": "27c54b99abc577cdfc62d6010d955c2f4c13f3fa2cf6bb8fc872ae298bfe54e4",
+      "description": "Blind record saved before expected reveal",
+      "capture": null
+    },
+    {
+      "id": "spec",
+      "path": "docs/visualize-eval/rounds/09/network/specs/v1.json",
+      "sha256": "3c5d4fc340a20dd4f727c3931dbb434a6e71e1fef7594ca718b6b818f75e6958",
+      "description": "Final single spec",
+      "capture": null
+    },
+    {
+      "id": "pinned",
+      "path": "docs/visualize-eval/rounds/09/network/pinned/v1-77x47.txt",
+      "sha256": "7438dccdadea4bd51c99e87a4735a1e9e571549d749a7b2f415d37cd793e2ae7",
+      "description": "Final-spec target dump, frames 0–20",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0–20",
+        "timestamp": "2026-11-02T21:53:35Z; 0–2000ms",
+        "state": "normal animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "text",
+      "path": "docs/visualize-eval/rounds/09/network/evidence/v1/v1-text.txt",
+      "sha256": "1371bb5dd8b6b674a6a4995a905d18d861502c574b2e74addfef716526e6f0f6",
+      "description": "Live measured pane",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:54:14Z–2026-11-02T21:54:18Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi",
+      "path": "docs/visualize-eval/rounds/09/network/evidence/v1/v1-ansi.ansi",
+      "sha256": "cdc879f64e2498316cafd7cfdf43721cceaa94f47c17b731f3e376949312abb3",
+      "description": "Live normal border colors",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:54:14Z–2026-11-02T21:54:18Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected",
+      "path": "docs/visualize-eval/rounds/09/network/evidence/v1/v1-selected.ansi",
+      "sha256": "3940dd4087e9acf0649276b4d13bc2e66cbe85178207ff8b2db77290af51a138",
+      "description": "All selected node borders",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "2026-11-02T21:54:14Z–2026-11-02T21:54:18Z",
+        "state": "select all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "frames",
+      "path": "docs/visualize-eval/rounds/09/network/evidence/v1/v1-frames.txt",
+      "sha256": "f6a386baf32940af1e2ad52f57ea32a54c22fcf4fde8f90fbe32e3a0e2901e1c",
+      "description": "Live motion capture begins with a partial frame",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "2–20",
+        "timestamp": "2026-11-02T21:54:14Z–2026-11-02T21:54:18Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "framesansi",
+      "path": "docs/visualize-eval/rounds/09/network/evidence/v1/v1-frames.ansi",
+      "sha256": "ac814c9693e65888c0fb8c1a1808ceed4e1ad5803205cb11d1dc70a650fbb788",
+      "description": "Live frame ANSI",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "2–20",
+        "timestamp": "2026-11-02T21:54:14Z–2026-11-02T21:54:18Z",
+        "state": "animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "check",
+      "path": "docs/visualize-eval/rounds/09/network/evidence/v1/check.txt",
+      "sha256": "4085787b37c4368ab0a3252b78b0546d8c002ea38308f1925e746940f8e694ad",
+      "description": "Frozen checker output",
+      "capture": null
+    },
+    {
+      "id": "manifest",
+      "path": "docs/visualize-eval/rounds/09/network/evidence/v1/manifest.json",
+      "sha256": "664f6ffb108f790d0393e5c6fc02acfbad6ed361bd0e35f3af1e0e8485b8eaa9",
+      "description": "Capture hashes, measured pane and cleanup",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/09/network/generation.json",
+      "sha256": "f2740dd60a106b28873789175bb36a4c1af0a28677fd3df638dccdc731f9c2c8",
+      "description": "Generator classification, mapping and commands",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/09/network/attempts.json",
+      "sha256": "43620cf6b2385737aaef40c1301d9041a68ab88278842692b4e71a5f0f6ff162",
+      "description": "Candidate budget and attempts",
+      "capture": null
+    },
+    {
+      "id": "records",
+      "path": "docs/visualize-eval/rounds/09/network/attempts-log.jsonl",
+      "sha256": "46e58a2caa7e4d698d419596043af9d4ae4cad4cc84e174d17a263ddb50b05f8",
+      "description": "Probe command and raw-byte records",
+      "capture": null
+    },
+    {
+      "id": "validator",
+      "path": "docs/visualize-eval/rounds/09/network/validator-v1.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "Recorded validator output",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/09/metadata.json",
+      "sha256": "abc75dda9ee0149980533966ab7d640689a4caf961900938cff810a2d9750ddd",
+      "description": "Frozen identities and hashes",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/network/source.md",
+      "sha256": "9d23a7b50d1d26a69f95523a9586bab96ec588afb9628ae274c896992b147947",
+      "description": "Source-backed network request and facts",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/network/expected.json",
+      "sha256": "8cb86d269c21176d775e79f8592f09067049031a0e581df38d66705e73a8caa9",
+      "description": "Frozen expected relations",
+      "capture": null
+    },
+    {
+      "id": "variants",
+      "path": "docs/visualize-eval/cases/network/historical-variants.json",
+      "sha256": "6af06039e172f0ef75d83c87703f85541b24e61d8706c64d8bba31ce742c2cbe",
+      "description": "Historical variants; not independently verified",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/09/rubric.json",
+      "sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+      "description": "Frozen rubric and schema",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen dataset manifest",
+      "capture": null
+    },
+    {
+      "id": "candidate",
+      "path": "docs/visualize-eval/rounds/09/SKILL.md",
+      "sha256": "ba2878c5194cd6fc4bc1af5299a156064130de9be1b0ccf4c6eeb0236d431381",
+      "description": "Frozen skill",
+      "capture": null
+    },
+    {
+      "id": "v1-attempt1-lr",
+      "path": "docs/visualize-eval/rounds/09/network/specs/v1-attempt1-lr.json",
+      "sha256": "cb6c418c4a7d86d5674b3e0b33cc453688d78eac627138bed7256e42fa365a1c",
+      "description": "Recorded candidate spec",
+      "capture": null
+    },
+    {
+      "id": "v1-attempt2-tb",
+      "path": "docs/visualize-eval/rounds/09/network/specs/v1-attempt2-tb.json",
+      "sha256": "54267d2e86ade3f929425f60eed910c7440775faf3e446cc857e32a7128572a4",
+      "description": "Recorded candidate spec",
+      "capture": null
+    },
+    {
+      "id": "v1-attempt3-tb-labelslot",
+      "path": "docs/visualize-eval/rounds/09/network/specs/v1-attempt3-tb-labelslot.json",
+      "sha256": "3c5d4fc340a20dd4f727c3931dbb434a6e71e1fef7594ca718b6b818f75e6958",
+      "description": "Recorded candidate spec",
+      "capture": null
+    },
+    {
+      "id": "v1-attempt1-lr-stdout",
+      "path": "docs/visualize-eval/rounds/09/network/recorded/v1-attempt1-lr.stdout",
+      "sha256": "8194323aae498dfec9e18e25d7ef6081261d2a0d0798ee1ac8a37ca0910ab7ae",
+      "description": "Recorded raw bytes for probe",
+      "capture": null
+    },
+    {
+      "id": "v1-attempt1-lr-stderr",
+      "path": "docs/visualize-eval/rounds/09/network/recorded/v1-attempt1-lr.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded raw bytes for probe",
+      "capture": null
+    },
+    {
+      "id": "v1-attempt2-tb-stdout",
+      "path": "docs/visualize-eval/rounds/09/network/recorded/v1-attempt2-tb.stdout",
+      "sha256": "0e8b691c262e345fee46d4af7a8fe7a9c9a8c4528120ed5d8ad696a5bc3eb0b5",
+      "description": "Recorded raw bytes for probe",
+      "capture": null
+    },
+    {
+      "id": "v1-attempt2-tb-stderr",
+      "path": "docs/visualize-eval/rounds/09/network/recorded/v1-attempt2-tb.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded raw bytes for probe",
+      "capture": null
+    },
+    {
+      "id": "v1-attempt3-tb-labelslot-stdout",
+      "path": "docs/visualize-eval/rounds/09/network/recorded/v1-attempt3-tb-labelslot.stdout",
+      "sha256": "4085787b37c4368ab0a3252b78b0546d8c002ea38308f1925e746940f8e694ad",
+      "description": "Recorded raw bytes for probe",
+      "capture": null
+    },
+    {
+      "id": "v1-attempt3-tb-labelslot-stderr",
+      "path": "docs/visualize-eval/rounds/09/network/recorded/v1-attempt3-tb-labelslot.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded raw bytes for probe",
+      "capture": null
+    },
+    {
+      "id": "v1-pinned-77x47-stdout",
+      "path": "docs/visualize-eval/rounds/09/network/recorded/v1-pinned-77x47.stdout",
+      "sha256": "7438dccdadea4bd51c99e87a4735a1e9e571549d749a7b2f415d37cd793e2ae7",
+      "description": "Recorded raw bytes for probe",
+      "capture": null
+    },
+    {
+      "id": "v1-pinned-77x47-stderr",
+      "path": "docs/visualize-eval/rounds/09/network/recorded/v1-pinned-77x47.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded raw bytes for probe",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All required nodes and route endpoints are present, but 4 of 7 edge labels have ambiguous ownership between parallel outgoing lanes; link and application meanings cannot reliably be assigned to the required edges.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "spec",
+        "blind"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Seven distinct directed routes and arrowheads are traceable, including both converging pairs; bridge is distinguishable and origin cells are correct. No evidence establishes an avoidable detour.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "check"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Pinned final-spec dump at 77×47 natural contains all graph and UI without clipping. One bridge is disclosed; recorded attempts do not establish that it was avoidable without violating source order.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "attempts",
+        "check"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Four declared role groups collapse to three hue families: Core switch/fabric and Web tier/app are both exactly RGB 125,174,163, so color fails to distinguish two source roles. No group enclosure is drawn, correctly.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "ansi",
+        "spec"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 6 node borders are complete and individually color-continuous in ANSI; select-all proves all 6 occurrences with intact selected borders, not six individual selections.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "ansi",
+        "selected",
+        "pinned"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Blind, hashes, raw probe records, measured live pane, pinned fit and cleanup are present; validator passes. But timestamped target and live captures end at 2 seconds before the longest animated route completes one lap, so required full-lap evidence is missing.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "metadata",
+        "records",
+        "validator",
+        "pinned",
+        "frames",
+        "manifest"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "All 7 dots begin at true origins, remain sparse and move at common speed in recorded frames without covering bends, bridge, labels or arrowheads. A complete cycle of the longest route is not captured, so full required motion evidence is missing. Shared default flow does not represent link speed.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "spec",
+        "check"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Correct and stated family service-meshes; source-backed evidence and ordered core fan are visible. Source has no anti-parallel pair, so none can be required or invented; two separate inbound pairs remain in one view. No yield is claimed or needed. Label-owner defect is independently scored in semantic fidelity.",
+      "judged_family": "service-meshes",
+      "generator_family": "service-meshes",
+      "evidence_line": "core switch fans 2 edges to neighbours (core->web 10 GbE, core->cache 25 GbE) and two separate relations converge on the cache tier (core->cache 25 GbE, web->cache session) and on the DB tier (web->db queries, cache->db fill), which the source's fixed constraint requires kept separate.",
+      "evidence_location": "docs/visualize-eval/rounds/09/network/generation.json#step0_classification.evidence",
+      "recipe_facts": [
+        "Core port order web then cache matches source listing.",
+        "No source anti-parallel pair exists; none appears.",
+        "Cache and DB each receive two independent arrowheads in the single view.",
+        "No yield."
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "wan-fw",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "WAN → Firewall: 1 GbE",
+      "observed": "WAN → Firewall; stem (38,6), bends (38,8)/(35,8), head (35,9); label identifiable.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            35,
+            6,
+            11,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "fw-core",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "Firewall → Core switch: 10 GbE",
+      "observed": "Firewall → Core; stem (35,14), bends (35,16)/(34,16), head (34,17); label identifiable.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            34,
+            14,
+            13,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "core-web",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "Core switch → Web tier: 10 GbE",
+      "observed": "Core → Web stem (34,22), head (33,25), but 10 GbE at (41,22) competes with Core → Redis in same gutter.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            33,
+            22,
+            14,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "labels-core"
+      ]
+    },
+    {
+      "edge_id": "core-redis",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "Core switch → Redis: 25 GbE",
+      "observed": "Core → Redis stem (36,22), right-hand lane x47, head (41,34), but 25 GbE at (41,23) competes with Core → Web.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            36,
+            22,
+            12,
+            13
+          ]
+        }
+      ],
+      "finding_ids": [
+        "labels-core"
+      ]
+    },
+    {
+      "edge_id": "web-redis",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "Web tier → Redis: session",
+      "observed": "Web → Redis stem (33,30), crosses bridge (35,33) over Web → DB, head (39,34); session ownership competes with Web → DB.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            33,
+            30,
+            14,
+            5
+          ]
+        }
+      ],
+      "finding_ids": [
+        "labels-web"
+      ]
+    },
+    {
+      "edge_id": "web-db",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "Web tier → DB tier: queries",
+      "observed": "Web → DB stem (35,30), passes beneath bridge (35,33), head (36,42); queries ownership competes with Web → Redis.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            33,
+            30,
+            13,
+            13
+          ]
+        }
+      ],
+      "finding_ids": [
+        "labels-web"
+      ]
+    },
+    {
+      "edge_id": "redis-db",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "Redis → DB tier: fill",
+      "observed": "Redis → DB stem (39,39), head (38,42), distinct from Web → DB; fill identifiable.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            38,
+            39,
+            9,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "labels-core",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "core-web",
+        "core-redis"
+      ],
+      "severity": "high",
+      "description": "DEFECT — checker says zero ambiguous owners but the 10 GbE [41,22,6,1] and 25 GbE [41,23,6,1] gutter labels are both nearer to the right x36 lane than the left x34 lane; no leaders or exclusive placement identify which value belongs to which edge. The ownership metric misses the reader-visible ambiguity; the layout also fails ownership. No measured evidence proves unambiguous placement impossible.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            34,
+            22,
+            13,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "labels-web",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "web-redis",
+        "web-db"
+      ],
+      "severity": "high",
+      "description": "DEFECT — session [39,30,7,1] and queries [39,31,7,1] are both closer to the right x35 lane than the left x33 lane; neither has a leader or unique near-route association. A reader cannot reliably assign either label to its source-required relation, contrary to checker zero.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            33,
+            30,
+            13,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "group-collision",
+      "category": "conceptual_grouping_color",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "DEFECT — fabric Core switch and app Web tier share exact teal RGB 125,174,163; four declared roles render as three distinguishable families. Text retains names, but hue fails to discriminate these groups.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "ansi",
+          "region": [
+            36,
+            20,
+            13,
+            4
+          ]
+        },
+        {
+          "evidence_id": "ansi",
+          "region": [
+            35,
+            28,
+            10,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "full-lap",
+      "category": "workflow_evidence",
+      "edge_ids": [
+        "core-redis",
+        "web-db"
+      ],
+      "severity": "high",
+      "description": "EVIDENCE GAP — timestamped target dump ends at frame 20/2000ms. Core→Redis starts at (36,22) and reaches only (45,24), well before its target (41,34); it never wraps or completes a lap. Web→DB also does not wrap. Thus neither target nor live capture proves a longest-route cycle, despite validator all-pass.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            36,
+            22,
+            12,
+            13
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "Full-lap timestamped capture of longest animated route at target 77×47 is missing; no renderer capability blocker has been proven."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pNM"
+    ],
+    "closed_pane_ids": [
+      "w7E:pNM"
+    ],
+    "status": "done",
+    "reason": "Generation and manifest report confirmed_closed; no review panes opened."
+  },
+  "overall": "fail"
+}

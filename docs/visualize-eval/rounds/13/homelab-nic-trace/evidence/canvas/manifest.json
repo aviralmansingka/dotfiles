@@ -1,0 +1,58 @@
+{
+  "spec_path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/13/homelab-nic-trace/spec.json",
+  "spec_sha256": "9ddfaef45aa5b7fd0e98fdc5bcd256c702dac1a83276af0715667a2e6acaf1b8",
+  "spec_form": "canvas",
+  "diagrams": [
+    {
+      "id": "egress",
+      "title": "Wired egress, hop by hop",
+      "description": "Primary egress trace: historical hops; Fios router is the collapsed fabric; v6 ULA-only."
+    },
+    {
+      "id": "local",
+      "title": "Local virtual nets",
+      "description": "Local to the host: VM behind the libvirt NAT bridge, container behind the Docker bridge."
+    },
+    {
+      "id": "secondary",
+      "title": "Wi-Fi backup and Tailscale overlay",
+      "description": "Secondary paths: Wi-Fi failover at metric 600, Tailscale encapsulated over UDP on bond0."
+    }
+  ],
+  "binary_path": "/tmp/visualize-eval/round-13/bin/rataflow-view",
+  "binary_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+  "pane_id": "w7E:pZT",
+  "pane_rect": null,
+  "pane_cols": null,
+  "pane_rows": 44,
+  "viewport_line": null,
+  "viewport_token": "68x44 @100%",
+  "check_exit": 0,
+  "check_window": [
+    "2026-11-03T14:01:39Z",
+    "2026-11-03T14:01:39Z"
+  ],
+  "capture_window": [
+    "2026-11-03T14:01:40Z",
+    "2026-11-03T14:01:44Z"
+  ],
+  "cleanup": "confirmed_closed",
+  "select_all_frame": true,
+  "frames": 3,
+  "frame_step_ms": 100,
+  "pinned_frames": {
+    "file": "canvas-77x47-frames.txt",
+    "viewport_line": "viewport: 77x47 zoom: 1.00 natural"
+  },
+  "artifacts": {
+    "bin.sha256": "41acd28bd47aeed7923377b953efce1900faf3bdd0d9c08a898ca8ffaf087a8d",
+    "canvas-77x47-frames.txt": "949451364c6662f56371e91fb265b4487c1aaeae4e16e2988920c2864b23bba5",
+    "canvas-ansi.ansi": "11fc6612bb6005699615a992d806bbd88aef89b57fb2cbd5b6518b7dd08dd878",
+    "canvas-frames.ansi": "d86d271393c9ef05e81cd52926d4a0dfb4c71a4bfb13dc73676256ea23d859f3",
+    "canvas-frames.txt": "d96bf010d214cca88e7dca81aa45a630e50909990b4fc52bf08695286531310d",
+    "canvas-pinned.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "canvas-selected.ansi": "7431b5b63d2b1e37208cca86982371c3c52e80d0da9d3cbb4fe586e8128ca51f",
+    "canvas-text.txt": "9d17e9a5026e359261769c64ee42fa5955fb506664a72fa1de3e7e454c9be179",
+    "check.txt": "26bd2e8d1e433536083f1a7e2150523f61d861c4086455af8b73fdcf4777f07d"
+  }
+}

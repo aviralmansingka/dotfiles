@@ -1,0 +1,9 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=5 edges=4 flows=4 direction=tb theme=gruvbox
+extent=40x32 cells
+crossings: 0
+labels: 4/4 placed, 0 on route cells, 0 skipped
+groups: edge(2) switching(1) app(1) data(1)
+trunks:
+dots: 4 single-dot routes, 0 periodic routes, 0 violations, 4 synchronized at 2000ms
+origins: 4/4 routes start at their arrow origin

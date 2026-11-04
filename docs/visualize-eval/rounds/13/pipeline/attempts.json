@@ -1,0 +1,130 @@
+{
+ "case_id": "pipeline",
+ "round": "13",
+ "view_budget": 4,
+ "views": [
+  {
+   "view": "v1",
+   "spec": "docs/visualize-eval/rounds/13/pipeline/specs/spec.json",
+   "surface": "one side-by-side view (ladder rung 1)",
+   "angles": {
+    "count": 3,
+    "levers": []
+   },
+   "final": "a2-tb",
+   "attempts": [
+    {
+     "index": 1,
+     "label": "a1-lr",
+     "record_label": "a1-lr",
+     "spec": "docs/visualize-eval/rounds/13/pipeline/attempts/a1-lr.json",
+     "record": "attempts-log.jsonl#a1-lr",
+     "raw_stdout": "docs/visualize-eval/rounds/13/pipeline/recorded/a1-lr.stdout",
+     "capture": "docs/visualize-eval/rounds/13/pipeline/attempts/a1-lr-77x47-frames.txt",
+     "hypothesis": "flow-chains habit: lr for a five-rank chain, one dot per hop, labels in the horizontal rank gaps",
+     "check": {
+      "ok": "ok: nodes=6 edges=6 flows=6 direction=lr theme=gruvbox",
+      "extent": "extent=89x9 cells",
+      "crossings": "crossings: 0 bridges, 0 touching bends",
+      "near-misses": "near-misses: 0 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)",
+      "passes-near-unrelated-node": "passes-near-unrelated-node: 0",
+      "labels": "labels: 4/4 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners",
+      "groups": "groups: client(1) services(2) workers(2) store(1)",
+      "dots": "dots: 6 single-dot routes, 0 periodic routes, 0 violations, 6 constant at 0.5c/step, 0 same-arrival at 2000ms",
+      "dot hues": "dot hues: 6 by source, 0 by destination, 1 shared-hue pair(s) (source-only 1, destination-only 1)",
+      "origins": "origins: 6/6 routes start at their arrow origin",
+      "arrivals": "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+     },
+     "measured": "check extent=89x9; the pinned 77x47 dump prints 'canvas 78x9 at 100% \u00b7 drag to pan' and Postgres sits past the right edge",
+     "rejected_because": "the chain is five ranks wide (cli, api, {auth, queue}, worker, db) and there is no rank the source lets me remove, so lr needs 89 columns against a 77-column pane. The pinned dump proves the overflow and the clipped db, it is not a fit attempt that could be tuned.",
+     "defects": [
+      "canvas 78x9 > 77 columns: overflow badge",
+      "db clipped past the right edge"
+     ]
+    },
+    {
+     "index": 2,
+     "label": "a2-tb",
+     "record_label": "a2-tb",
+     "also_recorded_as": "final-spec, final-spec-a2",
+     "spec": "docs/visualize-eval/rounds/13/pipeline/specs/spec.json",
+     "record": "attempts-log.jsonl#a2-tb",
+     "raw_stdout": "docs/visualize-eval/rounds/13/pipeline/recorded/a2-tb.stdout",
+     "capture": "docs/visualize-eval/rounds/13/pipeline/evidence/v1/v1-77x47-frames.txt",
+     "hypothesis": "same declarations, direction tb: rank rows instead of columns, one extra rank gap so the four verbs each get a clean side of their own route",
+     "check": {
+      "ok": "ok: nodes=6 edges=6 flows=6 direction=tb theme=gruvbox",
+      "extent": "extent=31x46 cells",
+      "crossings": "crossings: 0 bridges, 0 touching bends",
+      "near-misses": "near-misses: 0 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)",
+      "passes-near-unrelated-node": "passes-near-unrelated-node: 0",
+      "labels": "labels: 4/4 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners",
+      "groups": "groups: client(1) services(2) workers(2) store(1)",
+      "dots": "dots: 6 single-dot routes, 0 periodic routes, 0 violations, 6 constant at 0.5c/step, 0 same-arrival at 2000ms",
+      "dot hues": "dot hues: 6 by source, 0 by destination, 1 shared-hue pair(s) (source-only 1, destination-only 1)",
+      "origins": "origins: 6/6 routes start at their arrow origin",
+      "arrivals": "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+     },
+     "measured": "check extent=31x46; pinned 77x47 dump prints no canvas extent (fits whole at natural zoom). Live half pane in this worker tab measured 68x44 @100%, i.e. 2 rows shorter than the drawing, so THAT pane pans; the frozen target it is graded at is 77x47 where it fits.",
+     "shipped": true,
+     "defects": [
+      "uses 46 of the 47 target rows: one row of vertical slack",
+      "in a 68x44 half pane (this worker tab, not the target) the bottom border of Postgres falls outside the viewport and the app shows its drag-to-pan badge"
+     ]
+    },
+    {
+     "index": 3,
+     "label": "a3-tb-slots",
+     "record_label": "a3-tb-slots",
+     "spec": "docs/visualize-eval/rounds/13/pipeline/attempts/a3-tb-slots.json",
+     "record": "attempts-log.jsonl#a3-tb-slots",
+     "raw_stdout": "docs/visualize-eval/rounds/13/pipeline/recorded/a3-tb-slots.stdout",
+     "capture": "docs/visualize-eval/rounds/13/pipeline/attempts/a3-tb-slots-77x47-frames.txt",
+     "audit": "docs/visualize-eval/rounds/13/pipeline/attempts/a3-tb-slots-frame-audit.json",
+     "hypothesis": "tb + label_slot on the four labelled routes: the gutter trades rank-gap height for side gutters, extent 31x36, so the drawing fits even the 68x44 half pane whole",
+     "check": {
+      "ok": "ok: nodes=6 edges=6 flows=6 direction=tb theme=gruvbox",
+      "extent": "extent=31x36 cells",
+      "crossings": "crossings: 0 bridges, 0 touching bends",
+      "near-misses": "near-misses: 0 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)",
+      "passes-near-unrelated-node": "passes-near-unrelated-node: 0",
+      "labels": "labels: 4/4 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners",
+      "groups": "groups: client(1) services(2) workers(2) store(1)",
+      "dots": "dots: 6 single-dot routes, 0 periodic routes, 0 violations, 6 constant at 0.5c/step, 0 same-arrival at 2000ms",
+      "dot hues": "dot hues: 6 by source, 0 by destination, 1 shared-hue pair(s) (source-only 1, destination-only 1)",
+      "origins": "origins: 6/6 routes start at their arrow origin",
+      "arrivals": "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+     },
+     "measured": "check extent=31x36, labels 4/4 placed, 0 on route, 0 ambiguous owners, near-misses 0. The frame audit on its 77x47 40-frame dump FAILS: 'routes run at different rates: 0.000..0.500 cells/frame', because label_slot collapsed the api->auth hop to a 2-3 cell route (audit route r2: start [18,37] end [19,34], rate 0.000).",
+     "rejected_because": "the compact layout shortens the api->auth hop until its dot cannot show a readable rate; the animation audit is the arbiter and it fails. The verbs also sit flush against the origin dot ('verify\u25cf \u25cf') and one corner arrowhead ('enqueue\u25bc').",
+     "defects": [
+      "frame audit FAIL: one route reads 0.000 cells/frame (too short to animate)",
+      "verbs flush against dots and one arrowhead"
+     ]
+    }
+   ]
+  }
+ ],
+ "abandoned_shapes": [
+  {
+   "label": "a1-lr",
+   "record_label": "a1-lr",
+   "kind": "orientation probe",
+   "why": "lr is the flow-chains default for a five-stage chain; measured 89 columns against a 77-column pane, so the habit was dropped with a capture, not a preference",
+   "record": "attempts-log.jsonl#a1-lr"
+  },
+  {
+   "label": "a3-tb-slots",
+   "record_label": "a3-tb-slots",
+   "kind": "compaction draft",
+   "why": "label_slot compaction that fit every pane size but broke the animation audit on a 2-3 cell route",
+   "record": "attempts-log.jsonl#a3-tb-slots"
+  }
+ ],
+ "records_note": "attempts-log.jsonl holds six records in order: a1-lr, a2-tb, a3-tb-slots (the three spec candidates, each bound to the spec file that still exists at attempts/), then final-spec, final-spec-a3 and final-spec-a2. The last three re-check specs/spec.json as the shipped spec changed: final-spec bound the a2 draft while specs/spec.json held it, final-spec-a3 bound the a3 draft, final-spec-a2 is the shipped re-check whose sha256 050a052477e03bd2609b4382c2ce9a17cce4699a64b88b689458f539214cc902 matches the current file. Canonical per-draft copies live in attempts/.",
+ "notes": [
+  "Three spec candidates, the whole budget, for the one view. No fourth orientation was spent: the lr overflow is intrinsic to five source ranks, and the tb compaction that would fit any pane cost the animation audit.",
+  "Every probe and draft ran through scripts/viz-evidence.sh record and every spec INPUT is bundled under attempts/ or specs/."
+ ],
+ "shipped_spec_sha256": "050a052477e03bd2609b4382c2ce9a17cce4699a64b88b689458f539214cc902"
+}

@@ -1,0 +1,1000 @@
+                 events+mgmt RPC│  ● task+ctrl RPC
+                                │  │
+                                │  ▼
+                                │ ╭─────────────╮
+                                ●─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch● ●   HTTP over UDS
+                                   ╰╮╰───────────────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭───────────────────────────● ●
+        │                      ╭──────╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        ● runs process         ● image+volume data
+        ╰─╮                    ╰──────╮
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ╭▶│modal-worker│
+                                │ │            │
+                                │ ╰────────────╯
+                                │  │
+                 events+mgmt RPC│  ● task+ctrl RPC
+                                │  │
+                                │  ▼
+                                │ ╭─────────────╮
+                                ●─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch● ●   HTTP over UDS
+                                   ╰╮╰───────────────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭───────────────────────────● ●
+        │                      ╭──────╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        ● runs process         ● image+volume data
+        ╰─╮                    ╰──────╮
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ╭▶│modal-worker│
+                                │ │            │
+                                │ ╰────────────╯
+                                │  │
+                 events+mgmt RPC│  │ task+ctrl RPC
+                                │  ●
+                                │  ▼
+                                ● ╭─────────────╮
+                                ╰─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch│ │   HTTP over UDS
+                                   ╰●╰●──────────────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭──────────────────────────●╯ │
+        │                      ╭─────●╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        │ runs process         │ image+volume data
+        ╰●╮                    ╰●─────╮
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ╭▶│modal-worker│
+                                │ │            │
+                                │ ╰────────────╯
+                                │  │
+                 events+mgmt RPC│  │ task+ctrl RPC
+                                │  ●
+                                │  ▼
+                                ● ╭─────────────╮
+                                ╰─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch│ │   HTTP over UDS
+                                   ╰●╰●──────────────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭──────────────────────────●╯ │
+        │                      ╭─────●╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        │ runs process         │ image+volume data
+        ╰●╮                    ╰●─────╮
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ╭▶│modal-worker│
+                                │ │            │
+                                │ ╰────────────╯
+                                │  │
+                 events+mgmt RPC│  ● task+ctrl RPC
+                                │  │
+                                ●  ▼
+                                │ ╭─────────────╮
+                                ╰─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch● │   HTTP over UDS
+                                   ╰╮╰─●─────────────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭─────────────────────────●─╯ │
+        │                      ╭────●─╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        │ runs process         │ image+volume data
+        ╰─●                    ╰─●────╮
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 5 at 500ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ╭▶│modal-worker│
+                                │ │            │
+                                │ ╰────────────╯
+                                │  │
+                 events+mgmt RPC│  ● task+ctrl RPC
+                                │  │
+                                ●  ▼
+                                │ ╭─────────────╮
+                                ╰─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch● │   HTTP over UDS
+                                   ╰╮╰─●─────────────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭─────────────────────────●─╯ │
+        │                      ╭────●─╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        │ runs process         │ image+volume data
+        ╰─●                    ╰─●────╮
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 6 at 600ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ╭▶│modal-worker│
+                                │ │            │
+                                │ ╰────────────╯
+                                │  │
+                 events+mgmt RPC│  │ task+ctrl RPC
+                                ●  ●
+                                │  ▼
+                                │ ╭─────────────╮
+                                ╰─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch│ │   HTTP over UDS
+                                   ╰●╰──●────────────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭────────────────────────●──╯ │
+        │                      ╭───●──╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        ● runs process         │ image+volume data
+        ╰─╮                    ╰──●───╮
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 7 at 700ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ╭▶│modal-worker│
+                                │ │            │
+                                │ ╰────────────╯
+                                │  │
+                 events+mgmt RPC│  │ task+ctrl RPC
+                                ●  ●
+                                │  ▼
+                                │ ╭─────────────╮
+                                ╰─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch│ │   HTTP over UDS
+                                   ╰●╰──●────────────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭────────────────────────●──╯ │
+        │                      ╭───●──╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        ● runs process         │ image+volume data
+        ╰─╮                    ╰──●───╮
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 8 at 800ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ╭▶│modal-worker│
+                                │ │            │
+                                │ ╰────────────╯
+                                │  │
+                 events+mgmt RPC●  ● task+ctrl RPC
+                                │  │
+                                │  ▼
+                                │ ╭─────────────╮
+                                ╰─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch● │   HTTP over UDS
+                                   ╰╮╰───●───────────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭───────────────────────●───╯ │
+        │                      ╭──●───╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        │ runs process         │ image+volume data
+        ╰●╮                    ╰───●──╮
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 9 at 900ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ╭▶│modal-worker│
+                                │ │            │
+                                │ ╰────────────╯
+                                │  │
+                 events+mgmt RPC●  ● task+ctrl RPC
+                                │  │
+                                │  ▼
+                                │ ╭─────────────╮
+                                ╰─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch● │   HTTP over UDS
+                                   ╰╮╰───●───────────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭───────────────────────●───╯ │
+        │                      ╭──●───╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        │ runs process         │ image+volume data
+        ╰●╮                    ╰───●──╮
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 10 at 1000ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ╭▶│modal-worker│
+                                │ │            │
+                                │ ╰────────────╯
+                                ●  │
+                 events+mgmt RPC│  │ task+ctrl RPC
+                                │  ●
+                                │  ▼
+                                │ ╭─────────────╮
+                                ╰─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch│ │   HTTP over UDS
+                                   ╰●╰────●──────────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭──────────────────────●────╯ │
+        │                      ╭─●────╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        │ runs process         │ image+volume data
+        ╰─●                    ╰────●─╮
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 11 at 1100ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ╭▶│modal-worker│
+                                │ │            │
+                                │ ╰────────────╯
+                                ●  │
+                 events+mgmt RPC│  │ task+ctrl RPC
+                                │  ●
+                                │  ▼
+                                │ ╭─────────────╮
+                                ╰─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch│ │   HTTP over UDS
+                                   ╰●╰────●──────────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭──────────────────────●────╯ │
+        │                      ╭─●────╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        │ runs process         │ image+volume data
+        ╰─●                    ╰────●─╮
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 12 at 1200ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ╭▶│modal-worker│
+                                │ │            │
+                                ● ╰────────────╯
+                                │  │
+                 events+mgmt RPC│  ● task+ctrl RPC
+                                │  │
+                                │  ▼
+                                │ ╭─────────────╮
+                                ╰─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch● │   HTTP over UDS
+                                   ╰╮╰─────●─────────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭─────────────────────●─────╯ │
+        │                      ╭●─────╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        ● runs process         │ image+volume data
+        ╰─╮                    ╰─────●╮
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 13 at 1300ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ╭▶│modal-worker│
+                                │ │            │
+                                ● ╰────────────╯
+                                │  │
+                 events+mgmt RPC│  ● task+ctrl RPC
+                                │  │
+                                │  ▼
+                                │ ╭─────────────╮
+                                ╰─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch● │   HTTP over UDS
+                                   ╰╮╰─────●─────────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭─────────────────────●─────╯ │
+        │                      ╭●─────╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        ● runs process         │ image+volume data
+        ╰─╮                    ╰─────●╮
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 14 at 1400ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ╭▶│modal-worker│
+                                ● │            │
+                                │ ╰────────────╯
+                                │  │
+                 events+mgmt RPC│  │ task+ctrl RPC
+                                │  ●
+                                │  ▼
+                                │ ╭─────────────╮
+                                ╰─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch│ │   HTTP over UDS
+                                   ╰●╰──────●────────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭────────────────────●──────╯ │
+        │                      ●──────╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        │ runs process         │ image+volume data
+        ╰●╮                    ╰──────●
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 15 at 1500ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ╭▶│modal-worker│
+                                ● │            │
+                                │ ╰────────────╯
+                                │  │
+                 events+mgmt RPC│  │ task+ctrl RPC
+                                │  ●
+                                │  ▼
+                                │ ╭─────────────╮
+                                ╰─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch│ │   HTTP over UDS
+                                   ╰●╰──────●────────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭────────────────────●──────╯ │
+        │                      ●──────╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        │ runs process         │ image+volume data
+        ╰●╮                    ╰──────●
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 16 at 1600ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ●▶│modal-worker│
+                                │ │            │
+                                │ ╰────────────╯
+                                │  │
+                 events+mgmt RPC│  ● task+ctrl RPC
+                                │  │
+                                │  ▼
+                                │ ╭─────────────╮
+                                ╰─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch● │   HTTP over UDS
+                                   ╰╮╰───────●───────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭───────────────────●───────╯ ●
+        │                      ╭──────╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        │ runs process         ● image+volume data
+        ╰─●                    ╰──────╮
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 17 at 1700ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ●▶│modal-worker│
+                                │ │            │
+                                │ ╰────────────╯
+                                │  │
+                 events+mgmt RPC│  ● task+ctrl RPC
+                                │  │
+                                │  ▼
+                                │ ╭─────────────╮
+                                ╰─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch● │   HTTP over UDS
+                                   ╰╮╰───────●───────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭───────────────────●───────╯ ●
+        │                      ╭──────╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        │ runs process         ● image+volume data
+        ╰─●                    ╰──────╮
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 18 at 1800ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ╭▶│modal-worker│
+                                │ │            │
+                                │ ╰────────────╯
+                                │  │
+                 events+mgmt RPC│  │ task+ctrl RPC
+                                │  ●
+                                │  ▼
+                                │ ╭─────────────╮
+                                ●─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch│ │   HTTP over UDS
+                                   ╰●╰────────●──────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭──────────────────●────────╯ │
+        │                      ╭─────●╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        ● runs process         │ image+volume data
+        ╰─╮                    ╰●─────╮
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 19 at 1900ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ╭▶│modal-worker│
+                                │ │            │
+                                │ ╰────────────╯
+                                │  │
+                 events+mgmt RPC│  │ task+ctrl RPC
+                                │  ●
+                                │  ▼
+                                │ ╭─────────────╮
+                                ●─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch│ │   HTTP over UDS
+                                   ╰●╰────────●──────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭──────────────────●────────╯ │
+        │                      ╭─────●╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        ● runs process         │ image+volume data
+        ╰─╮                    ╰●─────╮
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 20 at 2000ms
+ rataflow-view · 77x47 @100% · v1-b.json · 8 nodes · 8 edges · q quit
+
+
+
+
+
+                                  ╭────────────╮
+                                ╭▶│modal-worker│
+                                │ │            │
+                                │ ╰────────────╯
+                                │  │
+                 events+mgmt RPC│  ● task+ctrl RPC
+                                │  │
+                                │  ▼
+                                ● ╭─────────────╮
+                                ╰─│modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                      task dispatch● │   HTTP over UDS
+                                   ╰╮╰─────────●─────────╮
+                                    ▼                    ▼
+                                   ╭───────────╮        ╭────────────╮
+                                   │Task engine│        │modal-daemon│
+                                   │           │        │            │
+                                   ╰───────────╯        ╰────────────╯
+               starts/manages       │ │
+        ╭─────────────────●─────────╯ │
+        │                      ╭────●─╯
+        ▼                      ▼ mounts/snapshots
+       ╭─────────────────╮    ╭────────────────────╮
+       │Container backend│    │Filesystem + volumes│
+       │                 │    │                    │
+       ╰─────────────────╯    ╰────────────────────╯
+        │                      │
+        │ runs process         │ image+volume data
+        ╰●╮                    ╰─●────╮
+          ▼                           ▼
+         ╭──────────────╮            ╭───────╮
+         │Task container│            │Blobnet│
+ ┌───────┐              │            │       │
+ │ + [+] │──────────────╯            ╰───────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+[0m[1m[38;5;6mfix-visualize-skill[0m on [0m[1m[38;5;5m fix/visualize-skill[0m [0m[1m[38;5;1m[$!?][0m on [0m[1m[38;5;3m☁️  (ap-south-1) [0mon [0m[1m[38;5;4m☁️ [0m
+[0m[1m[38;5;4m aviralmansingka@gmail.com[0m 
+[0m[1m[38;5;2m❯[0m 

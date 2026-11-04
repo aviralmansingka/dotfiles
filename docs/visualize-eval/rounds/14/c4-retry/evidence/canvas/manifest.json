@@ -1,0 +1,58 @@
+{
+  "spec_path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/14/c4-retry/specs/c4-canvas.json",
+  "spec_sha256": "187b43785109521872263f267d7f956d620a762f3c1eed4676b7e3a1e0ca3991",
+  "spec_form": "canvas",
+  "diagrams": [
+    {
+      "id": "l1",
+      "title": "L1 · System context — the machine manager",
+      "description": "One double-bordered manager box; providers (BM = bare metal) and machines stay outside it, S3 and Slack beyond. Two arrows run between manager and machines, one each way."
+    },
+    {
+      "id": "l2a",
+      "title": "L2 · Containers — request, provisioning and boot",
+      "description": "Dotted box = the manager's own containers; the caller, providers (BM) and machines stay outside it. Actions become a River job, a provider allocation, then a boot."
+    },
+    {
+      "id": "l2b",
+      "title": "L2 · Containers — heartbeat, audits and diagnostics",
+      "description": "Dotted box = the manager's own containers; machines (BM), S3 and Slack stay outside it. Agent heartbeat, audit and diagnose jobs, janitor proposals and Slack alerts."
+    }
+  ],
+  "binary_path": "/tmp/visualize-eval/round-14/bin/rataflow-view",
+  "binary_sha256": "9b3baf0496bb2b5d9a8e708ceea2830ec88bbd00fce52b28a4bd9aeb0cafee31",
+  "pane_id": "w7E:p129",
+  "pane_rect": null,
+  "pane_cols": null,
+  "pane_rows": 44,
+  "viewport_line": null,
+  "viewport_token": "68x44 @100%",
+  "check_exit": 0,
+  "check_window": [
+    "2026-11-03T17:27:38Z",
+    "2026-11-03T17:27:38Z"
+  ],
+  "capture_window": [
+    "2026-11-03T17:27:38Z",
+    "2026-11-03T17:27:43Z"
+  ],
+  "cleanup": "confirmed_closed",
+  "select_all_frame": true,
+  "frames": 60,
+  "frame_step_ms": 100,
+  "pinned_frames": {
+    "file": "canvas-260x90-frames.txt",
+    "viewport_line": "viewport: 260x90 zoom: 1.00 natural"
+  },
+  "artifacts": {
+    "bin.sha256": "b890178d6a3c5060b6962ec02388b00e24f5a5e5f04b71868e72c1c8f31f0889",
+    "canvas-260x90-frames.txt": "a72d2a6ed6cf01eeea990103122b7dfb448295b1dfe565e1f66e937eaa153577",
+    "canvas-ansi.ansi": "4537c2eec6cb6fa5ed449d9973e91b0ab3da37de8f8588799ce745e3bb805fc8",
+    "canvas-frames.ansi": "4a1f74d055da5b96d0055fb5bf41be8ad80223e42023e078bbdd1dc698ba8130",
+    "canvas-frames.txt": "4f8208b9ad6140c4556b9de8e33de1dba765b24ffaba64f695520291433ec95e",
+    "canvas-pinned.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "canvas-selected.ansi": "2a32044bcdf238dae900d96d4577f847cd869694d85ba4e42f8315811add42b4",
+    "canvas-text.txt": "10a5f997cd50d896336fbd5e42be2697e78b97a0273a5d4362439e5beb71e052",
+    "check.txt": "065edd241b992ee733095cc74222f28de636ceb0dc265a74011268191aa9974a"
+  }
+}

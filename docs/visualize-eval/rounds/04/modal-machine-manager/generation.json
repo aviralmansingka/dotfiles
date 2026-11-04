@@ -1,0 +1,803 @@
+{
+  "case_id": "modal-machine-manager",
+  "round": "04",
+  "worker_label": "viz-ds04-6",
+  "generator": {
+    "identity": "fresh generator agent, round-04 visualize evaluation (no judge spawned)",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "model_source": "docs/visualize-eval/rounds/04/config.json generator_model + metadata.json"
+  },
+  "candidate_skill": {
+    "path": "docs/visualize-eval/rounds/04/SKILL.md",
+    "sha256": "ac431c6d3035e466e29136f36d9579c551c2e070a354dc5df72999b1bb1beb3c",
+    "verified_with": "shasum -a 256"
+  },
+  "renderer": {
+    "path": "/tmp/visualize-eval/round-04/bin/rataflow-view",
+    "sha256": "0da16d8d8ed46e2a25eb773fc71ecad4de9e310cd33e303a4c7fe77231ad95bc",
+    "verified_with": "shasum -a 256",
+    "note": "absolute path used for every check, dump and pane launch; never rebuilt, never substituted"
+  },
+  "source": {
+    "case_file": "docs/visualize-eval/cases/modal-machine-manager/source.md",
+    "pointers": [
+      "source.md 'Original line 31 (assistant)': the three edge groups (request/provisioning, heartbeat, ops) that define the split",
+      "source.md 'Relationship facts from the historical attempt': the 17 component identities and 23 directed relations",
+      "source.md 'Fixed constraints': coverage of all 17 components / 23 relations, the boot.ipxe response, janitor->webapi, diagnostics separate from image pull, sparse dots, no dots on borders",
+      "source.md 'Original line 50/148/217 (user)': one live dot per line, slow dots, no dots at arrow attachment points",
+      "source.md 'Original line 64 (user)': the diagram must fit beside the text on one fullscreen screen (hence 77x47 at 100% and no panning)"
+    ],
+    "qualification": "The brief labels every relation a historical claim. Nothing in it is marked unconfirmed, inactive or not-cabled, so no edge uses style:'dashed' and no label needed an uncertainty qualifier. The one uncertainty the brief does state - that this is a past chat, not live authority - is recorded here, not invented into the drawing."
+  },
+  "motion": {
+    "mode": "constant (renderer default)",
+    "field_choice": "dots: 1 + flow: true on every edge; timing/duration_ms deliberately absent",
+    "why": "The case history ends with 'use way less dots. keep on dot alive per line' and 'slow dots', and the source never asks for synchronized arrival, so the round-04 constant default (0.5 cells / 100 ms) applies. timing:'same-arrival' was not set.",
+    "proof": {
+      "v1-intake": "evidence/v1-intake/direct-frames-77x47.txt: frame 0 has dots at (col 15,row 20), (47,20), (15,28), (47,28); frame 2 at (15,21), (47,21), (16,29), (46,29); frame 4 at (15,20), (47,20), (17,29), (45,29) - every dot advances one cell per two 100 ms steps, i.e. 0.5 cells/step, and dots that wrap return to their origins.",
+      "v2-provision": "evidence/v2-provision/direct-frames-77x47.txt frame 0 dots (12,11),(9,19),(7,27),(8,35),(10,35),(30,40); frame 2 (11,12),(8,20),(8,28),(11,35),(8,36),(29,40); frame 4 (10,12),(7,20),(7,27),(12,35),(9,37),(28,40).",
+      "v3-state": "evidence/v3-state/direct-frames-77x47.txt frame 0 has 7 dots at (7,10),(10,18),(33,18),(11,26),(32,26),(53,26),(55,26); frame 2 advances each by one route cell; frame 4 continues at the same rate.",
+      "v4-ops": "evidence/v4-ops/direct-frames-77x47.txt frame 0 dots (24,11),(26,11),(28,11),(1,29),(45,29),(62,37); frame 2 (24,12),(26,12),(28,12),(2,30),(46,30),(63,38); frame 4 (24,13),(26,13),(28,13),(3,30),(47,30),(64,38).",
+      "origins": "each view's check line 'origins: N/N routes start at their arrow origin' is full (4/4, 6/6, 7/7, 6/6) and frame 0 in each direct dump shows a dot at the first drawn cell after the source port, e.g. v4 frame 0 (24,11) sits directly under the River queue box (rows 7-10) at the route's first cell."
+    }
+  },
+  "meaning_ledger": [
+    [
+      "humans + mmctl -> webapi over http",
+      "action/protocol",
+      "drawn v1 (web -> wapi 'http')"
+    ],
+    [
+      "control plane -> private gRPC: create / terminate / repair",
+      "action verbs",
+      "drawn v1, abbreviated 'create/term/repair'"
+    ],
+    [
+      "private gRPC enqueues River jobs",
+      "action",
+      "drawn v1 (enqueue job)"
+    ],
+    [
+      "webapi -> queue: reinstall / reprovision",
+      "action verbs",
+      "drawn v1, abbreviated 'reinstall/reprov'"
+    ],
+    [
+      "River queue -> provider registry: provision job",
+      "action",
+      "drawn v2"
+    ],
+    [
+      "provider registry -> bare-metal providers: provider API",
+      "protocol",
+      "drawn v2"
+    ],
+    [
+      "bare-metal providers -> machines: allocate instance",
+      "action",
+      "drawn v2"
+    ],
+    [
+      "machines -> boot server: iPXE request",
+      "protocol/action",
+      "drawn v2"
+    ],
+    [
+      "boot server -> machines: boot.ipxe + S3 args",
+      "payload",
+      "drawn v2 verbatim (the response chain named in the constraints)"
+    ],
+    [
+      "machines -> S3: pull boot image",
+      "action/payload",
+      "drawn v2 ('pull boot image', keeps 'pull')"
+    ],
+    [
+      "machine-agent runs on each host (residency)",
+      "role/residency",
+      "drawn v3 as the audited relation 'runs on host' (source lists it as an edge)"
+    ],
+    [
+      "machine-agent -> public gRPC: register + heartbeat",
+      "action",
+      "drawn v3"
+    ],
+    [
+      "public gRPC -> Postgres: machine state",
+      "payload",
+      "drawn v3"
+    ],
+    [
+      "private gRPC -> Postgres: machine rows",
+      "payload",
+      "drawn v3"
+    ],
+    [
+      "River queue -> Postgres: job rows",
+      "payload",
+      "drawn v3"
+    ],
+    [
+      "jobs SSH into machines for audits",
+      "action",
+      "drawn v4 (q -> ssh 'audit/verify reimage', ssh -> mch 'run machine-audit')"
+    ],
+    [
+      "jobs post diagnostics to the janitor app",
+      "action",
+      "drawn v4 (q -> jan 'diagnostic events')"
+    ],
+    [
+      "jobs -> S3: diagnose uploads (separate from providers, janitor and image pull)",
+      "action",
+      "drawn v4 on its own edge with its own label owner; mch -> s3 'pull boot image' lives in v2, a different view"
+    ],
+    [
+      "janitor -> webapi: proposed actions",
+      "action",
+      "drawn v4"
+    ],
+    [
+      "webapi -> Slack: confirm + alerts",
+      "action",
+      "drawn v4"
+    ],
+    [
+      "reconcile loop -> providers: gcore sync every minute",
+      "action/cadence",
+      "drawn v3 'gcore sync, 1 min'"
+    ],
+    [
+      "reconcile loop -> Postgres: cluster state",
+      "payload",
+      "drawn v3"
+    ],
+    [
+      "17 component identities (cp, web, pgrpc, wapi, pub, boot, q, rec, ssh, db, s3, reg, prov, mch, agent, jan, slack)",
+      "identifiers",
+      "drawn as node ids; every one has a human label on its box"
+    ],
+    [
+      "three source edge groups (request/provisioning, heartbeat, ops)",
+      "structure",
+      "drawn as the split: v1+v2 request/provisioning, v3 heartbeat+state, v4 ops (+ reconcile edges ride in v3 with the Postgres state they write)"
+    ],
+    [
+      "heartbeat is the 'fastest' path",
+      "qualifier",
+      "abbreviated into the label 'register + heartbeat' (v3); no speed is drawn because the renderer has no per-edge cadence field"
+    ],
+    [
+      "no addresses / IPs / ports in this source",
+      "addresses",
+      "nothing to key; no identifiers were dropped"
+    ],
+    [
+      "provider registry and machine-agent may be grouped, not dropped",
+      "constraint",
+      "drawn with group 'providers' (v2, v3) and 'host' (v2, v3, v4)"
+    ],
+    [
+      "one live dot per line, slow, none on borders",
+      "human correction",
+      "dots: 1 + flow: true at 0.5 cells/step in all four views; check reports 0 dot violations and dots sit on route cells only"
+    ]
+  ],
+  "relationship_audit": [
+    [
+      "e1",
+      "web -> wapi",
+      "http",
+      "e1",
+      "v1-intake"
+    ],
+    [
+      "e2",
+      "cp -> pgrpc",
+      "create/term/repair",
+      "e2",
+      "v1-intake"
+    ],
+    [
+      "e3",
+      "pgrpc -> q",
+      "enqueue job",
+      "e3",
+      "v1-intake"
+    ],
+    [
+      "e4",
+      "wapi -> q",
+      "reinstall/reprov",
+      "e4",
+      "v1-intake"
+    ],
+    [
+      "e5",
+      "q -> reg",
+      "provision job",
+      "e5",
+      "v2-provision"
+    ],
+    [
+      "e6",
+      "reg -> prov",
+      "provider API",
+      "e6",
+      "v2-provision"
+    ],
+    [
+      "e7",
+      "prov -> mch",
+      "allocate instance",
+      "e7",
+      "v2-provision"
+    ],
+    [
+      "e8",
+      "mch -> boot",
+      "iPXE request",
+      "e8",
+      "v2-provision"
+    ],
+    [
+      "e9",
+      "boot -> mch",
+      "boot.ipxe + S3 args",
+      "e9",
+      "v2-provision"
+    ],
+    [
+      "e10",
+      "mch -> s3",
+      "pull boot image",
+      "e10",
+      "v2-provision"
+    ],
+    [
+      "e11",
+      "mch -> agent",
+      "runs on host",
+      "e11",
+      "v3-state"
+    ],
+    [
+      "e12",
+      "agent -> pub",
+      "register + heartbeat",
+      "e12",
+      "v3-state"
+    ],
+    [
+      "e13",
+      "pub -> db",
+      "machine state",
+      "e13",
+      "v3-state"
+    ],
+    [
+      "e14",
+      "pgrpc -> db",
+      "machine rows",
+      "e14",
+      "v3-state"
+    ],
+    [
+      "e15",
+      "q -> db",
+      "job rows",
+      "e15",
+      "v3-state"
+    ],
+    [
+      "e16",
+      "rec -> db",
+      "cluster state",
+      "e16",
+      "v3-state"
+    ],
+    [
+      "e17",
+      "rec -> prov",
+      "gcore sync, 1 min",
+      "e17",
+      "v3-state"
+    ],
+    [
+      "e18",
+      "q -> ssh",
+      "audit/verify reimage",
+      "e18",
+      "v4-ops"
+    ],
+    [
+      "e19",
+      "ssh -> mch",
+      "run machine-audit",
+      "e19",
+      "v4-ops"
+    ],
+    [
+      "e20",
+      "q -> s3",
+      "diagnose uploads",
+      "e20",
+      "v4-ops"
+    ],
+    [
+      "e21",
+      "q -> jan",
+      "diagnostic events",
+      "e21",
+      "v4-ops"
+    ],
+    [
+      "e22",
+      "jan -> wapi",
+      "proposed actions",
+      "e22",
+      "v4-ops"
+    ],
+    [
+      "e23",
+      "wapi -> slack",
+      "confirm + alerts",
+      "e23",
+      "v4-ops"
+    ]
+  ],
+  "mapping": {
+    "edge_to_view": {
+      "e1": "web -> wapi (http)",
+      "e2": "cp -> pgrpc (create/term/repair)",
+      "e3": "pgrpc -> q (enqueue job)",
+      "e4": "wapi -> q (reinstall/reprov)",
+      "e5": "q -> reg (provision job)",
+      "e6": "reg -> prov (provider API)",
+      "e7": "prov -> mch (allocate instance)",
+      "e8": "mch -> boot (iPXE request)",
+      "e9": "boot -> mch (boot.ipxe + S3 args)",
+      "e10": "mch -> s3 (pull boot image)",
+      "e11": "mch -> agent (runs on host)",
+      "e12": "agent -> pub (register + heartbeat)",
+      "e13": "pub -> db (machine state)",
+      "e14": "pgrpc -> db (machine rows)",
+      "e15": "q -> db (job rows)",
+      "e16": "rec -> db (cluster state)",
+      "e17": "rec -> prov (gcore sync, 1 min)",
+      "e18": "q -> ssh (audit/verify reimage)",
+      "e19": "ssh -> mch (run machine-audit)",
+      "e20": "q -> s3 (diagnose uploads)",
+      "e21": "q -> jan (diagnostic events)",
+      "e22": "jan -> wapi (proposed actions)",
+      "e23": "wapi -> slack (confirm + alerts)"
+    },
+    "components_to_views": {
+      "cp": [
+        "v1-intake"
+      ],
+      "web": [
+        "v1-intake"
+      ],
+      "wapi": [
+        "v1-intake",
+        "v4-ops"
+      ],
+      "pgrpc": [
+        "v1-intake",
+        "v3-state"
+      ],
+      "q": [
+        "v1-intake",
+        "v2-provision",
+        "v3-state",
+        "v4-ops"
+      ],
+      "reg": [
+        "v2-provision"
+      ],
+      "prov": [
+        "v2-provision",
+        "v3-state"
+      ],
+      "mch": [
+        "v2-provision",
+        "v3-state",
+        "v4-ops"
+      ],
+      "boot": [
+        "v2-provision"
+      ],
+      "s3": [
+        "v2-provision",
+        "v4-ops"
+      ],
+      "agent": [
+        "v3-state"
+      ],
+      "pub": [
+        "v3-state"
+      ],
+      "db": [
+        "v3-state"
+      ],
+      "rec": [
+        "v3-state"
+      ],
+      "ssh": [
+        "v4-ops"
+      ],
+      "jan": [
+        "v4-ops"
+      ],
+      "slack": [
+        "v4-ops"
+      ]
+    },
+    "complete": "23 of 23 relations, 17 of 17 components; every relation appears in exactly one view"
+  },
+  "groups": {
+    "people": [
+      "web",
+      "slack"
+    ],
+    "control": [
+      "cp",
+      "wapi",
+      "q",
+      "rec",
+      "jan"
+    ],
+    "rpc": [
+      "pgrpc",
+      "pub"
+    ],
+    "providers": [
+      "reg",
+      "prov"
+    ],
+    "host": [
+      "mch",
+      "agent"
+    ],
+    "ops": [
+      "ssh"
+    ],
+    "state": [
+      "db",
+      "s3"
+    ],
+    "boot": [
+      "boot"
+    ],
+    "why": "concepts from the source (humans, control plane, the two gRPC surfaces, the provider tier, the machine tier incl. the on-host agent, the state stores, the boot server, the ops channel), not row or column positions"
+  },
+  "trunks": {
+    "used": 0,
+    "why": "the source states no shared bus that splits; every relation is point to point, so no trunk direction could contradict it"
+  },
+  "abbreviations": [
+    [
+      "create/term/repair",
+      "create / terminate / repair",
+      "v1: the two intake routes into the queue bend toward each other; the 22-character form left no unambiguous slot at 77 columns"
+    ],
+    [
+      "reinstall/reprov",
+      "reinstall / reprovision",
+      "v1: same band as above; the shorter form is the difference between an ambiguous and an unplaced label"
+    ],
+    [
+      "audit/verify reimage",
+      "audit / verify reimage",
+      "v4: keeps all three tokens on the edge the constraints name"
+    ],
+    [
+      "reconcile loop",
+      "cluster reconcile loop",
+      "v3: the node box, so the 'cluster' qualifier rides on its 'cluster state' edge instead"
+    ],
+    [
+      "register + heartbeat",
+      "machine-agent registers and heartbeats over public gRPC",
+      "v3: the cadence ('fastest') is not drawable, so only the two verbs are drawn"
+    ]
+  ],
+  "deliberate_drops": [],
+  "known_defects": [
+    {
+      "id": "D1",
+      "where": "v1-intake",
+      "check_line": "labels: 4/4 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+      "captured_band": "evidence/v1-intake/direct-frames-77x47.txt, frame 0: rows 27-30 hold the two corridors at columns 15 and 47; both jog toward the queue on row 29 (columns 15-31 and 33-47) and their arrowheads land on row 30 at columns 31 and 33. The 'reinstall/reprov' label sits on row 28 from column 31 to column 46, i.e. its left edge is one row above the sibling route's corner at (31,29) and 16 cells from its own corridor at column 47.",
+      "inferred_label": "reinstall/reprov (wapi -> q). The check reports a count, not a name; by this geometry it is the only label in the view whose left edge is nearer a sibling route than its own.",
+      "why_not_fixed": "all three candidates for this view are spent: (a) auto layout with full-length verbs, (b) explicit layers with an empty band (packed the canvas to 36 cells and dropped the 22-character label outright), (c) this abbreviated retry. Each attempt reported exactly one ambiguous owner."
+    },
+    {
+      "id": "D2",
+      "where": "v2-provision",
+      "check_line": "labels: 6/6 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+      "captured_band": "evidence/v2-provision/direct-frames-77x47.txt, frame 0: the request run (row 37, columns 8-33) and the response run (row 40, columns 5-32) are parallel and three rows apart, with the two arrowheads on row 38 at columns 33 and 54. The 'boot.ipxe + S3 args' label sits on row 39 from column 9 to column 27, between the two runs.",
+      "inferred_label": "boot.ipxe + S3 args (boot -> mch), the only label in the view sandwiched between two parallel runs.",
+      "why_not_fixed": "three candidates spent: the auto layout reported two ambiguous owners (the machine box's two outgoing corridors were 2 cells apart), the empty-band variant grew to 47 rows and would have to be panned, and this staggered variant reports one."
+    },
+    {
+      "id": "D3",
+      "where": "v3-state",
+      "check_line": "labels: 7/7 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+      "captured_band": "evidence/v3-state/direct-frames-77x47.txt, frame 0: four writers into Postgres leave corridors at columns 11, 29, 32 and 53 (reconcile -> providers adds column 55). The three long labels of that band - 'job rows' (row 28, columns 20-28), 'machine rows' (row 29, columns 34-46) and 'cluster state' (row 31, columns 40-52) - each sit between two of those corridors.",
+      "inferred_label": "one of job rows / machine rows / cluster state; the check does not say which.",
+      "why_not_fixed": "the only attempt with 0 ambiguous owners had an 85x41 extent, i.e. it would need panning inside 77 columns (the skill forbids calling that a fit); the two fitting retries each kept one ambiguous owner."
+    },
+    {
+      "id": "D4",
+      "where": "v4-ops",
+      "check_line": "labels: 6/6 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+      "captured_band": "evidence/v4-ops/direct-frames-77x47.txt, frame 0: the queue's left-border route runs along row 22 from column 1 to column 23 and then down column 1; its sibling runs down column 26 and turns at row 23. The 'diagnose uploads' label sits on row 23 from column 5 to column 20 - one row under the sibling's run and far from its own corner at column 22.",
+      "inferred_label": "diagnose uploads (q -> s3).",
+      "why_not_fixed": "three candidates spent: the plain fan with a tall band gave 2 ambiguous owners, the staircase overflowed 47 rows with 3, and this three-border fan gives 1. Note the constraint this case names - 'diagnose uploads must have an unambiguous owner' - is therefore NOT met in this view."
+    }
+  ],
+  "systemic_finding": {
+    "observation": "Each view ends with exactly one ambiguous label: 4 in total. The recurring mechanism is the same in all four - a label whose own route has no free cell inside the canvas extent is placed on a clear slot near a sibling route (a parallel run or a corner). Two renderer behaviours drive it: consecutive edges leaving one node get adjacent ports (2 cells apart in v2/v4), so a fan cannot host 16-20 character labels in its band; and the label search keeps a clear-but-far slot when its own route offers none.",
+    "gate_status": "the round-04 requirement '0 ambiguous owners total' is NOT met: 4 ambiguous owners across 4 views",
+    "what_would_lift_it": "a fifth view to thin the hub bands (over the 4-view budget), wider port spread per node, or a label search that refuses an anchor which is not strictly nearest to its own route"
+  },
+  "blockers": [],
+  "cleanup": {
+    "panes": "one half pane per view, split with --no-focus, closed by scripts/viz-evidence.sh",
+    "manifests": {
+      "v1-intake": "confirmed_closed",
+      "v2-provision": "confirmed_closed",
+      "v3-state": "confirmed_closed",
+      "v4-ops": "confirmed_closed"
+    },
+    "panes_owned": "only panes created by the harness; the captain's tab was never used and no raw tmux was touched"
+  },
+  "process_notes": {
+    "attempt_budget": "3 spec candidates per view, 3 used per view, 12 in total; every --check run on a distinct spec is recorded in attempts.json with its raw output preserved in attempts/<spec>.check.txt",
+    "rechecks": "the evidence harness runs --check again on the same spec bytes (same sha256); that is not a new candidate",
+    "renders_used_for_diagnosis": "plain --frames dumps were only taken on specs whose --check output was already recorded (same bytes), never to explore a new layout",
+    "renderer_source_read": "rataflow/src/router.rs and src/main.rs were read to understand the reported fields; nothing was edited, rebuilt or substituted",
+    "judge": "no separate judge was spawned; that is the captain's step"
+  },
+  "validator_command": "scripts/viz-validate.py <bundle> --require-select --require-frames --attempts attempts.json",
+  "views": [
+    {
+      "view": "v1-intake",
+      "spec": "specs/v1-intake.json",
+      "spec_sha256": "e03bce6ff14e8b4f46b7723cfb9ff2fec3683ed300ba15e2f912e04015ac13d3",
+      "captures": {
+        "plain_text": "evidence/v1-intake/v1-intake-text.txt",
+        "ansi": "evidence/v1-intake/v1-intake-ansi.ansi",
+        "select_all_ansi": "evidence/v1-intake/v1-intake-selected.ansi",
+        "check": "evidence/v1-intake/check.txt",
+        "pane_frames_txt": "evidence/v1-intake/v1-intake-frames.txt",
+        "pane_frames_ansi": "evidence/v1-intake/v1-intake-frames.ansi",
+        "direct_frames_pinned_size": "evidence/v1-intake/direct-frames-77x47.txt",
+        "manifest": "evidence/v1-intake/manifest.json",
+        "validator_output": "evidence/v1-intake/validator.txt"
+      },
+      "measured": {
+        "cols": 77,
+        "rows": 47,
+        "zoom": 1.0,
+        "source": "the app's own header token in the captured pane text; the pinned-size direct dump prints the same numbers",
+        "viewport_token_in_pane_text": "77x47 @100%",
+        "direct_dump_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "harness_pane_rect": null,
+        "harness_pane_cols": null,
+        "harness_pane_rows": 47,
+        "note": "scripts/viz-evidence.sh could not resolve the pane rectangle on this Herdr build (pane_rect/pane_cols null, pane_rows 47 from the scroll viewport); the app's header token is the accepted measurement per the candidate skill, so no geometry was hardcoded."
+      },
+      "edges_visible": [
+        "web -> wapi (http)",
+        "cp -> pgrpc (create/term/repair)",
+        "pgrpc -> q (enqueue job)",
+        "wapi -> q (reinstall/reprov)"
+      ],
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=5 edges=4 flows=4 direction=tb theme=gruvbox",
+        "extent=52x24 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 4/4 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+        "warning: 1 label(s) have an ambiguous owner: another route is as close to the label as its own edge, so a reader cannot tell which edge the label names",
+        "groups: people(1) control(3) rpc(1)",
+        "trunks:",
+        "routes: 4/4 near-minimal, 0 detours, 0 shortened",
+        "dots: 4 single-dot routes, 0 periodic routes, 0 violations, 4 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 4/4 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "validator": {
+        "command": "scripts/viz-validate.py docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v1-intake --require-select --require-frames --attempts docs/visualize-eval/rounds/04/modal-machine-manager/attempts.json",
+        "failures": [
+          "FAIL check_warnings_absent \u2014 warning: 1 label(s) have an ambiguous owner: another route is as close to the label as its own edge, so a reader cannot tell which edge the label names",
+          "FAIL labels_ownership_clear \u2014 1 label(s) sit as close to another route as to their own edge; a reader cannot pair them"
+        ],
+        "summary": "2 check(s) failed: check_warnings_absent, labels_ownership_clear"
+      }
+    },
+    {
+      "view": "v2-provision",
+      "spec": "specs/v2-provision.json",
+      "spec_sha256": "eb7a63b3aa220ed7c1f55d2461840532f243d0534fff95e6895b9d3e139429b9",
+      "captures": {
+        "plain_text": "evidence/v2-provision/v2-provision-text.txt",
+        "ansi": "evidence/v2-provision/v2-provision-ansi.ansi",
+        "select_all_ansi": "evidence/v2-provision/v2-provision-selected.ansi",
+        "check": "evidence/v2-provision/check.txt",
+        "pane_frames_txt": "evidence/v2-provision/v2-provision-frames.txt",
+        "pane_frames_ansi": "evidence/v2-provision/v2-provision-frames.ansi",
+        "direct_frames_pinned_size": "evidence/v2-provision/direct-frames-77x47.txt",
+        "manifest": "evidence/v2-provision/manifest.json",
+        "validator_output": "evidence/v2-provision/validator.txt"
+      },
+      "measured": {
+        "cols": 77,
+        "rows": 47,
+        "zoom": 1.0,
+        "source": "the app's own header token in the captured pane text; the pinned-size direct dump prints the same numbers",
+        "viewport_token_in_pane_text": "77x47 @100%",
+        "direct_dump_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "harness_pane_rect": null,
+        "harness_pane_cols": null,
+        "harness_pane_rows": 47,
+        "note": "scripts/viz-evidence.sh could not resolve the pane rectangle on this Herdr build (pane_rect/pane_cols null, pane_rows 47 from the scroll viewport); the app's header token is the accepted measurement per the candidate skill, so no geometry was hardcoded."
+      },
+      "edges_visible": [
+        "q -> reg (provision job)",
+        "reg -> prov (provider API)",
+        "prov -> mch (allocate instance)",
+        "mch -> boot (iPXE request)",
+        "boot -> mch (boot.ipxe + S3 args)",
+        "mch -> s3 (pull boot image)"
+      ],
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=6 edges=6 flows=6 direction=tb theme=gruvbox",
+        "layers=5 (explicit placement, sugiyama skipped)",
+        "extent=65x38 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 6/6 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+        "warning: 1 label(s) have an ambiguous owner: another route is as close to the label as its own edge, so a reader cannot tell which edge the label names",
+        "groups: control(1) providers(2) host(1) boot(1) state(1)",
+        "trunks:",
+        "routes: 6/6 near-minimal, 0 detours, 1 shortened",
+        "dots: 6 single-dot routes, 0 periodic routes, 0 violations, 6 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 6/6 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "validator": {
+        "command": "scripts/viz-validate.py docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v2-provision --require-select --require-frames --attempts docs/visualize-eval/rounds/04/modal-machine-manager/attempts.json",
+        "failures": [
+          "FAIL check_warnings_absent \u2014 warning: 1 label(s) have an ambiguous owner: another route is as close to the label as its own edge, so a reader cannot tell which edge the label names",
+          "FAIL labels_ownership_clear \u2014 1 label(s) sit as close to another route as to their own edge; a reader cannot pair them"
+        ],
+        "summary": "2 check(s) failed: check_warnings_absent, labels_ownership_clear"
+      }
+    },
+    {
+      "view": "v3-state",
+      "spec": "specs/v3-state.json",
+      "spec_sha256": "ddbedaf644c30f9890ec7d906af63631a038bd6471acd9b1ecee16dbddf29955",
+      "captures": {
+        "plain_text": "evidence/v3-state/v3-state-text.txt",
+        "ansi": "evidence/v3-state/v3-state-ansi.ansi",
+        "select_all_ansi": "evidence/v3-state/v3-state-selected.ansi",
+        "check": "evidence/v3-state/check.txt",
+        "pane_frames_txt": "evidence/v3-state/v3-state-frames.txt",
+        "pane_frames_ansi": "evidence/v3-state/v3-state-frames.ansi",
+        "direct_frames_pinned_size": "evidence/v3-state/direct-frames-77x47.txt",
+        "manifest": "evidence/v3-state/manifest.json",
+        "validator_output": "evidence/v3-state/validator.txt"
+      },
+      "measured": {
+        "cols": 77,
+        "rows": 47,
+        "zoom": 1.0,
+        "source": "the app's own header token in the captured pane text; the pinned-size direct dump prints the same numbers",
+        "viewport_token_in_pane_text": "77x47 @100%",
+        "direct_dump_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "harness_pane_rect": null,
+        "harness_pane_cols": null,
+        "harness_pane_rows": 47,
+        "note": "scripts/viz-evidence.sh could not resolve the pane rectangle on this Herdr build (pane_rect/pane_cols null, pane_rows 47 from the scroll viewport); the app's header token is the accepted measurement per the candidate skill, so no geometry was hardcoded."
+      },
+      "edges_visible": [
+        "mch -> agent (runs on host)",
+        "agent -> pub (register + heartbeat)",
+        "pub -> db (machine state)",
+        "pgrpc -> db (machine rows)",
+        "q -> db (job rows)",
+        "rec -> db (cluster state)",
+        "rec -> prov (gcore sync, 1 min)"
+      ],
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=8 edges=7 flows=7 direction=tb theme=gruvbox",
+        "layers=5 (explicit placement, sugiyama skipped)",
+        "extent=66x41 cells",
+        "crossings: 1 bridges, 0 touching bends",
+        "labels: 7/7 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+        "warning: 1 label(s) have an ambiguous owner: another route is as close to the label as its own edge, so a reader cannot tell which edge the label names",
+        "groups: host(2) rpc(2) control(2) state(1) providers(1)",
+        "trunks:",
+        "routes: 7/7 near-minimal, 0 detours, 1 forced, 0 shortened",
+        "note: route e4 (q -> db) runs 41 cells against a 29 cell straight stair; no obstacle-safe route is shorter, so the length is forced, not a detour",
+        "dots: 7 single-dot routes, 0 periodic routes, 0 violations, 7 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 7/7 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "validator": {
+        "command": "scripts/viz-validate.py docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v3-state --require-select --require-frames --attempts docs/visualize-eval/rounds/04/modal-machine-manager/attempts.json",
+        "failures": [
+          "FAIL check_warnings_absent \u2014 warning: 1 label(s) have an ambiguous owner: another route is as close to the label as its own edge, so a reader cannot tell which edge the label names",
+          "FAIL labels_ownership_clear \u2014 1 label(s) sit as close to another route as to their own edge; a reader cannot pair them"
+        ],
+        "summary": "2 check(s) failed: check_warnings_absent, labels_ownership_clear"
+      }
+    },
+    {
+      "view": "v4-ops",
+      "spec": "specs/v4-ops.json",
+      "spec_sha256": "b11a993ac703201aed3ac04f198ff2cbdab4b3319ecdccde0ce6bc90c30868fb",
+      "captures": {
+        "plain_text": "evidence/v4-ops/v4-ops-text.txt",
+        "ansi": "evidence/v4-ops/v4-ops-ansi.ansi",
+        "select_all_ansi": "evidence/v4-ops/v4-ops-selected.ansi",
+        "check": "evidence/v4-ops/check.txt",
+        "pane_frames_txt": "evidence/v4-ops/v4-ops-frames.txt",
+        "pane_frames_ansi": "evidence/v4-ops/v4-ops-frames.ansi",
+        "direct_frames_pinned_size": "evidence/v4-ops/direct-frames-77x47.txt",
+        "manifest": "evidence/v4-ops/manifest.json",
+        "validator_output": "evidence/v4-ops/validator.txt"
+      },
+      "measured": {
+        "cols": 77,
+        "rows": 47,
+        "zoom": 1.0,
+        "source": "the app's own header token in the captured pane text; the pinned-size direct dump prints the same numbers",
+        "viewport_token_in_pane_text": "77x47 @100%",
+        "direct_dump_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "harness_pane_rect": null,
+        "harness_pane_cols": null,
+        "harness_pane_rows": 47,
+        "note": "scripts/viz-evidence.sh could not resolve the pane rectangle on this Herdr build (pane_rect/pane_cols null, pane_rows 47 from the scroll viewport); the app's header token is the accepted measurement per the candidate skill, so no geometry was hardcoded."
+      },
+      "edges_visible": [
+        "q -> ssh (audit/verify reimage)",
+        "ssh -> mch (run machine-audit)",
+        "q -> s3 (diagnose uploads)",
+        "q -> jan (diagnostic events)",
+        "jan -> wapi (proposed actions)",
+        "wapi -> slack (confirm + alerts)"
+      ],
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=7 edges=6 flows=6 direction=tb theme=gruvbox",
+        "layers=5 (explicit placement, sugiyama skipped)",
+        "extent=77x39 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 6/6 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+        "warning: 1 label(s) have an ambiguous owner: another route is as close to the label as its own edge, so a reader cannot tell which edge the label names",
+        "groups: control(3) ops(1) state(1) host(1) people(1)",
+        "trunks:",
+        "routes: 6/6 near-minimal, 0 detours, 0 shortened",
+        "dots: 6 single-dot routes, 0 periodic routes, 0 violations, 6 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 6/6 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "validator": {
+        "command": "scripts/viz-validate.py docs/visualize-eval/rounds/04/modal-machine-manager/evidence/v4-ops --require-select --require-frames --attempts docs/visualize-eval/rounds/04/modal-machine-manager/attempts.json",
+        "failures": [
+          "FAIL check_warnings_absent \u2014 warning: 1 label(s) have an ambiguous owner: another route is as close to the label as its own edge, so a reader cannot tell which edge the label names",
+          "FAIL labels_ownership_clear \u2014 1 label(s) sit as close to another route as to their own edge; a reader cannot pair them"
+        ],
+        "summary": "2 check(s) failed: check_warnings_absent, labels_ownership_clear"
+      }
+    }
+  ],
+  "round_note": "Recorded as round 04 (docs/visualize-eval/rounds/04/metadata.json says round 4, config.json says round 4). The generator task template's field text still reads round \"03\"; that is a stale template value, not this run's round."
+}

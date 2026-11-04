@@ -1,0 +1,184 @@
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/10/gb300-rack-software/spec-v2
+.json
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+󰂄 7% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/10/gb300-rack-software/
+spec-v2.json
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+󰂄 7% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/10/gb300-rack-software/
+spec-v2.json --select-all
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+󰂄 7% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/10/gb300-rack-software/
+spec-v2.json --frames 3 --step-ms 100
+viewport: 82x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 82x51 @100% · spec-v2.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                     ╭───────╮
+                                     │nv-rms │
+                                     │       │
+                                     ╰───────╯
+                                      │ │ │ │
+                                      │ │ │ │  Redfish pshelf
+                      Redfish/HTTPS   │ │ │ ╰────────────────────╮
+                  ╭───────────────────╯ │ │                      │
+                  │    Redfish power╭───╯ ╰────────╮             │
+                  ▼                 ▼     client on▼             ▼
+          ╭───────────────╮   ╭────────────╮   ╭───────╮   ╭───────────╮
+          │Compute BMC x18│   │NVSwitch BMC│   │OOB LAN│   │Power shelf│
+          │               │   │            │   │       │   │           │
+          ╰───────────────╯   ╰────────────╯   ╰───────╯   ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 82x51 @100% · spec-v2.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                     ╭───────╮
+                                     │nv-rms │
+                                     │       │
+                                     ╰───────╯
+                                      │ │ │ │
+                                      │ │ │ │  Redfish pshelf
+                      Redfish/HTTPS   │ │ │ ╰────────────────────╮
+                  ╭───────────────────╯ │ │                      │
+                  │    Redfish power╭───╯ ╰────────╮             │
+                  ▼                 ▼     client on▼             ▼
+          ╭───────────────╮   ╭────────────╮   ╭───────╮   ╭───────────╮
+          │Compute BMC x18│   │NVSwitch BMC│   │OOB LAN│   │Power shelf│
+          │               │   │            │   │       │   │           │
+          ╰───────────────╯   ╰────────────╯   ╰───────╯   ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 82x51 @100% · spec-v2.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                     ╭───────╮
+                                     │nv-rms │
+                                     │       │
+                                     ╰───────╯
+                                      │ │ │ │
+                                      │ │ │ │  Redfish pshelf
+                      Redfish/HTTPS   │ │ │ ╰────────────────────╮
+                  ╭───────────────────╯ │ │                      │
+                  │    Redfish power╭───╯ ╰────────╮             │
+                  ▼                 ▼     client on▼             ▼
+          ╭───────────────╮   ╭────────────╮   ╭───────╮   ╭───────────╮
+          │Compute BMC x18│   │NVSwitch BMC│   │OOB LAN│   │Power shelf│
+          │               │   │            │   │       │   │           │
+          ╰───────────────╯   ╰────────────╯   ╰───────╯   ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+󰂄 7% ❯

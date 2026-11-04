@@ -1,0 +1,50 @@
+ rataflow-view · 82x51 @100% · v1.json · 6 nodes · 5 edges · q quit
+
+
+
+                                  ╭─────────────╮
+                                  │control plane│
+                                  │             │
+                                  ╰─────────────╯
+                                   ●       create/terminate/repair
+                                   │
+                                   │
+                                   ▼
+                                  ╭────────────╮
+                                  │private gRPC│
+                                  │            │
+                                  ╰────────────╯
+                                   │       enqueue job
+                                   ●
+                                  ╭╯
+                                  ▼
+                                 ╭───────────────╮
+                                 │River job queue│
+                                 │               │
+                                 ╰───────────────╯
+                                  │        provision job
+                                  ●
+                                 ╭╯
+                                 ▼
+                                ╭─────────────────╮
+                                │provider registry│
+                                │                 │
+                                ╰─────────────────╯
+                                 ●         provider API
+                                 │
+                               ╭─╯
+                               ▼
+                              ╭────────────────────╮
+                              │bare-metal providers│
+                              │                    │
+                              ╰────────────────────╯
+                               │           allocate instance
+                               ●
+                               ╰╮
+                                ▼
+ ┌───────┐                     ╭───────────────────╮
+ │ + [+] │                     │bare-metal machines│
+ │ − [-] │                     │                   │
+ │ ⊡ [f] │                     ╰───────────────────╯
+ │ □ [i] │
+ └───────┘

@@ -1,0 +1,128 @@
+{
+  "case_id": "gb300-rack-software",
+  "round": "08",
+  "budget": "3 spec candidates per view, every --check run on a distinct spec counts",
+  "binary": "/tmp/visualize-eval/round-08/bin/rataflow-view",
+  "binary_sha256": "ea24593b0f80c1617573eef4766f2bacaaf4315a8133a65d5331e9daec1c1f30",
+  "views": [
+    {
+      "view": "v1",
+      "final": "specs/v1-oob-bus.json",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec_sha256": null,
+          "spec": "specs/v1-oob-bus.json#attempt1 (direction tb, labels 'client on LAN' + 'Redfish/HTTPS')",
+          "raw_check": "checks/v1-a1.txt",
+          "note": "same structure as the final spec but both edge labels long. tb rank gaps cost (label chars - 1) rows, so extent hit 46 rows: one row of margin left, no room for any repair.",
+          "spec_preserved": false
+        },
+        {
+          "attempt": 2,
+          "spec_sha256": "a4f507b39e37ec25c857c201c421026782aa114759bba5defdbb72363ad46893",
+          "spec": "specs/v1-oob-bus.json",
+          "raw_check": "checks/v1-a2.txt",
+          "note": "FINAL. 'LAN client' shortened, so extent drops to 62x43 and the graph fits with margin. Trunk is one bus (oob -> bmc_c) with two spurs (bmc_s, pwr) = three destinations, and --check prints '1 junctions'. Three destinations cannot be encoded any other way in this build: the trunk's `to` plus `branches` must be distinct nodes, so 3 destinations means 2 spurs, which selects the hub split. The hub's cost is one raw warning: the bus's own port cell and hub cell are shared by its routes. A 4-destination probe (3 spurs) printed '3 branches, 3 junctions' with no warning, and that shape is not available for three destinations."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "final": "specs/v2-oob-plant.json",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec_sha256": null,
+          "spec": "specs/v2-oob-plant.json#attempt1 (direction tb, 3 fan labels: OOB drop, Redfish/HTTPS, OOB drop, air-gapped)",
+          "raw_check": "checks/v2-a1.txt",
+          "note": "tb fan with three labels in one rank gap: 'Redfish/HTTPS' had no free slot and one label became ambiguous. Rejected.",
+          "spec_preserved": false
+        },
+        {
+          "attempt": 2,
+          "spec_sha256": null,
+          "spec": "specs/v2-oob-plant.json#attempt2 (direction lr, same labels)",
+          "raw_check": "checks/v2-a2.txt",
+          "note": "lr puts each fan label on its own row: 4/4 placed, 0 ambiguous, 1 bridge. Rejected on the capture: in lr a single-member group draws a displaced empty region box (two stray empty boxes visible below the graph).",
+          "spec_preserved": false
+        },
+        {
+          "attempt": 3,
+          "spec_sha256": "32d6b034f4870d5ea3a5270d3e3590dace94e4b9d54f8586da2351699cbd102b",
+          "spec": "specs/v2-oob-plant.json",
+          "raw_check": "checks/v2-a3.txt",
+          "note": "FINAL. Back to tb (multi-member regions render correctly there). The rack-hw region gets 4 members so its title is not split by the middle arrowhead, and only one protocol label remains: 2/2 placed, 0 ambiguous, 0 skipped, 2 bridges."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "final": "specs/v3-nvswitch-sw.json",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec_sha256": null,
+          "spec": "specs/v3-nvswitch-sw.json#attempt1 (direction tb, NVUE REST + SSH/SFTP as two parallel edges)",
+          "raw_check": "checks/v3-a1.txt",
+          "note": "tb: 'SSH/SFTP' had no free slot and one label became ambiguous; two parallel edges between the same pair cannot both own a clear label.",
+          "spec_preserved": false
+        },
+        {
+          "attempt": 2,
+          "spec_sha256": null,
+          "spec": "specs/v3-nvswitch-sw.json#attempt2 (direction lr, parallel paths merged into 'NVUE/SSH/SFTP', all four groups declared)",
+          "raw_check": "checks/v3-a2.txt",
+          "note": "lr: 4/4 placed, 0 ambiguous, 0 bridges. Rejected on the capture: the 2-member NVSwitch region draws its title across the neighbouring NVSwitch BMC row, and the three single-member groups draw empty displaced boxes.",
+          "spec_preserved": false
+        },
+        {
+          "attempt": 3,
+          "spec_sha256": "9b65a2818975fbaaab7454e04e242f7dc044e2707781a32e68ba1126c8690fb6",
+          "spec": "specs/v3-nvswitch-sw.json",
+          "raw_check": "checks/v3-a3.txt",
+          "note": "FINAL. lr with no declared region: 67x11, 0 bridges, 4/4 labels, 0 ambiguous owners. The NVSwitch software plane is named by its nodes; the region declaration was dropped because every placement that carried it drew a mangled title."
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "final": "specs/v4-inband-sw.json",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec_sha256": null,
+          "spec_preserved": false,
+          "spec": "specs/v4-inband-sw.json#attempt1 (direction tb, 6 labelled edges)",
+          "raw_check": "checks/v4-a1.txt",
+          "note": "tb rank gaps cost (label chars - 1) rows; a 5-rank chain with those labels measured 50x60 and overflows the 47-row pane ('graph overflows \u00b7 drag to pan' in the frame). Rejected."
+        },
+        {
+          "attempt": 2,
+          "spec_sha256": "277966979e8ee37cb0ed5aab8ab74e35c7f2d9b8a8c9ba6f39fd70548912137b",
+          "spec": "specs/v4-inband-sw.json#attempt2 (verbs moved into node labels, 'compute host' region declared over 4 members)",
+          "raw_check": "checks/v4-a2.txt",
+          "note": "51x44, 0 bridges, 2/2 labels placed, 0 ambiguous \u2014 but the capture showed the 'compute host' region box drawn displaced and empty beside its own members, and its border cut the 'Fabric Mgr (bundled)' label ('Fabric Mgr\u2502(bundled)'). Rejected."
+        },
+        {
+          "attempt": 3,
+          "spec_sha256": "3761a61aff7058f0dc1b6aa5897be3e6d7113626cad7f0de7b1df72f31cd15b0",
+          "spec": "specs/v4-inband-sw.json",
+          "raw_check": "checks/v4-a3.txt",
+          "note": "FINAL. Same graph and labels, 'compute host' region dropped: 50x44, 0 bridges, 2/2 placed, 0 ambiguous, label intact, only the 'cluster' and 'in-band' regions drawn (both over their members)."
+        }
+      ]
+    }
+  ],
+  "engine_calibration_probes": [
+    {
+      "note": "Not case candidates: throwaway specs used to measure renderer behaviour before committing a view. Raw outputs were not kept; the measured numbers are quoted here and in generation.md.",
+      "raw": [
+        "tb rank gap costs (len(label)-1) rows: 2-node tb chain extent 15x12 unlabelled, 15x14 at len 3, 15x19 at len 8, 15x24 at len 13.",
+        "lr rank gap costs the same amount in columns: 23 wide unlabelled, 25 at len 3, 30 at len 8, 35 at len 13.",
+        "trunk junction model: spurs<=2 -> one hub junction (1 junction) and a shared-run warning; 3 spurs -> one tap per branch (3 junctions) and no shared-run warning.",
+        "groups: a single-member group draws no titled region in tb but a displaced empty box in lr; a multi-member group draws a bordered titled region, and an arrowhead crossing the top border overwrites a title glyph."
+      ]
+    }
+  ],
+  "note_on_rejected_attempts": "Rejected-attempt spec files were overwritten by later drafts; their raw --check output is preserved verbatim in checks/. No hash is reported for a spec that was not kept."
+}

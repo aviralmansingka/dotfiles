@@ -1,0 +1,46 @@
+ rataflow-view · execution.v2.json · 5 nodes · 4 edges · 0 flows · drag pan ·
+
+
+
+
+
+
+
+
+
+
+
+
+
+                     ╭───────────╮
+                     │Task engine│
+                     │           │
+                     ╰───────────╯
+                      │ │
+                      │ │ starts/manages
+                 ╭────╯ ╰──────────────────╮
+                 ▼      mount/snapshot     ▼
+                ╭────────────────────╮    ╭─────────────────╮
+                │Filesystem + volumes│    │Container backend│
+                │                    │    │                 │
+                ╰────────────────────╯    ╰─────────────────╯
+                 │ image/vol data          │
+                 │            runs process │
+                 ╰──────╮                  ╰─╮
+                        ▼                    ▼
+                       ╭───────╮            ╭──────────────╮
+                       │Blobnet│            │Task container│
+                       │       │            │              │
+                       ╰───────╯            ╰──────────────╯
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘

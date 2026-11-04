@@ -1,0 +1,1858 @@
+{
+  "protocol_version": 1,
+  "round": 8,
+  "case_id": "modal-machine-manager",
+  "candidate_sha256": "b1bdb4d3d38336cb7783db34da7f9f19edf80704a890de32285d9e582b4221eb",
+  "renderer_sha256": "ea24593b0f80c1617573eef4766f2bacaaf4315a8133a65d5331e9daec1c1f30",
+  "rubric_sha256": "ef092e343d622654fe3eb6115eafb395b53a5d4f4b47b2f0c4a165256b1d00b3",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "0632ca377710fcd5de85f47918c0b7e249f57821189f552cb52792c01226118d",
+  "generator": {
+    "worker_id": "viz-ds08-6",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge08-modal-machine-manager",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": false
+  },
+  "live_pane": {
+    "columns": 83,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/08/reviews/modal-machine-manager/observed-first.md",
+      "sha256": "2270153914f65979162e1f0f54b4224bf9285bfdb643df82215b4d56f1243c20",
+      "description": "Blind observations saved before expectations reveal",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/08/reviews/modal-machine-manager/spec-manifest.json",
+      "sha256": "0632ca377710fcd5de85f47918c0b7e249f57821189f552cb52792c01226118d",
+      "description": "Sorted paths and verified hashes for the four final specs",
+      "capture": null
+    },
+    {
+      "id": "spec1",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/specs/v1-request.json",
+      "sha256": "5e19b2ed34593f0b3ab7979e751c3812c97bd064f6b5d17bb5f4f44297dca9e4",
+      "description": "Final spec v1",
+      "capture": null
+    },
+    {
+      "id": "spec2",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/specs/v2-dispatch.json",
+      "sha256": "70f3c2ca0c7dda0db3b360770966ad968e2c0933e8eef8a6715f859c00277e9c",
+      "description": "Final spec v2",
+      "capture": null
+    },
+    {
+      "id": "spec3",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/specs/v3-boot.json",
+      "sha256": "aff9f588faff84fd06f2449a93ff3fd0091c096cda0e294acc0f78abbc5964c4",
+      "description": "Final spec v3",
+      "capture": null
+    },
+    {
+      "id": "spec4",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/specs/v4-state-reconcile.json",
+      "sha256": "df95ea2a9e36c9822a6fbb4b9971bc6c0a2a2d29f37bcac11e2d299d7037b89e",
+      "description": "Final spec v4",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/source.md",
+      "sha256": "a41065d9ceca1ed035bfd6282f0e937abbd0034ad497a33637a76f2d8a9ebab3",
+      "description": "source",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/expected.json",
+      "sha256": "c6d14814bcfa0f41e7401df3b57ea1400e15050b9fb4db3d2e12980d6fde9764",
+      "description": "expected",
+      "capture": null
+    },
+    {
+      "id": "history",
+      "path": "docs/visualize-eval/cases/modal-machine-manager/historical-variants.json",
+      "sha256": "22f00c085b50f218115610ed1580e89f4c0a94d39f8ecf83c80d6712116a06b2",
+      "description": "history",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "dataset",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/08/rubric.json",
+      "sha256": "ef092e343d622654fe3eb6115eafb395b53a5d4f4b47b2f0c4a165256b1d00b3",
+      "description": "rubric",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/08/metadata.json",
+      "sha256": "83084698e7d2bf4a6e2e0f411ef5b0b5454e5dc37c04f9ce45b8b82ea591ebf0",
+      "description": "metadata",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/08/SKILL.md",
+      "sha256": "b1bdb4d3d38336cb7783db34da7f9f19edf80704a890de32285d9e582b4221eb",
+      "description": "skill",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/generation.json",
+      "sha256": "407b1e41809d3887fbac1c2c18270f320fe18ccc563da47dc0193cd230a25134",
+      "description": "generation",
+      "capture": null
+    },
+    {
+      "id": "generation-md",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/generation.md",
+      "sha256": "79f2884e9821d266f9394d714013f83dd7af6b184739ce3dbc03845c26a2bff0",
+      "description": "generation-md",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/attempts.json",
+      "sha256": "0c99b67ac64d41873c74289de8b1af9abdcc80dc60f7d5cd56ee80176b448a6b",
+      "description": "attempts",
+      "capture": null
+    },
+    {
+      "id": "v1-text",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v1/v1-text.txt",
+      "sha256": "d2139e791a85e8eb232c0233bde2e3ae0cd6367d6aab78eb50418831d9a5f5c3",
+      "description": "v1 text",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "pane still",
+        "timestamp": "2026-11-02T21:05:06Z to 2026-11-02T21:05:10Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-ansi",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v1/v1-ansi.ansi",
+      "sha256": "dc6a2a8fec572cd801e88f72a17c90ae805792faa6a6cbbcadf4f8dc5c2d88d8",
+      "description": "v1 ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "pane still",
+        "timestamp": "2026-11-02T21:05:06Z to 2026-11-02T21:05:10Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-selected",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v1/v1-selected.ansi",
+      "sha256": "cb83cf024f0ef3a1daa63ec7faf35598696c517dcc017a6902e3e6a7f0a4716a",
+      "description": "v1 selected",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "pane still",
+        "timestamp": "2026-11-02T21:05:06Z to 2026-11-02T21:05:10Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-pane-frames",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v1/v1-frames.txt",
+      "sha256": "8785b3e835c057a8f426fa7d7d4401d66203202763d5bddc95f25664b4c21895",
+      "description": "v1 pane-frames",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "19 captured frames",
+        "timestamp": "2026-11-02T21:05:06Z to 2026-11-02T21:05:10Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-pane-frames-ansi",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v1/v1-frames.ansi",
+      "sha256": "f587904cc4aa83f921686e45be48fb302891b08157992db4571938c29f89efa2",
+      "description": "v1 pane-frames-ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "19 captured frames",
+        "timestamp": "2026-11-02T21:05:06Z to 2026-11-02T21:05:10Z",
+        "state": "animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-pinned",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v1/v1-frames-77x47.txt",
+      "sha256": "0ccf356dd35354cc1e3d47b0c76506e413c687bf47250960de1a6ecee5985245",
+      "description": "v1 pinned",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frames 0–70; 0–7000ms",
+        "timestamp": "relative 0–7000ms; wall clock not recorded",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-manifest",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v1/manifest.json",
+      "sha256": "7535b6414b0517e96f1c75452b4d67ff1ffbab11b40fb105bc806cb803a211f7",
+      "description": "v1 manifest.json",
+      "capture": null
+    },
+    {
+      "id": "v1-check",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v1/check.txt",
+      "sha256": "7c55d6372118aa9a74ffb6498932e55e2279d6b1f14a1194891432f309ecca88",
+      "description": "v1 check.txt",
+      "capture": null
+    },
+    {
+      "id": "v1-validator",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v1/validator.txt",
+      "sha256": "969927ab0250fa11dc0f58a15b5b7cd1bf56ca425ff040cf227d2c31c4c01b8c",
+      "description": "v1 validator.txt",
+      "capture": null
+    },
+    {
+      "id": "v1-bin",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v1/bin.sha256",
+      "sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+      "description": "v1 bin.sha256",
+      "capture": null
+    },
+    {
+      "id": "v2-text",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v2/v2-text.txt",
+      "sha256": "eb97f0587d34c035aadde8e580eb820dd918c41800ac90cd1d72b013f0aee06e",
+      "description": "v2 text",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "pane still",
+        "timestamp": "2026-11-02T21:05:18Z to 2026-11-02T21:05:22Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-ansi",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v2/v2-ansi.ansi",
+      "sha256": "6f228750fdb47eb1ccfa7b469c5f7db86f8b1caaea479efb02200388ce08b654",
+      "description": "v2 ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "pane still",
+        "timestamp": "2026-11-02T21:05:18Z to 2026-11-02T21:05:22Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-selected",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v2/v2-selected.ansi",
+      "sha256": "7163ad7726de912c9a114cc810f345367961f18791446b1a0b30701864275445",
+      "description": "v2 selected",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "pane still",
+        "timestamp": "2026-11-02T21:05:18Z to 2026-11-02T21:05:22Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-pane-frames",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v2/v2-frames.txt",
+      "sha256": "e13b87f475e672dd03f4e968a298d67b1100bc3a1df77b2f55739a91c3022727",
+      "description": "v2 pane-frames",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "19 captured frames",
+        "timestamp": "2026-11-02T21:05:18Z to 2026-11-02T21:05:22Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-pane-frames-ansi",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v2/v2-frames.ansi",
+      "sha256": "624f4a90a691001224981303e9b8e4f11c6189cd364e3fcaf7af43f9d9d1052b",
+      "description": "v2 pane-frames-ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "19 captured frames",
+        "timestamp": "2026-11-02T21:05:18Z to 2026-11-02T21:05:22Z",
+        "state": "animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-pinned",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v2/v2-frames-77x47.txt",
+      "sha256": "0e1eec0a47558c6e0c08a2a88b30521e3f5f06b7f8cab3d08550bd361a6a3046",
+      "description": "v2 pinned",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "frames 0–70; 0–7000ms",
+        "timestamp": "relative 0–7000ms; wall clock not recorded",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-manifest",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v2/manifest.json",
+      "sha256": "5df331e8e3fc7990461bcc3c54a5bebc5d774f062cef88b1eb4c9584e4b296cc",
+      "description": "v2 manifest.json",
+      "capture": null
+    },
+    {
+      "id": "v2-check",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v2/check.txt",
+      "sha256": "39f637f406ec74a8f94b38c3db7e3c02288a88bea830151d7b236e63d6db9953",
+      "description": "v2 check.txt",
+      "capture": null
+    },
+    {
+      "id": "v2-validator",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v2/validator.txt",
+      "sha256": "969927ab0250fa11dc0f58a15b5b7cd1bf56ca425ff040cf227d2c31c4c01b8c",
+      "description": "v2 validator.txt",
+      "capture": null
+    },
+    {
+      "id": "v2-bin",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v2/bin.sha256",
+      "sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+      "description": "v2 bin.sha256",
+      "capture": null
+    },
+    {
+      "id": "v3-text",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v3/v3-text.txt",
+      "sha256": "f89a9e33ce0aae2f4627188e20c79d93805bb869b2b8f1fa987d85b53ada8aa2",
+      "description": "v3 text",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "pane still",
+        "timestamp": "2026-11-02T21:05:22Z to 2026-11-02T21:05:26Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-ansi",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v3/v3-ansi.ansi",
+      "sha256": "d06c58fd282c65819cb065720a4003786011b02d4bdc012c29ecb662906581ff",
+      "description": "v3 ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "pane still",
+        "timestamp": "2026-11-02T21:05:22Z to 2026-11-02T21:05:26Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-selected",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v3/v3-selected.ansi",
+      "sha256": "66ee58063ed1e864491c916d3ae1e069b8aea756f17bc2ab30ef4786d8707224",
+      "description": "v3 selected",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "pane still",
+        "timestamp": "2026-11-02T21:05:22Z to 2026-11-02T21:05:26Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-pane-frames",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v3/v3-frames.txt",
+      "sha256": "4a9cfad0bb47dc56b99373160ad76175b8b623718e1b13bf7153bc06eb8e2d48",
+      "description": "v3 pane-frames",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "19 captured frames",
+        "timestamp": "2026-11-02T21:05:22Z to 2026-11-02T21:05:26Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-pane-frames-ansi",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v3/v3-frames.ansi",
+      "sha256": "6106c9dc2dbb1c70b99b0da8d727fecbe09909e47d6af895dd81ec5e068b2e46",
+      "description": "v3 pane-frames-ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "19 captured frames",
+        "timestamp": "2026-11-02T21:05:22Z to 2026-11-02T21:05:26Z",
+        "state": "animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v3-pinned",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v3/v3-frames-77x47.txt",
+      "sha256": "16f13f2b9271eb6e955ea647851b3d17f5934874f77ef3508b01357caa0d127d",
+      "description": "v3 pinned",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "frames 0–70; 0–7000ms",
+        "timestamp": "relative 0–7000ms; wall clock not recorded",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v3-manifest",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v3/manifest.json",
+      "sha256": "bc25c2379f6262b4d47d511d17f16233fd2322a5db387362916401202e33a4c6",
+      "description": "v3 manifest.json",
+      "capture": null
+    },
+    {
+      "id": "v3-check",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v3/check.txt",
+      "sha256": "a9286b5b02d4d179ea0b1ef9e976456faf7bc1b66c0d9e5f5c2e6f922a6efdee",
+      "description": "v3 check.txt",
+      "capture": null
+    },
+    {
+      "id": "v3-validator",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v3/validator.txt",
+      "sha256": "969927ab0250fa11dc0f58a15b5b7cd1bf56ca425ff040cf227d2c31c4c01b8c",
+      "description": "v3 validator.txt",
+      "capture": null
+    },
+    {
+      "id": "v3-bin",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v3/bin.sha256",
+      "sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+      "description": "v3 bin.sha256",
+      "capture": null
+    },
+    {
+      "id": "v4-text",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v4/v4-text.txt",
+      "sha256": "28dc19868a8967500194f0af3a67d7266628942933bc8c91e706ca76c6487123",
+      "description": "v4 text",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "pane still",
+        "timestamp": "2026-11-02T21:05:27Z to 2026-11-02T21:05:31Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-ansi",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v4/v4-ansi.ansi",
+      "sha256": "8c0ed907b470d29cf1406978fbdebc7c9d0756469adfef19a6e91c25b50d3064",
+      "description": "v4 ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "pane still",
+        "timestamp": "2026-11-02T21:05:27Z to 2026-11-02T21:05:31Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-selected",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v4/v4-selected.ansi",
+      "sha256": "372574ea9f6ae024745b88697110e8890c0c33a05b7cb202e188e3f575a96cc8",
+      "description": "v4 selected",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "pane still",
+        "timestamp": "2026-11-02T21:05:27Z to 2026-11-02T21:05:31Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-pane-frames",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v4/v4-frames.txt",
+      "sha256": "e503125eac3745a6fdbe9228b95d629694352833ec09de571f3bfb315cec8b76",
+      "description": "v4 pane-frames",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "19 captured frames",
+        "timestamp": "2026-11-02T21:05:27Z to 2026-11-02T21:05:31Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-pane-frames-ansi",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v4/v4-frames.ansi",
+      "sha256": "be70c75e4834ed21167bdd1e2e63254a36a5645ccf7a12b3c2f2aca3ef7b66e9",
+      "description": "v4 pane-frames-ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v4",
+        "frame": "19 captured frames",
+        "timestamp": "2026-11-02T21:05:27Z to 2026-11-02T21:05:31Z",
+        "state": "animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v4-pinned",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v4/v4-frames-77x47.txt",
+      "sha256": "f3906182ea5a7ee9dc9e8e4bb098f610e633b3bd967c9df07827f59866b3e77a",
+      "description": "v4 pinned",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v4",
+        "frame": "frames 0–70; 0–7000ms",
+        "timestamp": "relative 0–7000ms; wall clock not recorded",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v4-manifest",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v4/manifest.json",
+      "sha256": "404681bd9c03b1d4c56458c77bc46d4ad393c4650ecbbd29e7f610ca041376e0",
+      "description": "v4 manifest.json",
+      "capture": null
+    },
+    {
+      "id": "v4-check",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v4/check.txt",
+      "sha256": "313b72c3e5400da2af5b707207c4f59b7d71a2ab2fa4b75d0ffb4d30beb81360",
+      "description": "v4 check.txt",
+      "capture": null
+    },
+    {
+      "id": "v4-validator",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v4/validator.txt",
+      "sha256": "869e78c67ce75c747f9edea7456a09a8d2934a0d6c1472b519798a54ef445130",
+      "description": "v4 validator.txt",
+      "capture": null
+    },
+    {
+      "id": "v4-bin",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/evidence/v4/bin.sha256",
+      "sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+      "description": "v4 bin.sha256",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-a1-check",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/attempts-raw/v1-a1-check.txt",
+      "sha256": "980f7c20409b5177ce4e3a0a3072d2ab18ec3fd165807e0f1b1f64626a973825",
+      "description": "Rejected/final attempt raw check output",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-a2-check",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/attempts-raw/v1-a2-check.txt",
+      "sha256": "61974ed9e43c807b5d6d1b5e4b29b0bb2312423a7e4db59a1bb7251f8d497b0f",
+      "description": "Rejected/final attempt raw check output",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-a3-check",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/attempts-raw/v1-a3-check.txt",
+      "sha256": "a08f0e9a27af3781767054cba4c1fe0b4763ca495922cfb8dd5f8d1ae12b5e7e",
+      "description": "Rejected/final attempt raw check output",
+      "capture": null
+    },
+    {
+      "id": "raw-v1-a4-check",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/attempts-raw/v1-a4-check.txt",
+      "sha256": "7c55d6372118aa9a74ffb6498932e55e2279d6b1f14a1194891432f309ecca88",
+      "description": "Rejected/final attempt raw check output",
+      "capture": null
+    },
+    {
+      "id": "raw-v2-a1-check",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/attempts-raw/v2-a1-check.txt",
+      "sha256": "cfa2a923474ed52378412d0e39625986e485b47a0c409cc10b67bf89420277b2",
+      "description": "Rejected/final attempt raw check output",
+      "capture": null
+    },
+    {
+      "id": "raw-v2-a2-check",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/attempts-raw/v2-a2-check.txt",
+      "sha256": "39f637f406ec74a8f94b38c3db7e3c02288a88bea830151d7b236e63d6db9953",
+      "description": "Rejected/final attempt raw check output",
+      "capture": null
+    },
+    {
+      "id": "raw-v3-a1-check",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/attempts-raw/v3-a1-check.txt",
+      "sha256": "a9286b5b02d4d179ea0b1ef9e976456faf7bc1b66c0d9e5f5c2e6f922a6efdee",
+      "description": "Rejected/final attempt raw check output",
+      "capture": null
+    },
+    {
+      "id": "raw-v3-a2-check",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/attempts-raw/v3-a2-check.txt",
+      "sha256": "c03f42b774cb2f6ad0c3776096bb9d47429db9274c55190aa30ff5102979f48d",
+      "description": "Rejected/final attempt raw check output",
+      "capture": null
+    },
+    {
+      "id": "raw-v4-a1-check",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/attempts-raw/v4-a1-check.txt",
+      "sha256": "f33cedf345901af1a184e7d5101215f194020bb47d1d70f47e758edb5b1d2883",
+      "description": "Rejected/final attempt raw check output",
+      "capture": null
+    },
+    {
+      "id": "raw-v4-a2-check",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/attempts-raw/v4-a2-check.txt",
+      "sha256": "313b72c3e5400da2af5b707207c4f59b7d71a2ab2fa4b75d0ffb4d30beb81360",
+      "description": "Rejected/final attempt raw check output",
+      "capture": null
+    },
+    {
+      "id": "prior-v1-a3-create-term-repair",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/prior-attempts/v1-a3-create-term-repair.json",
+      "sha256": "327597e820ce56339373e5184c69d2d73087f96d2528bcb3ba6f8892399fb3ae",
+      "description": "Preserved prior spec",
+      "capture": null
+    },
+    {
+      "id": "probe-v1-request-61frames",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/route-probe/v1-request-61frames.txt",
+      "sha256": "6cd6b9cceeacac6b7ea298e0e00ca585dfee94a6b7ecb3eb273b1559fa25ecd9",
+      "description": "Preserved route probe",
+      "capture": null
+    },
+    {
+      "id": "probe-v2-dispatch-61frames",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/route-probe/v2-dispatch-61frames.txt",
+      "sha256": "59e0dc78a9565b0ced8835d02831d23c053d4c8a4726492d384a00d68b433e7c",
+      "description": "Preserved route probe",
+      "capture": null
+    },
+    {
+      "id": "probe-v3-boot-61frames",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/route-probe/v3-boot-61frames.txt",
+      "sha256": "547ba9bc79f1e6973827f1a37dc7ea08a10c8f6b42f4589ddad45850e0dba2de",
+      "description": "Preserved route probe",
+      "capture": null
+    },
+    {
+      "id": "probe-v4-state-reconcile-61frames",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/route-probe/v4-state-reconcile-61frames.txt",
+      "sha256": "6ec9c2b3716ee2bfe3581dde4e836db003f1b4172ebda87bb2f38c6259c5397e",
+      "description": "Preserved route probe",
+      "capture": null
+    },
+    {
+      "id": "prior-v1-provision",
+      "path": "docs/visualize-eval/rounds/08/modal-machine-manager/specs/v1-provision.json",
+      "sha256": "91b17a435b3df2d6a3c3d1e409d30f617f0f407f23599508c0d91ac1b92db65a",
+      "description": "Rejected draft, not a final spec",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 17 concepts and 23 directed links are declared, but required repair, reprovision, alerts, register and audit/verify qualifiers are dropped; response label is overwritten, so source meaning is not fully visible.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "evidence_ids": [
+        "blind",
+        "generation",
+        "v1-pinned",
+        "v2-pinned",
+        "v3-pinned",
+        "v4-pinned"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Frame-zero origin is one cell late on sampled arrows, explicitly making direction unproven. Three in-band label-owner ambiguities and region/title collisions further obscure traces.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "evidence_ids": [
+        "blind",
+        "generation",
+        "v1-pinned",
+        "v2-pinned",
+        "v3-pinned",
+        "v4-pinned"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "At pinned 77x47, janitor label and boot response are overwritten; several region titles are lost, and selected/live evidence is actually 83x51, not a live 77x47 pane.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "evidence_ids": [
+        "blind",
+        "generation",
+        "v1-pinned",
+        "v2-pinned",
+        "v3-pinned",
+        "v4-pinned"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Named conceptual hues exist, but fragmented/missing region titles and apparent border overlap leave membership misleading; phase order is not consistently expressed in the boot view.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "evidence_ids": [
+        "blind",
+        "generation",
+        "v1-pinned",
+        "v2-pinned",
+        "v3-pinned",
+        "v4-pinned"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "The ops region line crosses the janitor box and its interior in v2; selected borders are demonstrated simultaneously for 26 occurrences, not a proof of unobstructed continuous borders.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "evidence_ids": [
+        "blind",
+        "generation",
+        "v1-pinned",
+        "v2-pinned",
+        "v3-pinned",
+        "v4-pinned"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Live app headers prove 83x51, not the required actual 77x47 pane; pinned non-pane dumps cannot replace the required live half-pane. Pane frames contain only 19/71. Some raw attempts are stdout-only without exact command/status, and some rejected specs were overwritten.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "evidence_ids": [
+        "blind",
+        "generation",
+        "v1-pinned",
+        "v2-pinned",
+        "v3-pinned",
+        "v4-pinned"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Pinned frames contain one dot per route, but the v3 return advances six cells from (36,32) to (34,36) versus five on the other sampled routes; sampled frame-zero dots start one cell late and the v3 dot is on a non-origin corner.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "evidence_ids": [
+        "blind",
+        "generation",
+        "v1-pinned",
+        "v2-pinned",
+        "v3-pinned",
+        "v4-pinned"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "The source-backed lifecycle-machines family and one-line evidence are recorded in generation.json, but v3 places machines above boot, S3 and agent at the same rank; boot response returns upward and image/agent phases are simultaneous rather than the requested readable top-to-bottom lifecycle sequence."
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e01",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "cp → pgrpc: create / terminate / repair",
+      "observed": "create/term drops repair; own route is visually crowded",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            38,
+            18,
+            11,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "meaning",
+        "ambiguity",
+        "origin"
+      ]
+    },
+    {
+      "edge_id": "e02",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "web → wapi: http",
+      "observed": "http, route heads right to webapi over bridge",
+      "status": "blocked",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            56,
+            32,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e03",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "pgrpc → q: enqueue job",
+      "observed": "enqueue down to queue, arrow pierces jobs region title",
+      "status": "blocked",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            24,
+            35,
+            7,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "regions"
+      ]
+    },
+    {
+      "edge_id": "e04",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "wapi → q: reinstall / reprovision",
+      "observed": "reinstall down/left to queue; reprovision absent and head overwrites jobs title",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            37,
+            38,
+            9,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "meaning",
+        "regions"
+      ]
+    },
+    {
+      "edge_id": "e05",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "q → reg: provision job",
+      "observed": "provision right/up to registry; sampled origin is late",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            23,
+            23,
+            9,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "origin"
+      ]
+    },
+    {
+      "edge_id": "e06",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "reg → prov: provider API",
+      "observed": "API right to providers, short direct route",
+      "status": "blocked",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            58,
+            17,
+            3,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e07",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "prov → mch: allocate instance",
+      "observed": "allocate down/left to machines, visible destination",
+      "status": "blocked",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            52,
+            39,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e08",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "mch → boot: iPXE request",
+      "observed": "iPXE req down to boot; tight parallel machine stems make owner uncertain; sampled machine-origin late",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            33,
+            32,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "ambiguity",
+        "origin"
+      ]
+    },
+    {
+      "edge_id": "e09",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "boot → mch: boot.ipxe + S3 args",
+      "observed": "reverse loop to machines; label reads boot.ipxe─+─S3 args through region/route glyphs; intended payload and owner not cleanly readable",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            41,
+            37,
+            19,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "labels",
+        "regions"
+      ]
+    },
+    {
+      "edge_id": "e10",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "mch → agent: runs on host",
+      "observed": "on host down to machine-agent; sampled machine-origin late",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            24,
+            25,
+            7,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "origin"
+      ]
+    },
+    {
+      "edge_id": "e11",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "agent → pub: register + heartbeat",
+      "observed": "heartbeat down to public gRPC; register absent; sampled origin late",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            12,
+            17,
+            9,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "meaning",
+        "origin"
+      ]
+    },
+    {
+      "edge_id": "e12",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "pub → db: machine state",
+      "observed": "state rows down/right to Postgres; machine qualifier not explicit",
+      "status": "blocked",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            15,
+            39,
+            10,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e13",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "pgrpc → db: machine rows",
+      "observed": "machine rows down/right to Postgres",
+      "status": "blocked",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            30,
+            25,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e14",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "q → db: job rows",
+      "observed": "job rows down/left to Postgres crossing at bridge",
+      "status": "blocked",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            47,
+            25,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e15",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "q → ssh: audit / verify reimage",
+      "observed": "reimage carried by queue→SSH corridor; audit/verify qualifier missing",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            26,
+            29,
+            7,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "meaning",
+        "ambiguity"
+      ]
+    },
+    {
+      "edge_id": "e16",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "ssh → mch: run machine-audit",
+      "observed": "run audit right/down to machines; bridge at approach",
+      "status": "blocked",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            52,
+            27,
+            9,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e17",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "mch → s3: pull boot image",
+      "observed": "pull image on machines→S3, distinct from queue diagnose; sampled machine-origin late",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            41,
+            30,
+            10,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "origin",
+        "ambiguity"
+      ]
+    },
+    {
+      "edge_id": "e18",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "q → s3: diagnose uploads",
+      "observed": "diagnose to S3 independently of image pull; uploads qualifier absent",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            48,
+            26,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "meaning"
+      ]
+    },
+    {
+      "edge_id": "e19",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "q → jan: diagnostic events",
+      "observed": "diagnostics heads to janitor app but adjacent fan makes owner uncertain and janitor text is crossed",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            23,
+            25,
+            11,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "ambiguity",
+        "labels"
+      ]
+    },
+    {
+      "edge_id": "e20",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "jan → wapi: proposed actions",
+      "observed": "proposals from janitor to webapi visible, janitor label crossed",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            53,
+            22,
+            9,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "labels"
+      ]
+    },
+    {
+      "edge_id": "e21",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "wapi → slack: confirm + alerts",
+      "observed": "confirm to Slack, alerts omitted",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            41,
+            40,
+            7,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "meaning",
+        "ambiguity"
+      ]
+    },
+    {
+      "edge_id": "e22",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "rec → prov: gcore sync, 1 min",
+      "observed": "gcore 1min to providers; sync verb omitted",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            65,
+            17,
+            10,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "meaning"
+      ]
+    },
+    {
+      "edge_id": "e23",
+      "kind": "independent_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": "rec → db: cluster state",
+      "observed": "cluster state down to Postgres across bridge",
+      "status": "blocked",
+      "locations": [
+        {
+          "evidence_id": "v4-text",
+          "region": [
+            48,
+            24,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "apparent-v3-s3-junction",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "expected": null,
+      "observed": "Adjacent arrowheads and region line at S3 approach resemble a junction; no extra spec edge is established.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            55,
+            32,
+            8,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "regions"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "meaning",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e01",
+        "e04",
+        "e11",
+        "e15",
+        "e18",
+        "e21",
+        "e22"
+      ],
+      "severity": "critical",
+      "description": "Required qualifiers lost: repair, reprovision, register, alerts, audit/verify, uploads, and sync. These cannot be recovered from abbreviated captured labels.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            38,
+            18,
+            11,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "labels",
+      "category": "layout_fit",
+      "edge_ids": [
+        "e09",
+        "e19",
+        "e20"
+      ],
+      "severity": "high",
+      "description": "v2 janitor─app crosses a node label; v3 boot.ipxe─+─S3 args is visibly overpainted. They are not clean intact text despite placed-label checks.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            38,
+            23,
+            11,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "regions",
+      "category": "conceptual_grouping_color",
+      "edge_ids": [
+        "e03",
+        "e04"
+      ],
+      "severity": "high",
+      "description": "Region titles and borders are overwritten or absent; v1 jobs top is ──▼j▼bs ───────. A group count does not prove membership geometry.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            29,
+            41,
+            15,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ambiguity",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "e01",
+        "e08",
+        "e15",
+        "e17",
+        "e19",
+        "e21"
+      ],
+      "severity": "high",
+      "description": "Three views have an in-band multiple-edge label owner ambiguity; no proof rules out all alternative placements, so budget exhaustion does not waive the gate.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            23,
+            25,
+            11,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "origin",
+      "category": "animation",
+      "edge_ids": [
+        "e01",
+        "e05",
+        "e08",
+        "e10",
+        "e11",
+        "e17"
+      ],
+      "severity": "high",
+      "description": "Frame-0 dot first appears one route cell after the true first drawn cell; e.g. v1 control plane (33,10) first cell, dot at (33,11). The checker incorrectly claims origins complete.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-pinned",
+          "region": [
+            33,
+            10,
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "arrow-origin",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "e01",
+        "e05",
+        "e08",
+        "e10",
+        "e11",
+        "e17"
+      ],
+      "severity": "high",
+      "description": "A dot beginning away from its arrow origin makes that direction unproven under the gate.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-pinned",
+          "region": [
+            33,
+            10,
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "corner",
+      "category": "animation",
+      "edge_ids": [
+        "e09"
+      ],
+      "severity": "medium",
+      "description": "v3 boot return source port is (38,32), first drawn route cell (37,32), but frame 0 dot is on the subsequent corner (36,32), visible as ╭ in later frames. This is not the origin cell; special-cell audit remains incomplete.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-pinned",
+          "region": [
+            36,
+            32,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "speed",
+      "category": "animation",
+      "edge_ids": [
+        "e09"
+      ],
+      "severity": "medium",
+      "description": "v3 return dot moves from (36,32) to (34,36), Manhattan distance six, so cannot advance only five route cells; the blind record mistakenly called it five. Other sampled routes advanced five.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-pinned",
+          "region": [
+            34,
+            32,
+            3,
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "id": "border",
+      "category": "border_integrity",
+      "edge_ids": [
+        "e19",
+        "e20"
+      ],
+      "severity": "high",
+      "description": "v2 ops region line traverses the janitor box around its middle and text; selected ANSI shows highlighted borders but not intact continuous unobstructed boxes.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-selected",
+          "region": [
+            37,
+            22,
+            13,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phases",
+      "category": "category_fit",
+      "edge_ids": [
+        "e08",
+        "e09",
+        "e10",
+        "e17"
+      ],
+      "severity": "high",
+      "description": "Lifecycle-machines is supported and named, but the boot response returns upward and boot, image and agent targets share a single lower rank, not a one-direction phase sequence.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v3-text",
+          "region": [
+            23,
+            16,
+            40,
+            22
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fit-proof",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Live pane headers are 83x51, not 77x47; 77x47 frames are pinned dumps, and live pane frame history is truncated to 19/71.",
+      "source_refs": [
+        "source",
+        "expected",
+        "history"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v4-pinned",
+          "region": [
+            1,
+            1,
+            77,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "No actual live 77x47 half-pane capture; pinned target-sized frames cannot prove measured live pane fit.",
+    "Actual pane animation captures stop at 19 frames; full-lap pinned dump exists but is not live-pane evidence.",
+    "Some earlier rejected specs were overwritten and raw checks lack reproducible commands and exit/stderr separation.",
+    "Per-route full-cycle corner and origin audit was not completed; known origin failures remain failures.",
+    "The failed left-to-right boot-pair candidate reports no obstacle-safe route; other possible layouts are not disproven."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pM6",
+      "w7E:pM8",
+      "w7E:pM9",
+      "w7E:pMA"
+    ],
+    "closed_pane_ids": [
+      "w7E:pM6",
+      "w7E:pM8",
+      "w7E:pM9",
+      "w7E:pMA"
+    ],
+    "status": "done",
+    "reason": "All four generator manifests record cleanup=confirmed_closed; review launched no panes."
+  },
+  "overall": "fail"
+}

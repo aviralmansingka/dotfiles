@@ -1,0 +1,8 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=6 edges=5 flows=5 direction=tb theme=gruvbox
+layers=5 (explicit placement, sugiyama skipped)
+extent=33x37 cells
+labels: 5/5 placed, 0 on route cells, 0 skipped
+groups: inband(6)
+trunks:
+dots: 5 single-dot routes, 0 periodic routes, 0 violations

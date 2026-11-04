@@ -1,0 +1,959 @@
+{
+  "protocol_version": 1,
+  "round": 13,
+  "case_id": "modal-machine-manager",
+  "candidate_sha256": "2cd0500be4927ea084971cb0274bd30c032aa940a48ad6ac8a0601dbb71e0dff",
+  "renderer_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+  "rubric_sha256": "6bfd3733c8d08b66af9a92e71985a20846f954d7916eaf9685f86c8d2f96bcb8",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "2cd0500be4927ea084971cb0274bd30c032aa940a48ad6ac8a0601dbb71e0dff",
+  "generator": {
+    "worker_id": "viz-ds13-5",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge13-mm",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 68,
+    "rows": 44
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/13/reviews/modal-machine-manager/observed-first.md",
+      "sha256": "301a6ace54758fffc7dfc7a8017c61c007dcdbc63dd4bb45cf6daaef3ab71ee2",
+      "description": "Blind stage-A record; rows in the record are one too high",
+      "capture": null
+    },
+    {
+      "id": "spec",
+      "path": "docs/visualize-eval/rounds/13/modal-machine-manager/specs/canvas.json",
+      "sha256": "2cd0500be4927ea084971cb0274bd30c032aa940a48ad6ac8a0601dbb71e0dff",
+      "description": "Final canvas spec",
+      "capture": null
+    },
+    {
+      "id": "check",
+      "path": "docs/visualize-eval/rounds/13/modal-machine-manager/evidence/canvas/check.txt",
+      "sha256": "59c915fdf8f5c9aea307bd57e5f1ff8a3cb18fbb1e640f1707e93f5761c629ed",
+      "description": "Frozen renderer check",
+      "capture": null
+    },
+    {
+      "id": "pinned",
+      "path": "docs/visualize-eval/rounds/13/modal-machine-manager/evidence/canvas/canvas-77x47-frames.txt",
+      "sha256": "862e0b9f696996aaba18aeaf8bd1a22bdd8686789137a4f8b193bc8cc63a356c",
+      "description": "Pinned target natural viewport",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "canvas",
+        "frame": "frames 0–87",
+        "timestamp": "0–8700ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "whole",
+      "path": "docs/visualize-eval/rounds/13/modal-machine-manager/evidence/canvas/canvas-300x70-frames.txt",
+      "sha256": "a877887adf23db3c7019118aa45d10d2dbea1c7147cfcd41eba66abe278064de",
+      "description": "Entire canvas and all animation frames",
+      "capture": {
+        "dimensions": {
+          "columns": 300,
+          "rows": 70
+        },
+        "view": "canvas",
+        "frame": "frames 0–87",
+        "timestamp": "0–8700ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "request",
+      "path": "docs/visualize-eval/rounds/13/modal-machine-manager/evidence/canvas/sections/request-300x18-frames.txt",
+      "sha256": "370a4f0ddf67eaad2634f46dc2520da3608f394576e4c87d10443dd342b54162",
+      "description": "Request section with controls overlay",
+      "capture": {
+        "dimensions": {
+          "columns": 300,
+          "rows": 18
+        },
+        "view": "canvas",
+        "frame": "frame 0",
+        "timestamp": "0ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "heartbeat",
+      "path": "docs/visualize-eval/rounds/13/modal-machine-manager/evidence/canvas/sections/heartbeat-300x38-frames.txt",
+      "sha256": "25c4a06e510c947f4a0a9276acc3747642899672521e1fc3db938c27450e1795",
+      "description": "Heartbeat section capture",
+      "capture": {
+        "dimensions": {
+          "columns": 300,
+          "rows": 38
+        },
+        "view": "canvas",
+        "frame": "frames",
+        "timestamp": "timestamped",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ops",
+      "path": "docs/visualize-eval/rounds/13/modal-machine-manager/evidence/canvas/sections/ops-300x70-frames.txt",
+      "sha256": "3be1ca20ef745cff25fb5f7c3a27a75cd4fa211392326f432a1858083ef0a709",
+      "description": "Ops section capture",
+      "capture": {
+        "dimensions": {
+          "columns": 300,
+          "rows": 70
+        },
+        "view": "canvas",
+        "frame": "frames",
+        "timestamp": "timestamped",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "selectall",
+      "path": "docs/visualize-eval/rounds/13/modal-machine-manager/evidence/canvas/sections/canvas-300x70-select-all-frames.txt",
+      "sha256": "caafb4e93b720663484079323926da859da998b4433bb6d2dc2f47cf5bc89fe5",
+      "description": "Whole-canvas selected-state plain text",
+      "capture": {
+        "dimensions": {
+          "columns": 300,
+          "rows": 70
+        },
+        "view": "canvas",
+        "frame": "frames",
+        "timestamp": "timestamped",
+        "state": "selected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi",
+      "path": "docs/visualize-eval/rounds/13/modal-machine-manager/evidence/canvas/canvas-ansi.ansi",
+      "sha256": "120e0048057993c71db202a84c9153bebd422403b6fe0cd08fada41c459bede8",
+      "description": "Small pane ANSI capture",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "canvas",
+        "frame": "capture",
+        "timestamp": "capture time",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected",
+      "path": "docs/visualize-eval/rounds/13/modal-machine-manager/evidence/canvas/canvas-selected.ansi",
+      "sha256": "63694ce405e1552540cb2b6c8c8fe2ba077ac35fc53d549b98ce11ebc818cf7e",
+      "description": "Small pane selection ANSI capture",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "canvas",
+        "frame": "capture",
+        "timestamp": "capture time",
+        "state": "selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "live",
+      "path": "docs/visualize-eval/rounds/13/modal-machine-manager/evidence/canvas/canvas-text.txt",
+      "sha256": "1cac3b4377875d71d773b5623d67d5dd0d6088e3a949a6550a79ee9a807247e1",
+      "description": "Actual pane capture",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "canvas",
+        "frame": "capture",
+        "timestamp": "capture time",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "audit",
+      "path": "docs/visualize-eval/rounds/13/modal-machine-manager/evidence/canvas/frame-audit-300x70.txt",
+      "sha256": "c898f96eaa0e2c5c3cd1406239b7e5680100996ea9d844b34c356a7e561a9e99",
+      "description": "Recorded full-canvas frame audit",
+      "capture": null
+    },
+    {
+      "id": "validator",
+      "path": "docs/visualize-eval/rounds/13/modal-machine-manager/evidence/canvas/validator.txt",
+      "sha256": "c6c5082c0304b9527845fff6107ee66706e3bdb0560d41befe4ac6ec61444889",
+      "description": "Validator and recorded frame audit",
+      "capture": null
+    },
+    {
+      "id": "manifest",
+      "path": "docs/visualize-eval/rounds/13/modal-machine-manager/evidence/canvas/manifest.json",
+      "sha256": "b81c1ccf1447b0c24e8183f35f0878677365a4690c307c99f9831f648b62d463",
+      "description": "Evidence and pane cleanup manifest",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/13/modal-machine-manager/generation.json",
+      "sha256": "78cf2d0349efada139cfbfbd10b3862dc72bcbedf3214b643e6cc3ff7db4453d",
+      "description": "Generation record including triage and coverage",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/13/modal-machine-manager/attempts.json",
+      "sha256": "9ea457090d690dc02f29ede1751a234780b03384a5bfa26e0d3af2098c1669db",
+      "description": "Attempt index",
+      "capture": null
+    },
+    {
+      "id": "log",
+      "path": "docs/visualize-eval/rounds/13/modal-machine-manager/attempts-log.jsonl",
+      "sha256": "1f68a6be852580f6d0c10052fa0b154720089080b4b4ed62b233bf4b7207046d",
+      "description": "Recorded probe commands",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 17 components and all 23 directed source relations occur once across the three diagrams. Both boot directions, distinct S3 paths, janitor proposal and one-minute sync are readable. Historical relations are source-qualified rather than independently verified.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/13/briefs/modal-machine-manager.md"
+      ],
+      "evidence_ids": [
+        "spec",
+        "whole",
+        "generation"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 23 distinct routes have identifiable heads and traceable stems in the full capture; labels have identifiable owners. Check reports zero bridges, touching bends and unrelated-node near misses; no apparent extra branch or contradictory near miss was found.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/13/briefs/modal-machine-manager.md"
+      ],
+      "evidence_ids": [
+        "whole",
+        "check"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Branch B: one 260×64 canvas contains three described concepts, complete at 100% in 300×70, with extents matching the check and no interdiagram overlap. Pinned 77×47 overflows as expected; request alone spans 3.4 viewport widths, a material navigation cost, not branch-A fit.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/13/briefs/modal-machine-manager.md"
+      ],
+      "evidence_ids": [
+        "whole",
+        "pinned",
+        "check"
+      ]
+    },
+    "navigation_clarity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Descriptions and title are clear in the large capture, but on the live pane the controls cover the ops title and description, and at 77×47 the minimap covers its description. The target viewport clips long descriptions and the request ribbon requires extensive pan. The ops title says loop; the source also names a loop, but no cycle is shown, so do not infer an extra edge.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/13/briefs/modal-machine-manager.md"
+      ],
+      "evidence_ids": [
+        "whole",
+        "live",
+        "pinned",
+        "generation"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Groups are coherent and have no enclosure, but the only ANSI is clipped to the left portion of the canvas. It cannot verify ops hue or case-wide family stability across all diagrams.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/13/briefs/modal-machine-manager.md"
+      ],
+      "evidence_ids": [
+        "ansi",
+        "spec",
+        "whole"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Correct and stated family lifecycle-machines: request stages progress through provisioning and boot, and 22 live transitions have dots; source describes named paths, fan-out, and boot pair. Anti-parallel mesh habit is visible and deviations (three sections and LR axis) have measured reasons in generation.json.",
+      "judged_family": "lifecycle-machines",
+      "stated_family": "lifecycle-machines",
+      "evidence_line": "One River job queue state fans to 5 destinations (provider registry, Postgres, SSH+BMC ops, janitor, S3) and the source marks every transition live ('keep on dot alive per line'), so one dot per line.",
+      "recipe_facts": [
+        "source-phase request sequence",
+        "22 single-dot live transitions",
+        "two distinct opposite boot routes",
+        "recorded measured split and axis deviations"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "The preserved 300×18 request capture visibly paints controls over the humans + mmctl label and box border; this is a known border defect, not merely missing evidence. Whole-canvas selected and normal border color continuity are additionally unproved for most nodes.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/13/briefs/modal-machine-manager.md"
+      ],
+      "evidence_ids": [
+        "request",
+        "ansi",
+        "selected",
+        "selectall"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Frozen hashes verified, 3 probes recorded and validator passed, separate judge and saved blind record, measured 68×44 pane, long captures and confirmed pane closure. Triage annex answers are verbatim; own judgments are sourced. Brief already answers scope and motion so the extra questions are redundant but the provided annex is not a fabricated user dialogue.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/13/briefs/modal-machine-manager.md"
+      ],
+      "evidence_ids": [
+        "blind",
+        "manifest",
+        "attempts",
+        "log",
+        "validator",
+        "generation"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Independent offline frame audit confirms 22 dots in every frame, full laps and equal 0.500 cells/frame; check reports origins and zero violations. Whole-canvas per-route ANSI color, source/destination matches and collision occupancy are not captured, so the required dot-hue claim cannot be independently established.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md",
+        "docs/visualize-eval/rounds/13/briefs/modal-machine-manager.md"
+      ],
+      "evidence_ids": [
+        "whole",
+        "audit",
+        "check",
+        "ansi"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "E01",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "cp → pgrpc: create / terminate / repair",
+      "observed": "Request and provisioning path: cp → pgrpc, label create/terminate/repair; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            45,
+            7,
+            23,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E02",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "web → wapi: http",
+      "observed": "Request and provisioning path: web → wapi, label http; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            53,
+            12,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E03",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "pgrpc → q: enqueue job",
+      "observed": "Request and provisioning path: pgrpc → q, label enqueue job; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            90,
+            7,
+            11,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E04",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "wapi → q: reinstall / reprovision",
+      "observed": "Request and provisioning path: wapi → q, label reinstall/reprovision; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            85,
+            12,
+            21,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E05",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "q → reg: provision job",
+      "observed": "Request and provisioning path: q → reg, label provision job; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            126,
+            10,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E06",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "reg → prov: provider API",
+      "observed": "Request and provisioning path: reg → prov, label provider API; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            160,
+            9,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E07",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "prov → mch: allocate instance",
+      "observed": "Request and provisioning path: prov → mch, label allocate instance; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            199,
+            8,
+            17,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E08",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "mch → boot: iPXE request",
+      "observed": "Request and provisioning path: mch → boot, label iPXE request; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            203,
+            10,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E09",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "boot → mch: boot.ipxe + S3 args",
+      "observed": "Request and provisioning path: boot → mch, label boot.ipxe + S3 args; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            196,
+            15,
+            19,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E10",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "mch → agent: runs on host",
+      "observed": "Heartbeat and machine state: mch → agent, label runs on host; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            49,
+            27,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E11",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "agent → pub: register + heartbeat",
+      "observed": "Heartbeat and machine state: agent → pub, label register + heartbeat; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            79,
+            27,
+            20,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E12",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "pub → db: machine state",
+      "observed": "Heartbeat and machine state: pub → db, label machine state; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            118,
+            24,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E13",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "pgrpc → db: machine rows",
+      "observed": "Heartbeat and machine state: pgrpc → db, label machine rows; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            118,
+            27,
+            12,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E14",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "q → db: job rows",
+      "observed": "Heartbeat and machine state: q → db, label job rows; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            121,
+            32,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E15",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "q → ssh: audit / verify reimage",
+      "observed": "Slow ops path and reconcile loop: q → ssh, label audit/verify reimage; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            48,
+            54,
+            20,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E16",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "ssh → mch: run machine-audit",
+      "observed": "Slow ops path and reconcile loop: ssh → mch, label run machine-audit; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            90,
+            52,
+            17,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E17",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "mch → s3: pull boot image",
+      "observed": "Request and provisioning path: mch → s3, label pull boot image; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            241,
+            10,
+            15,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E18",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "q → s3: diagnose uploads",
+      "observed": "Slow ops path and reconcile loop: q → s3, label diagnose uploads; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            49,
+            50,
+            16,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E19",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "q → jan: diagnostic events",
+      "observed": "Slow ops path and reconcile loop: q → jan, label diagnostic events; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            52,
+            44,
+            17,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E20",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "jan → wapi: proposed actions",
+      "observed": "Slow ops path and reconcile loop: jan → wapi, label proposed actions; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            91,
+            44,
+            16,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E21",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "wapi → slack: confirm + alerts",
+      "observed": "Slow ops path and reconcile loop: wapi → slack, label confirm + alerts; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            131,
+            50,
+            16,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E22",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "rec → prov: gcore sync, 1 min",
+      "observed": "Slow ops path and reconcile loop: rec → prov, label gcore sync, 1 min; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            48,
+            60,
+            17,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "E23",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "expected": "rec → db: cluster state",
+      "observed": "Slow ops path and reconcile loop: rec → db, label cluster state; distinct stem, visible arrowhead, no crossing or junction observed.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "whole",
+          "region": [
+            52,
+            56,
+            13,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "N1",
+      "category": "navigation_clarity",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Live 68×44 controls obscure the ops title and description; pinned 77×47 minimap obscures the ops description. Long descriptions are clipped at that width.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/13/briefs/modal-machine-manager.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "live",
+          "region": [
+            1,
+            38,
+            68,
+            4
+          ]
+        },
+        {
+          "evidence_id": "pinned",
+          "region": [
+            1,
+            39,
+            77,
+            3
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B1",
+      "category": "border_integrity",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "Controls overwrite the humans + mmctl node label and bottom border in the preserved request 300×18 frame.",
+      "source_refs": [
+        "docs/visualize-eval/cases/modal-machine-manager/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "request",
+          "region": [
+            1,
+            10,
+            16,
+            4
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "No full-canvas ANSI or buffer capture proves cross-diagram group hue stability and all per-route dot bindings.",
+    "Selected and normal border color continuity is unproved for nodes beyond the small ANSI capture."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pZS"
+    ],
+    "closed_pane_ids": [
+      "w7E:pZS"
+    ],
+    "status": "done",
+    "reason": "Manifest reports confirmed_closed after pane get failed."
+  },
+  "overall": "fail"
+}

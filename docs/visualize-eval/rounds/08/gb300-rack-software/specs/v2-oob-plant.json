@@ -1,0 +1,19 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "oob", "label": "OOB LAN", "group": "OOB plant" },
+    { "id": "bmc_c", "label": "Compute BMC×18", "group": "rack hw" },
+    { "id": "cdu", "label": "CDU ctlr", "group": "rack hw" },
+    { "id": "pdu", "label": "PDUs", "group": "rack hw" },
+    { "id": "pwr", "label": "Power shelf", "group": "rack hw" },
+    { "id": "inband", "label": "in-band net", "group": "in-band" }
+  ],
+  "edges": [
+    { "from": "oob", "to": "bmc_c", "dots": 0 },
+    { "from": "oob", "to": "cdu", "dots": 0 },
+    { "from": "oob", "to": "pdu", "dots": 0 },
+    { "from": "oob", "to": "pwr", "label": "Redfish/HTTPS", "dots": 0 },
+    { "from": "oob", "to": "inband", "label": "air-gapped", "dots": 0, "style": "dashed", "minlen": 2 }
+  ]
+}

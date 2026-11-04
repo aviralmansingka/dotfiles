@@ -1,0 +1,29 @@
+=== vB unselected ===
+box 'Arista .57 AS132717' rows 11-14 cols 29-49
+   fg=(216, 166, 87) bold=False cells=46 <-dominant
+box 'Airtel 14.143.x' rows 19-22 cols 31-47
+   fg=(125, 174, 163) bold=False cells=38 <-dominant
+box 'Airtel BB 14.141.x' rows 27-30 cols 30-49
+   fg=(211, 134, 155) bold=False cells=44 <-dominant
+box 'Cloudflare 1.1.1.1' rows 35-38 cols 30-49
+   fg=(169, 182, 101) bold=False cells=44 <-dominant
+=== vB selected-1 ===
+box 'Arista .57 AS132717' rows 11-14 cols 29-49
+   fg=(216, 166, 87) bold=False cells=46 <-dominant
+box 'Airtel 14.143.x' rows 19-22 cols 31-47
+   fg=(216, 166, 87) bold=True cells=38 <-dominant
+   bold cells: [(19, 31), (19, 32), (19, 33), (19, 34), (19, 35), (19, 36), (19, 37), (19, 38), (19, 39), (19, 40), (19, 41), (19, 42), (19, 43), (19, 44), (19, 45), (19, 46), (19, 47), (20, 31), (20, 47), (21, 31), (21, 47), (22, 31), (22, 32), (22, 33), (22, 34), (22, 35), (22, 36), (22, 37), (22, 38), (22, 39), (22, 40), (22, 41), (22, 42), (22, 43), (22, 44), (22, 45), (22, 46), (22, 47)]
+box 'Airtel BB 14.141.x' rows 27-30 cols 30-49
+   fg=(211, 134, 155) bold=False cells=44 <-dominant
+box 'Cloudflare 1.1.1.1' rows 35-38 cols 30-49
+   fg=(169, 182, 101) bold=False cells=44 <-dominant
+=== vB selected-2 ===
+box 'Arista .57 AS132717' rows 11-14 cols 29-49
+   fg=(216, 166, 87) bold=False cells=46 <-dominant
+box 'Airtel 14.143.x' rows 19-22 cols 31-47
+   fg=(125, 174, 163) bold=False cells=38 <-dominant
+box 'Airtel BB 14.141.x' rows 27-30 cols 30-49
+   fg=(216, 166, 87) bold=True cells=44 <-dominant
+   bold cells: [(27, 30), (27, 31), (27, 32), (27, 33), (27, 34), (27, 35), (27, 36), (27, 37), (27, 38), (27, 39), (27, 40), (27, 41), (27, 42), (27, 43), (27, 44), (27, 45), (27, 46), (27, 47), (27, 48), (27, 49), (28, 30), (28, 49), (29, 30), (29, 49), (30, 30), (30, 31), (30, 32), (30, 33), (30, 34), (30, 35), (30, 36), (30, 37), (30, 38), (30, 39), (30, 40), (30, 41), (30, 42), (30, 43), (30, 44), (30, 45), (30, 46), (30, 47), (30, 48), (30, 49)]
+box 'Cloudflare 1.1.1.1' rows 35-38 cols 30-49
+   fg=(169, 182, 101) bold=False cells=44 <-dominant

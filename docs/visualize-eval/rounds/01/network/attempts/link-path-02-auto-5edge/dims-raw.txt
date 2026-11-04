@@ -1,0 +1,12 @@
+stty size; tput cols; tput lines
+
+network/views/link-path on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on
+ ☁️  aviralmansingka@gmail.com
+❯ stty size; tput cols; tput lines
+47 77
+77
+47
+
+network/views/link-path on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on
+ ☁️  aviralmansingka@gmail.com
+❯

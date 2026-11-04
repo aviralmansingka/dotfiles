@@ -1,0 +1,15 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "dark", "label": "7 of 8 NICs dark", "group": "nics" },
+    { "id": "s1", "label": "server1 .58 R7725 bare metal · 1.5d up, no GPU/bench", "group": "servers" },
+    { "id": "nic", "label": "eno16595np0 25GbE .58/29", "group": "nics" },
+    { "id": "gw", "label": ".57 Arista ToR · MAC OUI", "group": "access" }
+  ],
+  "edges": [
+    { "from": "dark", "to": "s1", "label": "no cable seen · unproven", "style": "dashed", "label_slot": true },
+    { "from": "s1", "to": "nic", "label": "only uplink · no ECMP, 1 ISP", "label_slot": true },
+    { "from": "nic", "to": "gw", "label": "default gw 0.1 ms", "label_slot": true }
+  ]
+}

@@ -1,0 +1,43 @@
+ rataflow-view · 68x44 @100% · canvas 133x34 · modal-runtime-canvas.
+worker and runtime: the two RPC seams
+Task input plus control RPCs down; events plus management RPCs back.
+
+╭─────────────╮                                  ╭────────────╮
+│             │◀─────────────────────────────────│            │
+│modal-runtime│     task input + control RPCs    │modal-worker│
+│             │───╮ events + management RPCs   ╭▶│            │
+╰─────────────╯   ╰────────────────────────────╯ ╰────────────╯
+
+
+────────────────────────────────────────────────────────────────────
+task dispatch down to the container
+modal-runtime dispatches to the Task engine, which starts a Containe
+
+╭─────────────╮                   ╭───────────╮                   ╭─
+│modal-runtime│──────────────────▶│Task engine│──────────────────▶│C
+│             │ dispatches tasks  │           │ starts / manages  │
+╰─────────────╯                   ╰───────────╯                   ╰─
+
+
+────────────────────────────────────────────────────────────────────
+storage and daemon interfaces
+Engine mounts/snapshots Filesystem + volumes, then Blobnet; runtime
+
+ ╭───────────╮                            ╭────────────────────╮
+ │Task engine│───────────────────────────▶│Filesystem + volumes│────
+ │           │    mounts / snapshots      │                    │ ima
+ ╰───────────╯                            ╰────────────────────╯
+
+╭─────────────╮   filesystem HTTP over UDS    ╭────────────╮
+│modal-runtime│──────────────────────────────▶│modal-daemon│
+│             │                               │            │
+╰─────────────╯
+                                           ▄▄▄      ▄▄▖
+                                           ▀▀▀      ▀▀▘
+                                           ▄▄▄   ▗▄▄   ▗▄▄▄   ▗▄▄▖
+ ┌───────┐
+ │ + [+] │                                 ▄▄▖     ▄▄▄▄
+ │ − [-] │                                 ▀▀▀     ▝▀▀     ▀▘
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘

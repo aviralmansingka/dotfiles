@@ -1,0 +1,163 @@
+{
+  "case_id": "modal-runtime",
+  "round": "11",
+  "generator": "viz-ds11-7",
+  "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+  "binary": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+  "binary_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+  "skill": "docs/visualize-eval/rounds/11/SKILL.md",
+  "skill_sha256": "fb975dbe337bee801dc098f58695e0068cb1b2d7d79f34c0e473e24a1626cd4e",
+  "record_log": "attempts-log.jsonl",
+  "recorded_raw_dir": "recorded/",
+  "budget_note": "Every --check on a distinct spec is a candidate. Ships 3 views; each view's candidate list is at the 3-candidate cap or below. All candidates, orientation probes and frame dumps were run through scripts/viz-evidence.sh record (no hand-kept probe output).",
+  "views": [
+    {
+      "view": "v1",
+      "subject": "the anti-parallel worker RPC seam (worker <-> runtime), co-viewed",
+      "shipped_spec": "specs/v1-seam-pair.json",
+      "dir": "lr",
+      "attempts": [
+        {
+          "id": "v1-pair",
+          "spec": "specs/v1-pair.json",
+          "spec_sha256": "9b4dcf3480cce200a1cb4e3ce2a21a98d167526a50223087fa5c50f11ab3f685",
+          "record_label": "v1-pair",
+          "check": "extent=61x5; labels 1/2 placed, 1 skipped, 0 ambiguous; crossings 0/0",
+          "rejected_because": "lr without label_slot: place_label offsets a horizontal run's label into the row above/below the run, and the layout reserved no such row for a 21-char label, so e0 (\"task input + ctrl RPCs\") was skipped (stderr: no clear cell).",
+          "frame_dump_record": "diag-dump-v1-pair"
+        },
+        {
+          "id": "v1-pair-b",
+          "spec": "specs/v1-pair-b.json",
+          "spec_sha256": "c6f862668fd62dce263ee5e65a1c9967bc5c42f486dadebc139e2b9f00ff694a",
+          "record_label": "v1-pair-b",
+          "shipped": true,
+          "shipped_as": "specs/v1-seam-pair.json (identical bytes)",
+          "check": "extent=44x7; labels 2/2 placed, 0 skipped, 0 ambiguous; crossings 0/0",
+          "why_kept": "Both reverse directions are separate edges in one frame with distinct labels and distinct ports, and label_slot reserves the gutter rows the labels need. Chosen over v1-pair (skipped label) and v1-pair-c (both labels skipped).",
+          "frame_dump_record": "diag-dump-v1-pair-b"
+        },
+        {
+          "id": "v1-pair-c",
+          "spec": "specs/v1-pair-c.json",
+          "spec_sha256": "07d6369c7a4dfb5f3ca9c57c7346092c850e209219bb7d35a6d7594505fd46b5",
+          "record_label": "v1-pair-c",
+          "check": "extent=26x29; labels 0/2 placed, 2 skipped, 0 ambiguous; crossings 0/0",
+          "rejected_because": "tb orientation: for a vertical run place_label sets the label beside the column, which needs horizontal flank room the layout never reserves, so both long labels were skipped.",
+          "frame_dump_record": "diag-dump-v1-pair-c"
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "subject": "modal-runtime's callee fan (task engine, modal-daemon over HTTP on UDS)",
+      "shipped_spec": "specs/v2-fan-final.json",
+      "dir": "lr",
+      "attempts": [
+        {
+          "id": "v2-fan",
+          "spec": "specs/v2-fan.json",
+          "spec_sha256": "690df5a26d49ba85ea374f16bbd6e6e2b22a3d2f91f7e9487f99333743e42d6f",
+          "record_label": "v2-fan",
+          "shipped": true,
+          "shipped_as": "specs/v2-fan-final.json (identical bytes)",
+          "check": "extent=59x9; labels 2/2 placed, 0 skipped, 0 ambiguous; crossings 0/0",
+          "why_kept": "Each label sits on its own route's row beside that route's run (frame rows 4 and 8 of the pinned dump); the two callees are separated by hue (engine = control family with runtime, daemon = agents family).",
+          "frame_dump_record": "diag-dump-v2-fan"
+        },
+        {
+          "id": "v2-fan-b",
+          "spec": "specs/v2-fan-b.json",
+          "spec_sha256": "0f23f60b569028733d7ba5a87e614bb5d02f0cb63c1839a3fda36ef7b574a777",
+          "record_label": "v2-fan-b",
+          "check": "extent=59x9; labels 2/2 placed, 0 skipped, 0 ambiguous; crossings 0/0",
+          "rejected_because": "orientation probe: nodes declared daemon-before-engine to try to put Task engine above modal-daemon (source lists the engine dispatch, e3, before the daemon seam, e8). The render was byte-identical to v2-fan, so node declaration order does not control the across-axis order in lr. Kept as the measurement for the recorded order deviation.",
+          "frame_dump_record": "diag-dump-v2-fan-b"
+        },
+        {
+          "id": "v2-fan-c",
+          "spec": "specs/v2-fan-c.json",
+          "spec_sha256": "f90ec924d930792471829cf51d0c4ce13fd4806bad23f9a72aba57fb3d0b4f6f",
+          "record_label": "v2-fan-c",
+          "check": "extent=41x27; labels 2/2 placed, 0 skipped, 1 ambiguous owner; crossings 0/0",
+          "rejected_because": "tb orientation fixed nothing and introduced an ambiguous owner: both long labels stacked on the same flank of one two-column corridor, so one of them sits as close to the other route as to its own.",
+          "frame_dump_record": "diag-dump-v2-fan-c"
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "subject": "task dispatch, container backend and storage (engine, backend, container, filesystem, blobnet)",
+      "shipped_spec": "specs/v3-compute-final.json",
+      "dir": "tb",
+      "attempts": [
+        {
+          "id": "v2-a (later numbered v3-a)",
+          "spec": "specs/v2-a.json",
+          "spec_sha256": "d1667ef6e30bdace40a0a9143655b6be546f0ba2688919d61dc0f4b8fe6a6d96",
+          "record_label": "v2-a",
+          "check": "extent=55x55; labels 4/4 placed, 0 skipped, 0 ambiguous; crossings 0/0",
+          "rejected_because": "55 rows of extent exceed the 47-row target: the frames dump at COLUMNS=77 LINES=47 shows 'graph overflows · drag to pan'. Labels without a reserved gutter cost rank-row height.",
+          "frame_dump_record": "diag-dump-v2-a"
+        },
+        {
+          "id": "v2-b (later numbered v3-b)",
+          "spec": "specs/v2-b.json",
+          "spec_sha256": "e33d983066aa054f9b9ce0f47981591a29a682ea90777638f8d83fb840c7359c",
+          "record_label": "v2-b",
+          "check": "extent=66x20; labels 4/4 placed, 0 skipped, 0 ambiguous; crossings 0/0",
+          "rejected_because": "label_slot on all four edges fixed the height (20 rows) but the group tag 'storage' resolves to hue family 1 (RGB 183,206,115) in this build - the same family as the 'agents' tag used by v1/v2 (measured from the border colours in evidence/v1/v1-ansi.ansi and evidence/v3/v3-ansi.ansi), so two of the case's four groups shared one hue.",
+          "frame_dump_record": "diag-dump-v2-b"
+        },
+        {
+          "id": "v3-compute-b",
+          "spec": "specs/v3-compute-b.json",
+          "spec_sha256": "10f9f9ab32b0d440ee52c13d246287478d4aa15545aab1577136e4dd194ba50c",
+          "record_label": "v3-compute-b",
+          "shipped": true,
+          "shipped_as": "specs/v3-compute-final.json (identical bytes)",
+          "check": "extent=66x20; labels 4/4 placed, 0 skipped, 0 ambiguous; crossings 0/0; groups control(1) compute(2) volumes(2)",
+          "why_kept": "Same layout as v2-b with the storage tag renamed to the source-worded 'volumes' (source: 'Filesystem + volumes', 'image + volume data'), whose hue family is 5 (RGB 138,115,206) - distinct from agents/control/compute. Border colours re-measured from the fresh capture: engine (206,115,138), backend (115,161,206), filesystem (138,115,206), container (153,186,219), blobnet (170,153,219)."
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "shape": "calibration: minimal 2-node static spec",
+      "record_label": "calibration-static",
+      "spec_sha256": "2214a9571de1d4bd85ba7317ebd918e6ea513eb5b157fdf0a0fa2e0bab880ae6",
+      "note": "Not a case view: used to learn this build's static check lines (a static spec still prints 'dots: ... 0 same-arrival' and 'arrivals: 0/0'). Not shipped anywhere."
+    },
+    {
+      "shape": "single-view overview of all 8 nodes and 8 relations",
+      "spec": "specs/v1-draft1-overview.json",
+      "record_label": "v1-draft1",
+      "spec_sha256": "e3dcd568a30fd5e22260df87cb8e07b9ac217848565c1725e969e166b62c83dd",
+      "check": "extent=47x84; labels 7/8 placed, 1 skipped, 1 ambiguous owner; crossings 0/0",
+      "note": "84 rows exceeds the 47-row target, and the pair's two labels landed in one band (ambiguous owner). Abandoned: cannot fit 77x47 and it already reproduced the round-10 pair-label defect. The bytes were re-materialised from the session record after the name was reused; sha256 matches the recorded candidate exactly."
+    },
+    {
+      "shape": "seam-all: runtime + worker + engine + daemon in one frame (pair AND fan together)",
+      "record_labels": ["v1-a", "v1-b", "v1-c"],
+      "checks": [
+        {"spec_sha256": "88f3291e8343e04c76e9c07f5002f84141b620c348931fef4fb4cedcfc24e606", "label": "v1-a", "check": "extent=58x27; labels 4/4, 2 ambiguous owners; crossings 0/0"},
+        {"spec_sha256": "68c5a0611a4e30eab09d9ad56113c41d7f39a2e02f5ea6f70b7d7b08a53fe4f3", "label": "v1-b", "check": "extent=33x35; labels 0/4 placed, 4 skipped; crossings 1 bridge (layers pin, 3 layers)"},
+        {"spec_sha256": "f51e4095691fae4d9a1f4f4f0e573ae24317c49598dce74cad0bd89d09992a14", "label": "v1-c", "check": "extent=46x17; labels 3/4 placed, 1 skipped; crossings 2 bridges, 2 touching bends (lr + label_slot on all four)"}
+      ],
+      "note": "Three candidates, each with a hard defect: four labelled routes around one core cannot be placed without either an ambiguous pair label, skipped labels, bridges, or height overflow. Abandoned in favour of the v1+v2 partition (pair in one view, fan in the next), which is the recorded recipe yield.",
+      "frame_dumps": ["diag-dump-v1-a", "diag-dump-v1-c"]
+    }
+  ],
+  "harness_runs": {
+    "note": "scripts/viz-evidence.sh was re-run (the skill's own 'close it, re-split, retry') until each bundle held a real text frame and >=5 timestamped frames; the pane shell in this tab needs 4-6 s to start while the script waits ~1 s after the echoed command line, so early stages are intermittently lost.",
+    "v1": 1,
+    "v2": 8,
+    "v3": 5
+  },
+  "pinned_fit_dumps": {
+    "v1": "evidence/v1/v1-77x47-pinned.stdout",
+    "v2": "evidence/v2/v2-77x47-pinned.stdout",
+    "v3": "evidence/v3/v3-77x47-pinned-b.stdout"
+  }
+}

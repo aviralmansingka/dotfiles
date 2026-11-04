@@ -1,0 +1,102 @@
+{
+ "boxes": [
+  {
+   "label_hint": "VMvnet0",
+   "rect": {
+    "top": 15,
+    "left": 24,
+    "height": 4,
+    "width": 10
+   },
+   "border_colors": [
+    {
+     "fg": "rgb(216,166,87)",
+     "bold": false,
+     "cells": 28
+    }
+   ],
+   "uniform_color": true,
+   "sides_complete": true,
+   "border_defects": []
+  },
+  {
+   "label_hint": "Containerveth",
+   "rect": {
+    "top": 15,
+    "left": 40,
+    "height": 4,
+    "width": 16
+   },
+   "border_colors": [
+    {
+     "fg": "rgb(228,184,111)",
+     "bold": false,
+     "cells": 40
+    }
+   ],
+   "uniform_color": true,
+   "sides_complete": true,
+   "border_defects": []
+  },
+  {
+   "label_hint": "virbr0NAT",
+   "rect": {
+    "top": 23,
+    "left": 23,
+    "height": 4,
+    "width": 12
+   },
+   "border_colors": [
+    {
+     "fg": "rgb(125,174,163)",
+     "bold": false,
+     "cells": 32
+    }
+   ],
+   "uniform_color": true,
+   "sides_complete": true,
+   "border_defects": []
+  },
+  {
+   "label_hint": "docker0172.18",
+   "rect": {
+    "top": 23,
+    "left": 40,
+    "height": 4,
+    "width": 16
+   },
+   "border_colors": [
+    {
+     "fg": "rgb(147,194,183)",
+     "bold": false,
+     "cells": 40
+    }
+   ],
+   "uniform_color": true,
+   "sides_complete": true,
+   "border_defects": []
+  },
+  {
+   "label_hint": "homelabhost",
+   "rect": {
+    "top": 31,
+    "left": 22,
+    "height": 4,
+    "width": 14
+   },
+   "border_colors": [
+    {
+     "fg": "rgb(211,134,155)",
+     "bold": false,
+     "cells": 36
+    }
+   ],
+   "uniform_color": true,
+   "sides_complete": true,
+   "border_defects": []
+  }
+ ],
+ "failures": [],
+ "arrow_or_dot_on_border": [],
+ "ok": true
+}

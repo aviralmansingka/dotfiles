@@ -1,0 +1,7 @@
+# cmd: /tmp/visualize-eval/round-01/bin/rataflow-view --check attempts/v2-a3-tb.json
+# utc: 2026-11-02T08:30:59Z
+ok: nodes=4 edges=4 flows=3 direction=tb theme=gruvbox
+layers=3 (explicit placement, sugiyama skipped)
+extent=34x22 cells
+warning: 1 edge label(s) had no free slot; shorten the labels or split the graph
+# exit=0

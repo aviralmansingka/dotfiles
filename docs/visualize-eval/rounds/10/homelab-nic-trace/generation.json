@@ -1,0 +1,278 @@
+{
+  "case_id": "homelab-nic-trace",
+  "round": "10",
+  "round_note": "docs/visualize-eval/rounds/10/generator-task.md Output still says round \"09\"; this sample is round 10 and the directory is rounds/10/homelab-nic-trace.",
+  "generator": {
+    "identity": "viz-ds10-3",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "frozen_inputs": {
+    "candidate_skill": {
+      "path": "docs/visualize-eval/rounds/10/SKILL.md",
+      "sha256": "9c1256791069e27207db2e5138527e45587e7096955f5ed4f86c79d46f77e56d"
+    },
+    "renderer": {
+      "path": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+      "sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8"
+    },
+    "source": {
+      "path": "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+      "chat_session": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-rack-bench-feat-network-diagram--/2026-10-13T05-14-42-097Z_01a133af-3231-71ff-87c1-c56889a12a6c.jsonl",
+      "chat_pointer": "line 62, call chatcmpl-tool-b004896d418e23a3 (original graph write)",
+      "evidence_tweets_read": "lines 48 and 68 excerpts plus the probe findings, relationship facts, and fixed constraints in the case file",
+      "not_read": ["expected.json", "historical-variants.json", "other cases", "earlier rounds"]
+    }
+  },
+  "step0_classification": {
+    "family": "identity-probe-maps",
+    "evidence": "every relation in the source is carried by an address, a name, or a qualifier (bond0 192.168.1.197, tailscale0 100.113.153.49, dkbr 172.18.2.1, ONT 169.254.3.1, vzbb AS701, cf AS13335, 'metric 600', 'WNC OUI', '(hist.)'), and the egress path is a deep chain of probe hops, so coverage of identifiers wins over geometry.",
+    "density_vs_depth": "14 relations over 13 nodes: E exceeds N by one, which is chain-like, not fabric-like. No redundant fabric (only two uplinks into one router, no double-arrowhead targets), no phase-ordered fan, no 5+ state machine, no two weakly-connected worlds joined by a bus.",
+    "tie_breakers_considered": [
+      "density: E=14, N=13 -> not a mesh (a mesh would be a fan of 2-3 around a core with an anti-parallel pair; here the fan is two one-way uplinks into one router and the rest is a chain)",
+      "bus with disconnected worlds -> placement-planes? rejected: the four clusters (physical, virtual, overlay, egress) are connected through the host, not joined by a source-named bus; nothing splits once",
+      "identifier/qualifier content: decisive. Six identifiers and five qualified facts (hist., no global v6, no committed rate, failover-not-ECMP, one ISP/path) must survive, so identity-probe-maps"
+    ],
+    "secondary_recipes_applied": [
+      "service-mesh fan order: the two uplinks into the Fios router are ordered and drawn as two distinct ports into one target, never merged into one arrow (v3)",
+      "flow-chain corridor protection: each hop of the egress chain gets its own rank and its own corridor (v4), no mixed shape"
+    ],
+    "reclassified_midway": false
+  },
+  "views": [
+    {
+      "view": "v1",
+      "title": "host virtual nets (libvirt NAT + docker bridge)",
+      "spec": "specs/v1-host-virtuals.json",
+      "spec_sha256": "a15623e23256044f1dd266bd08b9e79e1ef99bb870c04cf6b73a46c41248b40b",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "check": "evidence/v1/check.txt",
+      "frames": "evidence/v1/v1-frames.txt",
+      "frames_ansi": "evidence/v1/v1-frames.ansi",
+      "frames_count": 3,
+      "manifest": "evidence/v1/manifest.json",
+      "pinned_target_dump": "pinned/v1-host-virtuals-77x47.txt",
+      "measured_dimensions": { "pane": "82x51", "drawing_extent": "54x20", "target": "77x47" },
+      "viewport_line": null,
+      "viewport_token": "82x51 @100%",
+      "cleanup": "confirmed_closed"
+    },
+    {
+      "view": "v2",
+      "title": "overlay encapsulation + host uplinks",
+      "spec": "specs/v2-overlay-uplinks.json",
+      "spec_sha256": "ac511f635f630100aeb7daeca28627f0c4cbda91ce3a9ec24f72f3a43693dc4d",
+      "text": "evidence/v2/v2-text.txt",
+      "ansi": "evidence/v2/v2-ansi.ansi",
+      "selected_ansi": "evidence/v2/v2-selected.ansi",
+      "check": "evidence/v2/check.txt",
+      "frames": "evidence/v2/v2-frames.txt",
+      "frames_ansi": "evidence/v2/v2-frames.ansi",
+      "frames_count": 3,
+      "manifest": "evidence/v2/manifest.json",
+      "pinned_target_dump": "pinned/v2-overlay-uplinks-77x47.txt",
+      "measured_dimensions": { "pane": "82x51", "drawing_extent": "57x21", "target": "77x47" },
+      "viewport_line": null,
+      "viewport_token": "82x51 @100%",
+      "cleanup": "confirmed_closed"
+    },
+    {
+      "view": "v3",
+      "title": "LAN gateway: wired default path and Wi-Fi failover path",
+      "spec": "specs/v3-lan-gateway.json",
+      "spec_sha256": "1439e2d086e7eb027b964a426a8fff27fdd05a9236ba8af1c4cf2735b902e90e",
+      "text": "evidence/v3/v3-text.txt",
+      "ansi": "evidence/v3/v3-ansi.ansi",
+      "selected_ansi": "evidence/v3/v3-selected.ansi",
+      "check": "evidence/v3/check.txt",
+      "frames": "evidence/v3/v3-frames.txt",
+      "frames_ansi": "evidence/v3/v3-frames.ansi",
+      "frames_count": 3,
+      "manifest": "evidence/v3/manifest.json",
+      "pinned_target_dump": "pinned/v3-lan-gateway-77x47.txt",
+      "measured_dimensions": { "pane": "82x51", "drawing_extent": "73x12", "target": "77x47" },
+      "viewport_line": null,
+      "viewport_token": "82x51 @100%",
+      "cleanup": "confirmed_closed"
+    },
+    {
+      "view": "v4",
+      "title": "egress chain: router -> ONT -> Verizon hops -> Cloudflare",
+      "spec": "specs/v4-egress-chain.json",
+      "spec_sha256": "e8907659668ae98fdd4a173d869b3bdb4c92cdcdd68da5a13618a8aa9e62f0db",
+      "text": "evidence/v4/v4-text.txt",
+      "ansi": "evidence/v4/v4-ansi.ansi",
+      "selected_ansi": "evidence/v4/v4-selected.ansi",
+      "check": "evidence/v4/check.txt",
+      "frames": "evidence/v4/v4-frames.txt",
+      "frames_ansi": "evidence/v4/v4-frames.ansi",
+      "frames_count": 3,
+      "manifest": "evidence/v4/manifest.json",
+      "pinned_target_dump": "pinned/v4-egress-chain-77x47.txt",
+      "measured_dimensions": { "pane": "82x51", "drawing_extent": "65x36", "target": "77x47" },
+      "viewport_line": null,
+      "viewport_token": "82x51 @100%",
+      "cleanup": "confirmed_closed"
+    }
+  ],
+  "family_recipe_per_view": [
+    {
+      "view": "v1",
+      "recipe": "identity-probe-maps: each identifier is its own coverage row with a named view; layout stays a short tb chain (3 ranks) so no fact is lost to geometry.",
+      "levers": ["group tags: libvirt / docker / host", "two separate parallel paths into the host (no bundling)", "label_slot gutters"],
+      "capture_proof": "evidence/v1/v1-text.txt rows 13-27: 'ctr veth' and 'VM vnet0' above, 'docker0 172.18.2.1' and 'virbr0' below, both subnets ('172.18.2.x', '192.168.122.x') on their own edges, then 'docker bridge' and 'libvirt NAT' into the host box; two distinct families of node colour in v1-ansi.ansi (docker pink-magenta vs libvirt pink-red, siblings differ by lightness)."
+    },
+    {
+      "view": "v2",
+      "recipe": "identity-probe-maps: the overlay identifier (100.113.153.49) and the UDP-encapsulation relation are drawn as two edges out of tailscale0 — one to the host, one to the wired NIC — so encapsulation is not folded into the physical link.",
+      "levers": ["group tags: overlay / host / wired / wifi", "label_slot gutters", "fan order from the source listing (ts -> box, ts -> bond0)"],
+      "capture_proof": "evidence/v2/v2-text.txt rows 15-31: tailscale0 with '100.113.153.49' and 'UDP encap' beside its two distinct runs, the second run going round the host box into 'bond0 192.168.1.197/24'; 'eno1 2.5 GbE' and 'Wi-Fi backup' below, both arrowheads landing on separate ports of bond0 and wlp8s0."
+    },
+    {
+      "view": "v3",
+      "recipe": "identity-probe-maps + the service-mesh fan rule: bond0 and wlp8s0 are two distinct one-way ports into the ONE router box, never one bidirectional arrow, and the qualifier (metric 600, failover, no ECMP) stays with the Wi-Fi edge it belongs to.",
+      "levers": ["group tags: wired / wifi / egress", "two parallel lanes into the same target (target-aligned port order)", "long entity label on the lone router node"],
+      "capture_proof": "evidence/v3/v3-text.txt rows 13-25: two boxes at the top ('bond0', 'wlp8s0'), 'default gw 0.5 ms' left and 'metric 600 · failover, no ECMP' right of their own runs, both arrowheads meeting the single 'Fios rtr 192.168.1.1 · NAT+DHCP · WNC (hist.)' box at separate ports."
+    },
+    {
+      "view": "v4",
+      "recipe": "identity-probe-maps: every hop of the probe chain is one rank deep with its own address label; historical interpretation is carried as dashed routes plus '(hist.)' on each label, and the confirmed NAT hop stays solid.",
+      "levers": ["rank order fixed to the source's path order (rtr -> ont -> vzagg -> vzbb -> cf)", "label_slot gutters on all four edges", "style: dashed for the three historical hops only"],
+      "capture_proof": "evidence/v4/v4-text.txt rows 10-44: five single-node ranks in source order; 'NAT → 71.251.12.240 (whole home)' on the solid route; '4.5 ms (hist.)', '6.6 ms (hist.)', '6-9 ms (hist.)' each beside a ╎ dashed run; 'vzbb AS701 (1 ISP, 1 path)' and 'cf 1.1.1.1 AS13335' close the chain."
+    }
+  ],
+  "meaning_ledger": [
+    { "fact": "host is `homelab`, the rack-bench host (ASUS bare metal, Linux 7.0, ~/rack-bench with Oct 11 runs)", "kind": "identity + role/residency", "fate": "drawn", "carrier": "v1 box label 'homelab rack-bench'; v2 box label 'homelab ASUS Linux 7.0'", "view": "v1, v2" },
+    { "fact": "bond0, 2.5 GbE over eno1, address 192.168.1.197 on the 192.168.1.0/24 LAN", "kind": "address + path", "fate": "drawn", "carrier": "v2 bond0 label 'bond0 192.168.1.197/24' + edge 'eno1 2.5 GbE'", "view": "v2" },
+    { "fact": "Wi-Fi interface wlp8s0, .213, same LAN", "kind": "address", "fate": "drawn", "carrier": "v2/v3 label 'wlp8s0 .213' / 'wlp8s0'", "view": "v2, v3" },
+    { "fact": "Wi-Fi is a backup route at metric 600: metric failover, not ECMP", "kind": "qualifier", "fate": "drawn", "carrier": "v3 edge 'metric 600 · failover, no ECMP'", "view": "v3" },
+    { "fact": "default gateway 192.168.1.1 at 0.5 ms", "kind": "address + latency", "fate": "drawn", "carrier": "v3 router label '192.168.1.1' + edge 'default gw 0.5 ms'", "view": "v3" },
+    { "fact": "gateway is a Verizon Fios router, identified by WNC OUI — a historical MAC-vendor interpretation", "kind": "identity + qualifier", "fate": "drawn", "carrier": "v3 router label 'Fios rtr ... WNC (hist.)'", "view": "v3" },
+    { "fact": "the router does NAT and DHCP", "kind": "role", "fate": "drawn", "carrier": "v3 router label 'NAT+DHCP'", "view": "v3" },
+    { "fact": "the router is the whole collapsed fabric: ToR, spine, border, and firewall in one box", "kind": "role (mandatory round-09 row)", "fate": "drawn", "carrier": "v4 router label 'Fios rtr = ToR+spine+border+FW'", "view": "v4" },
+    { "fact": "NAT on egress: the whole home shares one Fios pool IP, 71.251.12.240", "kind": "address + shared role (mandatory round-09 row)", "fate": "drawn", "carrier": "v4 edge 'NAT → 71.251.12.240 (whole home)'", "view": "v4" },
+    { "fact": "ONT / Verizon edge 169.254.3.1 at 4.5 ms; its identity is a historical interpretation", "kind": "address + qualifier", "fate": "drawn", "carrier": "v4 ont label 'ONT 169.254.3.1 (hist.)' + edge '4.5 ms (hist.)'", "view": "v4" },
+    { "fact": "the ONT is the demarc — the MMR analog", "kind": "role/interpretation", "fate": "drawn", "carrier": "v4 ont label '= MMR analog'", "view": "v4" },
+    { "fact": "one ISP, one path: the opposite of the 4-ISP, 2-MMR design", "kind": "interpretation", "fate": "drawn (concrete sides) + abbreviated (contrast)", "carrier": "'1 ISP, 1 path' on v4 vzbb; 'MMR analog' on v4 ont. The compared 4-ISP/2-MMR diagram is not in this source, so the contrast itself is not printed.", "view": "v4" },
+    { "fact": "Verizon aggregation 100.41.x at 6.6 ms", "kind": "address + latency", "fate": "drawn", "carrier": "v4 vzagg label '100.41.x' + edge '6.6 ms (hist.)'", "view": "v4" },
+    { "fact": "Verizon backbone AS701 at 6-9 ms", "kind": "identifier + latency", "fate": "drawn", "carrier": "v4 vzbb label 'vzbb AS701' + edge '6-9 ms (hist.)'", "view": "v4" },
+    { "fact": "Cloudflare AS13335 / 1.1.1.1", "kind": "address + identifier", "fate": "drawn", "carrier": "v4 cf label 'cf 1.1.1.1 AS13335'", "view": "v4" },
+    { "fact": "libvirt NAT bridge virbr0, VM vnet0, subnet 192.168.122.x", "kind": "address + relation", "fate": "drawn", "carrier": "v1 labels 'virbr0', 'VM vnet0', edge '192.168.122.x'", "view": "v1" },
+    { "fact": "docker bridge docker0 at 172.18.2.1, container veth, subnet 172.18.2.x", "kind": "address + relation", "fate": "drawn", "carrier": "v1 labels 'docker0 172.18.2.1', 'ctr veth', edge '172.18.2.x'", "view": "v1" },
+    { "fact": "Tailscale overlay tailscale0 at 100.113.153.49, encapsulated over UDP on the wired path", "kind": "address + protocol/path", "fate": "drawn", "carrier": "v2 labels 'tailscale0', edges '100.113.153.49' and 'UDP encap'", "view": "v2" },
+    { "fact": "IPv6 is ULA-only: no global v6, so v6 internet is unreachable from this host", "kind": "limitation", "fate": "drawn", "carrier": "v1 box label 'homelab rack-bench · no global v6' (the ULA-only detail is the reason, folded into this one qualifier)", "view": "v1" },
+    { "fact": "bench internet answers: NAT on egress, no committed rate, no v6 — the three Part B answers", "kind": "measurement answers (mandatory round-09 row)", "fate": "drawn", "carrier": "NAT in v4 'NAT → ...'; no committed rate in v2 box label; no v6 in v1 box label", "view": "v1, v2, v4" },
+    { "fact": "traceroute hops and MAC-vendor device roles are historical interpretations, not verified physical topology", "kind": "qualifier", "fate": "drawn", "carrier": "'(hist.)' on v3 router label, v4 ont label and the three hop labels; those three hops are dashed", "view": "v3, v4" },
+    { "fact": "separate wired primary, Wi-Fi backup, Tailscale encapsulation, docker bridge, libvirt NAT", "kind": "separation requirement", "fate": "drawn", "carrier": "five distinct group tags (wired, wifi, overlay, docker, libvirt) and two separate parallel paths into the router / host; no route merges", "view": "v1, v2, v3" }
+  ],
+  "relationship_audit": [
+    { "id": "e1", "from": "vm", "to": "virbr", "verb": "vnet0 on the libvirt bridge (192.168.122.x)", "label_owner": "e1", "view": "v1" },
+    { "id": "e2", "from": "virbr", "to": "box", "verb": "libvirt NAT bridge", "label_owner": "e2", "view": "v1" },
+    { "id": "e3", "from": "ctr", "to": "dkbr", "verb": "veth on the docker bridge (172.18.2.x)", "label_owner": "e3", "view": "v1" },
+    { "id": "e4", "from": "dkbr", "to": "box", "verb": "docker bridge", "label_owner": "e4", "view": "v1" },
+    { "id": "e5", "from": "ts", "to": "box", "verb": "overlay to the host (100.113.153.49)", "label_owner": "e5", "view": "v2" },
+    { "id": "e6", "from": "ts", "to": "bond0", "verb": "UDP encapsulation over the wired path", "label_owner": "e6", "view": "v2" },
+    { "id": "e7", "from": "box", "to": "bond0", "verb": "eno1 2.5 GbE", "label_owner": "e7", "view": "v2" },
+    { "id": "e8", "from": "box", "to": "wlp", "verb": "Wi-Fi backup path", "label_owner": "e8", "view": "v2" },
+    { "id": "e9", "from": "bond0", "to": "rtr", "verb": "default gateway, 0.5 ms", "label_owner": "e9", "view": "v3" },
+    { "id": "e10", "from": "wlp", "to": "rtr", "verb": "backup route, metric 600, failover not ECMP", "label_owner": "e10", "view": "v3" },
+    { "id": "e11", "from": "rtr", "to": "ont", "verb": "NAT out via the shared Fios pool IP", "label_owner": "e11", "view": "v4" },
+    { "id": "e12", "from": "ont", "to": "vzagg", "verb": "historical hop, 4.5 ms", "label_owner": "e12", "view": "v4" },
+    { "id": "e13", "from": "vzagg", "to": "vzbb", "verb": "historical hop, 6.6 ms", "label_owner": "e13", "view": "v4" },
+    { "id": "e14", "from": "vzbb", "to": "cf", "verb": "historical hop, 6-9 ms", "label_owner": "e14", "view": "v4" }
+  ],
+  "coverage_map": [
+    { "view": "v1 host virtual nets", "carries": "e1, e2, e3, e4; identifiers virbr0, docker0 172.18.2.1, VM vnet0, ctr veth, both container subnets; ledger rows: libvirt NAT, docker bridge, host name 'rack-bench', no global v6" },
+    { "view": "v2 overlay + uplinks", "carries": "e5, e6, e7, e8; identifiers tailscale0, 100.113.153.49, bond0 192.168.1.197/24, wlp8s0 .213; ledger rows: overlay over UDP, eno1 2.5 GbE, Wi-Fi backup, ASUS/Linux 7.0, no committed rate" },
+    { "view": "v3 LAN gateway", "carries": "e9, e10; identifiers 192.168.1.1, metric 600; ledger rows: NAT+DHCP, WNC (hist.), default gw 0.5 ms, failure-not-ECMP" },
+    { "view": "v4 egress chain", "carries": "e11, e12, e13, e14; identifiers 71.251.12.240, 169.254.3.1, 100.41.x, AS701, 1.1.1.1, AS13335; ledger rows: collapsed ToR/spine/border/FW role, shared pool IP, demarc/MMR analog, 1 ISP 1 path, three latencies, historical qualifiers" }
+  ],
+  "relationship_mapping": [
+    { "source_relation": "vm -> virbr (192.168.122.x)", "visible_as": "v1 e1", "direction_kept": true },
+    { "source_relation": "virbr -> box (NAT bridge)", "visible_as": "v1 e2", "direction_kept": true },
+    { "source_relation": "ctr -> dkbr (172.18.2.x)", "visible_as": "v1 e3", "direction_kept": true },
+    { "source_relation": "dkbr -> box (docker bridge)", "visible_as": "v1 e4", "direction_kept": true },
+    { "source_relation": "ts -> box (overlay)", "visible_as": "v2 e5", "direction_kept": true },
+    { "source_relation": "ts -> bond0 (encap over UDP)", "visible_as": "v2 e6", "direction_kept": true },
+    { "source_relation": "box -> bond0 (eno1 2.5 GbE)", "visible_as": "v2 e7", "direction_kept": true },
+    { "source_relation": "box -> wlp (backup path)", "visible_as": "v2 e8", "direction_kept": true },
+    { "source_relation": "bond0 -> rtr (default gw 0.5 ms)", "visible_as": "v3 e9", "direction_kept": true },
+    { "source_relation": "wlp -> rtr (metric 600)", "visible_as": "v3 e10", "direction_kept": true },
+    { "source_relation": "rtr -> ont (NAT out)", "visible_as": "v4 e11", "direction_kept": true },
+    { "source_relation": "ont -> vzagg (4.5 ms)", "visible_as": "v4 e12", "direction_kept": true },
+    { "source_relation": "vzagg -> vzbb (6.6 ms)", "visible_as": "v4 e13", "direction_kept": true },
+    { "source_relation": "vzbb -> cf (6-9 ms)", "visible_as": "v4 e14", "direction_kept": true }
+  ],
+  "structural_levers": [
+    { "view": "v1", "lever": "group tags", "value": "libvirt, docker, host", "source_fact": "'Separate ... Docker bridge, and libvirt NAT'" },
+    { "view": "v1", "lever": "label_slot", "value": "all four edges", "source_fact": "long identifiers (172.18.2.x, docker bridge) would otherwise widen each rank gap to their text length" },
+    { "view": "v2", "lever": "group tags", "value": "overlay, host, wired, wifi", "source_fact": "'Separate wired primary, Wi-Fi backup, Tailscale encapsulation'" },
+    { "view": "v2", "lever": "label_slot", "value": "all four edges", "source_fact": "identifier labels 100.113.153.49 / bond0 192.168.1.197/24" },
+    { "view": "v3", "lever": "group tags", "value": "wired, wifi, egress", "source_fact": "wired primary vs Wi-Fi backup are different concepts; the gateway is the egress boundary" },
+    { "view": "v3", "lever": "label_slot", "value": "both edges", "source_fact": "'metric 600 ... failover, not ECMP' is a qualifier, not a name; it stays on its own edge" },
+    { "view": "v3", "lever": "rank pin (implicit, no layers)", "value": "bond0/wlp above, router below", "source_fact": "the source's direction bond0 -> rtr and wlp -> rtr" },
+    { "view": "v4", "lever": "rank order from the source path", "value": "rtr, ont, vzagg, vzbb, cf", "source_fact": "'WAN path: ONT / Verizon edge ... -> Verizon aggregation ... -> Verizon backbone AS701 -> Cloudflare AS13335'" },
+    { "view": "v4", "lever": "style: dashed", "value": "e12, e13, e14 (the three traceroute hops)", "source_fact": "'Treat traceroute hops and MAC-vendor device roles as historical interpretations'" },
+    { "view": "v4", "lever": "label_slot", "value": "all four edges", "source_fact": "address labels plus a 31-character NAT/pool label" },
+    { "view": "all", "lever": "trunks", "value": "none declared", "source_fact": "the source names no shared bus that splits once; inventing one would fake a fan" },
+    { "view": "all", "lever": "layers / minlen", "value": "none declared", "source_fact": "no source-stated tier pin or reserved corridor; the engine's longest-path ranking already matches the path order" },
+    { "view": "all", "lever": "dots / flow", "value": "none", "source_fact": "the source shows no motion anywhere, so every view is static; frames were still captured (3 per view, byte-identical)" }
+  ],
+  "recipe_yield": null,
+  "recipe_yield_note": "No recipe demand was yielded. The service-mesh anti-parallel-pair rule did not apply (no bidirectional relation in the source), and the egress chain fitted one view with label_slot gutters.",
+  "source_pointers": [
+    "source.md 'Task' — visualize the rack-bench homelab host, not the devbox",
+    "source.md 'What the probes found' — host, uplink, gateway, WAN path, virtual nets, overlay, IPv6 bullets",
+    "source.md 'Mapped onto the datacenter model' — collapsed fabric role, ONT as demarc/MMR analog, the three Part B bench answers",
+    "source.md 'Relationship facts from the historical attempt' — the 13 node rows and 14 relation rows used verbatim for direction",
+    "source.md 'Fixed constraints' — historical interpretation qualifier, five-way separation, no probing"
+  ],
+  "abbreviations": [
+    { "text": "rtr", "stands_for": "Fios router (Verizon Fios gateway) 192.168.1.1", "key_on_view": "v3 router label spells the full role and address" },
+    { "text": "ont", "stands_for": "ONT / Verizon edge 169.254.3.1", "key_on_view": "v4 ont label carries the address and the demarc role" },
+    { "text": "vzagg / vzbb / cf", "stands_for": "Verizon aggregation 100.41.x / Verizon backbone AS701 / Cloudflare AS13335", "key_on_view": "each label carries its address or AS number on the same view; 'Fios' on v3/v4 names the operator" },
+    { "text": "hist.", "stands_for": "historical interpretation, not verified physical topology", "key_on_view": "marked on the labels of every qualified fact and repeated as a dashed route style on the three traceroute hops" },
+    { "text": "no global v6", "stands_for": "ULA prefixes only, so v6 internet is unreachable from this host", "key_on_view": "v1 box label" },
+    { "text": "/24", "stands_for": "the 192.168.1.0/24 LAN", "key_on_view": "v2 bond0 label 'bond0 192.168.1.197/24'" },
+    { "text": "1 ISP, 1 path", "stands_for": "the single-ISP single-path shape that is the opposite of the 4-ISP, 2-MMR design", "key_on_view": "v4 vzbb label" }
+  ],
+  "deliberate_drops": [
+    { "fact": "the literal comparison 'opposite of the 4-ISP, 2-MMR design'", "reason": "the compared diagram is a different artifact that is not in this source; both of its homelab sides are drawn instead ('1 ISP, 1 path' on v4 vzbb, 'MMR analog' on v4 ont) so nothing about the homelab host is lost" },
+    { "fact": "the 'Verizon' brand word on the WAN hops", "reason": "abbreviated, not dropped in meaning: 'Fios' names the operator on the router in v3/v4 and AS701 is Verizon's backbone AS; the hop prefixes vz* name the same operator. The view stayed at 65 columns instead of growing a second brand label" },
+    { "fact": "host kernel wording 'Linux 7.0' vs a full uname string", "reason": "abbreviated on the v2 box label; the source gives no fuller string" }
+  ],
+  "known_defects": [
+    { "defect": "cross-view hue drift for the wifi group", "detail": "wlp8s0 is magenta (206,115,206) in v2 but orange (206,161,115) in v3, because group families are resolved per spec from the SET of declared names and the two views declare different sets. Within each view the wheel is collision-free (4 and 3 distinct families) and sibling order is stable; only the cross-view colour of this one group differs. Files: evidence/v2/v2-ansi.ansi, evidence/v3/v3-ansi.ansi." },
+    { "defect": "router node carries two complementary label lines", "detail": "v3 labels the router with its identity/NAT/WNC history, v4 with its collapsed-fabric role. Both are true and the coverage map says which view owns which fact, but a reader comparing views sees two different router labels." },
+    { "defect": "one capture retry for v1", "detail": "the first evidence run for v1 produced a pane read with no `rataflow-view` header (art missing, frames 0) although --check passed; the run was repeated and the bundle now holds the good capture with 3 frames. No capture, manifest or validator byte was edited by hand." }
+  ],
+  "blockers": [],
+  "cleanup": {
+    "status": "all four evidence panes closed and proven",
+    "detail": "each manifest reports cleanup=confirmed_closed; no pane of mine remains (herdr pane layout shows only the agent pane). One failed v1 capture attempt also closed its pane.",
+    "own_panes_only": true,
+    "raw_tmux_used": false
+  },
+  "dumps": {
+    "pinned_target_dump_rule": "The live pane in this tab measures 82x51, larger than the 77x47 target, so each view is ALSO dumped directly at COLUMNS=77 LINES=47 with its own FINAL spec (`pinned/<view>-77x47.txt`): viewport line 'viewport: 77x47 zoom: 1.00 natural', no overflow banner. Drawing extents at that size: v1 54x20, v2 57x21, v3 73x12, v4 65x36."
+  },
+  "validator_output": "validator/",
+  "validator_summary": [
+    { "view": "v1", "file": "validator/v1.txt", "result": "33/33 PASS, exit 0, 'all checks passed'" },
+    { "view": "v2", "file": "validator/v2.txt", "result": "33/33 PASS, exit 0, 'all checks passed'" },
+    { "view": "v3", "file": "validator/v3.txt", "result": "33/33 PASS, exit 0, 'all checks passed'" },
+    { "view": "v4", "file": "validator/v4.txt", "result": "33/33 PASS, exit 0, 'all checks passed'" }
+  ],
+  "validator_command": "scripts/viz-validate.py <case>/evidence/<view> --require-select --require-frames --require-records --attempts <case>/attempts.json",
+  "static_motion_proof": "All four views are dot-free (dots: 0 single-dot routes, 0 periodic routes, 0 violations). Each frames capture holds 3 timestamped frames (0ms, 100ms, 200ms) whose drawings are byte-identical; only the trailing shell prompt line differs in the pane read after the app exits. No flow, no dots: the source shows no motion.",
+  "static_frames_note": "checked with a diff of the frame bodies in evidence/<view>/<view>-frames.txt",
+  "check_lines_per_view": [
+    { "view": "v1", "check": "extent=54x20 cells; crossings: 0 bridges, 0 touching bends; labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners; origins 0/0; arrivals 0/0" },
+    { "view": "v2", "check": "extent=57x21 cells; crossings: 0 bridges, 0 touching bends; labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners" },
+    { "view": "v3", "check": "extent=73x12 cells; crossings: 0 bridges, 0 touching bends; labels: 2/2 placed, 0 on route cells, 0 skipped, 0 ambiguous owners" },
+    { "view": "v4", "check": "extent=65x36 cells; crossings: 0 bridges, 0 touching bends; labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners" }
+  ],
+  "not_claimed": "This sample does not mark itself green and has no independent visual approval; the captain starts the separate terra judge.",
+  "review_not_run": "Step 9 was not run: the generator contract forbids spawning reviewers and the captain starts the terra judge separately."
+}

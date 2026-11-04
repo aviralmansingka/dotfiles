@@ -1,0 +1,19 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "k8s",   "label": "Kubernetes",    "group": "k8s" },
+    { "id": "gpuop", "label": "GPU Operator",  "group": "k8s" },
+    { "id": "dcgm",  "label": "DCGM",          "group": "host" },
+    { "id": "dcgmx", "label": "dcgm-exporter", "group": "host" },
+    { "id": "drvk",  "label": "Driver+CUDA",   "group": "host" },
+    { "id": "fm",    "label": "Fabric Mgr",    "group": "host" }
+  ],
+  "edges": [
+    { "from": "k8s",  "to": "gpuop", "label": "in-band",      "label_slot": true },
+    { "from": "gpuop","to": "dcgm",  "label": "DaemonSet",    "label_slot": true },
+    { "from": "dcgm", "to": "dcgmx", "label": "serves :9400", "label_slot": true },
+    { "from": "dcgm", "to": "drvk",  "label": "reads NVML",   "label_slot": true },
+    { "from": "drvk", "to": "fm",    "label": "same host",    "label_slot": true }
+  ]
+}

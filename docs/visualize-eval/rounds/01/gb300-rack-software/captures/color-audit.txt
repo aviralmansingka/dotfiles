@@ -1,0 +1,39 @@
+##### v1-a4
+capture: captures/v1-a4-unselected.ansi
+grid: 77 cols x 47 rows
+boxes: 5
+  box (29,16)-(37,22) label~'OOB LAN' size=9x7 border_colours=[(125, 174, 163) x28]
+  box (5,18)-(12,21) label~'' size=8x4 border_colours=[(216, 166, 87) x20]
+  box (59,18)-(71,21) label~'' size=13x4 border_colours=[(211, 134, 155) x30]
+  box (59,24)-(72,27) label~'' size=14x4 border_colours=[(226, 156, 175) x32]
+  box (59,29)-(71,32) label~'' size=13x4 border_colours=[(187, 108, 131) x30]
+flow dots (●): 0 at []
+##### v2-a2
+capture: captures/v2-a2-unselected.ansi
+grid: 77 cols x 47 rows
+boxes: 4
+  box (22,18)-(29,21) label~'' size=8x4 border_colours=[(216, 166, 87) x20]
+  box (19,27)-(31,30) label~'' size=13x4 border_colours=[(125, 174, 163) x30]
+  box (36,27)-(48,30) label~'' size=13x4 border_colours=[(147, 194, 183) x30]
+  box (53,27)-(58,30) label~'' size=6x4 border_colours=[(99, 151, 141) x16]
+flow dots (●): 0 at []
+##### v3-a3
+capture: captures/v3-a3-unselected.ansi
+grid: 77 cols x 47 rows
+boxes: 4
+  box (6,20)-(14,24) label~'OOB LAN' size=9x5 border_colours=[(216, 166, 87) x24]
+  box (36,21)-(49,24) label~'' size=14x4 border_colours=[(125, 174, 163) x32]
+  box (64,21)-(72,24) label~'' size=9x4 border_colours=[(211, 134, 155) x22]
+  box (36,26)-(41,29) label~'' size=6x4 border_colours=[(147, 194, 183) x16]
+flow dots (●): 0 at []
+##### v4-a2
+capture: captures/v4-a2-unselected.ansi
+grid: 77 cols x 47 rows
+boxes: 6
+  box (23,7)-(34,10) label~'' size=12x4 border_colours=[(216, 166, 87) x28]
+  box (22,15)-(35,18) label~'' size=14x4 border_colours=[(125, 174, 163) x32]
+  box (26,23)-(31,26) label~'' size=6x4 border_colours=[(211, 134, 155) x16]
+  box (21,31)-(35,34) label~'' size=15x4 border_colours=[(169, 182, 101) x34]
+  box (44,31)-(56,34) label~'' size=13x4 border_colours=[(189, 201, 124) x30]
+  box (23,39)-(34,42) label~'' size=12x4 border_colours=[(125, 160, 184) x28]
+flow dots (●): 0 at []

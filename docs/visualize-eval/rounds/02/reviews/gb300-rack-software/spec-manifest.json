@@ -1,0 +1,10 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/02/gb300-rack-software/v1.json",
+    "sha256": "d459325771c09e7402acb88a3c6c670d537c813b4d016962a04e3aaf28c7a04d"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/02/gb300-rack-software/v2.json",
+    "sha256": "e645856239d27a20b4ffe8c55b12c2dab360ac45454b5af0812eb5ebc4f9a083"
+  }
+]

@@ -1,0 +1,17 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "nic", "label": "eno16595np0 .58", "group": "ports" },
+    { "id": "airtel", "label": "Airtel 14.143.x", "group": "transit" },
+    { "id": "gw", "label": "Arista .57 AS132717", "group": "fabric" },
+    { "id": "airtelbb", "label": "AirtelBB 14.141.x", "group": "transit" },
+    { "id": "cf", "label": "CF 1.1.1.1 AS13335", "group": "internet" }
+  ],
+  "edges": [
+    { "from": "nic", "to": "gw", "label": "no NAT, no v6", "dots": 1 },
+    { "from": "gw", "to": "airtel", "label": "1.8 ms unseen", "dots": 1 },
+    { "from": "airtel", "to": "airtelbb", "label": "7.1 ms", "dots": 1 },
+    { "from": "airtelbb", "to": "cf", "label": "8.3 ms", "dots": 1 }
+  ]
+}

@@ -1,0 +1,701 @@
+{
+  "case_id": "modal-machine-manager",
+  "round": "09",
+  "generator": {
+    "worker_label": "viz-ds09-6",
+    "identity": "fresh generator (no prior case output, expected data or history read)",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "candidate_skill": {
+      "path": "docs/visualize-eval/rounds/09/SKILL.md",
+      "sha256": "ba2878c5194cd6fc4bc1af5299a156064130de9be1b0ccf4c6eeb0236d431381"
+    },
+    "renderer": {
+      "path": "/tmp/visualize-eval/round-09/bin/rataflow-view",
+      "sha256": "405a61a674a7cc6271ae1276794eb270c9425dfc38585f4cbb1c48e9b6db495b",
+      "used_by_absolute_path_in_every_command": true
+    }
+  },
+  "step0_classification": {
+    "family": "lifecycle-machines",
+    "evidence": "one queue node fans to five phase targets (River jobs -> registry, SSH/BMC ops, janitor, S3, Postgres) while the machine side advances in a fixed stage order (enqueue -> provision -> allocate -> iPXE boot -> image pull -> agent heartbeat -> state write), and the chat's final correction is 'one dot alive per line', i.e. one live dot per transition.",
+    "tie_breakers_considered": [
+      "E>N (23 edges / 17 nodes) argues mesh or fabric at first glance; rejected because the density is a 5-way phase fan out of one queue, not a pair-wise service mesh and not redundant parallel links.",
+      "No anti-parallel request/response pair around a single core (the boot request/boot.ipxe answer is one ordered boot handshake, not two independent service directions), so service-meshes is not dominant.",
+      "No double-arrowhead redundant targets and no 'dots forbidden' statement, so redundant-fabrics is out (dots are explicitly requested).",
+      "Two weakly-connected worlds plus a bus would be placement-planes; the source never names a shared bus between planes, and q's fan is five independent job types, not one split bus.",
+      "Modal runtime (a sibling case) is the service-mesh sample; this case is the lifecycle sample named in the skill's own family table."
+    ],
+    "secondary_recipe_applied": "service-meshes, only for the single anti-parallel pair machines -> boot server (iPXE request) and boot server -> machines (boot.ipxe + S3 args): both are drawn in ONE view (v2) as two distinct edges with two distinct labels and distinct arrowheads, never merged and never split across views."
+  },
+  "views": [
+    {
+      "view": "v1",
+      "role": "provisioning spine, phases 1-5 (request -> private gRPC -> enqueue -> provision job -> provider API -> allocate)",
+      "spec": "docs/visualize-eval/rounds/09/modal-machine-manager/specs/v1.json",
+      "spec_sha256": "d8a1e3cdf9f77e399520ed50ffe052b7b9fad2deb235a463db8827d1e7f1346c",
+      "text": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v1/v1-text.txt",
+      "ansi": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v1/v1-selected.ansi",
+      "check": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v1/check.txt",
+      "frames": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v1/v1-frames.txt",
+      "frames_ansi": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v1/v1-frames.ansi",
+      "pinned_target_dump": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v1/v1-77x47.txt",
+      "manifest": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v1/manifest.json",
+      "measured_pane": "82x51 @100% (header token, evidence/v1/v1-text.txt line 1)",
+      "viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+      "viewport_evidence": "pinned direct dump of this final spec at COLUMNS=77 LINES=47, no overflow banner (evidence/v1/v1-77x47.txt line 1)",
+      "extent": "48x44",
+      "check_summary": "crossings: 0 bridges, 0 touching bends; labels: 5/5 placed, 0 on route cells, 0 skipped, 0 ambiguous owners; dots: 5 single-dot routes, 0 violations, 5 constant at 0.5c/step; origins: 5/5; arrivals 0/0 (constant mode)",
+      "recipe": "phase-ordered ranks, boot/provision order readable top-to-bottom, exactly one dot per live transition",
+      "recipe_capture": "evidence/v1/v1-77x47.txt: control plane (line 6) -> private gRPC (line 14) -> River job queue (line 22) -> provider registry (line 30) -> bare-metal providers (line 38) -> bare-metal machines (line 46); one dot per hop at frame 0 (lines 9, 17, 25, 33, 41) and at frame 2 the same five dots one row lower (lines 106, 114, 122, 130, 138) = identical 1-cell advance.",
+      "levers": {
+        "groups": "control (cp, pgrpc, q), provision (reg, prov), hosts (mch) - name-derived hue families, one stable sibling order, nothing drawn around members",
+        "rank_pins": "none - the longest-path ranking already produces exactly the source's five phases in order",
+        "minlen": "none - every relation here is one hop",
+        "trunks": "none - no shared bus on this path; a trunk would fake a split the source does not describe",
+        "label_slot": "all 5 edges: create/terminate/repair (23), enqueue job, provision job, provider API, allocate instance. Each gap has exactly one band and each source is alone in its rank, so the band cannot cover a sibling port."
+      },
+      "validator": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v1/validator.txt"
+    },
+    {
+      "view": "v2",
+      "role": "boot phase (phases 6-7): iPXE request, boot.ipxe + S3 args, image pull, agent run, diagnostic upload",
+      "spec": "docs/visualize-eval/rounds/09/modal-machine-manager/specs/v2.json",
+      "spec_sha256": "897bcf4ba297df20f16f212ad7570ed763f5cd9939f6ef8f0cfde613b617c584",
+      "text": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v2/v2-text.txt",
+      "ansi": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v2/v2-ansi.ansi",
+      "selected_ansi": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v2/v2-selected.ansi",
+      "check": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v2/check.txt",
+      "frames": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v2/v2-frames.txt",
+      "frames_ansi": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v2/v2-frames.ansi",
+      "pinned_target_dump": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v2/v2-77x47.txt",
+      "manifest": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v2/manifest.json",
+      "measured_pane": "82x51 @100% (header token, evidence/v2/v2-text.txt line 1)",
+      "viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+      "viewport_evidence": "pinned direct dump at COLUMNS=77 LINES=47 shows the overflow banner on the same line as the header ('graph overflows - drag to pan', evidence/v2/v2-77x47.txt lines 4, 52, 100), so this view does NOT fit the target.",
+      "extent": "52x53",
+      "check_summary": "crossings: 0 bridges, 0 touching bends; labels: 5/5 placed, 0 on route cells, 0 skipped, 0 ambiguous owners; dots: 5 single-dot routes, 0 violations, 5 constant at 0.5c/step; origins: 5/5",
+      "recipe": "phase-ordered ranks (machines above the boot rank), one dot per live transition, and the anti-parallel boot handshake drawn as two distinct edges in this one view",
+      "recipe_capture": "evidence/v2/v2-text.txt: the 'boot.ipxe + S3 args' label sits at line 14 on the downward run from the boot rank into bare-metal machines, and 'iPXE request' sits at line 16 on the separate upward run from machines into the boot rank - two routes, two arrowheads, one view (panel rows 3-31 of the same capture).",
+      "levers": {
+        "groups": "hosts (mch, agent), control (q), provision (boot), state (s3)",
+        "rank_pins": "none - mch is ranked above the boot rank by the boot handshake itself",
+        "minlen": "none",
+        "trunks": "none - five independent job/boot relations, no shared bus",
+        "label_slot": "none - every label sits in the one 23-row rank gap; banding them failed routing (attempt v2-b), so the gap carries the text instead"
+      },
+      "validator": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v2/validator.txt",
+      "defects": [
+        "extent 52x53 exceeds the 77x47 target by 6 rows (fit failure, evidenced by the overflow banner in v2-77x47.txt)"
+      ]
+    },
+    {
+      "view": "v3",
+      "role": "state and ops writes (phases 8-10): heartbeat register, job rows, audit hand-off, cluster state, gcore sync",
+      "spec": "docs/visualize-eval/rounds/09/modal-machine-manager/specs/v3.json",
+      "spec_sha256": "6a1999c597baa91296eb704b9972fb80ce789baae0375e6adb1f067503eab9d0",
+      "text": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v3/v3-text.txt",
+      "ansi": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v3/v3-ansi.ansi",
+      "selected_ansi": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v3/v3-selected.ansi",
+      "check": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v3/check.txt",
+      "frames": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v3/v3-frames.txt",
+      "frames_ansi": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v3/v3-frames.ansi",
+      "pinned_target_dump": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v3/v3-77x47.txt",
+      "manifest": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v3/manifest.json",
+      "measured_pane": "82x51 @100% (header token, evidence/v3/v3-text.txt line 1)",
+      "viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+      "viewport_evidence": "pinned direct dump at COLUMNS=77 LINES=47 shows 'graph overflows - drag to pan' (evidence/v3/v3-77x47.txt lines 5, 53, 101) and repeats the skipped-label warning on line 1, so this view does NOT fit the target.",
+      "extent": "80x31",
+      "check_summary": "crossings: 0 bridges, 0 touching bends; labels: 4/5 placed, 0 on route cells, 1 skipped, 0 ambiguous owners; dots: 5 single-dot routes, 0 violations, 5 constant at 0.5c/step; origins: 5/5",
+      "recipe": "phase-ordered fan into the state sink (agent/queue/reconcile above Postgres and the ops targets), one dot per live transition",
+      "recipe_capture": "evidence/v3/v3-text.txt: machine-agent, River job queue and reconcile loop share the upper rank; every route descends into the lower rank and each route carries exactly one dot.",
+      "levers": {
+        "groups": "hosts (agent), control (q), ops (rec, ssh), provision (prov), state (db)",
+        "rank_pins": "none - a two-rank fan is what the source states",
+        "minlen": "none",
+        "trunks": "none - five different writers of five different facts, not one bus",
+        "label_slot": "none - five bands from three sources in one gap would cover each other's ports (proved by attempts v1-b and v2-b); the labels sit in the gap instead"
+      },
+      "validator": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v3/validator.txt",
+      "defects": [
+        "extent 80x31 exceeds the 77x47 target by 3 columns (fit failure)",
+        "1 label skipped: 'register + heartbeat' (agent -> public gRPC) has no free cell; the fact is still in the spec, its text is not drawn",
+        "1 check warning line accompanies the skip"
+      ]
+    },
+    {
+      "view": "v4",
+      "role": "ops loop: mmctl/http, webapi -> queue, janitor -> webapi proposals, webapi -> Slack, SSH audit onto machines, private gRPC machine rows",
+      "spec": "docs/visualize-eval/rounds/09/modal-machine-manager/specs/v4.json",
+      "spec_sha256": "e60fb2db477c2c6baa2863723a58ed9336c9c7110b526cd2633b0d7014746833",
+      "text": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v4/v4-text.txt",
+      "ansi": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v4/v4-ansi.ansi",
+      "selected_ansi": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v4/v4-selected.ansi",
+      "check": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v4/check.txt",
+      "frames": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v4/v4-frames.txt",
+      "frames_ansi": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v4/v4-frames.ansi",
+      "pinned_target_dump": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v4/v4-77x47.txt",
+      "manifest": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v4/manifest.json",
+      "measured_pane": "82x51 @100% (header token, evidence/v4/v4-text.txt line 1)",
+      "viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+      "viewport_evidence": "pinned direct dump of this final spec at COLUMNS=77 LINES=47, no overflow banner (evidence/v4/v4-77x47.txt line 1)",
+      "extent": "54x42",
+      "check_summary": "crossings: 0 bridges, 0 touching bends; labels: 5/5 placed, 0 on route cells, 0 skipped, 0 ambiguous owners; dots: 5 single-dot routes, 0 violations, 5 constant at 0.5c/step; origins: 5/5",
+      "recipe": "phase-ordered ranks pinned by the source's own ops order (webapi -> queue -> janitor -> machines), typed top-to-bottom, exactly one dot per live transition, and the backward proposal edge (janitor -> webapi) drawn without reversing its direction",
+      "recipe_capture": "evidence/v4/v4-77x47.txt: webapi server (line 7) -> River job queue (line 16) -> janitor app (line 25), with 'proposed actions' (line 20) returning upward from the janitor into webapi's left port and 'confirm + alerts' (line 30) running down to Slack; 'reinstall/reprovision' is banded beside the first hop (line 10). Dots at frame 0 on lines 10, 19, 25, 28 and one cell further at frame 2 on lines 107, 116, 121, 125.",
+      "levers": {
+        "groups": "control (wapi, q), ops (jan, ssh), hosts (mch), humans (slack)",
+        "rank_pins": "layers=4 declared pins [wapi][q][jan,ssh][mch,slack]; the source states this ops order ('janitor proposes actions back through webapi', 'jobs SSH into machines for audits') and the pinned ranks keep the backward proposal edge one rank long instead of letting the ranking cycle reorder the phases",
+        "minlen": "none",
+        "trunks": "none",
+        "label_slot": "wapi -> q (reinstall/reprovision, 21 chars) and q -> jan (diagnostic events): each gap holds exactly one band and each source is alone in its rank, which is the only band placement that never covered a port in 14 measured checks"
+      },
+      "validator": "docs/visualize-eval/rounds/09/modal-machine-manager/evidence/v4/validator.txt"
+    }
+  ],
+  "split_coverage_map": {
+    "v1 provisioning spine": [
+      "cp->pgrpc",
+      "pgrpc->q",
+      "q->reg",
+      "reg->prov",
+      "prov->mch"
+    ],
+    "v2 boot phase": [
+      "mch->boot",
+      "boot->mch",
+      "mch->s3",
+      "mch->agent",
+      "q->s3"
+    ],
+    "v3 state and ops writes": [
+      "agent->pub",
+      "q->db",
+      "q->ssh",
+      "rec->db",
+      "rec->prov"
+    ],
+    "v4 ops loop": [
+      "wapi->q",
+      "q->jan",
+      "jan->wapi",
+      "wapi->slack",
+      "ssh->mch"
+    ],
+    "not drawn (documented gap)": [
+      "web->wapi",
+      "pgrpc->db",
+      "pub->db"
+    ]
+  },
+  "meaning_ledger": [
+    {
+      "fact": "Modal control plane",
+      "kind": "role",
+      "fate": "drawn (v1 node 'control plane')"
+    },
+    {
+      "fact": "humans + mmctl",
+      "kind": "role",
+      "fate": "dropped - the only relation that carries it is web->wapi, which has no shipped view (see known_defects.coverage)"
+    },
+    {
+      "fact": "private gRPC",
+      "kind": "protocol",
+      "fate": "drawn (v1 node)"
+    },
+    {
+      "fact": "webapi server",
+      "kind": "role",
+      "fate": "drawn (v4 node)"
+    },
+    {
+      "fact": "public gRPC",
+      "kind": "protocol",
+      "fate": "drawn (v3 node)"
+    },
+    {
+      "fact": "boot server",
+      "kind": "role",
+      "fate": "drawn (v2 node)"
+    },
+    {
+      "fact": "River job queue",
+      "kind": "role",
+      "fate": "drawn (v1, v2, v3, v4)"
+    },
+    {
+      "fact": "cluster reconcile loop (every minute)",
+      "kind": "role + rate",
+      "fate": "abbreviated - node label 'reconcile loop', the rate rides on the edge label 'gcore sync, 1 min'"
+    },
+    {
+      "fact": "SSH + BMC ops",
+      "kind": "protocol",
+      "fate": "drawn (v3 node, v4 node)"
+    },
+    {
+      "fact": "Postgres",
+      "kind": "state store",
+      "fate": "drawn (v3 node)"
+    },
+    {
+      "fact": "S3 object store",
+      "kind": "state store",
+      "fate": "drawn (v2 node)"
+    },
+    {
+      "fact": "provider registry",
+      "kind": "role",
+      "fate": "drawn (v1 node, grouped with providers)"
+    },
+    {
+      "fact": "bare-metal providers",
+      "kind": "role",
+      "fate": "drawn (v1 node, v3 node)"
+    },
+    {
+      "fact": "bare-metal machines",
+      "kind": "role",
+      "fate": "drawn (v1, v2, v4 nodes)"
+    },
+    {
+      "fact": "machine-agent",
+      "kind": "role",
+      "fate": "drawn (v2 node, v3 node)"
+    },
+    {
+      "fact": "janitor app",
+      "kind": "role",
+      "fate": "drawn (v4 node)"
+    },
+    {
+      "fact": "Slack",
+      "kind": "human channel",
+      "fate": "drawn (v4 node)"
+    },
+    {
+      "fact": "create / terminate / repair",
+      "kind": "action verbs",
+      "fate": "drawn verbatim as the cp->pgrpc edge label (v1)"
+    },
+    {
+      "fact": "http",
+      "kind": "protocol",
+      "fate": "dropped with web->wapi (no shipped view)"
+    },
+    {
+      "fact": "enqueue job",
+      "kind": "action",
+      "fate": "drawn (v1)"
+    },
+    {
+      "fact": "reinstall / reprovision",
+      "kind": "action verb",
+      "fate": "drawn as 'reinstall/reprovision' (v4)"
+    },
+    {
+      "fact": "provision job",
+      "kind": "action",
+      "fate": "drawn (v1)"
+    },
+    {
+      "fact": "provider API",
+      "kind": "protocol",
+      "fate": "drawn (v1)"
+    },
+    {
+      "fact": "allocate instance",
+      "kind": "action",
+      "fate": "drawn (v1)"
+    },
+    {
+      "fact": "iPXE request",
+      "kind": "action + protocol",
+      "fate": "drawn (v2)"
+    },
+    {
+      "fact": "boot.ipxe + S3 args",
+      "kind": "payload",
+      "fate": "drawn verbatim (v2)"
+    },
+    {
+      "fact": "pull boot image from S3",
+      "kind": "payload",
+      "fate": "drawn as 'pull boot image' (v2)"
+    },
+    {
+      "fact": "runs on host",
+      "kind": "residency",
+      "fate": "drawn (v2)"
+    },
+    {
+      "fact": "register + heartbeat",
+      "kind": "action",
+      "fate": "abbreviated to the edge label; the label is SKIPPED by the renderer in v3 (defect)"
+    },
+    {
+      "fact": "machine state",
+      "kind": "payload",
+      "fate": "dropped - pub->db has no shipped view (see known_defects.coverage)"
+    },
+    {
+      "fact": "machine rows",
+      "kind": "payload",
+      "fate": "dropped - pgrpc->db has no shipped view (see known_defects.coverage)"
+    },
+    {
+      "fact": "job rows",
+      "kind": "payload",
+      "fate": "drawn (v3)"
+    },
+    {
+      "fact": "audit / verify reimage",
+      "kind": "action verb",
+      "fate": "abbreviated to 'audit / reimage' (v3)"
+    },
+    {
+      "fact": "run machine-audit",
+      "kind": "action",
+      "fate": "abbreviated to 'machine-audit' (v4)"
+    },
+    {
+      "fact": "diagnose uploads",
+      "kind": "action",
+      "fate": "drawn (v2, q -> S3 object store)"
+    },
+    {
+      "fact": "diagnostic events",
+      "kind": "payload",
+      "fate": "abbreviated to 'diagnostics' (v4 edge q->jan)"
+    },
+    {
+      "fact": "proposed actions",
+      "kind": "action",
+      "fate": "drawn (v4, jan->wapi, direction preserved)"
+    },
+    {
+      "fact": "confirm + alerts",
+      "kind": "action",
+      "fate": "drawn (v4)"
+    },
+    {
+      "fact": "gcore sync, 1 min",
+      "kind": "action + rate",
+      "fate": "drawn (v3)"
+    },
+    {
+      "fact": "cluster state",
+      "kind": "payload",
+      "fate": "drawn (v3)"
+    },
+    {
+      "fact": "slow, sparse dots; one dot per line; none on borders",
+      "kind": "human correction",
+      "fate": "drawn - every edge carries dots: 1 with constant 0.5 c/step flow, origins N/N, zero dot violations"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "cp",
+      "to": "pgrpc",
+      "verb": "create / terminate / repair",
+      "label_owner": "e1",
+      "view": "v1"
+    },
+    {
+      "id": "e2",
+      "from": "web",
+      "to": "wapi",
+      "verb": "http",
+      "label_owner": "e2",
+      "view": "NOT DRAWN"
+    },
+    {
+      "id": "e3",
+      "from": "pgrpc",
+      "to": "q",
+      "verb": "enqueue job",
+      "label_owner": "e3",
+      "view": "v1"
+    },
+    {
+      "id": "e4",
+      "from": "wapi",
+      "to": "q",
+      "verb": "reinstall / reprovision",
+      "label_owner": "e4",
+      "view": "v4"
+    },
+    {
+      "id": "e5",
+      "from": "q",
+      "to": "reg",
+      "verb": "provision job",
+      "label_owner": "e5",
+      "view": "v1"
+    },
+    {
+      "id": "e6",
+      "from": "reg",
+      "to": "prov",
+      "verb": "provider API",
+      "label_owner": "e6",
+      "view": "v1"
+    },
+    {
+      "id": "e7",
+      "from": "prov",
+      "to": "mch",
+      "verb": "allocate instance",
+      "label_owner": "e7",
+      "view": "v1"
+    },
+    {
+      "id": "e8",
+      "from": "mch",
+      "to": "boot",
+      "verb": "iPXE request",
+      "label_owner": "e8",
+      "view": "v2"
+    },
+    {
+      "id": "e9",
+      "from": "boot",
+      "to": "mch",
+      "verb": "boot.ipxe + S3 args",
+      "label_owner": "e9",
+      "view": "v2 (anti-parallel partner of e8, same view, distinct route and head)"
+    },
+    {
+      "id": "e10",
+      "from": "mch",
+      "to": "agent",
+      "verb": "runs on host",
+      "label_owner": "e10",
+      "view": "v2"
+    },
+    {
+      "id": "e11",
+      "from": "agent",
+      "to": "pub",
+      "verb": "register + heartbeat",
+      "label_owner": "e11",
+      "view": "v3 (label skipped by renderer)"
+    },
+    {
+      "id": "e12",
+      "from": "pub",
+      "to": "db",
+      "verb": "machine state",
+      "label_owner": "e12",
+      "view": "NOT DRAWN"
+    },
+    {
+      "id": "e13",
+      "from": "pgrpc",
+      "to": "db",
+      "verb": "machine rows",
+      "label_owner": "e13",
+      "view": "NOT DRAWN"
+    },
+    {
+      "id": "e14",
+      "from": "q",
+      "to": "db",
+      "verb": "job rows",
+      "label_owner": "e14",
+      "view": "v3"
+    },
+    {
+      "id": "e15",
+      "from": "q",
+      "to": "ssh",
+      "verb": "audit / verify reimage",
+      "label_owner": "e15",
+      "view": "v3"
+    },
+    {
+      "id": "e16",
+      "from": "ssh",
+      "to": "mch",
+      "verb": "run machine-audit",
+      "label_owner": "e16",
+      "view": "v4"
+    },
+    {
+      "id": "e17",
+      "from": "mch",
+      "to": "s3",
+      "verb": "pull boot image",
+      "label_owner": "e17",
+      "view": "v2"
+    },
+    {
+      "id": "e18",
+      "from": "q",
+      "to": "s3",
+      "verb": "diagnose uploads",
+      "label_owner": "e18",
+      "view": "v2"
+    },
+    {
+      "id": "e19",
+      "from": "q",
+      "to": "jan",
+      "verb": "diagnostic events",
+      "label_owner": "e19",
+      "view": "v4"
+    },
+    {
+      "id": "e20",
+      "from": "jan",
+      "to": "wapi",
+      "verb": "proposed actions",
+      "label_owner": "e20",
+      "view": "v4"
+    },
+    {
+      "id": "e21",
+      "from": "wapi",
+      "to": "slack",
+      "verb": "confirm + alerts",
+      "label_owner": "e21",
+      "view": "v4"
+    },
+    {
+      "id": "e22",
+      "from": "rec",
+      "to": "prov",
+      "verb": "gcore sync, 1 min",
+      "label_owner": "e22",
+      "view": "v3"
+    },
+    {
+      "id": "e23",
+      "from": "rec",
+      "to": "db",
+      "verb": "cluster state",
+      "label_owner": "e23",
+      "view": "v3"
+    }
+  ],
+  "coverage": {
+    "components_required": 17,
+    "components_drawn": 16,
+    "components_missing": [
+      "web (humans + mmctl)"
+    ],
+    "relations_required": 23,
+    "relations_drawn": 20,
+    "relations_missing": [
+      "web->wapi (http)",
+      "pgrpc->db (machine rows)",
+      "pub->db (machine state)"
+    ]
+  },
+  "recipe_yield": {
+    "demand": "cover all 17 components and all 23 directed relations in at most four views that each fit 77x47 at natural zoom, with one live dot per line",
+    "what_the_renderer_could_not_hold": [
+      "A labelled fan out of one node in one rank gap: three label_slot bands from the same source cover each other's ports (measured: v2-b, 3 routes unrouted), so a fan must put its labels in the gap, which costs (widest label + 3) rank-gap rows.",
+      "An lr (two-area) fan with in-area labels: labels occupy whole rows of the inter-area channel, so the only horizontal corridor is cut and return edges die (measured: v3-b wapi->q, v3-c agent->pub, v4-a jan->wapi).",
+      "A two-rank tb fan whose widest label is 20 chars: the gap costs 23 rows, and with grown port-bearing boxes the extent is 53 rows (measured: v2-a 39x59, v2-c 52x53)."
+    ],
+    "shipped_distance": "v1 and v4 fit exactly (48x44 and 54x42, no overflow banner in their pinned 77x47 dumps). v2 and v3 miss the target by 6 rows and 3 columns respectively and both show the overflow banner in their pinned dumps. Three relations and one component (web) are not drawn at all, because every view's three-candidate budget was spent on layouts that either failed routing or overflowed."
+  },
+  "abbreviations": [
+    {
+      "drawn": "reconcile loop",
+      "source": "cluster reconcile loop",
+      "view": "v3"
+    },
+    {
+      "drawn": "audit / reimage",
+      "source": "audit / verify reimage",
+      "view": "v3"
+    },
+    {
+      "drawn": "machine-audit",
+      "source": "run machine-audit",
+      "view": "v4"
+    },
+    {
+      "drawn": "diagnostics",
+      "source": "diagnostic events",
+      "view": "v4"
+    },
+    {
+      "drawn": "register + heartbeat",
+      "source": "register + heartbeat",
+      "view": "v3 (label skipped, text not drawn)"
+    }
+  ],
+  "deliberate_drops": [
+    {
+      "fact": "web->wapi (http), pgrpc->db (machine rows), pub->db (machine state)",
+      "reason": "no shipped view could hold them: the entry/state-write views that would carry them either failed routing (v3-b, v3-c, v4-a) or overflowed (v4-c 69x52 with 2 bridges and an ambiguous label owner); every view's three-candidate budget was spent"
+    },
+    {
+      "fact": "the 'web' node (humans + mmctl)",
+      "reason": "it appears only through web->wapi, so it goes with that relation"
+    },
+    {
+      "fact": "per-hop rate details other than the reconcile minute",
+      "reason": "the source states no other rate; adding one would have invented a fact"
+    }
+  ],
+  "known_defects": [
+    {
+      "id": "D1",
+      "view": "v2",
+      "defect": "fit: extent 52x53 vs target 77x47 (6 rows over); pinned dump shows 'graph overflows - drag to pan'",
+      "evidence": "evidence/v2/v2-77x47.txt lines 4, 52, 100"
+    },
+    {
+      "id": "D2",
+      "view": "v3",
+      "defect": "fit: extent 80x31 vs target 77x47 (3 columns over); pinned dump shows the overflow banner",
+      "evidence": "evidence/v3/v3-77x47.txt lines 5, 53, 101"
+    },
+    {
+      "id": "D3",
+      "view": "v3",
+      "defect": "label coverage: 'register + heartbeat' skipped (4/5 placed), warning line in check.txt",
+      "evidence": "evidence/v3/check.txt warning line and labels: 4/5 placed"
+    },
+    {
+      "id": "D4",
+      "view": "all",
+      "defect": "coverage: 16/17 components and 20/23 relations drawn; web, web->wapi, pgrpc->db, pub->db missing",
+      "evidence": "split_coverage_map above; no view spec declares them"
+    }
+  ],
+  "blockers": [
+    "Renderor corridor strictness is the root blocker for coverage: node boxes carry a one-cell impassable ring and each rank gap is a single free lane, so a label band placed in that lane dead-ends routes. Four views therefore top out at ~5 relations each once every hop must carry its own text.",
+    "No renderer feature is missing; the frozen binary does emit label_slot, layers, minlen, dots and dashed styles. The gap is a layout/count limit, not a missing field."
+  ],
+  "source_pointers": [
+    "docs/visualize-eval/cases/modal-machine-manager/source.md lines 5-31 (relationship facts), 50/64/148/217 (human corrections: no rapid dots, dots on the arrows, slow dots, one dot per line)",
+    "fixed constraints block: 17 components, 23 directed relations, both boot directions preserved, janitor->webapi preserved, q->s3 separate, slow sparse dots never on borders"
+  ],
+  "dot_semantics": {
+    "mode": "constant (default) 0.5 cells per 100 ms step",
+    "same_arrival": false,
+    "why": "the source gives no rate and never asks for synchronized arrival; the human correction was 'slow dots' + 'one dot alive per line', which is exactly dots: 1 with constant flow",
+    "per_view": "v1-v4 all: dots: 1 on every edge, 0 dot violations, origins N/N in every check; frames captured 21 per view at 100 ms steps"
+  },
+  "cleanup": {
+    "panes_opened": 4,
+    "panes_closed": 4,
+    "evidence": "every manifest.json carries cleanup: confirmed_closed (evidence/v1..v4/manifest.json)",
+    "failures": "none; no pane left open, no raw tmux used, no other tab touched"
+  },
+  "commands": {
+    "check_probe": "scripts/viz-evidence.sh record --to <case>/attempts-log.jsonl --label <name> -- /tmp/visualize-eval/round-09/bin/rataflow-view --check <spec>",
+    "capture": "scripts/viz-evidence.sh --spec <case>/specs/vN.json --bin /tmp/visualize-eval/round-09/bin/rataflow-view --out <case>/evidence/vN --label vN --frames 21",
+    "pinned_dump": "COLUMNS=77 LINES=47 /tmp/visualize-eval/round-09/bin/rataflow-view --frames 3 <case>/specs/vN.json",
+    "validate": "scripts/viz-validate.py <case>/evidence/vN --require-select --require-frames --require-records --attempts <case>/attempts.json"
+  },
+  "self_assessment": "not green: two of four views miss the 77x47 target and three relations plus one component are not drawn. Everything claimed above is cited to a capture file or a recorded --check line; no judge or reviewer has approved this output."
+}

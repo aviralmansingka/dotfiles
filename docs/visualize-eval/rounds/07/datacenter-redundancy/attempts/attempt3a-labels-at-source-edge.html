@@ -1,0 +1,868 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>datacenter-redundancy — React Flow twin (round 07)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xyflow/react@12.3.5/dist/style.css">
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; padding: 0; background: #282828; color: #ebdbb2;
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .page { padding: 14px 0 26px 24px; }
+  h1 { font-size: 15px; font-weight: 600; margin: 0 0 12px; color: #ebdbb2; letter-spacing: .02em; }
+  .view { margin: 0 0 22px; }
+  .caption { font-size: 11px; color: #a89984; margin: 0 0 6px; white-space: nowrap; }
+  .caption b { color: #d79921; font-weight: 600; }
+  .caption .hash { color: #665c54; }
+  .canvas { width: 1100px; height: 700px; background: #1d2021; border: 1px solid #3c3836; }
+  .rf-node { font-size: 12.5px; line-height: 1.1; text-align: center; padding: 0 8px; }
+  .rf-group-label { position: absolute; top: -9px; left: 10px; font-size: 10px;
+    letter-spacing: .08em; text-transform: uppercase; background: #1d2021;
+    padding: 0 5px; border-radius: 3px; line-height: 1.6; }
+  .react-flow__handle { opacity: 0; width: 1px; height: 1px; min-width: 0; min-height: 0;
+    border: 0; background: transparent; pointer-events: none; }
+  .rf-edge-label { position: absolute; background: #282828; color: #a89984; border: 1px solid #504945;
+    border-radius: 3px; padding: 0 5px; font-size: 10.5px; line-height: 1.5;
+    white-space: nowrap; pointer-events: none; }
+  
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react/": "https://esm.sh/react@18.3.1/",
+    "react-dom": "https://esm.sh/react-dom@18.3.1?deps=react@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client?deps=react@18.3.1",
+    "@xyflow/react": "https://esm.sh/@xyflow/react@12.3.5?external=react,react-dom",
+    "@dagrejs/dagre": "https://esm.sh/@dagrejs/dagre@1.1.5"
+  }
+}
+</script>
+</head>
+<body>
+<div id="root"></div>
+<script type="module">
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import {
+  ReactFlow, Background, BaseEdge, EdgeLabelRenderer, Handle, Position, getSmoothStepPath,
+} from '@xyflow/react';
+import dagre from '@dagrejs/dagre';
+
+const VIEWS = [
+ {
+  "view": "v1",
+  "title": "ISP tier -> MUX tier -> core tier",
+  "spec": "rounds/05/datacenter-redundancy/specs/v1-wan-mux-core.json",
+  "spec_sha256": "3adbbf099facfc60bc6ed88c5def5acef81c71d3cb589e476ddbf053ee341a58",
+  "direction": "lr",
+  "nodes": [
+   {
+    "id": "ispA",
+    "label": "ISP A",
+    "group": "wan",
+    "color": "#d3869b"
+   },
+   {
+    "id": "ispB",
+    "label": "ISP B",
+    "group": "wan",
+    "color": "#e29caf"
+   },
+   {
+    "id": "ispC",
+    "label": "ISP C",
+    "group": "wan",
+    "color": "#bb6c83"
+   },
+   {
+    "id": "ispD",
+    "label": "ISP D",
+    "group": "wan",
+    "color": "#eeb4c4"
+   },
+   {
+    "id": "mux1",
+    "label": "MUX 1",
+    "group": "mux",
+    "color": "#7da0b8"
+   },
+   {
+    "id": "mux2",
+    "label": "MUX 2",
+    "group": "mux",
+    "color": "#97b8ce"
+   },
+   {
+    "id": "core1",
+    "label": "Core 1",
+    "group": "core",
+    "color": "#a9b665"
+   },
+   {
+    "id": "core2",
+    "label": "Core 2",
+    "group": "core",
+    "color": "#bdc97c"
+   }
+  ],
+  "edges": [
+   {
+    "id": "ispA->mux1",
+    "from": "ispA",
+    "to": "mux1",
+    "label": "",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "ispB->mux1",
+    "from": "ispB",
+    "to": "mux1",
+    "label": "",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "ispC->mux2",
+    "from": "ispC",
+    "to": "mux2",
+    "label": "",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "ispD->mux2",
+    "from": "ispD",
+    "to": "mux2",
+    "label": "",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "mux1->core1",
+    "from": "mux1",
+    "to": "core1",
+    "label": "x-connect",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "mux1->core2",
+    "from": "mux1",
+    "to": "core2",
+    "label": "x-connect",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "mux2->core1",
+    "from": "mux2",
+    "to": "core1",
+    "label": "x-connect",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "mux2->core2",
+    "from": "mux2",
+    "to": "core2",
+    "label": "x-connect",
+    "dashed": false,
+    "animated": false
+   }
+  ],
+  "groups": [
+   {
+    "name": "wan",
+    "color": "#d3869b"
+   },
+   {
+    "name": "mux",
+    "color": "#7da0b8"
+   },
+   {
+    "name": "core",
+    "color": "#a9b665"
+   }
+  ]
+ },
+ {
+  "view": "v2",
+  "title": "core tier -> active/passive firewall pair -> border leaves -> spines",
+  "spec": "rounds/05/datacenter-redundancy/specs/v2-fw-border-spine.json",
+  "spec_sha256": "89e36227a0ac6e618fc1ca99bac7883df1972f299ffa80cfbf158c81918c7970",
+  "direction": "lr",
+  "nodes": [
+   {
+    "id": "core1",
+    "label": "Core 1",
+    "group": "core",
+    "color": "#a9b665"
+   },
+   {
+    "id": "core2",
+    "label": "Core 2",
+    "group": "core",
+    "color": "#bdc97c"
+   },
+   {
+    "id": "fw1",
+    "label": "FW1",
+    "group": "firewall",
+    "color": "#7daea3"
+   },
+   {
+    "id": "fw2",
+    "label": "FW2",
+    "group": "firewall",
+    "color": "#93c2b7"
+   },
+   {
+    "id": "bl1",
+    "label": "BL 1",
+    "group": "border-leaf",
+    "color": "#d8a657"
+   },
+   {
+    "id": "bl2",
+    "label": "BL 2",
+    "group": "border-leaf",
+    "color": "#e4b86f"
+   },
+   {
+    "id": "sp1",
+    "label": "Spine 1",
+    "group": "spine",
+    "color": "#7daea3"
+   },
+   {
+    "id": "sp2",
+    "label": "Spine 2",
+    "group": "spine",
+    "color": "#93c2b7"
+   }
+  ],
+  "edges": [
+   {
+    "id": "core1->fw1",
+    "from": "core1",
+    "to": "fw1",
+    "label": "active",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "core2->fw1",
+    "from": "core2",
+    "to": "fw1",
+    "label": "active",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "core1->fw2",
+    "from": "core1",
+    "to": "fw2",
+    "label": "standby?",
+    "dashed": true,
+    "animated": false
+   },
+   {
+    "id": "core2->fw2",
+    "from": "core2",
+    "to": "fw2",
+    "label": "standby?",
+    "dashed": true,
+    "animated": false
+   },
+   {
+    "id": "fw1->bl1",
+    "from": "fw1",
+    "to": "bl1",
+    "label": "active",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "fw1->bl2",
+    "from": "fw1",
+    "to": "bl2",
+    "label": "active",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "fw2->bl1",
+    "from": "fw2",
+    "to": "bl1",
+    "label": "standby?",
+    "dashed": true,
+    "animated": false
+   },
+   {
+    "id": "fw2->bl2",
+    "from": "fw2",
+    "to": "bl2",
+    "label": "standby?",
+    "dashed": true,
+    "animated": false
+   },
+   {
+    "id": "bl1->sp1",
+    "from": "bl1",
+    "to": "sp1",
+    "label": "ECMP",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "bl1->sp2",
+    "from": "bl1",
+    "to": "sp2",
+    "label": "ECMP",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "bl2->sp1",
+    "from": "bl2",
+    "to": "sp1",
+    "label": "ECMP",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "bl2->sp2",
+    "from": "bl2",
+    "to": "sp2",
+    "label": "ECMP",
+    "dashed": false,
+    "animated": false
+   }
+  ],
+  "groups": [
+   {
+    "name": "core",
+    "color": "#a9b665"
+   },
+   {
+    "name": "firewall",
+    "color": "#7daea3"
+   },
+   {
+    "name": "border-leaf",
+    "color": "#d8a657"
+   },
+   {
+    "name": "spine",
+    "color": "#7daea3"
+   }
+  ]
+ },
+ {
+  "view": "v3",
+  "title": "spines -> rack leaves -> racks",
+  "spec": "rounds/05/datacenter-redundancy/specs/v3-fabric-leaves-racks.json",
+  "spec_sha256": "fcc12c64f14b41645f5fba4fbe960cb0693c8e756441d9bfd70de63172ffde2b",
+  "direction": "lr",
+  "nodes": [
+   {
+    "id": "sp1",
+    "label": "Spine 1",
+    "group": "spine",
+    "color": "#7daea3"
+   },
+   {
+    "id": "sp2",
+    "label": "Spine 2",
+    "group": "spine",
+    "color": "#93c2b7"
+   },
+   {
+    "id": "leaf1",
+    "label": "Leaf 1",
+    "group": "rack-leaf",
+    "color": "#7daea3"
+   },
+   {
+    "id": "leaf2",
+    "label": "Leaf 2",
+    "group": "rack-leaf",
+    "color": "#93c2b7"
+   },
+   {
+    "id": "rack1",
+    "label": "Rack 1",
+    "group": "rack",
+    "color": "#d3869b"
+   },
+   {
+    "id": "rack2",
+    "label": "Rack 2",
+    "group": "rack",
+    "color": "#e29caf"
+   }
+  ],
+  "edges": [
+   {
+    "id": "sp1->leaf1",
+    "from": "sp1",
+    "to": "leaf1",
+    "label": "ECMP",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "sp1->leaf2",
+    "from": "sp1",
+    "to": "leaf2",
+    "label": "ECMP",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "sp2->leaf1",
+    "from": "sp2",
+    "to": "leaf1",
+    "label": "ECMP",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "sp2->leaf2",
+    "from": "sp2",
+    "to": "leaf2",
+    "label": "ECMP",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "leaf1->rack1",
+    "from": "leaf1",
+    "to": "rack1",
+    "label": "dual",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "leaf2->rack1",
+    "from": "leaf2",
+    "to": "rack1",
+    "label": "dual",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "leaf1->rack2",
+    "from": "leaf1",
+    "to": "rack2",
+    "label": "dual",
+    "dashed": false,
+    "animated": false
+   },
+   {
+    "id": "leaf2->rack2",
+    "from": "leaf2",
+    "to": "rack2",
+    "label": "dual",
+    "dashed": false,
+    "animated": false
+   }
+  ],
+  "groups": [
+   {
+    "name": "spine",
+    "color": "#7daea3"
+   },
+   {
+    "name": "rack-leaf",
+    "color": "#7daea3"
+   },
+   {
+    "name": "rack",
+    "color": "#d3869b"
+   }
+  ]
+ }
+];
+
+const NODE_W = 168, NODE_H = 42;
+const PAD_X = 14, PAD_TOP = 24, PAD_BOTTOM = 8;
+const DAGRE = {
+ "ranksep": 120,
+ "nodesep": 62,
+ "edgesep": 20,
+ "marginx": 0,
+ "marginy": 0
+};
+const INNER = { ranksep: 58, nodesep: 38, edgesep: 18 };
+const META = { ranksep: DAGRE.ranksep, nodesep: DAGRE.nodesep, edgesep: DAGRE.edgesep };
+
+// Two-stage dagre layout.
+// 1. every group is laid out on its own (its members + the edges inside it),
+//    which yields the subflow block size and the intra-subflow positions;
+// 2. the blocks plus the ungrouped nodes are laid out again, with one edge per
+//    crossing pair, which yields the subflow positions in the whole graph.
+// Deterministic: same spec + same constants -> same coordinates.
+function innerLayout(members, edges, rankdir) {
+  const g = new dagre.graphlib.Graph({ multigraph: true });
+  g.setGraph({ rankdir, ranksep: INNER.ranksep, nodesep: INNER.nodesep,
+    edgesep: INNER.edgesep, marginx: 0, marginy: 0 });
+  g.setDefaultEdgeLabel(() => ({}));
+  members.forEach((n) => g.setNode(n.id, { width: NODE_W, height: NODE_H }));
+  edges.forEach((e, i) => g.setEdge(e.from, e.to, {}, 'i' + i));
+  dagre.layout(g);
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  const pos = {};
+  members.forEach((n) => {
+    const p = g.node(n.id);
+    const x = p.x - NODE_W / 2, y = p.y - NODE_H / 2;
+    pos[n.id] = { x, y };
+    minX = Math.min(minX, x); minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x + NODE_W); maxY = Math.max(maxY, y + NODE_H);
+  });
+  Object.keys(pos).forEach((k) => { pos[k].x -= minX; pos[k].y -= minY; });
+  return { pos, w: maxX - minX, h: maxY - minY };
+}
+
+function layout(view) {
+  const rankdir = view.direction === 'lr' ? 'LR' : 'TB';
+  const inner = {};
+  view.groups.forEach((grp) => {
+    const members = view.nodes.filter((n) => n.group === grp.name);
+    const ids = new Set(members.map((n) => n.id));
+    const edges = view.edges.filter((e) => ids.has(e.from) && ids.has(e.to));
+    inner[grp.name] = innerLayout(members, edges, rankdir);
+  });
+  const owner = {};
+  view.nodes.forEach((n) => { owner[n.id] = n.group || ('solo:' + n.id); });
+
+  const meta = new dagre.graphlib.Graph({ multigraph: true });
+  meta.setGraph({ rankdir, ranksep: META.ranksep, nodesep: META.nodesep,
+    edgesep: META.edgesep, marginx: 0, marginy: 0 });
+  meta.setDefaultEdgeLabel(() => ({}));
+  view.groups.forEach((grp) => {
+    meta.setNode(grp.name, {
+      width: inner[grp.name].w + 2 * PAD_X,
+      height: inner[grp.name].h + PAD_TOP + PAD_BOTTOM,
+    });
+  });
+  view.nodes.filter((n) => !n.group).forEach((n) => {
+    meta.setNode('solo:' + n.id, { width: NODE_W, height: NODE_H });
+  });
+  view.edges.forEach((e, i) => {
+    const a = owner[e.from], b = owner[e.to];
+    if (a === b) return;
+    meta.setEdge(a, b, {}, 'm' + i);
+  });
+  dagre.layout(meta);
+
+  const groupRects = {};
+  const rfNodes = [];
+  view.groups.forEach((grp) => {
+    const m = meta.node(grp.name);
+    groupRects[grp.name] = {
+      x: m.x - m.width / 2,
+      y: m.y - m.height / 2,
+      w: m.width,
+      h: m.height,
+    };
+  });
+  view.groups.forEach((grp) => {
+    const r = groupRects[grp.name];
+    rfNodes.push({
+      id: 'grp::' + grp.name,
+      type: 'groupBox',
+      position: { x: r.x, y: r.y },
+      data: { label: grp.name, color: grp.color },
+      style: { width: r.w, height: r.h },
+      draggable: false,
+      selectable: false,
+      zIndex: 0,
+    });
+  });
+  view.nodes.forEach((n) => {
+    if (n.group) {
+      const r = groupRects[n.group];
+      const p = inner[n.group].pos[n.id];
+      rfNodes.push({
+        id: n.id,
+        type: 'plain',
+        // child positions are RELATIVE to the parent subflow node
+        position: { x: PAD_X + p.x, y: PAD_TOP + p.y },
+        data: { label: n.label, color: n.color },
+        parentId: 'grp::' + n.group,
+        extent: 'parent',
+        draggable: false,
+        zIndex: 1,
+      });
+    } else {
+      const m = meta.node('solo:' + n.id);
+      rfNodes.push({
+        id: n.id,
+        type: 'plain',
+        position: { x: m.x - NODE_W / 2, y: m.y - NODE_H / 2 },
+        data: { label: n.label, color: n.color },
+        draggable: false,
+        zIndex: 1,
+      });
+    }
+  });
+
+  const ax = view.direction === 'lr' ? 'lr' : 'tb';
+  const nodeAbs = {};
+  view.nodes.forEach((n) => {
+    if (n.group) {
+      const r = groupRects[n.group];
+      const p = inner[n.group].pos[n.id];
+      nodeAbs[n.id] = { x: r.x + PAD_X + p.x, y: r.y + PAD_TOP + p.y };
+    } else {
+      const m = meta.node('solo:' + n.id);
+      nodeAbs[n.id] = { x: m.x - NODE_W / 2, y: m.y - NODE_H / 2 };
+    }
+  });
+  const labelPos = {};
+  view.edges.forEach((e) => {
+    const a = owner[e.from], b = owner[e.to];
+    if (a === b) return;                     // intra-subflow: keep the path midpoint
+    // cross-subflow labels sit in the middle of the gutter between blocks, so
+    // they never straddle a subflow border or sit under a block's fill
+    const half = 16;
+    const src = nodeAbs[e.from];
+    const blk = groupRects[a];
+    labelPos[e.id] = ax === 'tb'
+      ? { x: src.x + NODE_W / 2, y: (blk ? blk.y + blk.h : src.y + NODE_H) + half }
+      : { x: (blk ? blk.x + blk.w : src.x + NODE_W) + half, y: src.y + NODE_H / 2 };
+  });
+
+  // labels that resolve to the same gutter point (several edges leaving one
+  // node, or several nodes leaving one subflow at the same x/y) would hide each
+  // other; fan them out along the perpendicular axis instead
+  const buckets = {};
+  Object.keys(labelPos).forEach((id) => {
+    const p = labelPos[id];
+    const key = Math.round(p.x / 6) + '|' + Math.round(p.y / 6);
+    (buckets[key] = buckets[key] || []).push(id);
+  });
+  Object.keys(buckets).forEach((key) => {
+    const ids = buckets[key];
+    return;
+    // stack along y: label boxes are wide and short, so a vertical stack never
+    // collides, while a horizontal fan would just overlap the same text
+    const other = ax === 'tb' ? 'x' : 'y';
+    ids.sort((a, b) => {
+      const ta = nodeAbs[view.edges.find((x) => x.id === a).to];
+      const tb = nodeAbs[view.edges.find((x) => x.id === b).to];
+      return ta[other] - tb[other];
+    });
+    ids.forEach((id, i) => {
+      
+    });
+  });
+
+  const rfEdges = view.edges.map((e) => ({
+    id: e.id,
+    source: e.from,
+    target: e.to,
+    sourceHandle: 's-' + ax,
+    targetHandle: 't-' + ax,
+    type: 'labeled',
+    data: { label: e.label, dot: e.animated, labelPos: labelPos[e.id] || null,
+      branch: !!e.branch, trunk: e.trunk || null },
+    style: {
+      stroke: '#7c6f64',
+      strokeWidth: 1.4,
+      ...(e.dashed ? { strokeDasharray: '6 4' } : {}),
+    },
+    markerEnd: { type: 'arrowclosed', color: '#a89984', width: 14, height: 14 },
+  }));
+
+  return { rfNodes, rfEdges };
+}
+
+// ------------------------------------------------------------------- nodes
+function PlainNode({ data }) {
+  return React.createElement(
+    'div',
+    {
+      className: 'rf-node',
+      style: {
+        width: NODE_W,
+        height: NODE_H,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#32302f',
+        color: '#ebdbb2',
+        border: '1.5px solid ' + data.color,
+        borderRadius: 6,
+        boxSizing: 'border-box',
+      },
+    },
+    React.createElement(Handle, { type: 'target', position: Position.Top, id: 't-tb' }),
+    React.createElement(Handle, { type: 'source', position: Position.Bottom, id: 's-tb' }),
+    React.createElement(Handle, { type: 'target', position: Position.Left, id: 't-lr' }),
+    React.createElement(Handle, { type: 'source', position: Position.Right, id: 's-lr' }),
+    data.label
+  );
+}
+
+function GroupBox({ data, style }) {
+  const bg = data.color + '1f';
+  return React.createElement(
+    'div',
+    {
+      style: {
+        width: '100%',
+        height: '100%',
+        boxSizing: 'border-box',
+        border: '1px solid ' + data.color,
+        borderRadius: 9,
+        background: bg,
+      },
+    },
+    React.createElement(
+      'div',
+      { className: 'rf-group-label', style: { color: data.color } },
+      data.label
+    )
+  );
+}
+
+// ------------------------------------------------------------------- edges
+function LabeledEdge(props) {
+  const { id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition,
+          data, markerEnd, style } = props;
+  const [path, pathLabelX, pathLabelY] = getSmoothStepPath({
+    sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, borderRadius: 0,
+  });
+  const labelX = data && data.labelPos ? data.labelPos.x : pathLabelX;
+  const labelY = data && data.labelPos ? data.labelPos.y : pathLabelY;
+  const pathRef = useRef(null);
+  const [dur, setDur] = useState('3s');
+  useEffect(() => {
+    if (!data || !data.dot || !pathRef.current) return;
+    const len = pathRef.current.getTotalLength();
+    // constant pixel speed: 55 px/s keeps one dot per edge and every dot moving
+    setDur((len / 55).toFixed(3) + 's');
+  }, [data, path]);
+  const children = [
+    React.createElement(BaseEdge, { key: 'e', id, path, markerEnd, style }),
+  ];
+  if (data && data.dot) {
+    children.push(
+      React.createElement(
+        'circle',
+        { key: 'd', r: 3.6, fill: '#fabd2f' },
+        React.createElement('animateMotion', {
+          dur, repeatCount: 'indefinite', path,
+        })
+      )
+    );
+  }
+  if (data && data.label) {
+    children.push(
+      React.createElement(
+        EdgeLabelRenderer,
+        { key: 'l' },
+        React.createElement(
+          'div',
+          {
+            className: 'rf-edge-label',
+            style: { transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` },
+          },
+          data.label
+        )
+      )
+    );
+  }
+  if (data && data.dot) {
+    // path ref must exist for getTotalLength: render a hidden copy under the dot
+    children.push(
+      React.createElement('path', { key: 'p', ref: pathRef, d: path, fill: 'none',
+        stroke: 'none', pointerEvents: 'none' })
+    );
+  }
+  return React.createElement('g', null, children);
+}
+
+const nodeTypes = { plain: PlainNode, groupBox: GroupBox };
+const edgeTypes = { labeled: LabeledEdge };
+
+function View({ view, index }) {
+  const { rfNodes, rfEdges } = useMemo(() => layout(view), [view]);
+  const nodeCount = view.nodes.length;
+  const edgeCount = view.edges.length;
+  return React.createElement(
+    'section',
+    { className: 'view', id: 'view-' + view.view },
+    React.createElement(
+      'div',
+      { className: 'caption' },
+      React.createElement('b', null, view.view),
+      ' — ' + view.title + '   ·   ' + nodeCount + ' nodes / ' + edgeCount + ' edges' +
+        '   ·   direction ' + view.direction +
+        (view.groups.length ? '   ·   subflows: ' + view.groups.map((g) => g.name).join(', ') : ''),
+      React.createElement('span', { className: 'hash' }, '   ·   spec ' + view.spec_sha256.slice(0, 12))
+    ),
+    React.createElement(
+      'div',
+      { className: 'canvas' },
+      React.createElement(
+        ReactFlow,
+        {
+          nodes: rfNodes,
+          edges: rfEdges,
+          nodeTypes,
+          edgeTypes,
+          fitView: true,
+          fitViewOptions: { padding: 0.10, maxZoom: 1.2, minZoom: 0.15 },
+          nodesDraggable: false,
+          nodesConnectable: false,
+          elementsSelectable: false,
+          panOnDrag: false,
+          zoomOnScroll: false,
+          zoomOnPinch: false,
+          zoomOnDoubleClick: false,
+          preventScrolling: false,
+          minZoom: 0.15,
+          maxZoom: 1.2,
+          proOptions: { hideAttribution: false },
+        },
+        React.createElement(Background, { variant: 'dots', gap: 26, size: 1, color: '#3c3836' })
+      )
+    )
+  );
+}
+
+function App() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      window.__rfReady = true;
+      window.__rfFacts = VIEWS.map((v) => ({
+        view: v.view,
+        nodes: v.nodes.length,
+        edges: v.edges.length,
+        groups: v.groups.map((g) => g.name),
+        direction: v.direction,
+        spec_sha256: v.spec_sha256,
+      }));
+      setReady(true);
+    }, 1500);
+    return () => clearTimeout(t);
+  }, []);
+  return React.createElement(
+    'div',
+    { className: 'page' },
+    React.createElement('h1', null, 'datacenter-redundancy — React Flow twin (round 07 pilot, dagre ranksep 120 / nodesep 62 / edgesep 20)'),
+    VIEWS.map((v, i) => React.createElement(View, { key: v.view, view: v, index: i })),
+    ready ? null : React.createElement('div', { style: { fontSize: 11, color: '#665c54' } }, 'laying out…')
+  );
+}
+
+createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>

@@ -1,0 +1,1027 @@
+{
+  "protocol_version": 1,
+  "round": 8,
+  "case_id": "network",
+  "candidate_sha256": "b1bdb4d3d38336cb7783db34da7f9f19edf80704a890de32285d9e582b4221eb",
+  "renderer_sha256": "ea24593b0f80c1617573eef4766f2bacaaf4315a8133a65d5331e9daec1c1f30",
+  "rubric_sha256": "ef092e343d622654fe3eb6115eafb395b53a5d4f4b47b2f0c4a165256b1d00b3",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "2f8fd1014cfcb43e4358edc85b1a0bab75fbeb1f591f249166073f8366c4dec9",
+  "generator": {
+    "worker_id": "viz-ds08-2",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge08-network",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 83,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/08/reviews/network/observed-first.md",
+      "sha256": "d28fd803958a086dddd81025a5f0eaa03c14722c857ef0d8b35b61084b57730c",
+      "description": "Blind observation saved before expectation reveal.",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/08/reviews/network/spec-manifest.json",
+      "sha256": "2f8fd1014cfcb43e4358edc85b1a0bab75fbeb1f591f249166073f8366c4dec9",
+      "description": "Sorted repository-relative final spec paths and actual hashes.",
+      "capture": null
+    },
+    {
+      "id": "spec1",
+      "path": "docs/visualize-eval/rounds/08/network/v1.json",
+      "sha256": "321eed73e17298b4d738e89f5c49c412e20c3e15e3b4922c717eab069351575a",
+      "description": "Final graph specification.",
+      "capture": null
+    },
+    {
+      "id": "pinned1",
+      "path": "docs/visualize-eval/rounds/08/network/v1-77x47-frames.txt",
+      "sha256": "ef25107b8fb49501512ac2f41c96ff2e636b5600818cc4974caaf3c4269dcda9",
+      "description": "Pinned target-size 21-frame capture, 100 ms step.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0–20",
+        "timestamp": "0–2000ms",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-text-txt",
+      "path": "docs/visualize-eval/rounds/08/network/evidence/v1/v1-text.txt",
+      "sha256": "68c4224bc5da5932bccbd2c1877e27d7eb33306779c3cc7f44e7916b204a6080",
+      "description": "Live pane normal evidence.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "capture window 2026-11-02T20:59:49Z–20:59:53Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-ansi-ansi",
+      "path": "docs/visualize-eval/rounds/08/network/evidence/v1/v1-ansi.ansi",
+      "sha256": "7d944c9e6f71413d35e9d79eae33bd64bbd66bedd9d86417bcfe24f145e900e2",
+      "description": "Live pane normal evidence.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "capture window 2026-11-02T20:59:49Z–20:59:53Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-selected-ansi",
+      "path": "docs/visualize-eval/rounds/08/network/evidence/v1/v1-selected.ansi",
+      "sha256": "e67aee75853fbd0b312124edbd8e0de22bcef5205922be9c1512a174318193fc",
+      "description": "Live pane select-all evidence.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "single",
+        "timestamp": "capture window 2026-11-02T20:59:49Z–20:59:53Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frames-txt",
+      "path": "docs/visualize-eval/rounds/08/network/evidence/v1/v1-frames.txt",
+      "sha256": "c94e86019d73287ef665beeaf3dbcdcafcb7e8f6931cef18fd71a1f045c0e449",
+      "description": "Live pane animated evidence.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "frames 2–20 (frame stream begins mid-capture)",
+        "timestamp": "capture window 2026-11-02T20:59:49Z–20:59:53Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frames-ansi",
+      "path": "docs/visualize-eval/rounds/08/network/evidence/v1/v1-frames.ansi",
+      "sha256": "f40343a3129979e5aa2e1a44237294663111ca0d0622c0a2e0a95edbb5ba6787",
+      "description": "Live pane animated evidence.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "frames 2–20 (frame stream begins mid-capture)",
+        "timestamp": "capture window 2026-11-02T20:59:49Z–20:59:53Z",
+        "state": "animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-check-txt",
+      "path": "docs/visualize-eval/rounds/08/network/evidence/v1/check.txt",
+      "sha256": "ea90e8f29acbb85316f0b72cf540e98386fc7f887651d97d348a2e981cfe4e53",
+      "description": "Recorded check, capture metadata, or binary digest.",
+      "capture": null
+    },
+    {
+      "id": "v1-manifest-json",
+      "path": "docs/visualize-eval/rounds/08/network/evidence/v1/manifest.json",
+      "sha256": "71c9e75d116fd8207cc9091255a67927c14506ba4e5306693ca1143bcbb83dd4",
+      "description": "Recorded check, capture metadata, or binary digest.",
+      "capture": null
+    },
+    {
+      "id": "v1-bin-sha256",
+      "path": "docs/visualize-eval/rounds/08/network/evidence/v1/bin.sha256",
+      "sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+      "description": "Recorded check, capture metadata, or binary digest.",
+      "capture": null
+    },
+    {
+      "id": "validator1",
+      "path": "docs/visualize-eval/rounds/08/network/validator-v1.txt",
+      "sha256": "869e78c67ce75c747f9edea7456a09a8d2934a0d6c1472b519798a54ef445130",
+      "description": "Generator validator output; not a substitute for visual review.",
+      "capture": null
+    },
+    {
+      "id": "v1attempt1spec",
+      "path": "docs/visualize-eval/rounds/08/network/v1-attempt1.json",
+      "sha256": "11dcaa732c2b05522a41aba5e4d8391f472ebffdbbd914bdf5a099306bcba945",
+      "description": "Attempt spec.",
+      "capture": null
+    },
+    {
+      "id": "v1attempt1check",
+      "path": "docs/visualize-eval/rounds/08/network/attempts/v1-attempt1.check.txt",
+      "sha256": "5e9240bfa1c6bbc65db1e350d2526b4918392a0e0e3c4f3567ca8662c4253c2e",
+      "description": "Attempt raw check or target frame dump.",
+      "capture": null
+    },
+    {
+      "id": "v1attempt1frames77",
+      "path": "docs/visualize-eval/rounds/08/network/attempts/v1-attempt1.frames77.txt",
+      "sha256": "1d142c19101ea36e2e0ec71c8b81e570687ee1637ec4d143cad42f767e0ee988",
+      "description": "Attempt raw check or target frame dump.",
+      "capture": null
+    },
+    {
+      "id": "v1attempt2spec",
+      "path": "docs/visualize-eval/rounds/08/network/v1-attempt2.json",
+      "sha256": "781cbd85b21c1af1efae919d10fee493b49dcec83d4ae77c8d3a0da64b641ee8",
+      "description": "Attempt spec.",
+      "capture": null
+    },
+    {
+      "id": "v1attempt2check",
+      "path": "docs/visualize-eval/rounds/08/network/attempts/v1-attempt2.check.txt",
+      "sha256": "3fa934d10a15e34b6af29dbb81f6813bdad3ba9778f5852b51b3b5cce2d46fae",
+      "description": "Attempt raw check or target frame dump.",
+      "capture": null
+    },
+    {
+      "id": "v1attempt2frames77",
+      "path": "docs/visualize-eval/rounds/08/network/attempts/v1-attempt2.frames77.txt",
+      "sha256": "877a99eba2926ca70bd16f04e4941d435c8c78d2b49277237e756f0e2ba6615e",
+      "description": "Attempt raw check or target frame dump.",
+      "capture": null
+    },
+    {
+      "id": "v1attempt3spec",
+      "path": "docs/visualize-eval/rounds/08/network/v1-attempt3.json",
+      "sha256": "321eed73e17298b4d738e89f5c49c412e20c3e15e3b4922c717eab069351575a",
+      "description": "Attempt spec.",
+      "capture": null
+    },
+    {
+      "id": "v1attempt3check",
+      "path": "docs/visualize-eval/rounds/08/network/attempts/v1-attempt3.check.txt",
+      "sha256": "ea90e8f29acbb85316f0b72cf540e98386fc7f887651d97d348a2e981cfe4e53",
+      "description": "Attempt raw check or target frame dump.",
+      "capture": null
+    },
+    {
+      "id": "v1attempt3frames77",
+      "path": "docs/visualize-eval/rounds/08/network/attempts/v1-attempt3.frames77.txt",
+      "sha256": "9a8c0dbe3bc70e60c056f995e7648e058030770272837dd7be84f86cf80e76fd",
+      "description": "Attempt raw check or target frame dump.",
+      "capture": null
+    },
+    {
+      "id": "spec2",
+      "path": "docs/visualize-eval/rounds/08/network/v2.json",
+      "sha256": "779f9d1345394061563eac2525ae879cf8d3e6f53e8a3ec163c19d77109d03fc",
+      "description": "Final graph specification.",
+      "capture": null
+    },
+    {
+      "id": "pinned2",
+      "path": "docs/visualize-eval/rounds/08/network/v2-77x47-frames.txt",
+      "sha256": "cecadbe4ca75573ee1d14d823012390b2d40289e488ffd975623e3f1eca940b2",
+      "description": "Pinned target-size 21-frame capture, 100 ms step.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0–20",
+        "timestamp": "0–2000ms",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-text-txt",
+      "path": "docs/visualize-eval/rounds/08/network/evidence/v2/v2-text.txt",
+      "sha256": "7a634777fd36c42f0f840d72523f9de0b5a8219b2def662777f4864714b4b5ef",
+      "description": "Live pane normal evidence.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "single",
+        "timestamp": "capture window 2026-11-02T20:59:58Z–21:00:02Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-ansi-ansi",
+      "path": "docs/visualize-eval/rounds/08/network/evidence/v2/v2-ansi.ansi",
+      "sha256": "238b5a89583074a8504ae8cabcdfa42dbe9491d9c9d09ae6d6d5f0349190d63d",
+      "description": "Live pane normal evidence.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "single",
+        "timestamp": "capture window 2026-11-02T20:59:58Z–21:00:02Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-selected-ansi",
+      "path": "docs/visualize-eval/rounds/08/network/evidence/v2/v2-selected.ansi",
+      "sha256": "bc6e78221f650ada8863b230ea4aedc2e88e9669a7c25cfec9536e1e11ef3134",
+      "description": "Live pane select-all evidence.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "single",
+        "timestamp": "capture window 2026-11-02T20:59:58Z–21:00:02Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frames-txt",
+      "path": "docs/visualize-eval/rounds/08/network/evidence/v2/v2-frames.txt",
+      "sha256": "55b36f41f9f389d55e6fb0d28fbde31d6856067293eff74ff0540e824fa57db8",
+      "description": "Live pane animated evidence.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "frames 2–20 (frame stream begins mid-capture)",
+        "timestamp": "capture window 2026-11-02T20:59:58Z–21:00:02Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frames-ansi",
+      "path": "docs/visualize-eval/rounds/08/network/evidence/v2/v2-frames.ansi",
+      "sha256": "7adcc145915108f4c9757011490b9bd09c474456dc9aa3865d242891ce810670",
+      "description": "Live pane animated evidence.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "frames 2–20 (frame stream begins mid-capture)",
+        "timestamp": "capture window 2026-11-02T20:59:58Z–21:00:02Z",
+        "state": "animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-check-txt",
+      "path": "docs/visualize-eval/rounds/08/network/evidence/v2/check.txt",
+      "sha256": "b5d0d089d2ac54711d51cd9701c09eb6d2c0cd6f72655a1c7349134ee261455c",
+      "description": "Recorded check, capture metadata, or binary digest.",
+      "capture": null
+    },
+    {
+      "id": "v2-manifest-json",
+      "path": "docs/visualize-eval/rounds/08/network/evidence/v2/manifest.json",
+      "sha256": "15c379649a7d2ae18b296de3dc3fa544f5185804bdc40523c8cc1427e04cd61b",
+      "description": "Recorded check, capture metadata, or binary digest.",
+      "capture": null
+    },
+    {
+      "id": "v2-bin-sha256",
+      "path": "docs/visualize-eval/rounds/08/network/evidence/v2/bin.sha256",
+      "sha256": "02f329b2546e6aee4d0b8281819fe1a7d2daa298aebe2678bf079fef8fe9a478",
+      "description": "Recorded check, capture metadata, or binary digest.",
+      "capture": null
+    },
+    {
+      "id": "validator2",
+      "path": "docs/visualize-eval/rounds/08/network/validator-v2.txt",
+      "sha256": "869e78c67ce75c747f9edea7456a09a8d2934a0d6c1472b519798a54ef445130",
+      "description": "Generator validator output; not a substitute for visual review.",
+      "capture": null
+    },
+    {
+      "id": "v2attempt1spec",
+      "path": "docs/visualize-eval/rounds/08/network/v2-attempt1.json",
+      "sha256": "54d11f4dfe76be15ad2fd69b29a2c8d4346b867e39fbaaede0c2590823b4eb18",
+      "description": "Attempt spec.",
+      "capture": null
+    },
+    {
+      "id": "v2attempt1check",
+      "path": "docs/visualize-eval/rounds/08/network/attempts/v2-attempt1.check.txt",
+      "sha256": "b74f6c02e3a10f72163a864c489a22a1cf38ad195cc377adfb18c5a58abf5c83",
+      "description": "Attempt raw check or target frame dump.",
+      "capture": null
+    },
+    {
+      "id": "v2attempt1frames77",
+      "path": "docs/visualize-eval/rounds/08/network/attempts/v2-attempt1.frames77.txt",
+      "sha256": "cfceb0c0b22c076942e916cf3f926f342bb67ba1f43e228453d49352ff1d51d3",
+      "description": "Attempt raw check or target frame dump.",
+      "capture": null
+    },
+    {
+      "id": "v2attempt2spec",
+      "path": "docs/visualize-eval/rounds/08/network/v2-attempt2.json",
+      "sha256": "779f9d1345394061563eac2525ae879cf8d3e6f53e8a3ec163c19d77109d03fc",
+      "description": "Attempt spec.",
+      "capture": null
+    },
+    {
+      "id": "v2attempt2check",
+      "path": "docs/visualize-eval/rounds/08/network/attempts/v2-attempt2.check.txt",
+      "sha256": "b5d0d089d2ac54711d51cd9701c09eb6d2c0cd6f72655a1c7349134ee261455c",
+      "description": "Attempt raw check or target frame dump.",
+      "capture": null
+    },
+    {
+      "id": "v2attempt2frames77",
+      "path": "docs/visualize-eval/rounds/08/network/attempts/v2-attempt2.frames77.txt",
+      "sha256": "47467845b03b1996a209653898c2eb69e5116a6b88936fa83eff5fc9de46e549",
+      "description": "Attempt raw check or target frame dump.",
+      "capture": null
+    },
+    {
+      "id": "v2attempt3spec",
+      "path": "docs/visualize-eval/rounds/08/network/v2-attempt3.json",
+      "sha256": "84a77dfc594a04445fb03ac31137d10a0a1347849271e288a88843b0930c3c03",
+      "description": "Attempt spec.",
+      "capture": null
+    },
+    {
+      "id": "v2attempt3check",
+      "path": "docs/visualize-eval/rounds/08/network/attempts/v2-attempt3.check.txt",
+      "sha256": "f663478561038e1979351c38cb1591ee902be371641fc8e19a0b1670ae7ffd41",
+      "description": "Attempt raw check or target frame dump.",
+      "capture": null
+    },
+    {
+      "id": "v2attempt3frames77",
+      "path": "docs/visualize-eval/rounds/08/network/attempts/v2-attempt3.frames77.txt",
+      "sha256": "cb9da6e25e6e1a71426b934fd217584eedd4ecedde14d81fcdd2b94bfe15878e",
+      "description": "Attempt raw check or target frame dump.",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/08/network/generation.json",
+      "sha256": "d668881557fc8c729e348ede655f02f72bc56146c0dcec6ce64d0bfbea881004",
+      "description": "Frozen input or generator record.",
+      "capture": null
+    },
+    {
+      "id": "generation-md",
+      "path": "docs/visualize-eval/rounds/08/network/generation.md",
+      "sha256": "812d43075088feb57c91f54f13dd21a752a67af9c41719808ee33249a94ec3d5",
+      "description": "Frozen input or generator record.",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/08/network/attempts.json",
+      "sha256": "dfb77c81f8f8274c6251f35fb9a659cf330fa3b23d4caf9a8cff7b853abd8450",
+      "description": "Frozen input or generator record.",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/08/metadata.json",
+      "sha256": "83084698e7d2bf4a6e2e0f411ef5b0b5454e5dc37c04f9ce45b8b82ea591ebf0",
+      "description": "Frozen input or generator record.",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/08/SKILL.md",
+      "sha256": "b1bdb4d3d38336cb7783db34da7f9f19edf80704a890de32285d9e582b4221eb",
+      "description": "Frozen input or generator record.",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/08/rubric.json",
+      "sha256": "ef092e343d622654fe3eb6115eafb395b53a5d4f4b47b2f0c4a165256b1d00b3",
+      "description": "Frozen input or generator record.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen input or generator record.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/network/source.md",
+      "sha256": "9d23a7b50d1d26a69f95523a9586bab96ec588afb9628ae274c896992b147947",
+      "description": "Frozen input or generator record.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/network/expected.json",
+      "sha256": "8cb86d269c21176d775e79f8592f09067049031a0e581df38d66705e73a8caa9",
+      "description": "Frozen input or generator record.",
+      "capture": null
+    },
+    {
+      "id": "variants",
+      "path": "docs/visualize-eval/cases/network/historical-variants.json",
+      "sha256": "6af06039e172f0ef75d83c87703f85541b24e61d8706c64d8bba31ce742c2cbe",
+      "description": "Frozen input or generator record.",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Six nodes and seven source relations are readable across both views, with speeds and independent converging links; no source anti-parallel relation is specified.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "pinned1",
+        "pinned2"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Seven frame-zero dots start one drawn cell late; rubric explicitly makes direction unproven despite independently traceable stems and heads.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "pinned1",
+        "pinned2"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Complete target-size content is visible, but v2 web routes cross at one avoidable bridge: ordering session at the left port and queries at the right would preserve source order and separate the paths.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "pinned1",
+        "pinned2"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "V2 tiers rectangle includes part of ungrouped Core switch and hides its own wall behind it, misleadingly implying membership. Related member hues otherwise match.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "pinned1",
+        "pinned2"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Service-mesh classification is plausible for this fan/convergence; there is no source anti-parallel pair to invent. But the core fan is split across views, so the source-listed web-before-Redis fan order cannot be rendered or verified together; converging pair and front path separately do not satisfy the fan recipe."
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 8 node occurrences have complete continuous selected borders in ANSI; normal captures show complete consistent borders. V2 Core is gold but not bold in the normal ANSI, unlike its bold selected state; the blind inference that it was selected was mistaken. Region-wall defects are judged under grouping.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "v1-ansi-ansi",
+        "v1-selected-ansi",
+        "v2-ansi-ansi",
+        "v2-selected-ansi"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Pinned captures have 21 frames and live-pane frame files retain only frames 2–20; v2 longest web→DB route has not completed a full lap, required for animated views. Rejected-attempt logs also do not explicitly record individual exit statuses/stderr. Known renderer and inputs hash-match; pane dimensions are header-backed and cleanup recorded.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "pinned1",
+        "pinned2",
+        "attempts",
+        "generation",
+        "v1-manifest-json",
+        "v2-manifest-json"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All seven dots start one cell beyond the first drawn post-port cell; check reports origins complete despite the measured disagreement. Constant common speed and one dot per route are otherwise supported over 21 frames; v2 full longest lap is absent.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "pinned1",
+        "pinned2"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "wan-fw",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "WAN → Firewall, 1 GbE",
+      "observed": "WAN → Firewall, rightward, stem and ▶ visible; no crossing. Geometrically traceable; frame-zero dot starts one cell past the stipulated origin, making direction unproven under the rubric.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pinned1",
+          "region": [
+            11,
+            23,
+            9,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "origin-arrow"
+      ]
+    },
+    {
+      "edge_id": "fw-core",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "Firewall → Core switch, 10 GbE",
+      "observed": "Firewall → Core switch, rightward, stem and ▶ visible; no crossing. Geometrically traceable; frame-zero dot starts one cell past the stipulated origin, making direction unproven under the rubric.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pinned1",
+          "region": [
+            29,
+            23,
+            10,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "origin-arrow"
+      ]
+    },
+    {
+      "edge_id": "core-web",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "Core switch → Web tier, 10 GbE",
+      "observed": "Core → Web, rightward through group wall, stem and ▶ visible. Geometrically traceable; frame-zero dot starts one cell past the stipulated origin, making direction unproven under the rubric.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pinned1",
+          "region": [
+            51,
+            23,
+            10,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "origin-arrow"
+      ]
+    },
+    {
+      "edge_id": "core-cache",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "Core switch → Redis, 25 GbE",
+      "observed": "Core → Redis downward via left detour and its own ▼; separate from session. Geometrically traceable; frame-zero dot starts one cell past the stipulated origin, making direction unproven under the rubric.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pinned2",
+          "region": [
+            27,
+            14,
+            9,
+            10
+          ]
+        }
+      ],
+      "finding_ids": [
+        "origin-arrow"
+      ]
+    },
+    {
+      "edge_id": "web-cache",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "Web tier → Redis, session",
+      "observed": "Web → Redis downward and left, own ▼; crosses queries with bridge at [43,22]. Geometrically traceable; frame-zero dot starts one cell past the stipulated origin, making direction unproven under the rubric.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pinned2",
+          "region": [
+            34,
+            14,
+            12,
+            10
+          ]
+        }
+      ],
+      "finding_ids": [
+        "origin-arrow"
+      ]
+    },
+    {
+      "edge_id": "web-db",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "Web tier → DB tier, queries",
+      "observed": "Web → DB downward on its own path and ▼; crosses session at [43,22], no junction. Geometrically traceable; frame-zero dot starts one cell past the stipulated origin, making direction unproven under the rubric.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pinned2",
+          "region": [
+            38,
+            14,
+            8,
+            21
+          ]
+        }
+      ],
+      "finding_ids": [
+        "origin-arrow"
+      ]
+    },
+    {
+      "edge_id": "cache-db",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "Redis → DB tier, fill",
+      "observed": "Redis → DB downward and right to own ▼; no crossing. Geometrically traceable; frame-zero dot starts one cell past the stipulated origin, making direction unproven under the rubric.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "pinned2",
+          "region": [
+            32,
+            28,
+            7,
+            7
+          ]
+        }
+      ],
+      "finding_ids": [
+        "origin-arrow"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "origin-arrow",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "wan-fw",
+        "fw-core",
+        "core-web",
+        "core-cache",
+        "web-cache",
+        "web-db",
+        "cache-db"
+      ],
+      "severity": "high",
+      "description": "Defect: all seven route dots start one cell after the first drawn cell adjacent to the source border, so direction is unproven by the pinned gate despite readable arrowheads.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned1",
+          "region": [
+            11,
+            24,
+            43,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pinned2",
+          "region": [
+            27,
+            14,
+            19,
+            2
+          ]
+        },
+        {
+          "evidence_id": "pinned2",
+          "region": [
+            32,
+            28,
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "origin-motion",
+      "category": "animation",
+      "edge_ids": [
+        "wan-fw",
+        "fw-core",
+        "core-web",
+        "core-cache",
+        "web-cache",
+        "web-db",
+        "cache-db"
+      ],
+      "severity": "medium",
+      "description": "Defect: 7/7 frame-zero origin positions disagree with the stub-inclusive rule and the checks reporting 7/7 origins; constant shared speed is legal, unequal arrival is not a defect.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned1",
+          "region": [
+            11,
+            24,
+            43,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pinned2",
+          "region": [
+            27,
+            14,
+            19,
+            2
+          ]
+        },
+        {
+          "evidence_id": "pinned2",
+          "region": [
+            32,
+            28,
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "avoidable-bridge",
+      "category": "layout_fit",
+      "edge_ids": [
+        "web-cache",
+        "web-db"
+      ],
+      "severity": "medium",
+      "description": "Defect: session and queries cross once at the web fan; swapping those two outgoing port assignments gives source-listed session first and queries second, and can eliminate their crossing without reordering tiers or dropping relations.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned2",
+          "region": [
+            42,
+            14,
+            4,
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tiers-overreach",
+      "category": "conceptual_grouping_color",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Defect: tiers region crosses the ungrouped Core box, obscuring its own wall and implying partial membership, not merely cosmetic border styling.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned2",
+          "region": [
+            26,
+            9,
+            27,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "split-core-fan",
+      "category": "category_fit",
+      "edge_ids": [
+        "core-web",
+        "core-cache"
+      ],
+      "severity": "medium",
+      "description": "Defect: the generator names the mesh and cites convergence, but separates core→web from core→Redis so its source-listed fan order cannot be visible together. No anti-parallel pair exists in the source and none should be invented.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned1",
+          "region": [
+            39,
+            23,
+            32,
+            4
+          ]
+        },
+        {
+          "evidence_id": "pinned2",
+          "region": [
+            26,
+            10,
+            27,
+            15
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lap-gap",
+      "category": "workflow_evidence",
+      "edge_ids": [
+        "web-db"
+      ],
+      "severity": "high",
+      "description": "Evidence gap: the 21 target-size frames do not cover a full lap of longest v2 web→DB; it has not reached the DB arrow by frame 20. Rejected attempt check exit statuses and stderr are not separately preserved.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned2",
+          "region": [
+            38,
+            14,
+            8,
+            21
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "Target 77×47 v2 full longest-route lap was not captured; do not infer a complete cycle from 21 frames.",
+    "Rejected candidate logs omit explicit per-run exit statuses and separate stderr; the recorded final check exits are zero.",
+    "One-member region detachment and title loss in rejected layouts remain renderer capability limitations; final v2 retains a region overlap."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pK7",
+      "w7E:pK8"
+    ],
+    "closed_pane_ids": [
+      "w7E:pK7",
+      "w7E:pK8"
+    ],
+    "status": "done",
+    "reason": "Both evidence manifests report confirmed_closed; reviewer launched no panes."
+  },
+  "overall": "fail"
+}

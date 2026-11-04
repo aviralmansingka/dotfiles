@@ -1,0 +1,77 @@
+{
+  "case_id": "modal-machine-manager",
+  "round": "03",
+  "notes": "Attempts are the saved spec files in this bundle. Layout probes (extra --check runs in a scratch dir that permuted within-band node order) informed v3/v4 band order but are not captured attempts; the chosen specs are the three-or-fewer saved attempts listed here.",
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "spec": "specs/v1-attempt1.json",
+          "spec_sha256": "93a7db7c910b664f42b48fdaf946b5f2dfa3b3818447b4682b2b90da11418f2d",
+          "note": "tb auto layout with machines+S3 included: extent 64x56, too tall for 47 rows"
+        },
+        {
+          "spec": "specs/v1-attempt2.json",
+          "spec_sha256": "7846cd75b300d13052f30651bc7dc50bc8f5aa17be829ccd99a9bfe650386368",
+          "note": "dropped mch/s3 to v2 (coverage map split): extent 64x40, crossing 0, all labels placed"
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "attempts": [
+        {
+          "spec": "specs/v2-attempt1.json",
+          "spec_sha256": "cbd80df353fa462c9472109c1cc7e44b9950b1fc0c22e43b1d8220f9b7ae112d",
+          "note": "tb auto layout with prov+mch+boot+agent+s3+pub+db: extent 109 wide, 1 crossing, 1 dot violation, origins 6/7"
+        },
+        {
+          "spec": "specs/v2-attempt2.json",
+          "spec_sha256": "cc9c1d87cab39ae761a4dfb3153c291be087be5f1af26ef9f870efb59dd2be32",
+          "note": "S3 moved to v3: extent 71x40, 0 crossings, but still 1 dot violation and origins 5/6 from the short reversed mch<->boot pair"
+        },
+        {
+          "spec": "specs/v2-attempt3.json",
+          "spec_sha256": "a35c41b69f31da13aef1256e0c798d9a6c9e432ba3b09ec64bcb2a00b7d2b0f1",
+          "note": "explicit layers put mch and boot in one band, so both boot routes are same-band runs: extent 40x41, 0 crossings, 0 violations, origins 6/6"
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "attempts": [
+        {
+          "spec": "specs/v3-attempt1.json",
+          "spec_sha256": "9810e9f25c46bcf70f0dcbffc598434aa8356fc69cbb70287bb7a8ba027872ba",
+          "note": "explicit 4-band layout with mch+s3+wapi in one band: 2 skipped labels (q->ssh, mch->s3)"
+        },
+        {
+          "spec": "specs/v3-attempt2.json",
+          "spec_sha256": "956738ee33fc33436e672ae7d3f617f7608adb89d9bec929ee36a8c06bb1fd30",
+          "note": "shortened the two labels to audit + verify / boot image: same 2 skips, so the cause was routing space, not label length"
+        },
+        {
+          "spec": "specs/v3-attempt3.json",
+          "spec_sha256": "603a0d518e9c6950b59976a1d9005394ab8e69c0f6e54a1e469256764fc6f46a",
+          "note": "moved S3 to the bottom sink band with Slack: extent 42x32, 0 crossings, 7/7 labels, 0 violations, origins 7/7"
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "attempts": [
+        {
+          "spec": "specs/v4-attempt1.json",
+          "spec_sha256": "4e65405f69898ba358890887edaf7bd3fe787a97ee99f69eee786fcc820f5561",
+          "note": "explicit bands [rec,pgrpc,q][pub,prov][db]: extent 72x23, 1 crossing, all labels"
+        },
+        {
+          "spec": "specs/v4-attempt2.json",
+          "spec_sha256": "25a1971517889b3be13c45cc0e6e65a71d971976895ffbb0aae3f3e3da48f237",
+          "note": "reordered nodes inside their bands only (q before pgrpc): extent 69x23, crossing still 1, chosen for the narrower extent"
+        }
+      ]
+    }
+  ]
+}

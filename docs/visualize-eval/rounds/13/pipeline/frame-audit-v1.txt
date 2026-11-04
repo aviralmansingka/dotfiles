@@ -1,0 +1,12 @@
+frame audit: v1-77x47-frames.txt — 40 frames
+  viewport: 77x47 @1.00 natural · step 100ms · 6 route(s) tracked · dots/frame [6]
+  frames evenly spaced: pass · steady routes: 6/6
+  r1    13 cells / [2, 2, 2, 2, 2, 2, 1] → Δ per 10 frames [] · stall 1 · steady
+  r2    16 cells / [6, 5, 0, 5] → Δ per 10 frames [5, 5, 5, 5, 5] · stall 1 · steady
+  r3    16 cells / [7, 1, 7, 1] → Δ per 10 frames [5, 5, 5, 5, 5] · stall 1 · steady
+  r4    17 cells / [13, 4, 0] → Δ per 10 frames [5, 5, 5, 5, 5] · stall 1 · steady
+  r5    19 cells / [19] → Δ per 10 frames [5, 5, 5, 5, 5] · stall 1 · steady
+  r6    15 cells / [5, 1, 5, 1, 3] → Δ per 10 frames [5, 5, 5, 5] · stall 1 · steady
+  equal distance: pass over 25 x 10 frame window(s) (spread ≤ 1) — 0-10:0, 1-11:0, 2-12:0, 3-13:0, 4-14:0, 5-15:0
+  rates: 0.500..0.500 cells/frame, spread 0.0 (allowed 0.05)
+  verdict: PASS — every tracked dot holds one rate and covers equal distance

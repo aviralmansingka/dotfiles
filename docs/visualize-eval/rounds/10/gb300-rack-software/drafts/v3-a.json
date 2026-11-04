@@ -1,0 +1,16 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "rms", "label": "nv-rms", "group": "management" },
+    { "id": "oob", "label": "OOB LAN", "group": "plant" },
+    { "id": "nvos", "label": "NVOS", "group": "tray" },
+    { "id": "nmxc", "label": "NMX-C/T", "group": "tray" }
+  ],
+  "edges": [
+    { "from": "rms", "to": "nvos", "label": "NVUE REST/SSH", "label_slot": true },
+    { "from": "rms", "to": "nmxc", "label": "NMX-C gRPC", "label_slot": true },
+    { "from": "nvos", "to": "nmxc", "label": "hosts", "label_slot": true },
+    { "from": "oob", "to": "nvos", "label": "hist. unconf.", "style": "dashed", "label_slot": true }
+  ]
+}

@@ -1,0 +1,26 @@
+# view=v2 spec=specs/v2-host-nics.json
+# spec sha256: c74d69c2e9ca5caffa1656a61aa13629c1a7f0bb2bc6f87023b7c78ce827721f
+# binary: /tmp/visualize-eval/round-01/bin/rataflow-view sha256: 4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8
+# stty size measured inside the viewer pane before start (rows cols expected 47 77)
+# split utc: 2026-11-02T08:29:33Z
+# cmd: herdr pane split --current --direction right --ratio 0.5 --cwd "$PWD" --no-focus  -> pane=w7E:p4N tab=w7E:tM
+# pane_read_stty_size: 47 77
+# cmd: herdr pane run w7E:p4N "/tmp/visualize-eval/round-01/bin/rataflow-view specs/v2-host-nics.json; herdr pane close w7E:p4N"
+# unselected capture utc: 2026-11-02T08:29:38Z (text+ansi)
+# header:  rataflow-view · v2-host-nics.json · 4 nodes · 4 edges · 3 flows · drag pan ·
+# border check exit: 0 (checks/v2-borders.json)
+# frame 1 utc: 2026-11-02T08:29:38Z
+# frame 2 utc: 2026-11-02T08:29:39Z
+# frame 3 utc: 2026-11-02T08:29:40Z
+# cmd: herdr pane send-keys w7E:p4N Tab ; then selected capture utc: 2026-11-02T08:29:42Z
+# selection diff cells: 58
+# cmd: herdr pane send-keys w7E:p4N q  (viewer exits; self-closing command removes the pane)
+# cleanup: pane w7E:p4N closed by the self-closing viewer command
+# hashes:
+#   dd19a13ae16cd988c63b39d02ff2724625beec976e31f23ad3b51f6c2603b910  captures/v2-unselected.txt
+#   ef5468a4fd79efdf3567085cef317e796b32860038a1d5d0151380410f99b1d1  captures/v2-unselected.ansi
+#   e3fa3f99d2f8aecffaeba2676e9a270252498ed47127018241eb95325f1af249  captures/v2-selected.txt
+#   8560f39f9a44769e1b1b8ef959ff1dd17d1fb688af2c4c2c0001d6c66c1ac736  captures/v2-selected.ansi
+#   dd19a13ae16cd988c63b39d02ff2724625beec976e31f23ad3b51f6c2603b910  frames/v2-frame01.txt
+#   1bad9de8964a815e0471c77bd8fc34075b35311ac743d750b6efe7a3ccedc9af  frames/v2-frame02.txt
+#   d3d4bc994b53d87fae8fa61be39d8a52c0c108535d51fac28fb08f5fd3e3d15f  frames/v2-frame03.txt

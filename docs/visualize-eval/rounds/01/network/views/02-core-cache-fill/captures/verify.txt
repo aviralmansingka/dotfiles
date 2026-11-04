@@ -1,0 +1,24 @@
+view: 02-core-cache-fill
+spec: spec.json
+capture: captures/unselected.txt + captures/unselected.ansi.txt
+[PASS] header: 'rataflow-view · spec.json · 3 nodes · 2 edges · 2 flows · drag pan · scroll'
+[PASS] overflow badge absent
+[PASS] node label visible: core -> 'Core switch'
+[PASS] node label visible: cache -> 'Redis cache'
+[PASS] node label visible: db -> 'DB tier'
+[PASS] edge label visible: core->cache '25 GbE'
+[PASS] edge label visible: cache->db 'fill'
+[PASS] boxes detected: 3 (nodes 3) ['Core switch', 'Redis cache', 'DB tier']
+[PASS] arrowheads: 2 for 2 edges -> [(22, 34, '▼'), (30, 34, '▼')]
+[PASS] ▼ at row 22 col 34 points into a box top border at row 23
+[PASS] ▼ at row 30 col 34 points into a box top border at row 31
+[PASS] flow dots not on borders: 2 dots, offenders []
+[PASS] palette rows 41-45 cols 2-10 clear of node borders (overlap [])
+[PASS] palette clear of node borders, dots and arrowheads (clash [])
+[PASS] source stem leaves box 'Core switch' bottom at [(19, 34)]
+[PASS] source stem leaves box 'Redis cache' bottom at [(27, 34)]
+[NOTE] box 'Core switch' border 38;2;216;166;87 on 28 cells; other colours: 38;2;146;131;116x2 [(15, 39), (18, 39)]
+[NOTE] box 'Redis cache' border 38;2;125;174;163 on 28 cells; other colours: 38;2;146;131;116x2 [(23, 39), (26, 39)]
+[NOTE] box 'DB tier' border 38;2;211;134;155 on 20 cells; other colours: 38;2;146;131;116x2 [(31, 37), (34, 37)]
+
+RESULT: all mechanical checks passed

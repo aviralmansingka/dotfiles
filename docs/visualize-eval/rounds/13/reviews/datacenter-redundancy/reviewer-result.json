@@ -1,0 +1,1244 @@
+{
+  "protocol_version": 1,
+  "round": 13,
+  "case_id": "datacenter-redundancy",
+  "candidate_sha256": "c8de11474fa80d1361025b6cedf83ec6059411331cff929a3b35f8e54b274e8f",
+  "spec_sha256": "c8de11474fa80d1361025b6cedf83ec6059411331cff929a3b35f8e54b274e8f",
+  "renderer_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+  "rubric_sha256": "6bfd3733c8d08b66af9a92e71985a20846f954d7916eaf9685f86c8d2f96bcb8",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "generator": {
+    "worker_id": "viz-ds13-8",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge13-datacenter",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 68,
+    "rows": 44
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/13/reviews/datacenter-redundancy/observed-first.md",
+      "sha256": "91f7fee20709afa2f0f06a5eb3df4219a8ae261d69374e146606ba195c58f6fe",
+      "description": "Blind-first record",
+      "capture": null
+    },
+    {
+      "id": "spec",
+      "path": "docs/visualize-eval/rounds/13/datacenter-redundancy/specs/canvas-3.json",
+      "sha256": "c8de11474fa80d1361025b6cedf83ec6059411331cff929a3b35f8e54b274e8f",
+      "description": "Final canvas spec",
+      "capture": null
+    },
+    {
+      "id": "check",
+      "path": "docs/visualize-eval/rounds/13/datacenter-redundancy/evidence/v1/check.txt",
+      "sha256": "edda31bc8c6c5eb3633b392d07015cc3c482f742ea71abc66a0dc9cdd585899e",
+      "description": "Frozen check output",
+      "capture": null
+    },
+    {
+      "id": "visual",
+      "path": "docs/visualize-eval/rounds/13/datacenter-redundancy/recorded/canvas-3-visual.stdout",
+      "sha256": "8116508315324ff8c482c95537ab484d8465663b41572eb5939861d670fb5fde",
+      "description": "Whole-canvas diagnostic drawing",
+      "capture": {
+        "dimensions": {
+          "columns": 72,
+          "rows": 112
+        },
+        "view": "v1",
+        "frame": "0",
+        "timestamp": "0ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "pinned",
+      "path": "docs/visualize-eval/rounds/13/datacenter-redundancy/evidence/v1/v1-77x47-frames.txt",
+      "sha256": "6e1ec59029971424a6be7d59ce1f3070ae8678e362664731bb64c5cc9b630908",
+      "description": "Twelve static pinned frames",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0",
+        "timestamp": "0ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "pane",
+      "path": "docs/visualize-eval/rounds/13/datacenter-redundancy/evidence/v1/v1-text.txt",
+      "sha256": "95356fbcb4fc2d0bb9b2521e6738f4696287c2f532fa891dc04ec74e2db7bc6b",
+      "description": "Live pane capture",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "v1",
+        "frame": "0",
+        "timestamp": "0ms",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi",
+      "path": "docs/visualize-eval/rounds/13/datacenter-redundancy/evidence/v1/v1-ansi.ansi",
+      "sha256": "a7f9068bdd199ba2d08770931cc082ac3bd41c291877974d10ed375f9a331e8a",
+      "description": "Live pane color capture",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "v1",
+        "frame": "0",
+        "timestamp": "0ms",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected",
+      "path": "docs/visualize-eval/rounds/13/datacenter-redundancy/evidence/v1/v1-selected.ansi",
+      "sha256": "e229f607dd74094f8ffed169832c32d0d65ae31a8b25ae129d3c7676f18569c1",
+      "description": "Select-all live pane",
+      "capture": {
+        "dimensions": {
+          "columns": 68,
+          "rows": 44
+        },
+        "view": "v1",
+        "frame": "0",
+        "timestamp": "0ms",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "validator",
+      "path": "docs/visualize-eval/rounds/13/datacenter-redundancy/validate-v1.txt",
+      "sha256": "ec5b070379137141eb7790cb23f4cdb2100a926c46e503858dcede11cb21b228",
+      "description": "Validator output",
+      "capture": null
+    },
+    {
+      "id": "manifest",
+      "path": "docs/visualize-eval/rounds/13/datacenter-redundancy/evidence/v1/manifest.json",
+      "sha256": "d273cf2c129a6b4d62026016dfc352d8f3fa33ab8ee15e9a873e60fcaedde33c",
+      "description": "Capture and cleanup manifest",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/13/datacenter-redundancy/generation.json",
+      "sha256": "4a5a303dd137bb221c99a8b08eb77fce6658425b4709f1459ebee14c7f7f26d5",
+      "description": "Generator triage and audit record",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/13/datacenter-redundancy/attempts.json",
+      "sha256": "2a9ef7d6fc646e0456d4f370d2d740ddf28e4cd96ebc7c9e4986ef07c864f268",
+      "description": "Measured attempts",
+      "capture": null
+    },
+    {
+      "id": "records",
+      "path": "docs/visualize-eval/rounds/13/datacenter-redundancy/attempts-log.jsonl",
+      "sha256": "77b2c23dc3af49db8b93e8f761605980f7b62ab91e0d7dbedb5bf271acde5ce4",
+      "description": "Recorded probe log",
+      "capture": null
+    },
+    {
+      "id": "probe",
+      "path": "docs/visualize-eval/rounds/13/datacenter-redundancy/recorded/probe-single-view.stdout",
+      "sha256": "e22d363a8f03e1c31a30efd1ed276256d1856df1551485d3f971f85256175471",
+      "description": "Single-view measurement",
+      "capture": null
+    },
+    {
+      "id": "convention",
+      "path": "docs/visualize-eval/rounds/13/datacenter-redundancy/generation.md",
+      "sha256": "e7b63576cadcc65f7943d9815bedd2d8df2475916659597108dc7bec7ca99363",
+      "description": "Arrow convention in external generation record",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All 28 relations appear in the spec with source order, but several ECMP relations are not visually attributable; physical-connectivity arrow convention is stated only outside the drawing, not on the canvas.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "evidence_ids": [
+        "spec",
+        "visual",
+        "convention",
+        "blind"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Four unrelated-node near-miss routes (29 cells) violate the explicit zero threshold; dense ECMP bridges make several individual paths unverified despite separately counted heads.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "evidence_ids": [
+        "check",
+        "visual",
+        "blind",
+        "validator"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Branch B is appropriate and 71x106 extents are measured at 100%, but security description is clipped in the whole-canvas capture; actual pane navigation to the lower diagrams is not demonstrated.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "evidence_ids": [
+        "check",
+        "visual",
+        "pane",
+        "pinned",
+        "probe"
+      ]
+    },
+    "navigation_clarity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "The security description loses its final s. in the 72-column diagnostic and is obscured in the live capture; no pan-to-each-diagram evidence. Titles and scope are otherwise distinct, and the relation map is complete.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "evidence_ids": [
+        "visual",
+        "pane",
+        "generation"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Upper ISP, MUX and core hues are visible; no lower-diagram ANSI proves firewall, border-leaf, spine, rack-leaf, rack hues or same-tag cross-diagram consistency.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "evidence_ids": [
+        "ansi",
+        "visual",
+        "check"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Live control palette overwrites the security Core 1 border. Selected and normal color continuity of the lower diagrams is also unproven; only 8 of 22 complete selected borders are captured.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "evidence_ids": [
+        "pane",
+        "ansi",
+        "selected",
+        "visual"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "No ANSI/select-all coverage for lower diagrams and no captured pan; Q9 attributes ISP A/B and C/D mapping to brief framing although that mapping appears in the source, not the brief. The recorded probes and cleanup are otherwise preserved.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "evidence_ids": [
+        "selected",
+        "ansi",
+        "pane",
+        "generation",
+        "attempts",
+        "records",
+        "validator",
+        "manifest"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Explicitly off: 12 pinned drawing bodies match, and three pane frames show no dots; hue/origin/arrival are inapplicable.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "check",
+        "pane"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Correct stated and judged family redundant-fabrics: 18 identities, 28 relations, multiple 2x2 fans, no dots; tiers and no trunks are visible. The recipe requires independently traceable lanes, and several ECMP lanes are not independently verified; the generator records measured attempts and a near-miss yield but explicitly does not prove impossibility.",
+      "judged_family": "redundant-fabrics",
+      "generator_family": "redundant-fabrics",
+      "evidence_line": "18 nodes against 28 relations with four tiers that each form a complete 2x2 cross-connect, and the source kills the dots outright (line 134: 'remove the dots flowing for now'): the densest, dot-free fabric case.",
+      "recipe_verified": [
+        "tier pins match diagnostic",
+        "separate arrowheads and no declared trunk",
+        "no visible dots",
+        "dense ECMP traceability unproven"
+      ],
+      "evidence_ids": [
+        "visual",
+        "check",
+        "generation",
+        "blind"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "ispA -> mux1; unlabelled; independent link",
+      "observed": "ispA to mux1: distinct downward stem and head, no crossing, no label.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            1,
+            5,
+            43,
+            29
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "ispB -> mux1; unlabelled; independent link",
+      "observed": "ispB to mux1: distinct downward stem and head, no crossing, no label.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            1,
+            5,
+            43,
+            29
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "ispC -> mux2; unlabelled; independent link",
+      "observed": "ispC to mux2: distinct downward stem and head, no crossing, no label.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            1,
+            5,
+            43,
+            29
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "ispD -> mux2; unlabelled; independent link",
+      "observed": "ispD to mux2: distinct downward stem and head, no crossing, no label.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            1,
+            5,
+            43,
+            29
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "mux1 -> core1; x-connect; independent link",
+      "observed": "mux1 to core1: separate downward ports and head; x-connect shown; follow bridge without treating it as a junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            1,
+            5,
+            43,
+            29
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "mux1 -> core2; x-connect; independent link",
+      "observed": "mux1 to core2: separate downward ports and head; x-connect shown; follow bridge without treating it as a junction. Check reports near unrelated Core router 1, 2 cells.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            1,
+            5,
+            43,
+            29
+          ]
+        }
+      ],
+      "finding_ids": [
+        "near"
+      ]
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "mux2 -> core1; x-connect; independent link",
+      "observed": "mux2 to core1: separate downward ports and head; x-connect shown; follow bridge without treating it as a junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            1,
+            5,
+            43,
+            29
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "mux2 -> core2; x-connect; independent link",
+      "observed": "mux2 to core2: separate downward ports and head; x-connect shown; follow bridge without treating it as a junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            1,
+            5,
+            43,
+            29
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e9",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "core1 -> fw1; active; independent link",
+      "observed": "core1 to fw1: separate downward ports and head; active shown; follow bridge without treating it as a junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            1,
+            40,
+            40,
+            33
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e10",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "core2 -> fw1; active; independent link",
+      "observed": "core2 to fw1: separate downward ports and head; active shown; follow bridge without treating it as a junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            1,
+            40,
+            40,
+            33
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e11",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "core1 -> fw2; standby; independent link",
+      "observed": "core1 to fw2: separate downward ports and head; standby shown; follow bridge without treating it as a junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            1,
+            40,
+            40,
+            33
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e12",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "core2 -> fw2; standby; independent link",
+      "observed": "core2 to fw2: separate downward ports and head; standby shown; follow bridge without treating it as a junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            1,
+            40,
+            40,
+            33
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e13",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "fw1 -> bl1; active; independent link",
+      "observed": "fw1 to bl1: separate downward ports and head; active shown; follow bridge without treating it as a junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            1,
+            40,
+            40,
+            33
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e14",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "fw1 -> bl2; active; independent link",
+      "observed": "fw1 to bl2: separate downward ports and head; active shown; follow bridge without treating it as a junction. Check reports near unrelated Border leaf 1, 2 cells.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            1,
+            40,
+            40,
+            33
+          ]
+        }
+      ],
+      "finding_ids": [
+        "near"
+      ]
+    },
+    {
+      "edge_id": "e15",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "fw2 -> bl1; standby; independent link",
+      "observed": "fw2 to bl1: separate downward ports and head; standby shown; follow bridge without treating it as a junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            1,
+            40,
+            40,
+            33
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e16",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "fw2 -> bl2; standby; independent link",
+      "observed": "fw2 to bl2: separate downward ports and head; standby shown; follow bridge without treating it as a junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            1,
+            40,
+            40,
+            33
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e17",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "bl1 -> sp1; ECMP; independent link",
+      "observed": "bl1 to sp1: ECMP, upward spine heads and stems present, but dense bridges prevent confident end-to-end attribution from this capture alone.",
+      "status": "blocked",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            4,
+            80,
+            62,
+            25
+          ]
+        }
+      ],
+      "finding_ids": [
+        "ecmp"
+      ]
+    },
+    {
+      "edge_id": "e18",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "bl1 -> sp2; ECMP; independent link",
+      "observed": "bl1 to sp2: ECMP, upward spine heads and stems present, but dense bridges prevent confident end-to-end attribution from this capture alone.",
+      "status": "blocked",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            4,
+            80,
+            62,
+            25
+          ]
+        }
+      ],
+      "finding_ids": [
+        "ecmp"
+      ]
+    },
+    {
+      "edge_id": "e19",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "bl2 -> sp1; ECMP; independent link",
+      "observed": "bl2 to sp1: ECMP, upward spine heads and stems present, but dense bridges prevent confident end-to-end attribution from this capture alone. Check reports near unrelated Spine 2, 22 cells.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            4,
+            80,
+            62,
+            25
+          ]
+        }
+      ],
+      "finding_ids": [
+        "near",
+        "ecmp"
+      ]
+    },
+    {
+      "edge_id": "e20",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "bl2 -> sp2; ECMP; independent link",
+      "observed": "bl2 to sp2: ECMP, upward spine heads and stems present, but dense bridges prevent confident end-to-end attribution from this capture alone.",
+      "status": "blocked",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            4,
+            80,
+            62,
+            25
+          ]
+        }
+      ],
+      "finding_ids": [
+        "ecmp"
+      ]
+    },
+    {
+      "edge_id": "e21",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "sp1 -> leaf1; ECMP; independent link",
+      "observed": "sp1 to leaf1: ECMP, downward rack-leaf heads and stems present, but dense bridges prevent confident end-to-end attribution from this capture alone.",
+      "status": "blocked",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            4,
+            80,
+            62,
+            25
+          ]
+        }
+      ],
+      "finding_ids": [
+        "ecmp"
+      ]
+    },
+    {
+      "edge_id": "e22",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "sp1 -> leaf2; ECMP; independent link",
+      "observed": "sp1 to leaf2: ECMP, downward rack-leaf heads and stems present, but dense bridges prevent confident end-to-end attribution from this capture alone.",
+      "status": "blocked",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            4,
+            80,
+            62,
+            25
+          ]
+        }
+      ],
+      "finding_ids": [
+        "ecmp"
+      ]
+    },
+    {
+      "edge_id": "e23",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "sp2 -> leaf1; ECMP; independent link",
+      "observed": "sp2 to leaf1: ECMP, downward rack-leaf heads and stems present, but dense bridges prevent confident end-to-end attribution from this capture alone. Check reports near unrelated Spine 1, 3 cells.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            4,
+            80,
+            62,
+            25
+          ]
+        }
+      ],
+      "finding_ids": [
+        "near",
+        "ecmp"
+      ]
+    },
+    {
+      "edge_id": "e24",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "sp2 -> leaf2; ECMP; independent link",
+      "observed": "sp2 to leaf2: ECMP, downward rack-leaf heads and stems present, but dense bridges prevent confident end-to-end attribution from this capture alone.",
+      "status": "blocked",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            4,
+            80,
+            62,
+            25
+          ]
+        }
+      ],
+      "finding_ids": [
+        "ecmp"
+      ]
+    },
+    {
+      "edge_id": "e25",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "leaf1 -> rack1; dual; independent link",
+      "observed": "leaf1 to rack1: dual label and separate downward target head; bridge crossings must be followed as non-junctions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            4,
+            80,
+            62,
+            25
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e26",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "leaf2 -> rack1; dual; independent link",
+      "observed": "leaf2 to rack1: dual label and separate downward target head; bridge crossings must be followed as non-junctions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            4,
+            80,
+            62,
+            25
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e27",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "leaf1 -> rack2; dual; independent link",
+      "observed": "leaf1 to rack2: dual label and separate downward target head; bridge crossings must be followed as non-junctions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            4,
+            80,
+            62,
+            25
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e28",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "expected": "leaf2 -> rack2; dual; independent link",
+      "observed": "leaf2 to rack2: dual label and separate downward target head; bridge crossings must be followed as non-junctions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            4,
+            80,
+            62,
+            25
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "near",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "e6",
+        "e14",
+        "e19",
+        "e23"
+      ],
+      "severity": "high",
+      "description": "Four independently routed edges pass unrelated node margins: e6 near core1 (2 cells), e14 near bl1 (2), e19 near sp2 (22), e23 near sp1 (3). The check uses zero-based per-diagram indexes; edge audit uses one-based source IDs.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            10,
+            23,
+            30,
+            10
+          ]
+        },
+        {
+          "evidence_id": "visual",
+          "region": [
+            8,
+            62,
+            31,
+            10
+          ]
+        },
+        {
+          "evidence_id": "visual",
+          "region": [
+            24,
+            80,
+            40,
+            13
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ecmp",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "e17",
+        "e18",
+        "e19",
+        "e20",
+        "e21",
+        "e22",
+        "e23",
+        "e24"
+      ],
+      "severity": "high",
+      "description": "Closely packed bridges and touching bends obscure attribution of individual ECMP stems through the crossing field. Eight heads and routes are countable, but they do not establish each pairing. No extra junction is positively established.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            9,
+            80,
+            57,
+            15
+          ]
+        }
+      ]
+    },
+    {
+      "id": "convention",
+      "category": "semantic_fidelity",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "Physical-connectivity convention is in generation.md only; it is not stated on the drawing, so arrows can be mistaken for one-way traffic.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            4,
+            76,
+            64,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "clipped",
+      "category": "navigation_clarity",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Security description is clipped at the right edge in the large capture and partly occluded by controls in the live pane; no sequence demonstrates navigation to each section.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            4,
+            39,
+            69,
+            1
+          ]
+        },
+        {
+          "evidence_id": "pane",
+          "region": [
+            1,
+            38,
+            68,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fit",
+      "category": "layout_fit",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Branch-B navigation and complete rendered description are not established: security description clipped, and lower views are not captured by panning the actual pane.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            4,
+            39,
+            69,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "border",
+      "category": "border_integrity",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Live floating controls overwrite the security Core 1 border; lower normal and selected border colors lack complete capture.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pane",
+          "region": [
+            1,
+            39,
+            18,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "workflow",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "The lower diagrams lack ANSI/select-all captures and a demonstrated pan. Q9 claims the brief supplies exact ISP assignments, but it supplies only two per MUX; the exact mapping is in source.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pane",
+          "region": [
+            1,
+            39,
+            18,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "recipe",
+      "category": "category_fit",
+      "edge_ids": [
+        "e17",
+        "e18",
+        "e19",
+        "e20",
+        "e21",
+        "e22",
+        "e23",
+        "e24"
+      ],
+      "severity": "high",
+      "description": "The correct recipe demands individually traceable lanes, but the ECMP crossing field is not independently attributable and measured attempts do not prove the defect impossible.",
+      "source_refs": [
+        "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+        "docs/visualize-eval/rounds/13/briefs/datacenter-redundancy.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "visual",
+          "region": [
+            9,
+            80,
+            57,
+            15
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "No complete ANSI and selected-state captures for security and fabric, so case-wide hue and all border colors cannot be verified.",
+    "No pan sequence captures each diagram in the actual pane; individual ECMP route attribution is not established by static crossing glyphs alone."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:p08"
+    ],
+    "closed_pane_ids": [
+      "w7E:p08"
+    ],
+    "status": "done",
+    "reason": "Evidence manifest records confirmed_closed."
+  },
+  "overall": "fail"
+}

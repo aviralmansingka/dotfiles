@@ -1,0 +1,42 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "engine",
+      "label": "Task engine"
+    },
+    {
+      "id": "filesystem",
+      "label": "Filesystem + volumes"
+    },
+    {
+      "id": "blobnet",
+      "label": "Blobnet"
+    }
+  ],
+  "edges": [
+    {
+      "from": "engine",
+      "to": "filesystem",
+      "label": "mount/snapshot"
+    },
+    {
+      "from": "filesystem",
+      "to": "blobnet",
+      "label": "image+vol data"
+    }
+  ],
+  "layers": [
+    [
+      "engine"
+    ],
+    [
+      "filesystem"
+    ],
+    [
+      "",
+      "blobnet"
+    ]
+  ]
+}

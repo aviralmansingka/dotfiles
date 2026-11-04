@@ -1,0 +1,54 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "gw",
+      "label": "GW .57 Arista OUI"
+    },
+    {
+      "id": "airtel",
+      "label": "Airtel 14.143.x"
+    },
+    {
+      "id": "airtelbb",
+      "label": "Airtel BB 14.141.x"
+    },
+    {
+      "id": "cf",
+      "label": "Cloudflare 1.1.1.1"
+    }
+  ],
+  "edges": [
+    {
+      "from": "gw",
+      "to": "airtel",
+      "label": "next 1.8ms"
+    },
+    {
+      "from": "airtel",
+      "to": "airtelbb",
+      "label": "next 7.1ms"
+    },
+    {
+      "from": "airtelbb",
+      "to": "cf",
+      "label": "8.3/8.6ms?"
+    }
+  ],
+  "layers": [
+    [
+      "gw"
+    ],
+    [
+      "airtel"
+    ],
+    [
+      "airtelbb"
+    ],
+    [
+      "",
+      "cf"
+    ]
+  ]
+}

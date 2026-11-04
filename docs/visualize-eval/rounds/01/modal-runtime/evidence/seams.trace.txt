@@ -1,0 +1,9 @@
+# captures/seams.text.none.txt  lines=47 cols=77
+node  'modal-worker'           lines 15-18 cols 24-37
+node  'modal-runtime'          lines 23-26 cols 23-37
+node  'modal-daemon'           lines 31-34 cols 24-37
+node  'Task engine'            lines 31-34 cols 42-54
+glyph ◀ at line 16 col 38   context: 'er│◀╮'
+glyph ▼ at line 22 col 24   context: '   ▼    '
+glyph ▼ at line 30 col 25   context: '   ▼    '
+glyph ▼ at line 30 col 43   context: '   ▼'

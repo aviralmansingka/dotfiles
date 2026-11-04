@@ -1,0 +1,2495 @@
+{
+  "protocol_version": 1,
+  "round": 1,
+  "case_id": "network",
+  "candidate_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+  "renderer_sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+  "rubric_sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "6d2ed7273ed73fd6fb6338542605e4d5181c0e0376f98484cc0826a4c6883fa7",
+  "generator": {
+    "worker_id": "viz-ds01-network",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge01-network",
+    "model": "openai/gpt-6-astra"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": false
+  },
+  "live_pane": {
+    "columns": 77,
+    "rows": 47
+  },
+  "evidence": [
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/01/rubric.json",
+      "sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "description": "Frozen seven-category rubric and result schema.",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/01/metadata.json",
+      "sha256": "b99735d09760e77b21a21c7491e7e03663c20e1787ad8ac900d319c4d7ad240a",
+      "description": "Round01 frozen hashes and generator/reviewer assignments; new renderer baseline.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen dataset index; network animation is required.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/network/source.md",
+      "sha256": "9d23a7b50d1d26a69f95523a9586bab96ec588afb9628ae274c896992b147947",
+      "description": "Qualified network source and human constraints.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/network/expected.json",
+      "sha256": "8cb86d269c21176d775e79f8592f09067049031a0e581df38d66705e73a8caa9",
+      "description": "Seven directed source relations and six source concepts.",
+      "capture": null
+    },
+    {
+      "id": "candidate",
+      "path": "docs/visualize-eval/rounds/01/SKILL.md",
+      "sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "description": "Frozen candidate skill, read as evaluation input, not instructions to execute.",
+      "capture": null
+    },
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/01/reviews/network/observed-first.md",
+      "sha256": "2b96648d1c9df2483cb2d6bd347401fb951138cb8335bfca1bc94d49f301f436",
+      "description": "Unchanged Stage A record; hash verified before expected reveal and after Stage B.",
+      "capture": null
+    },
+    {
+      "id": "manifest",
+      "path": "docs/visualize-eval/rounds/01/reviews/network/spec-manifest.json",
+      "sha256": "6d2ed7273ed73fd6fb6338542605e4d5181c0e0376f98484cc0826a4c6883fa7",
+      "description": "Sorted [repository-relative final spec path, actual SHA256] pairs.",
+      "capture": null
+    },
+    {
+      "id": "verification",
+      "path": "docs/visualize-eval/rounds/01/reviews/network/artifact-verification.json",
+      "sha256": "78913ec852e85bd0bd13d76752f5fb2382ea6e19c2c638f8627cf60e96c8f45f",
+      "description": "Independent hashes, reviewer identity, raw ANSI/cell and relation-union audit.",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/01/network/generation.json",
+      "sha256": "4bfd47a0e5ba30056848d75ecd84d16e3f06a4150052160ecd0d494b3eba3433",
+      "description": "Generator claims, identity and coverage; not independent visual approval.",
+      "capture": null
+    },
+    {
+      "id": "generation-notes",
+      "path": "docs/visualize-eval/rounds/01/network/generation.md",
+      "sha256": "8c080a8e192f80bdca5807442d3b1a86f1c334d3d60d4e752d8e5e320faeadec",
+      "description": "Generator narrative and declared duplication, treated as claims.",
+      "capture": null
+    },
+    {
+      "id": "capture-script",
+      "path": "docs/visualize-eval/rounds/01/network/scripts/capture-view.sh",
+      "sha256": "fcb22f2f0a37387275fbcfc635c567f2375656e66d1c5bb4a6e48aebc352b7b4",
+      "description": "Saved capture procedure; BIN is declared but bare executable is launched.",
+      "capture": null
+    },
+    {
+      "id": "generation-script",
+      "path": "docs/visualize-eval/rounds/01/network/scripts/write-generation.py",
+      "sha256": "1a7ff9d9108359cf162cbe2b08b092fe0a95764c076ef35b10405ce58e2128fb",
+      "description": "Generation report writer; model and motion claims are not raw execution telemetry.",
+      "capture": null
+    },
+    {
+      "id": "v01-spec",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/spec.json",
+      "sha256": "d6a087d5fdc133641f579c26b2ca9e22ad0a0f7aee0acbb81b07739ae7e1ed9f",
+      "description": "Final generated spec.",
+      "capture": null
+    },
+    {
+      "id": "v01-check",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/check.txt",
+      "sha256": "74692104956a7875027481f704ad3a41f752fc172e22b0cfb78147c23964baf8",
+      "description": "Preserved check stdout with appended exit=0.",
+      "capture": null
+    },
+    {
+      "id": "v01-stderr",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/check.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Preserved empty check stderr.",
+      "capture": null
+    },
+    {
+      "id": "v01-commands-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/commands.txt",
+      "sha256": "d15ff06cd50aa106605b9ce582f14d4cbc6f9cfc22610038f5468737066a1dd5",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v01-dims-raw-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/dims-raw.txt",
+      "sha256": "0719c7f4295e1cfb264c7afdb3aba28f6438ad59416dc02b6bff04c4863627ee",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v01-frame-01-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/frames/frame-01.txt",
+      "sha256": "e847361ca49b97e075cacf4155b3d577715c5118c4eb13d2f8bb83e7048b3c84",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "01-request-path",
+        "frame": "frames/frame-01.txt",
+        "timestamp": "2026-11-02T08:32:06Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v01-frame-02-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/frames/frame-02.txt",
+      "sha256": "d1fb0298ad623700fb7c7ad51b61b7e1b35fea8bc04e1f0a45c5f2fa19264ae9",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "01-request-path",
+        "frame": "frames/frame-02.txt",
+        "timestamp": "2026-11-02T08:32:08Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v01-frame-03-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/frames/frame-03.txt",
+      "sha256": "391e043e9a2daf73c3ca4b73ea8bd9b2e996f18d508e4d9af4456741560d94c7",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "01-request-path",
+        "frame": "frames/frame-03.txt",
+        "timestamp": "2026-11-02T08:32:11Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v01-frame-04-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/frames/frame-04.txt",
+      "sha256": "e847361ca49b97e075cacf4155b3d577715c5118c4eb13d2f8bb83e7048b3c84",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "01-request-path",
+        "frame": "frames/frame-04.txt",
+        "timestamp": "2026-11-02T08:32:13Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v01-header-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/header.txt",
+      "sha256": "74515d4750c0b8c20a02077991747787ee72829820b0e6caa8900a52944c3bdd",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v01-layout-after-close-json",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/layout-after-close.json",
+      "sha256": "b27b2ca3498d4a346bc64a28d77ddbb920d795cc1aadf8983431f387e131d2b7",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v01-pane-get-json",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/pane-get.json",
+      "sha256": "55c85f6c1515287e8e6a5c17b9f6cfd64f84d60f598e16e8ffa7d9f166e959fe",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v01-pane-id-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/pane-id.txt",
+      "sha256": "78cff4275de5e0a44305649bbf3cc12ce138aba60bfae6e3edbac288fb9569bb",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v01-pane-split-json",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/pane-split.json",
+      "sha256": "3939d9b444872235bf319e5b1ee3746adf4c8fd1b5aa5c826562643ead845780",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v01-selected-after-frames-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/selected-after-frames.txt",
+      "sha256": "e847361ca49b97e075cacf4155b3d577715c5118c4eb13d2f8bb83e7048b3c84",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "01-request-path",
+        "frame": "selected-after-frames.txt",
+        "timestamp": "2026-11-02T08:32:18Z",
+        "state": "selected-after-frames",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v01-selected-right-ansi",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/selected-right.ansi.txt",
+      "sha256": "27ea9091bd9f6e0d655f324b5bc8045da62aa6e84a1ad9af573e259e6ca301ac",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "01-request-path",
+        "frame": "selected-right.ansi.txt",
+        "timestamp": "2026-11-02T08:32:18Z",
+        "state": "selected-right",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v01-selected-right-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/selected-right.txt",
+      "sha256": "e847361ca49b97e075cacf4155b3d577715c5118c4eb13d2f8bb83e7048b3c84",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "01-request-path",
+        "frame": "selected-right.txt",
+        "timestamp": "2026-11-02T08:32:18Z",
+        "state": "selected-right",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v01-selected-tab-ansi",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/selected-tab.ansi.txt",
+      "sha256": "0f490810af784589addc6d515b0e621936e2dfcd82dd285295e83ebc90da98c1",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "01-request-path",
+        "frame": "selected-tab.ansi.txt",
+        "timestamp": "2026-11-02T08:32:17Z",
+        "state": "selected-tab",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v01-selected-tab-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/selected-tab.txt",
+      "sha256": "d1fb0298ad623700fb7c7ad51b61b7e1b35fea8bc04e1f0a45c5f2fa19264ae9",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "01-request-path",
+        "frame": "selected-tab.txt",
+        "timestamp": "2026-11-02T08:32:17Z",
+        "state": "selected-tab",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v01-spec-sha256",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/spec.sha256",
+      "sha256": "c9d532e05e86a714aadc2f7337c1c765212283cb73b54c054a9f1b6aae9e3ed2",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v01-timestamps-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/timestamps.txt",
+      "sha256": "42a5fe732a2c70acdf5e80d7f3ed06b48af26e0e1653fdbd9f4dda8c55b284bb",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v01-unselected-ansi",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/unselected.ansi.txt",
+      "sha256": "f302136751fd846ead9fadecaf618b48398057a7b7659720f3984c018876b954",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "01-request-path",
+        "frame": "unselected.ansi.txt",
+        "timestamp": "2026-11-02T08:32:16Z",
+        "state": "unselected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v01-unselected-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/unselected.txt",
+      "sha256": "e847361ca49b97e075cacf4155b3d577715c5118c4eb13d2f8bb83e7048b3c84",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "01-request-path",
+        "frame": "unselected.txt",
+        "timestamp": "2026-11-02T08:32:16Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v01-verify-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/01-request-path/captures/verify.txt",
+      "sha256": "7c71e6a8705230e897a54874ae3924bfa0d05bb391226e9989e395d556593a28",
+      "description": "Generator mechanical report; its pass claim does not override raw color/dot defects.",
+      "capture": null
+    },
+    {
+      "id": "v02-spec",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/spec.json",
+      "sha256": "631cbc99580742d4f28b8af68e0a4841765a35779cf063b8fad7eb2aba7a62e9",
+      "description": "Final generated spec.",
+      "capture": null
+    },
+    {
+      "id": "v02-check",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/check.txt",
+      "sha256": "43c9fcf619347d3d22bc9f9a4407f0658b34cd7578d9a20b46c7db0e6046245e",
+      "description": "Preserved check stdout with appended exit=0.",
+      "capture": null
+    },
+    {
+      "id": "v02-stderr",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/check.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Preserved empty check stderr.",
+      "capture": null
+    },
+    {
+      "id": "v02-commands-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/commands.txt",
+      "sha256": "67d92254688379a9ba9ab1f4a66adb96fcc099f7149654494a0f8ef29dec6fce",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v02-dims-raw-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/dims-raw.txt",
+      "sha256": "0719c7f4295e1cfb264c7afdb3aba28f6438ad59416dc02b6bff04c4863627ee",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v02-frame-01-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/frames/frame-01.txt",
+      "sha256": "855b980c5600e9842b1bd2b42ed146ff16f8f9a8a302598e934a655458869ff3",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "02-core-cache-fill",
+        "frame": "frames/frame-01.txt",
+        "timestamp": "2026-11-02T08:32:27Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v02-frame-02-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/frames/frame-02.txt",
+      "sha256": "c19427b1d10f8c08e3fa962c9661beb6373d46867d2a2c62d55750118041f918",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "02-core-cache-fill",
+        "frame": "frames/frame-02.txt",
+        "timestamp": "2026-11-02T08:32:30Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v02-frame-03-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/frames/frame-03.txt",
+      "sha256": "c98e744a6aa91e9a847e4df40562fd38435c5f5749e3980a52f6ed1d9ac17209",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "02-core-cache-fill",
+        "frame": "frames/frame-03.txt",
+        "timestamp": "2026-11-02T08:32:32Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v02-frame-04-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/frames/frame-04.txt",
+      "sha256": "855b980c5600e9842b1bd2b42ed146ff16f8f9a8a302598e934a655458869ff3",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "02-core-cache-fill",
+        "frame": "frames/frame-04.txt",
+        "timestamp": "2026-11-02T08:32:35Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v02-header-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/header.txt",
+      "sha256": "de3e55c16ae1dfef8fb5ac6ff1afc7f86de6e669e8837133b3d689e3685ae5f2",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v02-layout-after-close-json",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/layout-after-close.json",
+      "sha256": "b27b2ca3498d4a346bc64a28d77ddbb920d795cc1aadf8983431f387e131d2b7",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v02-pane-get-json",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/pane-get.json",
+      "sha256": "fa112964f13973bc3eb2fc85969aa1f066df3060c2ebe041cd342b4c2e8a6395",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v02-pane-id-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/pane-id.txt",
+      "sha256": "bcd43862fba0bc85656f07206ea4f394cc4b109f35a2635885e41b0f8d7e1cb4",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v02-pane-split-json",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/pane-split.json",
+      "sha256": "120f65c5e90b1cb0653f6a314880cd5c289bfd43096b0cc06a1b9371e545c6cc",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v02-selected-after-frames-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/selected-after-frames.txt",
+      "sha256": "855b980c5600e9842b1bd2b42ed146ff16f8f9a8a302598e934a655458869ff3",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "02-core-cache-fill",
+        "frame": "selected-after-frames.txt",
+        "timestamp": "2026-11-02T08:32:40Z",
+        "state": "selected-after-frames",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v02-selected-right-ansi",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/selected-right.ansi.txt",
+      "sha256": "7b5d92f624c638a7af77db4da780595901e74f06d1d1a23daebcec61151d18bc",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "02-core-cache-fill",
+        "frame": "selected-right.ansi.txt",
+        "timestamp": "2026-11-02T08:32:40Z",
+        "state": "selected-right",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v02-selected-right-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/selected-right.txt",
+      "sha256": "855b980c5600e9842b1bd2b42ed146ff16f8f9a8a302598e934a655458869ff3",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "02-core-cache-fill",
+        "frame": "selected-right.txt",
+        "timestamp": "2026-11-02T08:32:40Z",
+        "state": "selected-right",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v02-selected-tab-ansi",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/selected-tab.ansi.txt",
+      "sha256": "1f54f7407f60797b1f092dcb2d0e32b2504bf36f3c840deb4db318081aa64f94",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "02-core-cache-fill",
+        "frame": "selected-tab.ansi.txt",
+        "timestamp": "2026-11-02T08:32:39Z",
+        "state": "selected-tab",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v02-selected-tab-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/selected-tab.txt",
+      "sha256": "c98e744a6aa91e9a847e4df40562fd38435c5f5749e3980a52f6ed1d9ac17209",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "02-core-cache-fill",
+        "frame": "selected-tab.txt",
+        "timestamp": "2026-11-02T08:32:39Z",
+        "state": "selected-tab",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v02-spec-sha256",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/spec.sha256",
+      "sha256": "6ec276c8661f3cd800eb26ac4482fe24178b15b3886f7023c1a6af2318dc66d3",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v02-timestamps-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/timestamps.txt",
+      "sha256": "d487701d2617256ccaec6022980e33e7f36fbf6e7f5684c24fabbc371b0c17cd",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v02-unselected-ansi",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/unselected.ansi.txt",
+      "sha256": "b531c9cb82434b9aa04271b74d99872623b46ea3bcf85529faed304b69df24ca",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "02-core-cache-fill",
+        "frame": "unselected.ansi.txt",
+        "timestamp": "2026-11-02T08:32:37Z",
+        "state": "unselected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v02-unselected-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/unselected.txt",
+      "sha256": "855b980c5600e9842b1bd2b42ed146ff16f8f9a8a302598e934a655458869ff3",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "02-core-cache-fill",
+        "frame": "unselected.txt",
+        "timestamp": "2026-11-02T08:32:37Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v02-verify-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/02-core-cache-fill/captures/verify.txt",
+      "sha256": "bf842904364c2cafeb2148f3845d52126dc339313b6821b8974ecdbfee58e0f4",
+      "description": "Generator mechanical report; its pass claim does not override raw color/dot defects.",
+      "capture": null
+    },
+    {
+      "id": "v03-spec",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/spec.json",
+      "sha256": "eb25d28f493eb2e3b96f07974ab221b751002f9ed7ef96adb91367eb2ac298f8",
+      "description": "Final generated spec.",
+      "capture": null
+    },
+    {
+      "id": "v03-check",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/check.txt",
+      "sha256": "43c9fcf619347d3d22bc9f9a4407f0658b34cd7578d9a20b46c7db0e6046245e",
+      "description": "Preserved check stdout with appended exit=0.",
+      "capture": null
+    },
+    {
+      "id": "v03-stderr",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/check.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Preserved empty check stderr.",
+      "capture": null
+    },
+    {
+      "id": "v03-commands-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/commands.txt",
+      "sha256": "d3436baa016bd980c133af650f431bf90efebe38213f8e1fb6c84052eb92b01b",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v03-dims-raw-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/dims-raw.txt",
+      "sha256": "0719c7f4295e1cfb264c7afdb3aba28f6438ad59416dc02b6bff04c4863627ee",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v03-frame-01-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/frames/frame-01.txt",
+      "sha256": "7d7e966eb35090fc51b49b69704def5bbd92baca9e6c0971c6fab7a3c16a4b27",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "03-session-fill",
+        "frame": "frames/frame-01.txt",
+        "timestamp": "2026-11-02T08:32:47Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v03-frame-02-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/frames/frame-02.txt",
+      "sha256": "bef35bc09e81ab7dfa1c1969d0e113b862045a0a66cabb5d814fb256ea95e0fa",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "03-session-fill",
+        "frame": "frames/frame-02.txt",
+        "timestamp": "2026-11-02T08:32:49Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v03-frame-03-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/frames/frame-03.txt",
+      "sha256": "0091ca0f61b9ebb3f6938ca89df7a70655f24b5c838e68cd0ce9c062860781da",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "03-session-fill",
+        "frame": "frames/frame-03.txt",
+        "timestamp": "2026-11-02T08:32:52Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v03-frame-04-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/frames/frame-04.txt",
+      "sha256": "0091ca0f61b9ebb3f6938ca89df7a70655f24b5c838e68cd0ce9c062860781da",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "03-session-fill",
+        "frame": "frames/frame-04.txt",
+        "timestamp": "2026-11-02T08:32:54Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v03-header-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/header.txt",
+      "sha256": "de3e55c16ae1dfef8fb5ac6ff1afc7f86de6e669e8837133b3d689e3685ae5f2",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v03-layout-after-close-json",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/layout-after-close.json",
+      "sha256": "b27b2ca3498d4a346bc64a28d77ddbb920d795cc1aadf8983431f387e131d2b7",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v03-pane-get-json",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/pane-get.json",
+      "sha256": "141d4bd1e1816667ea9abd6f99d913aa4e8d2c3b9df7563c785129f28a55b2ad",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v03-pane-id-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/pane-id.txt",
+      "sha256": "b57b9a9689dbfb8f21ad3ed184950b7981d8fa04821ed1ca260a705ef1db3774",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v03-pane-split-json",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/pane-split.json",
+      "sha256": "3e4005197b1405ad6042f93a8967cc32ea4883e6978ba2ab5e9e327e761b998b",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v03-selected-after-frames-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/selected-after-frames.txt",
+      "sha256": "7d7e966eb35090fc51b49b69704def5bbd92baca9e6c0971c6fab7a3c16a4b27",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "03-session-fill",
+        "frame": "selected-after-frames.txt",
+        "timestamp": "2026-11-02T08:32:59Z",
+        "state": "selected-after-frames",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v03-selected-right-ansi",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/selected-right.ansi.txt",
+      "sha256": "52e244951d94a0f34c0510f3c21176b58bd9cd3d8b217476034af364116ffc46",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "03-session-fill",
+        "frame": "selected-right.ansi.txt",
+        "timestamp": "2026-11-02T08:32:59Z",
+        "state": "selected-right",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v03-selected-right-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/selected-right.txt",
+      "sha256": "7d7e966eb35090fc51b49b69704def5bbd92baca9e6c0971c6fab7a3c16a4b27",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "03-session-fill",
+        "frame": "selected-right.txt",
+        "timestamp": "2026-11-02T08:32:59Z",
+        "state": "selected-right",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v03-selected-tab-ansi",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/selected-tab.ansi.txt",
+      "sha256": "3b78c7bbc6f2ebdb910cdacbcb1a8267471e21869fc35356d177e17cdb37cb9f",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "03-session-fill",
+        "frame": "selected-tab.ansi.txt",
+        "timestamp": "2026-11-02T08:32:58Z",
+        "state": "selected-tab",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v03-selected-tab-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/selected-tab.txt",
+      "sha256": "bef35bc09e81ab7dfa1c1969d0e113b862045a0a66cabb5d814fb256ea95e0fa",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "03-session-fill",
+        "frame": "selected-tab.txt",
+        "timestamp": "2026-11-02T08:32:58Z",
+        "state": "selected-tab",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v03-spec-sha256",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/spec.sha256",
+      "sha256": "8f3ac3beeaffcbca690082bcba2e178325b498403d2287485f5a8d807b0607e5",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v03-timestamps-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/timestamps.txt",
+      "sha256": "e6e5622b7dfe86969ce9b77534dce83850b46564135683cebcc9311117197296",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": null
+    },
+    {
+      "id": "v03-unselected-ansi",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/unselected.ansi.txt",
+      "sha256": "61b54837c683e71356a7f1fd1be827fd14c110e27ef3bb88f42b2e2295408604",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "03-session-fill",
+        "frame": "unselected.ansi.txt",
+        "timestamp": "2026-11-02T08:32:57Z",
+        "state": "unselected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v03-unselected-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/unselected.txt",
+      "sha256": "7d7e966eb35090fc51b49b69704def5bbd92baca9e6c0971c6fab7a3c16a4b27",
+      "description": "Raw final capture or supporting execution record.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "03-session-fill",
+        "frame": "unselected.txt",
+        "timestamp": "2026-11-02T08:32:57Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v03-verify-text",
+      "path": "docs/visualize-eval/rounds/01/network/views/03-session-fill/captures/verify.txt",
+      "sha256": "793391438585c4a19ea611eefa26d667b9129b4ae561a5fffed9353aa249f1ea",
+      "description": "Generator mechanical report; its pass claim does not override raw color/dot defects.",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All six source concepts and seven directed label meanings are visible across the three final views. Redis cache preserves Redis/cache identity. Core-to-cache and web-to-cache remain distinct; fill is intentionally duplicated, never reversed. No missing or invented relation. Speeds are visible text; uniform animation does not claim measured throughput. Coverage is independently audited, not inferred from JSON alone.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "generation",
+        "v01-spec",
+        "v02-spec",
+        "v03-spec",
+        "v01-unselected-text",
+        "v02-unselected-text",
+        "v03-unselected-text",
+        "blind",
+        "verification"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All seven required links (eight rendered instances including fill twice) have complete isolated column-34 traces, downward unique arrowheads and associated labels. Source/target contacts touch the correct box borders. No crossings, fake branches or route merges. Source fan-out/fan-in is preserved across explicit split coverage, not bundled into a bus.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "verification",
+        "v01-unselected-text",
+        "v02-unselected-text",
+        "v03-unselected-text"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Every final view is measured 77x47 and all labels, boxes and controls are unobscured; complete source coverage is verified. Strict natural-100% attestation is missing: no numeric zoom state is retained, and bare launch provenance cannot bind the known default to the executed binary. N06 is an evidence blocker, not a clipping claim.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "verification",
+        "capture-script",
+        "v01-dims-raw-text",
+        "v02-dims-raw-text",
+        "v03-dims-raw-text",
+        "v01-unselected-text",
+        "v02-unselected-text",
+        "v03-unselected-text"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "N02: source order is preserved, but repeated concepts change hue family across splits and unrelated first-position concepts share amber. Colors track local chain position without a source-backed semantic grouping/legend. Proximity and Gruvbox styling alone do not meet the fixed related-hue-family gate.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "v01-unselected-ansi",
+        "v02-unselected-ansi",
+        "v03-unselected-ansi",
+        "v01-spec",
+        "v02-spec",
+        "v03-spec",
+        "verification"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "N01: every box is geometrically complete, but two top/bottom handle cells per node are neutral rather than the per-node border hue. The mismatch remains in both selected states, despite bold styling. Actual ANSI demonstrates failure; the generator mechanical pass cannot waive it.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "v01-unselected-ansi",
+        "v02-unselected-ansi",
+        "v03-unselected-ansi",
+        "v01-selected-tab-ansi",
+        "v02-selected-tab-ansi",
+        "v03-selected-tab-ansi",
+        "v01-selected-right-ansi",
+        "v02-selected-right-ansi",
+        "v03-selected-right-ansi",
+        "verification"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "N05: frozen skill/binary/rubric/dataset/source/spec hashes, permitted model assignments, unchanged blind-first record, check outputs/status, text+ANSI, measured dimensions and cleanup are retained and audited. However the bare viewer launches lack resolved executable evidence and exact executed check argv is absent. Generator identity is recorded consistently, but the saved report writer hardcodes the model/session claims. No model substitution is inferred. Required execution provenance remains unsupported.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "candidate",
+        "rubric",
+        "dataset",
+        "generation",
+        "generation-script",
+        "capture-script",
+        "manifest",
+        "blind",
+        "verification",
+        "v01-check",
+        "v02-check",
+        "v03-check",
+        "v01-stderr",
+        "v02-stderr",
+        "v03-stderr",
+        "v01-commands-text",
+        "v02-commands-text",
+        "v03-commands-text",
+        "v01-layout-after-close-json",
+        "v02-layout-after-close-json",
+        "v03-layout-after-close-json"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Animation is required by source/manifest. N03 shows adjacent double dots on every rendered route in frame02, violating sparse presentation. All labels and arrowheads remain clear and sampled dots stay off borders. N04 additionally blocks verification of intended continuous direction and slow speed because samples alias; flow=0.2 and generator prose do not establish rendered motion.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "dataset",
+        "source",
+        "expected",
+        "v01-frame-01-text",
+        "v01-frame-02-text",
+        "v01-frame-03-text",
+        "v01-frame-04-text",
+        "v02-frame-01-text",
+        "v02-frame-02-text",
+        "v02-frame-03-text",
+        "v02-frame-04-text",
+        "v03-frame-01-text",
+        "v03-frame-02-text",
+        "v03-frame-03-text",
+        "v03-frame-04-text",
+        "v01-timestamps-text",
+        "v02-timestamps-text",
+        "v03-timestamps-text",
+        "verification"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "wan-fw",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "wan -> fw; label 1 GbE; independent directed link, not a named bus.",
+      "observed": "01-request-path: source bottom [34,10,1,1], uninterrupted stem/dot corridor [34,11,1,3], downward arrowhead [34,14,1,1], target top [34,15,1,1]; label '1 GbE' at [36,12,5,1]. No bends, crossings, shared corridor cells or false junctions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v01-unselected-text",
+          "region": [
+            34,
+            10,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-text",
+          "region": [
+            34,
+            11,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-text",
+          "region": [
+            34,
+            15,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-text",
+          "region": [
+            36,
+            12,
+            5,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "N03",
+        "N04"
+      ]
+    },
+    {
+      "edge_id": "fw-core",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "fw -> core; label 10 GbE; independent directed link, not a named bus.",
+      "observed": "01-request-path: source bottom [34,18,1,1], uninterrupted stem/dot corridor [34,19,1,3], downward arrowhead [34,22,1,1], target top [34,23,1,1]; label '10 GbE' at [36,20,6,1]. No bends, crossings, shared corridor cells or false junctions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v01-unselected-text",
+          "region": [
+            34,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-text",
+          "region": [
+            34,
+            19,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-text",
+          "region": [
+            34,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-text",
+          "region": [
+            36,
+            20,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "N03",
+        "N04"
+      ]
+    },
+    {
+      "edge_id": "core-web",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "core -> web; label 10 GbE; independent directed link, not a named bus.",
+      "observed": "01-request-path: source bottom [34,26,1,1], uninterrupted stem/dot corridor [34,27,1,3], downward arrowhead [34,30,1,1], target top [34,31,1,1]; label '10 GbE' at [36,28,6,1]. No bends, crossings, shared corridor cells or false junctions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v01-unselected-text",
+          "region": [
+            34,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-text",
+          "region": [
+            34,
+            27,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-text",
+          "region": [
+            34,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-text",
+          "region": [
+            36,
+            28,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "N03",
+        "N04"
+      ]
+    },
+    {
+      "edge_id": "core-cache",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "core -> cache; label 25 GbE; independent directed link, not a named bus.",
+      "observed": "02-core-cache-fill: source bottom [34,18,1,1], uninterrupted stem/dot corridor [34,19,1,3], downward arrowhead [34,22,1,1], target top [34,23,1,1]; label '25 GbE' at [36,20,6,1]. No bends, crossings, shared corridor cells or false junctions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v02-unselected-text",
+          "region": [
+            34,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-unselected-text",
+          "region": [
+            34,
+            19,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v02-unselected-text",
+          "region": [
+            34,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-unselected-text",
+          "region": [
+            36,
+            20,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "N03",
+        "N04"
+      ]
+    },
+    {
+      "edge_id": "web-cache",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "web -> cache; label session; independent directed link, not a named bus.",
+      "observed": "03-session-fill: source bottom [34,18,1,1], uninterrupted stem/dot corridor [34,19,1,3], downward arrowhead [34,22,1,1], target top [34,23,1,1]; label 'session' at [36,20,7,1]. No bends, crossings, shared corridor cells or false junctions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v03-unselected-text",
+          "region": [
+            34,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-unselected-text",
+          "region": [
+            34,
+            19,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v03-unselected-text",
+          "region": [
+            34,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-unselected-text",
+          "region": [
+            36,
+            20,
+            7,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "N03",
+        "N04"
+      ]
+    },
+    {
+      "edge_id": "web-db",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "web -> db; label queries; independent directed link, not a named bus.",
+      "observed": "01-request-path: source bottom [34,34,1,1], uninterrupted stem/dot corridor [34,35,1,3], downward arrowhead [34,38,1,1], target top [34,39,1,1]; label 'queries' at [36,36,7,1]. No bends, crossings, shared corridor cells or false junctions.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v01-unselected-text",
+          "region": [
+            34,
+            34,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-text",
+          "region": [
+            34,
+            35,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-text",
+          "region": [
+            34,
+            39,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-text",
+          "region": [
+            36,
+            36,
+            7,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "N03",
+        "N04"
+      ]
+    },
+    {
+      "edge_id": "cache-db",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "expected": "cache -> db; label fill; independent directed link, not a named bus.",
+      "observed": "02-core-cache-fill: source bottom [34,26,1,1], uninterrupted stem/dot corridor [34,27,1,3], downward arrowhead [34,30,1,1], target top [34,31,1,1]; label 'fill' at [36,28,4,1]. No bends, crossings, shared corridor cells or false junctions. 03-session-fill: source bottom [34,26,1,1], uninterrupted stem/dot corridor [34,27,1,3], downward arrowhead [34,30,1,1], target top [34,31,1,1]; label 'fill' at [36,28,4,1]. No bends, crossings, shared corridor cells or false junctions. Repeated fill is explicitly declared coverage duplication, not an extra relationship.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v02-unselected-text",
+          "region": [
+            34,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-unselected-text",
+          "region": [
+            34,
+            27,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v02-unselected-text",
+          "region": [
+            34,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-unselected-text",
+          "region": [
+            36,
+            28,
+            4,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-unselected-text",
+          "region": [
+            34,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-unselected-text",
+          "region": [
+            34,
+            27,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v03-unselected-text",
+          "region": [
+            34,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-unselected-text",
+          "region": [
+            36,
+            28,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "N03",
+        "N04"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "N01",
+      "category": "border_integrity",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "Every visible node has two neutral RGB(146,131,116) top/bottom handle cells that interrupt its own border hue. All 11 rendered node instances exhibit this; all three selected middle boxes retain those neutral cells even when the rest of the border becomes amber/bold. Complete geometry does not satisfy the rubric color-continuity requirement.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v01-unselected-ansi",
+          "region": [
+            35,
+            7,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-ansi",
+          "region": [
+            35,
+            10,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-ansi",
+          "region": [
+            38,
+            15,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-ansi",
+          "region": [
+            38,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-ansi",
+          "region": [
+            39,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-ansi",
+          "region": [
+            39,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-ansi",
+          "region": [
+            38,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-ansi",
+          "region": [
+            38,
+            34,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-ansi",
+          "region": [
+            37,
+            39,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-ansi",
+          "region": [
+            37,
+            42,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-tab-ansi",
+          "region": [
+            35,
+            7,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-tab-ansi",
+          "region": [
+            35,
+            10,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-tab-ansi",
+          "region": [
+            38,
+            15,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-tab-ansi",
+          "region": [
+            38,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-tab-ansi",
+          "region": [
+            39,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-tab-ansi",
+          "region": [
+            39,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-tab-ansi",
+          "region": [
+            38,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-tab-ansi",
+          "region": [
+            38,
+            34,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-tab-ansi",
+          "region": [
+            37,
+            39,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-tab-ansi",
+          "region": [
+            37,
+            42,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-right-ansi",
+          "region": [
+            35,
+            7,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-right-ansi",
+          "region": [
+            35,
+            10,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-right-ansi",
+          "region": [
+            38,
+            15,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-right-ansi",
+          "region": [
+            38,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-right-ansi",
+          "region": [
+            39,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-right-ansi",
+          "region": [
+            39,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-right-ansi",
+          "region": [
+            38,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-right-ansi",
+          "region": [
+            38,
+            34,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-right-ansi",
+          "region": [
+            37,
+            39,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v01-selected-right-ansi",
+          "region": [
+            37,
+            42,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-unselected-ansi",
+          "region": [
+            39,
+            15,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-unselected-ansi",
+          "region": [
+            39,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-unselected-ansi",
+          "region": [
+            39,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-unselected-ansi",
+          "region": [
+            39,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-unselected-ansi",
+          "region": [
+            37,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-unselected-ansi",
+          "region": [
+            37,
+            34,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-selected-tab-ansi",
+          "region": [
+            39,
+            15,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-selected-tab-ansi",
+          "region": [
+            39,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-selected-tab-ansi",
+          "region": [
+            39,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-selected-tab-ansi",
+          "region": [
+            39,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-selected-tab-ansi",
+          "region": [
+            37,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-selected-tab-ansi",
+          "region": [
+            37,
+            34,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-selected-right-ansi",
+          "region": [
+            39,
+            15,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-selected-right-ansi",
+          "region": [
+            39,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-selected-right-ansi",
+          "region": [
+            39,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-selected-right-ansi",
+          "region": [
+            39,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-selected-right-ansi",
+          "region": [
+            37,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-selected-right-ansi",
+          "region": [
+            37,
+            34,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-unselected-ansi",
+          "region": [
+            38,
+            15,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-unselected-ansi",
+          "region": [
+            38,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-unselected-ansi",
+          "region": [
+            39,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-unselected-ansi",
+          "region": [
+            39,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-unselected-ansi",
+          "region": [
+            37,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-unselected-ansi",
+          "region": [
+            37,
+            34,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-selected-tab-ansi",
+          "region": [
+            38,
+            15,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-selected-tab-ansi",
+          "region": [
+            38,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-selected-tab-ansi",
+          "region": [
+            39,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-selected-tab-ansi",
+          "region": [
+            39,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-selected-tab-ansi",
+          "region": [
+            37,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-selected-tab-ansi",
+          "region": [
+            37,
+            34,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-selected-right-ansi",
+          "region": [
+            38,
+            15,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-selected-right-ansi",
+          "region": [
+            38,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-selected-right-ansi",
+          "region": [
+            39,
+            23,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-selected-right-ansi",
+          "region": [
+            39,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-selected-right-ansi",
+          "region": [
+            37,
+            31,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-selected-right-ansi",
+          "region": [
+            37,
+            34,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "N02",
+      "category": "conceptual_grouping_color",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Normal hue families follow per-view chain position rather than source-defined concept groups: Core switch is pink in view01 but amber in view02; Web tier is green in view01 but amber in view03; DB tier is blue in view01 but pink in views02/03. Repeated source concepts have unstable hue identity, while unrelated first-position WAN/Core/Web share amber. Specs supply no source-backed grouping/layer mapping and captions show no legend. Sequential placement preserves direction but cannot justify semantic color grouping.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v01-unselected-ansi",
+          "region": [
+            33,
+            23,
+            13,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v02-unselected-ansi",
+          "region": [
+            33,
+            15,
+            13,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-ansi",
+          "region": [
+            33,
+            31,
+            10,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v03-unselected-ansi",
+          "region": [
+            33,
+            15,
+            10,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v01-unselected-ansi",
+          "region": [
+            33,
+            39,
+            9,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v02-unselected-ansi",
+          "region": [
+            33,
+            31,
+            9,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "N03",
+      "category": "animation",
+      "edge_ids": [
+        "wan-fw",
+        "fw-core",
+        "core-web",
+        "core-cache",
+        "web-cache",
+        "web-db",
+        "cache-db"
+      ],
+      "severity": "medium",
+      "description": "Frame02 in every view shows two adjacent dot glyphs per route, occupying two of the three stem cells before each arrow. This is not sparse separated motion on these very short routes. It also contradicts the generator claim of dots at least seven cells apart. Labels and arrowheads remain readable and there are no sampled border dots; those positives do not waive the sparse-motion gate.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v01-frame-02-text",
+          "region": [
+            34,
+            12,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v01-frame-02-text",
+          "region": [
+            34,
+            20,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v01-frame-02-text",
+          "region": [
+            34,
+            28,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v01-frame-02-text",
+          "region": [
+            34,
+            36,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v02-frame-02-text",
+          "region": [
+            34,
+            20,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v02-frame-02-text",
+          "region": [
+            34,
+            28,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v03-frame-02-text",
+          "region": [
+            34,
+            20,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v03-frame-02-text",
+          "region": [
+            34,
+            28,
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "N04",
+      "category": "animation",
+      "edge_ids": [
+        "wan-fw",
+        "fw-core",
+        "core-web",
+        "core-cache",
+        "web-cache",
+        "web-db",
+        "cache-db"
+      ],
+      "severity": "high",
+      "description": "The retained two-to-three-second samples alias on four-cell corridors: lower-only, both, upper-only, then lower-only (view03 frame04 remains upper-only). They prove changes but not intended continuous direction or slow speed for any route. flow=0.2 is intent, not actual-render timing proof; the generator assertion of 5-6 cells per interval is not recoverable from these samples. Animation remains failed for N03, with direction/speed evidence additionally blocked.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v01-frame-01-text",
+          "region": [
+            34,
+            11,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v01-frame-02-text",
+          "region": [
+            34,
+            11,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v01-frame-03-text",
+          "region": [
+            34,
+            11,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v01-frame-04-text",
+          "region": [
+            34,
+            11,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v02-frame-03-text",
+          "region": [
+            34,
+            19,
+            1,
+            12
+          ]
+        },
+        {
+          "evidence_id": "v03-frame-04-text",
+          "region": [
+            34,
+            19,
+            1,
+            12
+          ]
+        }
+      ]
+    },
+    {
+      "id": "N05",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Frozen input hashes verify, but launch-to-binary provenance is unresolved: all actual command records launch bare rataflow-view, while capture-view.sh declares BIN without using it and records no pane-shell PATH/resolved executable. The final records also lack the exact executed --check command; stdout/stderr/exit=0 exist but do not identify its executable/argv. This is missing required execution evidence, not proof that a different binary was used. Generator identity is consistently recorded by metadata/report, not separately attested by raw generator process evidence.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v01-unselected-text",
+          "region": [
+            2,
+            1,
+            75,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v02-unselected-text",
+          "region": [
+            2,
+            1,
+            75,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v03-unselected-text",
+          "region": [
+            2,
+            1,
+            75,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "N06",
+      "category": "layout_fit",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Measured 77x47 dimensions and complete, unobscured graph fit are proved in all three final views. Natural 100% zoom is plausible from default launch and natural-size boxes, but neither captures nor executed state records expose numeric zoom, and the executable default is not bound to the hashed binary (N05). The strict combined layout gate is therefore blocked for scale attestation only; there is no observed clipping failure.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v01-unselected-text",
+          "region": [
+            33,
+            7,
+            13,
+            36
+          ]
+        },
+        {
+          "evidence_id": "v02-unselected-text",
+          "region": [
+            33,
+            15,
+            13,
+            20
+          ]
+        },
+        {
+          "evidence_id": "v03-unselected-text",
+          "region": [
+            33,
+            15,
+            13,
+            20
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "B1: N05 — frozen executable bytes verify, but pane-shell resolution for the bare rataflow-view launch and exact executed --check command are not retained. Current PATH/source cannot repair historical provenance.",
+    "B2: N06 — actual 77x47 is measured; numeric natural-100% zoom is not directly attested. No re-render permitted.",
+    "B3: N04 — all seven routes lack sufficiently dense time-resolved actual-render evidence to distinguish continuous direction and slow speed from aliasing.",
+    "B4: N01/N02 — observed border color continuity and stable source-concept grouping are not delivered by these final renders. Frozen documented spec exposes no direct handle-color or per-concept color mapping; renderer-level support must be established, not assumed or replaced with another surface."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:p33",
+      "w7E:p38",
+      "w7E:p3H",
+      "w7E:p30",
+      "w7E:p44",
+      "w7E:p46",
+      "w7E:p4B",
+      "w7E:p4J",
+      "w7E:p4P",
+      "w7E:p52",
+      "w7E:p54",
+      "w7E:p5A",
+      "w7E:p5D"
+    ],
+    "closed_pane_ids": [
+      "w7E:p33",
+      "w7E:p38",
+      "w7E:p3H",
+      "w7E:p30",
+      "w7E:p44",
+      "w7E:p46",
+      "w7E:p4B",
+      "w7E:p4J",
+      "w7E:p4P",
+      "w7E:p52",
+      "w7E:p54",
+      "w7E:p5A",
+      "w7E:p5D"
+    ],
+    "status": "done",
+    "reason": "Generator declares 13 owned view/attempt panes in its own tab w7E:tK. All three post-close layout records list only the generator pane w7E:p2R, so none of those declared view panes remain there; each final commands.txt also records its pane gone after q. Historical per-attempt close events are not individually replayed/attested. Reviewer created no panes."
+  },
+  "overall": "fail"
+}

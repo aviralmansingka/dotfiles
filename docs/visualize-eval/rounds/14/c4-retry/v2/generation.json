@@ -1,0 +1,582 @@
+{
+  "case_id": "modal-machine-manager-c4-retry",
+  "run": "v2 (round 14, build b0282d3b: member-based enclosure)",
+  "round": "14",
+  "generator": {
+    "label": "viz-ds13-c4",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "frozen_inputs": {
+    "skill": "docs/visualize-eval/proposals/13/SKILL.md",
+    "skill_sha256": "55c6f9d061d64f65762bac29affececd1b9c5c3025f8ce15fc44117943d5362b",
+    "renderer": "/tmp/visualize-eval/round-14/bin/rataflow-view",
+    "renderer_sha256": "b0282d3bad98f42ffae5c8b76ec58a21c24d86412a3be218fa68238b6ae44146",
+    "source": "docs/visualize-eval/cases/modal-machine-manager/source.md",
+    "viewport": "77x47 natural (canvas form: whole-canvas pinned dump)"
+  },
+  "what_changed_vs_v1": [
+    "enclosure semantics: v1 used `enclosed: true` (whole band) so externals fell inside the dotted box - the judge's structural failure. v2 lists members explicitly (`enclosure: [...]`) and every actor/external is outside the box in both L2 diagrams.",
+    "queue -> SSH label: v1 read 'verify reimage'; v2 reads 'audit/verify reimage', restoring the source's `audit` action on that relation.",
+    "L1 machine interface: v1 folded both directions into one aggregate arrow; v2 draws two edges, `mm -> mch 'boot, audit'` and `mch -> mm 'iPXE, heartbeat'`, so the incoming direction is its own arrow.",
+    "L2 descriptions now state that the dotted box is the manager's containers and that caller/providers/machines/S3/Slack are outside it.",
+    "abbreviations keyed on the canvas: descriptions carry 'BM = bare metal'.",
+    "the whole-canvas pinned dump is now 260x90 for a 253x74 canvas, so the controls legend (row 84) sits below the drawing (ends row 76) and no enclosure border is overdrawn."
+  ],
+  "triage": {
+    "annex": "round-14 c4-retry brief (owner quote) plus the round-generation task message that carries the two owner directives",
+    "correction_vs_v1": "v1 attributed the 'verify reimage'/'args' directive to brief.md; it comes from the generation task message (owner directives), not the brief file. Also trimmed: the brief answers levels, direction, zoom parent and dots, so only the genuinely open questions are recorded.",
+    "questions_used": [
+      {
+        "id": "C4R14v2-1",
+        "question": "Which box is the zoom parent, and which level does it open?",
+        "answer": "The manager box in L1 opens the container level; L3 only if the source states internals (it does not).",
+        "answer_source": "brief framing"
+      },
+      {
+        "id": "C4R14v2-2",
+        "question": "Can the whole container level live in one enclosed diagram now that the boundary is member-based?",
+        "answer": "No: measured on b0282d3b, the 17-container/23-relation section is still unroutable at the mandated `lr` (exit 1, 'no obstacle-safe route for wapi -> q') and over the build's own 12/16 readable budget in `tb`. Two enclosed halves ship.",
+        "answer_source": "own judgment (measured)"
+      },
+      {
+        "id": "C4R14v2-3",
+        "question": "What belongs inside the manager boundary, and what stays outside?",
+        "answer": "Inside: the manager's own processes - control plane, webapi, both gRPC surfaces, River queue, reconcile loop, provider registry, janitor, Postgres, SSH/BMC ops, machine-agent. Outside: the human actor (humans+mmctl), the bare-metal providers, the machines, S3 and Slack. The boot server is a manager service but ships outside the L2a boundary: the source's chain reg->prov->mch->boot puts two externals between reg and boot, so a rectangle that holds boot inside also swallows prov and mch (measured: every such layout produced 30+ near-miss cells or an unroutable edge). Recorded as the one membership compromise.",
+        "answer_source": "own judgment (measured, probes in attempts.json)"
+      },
+      {
+        "id": "C4R14v2-4",
+        "question": "Do boundary-crossing relations keep their dots?",
+        "answer": "No: the build paints the dotted boundary after the flow, so a dot that crosses it is occluded for a frame and the frame audit splits its route (measured: 12/12 dots visible with `enclosed:true`, 11/12 with member enclosures; 3 routes split). The three boundary-crossing routes (web->wapi, reg->prov, wapi->slack) therefore ship static and the other nine keep one dot each.",
+        "answer_source": "own judgment (measured)"
+      }
+    ],
+    "converged_when": "Levels, parent, direction, enclosure membership and the qualifier list were fixed by the brief and the task-message directives; only the L2 split and the boundary membership needed measurement.",
+    "shape_decision": "one canvas, three described diagrams: l1 (context, `focus` on mm), l2a + l2b (container level, each with a member-based dotted enclosure)"
+  },
+  "classification": {
+    "family": "lifecycle-machines",
+    "evidence": "wide fan out of the queue/machine spine with one live dot per transition; phase order request -> provisioning -> boot.",
+    "secondary_recipe": "service-meshes (the anti-parallel boot pair stays in one enclosed diagram)",
+    "reclassification": null
+  },
+  "surfaces": [
+    {
+      "surface": "canvas",
+      "spec": "specs/c4-canvas.json",
+      "spec_sha256": "82bc764164e1be2604a01fbc3c1f02b2f4bfa3d6d15f949cd117e1176478b8d5",
+      "bundle": "evidence/canvas",
+      "check": "evidence/canvas/check.txt",
+      "text": "evidence/canvas/canvas-text.txt",
+      "ansi": "evidence/canvas/canvas-ansi.ansi",
+      "selected_ansi": "evidence/canvas/canvas-selected.ansi",
+      "frames": "evidence/canvas/canvas-frames.txt",
+      "whole_canvas_frames": "evidence/canvas/canvas-260x90-frames.txt",
+      "frame_audit": "evidence/canvas/frame-audit.txt",
+      "validator": "evidence/canvas/validator.txt",
+      "measured": {
+        "pane_token": "68x44 @100%",
+        "pinned_viewport_line": "viewport: 260x90 zoom: 1.00 natural",
+        "direction": "lr (canvas-level, no override)"
+      },
+      "cleanup": "confirmed_closed",
+      "totals": {
+        "nodes": 28,
+        "edges": 30,
+        "routes": 30,
+        "extent": "253x74",
+        "animated_routes": 9,
+        "crossings": "4 bridges, 0 touching bends",
+        "near_misses": 0,
+        "labels": "30/30, 0 ambiguous",
+        "origins": "9/9",
+        "pin_conflicts": 0,
+        "enclosure_entrances": 5,
+        "enclosure_crossings": "absent (0 - the build prints the line only when >0; verified 1-cell on a rejected probe, so the metric is live)"
+      },
+      "diagrams": [
+        {
+          "id": "l1",
+          "level": "C4 L1 - system context",
+          "title": "L1 · System context — the machine manager",
+          "extent": "112x21",
+          "origin": [
+            0,
+            5
+          ],
+          "nodes": 6,
+          "edges": 7,
+          "focus_node": "mm (double border)",
+          "dots": 4
+        },
+        {
+          "id": "l2a",
+          "level": "C4 L2 - containers (request, provisioning, boot)",
+          "extent": "253x20",
+          "origin": [
+            0,
+            31
+          ],
+          "nodes": 12,
+          "edges": 14,
+          "enclosed_members": [
+            "cp",
+            "wapi",
+            "pgrpc",
+            "q",
+            "rec",
+            "reg",
+            "db"
+          ],
+          "outside_members": [
+            "web",
+            "prov",
+            "mch",
+            "s3",
+            "boot"
+          ],
+          "dotted_box": "131x16 at 23,31",
+          "dots": 5
+        },
+        {
+          "id": "l2b",
+          "level": "C4 L2 - containers (heartbeat, audits, diagnostics)",
+          "extent": "189x18",
+          "origin": [
+            0,
+            56
+          ],
+          "nodes": 10,
+          "edges": 9,
+          "enclosed_members": [
+            "pub",
+            "wapi",
+            "q",
+            "ssh",
+            "agent",
+            "db",
+            "jan"
+          ],
+          "outside_members": [
+            "mch",
+            "s3",
+            "slack"
+          ],
+          "dotted_box": "140x14 at 22,56",
+          "dots": 0
+        }
+      ],
+      "canvas_chrome": {
+        "top_rule_above_first_section": "row 8 of the 260x90 dump",
+        "uniform_dividers": "rows 8, 34, 59 - all 257 cells (widest band)",
+        "legend": "row 84, below the drawing (ends row 76)"
+      }
+    }
+  ],
+  "coverage_map": {
+    "rule": "all 23 relations verbatim once at the container level; context edges are aggregates with recorded expansions",
+    "relations": [
+      {
+        "id": 1,
+        "source": "cp -> pgrpc",
+        "verb": "create / terminate / repair",
+        "level": "L2",
+        "surface": "l2a:e1"
+      },
+      {
+        "id": 2,
+        "source": "web -> wapi",
+        "verb": "http",
+        "level": "L2",
+        "surface": "l2a:e0 (expanded by l1:e0)"
+      },
+      {
+        "id": 3,
+        "source": "pgrpc -> q",
+        "verb": "enqueue job",
+        "level": "L2",
+        "surface": "l2a:e2"
+      },
+      {
+        "id": 4,
+        "source": "wapi -> q",
+        "verb": "reinstall / reprovision",
+        "level": "L2",
+        "surface": "l2a:e3"
+      },
+      {
+        "id": 5,
+        "source": "q -> reg",
+        "verb": "provision job",
+        "level": "L2",
+        "surface": "l2a:e4"
+      },
+      {
+        "id": 6,
+        "source": "reg -> prov",
+        "verb": "provider API",
+        "level": "L2",
+        "surface": "l2a:e5 (expanded by l1:e1)"
+      },
+      {
+        "id": 7,
+        "source": "prov -> mch",
+        "verb": "allocate instance",
+        "level": "L2",
+        "surface": "l2a:e6 (expanded by l1:e6)"
+      },
+      {
+        "id": 8,
+        "source": "mch -> boot",
+        "verb": "iPXE request",
+        "level": "L2",
+        "surface": "l2a:e7 (expanded by l1:e5)"
+      },
+      {
+        "id": 9,
+        "source": "boot -> mch",
+        "verb": "boot.ipxe + S3 args",
+        "level": "L2",
+        "surface": "l2a:e8 (expanded by l1:e4)"
+      },
+      {
+        "id": 10,
+        "source": "mch -> agent",
+        "verb": "runs on host",
+        "level": "L2",
+        "surface": "l2b:e2"
+      },
+      {
+        "id": 11,
+        "source": "agent -> pub",
+        "verb": "register + heartbeat",
+        "level": "L2",
+        "surface": "l2b:e3 (expanded by l1:e4)"
+      },
+      {
+        "id": 12,
+        "source": "pub -> db",
+        "verb": "machine state",
+        "level": "L2",
+        "surface": "l2b:e4"
+      },
+      {
+        "id": 13,
+        "source": "pgrpc -> db",
+        "verb": "machine rows",
+        "level": "L2",
+        "surface": "l2a:e10"
+      },
+      {
+        "id": 14,
+        "source": "q -> db",
+        "verb": "job rows",
+        "level": "L2",
+        "surface": "l2a:e11"
+      },
+      {
+        "id": 15,
+        "source": "q -> ssh",
+        "verb": "audit / verify reimage",
+        "level": "L2",
+        "surface": "l2b:e0 (label 'audit/verify reimage' - audit restored)"
+      },
+      {
+        "id": 16,
+        "source": "ssh -> mch",
+        "verb": "run machine-audit",
+        "level": "L2",
+        "surface": "l2b:e1 (expanded by l1:e5)"
+      },
+      {
+        "id": 17,
+        "source": "mch -> s3",
+        "verb": "pull boot image",
+        "level": "L2",
+        "surface": "l2a:e9"
+      },
+      {
+        "id": 18,
+        "source": "q -> s3",
+        "verb": "diagnose uploads",
+        "level": "L2",
+        "surface": "l2b:e8"
+      },
+      {
+        "id": 19,
+        "source": "q -> jan",
+        "verb": "diagnostic events",
+        "level": "L2",
+        "surface": "l2b:e5"
+      },
+      {
+        "id": 20,
+        "source": "jan -> wapi",
+        "verb": "proposed actions",
+        "level": "L2",
+        "surface": "l2b:e6"
+      },
+      {
+        "id": 21,
+        "source": "wapi -> slack",
+        "verb": "confirm + alerts",
+        "level": "L2",
+        "surface": "l2b:e7 (expanded by l1:e3)"
+      },
+      {
+        "id": 22,
+        "source": "rec -> prov",
+        "verb": "gcore sync, 1 min",
+        "level": "L2",
+        "surface": "l2a:e12 (expanded by l1:e1)"
+      },
+      {
+        "id": 23,
+        "source": "rec -> db",
+        "verb": "cluster state",
+        "level": "L2",
+        "surface": "l2a:e13"
+      }
+    ],
+    "expansions": [
+      {
+        "context_edge": "l1:e0",
+        "label": "http",
+        "expands_to": [
+          "web -> wapi http"
+        ]
+      },
+      {
+        "context_edge": "l1:e1",
+        "label": "provider API",
+        "expands_to": [
+          "reg -> prov provider API",
+          "rec -> prov gcore sync, 1 min"
+        ]
+      },
+      {
+        "context_edge": "l1:e2",
+        "label": "diagnose",
+        "expands_to": [
+          "q -> s3 diagnose uploads"
+        ]
+      },
+      {
+        "context_edge": "l1:e3",
+        "label": "confirm + alerts",
+        "expands_to": [
+          "wapi -> slack confirm + alerts"
+        ]
+      },
+      {
+        "context_edge": "l1:e4",
+        "label": "iPXE, heartbeat",
+        "expands_to": [
+          "mch -> boot iPXE request",
+          "agent -> pub register + heartbeat"
+        ]
+      },
+      {
+        "context_edge": "l1:e5",
+        "label": "boot, audit",
+        "expands_to": [
+          "boot -> mch boot.ipxe + S3 args",
+          "ssh -> mch run machine-audit"
+        ]
+      },
+      {
+        "context_edge": "l1:e6",
+        "label": "allocate instance",
+        "expands_to": [
+          "prov -> mch allocate instance"
+        ]
+      }
+    ],
+    "components_covered": "all 17",
+    "drops": "none",
+    "qualifier_on_canvas": [
+      "audit/verify reimage (l2b:e0 - 'audit' restored)",
+      "boot.ipxe + S3 args (l2a:e8)",
+      "create/terminate/repair",
+      "reinstall/reprovision",
+      "gcore sync, 1 min",
+      "run machine-audit",
+      "register + heartbeat",
+      "diagnostic events",
+      "proposed actions",
+      "confirm + alerts",
+      "diagnose uploads",
+      "pull boot image",
+      "allocate instance",
+      "machine state / machine rows / job rows / cluster state",
+      "runs on host"
+    ]
+  },
+  "meaning_ledger": [
+    {
+      "fact": "17 component names",
+      "kind": "identifier",
+      "fate": "drawn"
+    },
+    {
+      "fact": "bare-metal providers/machines",
+      "kind": "role",
+      "fate": "drawn",
+      "note": "'providers (BM)' / 'machines (BM)'; BM = bare metal is keyed in all three diagram descriptions on the canvas"
+    },
+    {
+      "fact": "audit / verify reimage",
+      "kind": "verbs",
+      "fate": "drawn",
+      "note": "both actions on l2b:e0"
+    },
+    {
+      "fact": "boot.ipxe + S3 args",
+      "kind": "payload",
+      "fate": "drawn",
+      "note": "l2a:e8"
+    },
+    {
+      "fact": "gcore sync, 1 min",
+      "kind": "qualifier",
+      "fate": "drawn",
+      "note": "l2a:e12"
+    },
+    {
+      "fact": "create / terminate / repair",
+      "kind": "verbs",
+      "fate": "drawn",
+      "note": "l2a:e1"
+    },
+    {
+      "fact": "reinstall / reprovision",
+      "kind": "verbs",
+      "fate": "drawn",
+      "note": "l2a:e3"
+    },
+    {
+      "fact": "register + heartbeat",
+      "kind": "verbs",
+      "fate": "drawn",
+      "note": "l2b:e3"
+    },
+    {
+      "fact": "run machine-audit",
+      "kind": "payload",
+      "fate": "drawn",
+      "note": "l2b:e1"
+    },
+    {
+      "fact": "diagnostic events / proposed actions / confirm + alerts / diagnose uploads",
+      "kind": "verbs",
+      "fate": "drawn",
+      "note": "l2b:e5, l2b:e6, l2b:e7, l2b:e8"
+    },
+    {
+      "fact": "machines <-> boot server both directions",
+      "kind": "direction pair",
+      "fate": "drawn",
+      "note": "l2a:e7 and l2a:e8 as separate routes inside the enclosure; L1 keeps its own pair l1:e4/l1:e5"
+    },
+    {
+      "fact": "'diagnose uploads' on the context aggregate",
+      "kind": "convention",
+      "fate": "abbreviated",
+      "note": "L1 label 'diagnose'; the full phrase is on l2b:e8"
+    },
+    {
+      "fact": "'historical claims' qualifier",
+      "kind": "qualifier",
+      "fate": "recorded",
+      "note": "no relation is individually unconfirmed, so no dashed edge"
+    }
+  ],
+  "relationship_audit": {
+    "l1": [
+      "e0 web->mm http",
+      "e1 mm->prov provider API",
+      "e2 mm->s3 diagnose",
+      "e3 mm->slack confirm + alerts",
+      "e4 mm->mch boot, audit",
+      "e5 mch->mm iPXE, heartbeat",
+      "e6 prov->mch allocate instance"
+    ],
+    "l2a": [
+      "e0 web->wapi http",
+      "e1 cp->pgrpc create/terminate/repair",
+      "e2 pgrpc->q enqueue job",
+      "e3 wapi->q reinstall/reprovision",
+      "e4 q->reg provision job",
+      "e5 reg->prov provider API",
+      "e6 prov->mch allocate instance",
+      "e7 mch->boot iPXE request",
+      "e8 boot->mch boot.ipxe + S3 args",
+      "e9 mch->s3 pull boot image",
+      "e10 pgrpc->db machine rows",
+      "e11 q->db job rows",
+      "e12 rec->prov gcore sync, 1 min",
+      "e13 rec->db cluster state"
+    ],
+    "l2b": [
+      "e0 q->ssh audit/verify reimage",
+      "e1 ssh->mch run machine-audit",
+      "e2 mch->agent runs on host",
+      "e3 agent->pub register + heartbeat",
+      "e4 pub->db machine state",
+      "e5 q->jan diagnostic events",
+      "e6 jan->wapi proposed actions",
+      "e7 wapi->slack confirm + alerts",
+      "e8 q->s3 diagnose uploads"
+    ]
+  },
+  "routing_record": {
+    "final": {
+      "near_misses": 0,
+      "ambiguous_labels": 0,
+      "crossings": "4 bridges",
+      "pin_conflicts": 0,
+      "enclosure_crossings": 0,
+      "enclosure_entrances": 5
+    },
+    "note": "member-based enclosures make routes join the boundary instead of dodging it; the geometry that satisfies both the boundary rule and the near-miss rule needed 9 one-lever layout probes (all bundled under specs/), because the source's chain interleaves externals between members (reg->prov->mch->boot, ssh->mch->agent)."
+  },
+  "hue_record": {
+    "groups": "humans(2) external(10) control(5) async(4) hostops(3) state(2) ops(1)",
+    "case_wide": "one group tag, one hue family across both enclosed halves",
+    "dot_hues": "dot hues: 8 by source, 1 by destination, 0 shared-hue pair(s) (source-only 1, destination-only 2)",
+    "destination_bound": "the one destination-bound dot is the context provider-API edge whose source box (the whole system) carries no group hue"
+  },
+  "defects": [
+    "renderer: the dotted boundary is painted after the flow, so a dot crossing it is occluded for a frame and the frame audit splits its route; the three boundary-crossing routes ship static (measured: 12/12 dots visible under `enclosed:true`, 11/12 under member enclosures).",
+    "membership compromise: the boot server is a manager service but sits outside the L2a boundary, because reg->prov->mch->boot interleaves two externals between members and a rectangular enclosure that keeps boot inside also engulfs prov and mch (measured probes v2-tryA/C/E).",
+    "L1 context label 'diagnose' is shortened from 'diagnose uploads' (full phrase on l2b:e8) because the context fan had no unambiguous owner with the longer text.",
+    "the canvas is 253x74, so the 68x44 pane capture shows only the top; the whole-canvas 260x90 pinned dump is the navigation proof.",
+    "whole-canvas ANSI/selected-state still cannot be captured by the harness (ANSI is pane-only); the v1 judge's color/animation 'blocked' finding still stands as an evidence gap, not a drawing defect.",
+    "process: 9 layout probes and 6 frame-audit variants were run outside the record wrapper (specs bundled); only the attempts and evidence runs are recorded."
+  ],
+  "blockers": [
+    "the frozen binary at its path was SIGKILLed by the OS signature cache after replacement (exit 137, identical bytes elsewhere ran fine); it was re-materialised at the same path from a byte-identical copy, sha unchanged (b0282d3b...), and every later run succeeded.",
+    "one-diagram L2 remains impossible at `lr` on this build (measured twice, v1 and v2).",
+    "no whole-canvas ANSI capture surface exists in the harness.",
+    "L3 stays unsupported by the source."
+  ],
+  "frame_audit": {
+    "input": "evidence/canvas/canvas-260x90-frames.txt",
+    "frames": 60,
+    "longest_route_cells": 28,
+    "frames_required": 56,
+    "verdict": "PASS - 9/9 routes steady, equal distance, 0.500 cells/frame"
+  },
+  "validator": {
+    "command": "viz-validate.py ... --require-select --require-frames --require-records --frame-audit",
+    "exit": 0,
+    "output": "evidence/canvas/validator.txt",
+    "summary": "all checks passed"
+  },
+  "cleanup": {
+    "pane": "closed by the evidence script",
+    "manifest": "confirmed_closed",
+    "other_panes": "none"
+  },
+  "v1_archive": "v1/ holds the first retry (specs, probes, evidence, attempts.json, generation.*, records) unchanged; its verdict was FAIL-partial with the boundary defect this run fixes."
+}

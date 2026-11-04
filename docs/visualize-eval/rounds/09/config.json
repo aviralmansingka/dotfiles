@@ -1,0 +1,40 @@
+{
+ "round": 9,
+ "status": "frozen",
+ "skill_sha256": "ba2878c5194cd6fc4bc1af5299a156064130de9be1b0ccf4c6eeb0236d431381",
+ "binary_sha256": "405a61a674a7cc6271ae1276794eb270c9425dfc38585f4cbb1c48e9b6db495b",
+ "binary_path": "/tmp/visualize-eval/round-09/bin/rataflow-view",
+ "rubric_sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+ "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+ "renderer_source_sha256": "bf01a90602efb33f40d58c59ccec0adcc8defcaa7aec40c397853ddb6227ca5b",
+ "generator_model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+ "reviewer_model": "openai/gpt-6.1-terra:high",
+ "target": {
+  "columns": 77,
+  "rows": 47,
+  "zoom": 1.0
+ },
+ "worker_labels": {
+  "pipeline": "viz-ds09-1",
+  "network": "viz-ds09-2",
+  "homelab-nic-trace": "viz-ds09-3",
+  "server-nic-layout": "viz-ds09-4",
+  "datacenter-redundancy": "viz-ds09-5",
+  "modal-machine-manager": "viz-ds09-6",
+  "modal-runtime": "viz-ds09-7",
+  "gb300-rack-software": "viz-ds09-8"
+ },
+ "animation_default": "constant 0.5 cells/step; same-arrival opt-in; dots only where the source animates",
+ "layout": "engine-owned + declarative: logical group tags (hue family + block order, nothing drawn), rank pins (layers), minlen, trunks, label_slot gutters",
+ "evidence": "viz-evidence.sh record wrapper into attempts-log.jsonl; viz-validate.py --require-records; pinned 77x47 final-spec dumps accepted as fit proof",
+ "cases": [
+  "pipeline",
+  "network",
+  "homelab-nic-trace",
+  "server-nic-layout",
+  "datacenter-redundancy",
+  "modal-machine-manager",
+  "modal-runtime",
+  "gb300-rack-software"
+ ]
+}

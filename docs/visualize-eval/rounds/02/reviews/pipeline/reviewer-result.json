@@ -1,0 +1,726 @@
+{
+  "protocol_version": 1,
+  "round": 2,
+  "case_id": "pipeline",
+  "candidate_sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+  "renderer_sha256": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+  "rubric_sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "b4fe1e889e73e771f44653580f489cd9a8c988042d3a0223383f7bc80c71824c",
+  "generator": {
+    "worker_id": "viz-ds02-pipeline",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge02-pipeline",
+    "model": "openai/gpt-6.1-sol"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 77,
+    "rows": 47
+  },
+  "evidence": [
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/02/metadata.json",
+      "sha256": "e40d17b02025d270a79fe0dd437fb908ed07c048ea6cbe043d4e17ccaf94bc45",
+      "description": "Frozen baseline, model identities, and worker-label correction.",
+      "capture": null
+    },
+    {
+      "id": "candidate",
+      "path": "docs/visualize-eval/rounds/02/SKILL.md",
+      "sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+      "description": "Frozen candidate skill; byte hash verified against metadata.",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/02/rubric.json",
+      "sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f",
+      "description": "Frozen seven-category rubric and result schema.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen source-backed case manifest.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/pipeline/source.md",
+      "sha256": "68aa197fdc597c3a22d1b8ca88a3ebee861dcda34684da15ae69b6946b741e58",
+      "description": "Pipeline-only frozen source excerpt and fixed constraints.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/pipeline/expected.json",
+      "sha256": "ea177d01af818876ff04bf707b923326b153185fd425f21ea96250486b504ec3",
+      "description": "Pipeline-only six required concepts and six relations.",
+      "capture": null
+    },
+    {
+      "id": "spec",
+      "path": "docs/visualize-eval/rounds/02/pipeline/v1.json",
+      "sha256": "ac2d00ec9ba3f61092f46de4486e5f7749612bb2cb756527fe2f6afa932df2ec",
+      "description": "Final spec; not used as proof of visible content.",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/02/reviews/pipeline/spec-manifest.json",
+      "sha256": "b4fe1e889e73e771f44653580f489cd9a8c988042d3a0223383f7bc80c71824c",
+      "description": "Deterministic sorted spec path/hash pairs; its digest is spec_sha256.",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/02/pipeline/generation.json",
+      "sha256": "5e25d0d110d8c5dfedaba7553467aae80a4cdf5e1b475daa97c2f1225561a8c4",
+      "description": "Generator identity, claims, measurements, and probe cleanup records; not visual proof.",
+      "capture": null
+    },
+    {
+      "id": "generation-report",
+      "path": "docs/visualize-eval/rounds/02/pipeline/generation.md",
+      "sha256": "0e55e4e803d01802d4a2fd4b975d8420f3e93522b74bd40a3d1cffbaa53d53b3",
+      "description": "Generator narrative; contains a systematic +1 row error in its motion table.",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/02/pipeline/attempts.json",
+      "sha256": "8ed938ae6a4fb59574e535e0eca1786488400a4ca43146f7ce0979dd0ed84e09",
+      "description": "One view and one spec attempt.",
+      "capture": null
+    },
+    {
+      "id": "capture-manifest",
+      "path": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/manifest.json",
+      "sha256": "5eebededeeabba2e3c05e4fa2e4bc1bd4831bb4cafac5c81be4add20ec5845cf",
+      "description": "Executed binary/spec binding, measured pane, windows, check exit 0 and confirmed capture-pane close.",
+      "capture": null
+    },
+    {
+      "id": "binary-record",
+      "path": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/bin.sha256",
+      "sha256": "e717d19f74f05e69ba5a2480e9ad955a0cfa3ec3fcee162a2d1233d423551f5f",
+      "description": "Frozen executable digest record; executable bytes also independently hashed without execution.",
+      "capture": null
+    },
+    {
+      "id": "check",
+      "path": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/check.txt",
+      "sha256": "caf76bb1596ba97e2a12c90f78a6ffd023df7d1a26772d1c51c284b26eadbb43",
+      "description": "Complete combined check stdout/stderr; manifest records exit 0; not visual proof.",
+      "capture": null
+    },
+    {
+      "id": "validator",
+      "path": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/validator.txt",
+      "sha256": "ddc22a7602cc1fcc150811b5727e52ac58c0075e007d1ac9b5591fdd945ab7c6",
+      "description": "Supplied validator output; not visual proof.",
+      "capture": null
+    },
+    {
+      "id": "harness",
+      "path": "scripts/viz-evidence.sh",
+      "sha256": "2a804dea703e5a9da9cdd788d4eb89690860a02606ec681948670dfe19e8e069",
+      "description": "Capture harness bytes verified against frozen metadata; identifies exact check and pane commands.",
+      "capture": null
+    },
+    {
+      "id": "observed-first",
+      "path": "docs/visualize-eval/rounds/02/reviews/pipeline/observed-first.md",
+      "sha256": "427148ce1be673ea04b3ffd5213f42b91ea54306cc855c15e4787984d2372b37",
+      "description": "Blind record saved before expected-data reveal; original SHA-256 verified unchanged.",
+      "capture": null
+    },
+    {
+      "id": "hash-verification",
+      "path": "docs/visualize-eval/rounds/02/reviews/pipeline/hash-verification.json",
+      "sha256": "e06a3665f86450e4eadba64659a4f372fc398ec9e72b2f69a1dddb7c206f271b",
+      "description": "Actual versus expected frozen artifact digests, all matched.",
+      "capture": null
+    },
+    {
+      "id": "normal-text",
+      "path": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/v1-text.txt",
+      "sha256": "dd8828d99348cce1200db3e22b21caac76a984926e7f00511504131fd0578467",
+      "description": "Normal actual pane text; coordinates are view-local.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "normal",
+        "timestamp": "2026-11-02T09:59:05Z/2026-11-02T09:59:09Z (exact still-capture instant not recorded)",
+        "state": "normal, natural zoom",
+        "format": "text"
+      }
+    },
+    {
+      "id": "normal-ansi",
+      "path": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/v1-ansi.ansi",
+      "sha256": "2fb64778da43cec57a5de6290ad944ad30b374c1ae01041af0695c153e37b120",
+      "description": "Normal 77x47 ANSI cell evidence, including complete group-colored borders.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "normal",
+        "timestamp": "2026-11-02T09:59:05Z/2026-11-02T09:59:09Z (exact still-capture instant not recorded)",
+        "state": "normal, natural zoom",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected-ansi",
+      "path": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/v1-selected.ansi",
+      "sha256": "8d23eab9b83eae3ff654f11c89b4ffc6de0e1cf9916c1fdb829be43254e6d756",
+      "description": "All-selected 77x47 ANSI; each of six selected perimeters is bold gold and complete.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "all-selected",
+        "timestamp": "2026-11-02T09:59:05Z/2026-11-02T09:59:09Z (exact still-capture instant not recorded)",
+        "state": "all six nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "frames-text",
+      "path": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/v1-frames.txt",
+      "sha256": "085be3d4fe6d4e4544da396edd9ca3c497a8d003180f84c40fa8e3199958239a",
+      "description": "Timestamped actual-render transcript, five frames and viewport reports.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frames 0-4; graph-local coordinates exclude transcript prefix",
+        "timestamp": "0,200,400,600,800ms",
+        "state": "normal, animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "frames-ansi",
+      "path": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/v1-frames.ansi",
+      "sha256": "86471c273eb4202d41a92b9e96bd016a92a9d6ee2909a9d8c3a59d37d4515386",
+      "description": "Matching transcript; diagram frames themselves have no color escapes.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frames 0-4; graph-local coordinates exclude transcript prefix",
+        "timestamp": "0,200,400,600,800ms",
+        "state": "normal, animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "frame-0",
+      "path": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/v1-frames.txt",
+      "sha256": "085be3d4fe6d4e4544da396edd9ca3c497a8d003180f84c40fa8e3199958239a",
+      "description": "Frame 0 crop of the transcript: coordinates begin at this frame header row, not at the shell transcript top.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frame 0",
+        "timestamp": "0ms relative to --frames start; absolute start not separately recorded",
+        "state": "normal, animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "frame-1",
+      "path": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/v1-frames.txt",
+      "sha256": "085be3d4fe6d4e4544da396edd9ca3c497a8d003180f84c40fa8e3199958239a",
+      "description": "Frame 1 crop of the transcript: coordinates begin at this frame header row, not at the shell transcript top.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frame 1",
+        "timestamp": "200ms relative to --frames start; absolute start not separately recorded",
+        "state": "normal, animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "frame-2",
+      "path": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/v1-frames.txt",
+      "sha256": "085be3d4fe6d4e4544da396edd9ca3c497a8d003180f84c40fa8e3199958239a",
+      "description": "Frame 2 crop of the transcript: coordinates begin at this frame header row, not at the shell transcript top.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frame 2",
+        "timestamp": "400ms relative to --frames start; absolute start not separately recorded",
+        "state": "normal, animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "frame-3",
+      "path": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/v1-frames.txt",
+      "sha256": "085be3d4fe6d4e4544da396edd9ca3c497a8d003180f84c40fa8e3199958239a",
+      "description": "Frame 3 crop of the transcript: coordinates begin at this frame header row, not at the shell transcript top.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frame 3",
+        "timestamp": "600ms relative to --frames start; absolute start not separately recorded",
+        "state": "normal, animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "frame-4",
+      "path": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/v1-frames.txt",
+      "sha256": "085be3d4fe6d4e4544da396edd9ca3c497a8d003180f84c40fa8e3199958239a",
+      "description": "Frame 4 crop of the transcript: coordinates begin at this frame header row, not at the shell transcript top.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frame 4",
+        "timestamp": "800ms relative to --frames start; absolute start not separately recorded",
+        "state": "normal, animated",
+        "format": "text"
+      }
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "observed-first",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All six concepts, six directed historical relations and four source verbs are visibly preserved. Auth read and Worker write use distinct paths and distinct Postgres arrivals. The two source-unlabeled relations remain unlabeled, with no invented protocol. No extra apparent relation or split-view omission.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json",
+        "docs/visualize-eval/rounds/02/rubric.json"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "normal-text",
+        "observed-first"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Six source stems trace independently to six downward arrowheads. Eight ordinary bends have no touching, crossing, bridge, shared run or route junction. API fan-out and Postgres fan-in occur at separate node ports, not fake branches. All four edge-label owners are clear.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json",
+        "docs/visualize-eval/rounds/02/rubric.json"
+      ],
+      "evidence_ids": [
+        "normal-text",
+        "normal-ansi",
+        "observed-first"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Manifest independently measures 79x49 outer pane / 77x47 app interior. Actual ANSI grids are 77 columns by 47 rows; startup token is viewport: 77x47 zoom: 1.00 natural. All graph content lies within columns 23-54, rows 7-42; controls end at row 46. No clipping, occlusion, pan or zoom required.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json",
+        "docs/visualize-eval/rounds/02/rubric.json"
+      ],
+      "evidence_ids": [
+        "capture-manifest",
+        "normal-text",
+        "normal-ansi",
+        "selected-ansi",
+        "frames-text"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Visible aqua shades relate API gateway/Auth, pink shades relate Job queue/Worker pool; CLI is gold and Postgres green. Related roles are near each other with top-down semantic pipeline order, not arbitrary depth-color cycling. All canvas/box fills are uniform #282828 and no background dot field is visible.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json",
+        "docs/visualize-eval/rounds/02/rubric.json"
+      ],
+      "evidence_ids": [
+        "normal-ansi",
+        "normal-text",
+        "observed-first"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All six normal perimeters (140 cells total) have complete sides/corners and one consistent per-node foreground. All six selected perimeters (another 140 cells) are complete, bold RGB 216,166,87. Coverage 6/6 in one simultaneous all-selected capture; no separately rendered handle states are shown or claimed.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json",
+        "docs/visualize-eval/rounds/02/rubric.json"
+      ],
+      "evidence_ids": [
+        "normal-ansi",
+        "selected-ansi",
+        "observed-first"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Frozen candidate, executable, rubric, dataset, source, expected, spec and capture digests match. Separate DeepSeek generator and Sol judge identities, blind-first record, one attempt, exact viewer commands, hash-pinned harness check command, combined check stdout/stderr and exit 0, dimensions, normal/selected/motion captures and pane cleanup records are present. Probe closes are recorded in generation.json; capture-pane closure is harness-confirmed. The stale Astra phrase in rubric prose is overridden by required_reviewer_model, schema and stage-B contract, all naming Sol.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json",
+        "docs/visualize-eval/rounds/02/rubric.json"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "candidate",
+        "rubric",
+        "dataset",
+        "generation",
+        "attempts",
+        "capture-manifest",
+        "harness",
+        "binary-record",
+        "check",
+        "observed-first",
+        "hash-verification",
+        "spec-manifest"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Animation is source-required. Six routes each have one unobstructive dot in all five 200ms samples; four longer routes show source-to-target progression. The short CLI-to-API and queue-to-Worker routes show only two interior positions, alternating 12/13 and 28/29 respectively. Geometry and positive spec flow make directed cyclic wrapping plausible but cannot distinguish it from back-and-forth motion in the rendered samples. Thus direction for two required routes remains unestablished; no known border-dot, corner-dot, missing-dot or duplicate-dot failure is asserted.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json",
+        "docs/visualize-eval/rounds/02/rubric.json"
+      ],
+      "evidence_ids": [
+        "source",
+        "spec",
+        "frame-0",
+        "frame-1",
+        "frame-2",
+        "frame-3",
+        "frame-4",
+        "observed-first"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "expected": "CLI -> API gateway, unlabeled; no protocol is specified.",
+      "observed": "CLI lower border at row 10; stem (37,11), straight down to unique visible arrowhead (37,14), above API top row 15. No crossing or junction. Static direction and endpoints pass; animated direction is separately blocked.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "normal-text",
+          "region": [
+            37,
+            11,
+            1,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "P-MOTION-01"
+      ]
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "expected": "API gateway -> Auth, labeled verify.",
+      "observed": "API bottom row 18; stem (39,19), bend (39,21), run right to bend (50,21), unique down arrow (50,22) above Auth row 23. verify [41,20,6,1] belongs to this run. No crossing, touching bend or junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "normal-text",
+          "region": [
+            39,
+            19,
+            12,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "expected": "API gateway -> Job queue, labeled enqueue.",
+      "observed": "API bottom row 18; stem (37,19), bend (37,21), run left to bend (24,21), unique down arrow (24,22) above queue row 23. enqueue [28,20,7,1] belongs to this run. Column 38 separates this route from e2; no junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "normal-text",
+          "region": [
+            24,
+            19,
+            14,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "expected": "Job queue -> Worker pool, unlabeled; no protocol is specified.",
+      "observed": "Queue bottom row 26; stem (24,27), straight down to unique down arrow (24,30), above Worker top row 31. No crossing or junction. Static direction and endpoints pass; animated direction is separately blocked.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "normal-text",
+          "region": [
+            24,
+            27,
+            1,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "P-MOTION-01"
+      ]
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "expected": "Worker pool -> Postgres, labeled write.",
+      "observed": "Worker bottom row 34; stem (24,35), bend (24,37), run right to (37,37), unique down arrow (37,38) above Postgres row 39. write [28,36,5,1] owns this route. Column 38 separates its arrival from e6; no merge or junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "normal-text",
+          "region": [
+            24,
+            35,
+            14,
+            4
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "expected": "Auth -> Postgres, labeled read.",
+      "observed": "Auth bottom row 26; stem (50,27), down to bend (50,37), run left to bend (39,37), unique down arrow (39,38) above Postgres row 39. read [43,36,4,1] belongs to this route. It passes right of Worker without touching; no crossing or junction.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "normal-text",
+          "region": [
+            39,
+            27,
+            12,
+            12
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "P-MOTION-01",
+      "category": "animation",
+      "edge_ids": [
+        "e1",
+        "e4"
+      ],
+      "severity": "high",
+      "description": "Insufficient direction evidence, not a proven reversed-flow defect: at 0/200/400/600/800ms e1 alternates (37,12)/(37,13) and e4 alternates (24,28)/(24,29). Their four-cell external routes have a source stem and destination arrowhead around only two observed dot positions. The apparent resets can be forward cyclic wrap or reversal; source-to-target direction cannot be independently established for these two requested animated routes from the frozen captures. All five frames have one dot per route and no observed corner, border, arrowhead or label collision.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json",
+        "docs/visualize-eval/rounds/02/rubric.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "frame-0",
+          "region": [
+            37,
+            11,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "frame-0",
+          "region": [
+            24,
+            27,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "frame-1",
+          "region": [
+            37,
+            11,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "frame-1",
+          "region": [
+            24,
+            27,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "frame-2",
+          "region": [
+            37,
+            11,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "frame-2",
+          "region": [
+            24,
+            27,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "frame-3",
+          "region": [
+            37,
+            11,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "frame-3",
+          "region": [
+            24,
+            27,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "frame-4",
+          "region": [
+            37,
+            11,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "frame-4",
+          "region": [
+            24,
+            27,
+            1,
+            4
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "P-MOTION-01: two-position sampled motion on e1/e4 cannot establish directed animation. Additional disambiguating actual-render evidence is required in a later sample, not produced by this judge. This is not proof that the renderer lacks directed animation."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:p6S",
+      "w7E:p6T",
+      "w7E:p6Y"
+    ],
+    "closed_pane_ids": [
+      "w7E:p6S",
+      "w7E:p6T",
+      "w7E:p6Y"
+    ],
+    "status": "done",
+    "reason": "generation.json records confirmed closes of both size-probe panes and capture pane; capture manifest independently records confirmed_closed for w7E:p6Y. Reviewer opened no panes. Raw probe-close output was not separately preserved."
+  },
+  "overall": "blocked"
+}

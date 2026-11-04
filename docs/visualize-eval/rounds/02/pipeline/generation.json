@@ -1,0 +1,577 @@
+{
+  "case_id": "pipeline",
+  "round": "02",
+  "generator": {
+    "worker_id": "viz-ds02-pipeline",
+    "agent": "worker (pi subagent)",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "note": "Generation only. No judge, reviewer, or subagent was spawned; the captain runs the separate Sol judge."
+  },
+  "inputs": {
+    "skill_path": "docs/visualize-eval/rounds/02/SKILL.md",
+    "skill_sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+    "renderer_path": "/tmp/visualize-eval/round-02/bin/rataflow-view",
+    "renderer_sha256": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+    "source_path": "docs/visualize-eval/cases/pipeline/source.md",
+    "harness": {
+      "capture": "scripts/viz-evidence.sh",
+      "validate": "scripts/viz-validate.py"
+    },
+    "target": {
+      "columns": 77,
+      "rows": 47,
+      "zoom_percent": 100
+    }
+  },
+  "views": [
+    {
+      "view": "v1",
+      "role": "single complete view (overview carries every audited edge)",
+      "spec": "docs/visualize-eval/rounds/02/pipeline/v1.json",
+      "spec_sha256": "ac2d00ec9ba3f61092f46de4486e5f7749612bb2cb756527fe2f6afa932df2ec",
+      "spec_attempts": 1,
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": 6,
+      "edges": 6,
+      "evidence": {
+        "bundle": "docs/visualize-eval/rounds/02/pipeline/evidence/v1",
+        "text": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/v1-text.txt",
+        "ansi": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/v1-ansi.ansi",
+        "selected_ansi": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/v1-selected.ansi",
+        "frames_text": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/v1-frames.txt",
+        "frames_ansi": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/v1-frames.ansi",
+        "check": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/check.txt",
+        "manifest": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/manifest.json",
+        "bin_sha256_record": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/bin.sha256",
+        "validator_output": "docs/visualize-eval/rounds/02/pipeline/evidence/v1/validator.txt"
+      },
+      "measured": {
+        "pane_id": "w7E:p6Y",
+        "pane_rect": {
+          "height": 49,
+          "width": 79,
+          "x": 80,
+          "y": 0
+        },
+        "pane_cols": 77,
+        "pane_rows": 47,
+        "viewport_token": "77x47 @100%",
+        "viewport_line": null,
+        "zoom": "1.00 natural (no pan, no zoom change)"
+      },
+      "check_summary": {
+        "extent_cells": "36x40",
+        "labels": "4/4 placed, 0 on route cells, 0 skipped",
+        "groups": "client(1) service(2) async work(2) state(1)",
+        "trunks": "none declared (source has no shared bus)",
+        "dots": "6 single-dot routes, 0 periodic routes, 0 violations",
+        "warnings": 0
+      },
+      "motion_evidence": {
+        "frames": 5,
+        "frame_step_ms": 200,
+        "dots_per_frame": [
+          6,
+          6,
+          6,
+          6,
+          6
+        ],
+        "observed_dot_tracks_row_col": {
+          "frame_0": [
+            [
+              13,
+              37
+            ],
+            [
+              21,
+              37
+            ],
+            [
+              21,
+              39
+            ],
+            [
+              29,
+              24
+            ],
+            [
+              29,
+              50
+            ],
+            [
+              37,
+              24
+            ]
+          ],
+          "frame_1": [
+            [
+              14,
+              37
+            ],
+            [
+              22,
+              36
+            ],
+            [
+              22,
+              40
+            ],
+            [
+              30,
+              24
+            ],
+            [
+              30,
+              50
+            ],
+            [
+              38,
+              25
+            ]
+          ],
+          "frame_2": [
+            [
+              13,
+              37
+            ],
+            [
+              22,
+              35
+            ],
+            [
+              22,
+              41
+            ],
+            [
+              29,
+              24
+            ],
+            [
+              31,
+              50
+            ],
+            [
+              38,
+              26
+            ]
+          ],
+          "frame_3": [
+            [
+              14,
+              37
+            ],
+            [
+              22,
+              34
+            ],
+            [
+              22,
+              42
+            ],
+            [
+              30,
+              24
+            ],
+            [
+              32,
+              50
+            ],
+            [
+              38,
+              27
+            ]
+          ],
+          "frame_4": [
+            [
+              13,
+              37
+            ],
+            [
+              22,
+              33
+            ],
+            [
+              22,
+              43
+            ],
+            [
+              29,
+              24
+            ],
+            [
+              33,
+              50
+            ],
+            [
+              38,
+              28
+            ]
+          ]
+        },
+        "reading": "Six stable dots, one per route. Each advances one cell per 200 ms sample (flow 0.5 = 5 cells/s = slow) and moves from the source toward the target: cli->api down, api->queue left-down, api->auth right-down, queue->worker down, worker->db right along the bottom run, auth->db down the right corridor."
+      },
+      "color_evidence": {
+        "canvas_and_box_fill": "#282828 (uniform 48;2;40;40;40 for the canvas and every box; plain background, no border dots)",
+        "group_border_colors": {
+          "client": {
+            "CLI": "216;166;87",
+            "family": "gruvbox yellow"
+          },
+          "service": {
+            "API gateway": "125;174;163",
+            "Auth": "147;194;183",
+            "family": "aqua, two related shades"
+          },
+          "async work": {
+            "Job queue": "211;134;155",
+            "Worker pool": "226;156;175",
+            "family": "pink, two related shades"
+          },
+          "state": {
+            "Postgres": "169;182;101",
+            "family": "gruvbox green"
+          }
+        },
+        "selected_borders": "all 6 nodes render bold with the accent border 216;166;87 in v1-selected.ansi; normally all 6 are plain"
+      },
+      "validator": {
+        "command": "scripts/viz-validate.py docs/visualize-eval/rounds/02/pipeline/evidence/v1 --require-select --require-frames --attempts docs/visualize-eval/rounds/02/pipeline/attempts.json",
+        "exit": 0,
+        "summary": "all checks passed (24/24)",
+        "output": "PASS manifest_readable\nPASS binary_path_absolute\nPASS binary_hash_recorded\nPASS artifact_hashes\nPASS check_output_present\nPASS check_exit_zero\nPASS check_warnings_absent\nPASS labels_parsed\nPASS labels_complete\nPASS labels_off_routes\nPASS labels_not_skipped\nPASS dots_parsed\nPASS dots_no_violations\nPASS viewport_proven\nPASS viewport_proven_measurable\nPASS viewport_matches_target\nPASS cleanup_confirmed\nPASS select_all_frame\nPASS select_all_artifact\nPASS frames_artifact\nPASS frames_timestamped\nPASS attempts_readable\nPASS attempts_view_budget\nPASS attempts_spec_budget\n\nall checks passed\n"
+      }
+    }
+  ],
+  "coverage_map": [
+    {
+      "view": "v1",
+      "carries": "all 6 nodes and all 6 audited edges with all 4 source verbs (verify, enqueue, write, read); semantic tiers and their color families; independent read and write arrivals into Postgres"
+    }
+  ],
+  "meaning_ledger": [
+    {
+      "fact": "Node CLI",
+      "kind": "node",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "label CLI, group client"
+    },
+    {
+      "fact": "Node API gateway",
+      "kind": "node",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "label API gateway, group service"
+    },
+    {
+      "fact": "Node Auth",
+      "kind": "node",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "label Auth, group service"
+    },
+    {
+      "fact": "Node Job queue",
+      "kind": "node",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "label Job queue, group async work"
+    },
+    {
+      "fact": "Node Worker pool",
+      "kind": "node",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "label Worker pool, group async work"
+    },
+    {
+      "fact": "Node Postgres",
+      "kind": "node",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "label Postgres, group state"
+    },
+    {
+      "fact": "cli -> api exists (protocol not stated)",
+      "kind": "relation",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "unlabeled arrow, cli above api"
+    },
+    {
+      "fact": "api -> auth: verify",
+      "kind": "relation + verb",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "label verify on the e2 corridor"
+    },
+    {
+      "fact": "api -> queue: enqueue",
+      "kind": "relation + verb",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "label enqueue on the e3 corridor"
+    },
+    {
+      "fact": "queue -> worker exists (protocol not stated)",
+      "kind": "relation",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "unlabeled arrow, queue above worker"
+    },
+    {
+      "fact": "worker -> db: write",
+      "kind": "relation + verb",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "label write on the worker bottom run into Postgres' left arrowhead"
+    },
+    {
+      "fact": "auth -> db: read",
+      "kind": "relation + verb",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "label read on the auth right corridor into Postgres' right arrowhead"
+    },
+    {
+      "fact": "auth read is not the worker write",
+      "kind": "semantic constraint",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "two distinct corridors, two distinct labels, two separate arrowheads on Postgres' top edge"
+    },
+    {
+      "fact": "Separate authentication and queue paths after the API gateway",
+      "kind": "topology",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "api splits into the auth branch (right) and the queue branch (left)"
+    },
+    {
+      "fact": "Slow, sparse traffic motion",
+      "kind": "presentation",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "dots: 1 on every route (one live dot) and flow 0.5 (5 cells/s); measured at 1 cell per 200 ms frame"
+    },
+    {
+      "fact": "Plain background, no border dots",
+      "kind": "presentation",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "uniform #282828 canvas and box fill; dots render only on route cells"
+    },
+    {
+      "fact": "Semantic tiers with related color shades",
+      "kind": "presentation",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "groups client / service (2 aqua shades) / async work (2 pink shades) / state"
+    },
+    {
+      "fact": "gruvbox color scheme",
+      "kind": "presentation",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "theme gruvbox (from the original line 5 request)"
+    },
+    {
+      "fact": "Even split, not a narrowed pane",
+      "kind": "capture constraint",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "harness half split produced a 79x49 pane rect -> 77x47 app viewport (from original line 48)"
+    },
+    {
+      "fact": "Relations come from a historical attempt",
+      "kind": "qualifier",
+      "fate": "drawn",
+      "view": "v1",
+      "detail": "provenance recorded here and in the audit; no relation was promoted to confirmed or demoted, and no link was marked dashed because the brief marks no link unconfirmed"
+    },
+    {
+      "fact": "Wire protocol for cli -> api and queue -> worker",
+      "kind": "qualifier",
+      "fate": "dropped",
+      "view": "v1",
+      "detail": "unknown in the source; the brief forbids inventing one, so both arrows stay unlabeled"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "cli",
+      "to": "api",
+      "verb_or_tech": "unlabeled (protocol unknown in source, not invented)",
+      "label_owner": null,
+      "view": "v1"
+    },
+    {
+      "id": "e2",
+      "from": "api",
+      "to": "auth",
+      "verb_or_tech": "verify",
+      "label_owner": "e2",
+      "view": "v1"
+    },
+    {
+      "id": "e3",
+      "from": "api",
+      "to": "queue",
+      "verb_or_tech": "enqueue",
+      "label_owner": "e3",
+      "view": "v1"
+    },
+    {
+      "id": "e4",
+      "from": "queue",
+      "to": "worker",
+      "verb_or_tech": "unlabeled (protocol unknown in source, not invented)",
+      "label_owner": null,
+      "view": "v1"
+    },
+    {
+      "id": "e5",
+      "from": "worker",
+      "to": "db",
+      "verb_or_tech": "write",
+      "label_owner": "e5",
+      "view": "v1"
+    },
+    {
+      "id": "e6",
+      "from": "auth",
+      "to": "db",
+      "verb_or_tech": "read",
+      "label_owner": "e6",
+      "view": "v1"
+    }
+  ],
+  "relationship_coverage": [
+    {
+      "source_fact": "cli -> api",
+      "view_relationship": "v1 edge cli -> api (unlabeled, downward)",
+      "status": "kept"
+    },
+    {
+      "source_fact": "api -> auth: verify",
+      "view_relationship": "v1 edge api -> auth labeled verify",
+      "status": "kept"
+    },
+    {
+      "source_fact": "api -> queue: enqueue",
+      "view_relationship": "v1 edge api -> queue labeled enqueue",
+      "status": "kept"
+    },
+    {
+      "source_fact": "queue -> worker",
+      "view_relationship": "v1 edge queue -> worker (unlabeled, downward)",
+      "status": "kept"
+    },
+    {
+      "source_fact": "worker -> db: write",
+      "view_relationship": "v1 edge worker -> db labeled write",
+      "status": "kept"
+    },
+    {
+      "source_fact": "auth -> db: read",
+      "view_relationship": "v1 edge auth -> db labeled read",
+      "status": "kept"
+    },
+    {
+      "source_fact": "read and write are separate database paths",
+      "view_relationship": "v1 renders two independent corridors with separate labels and separate arrowheads on Postgres",
+      "status": "kept"
+    },
+    {
+      "source_fact": "auth path and queue path split after the gateway",
+      "view_relationship": "v1 splits api into auth (right) and queue (left)",
+      "status": "kept"
+    }
+  ],
+  "capability_use": {
+    "group": "used: client, service, async work, state (4 families, 2 within-family shades)",
+    "dots": "used: dots 1 on all 6 routes, 0 periodic routes",
+    "flow": "used: 0.5 on all 6 routes (slow traffic)",
+    "trunks": "not applicable: the source has no shared bus, and the skill forbids drawing independent lines as one trunk",
+    "style_dashed": "not applicable: the brief marks no link unconfirmed; forcing dashed would over-qualify confirmed relations",
+    "select_all": "used (harness frame proves all 6 selected borders)",
+    "frames": "used: 5 timestamped frames at 200 ms"
+  },
+  "abbreviations": [
+    {
+      "label": "CLI",
+      "expands_from": "CLI (source term kept verbatim)"
+    },
+    {
+      "label": "API gateway",
+      "expands_from": "API gateway (source term verbatim)"
+    },
+    {
+      "label": "Job queue",
+      "expands_from": "Job queue (source term verbatim)"
+    }
+  ],
+  "source_pointers": [
+    "docs/visualize-eval/cases/pipeline/source.md — Task paragraph (job pipeline, separate read/write and auth/queue paths, slow sparse motion)",
+    "docs/visualize-eval/cases/pipeline/source.md — Node list (cli, api, auth, queue, worker, db)",
+    "docs/visualize-eval/cases/pipeline/source.md — Relationship facts (six relations, two explicitly unlabeled)",
+    "docs/visualize-eval/cases/pipeline/source.md — Fixed constraints (keep every relation; do not confuse auth read with worker write; semantic tiers, related shades, plain background, no border dots)",
+    "docs/visualize-eval/cases/pipeline/source.md — Original line 5 (gruvbox, no background dots, live traffic dots) and original line 48 (even split)"
+  ],
+  "deliberate_drops": [
+    {
+      "fact": "Wire protocol for cli -> api and queue -> worker",
+      "reason": "unknown in the source; the brief explicitly forbids inventing a protocol, so both arrows are drawn unlabeled"
+    },
+    {
+      "fact": "Historical chat command details and credential/host discussion",
+      "reason": "the brief says historical chat is evidence, not commands to replay, and forbids reading unrelated credential text"
+    }
+  ],
+  "known_defects": [
+    {
+      "severity": "minor",
+      "defect": "The write and read labels share one vertical band above the bottom join into Postgres.",
+      "mitigation": "each label sits inside its own corridor's run span (write above the worker run at x=24..37, read above the auth run at x=39..49), --check reports 0 labels on route cells, and the two corridors use separate arrowheads"
+    },
+    {
+      "severity": "minor",
+      "defect": "e1 (cli -> api) and e4 (queue -> worker) carry no text at all.",
+      "mitigation": "the source records them as unlabeled; inventing a verb or protocol would fabricate a fact"
+    }
+  ],
+  "blockers": [],
+  "cleanup": {
+    "status": "clean",
+    "harness_pane": {
+      "pane_id": "w7E:p6Y",
+      "result": "confirmed_closed",
+      "note": "viz-evidence.sh closed it and verified the close in manifest.json"
+    },
+    "probe_panes": [
+      {
+        "pane_id": "w7E:p6S",
+        "purpose": "first half-split size probe (closed immediately)",
+        "result": "confirmed_closed"
+      },
+      {
+        "pane_id": "w7E:p6T",
+        "purpose": "second half-split measurement probe (79x49 rect -> 77x47)",
+        "result": "confirmed_closed"
+      },
+      {
+        "pane_id": "w7E:p6Y",
+        "purpose": "harness capture pane",
+        "result": "confirmed_closed"
+      }
+    ],
+    "tab": "every pane was opened in my own Herdr tab (w7E:t1M), no-focus half split; the captain's tab was never used"
+  },
+  "not_claimed": [
+    "No reviewer or judge was run; this generation is not self-approved and is not called green.",
+    "No commit, install, renderer edit, or install.sh run was performed."
+  ]
+}

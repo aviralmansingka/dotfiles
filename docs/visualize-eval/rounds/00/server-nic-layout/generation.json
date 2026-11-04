@@ -1,0 +1,266 @@
+{
+  "case_id": "server-nic-layout",
+  "round": "00",
+  "candidate_skill_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+  "renderer_sha256": "b6e11b05b4fb79ce969dc2646c667572535a949bd1a396fd711e1a5466298c8f",
+  "renderer": "/tmp/visualize-eval/round-00/bin/rataflow-view",
+  "full_spec": "full-spec.json",
+  "views": [
+    {
+      "id": "ports",
+      "spec": "ports/spec.json",
+      "text": "ports/visible.txt",
+      "ansi": "ports/visible.ansi",
+      "check": "ports/check.txt",
+      "check_exit": "ports/check.exit",
+      "dimensions": "ports/dimensions.txt",
+      "actual_rows": 47,
+      "actual_cols": 77,
+      "extent_cols_rows": [
+        41,
+        26
+      ],
+      "attempts": 1,
+      "check_exit_code": 0,
+      "check_warnings": [],
+      "pane_id": "w7E:p2B",
+      "tab_id": "w7E:tC",
+      "header_verified": true,
+      "zoom": 1,
+      "pan_or_zoom_commands": false,
+      "pane_closed_after_capture": true,
+      "initial_pane_id": "w7E:p14",
+      "check_stderr": "ports/check.stderr",
+      "selected_text": "ports/selected.txt",
+      "selected_ansi": "ports/selected.ansi",
+      "capture_timestamps": "execution.jsonl",
+      "evidence_recapture": true
+    },
+    {
+      "id": "pool",
+      "spec": "pool/spec.json",
+      "text": "pool/visible.txt",
+      "ansi": "pool/visible.ansi",
+      "check": "pool/check.txt",
+      "check_exit": "pool/check.exit",
+      "dimensions": "pool/dimensions.txt",
+      "actual_rows": 47,
+      "actual_cols": 77,
+      "extent_cols_rows": [
+        38,
+        12
+      ],
+      "attempts": 1,
+      "check_exit_code": 0,
+      "check_warnings": [],
+      "pane_id": "w7E:p2C",
+      "tab_id": "w7E:tC",
+      "header_verified": true,
+      "zoom": 1,
+      "pan_or_zoom_commands": false,
+      "pane_closed_after_capture": true,
+      "initial_pane_id": "w7E:p17",
+      "check_stderr": "pool/check.stderr",
+      "selected_text": "pool/selected.txt",
+      "selected_ansi": "pool/selected.ansi",
+      "capture_timestamps": "execution.jsonl",
+      "evidence_recapture": true
+    },
+    {
+      "id": "egress",
+      "spec": "egress/spec.json",
+      "text": "egress/visible.txt",
+      "ansi": "egress/visible.ansi",
+      "check": "egress/check.txt",
+      "check_exit": "egress/check.exit",
+      "dimensions": "egress/dimensions.txt",
+      "actual_rows": 47,
+      "actual_cols": 77,
+      "extent_cols_rows": [
+        45,
+        26
+      ],
+      "attempts": 1,
+      "check_exit_code": 0,
+      "check_warnings": [],
+      "pane_id": "w7E:p2D",
+      "tab_id": "w7E:tC",
+      "header_verified": true,
+      "zoom": 1,
+      "pan_or_zoom_commands": false,
+      "pane_closed_after_capture": true,
+      "initial_pane_id": "w7E:p1F",
+      "check_stderr": "egress/check.stderr",
+      "selected_text": "egress/selected.txt",
+      "selected_ansi": "egress/selected.ansi",
+      "capture_timestamps": "execution.jsonl",
+      "evidence_recapture": true
+    }
+  ],
+  "coverage": [
+    {
+      "original_relation": "dark -> s1: no cable",
+      "view": "ports",
+      "view_relation": {
+        "from": "dark",
+        "to": "s1",
+        "label": "cable unknown"
+      },
+      "qualification": "Seven inactive NICs belong to server1; inactivity does not establish cable absence."
+    },
+    {
+      "original_relation": "s1 -> nic: only uplink",
+      "view": "ports",
+      "view_relation": {
+        "from": "s1",
+        "to": "nic",
+        "label": "only uplink"
+      },
+      "qualification": "One active uplink of eight physical NICs."
+    },
+    {
+      "original_relation": "nic -> gw: default gw 0.1 ms",
+      "view": "ports",
+      "view_relation": {
+        "from": "nic",
+        "to": "gw",
+        "label": "25G; GW 0.1ms"
+      },
+      "qualification": "25 GbE interface to default gateway .57; 0.1 ms is observed probe RTT, not a link latency. Gateway vendor OUI does not prove ToR role."
+    },
+    {
+      "original_relation": "s2 -> gw: same /29",
+      "view": "pool",
+      "view_relation": {
+        "from": "s2",
+        "to": "gw",
+        "label": "same /29"
+      },
+      "qualification": "Address membership, not an observed physical cable."
+    },
+    {
+      "original_relation": "spare -> gw: free in /29",
+      "view": "pool",
+      "view_relation": {
+        "from": "spare",
+        "to": "gw",
+        "label": "free? in /29"
+      },
+      "qualification": "Historical free claim is unverified; unresponsive addresses do not prove availability."
+    },
+    {
+      "original_relation": "gw -> airtel: transit 1.8 ms",
+      "view": "egress",
+      "view_relation": {
+        "from": "gw",
+        "to": "airtel",
+        "label": "next 1.8ms"
+      },
+      "qualification": "Next supplied observed responding hop, not proof of direct physical adjacency."
+    },
+    {
+      "original_relation": "airtel -> airtelbb: 7.1 ms",
+      "view": "egress",
+      "view_relation": {
+        "from": "airtel",
+        "to": "airtelbb",
+        "label": "next 7.1ms"
+      },
+      "qualification": "Next supplied observed responding hop; probe RTT from host, not per-link delay."
+    },
+    {
+      "original_relation": "airtelbb -> cf: 8.3 ms",
+      "view": "egress",
+      "view_relation": {
+        "from": "airtelbb",
+        "to": "cf",
+        "label": "8.3/8.6ms?"
+      },
+      "qualification": "Relationship list says 8.3 ms; original line 120 says 8.6 ms. Conflict retained explicitly, not resolved by guessing."
+    }
+  ],
+  "source_pointers": {
+    "brief": "docs/visualize-eval/cases/server-nic-layout/source.md",
+    "original_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-rack-bench-feat-network-diagram--/2026-10-13T05-14-42-097Z_01a133af-3231-71ff-87c1-c56889a12a6c.jsonl",
+    "excerpts_used": [
+      120,
+      121,
+      125
+    ],
+    "other_sections_used": [
+      "Relationship facts from the historical attempt",
+      "Fixed constraints"
+    ],
+    "original_write_reference_only": {
+      "line": 110,
+      "call": "chatcmpl-tool-bd5526a999aeb873"
+    },
+    "raw_chat_opened": false
+  },
+  "blockers": [],
+  "known_defects": [
+    {
+      "view": "ports",
+      "relations": [
+        "dark -> s1",
+        "s1 -> nic",
+        "nic -> gw"
+      ],
+      "defect": "All three target arrowheads are absent in the visible capture; direction cannot be established visually from arrow glyphs."
+    },
+    {
+      "view": "pool",
+      "relations": [
+        "s2 -> gw"
+      ],
+      "defect": "Target arrowhead is absent."
+    },
+    {
+      "view": "pool",
+      "relations": [
+        "spare -> gw"
+      ],
+      "defect": "Source begins with a horizontal stroke beneath the source box, rather than a clear downward stem; target arrowhead is visible."
+    },
+    {
+      "view": "egress",
+      "relations": [
+        "gw -> airtel",
+        "airtel -> airtelbb",
+        "airtelbb -> cf"
+      ],
+      "defect": "All three target arrowheads are absent in the visible capture."
+    },
+    {
+      "view": "all",
+      "defect": "ANSI captures show muted gray (146,131,116) cells interrupting colored box borders at connection handles, including top borders; borders are not uniformly in their node colors."
+    }
+  ],
+  "unaddressed_requirements": [
+    "Visible target arrowheads on seven relations",
+    "Clear source stem on spare -> gw",
+    "Uniform node-border colors"
+  ],
+  "independent_review": {
+    "status": "pending captain-owned Astra review",
+    "generator_approval": false
+  },
+  "animation": {
+    "required": false,
+    "flows": 0,
+    "second_capture": false
+  },
+  "qualifications": {
+    "gateway": "Arista OUI is a vendor clue; ToR/border-leaf role unproven. No invisible spines/leaves invented. Missing traceroute hops do not imply Layer 2.",
+    "port_state": "Inactive does not mean physically uncabled.",
+    "pool": "Free address claim unverified.",
+    "trace": "Observed responding hop sequence only; hidden or silent hops possible. RTTs are measured from server1, not incremental delays."
+  },
+  "execution_log": "execution.jsonl",
+  "evidence_notes": [
+    "Initial captures retained with initial. prefix; they lack contemporaneous command timestamps. Timestamped recaptures supersede them as primary evidence.",
+    "Specs unchanged for recapture; one local spec attempt per view.",
+    "Actual pane measurements are stty size rows/columns; all initial and recaptured panes measured 47 rows by 77 columns.",
+    "Selected states use one Tab key, with no fit/pan/zoom commands."
+  ]
+}

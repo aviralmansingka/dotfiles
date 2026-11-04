@@ -1,0 +1,136 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "q",
+      "label": "River jobs"
+    },
+    {
+      "id": "prov",
+      "label": "providers"
+    },
+    {
+      "id": "ssh",
+      "label": "SSH + BMC"
+    },
+    {
+      "id": "jan",
+      "label": "janitor"
+    },
+    {
+      "id": "rec",
+      "label": "reconcile loop"
+    },
+    {
+      "id": "mch",
+      "label": "machines"
+    },
+    {
+      "id": "s3",
+      "label": "S3"
+    },
+    {
+      "id": "boot",
+      "label": "boot server"
+    },
+    {
+      "id": "pub",
+      "label": "public gRPC"
+    },
+    {
+      "id": "db",
+      "label": "Postgres"
+    }
+  ],
+  "layers": [
+    [
+      "q"
+    ],
+    [
+      "prov",
+      "ssh",
+      "jan",
+      "rec"
+    ],
+    [
+      "mch"
+    ],
+    [
+      "s3",
+      "boot",
+      "pub"
+    ],
+    [
+      "",
+      "db"
+    ]
+  ],
+  "edges": [
+    {
+      "from": "q",
+      "to": "prov",
+      "label": "provision"
+    },
+    {
+      "from": "q",
+      "to": "ssh",
+      "label": "audit"
+    },
+    {
+      "from": "q",
+      "to": "jan",
+      "label": "events"
+    },
+    {
+      "from": "q",
+      "to": "s3",
+      "label": "logs"
+    },
+    {
+      "from": "q",
+      "to": "db",
+      "label": "job rows"
+    },
+    {
+      "from": "rec",
+      "to": "prov",
+      "label": "gcore sync"
+    },
+    {
+      "from": "rec",
+      "to": "db",
+      "label": "state"
+    },
+    {
+      "from": "ssh",
+      "to": "mch",
+      "label": "audit"
+    },
+    {
+      "from": "prov",
+      "to": "mch",
+      "label": "allocates"
+    },
+    {
+      "from": "mch",
+      "to": "s3",
+      "label": "image"
+    },
+    {
+      "from": "mch",
+      "to": "boot",
+      "label": "iPXE"
+    },
+    {
+      "from": "mch",
+      "to": "pub",
+      "label": "heartbeats"
+    },
+    {
+      "from": "pub",
+      "to": "db",
+      "label": "state"
+    }
+  ]
+}

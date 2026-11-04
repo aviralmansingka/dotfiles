@@ -1,0 +1,12 @@
+{"direction":"tb",
+ "nodes":[
+  {"id":"rtr","label":"Fios rtr 192.168.1.1","group":"edge"},
+  {"id":"ont","label":"ONT 169.254.3.1 hist","group":"edge"},
+  {"id":"vzagg","label":"VZ edge 100.41.x hist","group":"isp"},
+  {"id":"vzbb","label":"VZ bb AS701 hist","group":"isp"},
+  {"id":"cf","label":"cf 1.1.1.1 AS13335","group":"wan"}],
+ "edges":[
+  {"from":"rtr","to":"ont","label":"NAT 71.251.12.240","style":"dashed"},
+  {"from":"ont","to":"vzagg","label":"4.5 ms","style":"dashed"},
+  {"from":"vzagg","to":"vzbb","label":"6.6 ms","style":"dashed"},
+  {"from":"vzbb","to":"cf","label":"6-9 ms","style":"dashed"}]}

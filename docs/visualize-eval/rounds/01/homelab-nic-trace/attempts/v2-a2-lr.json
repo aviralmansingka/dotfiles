@@ -1,0 +1,21 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "ts", "label": "tailscale0 .49" },
+    { "id": "box", "label": "homelab host" },
+    { "id": "bond0", "label": "bond0 .1.197" },
+    { "id": "wlp", "label": "wlp8s0 .213" }
+  ],
+  "layers": [
+    ["ts"],
+    ["box"],
+    ["bond0", "wlp"]
+  ],
+  "edges": [
+    { "from": "ts", "to": "box", "label": "overlay", "flow": 0.25 },
+    { "from": "ts", "to": "bond0", "label": "UDP encap", "flow": 0.25 },
+    { "from": "box", "to": "bond0", "label": "eno1 2.5 GbE", "flow": 0.25 },
+    { "from": "box", "to": "wlp", "label": "backup" }
+  ]
+}

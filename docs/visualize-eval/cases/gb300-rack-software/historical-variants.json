@@ -1,0 +1,1068 @@
+[
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-vault-research-grace-blackwell--/2026-10-31T11-22-16-652Z_01a191b2-30cc-7236-b360-f3de1efcfa9a.jsonl",
+    "line": 231,
+    "call_id": "call_d445756bdb6e49a5afdcc36c",
+    "path": "/Users/aviral/vault/3_logs/2026-W44/rack-software-placement.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "ngc",
+          "label": "NGC registry"
+        },
+        {
+          "id": "facility",
+          "label": "Facility CDU"
+        },
+        {
+          "id": "oob",
+          "label": "OOB mgmt LAN"
+        },
+        {
+          "id": "ufm",
+          "label": "UFM"
+        },
+        {
+          "id": "mc",
+          "label": "Mission Control+BCM"
+        },
+        {
+          "id": "k8s",
+          "label": "Slurm / K8s"
+        },
+        {
+          "id": "rms",
+          "label": "nv-rms"
+        },
+        {
+          "id": "pwr",
+          "label": "Power shelf"
+        },
+        {
+          "id": "nvos",
+          "label": "NVOS"
+        },
+        {
+          "id": "nmxc",
+          "label": "NMX-C / NMX-T"
+        },
+        {
+          "id": "bmc",
+          "label": "Tray BMC"
+        },
+        {
+          "id": "fm",
+          "label": "Fabric Manager"
+        },
+        {
+          "id": "dcgm",
+          "label": "DCGM agent"
+        },
+        {
+          "id": "drv",
+          "label": "Driver + CUDA"
+        }
+      ],
+      "layers": [
+        [
+          "ngc"
+        ],
+        [
+          "facility",
+          "oob"
+        ],
+        [
+          "ufm",
+          "mc",
+          "k8s"
+        ],
+        [
+          "rms",
+          "pwr"
+        ],
+        [
+          "nvos",
+          "nmxc"
+        ],
+        [
+          "bmc",
+          "fm",
+          "dcgm"
+        ],
+        [
+          "",
+          "drv"
+        ]
+      ],
+      "edges": [
+        {
+          "from": "ngc",
+          "to": "mc",
+          "label": "image pull"
+        },
+        {
+          "from": "facility",
+          "to": "pwr",
+          "label": "power + coolant"
+        },
+        {
+          "from": "oob",
+          "to": "bmc",
+          "label": "IPMI"
+        },
+        {
+          "from": "mc",
+          "to": "rms",
+          "label": "rack ops"
+        },
+        {
+          "from": "rms",
+          "to": "bmc",
+          "label": "Redfish"
+        },
+        {
+          "from": "rms",
+          "to": "pwr",
+          "label": "Redfish"
+        },
+        {
+          "from": "rms",
+          "to": "nmxc",
+          "label": "gRPC"
+        },
+        {
+          "from": "nvos",
+          "to": "nmxc",
+          "label": "hosts app"
+        },
+        {
+          "from": "ufm",
+          "to": "nmxc",
+          "label": "fabric KPIs"
+        },
+        {
+          "from": "k8s",
+          "to": "dcgm",
+          "label": "deploys"
+        },
+        {
+          "from": "drv",
+          "to": "dcgm",
+          "label": "exposes counters"
+        },
+        {
+          "from": "drv",
+          "to": "fm",
+          "label": "registers GPU"
+        },
+        {
+          "from": "fm",
+          "to": "nvos",
+          "label": "NVLink init"
+        },
+        {
+          "from": "dcgm",
+          "to": "mc",
+          "label": "metrics"
+        }
+      ]
+    }
+  },
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-vault-research-grace-blackwell--/2026-10-31T11-22-16-652Z_01a191b2-30cc-7236-b360-f3de1efcfa9a.jsonl",
+    "line": 241,
+    "call_id": "call_2c7eda1557c341968bfb1c76",
+    "path": "/Users/aviral/vault/3_logs/2026-W44/rack-software-placement.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "ngc",
+          "label": "NGC registry"
+        },
+        {
+          "id": "oob",
+          "label": "OOB mgmt LAN"
+        },
+        {
+          "id": "ufm",
+          "label": "UFM"
+        },
+        {
+          "id": "mc",
+          "label": "Mission Control"
+        },
+        {
+          "id": "k8s",
+          "label": "Slurm / K8s"
+        },
+        {
+          "id": "rms",
+          "label": "nv-rms"
+        },
+        {
+          "id": "nvos",
+          "label": "NVOS"
+        },
+        {
+          "id": "nmxc",
+          "label": "NMX-C/T"
+        },
+        {
+          "id": "pwr",
+          "label": "Power shelf"
+        },
+        {
+          "id": "bmc",
+          "label": "Tray BMC"
+        },
+        {
+          "id": "fm",
+          "label": "Fabric Mgr"
+        },
+        {
+          "id": "dcgm",
+          "label": "DCGM"
+        },
+        {
+          "id": "drv",
+          "label": "Driver + CUDA"
+        }
+      ],
+      "layers": [
+        [
+          "ngc"
+        ],
+        [
+          "oob"
+        ],
+        [
+          "ufm",
+          "mc",
+          "k8s"
+        ],
+        [
+          "rms"
+        ],
+        [
+          "nvos",
+          "nmxc",
+          "pwr"
+        ],
+        [
+          "bmc",
+          "fm",
+          "dcgm"
+        ],
+        [
+          "",
+          "drv"
+        ]
+      ],
+      "edges": [
+        {
+          "from": "ngc",
+          "to": "mc",
+          "label": "pull"
+        },
+        {
+          "from": "oob",
+          "to": "bmc",
+          "label": "IPMI"
+        },
+        {
+          "from": "mc",
+          "to": "rms",
+          "label": "ops"
+        },
+        {
+          "from": "rms",
+          "to": "pwr",
+          "label": "Redfish"
+        },
+        {
+          "from": "rms",
+          "to": "bmc",
+          "label": "Redfish"
+        },
+        {
+          "from": "rms",
+          "to": "nmxc",
+          "label": "gRPC"
+        },
+        {
+          "from": "nvos",
+          "to": "nmxc",
+          "label": "hosts"
+        },
+        {
+          "from": "ufm",
+          "to": "nmxc",
+          "label": "KPIs"
+        },
+        {
+          "from": "k8s",
+          "to": "dcgm",
+          "label": "deploy"
+        },
+        {
+          "from": "drv",
+          "to": "dcgm",
+          "label": "counts"
+        },
+        {
+          "from": "drv",
+          "to": "fm",
+          "label": "reg"
+        },
+        {
+          "from": "fm",
+          "to": "nvos",
+          "label": "init"
+        },
+        {
+          "from": "dcgm",
+          "to": "mc",
+          "label": "metrics"
+        }
+      ]
+    }
+  },
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-vault-research-grace-blackwell--/2026-10-31T11-22-16-652Z_01a191b2-30cc-7236-b360-f3de1efcfa9a.jsonl",
+    "line": 251,
+    "call_id": "call_5c05c43a119b41ba8dade8ca",
+    "path": "/Users/aviral/vault/3_logs/2026-W44/rack-software-placement.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "ngc",
+          "label": "NGC (external)"
+        },
+        {
+          "id": "oob",
+          "label": "OOB LAN (hall)"
+        },
+        {
+          "id": "ufm",
+          "label": "UFM (mgmt node)"
+        },
+        {
+          "id": "mc",
+          "label": "Mission Control (mgmt)"
+        },
+        {
+          "id": "k8s",
+          "label": "Slurm / K8s (mgmt)"
+        },
+        {
+          "id": "rms",
+          "label": "nv-rms (mgmt)"
+        },
+        {
+          "id": "nvos",
+          "label": "NVOS (NVSwitch)"
+        },
+        {
+          "id": "nmxc",
+          "label": "NMX-C/T (NVSwitch)"
+        },
+        {
+          "id": "pwr",
+          "label": "Power shelf fw"
+        },
+        {
+          "id": "bmc",
+          "label": "Tray BMC fw"
+        },
+        {
+          "id": "fm",
+          "label": "Fabric Mgr (host)"
+        },
+        {
+          "id": "dcgm",
+          "label": "DCGM (host)"
+        },
+        {
+          "id": "drv",
+          "label": "Driver+CUDA (GPU)"
+        }
+      ],
+      "layers": [
+        [
+          "ngc"
+        ],
+        [
+          "oob"
+        ],
+        [
+          "ufm",
+          "mc",
+          "k8s"
+        ],
+        [
+          "rms"
+        ],
+        [
+          "nvos",
+          "nmxc",
+          "pwr"
+        ],
+        [
+          "bmc",
+          "fm",
+          "dcgm"
+        ],
+        [
+          "",
+          "drv"
+        ]
+      ],
+      "edges": [
+        {
+          "from": "ngc",
+          "to": "mc"
+        },
+        {
+          "from": "oob",
+          "to": "bmc"
+        },
+        {
+          "from": "mc",
+          "to": "rms"
+        },
+        {
+          "from": "rms",
+          "to": "bmc"
+        },
+        {
+          "from": "rms",
+          "to": "pwr"
+        },
+        {
+          "from": "rms",
+          "to": "nmxc"
+        },
+        {
+          "from": "nvos",
+          "to": "nmxc"
+        },
+        {
+          "from": "ufm",
+          "to": "nmxc"
+        },
+        {
+          "from": "k8s",
+          "to": "dcgm"
+        },
+        {
+          "from": "drv",
+          "to": "dcgm"
+        },
+        {
+          "from": "drv",
+          "to": "fm"
+        }
+      ]
+    }
+  },
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-vault-research-grace-blackwell--/2026-10-31T11-22-16-652Z_01a191b2-30cc-7236-b360-f3de1efcfa9a.jsonl",
+    "line": 267,
+    "call_id": "call_9990930dca7f476aa33e6d5d",
+    "path": "/Users/aviral/vault/3_logs/2026-W44/rack-software-placement.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "rms",
+          "label": "nv-rms (mgmt node)"
+        },
+        {
+          "id": "k8s",
+          "label": "Kubernetes (mgmt)"
+        },
+        {
+          "id": "oob",
+          "label": "OOB mgmt LAN"
+        },
+        {
+          "id": "gpuop",
+          "label": "GPU Operator"
+        },
+        {
+          "id": "bmc_c",
+          "label": "Compute BMC"
+        },
+        {
+          "id": "bmc_s",
+          "label": "NVSwitch BMC"
+        },
+        {
+          "id": "pwr",
+          "label": "Power shelf ctrl"
+        },
+        {
+          "id": "dcgm",
+          "label": "DCGM agent"
+        },
+        {
+          "id": "nvos",
+          "label": "NVOS"
+        },
+        {
+          "id": "dcgmx",
+          "label": "dcgm-exporter"
+        },
+        {
+          "id": "drv",
+          "label": "Driver + CUDA"
+        },
+        {
+          "id": "nmxc",
+          "label": "NMX-C / NMX-T"
+        },
+        {
+          "id": "fm",
+          "label": "Fabric Mgr"
+        }
+      ],
+      "layers": [
+        [
+          "rms",
+          "k8s"
+        ],
+        [
+          "oob",
+          "gpuop"
+        ],
+        [
+          "bmc_c",
+          "bmc_s",
+          "pwr",
+          "dcgm"
+        ],
+        [
+          "nvos",
+          "dcgmx",
+          "drv"
+        ],
+        [
+          "",
+          "nmxc",
+          "fm"
+        ]
+      ],
+      "edges": [
+        {
+          "from": "rms",
+          "to": "oob"
+        },
+        {
+          "from": "k8s",
+          "to": "gpuop"
+        },
+        {
+          "from": "oob",
+          "to": "bmc_c"
+        },
+        {
+          "from": "oob",
+          "to": "bmc_s"
+        },
+        {
+          "from": "oob",
+          "to": "pwr"
+        },
+        {
+          "from": "gpuop",
+          "to": "dcgm"
+        },
+        {
+          "from": "bmc_s",
+          "to": "nvos"
+        },
+        {
+          "from": "dcgm",
+          "to": "drv"
+        },
+        {
+          "from": "dcgm",
+          "to": "dcgmx"
+        },
+        {
+          "from": "drv",
+          "to": "fm"
+        },
+        {
+          "from": "nvos",
+          "to": "nmxc"
+        }
+      ]
+    }
+  },
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-vault-research-grace-blackwell--/2026-10-31T11-22-16-652Z_01a191b2-30cc-7236-b360-f3de1efcfa9a.jsonl",
+    "line": 273,
+    "call_id": "call_29e75d8874c94d78bf901f34",
+    "path": "/Users/aviral/vault/3_logs/2026-W44/rack-software-placement.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "rms",
+          "label": "nv-rms"
+        },
+        {
+          "id": "k8s",
+          "label": "Kubernetes"
+        },
+        {
+          "id": "oob",
+          "label": "OOB LAN"
+        },
+        {
+          "id": "gpuop",
+          "label": "GPU Operator"
+        },
+        {
+          "id": "bmc_c",
+          "label": "Compute BMC"
+        },
+        {
+          "id": "bmc_s",
+          "label": "NVSwitch BMC"
+        },
+        {
+          "id": "pwr",
+          "label": "Power shelf"
+        },
+        {
+          "id": "dcgm",
+          "label": "DCGM"
+        },
+        {
+          "id": "nvos",
+          "label": "NVOS"
+        },
+        {
+          "id": "dcgmx",
+          "label": "dcgm-exporter"
+        },
+        {
+          "id": "drv",
+          "label": "Driver+CUDA"
+        },
+        {
+          "id": "nmxc",
+          "label": "NMX-C/T"
+        },
+        {
+          "id": "fm",
+          "label": "Fabric Mgr"
+        }
+      ],
+      "layers": [
+        [
+          "rms",
+          "",
+          "",
+          "",
+          "k8s"
+        ],
+        [
+          "oob",
+          "",
+          "",
+          "",
+          "gpuop"
+        ],
+        [
+          "bmc_c",
+          "bmc_s",
+          "pwr",
+          "",
+          "dcgm"
+        ],
+        [
+          "nvos",
+          "",
+          "",
+          "",
+          "dcgmx"
+        ],
+        [
+          "nmxc",
+          "",
+          "",
+          "",
+          "drv"
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "fm"
+        ]
+      ],
+      "edges": [
+        {
+          "from": "rms",
+          "to": "oob"
+        },
+        {
+          "from": "oob",
+          "to": "bmc_c"
+        },
+        {
+          "from": "oob",
+          "to": "bmc_s"
+        },
+        {
+          "from": "oob",
+          "to": "pwr"
+        },
+        {
+          "from": "bmc_s",
+          "to": "nvos"
+        },
+        {
+          "from": "nvos",
+          "to": "nmxc"
+        },
+        {
+          "from": "k8s",
+          "to": "gpuop"
+        },
+        {
+          "from": "gpuop",
+          "to": "dcgm"
+        },
+        {
+          "from": "dcgm",
+          "to": "dcgmx"
+        },
+        {
+          "from": "dcgm",
+          "to": "drv"
+        },
+        {
+          "from": "drv",
+          "to": "fm"
+        }
+      ]
+    }
+  },
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-vault-research-grace-blackwell--/2026-10-31T11-22-16-652Z_01a191b2-30cc-7236-b360-f3de1efcfa9a.jsonl",
+    "line": 279,
+    "call_id": "call_d824e252f73b4c019bcfce1c",
+    "path": "/Users/aviral/vault/3_logs/2026-W44/rack-software-placement.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "rms",
+          "label": "nv-rms"
+        },
+        {
+          "id": "oob",
+          "label": "OOB LAN"
+        },
+        {
+          "id": "k8s",
+          "label": "Kubernetes"
+        },
+        {
+          "id": "bmc_c",
+          "label": "Compute BMC"
+        },
+        {
+          "id": "bmc_s",
+          "label": "NVSwitch BMC"
+        },
+        {
+          "id": "pwr",
+          "label": "Power shelf"
+        },
+        {
+          "id": "gpuop",
+          "label": "GPU Operator"
+        },
+        {
+          "id": "nvos",
+          "label": "NVOS"
+        },
+        {
+          "id": "dcgm",
+          "label": "DCGM"
+        },
+        {
+          "id": "nmxc",
+          "label": "NMX-C/T"
+        },
+        {
+          "id": "dcgmx",
+          "label": "dcgm-exporter"
+        },
+        {
+          "id": "drvk",
+          "label": "Driver+CUDA"
+        },
+        {
+          "id": "fm",
+          "label": "Fabric Mgr"
+        }
+      ],
+      "layers": [
+        [
+          "rms",
+          "oob",
+          "",
+          "k8s"
+        ],
+        [
+          "bmc_c",
+          "bmc_s",
+          "pwr",
+          "gpuop"
+        ],
+        [
+          "nvos",
+          "",
+          "",
+          "dcgm"
+        ],
+        [
+          "nmxc",
+          "",
+          "",
+          "dcgmx"
+        ],
+        [
+          "",
+          "",
+          "",
+          "drvk"
+        ],
+        [
+          "",
+          "",
+          "",
+          "fm"
+        ]
+      ],
+      "edges": [
+        {
+          "from": "rms",
+          "to": "bmc_c"
+        },
+        {
+          "from": "rms",
+          "to": "bmc_s"
+        },
+        {
+          "from": "rms",
+          "to": "pwr"
+        },
+        {
+          "from": "rms",
+          "to": "nvos"
+        },
+        {
+          "from": "oob",
+          "to": "bmc_c"
+        },
+        {
+          "from": "oob",
+          "to": "bmc_s"
+        },
+        {
+          "from": "oob",
+          "to": "pwr"
+        },
+        {
+          "from": "nvos",
+          "to": "nmxc"
+        },
+        {
+          "from": "k8s",
+          "to": "gpuop"
+        },
+        {
+          "from": "gpuop",
+          "to": "dcgm"
+        },
+        {
+          "from": "dcgm",
+          "to": "dcgmx"
+        },
+        {
+          "from": "dcgm",
+          "to": "drvk"
+        },
+        {
+          "from": "drvk",
+          "to": "fm"
+        }
+      ]
+    }
+  },
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-vault-research-grace-blackwell--/2026-10-31T11-22-16-652Z_01a191b2-30cc-7236-b360-f3de1efcfa9a.jsonl",
+    "line": 285,
+    "call_id": "call_db40c48257f14413bd538516",
+    "path": "/Users/aviral/vault/3_logs/2026-W44/rack-software-placement.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "rms",
+          "label": "nv-rms"
+        },
+        {
+          "id": "oob",
+          "label": "OOB LAN"
+        },
+        {
+          "id": "k8s",
+          "label": "Kubernetes"
+        },
+        {
+          "id": "bmc_c",
+          "label": "Compute BMC"
+        },
+        {
+          "id": "bmc_s",
+          "label": "NVSwitch BMC"
+        },
+        {
+          "id": "pwr",
+          "label": "Power shelf"
+        },
+        {
+          "id": "gpuop",
+          "label": "GPU Operator"
+        },
+        {
+          "id": "nvos",
+          "label": "NVOS"
+        },
+        {
+          "id": "dcgm",
+          "label": "DCGM"
+        },
+        {
+          "id": "nmxc",
+          "label": "NMX-C/T"
+        },
+        {
+          "id": "dcgmx",
+          "label": "dcgm-exporter"
+        },
+        {
+          "id": "drvk",
+          "label": "Driver+CUDA"
+        },
+        {
+          "id": "fm",
+          "label": "Fabric Mgr"
+        }
+      ],
+      "layers": [
+        [
+          "rms",
+          "",
+          "",
+          "k8s"
+        ],
+        [
+          "oob",
+          "",
+          "",
+          "gpuop"
+        ],
+        [
+          "bmc_c",
+          "bmc_s",
+          "pwr",
+          "dcgm"
+        ],
+        [
+          "nvos",
+          "",
+          "",
+          "dcgmx"
+        ],
+        [
+          "nmxc",
+          "",
+          "",
+          "drvk"
+        ],
+        [
+          "",
+          "",
+          "",
+          "fm"
+        ]
+      ],
+      "edges": [
+        {
+          "from": "rms",
+          "to": "oob"
+        },
+        {
+          "from": "oob",
+          "to": "bmc_c"
+        },
+        {
+          "from": "oob",
+          "to": "bmc_s"
+        },
+        {
+          "from": "oob",
+          "to": "pwr"
+        },
+        {
+          "from": "oob",
+          "to": "nvos"
+        },
+        {
+          "from": "nvos",
+          "to": "nmxc"
+        },
+        {
+          "from": "k8s",
+          "to": "gpuop"
+        },
+        {
+          "from": "gpuop",
+          "to": "dcgm"
+        },
+        {
+          "from": "dcgm",
+          "to": "dcgmx"
+        },
+        {
+          "from": "dcgm",
+          "to": "drvk"
+        },
+        {
+          "from": "drvk",
+          "to": "fm"
+        }
+      ]
+    }
+  }
+]

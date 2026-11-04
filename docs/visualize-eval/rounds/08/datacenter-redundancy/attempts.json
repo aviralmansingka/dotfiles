@@ -1,0 +1,91 @@
+{
+  "case_id": "datacenter-redundancy",
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "spec": "specs/v1-edge-core.json",
+          "spec_sha256": "e973aa007d70fecc8f6b530eeb85b8ec4436b2b934a730ae1fce9655582c6509",
+          "check_raw": "raw/check-v1-edge-core-a1.txt",
+          "note": "FINAL (captured as specs/v1-uplink.json, byte-identical copy). tb, 3 tier pins (wan/mux/core), 4 x-connect labels. labels 4/4 placed, 2 ambiguous owners."
+        },
+        {
+          "spec": "specs/v1-edge-core-a2-lr.json",
+          "spec_sha256": "a88d3bc22fb4fbf1632e3cc9250a590754c091effa6ca11d4ea8137400a9517a",
+          "check_raw": "raw/check-v1-a2-lr.txt",
+          "note": "orientation probe: same content, lr. 2 ambiguous owners, extent 52x27 -> no improvement, tb kept."
+        },
+        {
+          "spec": "specs/v1-edge-core-a3-minlen.json",
+          "spec_sha256": "5daa911647ea74b6ccfe7df3bc3216c77274ce0ebdf3212acc2697812fbfbb91",
+          "check_raw": "raw/check-v1-a3-minlen.txt",
+          "note": "minlen:2 on the 4 labelled edges with the core tier still pinned one rank below mux -> 4 pins-conflicts, so the gap was rejected rather than silently rearranged."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "attempts": [
+        {
+          "spec": "specs/v2-firewall-pair.json",
+          "spec_sha256": "3e4d666d4dde01d10f38b7029d13eb2ba9adeb919386ad520b904b91953d7c90",
+          "check_raw": "raw/check-v2-firewall-pair-a1.txt",
+          "note": "tb, 3 tier pins, standby label 'standby unconf' (14 chars) -> 2 labels skipped, extent 47x48 (over the 47-row target)."
+        },
+        {
+          "spec": "specs/v2-security-a2-labelrank.json",
+          "spec_sha256": "7b226b5bbfa129c409866f65cf6e4dfe96ae37fafdb6928f8c693d1dd8fcd01d",
+          "check_raw": "raw/check-v2-a2-labelrank.txt",
+          "note": "FINAL. tb, label channel ranks declared empty + minlen:2 on all 8 edges, uncertainty shortened to 'standby?'. 8/8 placed, 2 ambiguous, extent 36x36."
+        },
+        {
+          "spec": "specs/v2-security-a3-lr.json",
+          "spec_sha256": "9a85b16fa9c961406c3318fa1b3e2efef74a2e9c0134b7808eb912a7f5616436",
+          "check_raw": "raw/check-v2-a3-lr.txt",
+          "note": "same structure in lr: 8/8 placed, 0 ambiguous owners BUT extent 80x19 overflows the 77-column target (banner in the frame), so it cannot be the final view."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "attempts": [
+        {
+          "spec": "specs/v3-spine-fabric.json",
+          "spec_sha256": "e7eb0831e320ef94085a49d6555f88909301ec4a5190b2148ab95cf34207a6de",
+          "check_raw": "raw/check-v3-spine-fabric-a1.txt",
+          "note": "fabric with racks (8 nodes / 12 edges): 3 ambiguous owners, 15 bridges, an ECMP label overwrote the leaf-row region title."
+        },
+        {
+          "spec": "specs/v3-fabric-a2.json",
+          "spec_sha256": "d151786d9d53a7346bf00495dc4d0dceb67e679d7ffa8717fe582afecb2b3212",
+          "check_raw": "raw/check-v3-a2-fabric.txt",
+          "note": "FINAL. spines-above-leaf-row pin kept, racks moved to v4: 8/8 placed, 2 ambiguous, 14 bridges, extent 53x25."
+        },
+        {
+          "spec": "specs/v3-fabric-a3-order.json",
+          "spec_sha256": "862a429120cbecd5ccfd45012e5cb54f8625be96aecec91c5f631f031c856333",
+          "check_raw": "raw/check-v3-a3-order.txt",
+          "note": "declaration-order probe (rack-leaf declared first): identical numbers, within-rank order stayed engine-owned."
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "attempts": [
+        {
+          "spec": "specs/v4-access-a1.json",
+          "spec_sha256": "14256b3bc5d2b0f974d0da8f29663d169420249d1d750121b8b7448cbb636f2c",
+          "check_raw": "raw/check-v4-a1-access.txt",
+          "note": "tb with a declared label rank: 4/4 placed, 1 ambiguous owner."
+        },
+        {
+          "spec": "specs/v4-access-a2-lr.json",
+          "spec_sha256": "ab96ec5e04bbf79588e2d9ae3fa475010a24ad8a82e70e863de4a5e19a1bbf73",
+          "check_raw": "raw/check-v4-a2-lr.txt",
+          "note": "FINAL. lr: 4/4 placed, 0 ambiguous owners, extent 45x16."
+        }
+      ]
+    }
+  ]
+}

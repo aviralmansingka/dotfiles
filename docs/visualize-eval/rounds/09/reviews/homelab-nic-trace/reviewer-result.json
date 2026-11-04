@@ -1,0 +1,1440 @@
+{
+  "protocol_version": 1,
+  "round": 9,
+  "case_id": "homelab-nic-trace",
+  "candidate_sha256": "ba2878c5194cd6fc4bc1af5299a156064130de9be1b0ccf4c6eeb0236d431381",
+  "renderer_sha256": "405a61a674a7cc6271ae1276794eb270c9425dfc38585f4cbb1c48e9b6db495b",
+  "rubric_sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "adab253c3ea68f6ac908e8b00ae5e369ebed70df68307c649cb16257553ad614",
+  "generator": {
+    "worker_id": "viz-ds09-3",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge09-homelab",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 82,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/09/reviews/homelab-nic-trace/observed-first.md",
+      "sha256": "e615ae704b07cc0e5d1b58b03a5d5ad5fde703175003323a6107e91e99f16f7d",
+      "description": "Immutable blind observation saved before expected reveal",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/09/reviews/homelab-nic-trace/spec-manifest.json",
+      "sha256": "adab253c3ea68f6ac908e8b00ae5e369ebed70df68307c649cb16257553ad614",
+      "description": "Sorted final-spec paths and SHA-256 pairs",
+      "capture": null
+    },
+    {
+      "id": "spec1",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/specs/v1-host-local.json",
+      "sha256": "7399db149bfc1042b25e586c5c8c2fdae5dbde9e652bb592cfccb9c5c2034357",
+      "description": "Final spec",
+      "capture": null
+    },
+    {
+      "id": "spec2",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/specs/v2-uplink.json",
+      "sha256": "a1c68a7fa19bc3018cc9a44d90b02eadcc22bb926dcd8576069067b1efc7b568",
+      "description": "Final spec",
+      "capture": null
+    },
+    {
+      "id": "spec3",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/specs/v3-egress.json",
+      "sha256": "b0abc2f24a8667015326ca0b3a9db34d8354d348ce2d8c707cd21a9095c44637",
+      "description": "Final spec",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/09/SKILL.md",
+      "sha256": "ba2878c5194cd6fc4bc1af5299a156064130de9be1b0ccf4c6eeb0236d431381",
+      "description": "skill",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/09/rubric.json",
+      "sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+      "description": "rubric",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "dataset",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/09/metadata.json",
+      "sha256": "abc75dda9ee0149980533966ab7d640689a4caf961900938cff810a2d9750ddd",
+      "description": "metadata",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+      "sha256": "abe8b376eccd7d0027f2985aab55ed656603b2094c275ee66ed223a57421b4c4",
+      "description": "source",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/homelab-nic-trace/expected.json",
+      "sha256": "91ef88d09af71cd4583cfd0f1141e10f2fc2efdd3a779f9389f1d67759cd09c7",
+      "description": "expected",
+      "capture": null
+    },
+    {
+      "id": "variants",
+      "path": "docs/visualize-eval/cases/homelab-nic-trace/historical-variants.json",
+      "sha256": "d70fd9d33cc1966bc015b6bc4d84176984979cac15b9cb7d1d89165e1bc7fc1f",
+      "description": "variants",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/generation.json",
+      "sha256": "2975deebe841f6df04ddb899dd5c030c9dd13989af9dbeded4aea081bbdc49ea",
+      "description": "generation",
+      "capture": null
+    },
+    {
+      "id": "ledger",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/ledger.md",
+      "sha256": "1830eab74717d6e95115a06d98d54c1a9836f4c068b8a0f81632df35ec1b6d25",
+      "description": "ledger",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/attempts.json",
+      "sha256": "cef79e2158910353527ccf7e3eaed6b7560bfeea9878353fe327bf23f36730af",
+      "description": "attempts",
+      "capture": null
+    },
+    {
+      "id": "attempt-log",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/attempts-log.jsonl",
+      "sha256": "fbac49563a9c9a38487a31570805c54bc43b80abb351397cf8c55d5923619b92",
+      "description": "attempt-log",
+      "capture": null
+    },
+    {
+      "id": "text1",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v1/v1-text.txt",
+      "sha256": "8b29e873a0297d0a19856dff17204645646a790cd743e5d39d842dee6bb0ef52",
+      "description": "normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "frame 0",
+        "timestamp": "2026-11-02T21:54:05Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi1",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v1/v1-ansi.ansi",
+      "sha256": "8a9bf24363ca7c46d9c31304adb2aa9105aa085985abd949afea9effa692ff6f",
+      "description": "normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "frame 0",
+        "timestamp": "2026-11-02T21:54:05Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "select1",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v1/v1-selected.ansi",
+      "sha256": "985920f4dedfa75e43ccc2e214af3f92b26640d9f58ddb87121d9644b123bad0",
+      "description": "select-all",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T21:54:05Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "frames1",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v1/v1-frames.txt",
+      "sha256": "37225c2848a6738cdaab5b0a323727a78c9b0ef4601f1677d89540b1bf8b3dbb",
+      "description": "normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0, 100, 200 ms",
+        "timestamp": "2026-11-02T21:54:05Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "frames-ansi1",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v1/v1-frames.ansi",
+      "sha256": "71a4e9c121635b493404640e823616b936deef8e668eaf37c62f6ea416d18b3d",
+      "description": "normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0, 100, 200 ms",
+        "timestamp": "2026-11-02T21:54:05Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "check1",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v1/check.txt",
+      "sha256": "40de7a1095a433e062b0307151877b9cfb2c514c53af2fcb1124b0c8c3001200",
+      "description": "check",
+      "capture": null
+    },
+    {
+      "id": "manifest1",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v1/manifest.json",
+      "sha256": "9e65a55b550cbb0fce3849ba37fed6ca1f1efa1f10513139666d94423298e5f5",
+      "description": "manifest",
+      "capture": null
+    },
+    {
+      "id": "validator1",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v1/validator.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "validator",
+      "capture": null
+    },
+    {
+      "id": "pinned1",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/pinned/v1-77x47.stdout",
+      "sha256": "806dd8d46eff84a96cdbcdd467647b63985941f210b39a7aa95ce659f7808c19",
+      "description": "Final spec 77x47 natural direct dump",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0, 100, 200 ms",
+        "timestamp": "2026-11-02T21:54:30Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "text2",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v2/v2-text.txt",
+      "sha256": "cd639143895f0af50c5d5d6fe171581f8e853c6d934166402d392ceb8eeea952",
+      "description": "normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "frame 0",
+        "timestamp": "2026-11-02T21:54:14Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi2",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v2/v2-ansi.ansi",
+      "sha256": "99eaee60ffa8273b65250657eac43112073cb936da376c29bf96d062dc82b321",
+      "description": "normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "frame 0",
+        "timestamp": "2026-11-02T21:54:14Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "select2",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v2/v2-selected.ansi",
+      "sha256": "7206c9a500d207cf86b98f12502e007e7989e3ac3e190c0aead6f8054bbd932a",
+      "description": "select-all",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T21:54:14Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "frames2",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v2/v2-frames.txt",
+      "sha256": "4976517564376ab7e648485594c2d330dc073e5e178dfaf62a548ebcc3544786",
+      "description": "normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "0, 100, 200 ms",
+        "timestamp": "2026-11-02T21:54:14Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "frames-ansi2",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v2/v2-frames.ansi",
+      "sha256": "fedc86c0e865c222287dc2b8ae0f922b72fb0c945ad818c8bbded3a99b9e86c0",
+      "description": "normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "0, 100, 200 ms",
+        "timestamp": "2026-11-02T21:54:14Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "check2",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v2/check.txt",
+      "sha256": "afaf39960c09e74f850ec78959715ec3b4cde89be0a0a5fdbadf85413e5d9d0c",
+      "description": "check",
+      "capture": null
+    },
+    {
+      "id": "manifest2",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v2/manifest.json",
+      "sha256": "d0c68ad4fe5c259736ff2a39b4d345a3edfd0740382fe428d62fb73cfc682806",
+      "description": "manifest",
+      "capture": null
+    },
+    {
+      "id": "validator2",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v2/validator.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "validator",
+      "capture": null
+    },
+    {
+      "id": "pinned2",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/pinned/v2-77x47.stdout",
+      "sha256": "17bd462fd41519d048f7f50efa58efbbe214caecf43355cbe8731b52b7f366a6",
+      "description": "Final spec 77x47 natural direct dump",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0, 100, 200 ms",
+        "timestamp": "2026-11-02T21:54:31Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "text3",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v3/v3-text.txt",
+      "sha256": "9799d2e920d836130abcf7acb7e7b3d206ea793fa2cd388b8b3d7459d23c0093",
+      "description": "normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "frame 0",
+        "timestamp": "2026-11-02T21:54:22Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi3",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v3/v3-ansi.ansi",
+      "sha256": "19b34c1195be11141e9a2f93f1dffc825f2c06783e49421d84902acdfff713e7",
+      "description": "normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "frame 0",
+        "timestamp": "2026-11-02T21:54:22Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "select3",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v3/v3-selected.ansi",
+      "sha256": "8811b2c0df058025092469a03bcdabbd6a4dcdf6cbe3302c0abf71c6c2abe0bf",
+      "description": "select-all",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T21:54:22Z",
+        "state": "select-all",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "frames3",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v3/v3-frames.txt",
+      "sha256": "9b283ed32710040465b2895c025dcce616d3eff537bae35fd0151761acc8e397",
+      "description": "normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "0, 100, 200 ms",
+        "timestamp": "2026-11-02T21:54:22Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "frames-ansi3",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v3/v3-frames.ansi",
+      "sha256": "6658337116546bcb0953eba30709ed2aec50bd0932dbd295ade974f7dda5ab0a",
+      "description": "normal",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v3",
+        "frame": "0, 100, 200 ms",
+        "timestamp": "2026-11-02T21:54:22Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "check3",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v3/check.txt",
+      "sha256": "d0a044216872371b70576eea3372db739ddf0e81d1b52f4e839f8b4f5ca25390",
+      "description": "check",
+      "capture": null
+    },
+    {
+      "id": "manifest3",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v3/manifest.json",
+      "sha256": "1c16a635058bd9ee8eff1ada68ecec2dda3619c0fa719a3a6ef108b9e0b1964c",
+      "description": "manifest",
+      "capture": null
+    },
+    {
+      "id": "validator3",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/evidence/v3/validator.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "validator",
+      "capture": null
+    },
+    {
+      "id": "pinned3",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/pinned/v3-77x47.stdout",
+      "sha256": "ffb7ea4fe3c3468869b28d0818ac907024164a5fbb70cec532cd2cb5e1384b5d",
+      "description": "Final spec 77x47 natural direct dump",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v3",
+        "frame": "0, 100, 200 ms",
+        "timestamp": "2026-11-02T21:54:31Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "record1-stdout",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/recorded/v1-attempt1-host-tb.stdout",
+      "sha256": "d6734c59b3d8ef9e199b1d20b602b36728161abe36e0a8110b4c9ebaa2f8cde8",
+      "description": "Recorded v1-attempt1-host-tb stdout exit 0",
+      "capture": null
+    },
+    {
+      "id": "record1-stderr",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/recorded/v1-attempt1-host-tb.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v1-attempt1-host-tb stderr exit 0",
+      "capture": null
+    },
+    {
+      "id": "record2-stdout",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/recorded/v2-attempt1-egress-lr.stdout",
+      "sha256": "f47a5a3f01da6ff7cf09660697d2c54a27adc476ebe74ad172fcc4158b6dfef6",
+      "description": "Recorded v2-attempt1-egress-lr stdout exit 0",
+      "capture": null
+    },
+    {
+      "id": "record2-stderr",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/recorded/v2-attempt1-egress-lr.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v2-attempt1-egress-lr stderr exit 0",
+      "capture": null
+    },
+    {
+      "id": "record3-stdout",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/recorded/v1-attempt2-host-tb-labslot.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v1-attempt2-host-tb-labslot stdout exit 1",
+      "capture": null
+    },
+    {
+      "id": "record3-stderr",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/recorded/v1-attempt2-host-tb-labslot.stderr",
+      "sha256": "53125082c6428299857f6c3b3ae7b5b3c61c037ac7db45705ccad6ebdaaed206",
+      "description": "Recorded v1-attempt2-host-tb-labslot stderr exit 1",
+      "capture": null
+    },
+    {
+      "id": "record4-stdout",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/recorded/v2-attempt2-egress-tb-labslot.stdout",
+      "sha256": "d0a044216872371b70576eea3372db739ddf0e81d1b52f4e839f8b4f5ca25390",
+      "description": "Recorded v2-attempt2-egress-tb-labslot stdout exit 0",
+      "capture": null
+    },
+    {
+      "id": "record4-stderr",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/recorded/v2-attempt2-egress-tb-labslot.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v2-attempt2-egress-tb-labslot stderr exit 0",
+      "capture": null
+    },
+    {
+      "id": "record5-stdout",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/recorded/v1-attempt3-host-local.stdout",
+      "sha256": "40de7a1095a433e062b0307151877b9cfb2c514c53af2fcb1124b0c8c3001200",
+      "description": "Recorded v1-attempt3-host-local stdout exit 0",
+      "capture": null
+    },
+    {
+      "id": "record5-stderr",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/recorded/v1-attempt3-host-local.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v1-attempt3-host-local stderr exit 0",
+      "capture": null
+    },
+    {
+      "id": "record6-stdout",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/recorded/v2-attempt1-uplink.stdout",
+      "sha256": "afaf39960c09e74f850ec78959715ec3b4cde89be0a0a5fdbadf85413e5d9d0c",
+      "description": "Recorded v2-attempt1-uplink stdout exit 0",
+      "capture": null
+    },
+    {
+      "id": "record6-stderr",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/recorded/v2-attempt1-uplink.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v2-attempt1-uplink stderr exit 0",
+      "capture": null
+    },
+    {
+      "id": "record7-stderr",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/pinned/v1-77x47.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v1-77x47 stderr exit 0",
+      "capture": null
+    },
+    {
+      "id": "record8-stderr",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/pinned/v2-77x47.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v2-77x47 stderr exit 0",
+      "capture": null
+    },
+    {
+      "id": "record9-stderr",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/pinned/v3-77x47.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Recorded v3-77x47 stderr exit 0",
+      "capture": null
+    },
+    {
+      "id": "draft2",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/specs/v1-host-tb.json",
+      "sha256": "667701614d58c7f92e70537ca01ec481f9a0cb114237ed358e2342cd1622aaf8",
+      "description": "Preserved draft spec",
+      "capture": null
+    },
+    {
+      "id": "draft3",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/specs/v1-host-tb2.json",
+      "sha256": "6c94bcdad8c2395f358130e2df118c91172011662b754622c0b790bb7ab708af",
+      "description": "Preserved draft spec",
+      "capture": null
+    },
+    {
+      "id": "draft4",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/specs/v2-egress-lr.json",
+      "sha256": "c4dcb8cd3911f4bc85476688ed7f9974ce584a2fc208f262a207117af0e55ba5",
+      "description": "Preserved draft spec",
+      "capture": null
+    },
+    {
+      "id": "draft5",
+      "path": "docs/visualize-eval/rounds/09/homelab-nic-trace/specs/v2-egress-tb.json",
+      "sha256": "b0abc2f24a8667015326ca0b3a9db34d8354d348ce2d8c707cd21a9095c44637",
+      "description": "Preserved draft spec",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Required border/collapsed fabric role, Fios/shared pool, no committed rate, and multiple source qualifiers omitted or weakened; historical role qualification only partial.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "evidence_ids": [
+        "text1",
+        "text2",
+        "text3",
+        "ledger"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All routes visible and individually traceable; e9 label is nearer the unrelated e10 stem than its own, violating ownership with no recorded placement-specific yield.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "evidence_ids": [
+        "text3",
+        "check3"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All three pinned final views geometrically fit 77x47 natural; full source coverage across split views is missing.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "evidence_ids": [
+        "pinned1",
+        "pinned2",
+        "pinned3",
+        "text3"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Four supported hue families with no group enclosure; physical sibling order wlp/bond in v2 reverses to bond/wlp in v3, contrary to stable sibling order.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "evidence_ids": [
+        "ansi1",
+        "ansi2",
+        "ansi3"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 17 normal and select-all perimeters complete and color-continuous in ANSI; select-all is simultaneous.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "evidence_ids": [
+        "ansi1",
+        "ansi2",
+        "ansi3",
+        "select1",
+        "select2",
+        "select3"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Frozen hashes and independent blind record present; nine recorded commands and streams hash-match; validators pass; measured pane and final pinned dumps exist; owned panes closed. Initial failed 182-byte read was overwritten but final recapture is present.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "skill",
+        "dataset",
+        "rubric",
+        "metadata",
+        "attempt-log",
+        "validator1",
+        "validator2",
+        "validator3",
+        "manifest1",
+        "manifest2",
+        "manifest3"
+      ]
+    },
+    "animation": {
+      "applicable": false,
+      "status": null,
+      "reason": "Manifest marks animation optional and source describes historical static topology with no animation request; no dots are visible. Three recorded text and ANSI frames match per view.",
+      "source_refs": [
+        "docs/visualize-eval/cases.json",
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md"
+      ],
+      "evidence_ids": [
+        "frames1",
+        "frames2",
+        "frames3",
+        "frames-ansi1",
+        "frames-ansi2",
+        "frames-ansi3",
+        "pinned1",
+        "pinned2",
+        "pinned3"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Correct family identity-probe-maps; generator also states identity-probe-maps and evidence: 13 of 14 nodes are addresses, device names or AS numbers and roles are claimed/historical. Deep identifier-heavy chain, 14 edges / 13 distinct nodes, one weak world, no anti-parallel pair and static qualify. Recipe requires all source identifiers and qualifiers in ledger and captures; router border role, shared pool, no committed rate and other source qualifiers are absent. Recorded 189x9 LR, 66x62 host, and all-slot routing failure support layout yields but not semantic drops.",
+      "correct_family": "identity-probe-maps",
+      "generator_family": "identity-probe-maps",
+      "evidence_line": "13 of 14 nodes are addresses, device names or AS numbers (bond0 192.168.1.197, 100.113.153.49, 172.18.2.1, 169.254.3.1, AS701, 100.41.x) and the brief marks two device roles claimed/historical, so omission - not geometry - is what loses meaning.",
+      "recipe_facts": "Pre-spec ledger is generator-stated; v3 shows address- and qualifier-heavy deep chain; incomplete coverage of required identifiers and qualifiers fails recipe despite measured yields.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "evidence_ids": [
+        "ledger",
+        "generation",
+        "text1",
+        "text2",
+        "text3"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "expected": "vm → virbr: 192.168.122.x",
+      "observed": "Separate downward directed stem-to-head route, no crossing or junction. Label visible and attributable to this route.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text1",
+          "region": [
+            49,
+            16,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text1",
+          "region": [
+            35,
+            24,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "expected": "virbr → box: NAT bridge",
+      "observed": "Separate downward directed stem-to-head route, no crossing or junction. Label visible and attributable to this route.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text1",
+          "region": [
+            24,
+            36,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text1",
+          "region": [
+            35,
+            44,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "expected": "ctr → dkbr: 172.18.2.x",
+      "observed": "Separate downward directed stem-to-head route, no crossing or junction. Label visible and attributable to this route.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text1",
+          "region": [
+            17,
+            16,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text1",
+          "region": [
+            15,
+            24,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "expected": "dkbr → box: docker bridge",
+      "observed": "Separate downward directed stem-to-head route, no crossing or junction. Label visible and attributable to this route.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text1",
+          "region": [
+            18,
+            42,
+            13,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text1",
+          "region": [
+            33,
+            44,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "expected": "ts → box: overlay",
+      "observed": "Separate downward directed stem-to-head route, no crossing or junction. Label visible and attributable to this route.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text1",
+          "region": [
+            52,
+            36,
+            7,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text1",
+          "region": [
+            37,
+            44,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "expected": "ts → bond0: UDP encapsulation",
+      "observed": "Separate downward directed stem-to-head route, no crossing or junction. Label visible and attributable to this route.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text2",
+          "region": [
+            46,
+            26,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text2",
+          "region": [
+            42,
+            33,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "expected": "box → bond0: eno1 2.5 GbE",
+      "observed": "Separate downward directed stem-to-head route, no crossing or junction. Label visible and attributable to this route.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text2",
+          "region": [
+            26,
+            29,
+            11,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text2",
+          "region": [
+            40,
+            33,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e8",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "expected": "box → wlp: backup path",
+      "observed": "Separate downward directed stem-to-head route, no crossing or junction. Label visible and attributable to this route.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text2",
+          "region": [
+            10,
+            26,
+            11,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text2",
+          "region": [
+            24,
+            33,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e9",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "expected": "bond0 → rtr: default gateway 0.5 ms",
+      "observed": "Separate downward directed stem-to-head route, no crossing or junction. Gateway label closer to unrelated Wi-Fi stem (5 columns) than bond stem (11); owner ambiguous despite spec.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "text3",
+          "region": [
+            35,
+            9,
+            9,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text3",
+          "region": [
+            27,
+            12,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F-ownership"
+      ]
+    },
+    {
+      "edge_id": "e10",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "expected": "wlp → rtr: metric 600",
+      "observed": "Separate downward directed stem-to-head route, no crossing or junction. Label visible and attributable to this route.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text3",
+          "region": [
+            55,
+            9,
+            10,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text3",
+          "region": [
+            29,
+            12,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e11",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "expected": "rtr → ont: NAT out",
+      "observed": "Separate downward directed stem-to-head route, no crossing or junction. Label visible and attributable to this route.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text3",
+          "region": [
+            44,
+            17,
+            7,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text3",
+          "region": [
+            30,
+            20,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e12",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "expected": "ont → vzagg: 4.5 ms",
+      "observed": "Separate downward directed stem-to-head route, no crossing or junction. Label visible and attributable to this route.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text3",
+          "region": [
+            43,
+            25,
+            6,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text3",
+          "region": [
+            34,
+            28,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e13",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "expected": "vzagg → vzbb: 6.6 ms",
+      "observed": "Separate downward directed stem-to-head route, no crossing or junction. Label visible and attributable to this route.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text3",
+          "region": [
+            43,
+            33,
+            6,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text3",
+          "region": [
+            36,
+            36,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e14",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "expected": "vzbb → cf: 6-9 ms",
+      "observed": "Separate downward directed stem-to-head route, no crossing or junction. Label visible and attributable to this route.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text3",
+          "region": [
+            43,
+            41,
+            6,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text3",
+          "region": [
+            33,
+            44,
+            1,
+            1
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-router-role",
+      "category": "semantic_fidelity",
+      "edge_ids": [],
+      "severity": "critical",
+      "description": "Router border/collapsed fabric and firewall role and Fios identity are missing, although node is marked claimed.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "text3",
+          "region": [
+            27,
+            14,
+            30,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F-bench",
+      "category": "semantic_fidelity",
+      "edge_ids": [],
+      "severity": "critical",
+      "description": "No committed rate is missing; NAT and no-v6 alone cannot yield all three bench answers.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "text3",
+          "region": [
+            27,
+            14,
+            30,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text3",
+          "region": [
+            44,
+            17,
+            7,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F-identifiers",
+      "category": "semantic_fidelity",
+      "edge_ids": [],
+      "severity": "critical",
+      "description": "Shared Fios pool 71.251.12.240, LAN prefix and DHCP absent; Fios, Wi-Fi, Tailscale, libvirt and historical/ULA/not-ECMP qualifiers are absent or abbreviated without a key.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "text2",
+          "region": [
+            24,
+            35,
+            11,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text3",
+          "region": [
+            27,
+            14,
+            30,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F-ownership",
+      "category": "arrow_traceability",
+      "edge_ids": [
+        "e9"
+      ],
+      "severity": "high",
+      "description": "gw 0.5 ms spans x35–43; route stems x24 and x48. Minimum distances are 11 and 5 respectively, so it is closer to another edge, and no ownership-specific impossibility yield is recorded.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "text3",
+          "region": [
+            24,
+            9,
+            41,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F-siblings",
+      "category": "conceptual_grouping_color",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "Physical siblings reverse order: wlp before bond in v2, bond before wlp in v3.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "text2",
+          "region": [
+            24,
+            35,
+            35,
+            1
+          ]
+        },
+        {
+          "evidence_id": "text3",
+          "region": [
+            24,
+            6,
+            35,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F-category",
+      "category": "category_fit",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Correct identity-probe-maps family but coverage-first recipe incomplete, with recorded source facts dropped.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "text3",
+          "region": [
+            27,
+            14,
+            30,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F-fit-coverage",
+      "category": "layout_fit",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Geometric fit proven but complete source coverage required by fit gate is not met.",
+      "source_refs": [
+        "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+        "docs/visualize-eval/cases/homelab-nic-trace/expected.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "text3",
+          "region": [
+            27,
+            14,
+            30,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pNK",
+      "w7E:pNN",
+      "w7E:pNP"
+    ],
+    "closed_pane_ids": [
+      "w7E:pNK",
+      "w7E:pNN",
+      "w7E:pNP"
+    ],
+    "status": "done",
+    "reason": "Generator capture manifests report all three panes confirmed_closed; reviewer opened no panes."
+  },
+  "overall": "fail"
+}

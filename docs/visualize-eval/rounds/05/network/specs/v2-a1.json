@@ -1,0 +1,16 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "core", "label": "Core switch", "group": "network" },
+    { "id": "web", "label": "Web tier", "group": "tiers" },
+    { "id": "cache", "label": "Redis", "group": "tiers" },
+    { "id": "db", "label": "DB tier", "group": "tiers" }
+  ],
+  "edges": [
+    { "from": "core", "to": "cache", "label": "25 GbE", "flow": true, "dots": 1 },
+    { "from": "web", "to": "cache", "label": "session", "flow": true, "dots": 1 },
+    { "from": "web", "to": "db", "label": "queries", "flow": true, "dots": 1 },
+    { "from": "cache", "to": "db", "label": "fill", "flow": true, "dots": 1 }
+  ]
+}

@@ -1,0 +1,22 @@
+# Round-07 modal-machine-manager — exact commands (run from docs/visualize-eval/rounds/07)
+# 1. build the page from the frozen round-05 specs (verifies each spec sha256 first)
+python3 build_reactflow.py
+
+# 2. open the page in a terminal-browser pane (split so the page sits beside the chat)
+terminal-browser open "$PWD/modal-machine-manager/reactflow.html" --split right --size 0.55
+
+# 3. wait for the layout to settle (the page sets window.__rfReady after fitView), then read facts
+terminal-browser action --tab t1 -- eval "JSON.stringify({ready:!!window.__rfReady, views:[...document.querySelectorAll('.view')].map(v=>[v.id, v.querySelectorAll('.react-flow__node-plain').length, v.querySelectorAll('.react-flow__edge').length, v.querySelectorAll('.rf-edge-label').length, v.querySelectorAll('animateMotion').length])})"
+
+# 4. capture the whole page
+terminal-browser action --tab t1 -- screenshot --full "$PWD/modal-machine-manager/capture-raw.png"
+
+# 5. trim the tool's padded 4x output to the page box (5236x12240 -> 2618x6120 = page 1309x3060 CSS at 2x)
+python3 - <<'PY'
+from PIL import Image
+im = Image.open('modal-machine-manager/capture-raw.png')
+im.crop((0, 0, 1309*2, 3060*2)).save('modal-machine-manager/capture.png')
+PY
+
+# 6. per-view crops used while reviewing (not shipped)
+python3 /tmp/crop3.py modal-machine-manager/capture.png /tmp/mm

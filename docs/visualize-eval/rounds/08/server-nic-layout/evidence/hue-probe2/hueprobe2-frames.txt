@@ -1,0 +1,184 @@
+/tmp/visualize-eval/round-08/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotfi
+les/fix-visualize-skill/docs/visualize-eval/rounds/08/server-nic-layout/specs/probe
+-hues2.json
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-08/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/08/server-nic-layout/specs/pro
+be-hues2.json
+viewport: 83x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-08/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/08/server-nic-layout/specs/pro
+be-hues2.json --select-all
+viewport: 83x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-08/bin/rataflow-view /Users/aviral/.herdr/worktrees/dot
+files/fix-visualize-skill/docs/visualize-eval/rounds/08/server-nic-layout/specs/pro
+be-hues2.json --frames 3 --step-ms 100
+viewport: 83x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 83x51 @100% · probe-hues2.json · 6 nodes · 5 edges · q quit
+
+
+                                      ──────
+                                      │╭──╮│
+                                      ││a ││
+                                      ││  ││
+                                      │╰──╯│
+                                      ──│───
+                                        │
+                                        │
+                                        ▼               ───
+                                       ╭──╮             │ │
+                                       │b │             │ │
+                                       │  │             │ │
+                                       ╰──╯             │ │
+                                        │               ───
+                                        │
+                                        │
+                                        ▼      ───
+                                       ╭──╮    │ │
+                                       │c │    │ │
+                                       │  │    │ │
+                                       ╰──╯    │ │
+                                        │      ───
+                                        │
+                                        │
+                                        ▼   ───
+                                       ╭──╮ │ │
+                                       │d │ │ │
+                                       │  │ │ │
+                                       ╰──╯ │ │
+                                        │   ───
+                                        │
+                                        │
+                                        ▼         ───
+                                       ╭──╮       │ │
+                                       │e │       │ │
+                                       │  │       │ │
+                                       ╰──╯       │ │
+                                        │         ───
+                                        │
+                                        │
+                                        ▼            ───
+ ┌───────┐                             ╭──╮          │ │
+ │ + [+] │                             │f │          │ │
+ │ − [-] │                             │  │          │ │
+ │ ⊡ [f] │                             ╰──╯          │ │
+ │ □ [i] │                                           ───
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 83x51 @100% · probe-hues2.json · 6 nodes · 5 edges · q quit
+
+
+                                      ──────
+                                      │╭──╮│
+                                      ││a ││
+                                      ││  ││
+                                      │╰──╯│
+                                      ──│───
+                                        │
+                                        │
+                                        ▼               ───
+                                       ╭──╮             │ │
+                                       │b │             │ │
+                                       │  │             │ │
+                                       ╰──╯             │ │
+                                        │               ───
+                                        │
+                                        │
+                                        ▼      ───
+                                       ╭──╮    │ │
+                                       │c │    │ │
+                                       │  │    │ │
+                                       ╰──╯    │ │
+                                        │      ───
+                                        │
+                                        │
+                                        ▼   ───
+                                       ╭──╮ │ │
+                                       │d │ │ │
+                                       │  │ │ │
+                                       ╰──╯ │ │
+                                        │   ───
+                                        │
+                                        │
+                                        ▼         ───
+                                       ╭──╮       │ │
+                                       │e │       │ │
+                                       │  │       │ │
+                                       ╰──╯       │ │
+                                        │         ───
+                                        │
+                                        │
+                                        ▼            ───
+ ┌───────┐                             ╭──╮          │ │
+ │ + [+] │                             │f │          │ │
+ │ − [-] │                             │  │          │ │
+ │ ⊡ [f] │                             ╰──╯          │ │
+ │ □ [i] │                                           ───
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 83x51 @100% · probe-hues2.json · 6 nodes · 5 edges · q quit
+
+
+                                      ──────
+                                      │╭──╮│
+                                      ││a ││
+                                      ││  ││
+                                      │╰──╯│
+                                      ──│───
+                                        │
+                                        │
+                                        ▼               ───
+                                       ╭──╮             │ │
+                                       │b │             │ │
+                                       │  │             │ │
+                                       ╰──╯             │ │
+                                        │               ───
+                                        │
+                                        │
+                                        ▼      ───
+                                       ╭──╮    │ │
+                                       │c │    │ │
+                                       │  │    │ │
+                                       ╰──╯    │ │
+                                        │      ───
+                                        │
+                                        │
+                                        ▼   ───
+                                       ╭──╮ │ │
+                                       │d │ │ │
+                                       │  │ │ │
+                                       ╰──╯ │ │
+                                        │   ───
+                                        │
+                                        │
+                                        ▼         ───
+                                       ╭──╮       │ │
+                                       │e │       │ │
+                                       │  │       │ │
+                                       ╰──╯       │ │
+                                        │         ───
+                                        │
+                                        │
+                                        ▼            ───
+ ┌───────┐                             ╭──╮          │ │
+ │ + [+] │                             │f │          │ │
+ │ − [-] │                             │  │          │ │
+ │ ⊡ [f] │                             ╰──╯          │ │
+ │ □ [i] │                                           ───
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯

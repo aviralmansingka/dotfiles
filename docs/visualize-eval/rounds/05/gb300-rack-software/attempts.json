@@ -1,0 +1,83 @@
+{
+  "case_id": "gb300-rack-software",
+  "round": "05",
+  "budget_rule": "at most 3 checked spec candidates per view; each --check run on a distinct spec is one candidate",
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "n": 1,
+          "spec_sha256": "bb367ec1ca4bdc76e4e70d1aa36e0fe976695483c8eb73f105d6a2339c2265eb",
+          "spec": "attempts/v1/01-spec-tb-5node.json",
+          "check": "attempts/v1/01-check.txt",
+          "note": "rejected: tb with trunk to=Power shelf drew a 15-cell shared run (warning) and 14 bridges, extent 85x24 > target width"
+        },
+        {
+          "n": 2,
+          "spec_sha256": "4c08509a0925485b0a055b2a880e2a01b594a954577b49cfa592acd43560a120",
+          "spec": "attempts/v1/02-spec-lr-5node.json",
+          "check": "attempts/v1/02-check.txt",
+          "note": "rejected: lr to=Power shelf, 1 junction but still a 5-cell shared run (warning), 4 bridges, extent 89x24"
+        },
+        {
+          "n": 3,
+          "spec_sha256": "0239c7b29fa04f96bdc0f8b736d6fe18ce54ec39d272d7fad6f93d47b5d8a801",
+          "spec": "attempts/v1/03-spec-lr-trunk-to-bmc_s.json",
+          "check": "attempts/v1/03-check.txt",
+          "note": "kept: lr to=NVSwitch BMC. 0 bridges, 0 ambiguous owners, no warning, extent 74x24 (fits the 77x47 target and the 83x51 capture pane). Remaining defect: the single-split hub fell back, so trunks reports 2 junctions instead of 1. Label shortening (dropping 'x18' from Compute BMC) was needed to fit the target width; the '1 junction' arrangement (trunk to=Compute BMC) was found only in offline dumps after the third checked candidate and was therefore not checked or shipped (budget). Probes: probes/v1-trunk-permutations.txt"
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "attempts": [
+        {
+          "n": 1,
+          "spec_sha256": "5251a5e0999ac9c718a29b8d931537e29e1e451d87f029fe41326cba6a05039d",
+          "spec": "attempts/v2/01-spec-tb-fan3.json",
+          "check": "attempts/v2/01-check.txt",
+          "note": "rejected: tb 3-edge fan, extent exactly 77x16 but 1 ambiguous label owner (warning)"
+        },
+        {
+          "n": 2,
+          "spec_sha256": "50a480429d3c9baaac94754472e36848153b7fb5a00a69ce4670fddfe1a17960",
+          "spec": "attempts/v2/02-spec-lr-fan3.json",
+          "check": "attempts/v2/02-check.txt",
+          "note": "rejected: same fan in lr, still 1 ambiguous label owner (warning), extent 51x39"
+        },
+        {
+          "n": 3,
+          "spec_sha256": "fa5c790f1c76f9a8dd390ce1df7482652c0142f3614cc60285952408cabffc42",
+          "spec": "attempts/v2/03-spec-lr-fan2.json",
+          "check": "attempts/v2/03-check.txt",
+          "note": "kept: 2 labelled Redfish edges only. 0 ambiguous, 0 bridges, no warning, extent 48x19. The contested rms->NVSwitch-BMC edge moved out of the case entirely (see deliberate drops)."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "attempts": [
+        {
+          "n": 1,
+          "spec_sha256": "3425e2863c313eb2dc214f9afa424e10dd61bbd71969150846d01d5dc6d67920",
+          "spec": "attempts/v3/01-spec-tb-nvswitch.json",
+          "check": "attempts/v3/01-check.txt",
+          "note": "kept: tb, 3 nodes / 3 edges. 0 ambiguous, 1 bridge (the gRPC long edge crosses the NVUE REST run), no warning, extent 34x24. lr was dumped as an alternative (probes/v3-lr-dump.txt): also 1 bridge and a more tangled path, so tb stayed."
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "attempts": [
+        {
+          "n": 1,
+          "spec_sha256": "70cafa96988990a96badf8cecef0d01ad30671db40705df15f4d96b2da20973f",
+          "spec": "attempts/v4/01-spec-tb-inband.json",
+          "check": "attempts/v4/01-check.txt",
+          "note": "kept: tb, 6 nodes / 5 edges. 0 bridges, 0 ambiguous, all 5 labels placed, no warning, extent 49x40 (fits 77x47)"
+        }
+      ]
+    }
+  ]
+}

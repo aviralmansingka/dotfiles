@@ -1,0 +1,46 @@
+{
+  "case_id": "pipeline",
+  "round": "08",
+  "mode_family_line": "family: flow-chains | evidence: 6 nodes and 6 relations (E = N, one relation per node), shallow depth, and the source asks for slow sparse motion on the traffic, so one dot per animated hop at the constant default speed.",
+  "budget": {
+    "views": 1,
+    "spec_candidates_per_view_max": 3,
+    "spec_candidates_used": 3,
+    "note": "All three candidates are counted, including the synthetic-geometry engine probe and the lr orientation probe of the case content. Every candidate's raw --check output is preserved next to its spec."
+  },
+  "views": [
+    {
+      "view": "v1",
+      "carries": "whole pipeline: 6 nodes, 6 relations, 4 labels, one dot per hop",
+      "status": "accepted",
+      "attempts": [
+        {
+          "order": 1,
+          "kind": "engine probe (synthetic ids/labels matched to the case's label widths, 3 sibling groups)",
+          "spec": "attempts/01-lr-synthetic-groups/spec.json",
+          "spec_sha256": "92ebc0cca2469cc2281a947ea2a5407e2d5dd502a7561739610a4f5ca7946b55",
+          "raw_check": "attempts/01-lr-synthetic-groups/check.txt",
+          "raw_frames": "attempts/01-lr-synthetic-groups/frames-120x30.txt",
+          "note": "Probed whether declared sibling tier groups render as regions that contain their members in a centred 5-rank chain. They do not: --check reported extent=87x15 with groups tier-one(2) tier-two(3) tier-three(1), and the frames show the band borders landing in blank space away from the member boxes (region 'tier-one' border on rows 21/24 col 22..45 while its members AAA/BBBBBBBBBBB sit on rows 17). Rejected: shipping these boxes would draw false regions. Group declaration therefore dropped from the final spec."
+        },
+        {
+          "order": 2,
+          "kind": "case content, direction tb, full source labels, no groups",
+          "spec": "specs/pipeline-tb.json",
+          "spec_sha256": "e0180ab5749af5739d4a20a25112f39ae7914afcad04b2a85c435d46ab9db10d",
+          "raw_check": "attempts/02-tb-final/check.txt",
+          "note": "Accepted. extent=31x46, crossings 0, labels 4/4 with 0 ambiguous owners, 6 single-dot routes at 0.5c/step, origins 6/6, no warnings. Fits the 77x47 target with no 'graph overflows' badge (evidence/v1/v1-77x47-frames.txt line 2 is the viewport line, no badge anywhere in the dump)."
+        },
+        {
+          "order": 3,
+          "kind": "orientation probe of the same case content, direction lr (the flow-chains recipe's nominal choice for 5+ ranks)",
+          "spec": "attempts/03-lr-case/spec.json",
+          "spec_sha256": "325d647bb4c3ef1d0162701ca9991758e1d8d4a2c088c48eca0aeec1c99726e7",
+          "raw_check": "attempts/03-lr-case/check.txt",
+          "raw_frames": "attempts/03-lr-case/pinned77x47-frames.txt",
+          "note": "Rejected. extent=89x9 cells, i.e. 12 columns past the 77-column pane even before the palette reserve; the pinned 77x47 dump draws 'graph overflows - drag to pan' on line 4. --check also warns that route e0 (cli -> api) and e3 (queue -> worker) have only 2 dot cells, so two hops cannot show motion at all in lr. That is why v1 departs from the recipe's lr preference for five or more stages: at this viewport lr loses two animated hops and the fit."
+        }
+      ]
+    }
+  ]
+}

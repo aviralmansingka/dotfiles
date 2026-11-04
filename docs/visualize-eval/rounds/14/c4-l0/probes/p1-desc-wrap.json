@@ -1,0 +1,98 @@
+{
+ "direction": "lr",
+ "theme": "gruvbox",
+ "diagrams": [
+  {
+   "id": "probe-l0",
+   "title": "Probe L0",
+   "description": "System context: the machine manager is one box. The control plane and humans + mmctl call it; it drives the bare-metal providers, boots and audits the machines, keeps images and diagnostics in S3, and alerts in Slack. Nothing inside is shown yet, so L1 opens it.",
+   "nodes": [
+    {
+     "id": "al0",
+     "label": "alpha"
+    },
+    {
+     "id": "bl0",
+     "label": "beta"
+    }
+   ],
+   "edges": [
+    {
+     "from": "al0",
+     "to": "bl0",
+     "label": "one",
+     "dots": 0
+    }
+   ]
+  },
+  {
+   "id": "probe-l1",
+   "title": "Probe L1",
+   "description": "L0's box opened one level: its boundary services \u2014 private gRPC, webapi, provider registry, cluster reconcile, SSH + BMC ops and the boot server \u2014 sit in the Machine manager box, while the control plane, humans, providers, machines and S3 stay outside it.",
+   "nodes": [
+    {
+     "id": "al1",
+     "label": "alpha"
+    },
+    {
+     "id": "bl1",
+     "label": "beta"
+    }
+   ],
+   "edges": [
+    {
+     "from": "al1",
+     "to": "bl1",
+     "label": "one",
+     "dots": 0
+    }
+   ]
+  },
+  {
+   "id": "probe-l1b",
+   "title": "Probe L1B",
+   "description": "The fleet end of the same system. Bare-metal machines run the machine-agent, which registers and heartbeats into public gRPC inside the manager's box; the River queue uploads diagnostics to S3 and webapi confirms actions in Slack, both outside. The fleet drives these outward relations.",
+   "nodes": [
+    {
+     "id": "al1b",
+     "label": "alpha"
+    },
+    {
+     "id": "bl1b",
+     "label": "beta"
+    }
+   ],
+   "edges": [
+    {
+     "from": "al1b",
+     "to": "bl1b",
+     "label": "one",
+     "dots": 0
+    }
+   ]
+  },
+  {
+   "id": "probe-l2",
+   "title": "Probe L2",
+   "description": "The manager's inside: requests land on the River queue, which dispatches provision jobs, audits and diagnostic events; the janitor proposes actions back to webapi, and the queue, private gRPC, public gRPC and reconcile write into Postgres. Every node here is inside the box.",
+   "nodes": [
+    {
+     "id": "al2",
+     "label": "alpha"
+    },
+    {
+     "id": "bl2",
+     "label": "beta"
+    }
+   ],
+   "edges": [
+    {
+     "from": "al2",
+     "to": "bl2",
+     "label": "one",
+     "dots": 0
+    }
+   ]
+  }
+ ]
+}

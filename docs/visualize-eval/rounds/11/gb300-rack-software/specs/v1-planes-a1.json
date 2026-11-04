@@ -1,0 +1,32 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "rms",   "label": "nv-rms",          "group": "mgmt" },
+    { "id": "oob",   "label": "OOB LAN",         "group": "oob" },
+    { "id": "bmc_c", "label": "Compute BMC x18", "group": "bmc" },
+    { "id": "bmc_s", "label": "NVSwitch BMC",    "group": "bmc" },
+    { "id": "pwr",   "label": "Power shelf",     "group": "bmc" },
+    { "id": "nvos",  "label": "NVOS",            "group": "nvsw" },
+    { "id": "nmxc",  "label": "NMX-C/T",         "group": "nvsw" },
+    { "id": "k8s",   "label": "Kubernetes",      "group": "k8s" },
+    { "id": "gpuop", "label": "GPU Operator",    "group": "k8s" },
+    { "id": "dcgm",  "label": "DCGM",            "group": "host" },
+    { "id": "dcgmx", "label": "dcgm-exporter",   "group": "host" },
+    { "id": "drvk",  "label": "Driver+CUDA",     "group": "host" },
+    { "id": "fm",    "label": "Fabric Mgr",      "group": "host" }
+  ],
+  "trunks": [
+    { "id": "oob-bus", "from": "oob", "to": "nvos",
+      "branches": ["bmc_c", "bmc_s", "pwr"] }
+  ],
+  "edges": [
+    { "from": "rms",   "to": "oob",   "label": "client",       "label_slot": true },
+    { "from": "k8s",   "to": "gpuop", "label": "in-band",      "label_slot": true },
+    { "from": "gpuop", "to": "dcgm",  "label": "DaemonSet",    "label_slot": true },
+    { "from": "nvos",  "to": "nmxc",  "label": "hosts",        "label_slot": true },
+    { "from": "dcgm",  "to": "dcgmx", "label": "serves :9400", "label_slot": true },
+    { "from": "dcgm",  "to": "drvk",  "label": "reads NVML",   "label_slot": true },
+    { "from": "drvk",  "to": "fm",    "label": "same host",    "label_slot": true }
+  ]
+}

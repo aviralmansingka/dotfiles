@@ -1,0 +1,34 @@
+{
+  "spec_path": "/tmp/e11/v2.json",
+  "spec_sha256": "f9a161e554c6c7f9707661d99b3d30da2a4bd16db4a46a95094ac01cd55daf97",
+  "binary_path": "/tmp/e11/rv",
+  "binary_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+  "pane_id": "w7E:pTX",
+  "pane_rect": null,
+  "pane_cols": null,
+  "pane_rows": 51,
+  "viewport_line": null,
+  "viewport_token": "82x51 @100%",
+  "check_exit": 0,
+  "check_window": [
+    "2026-11-03T00:26:06Z",
+    "2026-11-03T00:26:06Z"
+  ],
+  "capture_window": [
+    "2026-11-03T00:26:08Z",
+    "2026-11-03T00:26:17Z"
+  ],
+  "cleanup": "confirmed_closed",
+  "select_all_frame": true,
+  "frames": 3,
+  "frame_step_ms": 100,
+  "artifacts": {
+    "bin.sha256": "df815873c91eeb5bd9794f19233a47a70bcb2e3cd424d158368ab3ae7375698d",
+    "check.txt": "d945b297146a895983166196b6afc20ffa0ce9fa284e2511901bd4a0429a644e",
+    "v2-ansi.ansi": "14456e601ff5c72a875571715362526aeac6667ad2309ccb6cc6d31260dfffe0",
+    "v2-frames.ansi": "8362682e94efdf7be6a88eaa5fbca7a82e318be4a961bd5a128f3aae40e3c3a9",
+    "v2-frames.txt": "ac81dfcf05d99929f233aed685366211cb3024700e8501c7efe3205138c10b43",
+    "v2-selected.ansi": "08ec3f5490771fec1b3753bfdf4da2ede69c760a0b16a1aa1b4bdb0848cb16e2",
+    "v2-text.txt": "7dacd99de8e6425bfd4ea27f4764018a32a2aadb6f2f18db6b364c8bd8527b27"
+  }
+}

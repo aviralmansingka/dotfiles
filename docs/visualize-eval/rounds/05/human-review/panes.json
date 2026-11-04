@@ -1,0 +1,189 @@
+{
+  "round": "05",
+  "baseline": "03",
+  "binary": "/tmp/visualize-eval/round-05/bin/rataflow-view",
+  "opened_at": "2026-11-02T16:39:09Z",
+  "note": "Panes stay open for human review. Left pane is the baseline round, right pane is the evaluated round.",
+  "cases": [
+    {
+      "case": "pipeline",
+      "tab_id": "w7E:t6V",
+      "view": 1,
+      "before_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/pipeline/spec-v1.json",
+      "after_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/pipeline/spec-v1.json",
+      "before_view_count": 1,
+      "after_view_count": 1,
+      "before_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/pipeline/spec-v1.json"
+      ],
+      "after_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/pipeline/spec-v1.json"
+      ],
+      "pane_ids": {
+        "before": "w7E:pJ2",
+        "after": "w7E:pJ3"
+      }
+    },
+    {
+      "case": "network",
+      "tab_id": "w7E:t6W",
+      "view": 1,
+      "before_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/network/specs/v1.json",
+      "after_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/network/specs/v1.json",
+      "before_view_count": 2,
+      "after_view_count": 2,
+      "before_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/network/specs/v1.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/network/specs/v2.json"
+      ],
+      "after_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/network/specs/v1.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/network/specs/v2.json"
+      ],
+      "pane_ids": {
+        "before": "w7E:pJ4",
+        "after": "w7E:pJ5"
+      }
+    },
+    {
+      "case": "homelab-nic-trace",
+      "tab_id": "w7E:t6X",
+      "view": 1,
+      "before_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v1-virtual-nets.json",
+      "after_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/homelab-nic-trace/specs/v1.json",
+      "before_view_count": 3,
+      "after_view_count": 4,
+      "before_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v1-virtual-nets.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v2-overlay-uplinks.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/homelab-nic-trace/specs/v3-wan-egress.json"
+      ],
+      "after_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/homelab-nic-trace/specs/v1.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/homelab-nic-trace/specs/v2.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/homelab-nic-trace/specs/v3.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/homelab-nic-trace/specs/v4.json"
+      ],
+      "pane_ids": {
+        "before": "w7E:pJ6",
+        "after": "w7E:pJ7"
+      }
+    },
+    {
+      "case": "server-nic-layout",
+      "tab_id": "w7E:t6Y",
+      "view": 1,
+      "before_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/server-nic-layout/specs/v1-attempt3.json",
+      "after_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/server-nic-layout/specs/v1-a3.json",
+      "before_view_count": 3,
+      "after_view_count": 3,
+      "before_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/server-nic-layout/specs/v1-attempt3.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/server-nic-layout/specs/v2-attempt2.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/server-nic-layout/specs/v3-attempt1.json"
+      ],
+      "after_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/server-nic-layout/specs/v1-a3.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/server-nic-layout/specs/v2-a2.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/server-nic-layout/specs/v3-a3.json"
+      ],
+      "pane_ids": {
+        "before": "w7E:pJ8",
+        "after": "w7E:pJ9"
+      }
+    },
+    {
+      "case": "datacenter-redundancy",
+      "tab_id": "w7E:t6Z",
+      "view": 1,
+      "before_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/datacenter-redundancy/specs/v1.json",
+      "after_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/datacenter-redundancy/specs/v1-wan-mux-core.json",
+      "before_view_count": 4,
+      "after_view_count": 3,
+      "before_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/datacenter-redundancy/specs/v1.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/datacenter-redundancy/specs/v2.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/datacenter-redundancy/specs/v3.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/datacenter-redundancy/specs/v4.json"
+      ],
+      "after_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/datacenter-redundancy/specs/v1-wan-mux-core.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/datacenter-redundancy/specs/v2-fw-border-spine.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/datacenter-redundancy/specs/v3-fabric-leaves-racks.json"
+      ],
+      "pane_ids": {
+        "before": "w7E:pJA",
+        "after": "w7E:pJB"
+      }
+    },
+    {
+      "case": "modal-machine-manager",
+      "tab_id": "w7E:t60",
+      "view": 1,
+      "before_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/modal-machine-manager/specs/v1-attempt2.json",
+      "after_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/modal-machine-manager/specs/v1.json",
+      "before_view_count": 4,
+      "after_view_count": 4,
+      "before_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/modal-machine-manager/specs/v1-attempt2.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/modal-machine-manager/specs/v2-attempt3.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/modal-machine-manager/specs/v3-attempt3.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/modal-machine-manager/specs/v4-attempt2.json"
+      ],
+      "after_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/modal-machine-manager/specs/v1.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/modal-machine-manager/specs/v2.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/modal-machine-manager/specs/v3.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/modal-machine-manager/specs/v4.json"
+      ],
+      "pane_ids": {
+        "before": "w7E:pJC",
+        "after": "w7E:pJD"
+      }
+    },
+    {
+      "case": "modal-runtime",
+      "tab_id": "w7E:t71",
+      "view": 1,
+      "before_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/modal-runtime/specs/v1.json",
+      "after_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/modal-runtime/specs/v1-a5.json",
+      "before_view_count": 1,
+      "after_view_count": 3,
+      "before_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/modal-runtime/specs/v1.json"
+      ],
+      "after_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/modal-runtime/specs/v1-a5.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/modal-runtime/specs/v2-a4.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/modal-runtime/specs/v3-a1.json"
+      ],
+      "pane_ids": {
+        "before": "w7E:pJE",
+        "after": "w7E:pJF"
+      }
+    },
+    {
+      "case": "gb300-rack-software",
+      "tab_id": "w7E:t72",
+      "view": 1,
+      "before_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/gb300-rack-software/specs/v1.json",
+      "after_spec": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/gb300-rack-software/specs/v1-oob-rail.json",
+      "before_view_count": 2,
+      "after_view_count": 4,
+      "before_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/gb300-rack-software/specs/v1.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/03/gb300-rack-software/specs/v2.json"
+      ],
+      "after_specs": [
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/gb300-rack-software/specs/v1-oob-rail.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/gb300-rack-software/specs/v2-rms-apis.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/gb300-rack-software/specs/v3-nvswitch-sw.json",
+        "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/05/gb300-rack-software/specs/v4-inband-compute.json"
+      ],
+      "pane_ids": {
+        "before": "w7E:pJG",
+        "after": "w7E:pJH"
+      }
+    }
+  ]
+}

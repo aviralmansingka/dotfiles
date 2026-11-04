@@ -1,0 +1,32 @@
+viewport: 100x30 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 100x30 @100% · q4fan.json · 5 nodes · 4 edges · q quit
+
+
+
+
+                                 ╭─────────────╮   ╭──────────────╮
+                                 │control plane│   │humans + mmctl│
+                                 │             │   │              │
+                                 ╰─────────────╯   ╰──────────────╯
+                                        │                 │
+                                        │                 │  http
+                                        │                 │
+                                        ▼                 ▼
+                                  ╭────────────╮   ╭─────────────╮
+                                  │private gRPC│   │webapi server│
+                                  │            │   │             │
+                                  ╰────────────╯   ╰─────────────╯
+                                        │                 │
+                                        │                 │ reinstall+reprov
+                                        ╰────────╮ ╭──────╯
+                                      enqueue job▼ ▼
+                                            ╭───────────╮
+                                            │River queue│
+ ┌───────┐                                  │           │
+ │ + [+] │                                  ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+

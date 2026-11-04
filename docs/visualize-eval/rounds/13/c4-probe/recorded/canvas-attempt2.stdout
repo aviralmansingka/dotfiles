@@ -1,0 +1,32 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=28 edges=34 flows=13 direction=mixed theme=gruvbox
+canvas: 3 diagrams on one canvas, drawn whole at 100%
+diagram l1 "L1 · System context — the machine manager" at 0,3: extent=76x48 nodes=6 edges=11 routes=11
+  description: One system box: humans and mmctl call it, providers allocate machines, S3 and Slack serve it.
+diagram l2a "L2 · Containers — request, provisioning and boot" at 0,56: extent=231x16 nodes=12 edges=14 routes=14
+  description: API actions (create/term/repair, reinstall/reprov) become a River job, a provider allocation, then a boot.
+diagram l2b "L2 · Containers — heartbeat, audits and diagnostics" at 0,77: extent=175x15 nodes=10 edges=9 routes=9
+  description: Agent heartbeat, slow audit and diagnose jobs, janitor proposals and the Slack alerts they raise.
+pins: 28 pinned, 0 conflict(s)
+extent=231x92 cells (whole canvas)
+crossings: 1 bridges, 1 touching bends
+near-misses: 19 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)
+passes-near-unrelated-node: 19
+near-miss: route l1:e3 passes 12 cell(s) at ring 2 of node 'slack' (nearest cell 28,41)
+near-miss: route l2a:e8 passes 7 cell(s) at ring 2 of node 's3' (nearest cell 213,6)
+warning: 19 route cell(s) hug a node their relation does not serve; move the affected relations or let them route around
+labels: 34/34 placed, 1 leader-ticked, 0 on route, 0 skipped, 6 ambiguous owners
+unowned label: l1:e2 "gcore sync 1m"
+unowned label: l1:e4 "boot.ipxe + S3"
+unowned label: l1:e5 "iPXE request"
+unowned label: l1:e6 "machine-audit"
+unowned label: l1:e10 "confirm+alerts"
+unowned label: l2b:e8 "diag uploads"
+warning: 6 label(s) have an ambiguous owner: another route is as close to the text as its own edge
+warning: 1 label(s) needed a leader tick: no cell beside the run held the text unambiguously
+groups: humans(2) external(10) control(5) async(4) hostops(3) state(2) ops(1)
+trunks:
+dots: 13 single-dot routes, 0 periodic routes, 0 violations, 13 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 12 by source, 1 by destination, 1 shared-hue pair(s) (source-only 2, destination-only 4)
+origins: 13/13 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

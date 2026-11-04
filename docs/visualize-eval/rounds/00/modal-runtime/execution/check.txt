@@ -1,0 +1,6 @@
+stdout:
+ok: nodes=4 edges=3 flows=0 direction=tb theme=gruvbox
+layers=4 (explicit placement, sugiyama skipped)
+extent=40x26 cells
+stderr:
+exit_code=0

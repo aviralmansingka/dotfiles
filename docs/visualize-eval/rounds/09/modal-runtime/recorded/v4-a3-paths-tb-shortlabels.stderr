@@ -1,0 +1,1 @@
+rataflow-view: no obstacle-safe route for runtime -> daemon, runtime -> engine, engine -> backend, engine -> filesystem, filesystem -> blobnet; increase node/layer spacing

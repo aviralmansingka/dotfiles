@@ -1,0 +1,64 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "sp1",
+      "label": "Spine 1",
+      "group": "spine"
+    },
+    {
+      "id": "sp2",
+      "label": "Spine 2",
+      "group": "spine"
+    },
+    {
+      "id": "leaf1",
+      "label": "Leaf 1",
+      "group": "leaf"
+    },
+    {
+      "id": "leaf2",
+      "label": "Leaf 2",
+      "group": "leaf"
+    }
+  ],
+  "layers": [
+    [
+      "sp1",
+      "",
+      "sp2"
+    ],
+    [
+      "leaf1",
+      "",
+      "leaf2"
+    ]
+  ],
+  "edges": [
+    {
+      "from": "sp1",
+      "to": "leaf1",
+      "label": "ECMP",
+      "dots": 0
+    },
+    {
+      "from": "sp1",
+      "to": "leaf2",
+      "label": "ECMP",
+      "dots": 0
+    },
+    {
+      "from": "sp2",
+      "to": "leaf1",
+      "label": "ECMP",
+      "dots": 0
+    },
+    {
+      "from": "sp2",
+      "to": "leaf2",
+      "label": "ECMP",
+      "dots": 0
+    }
+  ]
+}

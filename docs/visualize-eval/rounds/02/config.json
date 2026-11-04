@@ -1,0 +1,39 @@
+{
+ "round": 2,
+ "status": "frozen",
+ "skill_sha256": "7d1ff098d3ff460046e794c29925482ffd0ccb8c6fa493bc390758d976b75d70",
+ "binary_sha256": "ee085c0f3a82e9b7d516cde7532f394864b3490c99691cd7ac5b2d36d640e8ea",
+ "binary_path": "/tmp/visualize-eval/round-02/bin/rataflow-view",
+ "rubric_sha256": "555e3b1d5881449b79eb1dc1d9538df2c4fe0880aa850becbf9060c1bf42f86f",
+ "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+ "renderer_source_sha256": "f01fdc7dc41eb26e56068353e0ef87a587f8813127f79c4af02bbb32cca65c26",
+ "generator_model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+ "reviewer_model": "openai/gpt-6.1-sol",
+ "target": {
+  "columns": 77,
+  "rows": 47,
+  "zoom_percent": 100
+ },
+ "cases": [
+  "pipeline",
+  "network",
+  "homelab-nic-trace",
+  "server-nic-layout",
+  "datacenter-redundancy",
+  "modal-machine-manager",
+  "modal-runtime",
+  "gb300-rack-software"
+ ],
+ "baseline_note": "New renderer baseline: group colors, trunks, single-dot motion, dashed uncertainty, label reservation, select-all/frames/viewport evidence.",
+ "worker_labels": {
+  "pipeline": "viz-ds02-undefined",
+  "network": "viz-ds02-undefined-2",
+  "homelab-nic-trace": "viz-ds02-undefined-3",
+  "server-nic-layout": "viz-ds02-undefined-4",
+  "datacenter-redundancy": "viz-ds02-undefined-5",
+  "modal-machine-manager": "viz-ds02-undefined-6",
+  "modal-runtime": "viz-ds02-undefined-7",
+  "gb300-rack-software": "viz-ds02-undefined-8"
+ },
+ "worker_label_note": "Spawn bug: the first dispatch interpolated the case id as 'undefined', so every generator tab carried the label viz-ds02-undefined. Each was reassigned a distinct case before any spec was written; no case was generated twice and no case read another's source. generation.json records worker_id viz-ds02-<case>; this table records the actual tab name."
+}

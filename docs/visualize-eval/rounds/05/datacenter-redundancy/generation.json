@@ -1,0 +1,337 @@
+{
+  "case_id": "datacenter-redundancy",
+  "round": "05",
+  "round_field_note": "The generator-task template asks for round \"03\"; the actual evaluation round for this sample is 05, which is what is recorded here. The template string was not applied literally.",
+  "generator": {
+    "identity": "fresh DeepSeek diagram generator (round 05, case datacenter-redundancy)",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "session_kind": "isolated worker session in the non-main worktree"
+  },
+  "candidate_skill": {
+    "path": "docs/visualize-eval/rounds/05/SKILL.md",
+    "sha256": "ff4a9d3f32ba0bf86e54ee6bfbac02fdea3fac3b95b82a958b3411accef0a949"
+  },
+  "renderer": {
+    "binary": "/tmp/visualize-eval/round-05/bin/rataflow-view",
+    "sha256": "b1ab9f2e78af11c2f2b005eea083a999079d184bf550e8d0b6d9c51867f22404",
+    "hash_verified_by": "shasum -a 256 on the frozen path before every capture; evidence/<view>/bin.sha256 repeats it"
+  },
+  "direction_convention": {
+    "declared": "lr for all three views",
+    "why": "The audited endpoint direction of every cross-connect tier is a 2-source/2-target braid. In tb the frozen router refuses that braid in every view (raw refusals in checks/*-a1-tb-check.txt) because a tb rank gap leaves three routing lanes for four independently-routed links. lr gives the gap a label-sized channel (lib gap rule: channel = max(3 + ceil(crossings/2), longest_label + 4)), which routes the braid with one bridge per tier, the structural minimum. Nothing else changed between attempt 1 and attempt 2 in any view.",
+    "cost": "lr cannot express vertical elevation, so the source's 'spine above leaf' correction is not shown (defect D1)."
+  },
+  "arrow_convention": "Every arrow is a physical link trace drawn from the relationship's first-listed endpoint to its second-listed endpoint exactly as the case audit states it (ispA -> mux1 ... leaf2 -> rack2). No arrow implies one-way traffic, and no endpoint was reversed to force a layout.",
+  "motion": {
+    "source_statement": "line 134: 'remove the dots flowing for now' - the source explicitly forbids flowing dots",
+    "applied": "every edge carries dots: 0 and no flow/timing field; the check line reads 0 single-dot routes, 0 periodic routes, 0 violations for all three views",
+    "frames": "5 timestamped frames per view, all five frame bodies byte-identical (nothing moves)"
+  },
+  "views": [
+    {
+      "view": "v1",
+      "title": "ISP tier -> MUX tier -> core tier",
+      "carries": "e1-e8",
+      "spec": "specs/v1-wan-mux-core.json",
+      "spec_sha256": "3adbbf099facfc60bc6ed88c5def5acef81c71d3cb589e476ddbf053ee341a58",
+      "artifacts": {
+        "text": "evidence/v1/v1-text.txt",
+        "ansi": "evidence/v1/v1-ansi.ansi",
+        "selected_ansi": "evidence/v1/v1-selected.ansi",
+        "check": "evidence/v1/check.txt",
+        "frames": "evidence/v1/v1-frames.txt",
+        "frames_ansi": "evidence/v1/v1-frames.ansi",
+        "frames_pinned_target": "evidence/v1/v1-frames-77x47.txt",
+        "manifest": "evidence/v1/manifest.json",
+        "validator": "evidence/v1/validate.txt"
+      },
+      "measured": {
+        "pane_viewport_token": "83x51 @100%",
+        "pane_measure_source": "the app's own header token in evidence/v1/v1-text.txt",
+        "pinned_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "check_extent_cells": "45x39",
+        "fit_at_target": "extent 45x39 fits the 77x47 canvas; the pinned dump draws every node with no 'overflows' badge",
+        "frame_count": 5,
+        "frames_identical": true
+      },
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=8 edges=8 flows=0 direction=lr theme=gruvbox",
+        "extent=45x39 cells",
+        "crossings: 1 bridges, 1 touching bends",
+        "labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: wan(4) mux(2) core(2)",
+        "trunks:",
+        "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 0/0 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "check_exit": 0,
+      "warnings": "none",
+      "validator_summary": "all checks except viewport_matches_target pass; that check is satisfied through the pinned 77x47 dump (see evidence/v1/validate.txt final run)"
+    },
+    {
+      "view": "v2",
+      "title": "core tier -> active/passive firewall pair -> border leaves -> spines",
+      "carries": "e9-e20",
+      "spec": "specs/v2-fw-border-spine.json",
+      "spec_sha256": "89e36227a0ac6e618fc1ca99bac7883df1972f299ffa80cfbf158c81918c7970",
+      "artifacts": {
+        "text": "evidence/v2/v2-text.txt",
+        "ansi": "evidence/v2/v2-ansi.ansi",
+        "selected_ansi": "evidence/v2/v2-selected.ansi",
+        "check": "evidence/v2/check.txt",
+        "frames": "evidence/v2/v2-frames.txt",
+        "frames_ansi": "evidence/v2/v2-frames.ansi",
+        "frames_pinned_target": "evidence/v2/v2-frames-77x47.txt",
+        "manifest": "evidence/v2/manifest.json",
+        "validator": "evidence/v2/validate.txt"
+      },
+      "measured": {
+        "pane_viewport_token": "83x51 @100%",
+        "pane_measure_source": "the app's own header token in evidence/v2/v2-text.txt",
+        "pinned_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "check_extent_cells": "68x20",
+        "fit_at_target": "extent 68x20 fits the 77x47 canvas; the pinned dump draws all 8 boxes (rightmost border column 69) with no 'overflows' badge",
+        "frame_count": 5,
+        "frames_identical": true
+      },
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=8 edges=12 flows=0 direction=lr theme=gruvbox",
+        "extent=68x20 cells",
+        "crossings: 3 bridges, 3 touching bends",
+        "labels: 12/12 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: core(2) firewall(2) border-leaf(2) spine(2)",
+        "trunks:",
+        "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 0/0 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "check_exit": 0,
+      "warnings": "none",
+      "validator_summary": "all checks except viewport_matches_target pass; that check is satisfied through the pinned 77x47 dump"
+    },
+    {
+      "view": "v3",
+      "title": "spines -> rack leaves -> racks",
+      "carries": "e21-e28",
+      "spec": "specs/v3-fabric-leaves-racks.json",
+      "spec_sha256": "fcc12c64f14b41645f5fba4fbe960cb0693c8e756441d9bfd70de63172ffde2b",
+      "artifacts": {
+        "text": "evidence/v3/v3-text.txt",
+        "ansi": "evidence/v3/v3-ansi.ansi",
+        "selected_ansi": "evidence/v3/v3-selected.ansi",
+        "check": "evidence/v3/check.txt",
+        "frames": "evidence/v3/v3-frames.txt",
+        "frames_ansi": "evidence/v3/v3-frames.ansi",
+        "frames_pinned_target": "evidence/v3/v3-frames-77x47.txt",
+        "manifest": "evidence/v3/manifest.json",
+        "validator": "evidence/v3/validate.txt"
+      },
+      "measured": {
+        "pane_viewport_token": "83x51 @100%",
+        "pane_measure_source": "the app's own header token in evidence/v3/v3-text.txt",
+        "pinned_viewport_line": "viewport: 77x47 zoom: 1.00 natural",
+        "check_extent_cells": "49x20",
+        "fit_at_target": "extent 49x20 fits the 77x47 canvas; the pinned dump draws all 6 boxes with no 'overflows' badge",
+        "frame_count": 5,
+        "frames_identical": true
+      },
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=6 edges=8 flows=0 direction=lr theme=gruvbox",
+        "extent=49x20 cells",
+        "crossings: 2 bridges, 2 touching bends",
+        "labels: 8/8 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: spine(2) rack-leaf(2) rack(2)",
+        "trunks:",
+        "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 0/0 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "check_exit": 0,
+      "warnings": "none",
+      "validator_summary": "all checks except viewport_matches_target pass; that check is satisfied through the pinned 77x47 dump"
+    }
+  ],
+  "split_coverage_map": {
+    "v1": "ispA/ispB/ispC/ispD, mux1, mux2, core1, core2 - e1-e8 with the four x-connect labels",
+    "v2": "core1, core2, fw1, fw2, bl1, bl2, sp1, sp2 - e9-e20 with active / standby? / ECMP labels",
+    "v3": "sp1, sp2, leaf1, leaf2, rack1, rack2 - e21-e28 with ECMP / dual labels",
+    "coverage_proof": "28 of 28 audited links appear exactly once as a primary edge; node overlap between views is deliberate (core1/core2 in v1+v2, sp1/sp2 and bl in v2, sp in v3) and group hues stay stable because the hue derives from the group name"
+  },
+  "meaning_ledger": [
+    { "fact": "ispA ISP A", "kind": "identifier", "fate": "drawn", "where": "v1 label ISP A" },
+    { "fact": "ispB ISP B", "kind": "identifier", "fate": "drawn", "where": "v1 label ISP B" },
+    { "fact": "ispC ISP C", "kind": "identifier", "fate": "drawn", "where": "v1 label ISP C" },
+    { "fact": "ispD ISP D", "kind": "identifier", "fate": "drawn", "where": "v1 label ISP D" },
+    { "fact": "four separate ISP identities", "kind": "identifier set", "fate": "drawn", "where": "four distinct nodes in v1, so the 'MUX label only' compression was not needed" },
+    { "fact": "mux1 MUX 1 / mux2 MUX 2", "kind": "identifier", "fate": "drawn", "where": "v1 labels MUX 1, MUX 2" },
+    { "fact": "core1 Core 1 / core2 Core 2", "kind": "identifier", "fate": "drawn", "where": "v1 and v2 labels Core 1, Core 2" },
+    { "fact": "fw1 = FW1 active, fw2 = FW2 standby", "kind": "role/residency", "fate": "abbreviated", "where": "node labels FW1/FW2 plus the per-link active / standby? labels on e9-e16; the role is carried by the links, not repeated inside the node box" },
+    { "fact": "active-passive firewall pair (only one forwards)", "kind": "qualifier", "fate": "drawn", "where": "four e13-e16 links are dashed and labelled standby? in v2" },
+    { "fact": "bl1 BL 1 / bl2 BL 2 (border leaves)", "kind": "identifier", "fate": "drawn", "where": "v2 labels BL 1, BL 2" },
+    { "fact": "sp1 Spine 1 / sp2 Spine 2", "kind": "identifier", "fate": "drawn", "where": "v2 and v3 labels Spine 1, Spine 2" },
+    { "fact": "leaf1 Leaf 1 / leaf2 Leaf 2 (rack leaves)", "kind": "identifier", "fate": "drawn", "where": "v3 labels Leaf 1, Leaf 2" },
+    { "fact": "rack1 Rack 1 / rack2 Rack 2", "kind": "identifier", "fate": "drawn", "where": "v3 labels Rack 1, Rack 2" },
+    { "fact": "ispA->mux1, ispB->mux1, ispC->mux2, ispD->mux2 are unlabeled historical relations", "kind": "unlabeled link", "fate": "drawn", "where": "e1-e4 drawn with no label because the source states no protocol" },
+    { "fact": "mux<->core cross-connect (all four pairs)", "kind": "link + qualifier", "fate": "drawn", "where": "e5-e8 labelled x-connect in v1" },
+    { "fact": "core->fw active links and standby links", "kind": "link + qualifier", "fate": "drawn", "where": "e9-e12 solid and labelled active; e13-e16 dashed and labelled standby?" },
+    { "fact": "fw->border-leaf active / standby links", "kind": "link + qualifier", "fate": "drawn", "where": "e17-e20 in v2" },
+    { "fact": "border-leaf<->spine ECMP links", "kind": "protocol/path", "fate": "drawn", "where": "e21-e24 labelled ECMP in v2" },
+    { "fact": "spine<->rack-leaf ECMP links", "kind": "protocol/path", "fate": "drawn", "where": "e25-e28 labelled ECMP in v3" },
+    { "fact": "leaf<->rack dual links", "kind": "link + qualifier", "fate": "drawn", "where": "e25-e28 labelled dual in v3" },
+    { "fact": "cross-connect at each layer to demonstrate redundancy (line 142)", "kind": "intent", "fate": "drawn", "where": "every tier shows all four pairwise links; no tier is drawn as a bus" },
+    { "fact": "do not merge core1/core2 or mux1/mux2 arrows (line 270)", "kind": "constraint", "fate": "drawn", "where": "one edge per link, no trunks field in any spec (check line 'trunks:' empty), and two separate arrowheads per receiving box in every capture" },
+    { "fact": "remove flowing dots (line 134)", "kind": "constraint", "fate": "drawn", "where": "dots: 0 on all 28 edges; check lines report 0 dot routes and 0 violations" },
+    { "fact": "make the diagram more compact (lines 150, 158, 166)", "kind": "constraint", "fate": "partially drawn", "where": "extents are 45x39, 68x20, 49x20 at the 77x47 target; the requested smaller box height has no spec field (capability gap, see blockers)" },
+    { "fact": "border leaf and leaf at the same height; spine above the leaf (line 248)", "kind": "correction", "fate": "dropped with reason", "reason": "not expressible without reversing audited endpoint direction or using explicit placement, both excluded (defect D1, blocker B1)" },
+    { "fact": "neater firewall -> border-leaf arrows (line 270)", "kind": "aesthetic request", "fate": "drawn as conventionally routed", "where": "e17-e20 are the shortest obstacle-safe routes; the router owns the path shape, so 'neater' could not be tuned by hand" }
+  ],
+  "relationship_audit": [
+    { "id": "e1", "from_to": "ispA -> mux1", "verb_tech": "unlabeled physical link (source states no protocol)", "label_owner": "none (no label)", "view": "v1" },
+    { "id": "e2", "from_to": "ispB -> mux1", "verb_tech": "unlabeled physical link", "label_owner": "none", "view": "v1" },
+    { "id": "e3", "from_to": "ispC -> mux2", "verb_tech": "unlabeled physical link", "label_owner": "none", "view": "v1" },
+    { "id": "e4", "from_to": "ispD -> mux2", "verb_tech": "unlabeled physical link", "label_owner": "none", "view": "v1" },
+    { "id": "e5", "from_to": "mux1 -> core1", "verb_tech": "x-connect", "label_owner": "e5", "view": "v1" },
+    { "id": "e6", "from_to": "mux1 -> core2", "verb_tech": "x-connect", "label_owner": "e6", "view": "v1" },
+    { "id": "e7", "from_to": "mux2 -> core1", "verb_tech": "x-connect", "label_owner": "e7", "view": "v1" },
+    { "id": "e8", "from_to": "mux2 -> core2", "verb_tech": "x-connect", "label_owner": "e8", "view": "v1" },
+    { "id": "e9", "from_to": "core1 -> fw1", "verb_tech": "active forwarding path", "label_owner": "e9", "view": "v2" },
+    { "id": "e10", "from_to": "core2 -> fw1", "verb_tech": "active forwarding path", "label_owner": "e10", "view": "v2" },
+    { "id": "e11", "from_to": "core1 -> fw2", "verb_tech": "standby (active-passive), dashed", "label_owner": "e11", "view": "v2" },
+    { "id": "e12", "from_to": "core2 -> fw2", "verb_tech": "standby (active-passive), dashed", "label_owner": "e12", "view": "v2" },
+    { "id": "e13", "from_to": "fw1 -> bl1", "verb_tech": "active forwarding path", "label_owner": "e13", "view": "v2" },
+    { "id": "e14", "from_to": "fw1 -> bl2", "verb_tech": "active forwarding path", "label_owner": "e14", "view": "v2" },
+    { "id": "e15", "from_to": "fw2 -> bl1", "verb_tech": "standby (active-passive), dashed", "label_owner": "e15", "view": "v2" },
+    { "id": "e16", "from_to": "fw2 -> bl2", "verb_tech": "standby (active-passive), dashed", "label_owner": "e16", "view": "v2" },
+    { "id": "e17", "from_to": "bl1 -> sp1", "verb_tech": "ECMP", "label_owner": "e17", "view": "v2" },
+    { "id": "e18", "from_to": "bl1 -> sp2", "verb_tech": "ECMP", "label_owner": "e18", "view": "v2" },
+    { "id": "e19", "from_to": "bl2 -> sp1", "verb_tech": "ECMP", "label_owner": "e19", "view": "v2" },
+    { "id": "e20", "from_to": "bl2 -> sp2", "verb_tech": "ECMP", "label_owner": "e20", "view": "v2" },
+    { "id": "e21", "from_to": "sp1 -> leaf1", "verb_tech": "ECMP", "label_owner": "e21", "view": "v3" },
+    { "id": "e22", "from_to": "sp1 -> leaf2", "verb_tech": "ECMP", "label_owner": "e22", "view": "v3" },
+    { "id": "e23", "from_to": "sp2 -> leaf1", "verb_tech": "ECMP", "label_owner": "e23", "view": "v3" },
+    { "id": "e24", "from_to": "sp2 -> leaf2", "verb_tech": "ECMP", "label_owner": "e24", "view": "v3" },
+    { "id": "e25", "from_to": "leaf1 -> rack1", "verb_tech": "dual", "label_owner": "e25", "view": "v3" },
+    { "id": "e26", "from_to": "leaf2 -> rack1", "verb_tech": "dual", "label_owner": "e26", "view": "v3" },
+    { "id": "e27", "from_to": "leaf1 -> rack2", "verb_tech": "dual", "label_owner": "e27", "view": "v3" },
+    { "id": "e28", "from_to": "leaf2 -> rack2", "verb_tech": "dual", "label_owner": "e28", "view": "v3" }
+  ],
+  "relationship_mapping": {
+    "note": "Original relationship -> visible view relationship, verified from the pinned 77x47 frame 0 of each view (evidence/<view>/<view>-frames-77x47.txt) plus the label count in check.txt.",
+    "rows": [
+      { "orig": "ispA->mux1", "visible": "v1 edge into MUX 1, no label", "capture_proof": "v1 frame 0: MUX 1 box at x=34,y=12, arrowheads at (13,33) and (15,33) - two independent heads, one from ISP A and one from ISP B" },
+      { "orig": "ispB->mux1", "visible": "v1 edge into MUX 1, no label", "capture_proof": "same two heads at (13,33),(15,33) on MUX 1's left border" },
+      { "orig": "ispC->mux2", "visible": "v1 edge into MUX 2, no label", "capture_proof": "v1 frame 0: MUX 2 box at x=34,y=32, heads at (33,33),(35,33)" },
+      { "orig": "ispD->mux2", "visible": "v1 edge into MUX 2, no label", "capture_proof": "same pair on MUX 2's left border" },
+      { "orig": "mux1->core1 / mux1->core2 / mux2->core1 / mux2->core2", "visible": "v1 four separate x-connect edges", "capture_proof": "v1 frame 0: Core 1 at x=50,y=12 has heads at (13,49),(15,49); Core 2 at x=50,y=32 has heads at (33,49),(35,49); labels line '4/4 placed ... 0 ambiguous owners'" },
+      { "orig": "core1->fw1, core2->fw1 (active)", "visible": "v2 two solid active edges into FW1", "capture_proof": "v2 frame 0: FW1 box at x=25,y=26, solid heads at (27,24),(29,24); labels line 12/12 placed" },
+      { "orig": "core1->fw2, core2->fw2 (standby)", "visible": "v2 two dashed standby? edges into FW2", "capture_proof": "v2 frame 0: FW2 box at x=25,y=16, heads at (17,24),(19,24); dashed run '╌' visible on the row-17 segment from Core 1 (cols 15-23)" },
+      { "orig": "fw1->bl1, fw1->bl2 (active)", "visible": "v2 two solid active edges from FW1", "capture_proof": "v2 frame 0 rows 27 and 29: solid runs from FW1's right border (col 30) into BL 2's left border (heads at (27,42),(29,42) on BL 2, x=43,y=26)" },
+      { "orig": "fw2->bl1, fw2->bl2 (standby)", "visible": "v2 two dashed standby? edges from FW2", "capture_proof": "v2 frame 0 row 17: dashed run cols 30-41 with head (17,42) on BL 1 (x=43,y=16); row 19-20 dashed elbow '╰╌⌒╮' feeding the second path" },
+      { "orig": "bl1->sp1, bl1->sp2, bl2->sp1, bl2->sp2 (ECMP)", "visible": "v2 four solid ECMP edges", "capture_proof": "v2 frame 0: Spine 2 at x=61,y=16 heads (17,60),(19,60); Spine 1 at x=61,y=26 heads (27,60),(29,60); 'ECMP' labels at row 16 cols 49-52 and row 26 cols 49-52" },
+      { "orig": "sp1->leaf1, sp1->leaf2, sp2->leaf1, sp2->leaf2 (ECMP)", "visible": "v3 four solid ECMP edges", "capture_proof": "v3 frame 0: Leaf 1 at x=34,y=16 heads (17,33),(19,33); Leaf 2 at x=34,y=26 heads (27,33),(29,33)" },
+      { "orig": "leaf1->rack1, leaf2->rack1, leaf1->rack2, leaf2->rack2 (dual)", "visible": "v3 four solid dual edges", "capture_proof": "v3 frame 0: Rack 2 at x=52,y=16 heads (17,51),(19,51); Rack 1 at x=52,y=26 heads (27,51),(29,51); labels line 8/8 placed, 0 ambiguous owners" }
+    ],
+    "redundancy_invariant": "In all three pinned frame-0 dumps every receiving box has exactly two adjacent arrowheads at two different port rows and every source box has none saved as source: v1 8 heads, v2 12 heads, v3 8 heads = 28 heads for 28 audited links, so no two independent links are merged into one arrow."
+  },
+  "repeated_label_check": {
+    "requirement": "repeated labels (active, standby?, ECMP, dual, x-connect) must read 0 ambiguous owners via engine-owned label slots",
+    "result": "v1 0, v2 0, v3 0 ambiguous owners; 4/4, 12/12, 8/8 labels placed, 0 skipped, 0 on route cells",
+    "repeat_counts": "x-connect x4 (v1), active x4 and standby? x4 and ECMP x4 (v2), ECMP x4 and dual x4 (v3)",
+    "note": "No ambiguity remained, so nothing had to be recorded as an ambiguous-owner defect."
+  },
+  "source_pointers": {
+    "case_source": "docs/visualize-eval/cases/datacenter-redundancy/source.md",
+    "excerpts_used": [
+      "line 126 (user): component list and tier structure",
+      "line 134 (user): remove flowing dots",
+      "line 142 (user): cross-connect at each layer",
+      "line 150/158/166 (user): compactness requests",
+      "line 248 (user): border leaf level with leaf, spine above leaf",
+      "line 270 (user): do not merge arrows; neater firewall->border-leaf arrows",
+      "relationship facts: 18 nodes, 28 links, active/standby/ECMP/dual labels"
+    ],
+    "excluded_on_purpose": "the original session transcript path and any credential or host-access discussion in it"
+  },
+  "abbreviations": [
+    "MUX = multiplexer appliance (source wording)",
+    "FW = firewall appliance; the node text is FW1/FW2 and the active/standby role rides on the links",
+    "BL = border leaf",
+    "x-connect = cross-connect, the source's own term",
+    "standby? = the source's active-passive standby link; the '?' keeps the qualifier visible in the label text and the edge is also dashed"
+  ],
+  "deliberate_drops": [
+    { "dropped": "vertical elevation (spine above leaf, border leaf level with rack leaves)", "reason": "defect D1 / blocker B1: in lr, rank order comes from the audited edge direction (bl -> sp -> leaf -> rack), and tb cannot route the 2x2 braid at all in this build" },
+    { "dropped": "per-link protocol names for the ISP links", "reason": "the source states none; inventing one would be a false claim" },
+    { "dropped": "a legend or arrow-convention box inside the pane", "reason": "no legend field exists; the convention is stated in this file and in generation.md instead" },
+    { "dropped": "smaller node box height (line 166)", "reason": "no spec field controls box height; layout sizing is engine-owned (capability gap, listed under blockers)" }
+  ],
+  "known_defects": [
+    {
+      "id": "D1",
+      "defect": "The source correction 'border leaf and leaf at the same height; spine above the leaf' is not honored. Ranks read left to right as border leaf -> spine -> rack leaf, so the spines sit between the two leaf tiers instead of above them.",
+      "evidence": "v3 frame 0: Spine 1 x=16, Leaf 1 x=34 (spines left of the rack leaves); v2 frame 0: BL 1 x=43, Spine 2 x=61 (spines right of the border leaves)",
+      "why_not_fixed": "expressing it needs either reversed endpoint direction (forbidden by the case's fixed constraints) or explicit placement (excluded by round-05's engine-owned placement rule); tb refuses to route these tiers at all (see blocker B1)"
+    },
+    {
+      "id": "D2",
+      "defect": "Within-rank vertical order is not stable across views: v2 draws Spine 2 above Spine 1, v3 draws Spine 1 above Spine 2.",
+      "evidence": "v2 frame 0 Spine 2 at y=16 and Spine 1 at y=26; v3 frame 0 Spine 1 at y=16 and Spine 2 at y=26",
+      "why": "the engine orders each rank by neighbour barycenter, and the two views have different neighbours; ordering is engine-owned and was not reordered by hand"
+    },
+    {
+      "id": "D3",
+      "defect": "Dash style is only provable on straight segments; corner and elbow glyphs (╭ ╮ ⌒) are shared between solid and dashed routes, so the standby style is proven by the straight dashed runs plus the standby? label text, not by the corners.",
+      "evidence": "v2 frame 0 row 17 cols 15-23 and cols 30-41 carry '╌'; rows 21-25 cols 20 and 32 carry '╎'"
+    },
+    {
+      "id": "D4",
+      "defect": "The measured pane viewport was 83x51, larger than the 77x47 target, so end-to-end fit at exactly 77x47 rests on the pinned direct dumps rather than on the live pane capture.",
+      "evidence": "evidence/<view>/manifest.json viewport_token '83x51 @100%'; pinned dumps report 'viewport: 77x47 zoom: 1.00 natural' with no overflow badge"
+    }
+  ],
+  "blockers": [
+    {
+      "id": "B1",
+      "blocker": "The frozen binary's router refuses the tb (top-down) orientation of every 2x2 cross-connect tier in this topology: 'no obstacle-safe route for <edge>; increase node/layer spacing'. Each view's tb attempt was rejected before any check output existed.",
+      "raw_refusals": [
+        "checks/v1-a1-tb-check.txt: rataflow-view: no obstacle-safe route for mux2 -> core1; increase node/layer spacing",
+        "checks/v2-a1-tb-check.txt: rataflow-view: no obstacle-safe route for core2 -> fw2, fw1 -> bl1, bl2 -> sp2; increase node/layer spacing",
+        "checks/v3-a1-tb-check.txt: rataflow-view: no obstacle-safe route for sp2 -> leaf1, leaf2 -> rack2; increase node/layer spacing"
+      ],
+      "classification": "genuine renderer limitation for this case, not a spec error: nodes, edges, labels and groups were unchanged between the refused tb spec and the routed lr spec in each view, and the only lever left inside the rules was direction",
+      "workaround_used": "lr, which routed all three views with one bridge per braid tier",
+      "cost": "D1 (no vertical elevation)"
+    },
+    {
+      "id": "B2",
+      "blocker": "Capability gap: no spec field controls node box height, so the source's request to reduce individual box height (line 166) cannot be expressed.",
+      "impact": "box height stays at the engine's 5 rows; the compactness requests are met only through view splitting and extents (45x39, 68x20, 49x20)"
+    }
+  ],
+  "absent_check_fields": {
+    "routes_line": "the frozen binary prints no 'routes: N/M near-minimal, K detours' line at all; its absence is a property of this build and is not recorded as a blocker"
+  },
+  "pinned_fit_dumps": {
+    "note": "direct no-pane dumps at the pinned target size, one per final spec, shipped as fit proof because the harness half-pane measured 83x51 in this tab",
+    "v1": { "path": "evidence/v1/v1-frames-77x47.txt", "sha256": "10c22fee5cbfbde6fe3a974cbb20454cd63746eee6c7d90e7648b8496d84bd53", "viewport_line": "viewport: 77x47 zoom: 1.00 natural", "frames": 5, "frames_identical": true, "overflow_badge": false },
+    "v2": { "path": "evidence/v2/v2-frames-77x47.txt", "sha256": "f9e79b455c934ed9807265072f699ba82c111df73c99eedb2a1e94f46d858d7f", "viewport_line": "viewport: 77x47 zoom: 1.00 natural", "frames": 5, "frames_identical": true, "overflow_badge": false },
+    "v3": { "path": "evidence/v3/v3-frames-77x47.txt", "sha256": "9201472a3b9fc8f6385da89a812a5992bea7df43d7d3f87aa9fc882943398066", "viewport_line": "viewport: 77x47 zoom: 1.00 natural", "frames": 5, "frames_identical": true, "overflow_badge": false },
+    "command": "COLUMNS=77 LINES=47 /tmp/visualize-eval/round-05/bin/rataflow-view --frames 5 specs/<view>.json"
+  },
+  "cleanup": {
+    "capture_panes": "three, one per view, each closed by scripts/viz-evidence.sh and recorded as 'confirmed_closed' in evidence/<view>/manifest.json",
+    "exploratory_panes": "a few no-focus probe panes were split in this session's own tab while measuring the harness viewport; each was closed with 'herdr pane close' and none remains (pane list shows no probe pane in this workspace tab)",
+    "captain_tab": "not used; no raw tmux"
+  },
+  "validation": {
+    "command": "scripts/viz-validate.py evidence/<view> --require-select --require-frames --attempts attempts.json",
+    "v1": "evidence/v1/validate.txt",
+    "v2": "evidence/v2/validate.txt",
+    "v3": "evidence/v3/validate.txt",
+    "not_green": "This generator does not claim approval. Round-05 judges review the bundles independently."
+  }
+}

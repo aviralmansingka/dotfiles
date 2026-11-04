@@ -1,0 +1,18 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "h", "label": "homelab ASUS/Linux7", "group": "host" },
+    { "id": "bond0", "label": "bond0 192.168.1.197/24", "group": "phys" },
+    { "id": "wlp", "label": "wlp8s0 .213 failover", "group": "phys" },
+    { "id": "rtr", "label": "claimed Fios rtr 0.5ms", "group": "edge" },
+    { "id": "fios", "label": "Fios path: 1 ISP", "group": "edge" }
+  ],
+  "edges": [
+    { "from": "h", "to": "bond0", "label": "eno1 2.5 GbE", "dots": 1, "flow": true },
+    { "from": "h", "to": "wlp", "label": "backup path", "dots": 1, "flow": true },
+    { "from": "bond0", "to": "rtr", "label": "192.168.1.1", "dots": 1, "flow": true },
+    { "from": "wlp", "to": "rtr", "label": "metric 600, not ECMP", "dots": 1, "flow": true },
+    { "from": "rtr", "to": "fios", "label": "no committed rate", "dots": 1, "flow": true }
+  ]
+}

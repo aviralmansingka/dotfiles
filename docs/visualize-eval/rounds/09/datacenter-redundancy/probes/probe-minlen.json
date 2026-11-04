@@ -1,0 +1,15 @@
+{
+  "direction": "lr",
+  "nodes": [
+    { "id": "a", "label": "A", "group": "g1" },
+    { "id": "b", "label": "B", "group": "g1" },
+    { "id": "c", "label": "C", "group": "g2" },
+    { "id": "d", "label": "D", "group": "g2" }
+  ],
+  "edges": [
+    { "from": "a", "to": "c", "label": "x-connect", "label_slot": true, "minlen": 2, "dots": 0 },
+    { "from": "a", "to": "d", "label": "x-connect", "label_slot": true, "minlen": 2, "dots": 0 },
+    { "from": "b", "to": "c", "label": "x-connect", "label_slot": true, "minlen": 2, "dots": 0 },
+    { "from": "b", "to": "d", "label": "x-connect", "label_slot": true, "minlen": 2, "dots": 0 }
+  ]
+}

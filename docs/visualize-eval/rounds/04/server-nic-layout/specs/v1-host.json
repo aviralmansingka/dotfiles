@@ -1,0 +1,15 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "dark", "label": "7 of 8 dark",                  "group": "plant" },
+    { "id": "host", "label": "up 1.5 d · no GPU · no bench", "group": "facts" },
+    { "id": "s1",   "label": "server1 R7725 103.19.91.58",   "group": "host" },
+    { "id": "nic",  "label": "eno16595np0 25 GbE",           "group": "plant" }
+  ],
+  "layers": [["host", "dark"], ["s1"], ["nic"]],
+  "edges": [
+    { "from": "dark", "to": "s1",  "label": "no cable?",   "dots": 0 },
+    { "from": "s1",   "to": "nic", "label": "only uplink", "dots": 0 }
+  ]
+}

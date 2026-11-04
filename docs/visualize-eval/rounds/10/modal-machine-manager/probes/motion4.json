@@ -1,0 +1,1 @@
+{"direction":"tb","nodes":[{"id":"a","label":"alpha"},{"id":"b","label":"beta"},{"id":"c","label":"gamma"}],"edges":[{"from":"a","to":"b","label":"http","label_slot":true,"dots":1,"flow":true},{"from":"b","to":"c","label":"job","dots":1,"flow":true}]}

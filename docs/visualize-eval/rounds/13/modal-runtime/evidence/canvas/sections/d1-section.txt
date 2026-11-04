@@ -1,0 +1,9 @@
+       worker and runtime: the two RPC seams
+       Task input plus control RPCs down; events plus management RPCs back. Two directed seams, never one arrow.
+
+       ╭─────────────╮                                  ╭────────────╮
+       │             │◀─────────────────────────────────│            │
+       │modal-runtime│     task input + control RPCs    │modal-worker│
+       │             │───╮ events + management RPCs   ╭▶│            │
+       ╰─────────────╯   ╰────────────────────────────╯ ╰────────────╯
+

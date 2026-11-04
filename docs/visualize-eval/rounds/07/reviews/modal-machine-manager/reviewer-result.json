@@ -1,0 +1,21 @@
+{
+  "round": 7,
+  "case_id": "modal-machine-manager",
+  "generator": {"worker_id": "viz-rf07", "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"},
+  "reviewer": {"worker_id": "viz-judge07-sol", "model": "openai/gpt-6.1-sol"},
+  "observed_first": {"path": "docs/visualize-eval/rounds/07/reviews/modal-machine-manager/observed-first-rf.md", "sha256": "0eb4e553f0e830d34219ecfcf67570449faa74b8aad934f73abb00b90a742037", "saved_before_expected_reveal": true},
+  "baseline_result": "docs/visualize-eval/rounds/05/reviews/modal-machine-manager/reviewer-result.json",
+  "reactflow_evidence": {"html": "docs/visualize-eval/rounds/07/modal-machine-manager/reactflow.html", "html_sha256": "069eecfb9c6687d7b09b33a21ba3a58038fb8b7ea0ebd29805845ba062cd7ff2", "capture": "docs/visualize-eval/rounds/07/modal-machine-manager/capture.png", "capture_sha256": "073648786c7ee958297d030c2d74210a4042ccf50bbaceaf6fa2e79061857d97", "notes": "docs/visualize-eval/rounds/07/modal-machine-manager/notes.md", "commands": "docs/visualize-eval/rounds/07/modal-machine-manager/commands.txt", "attempts": "docs/visualize-eval/rounds/07/attempts.md"},
+  "categories": {
+    "semantic_fidelity": {"rataflow": {"applicable": true, "status": "fail"}, "reactflow": {"applicable": true, "status": "fail", "reason": "All 17 components appear across the views, but v2 iPXE request is hidden under the response label, so both required meanings are not readable; verify and fastest-heartbeat/slow-ops qualifiers remain absent. HTML existence is not rendered semantic coverage. See convergence v2 and source lines 31 and relation q→ssh."}},
+    "arrow_traceability": {"rataflow": {"applicable": true, "status": "fail"}, "reactflow": {"applicable": true, "status": "fail", "reason": "Shared and opposing runs, hidden paths through queue/registry/agent, and the v2 reciprocal pair at F(295,926) prevent independent direction/owner tracing. Origin and motion proof is additionally unavailable."}},
+    "layout_fit": {"rataflow": {"applicable": true, "status": "fail"}, "reactflow": {"applicable": true, "status": "pass", "reason": "Adapted gate is whole graph extent visible without pan at captured zoom: all four canvases show every node and group. Overlapped label is graded under semantic/traceability, not silently ignored."}},
+    "conceptual_grouping_color": {"rataflow": {"applicable": true, "status": "pass"}, "reactflow": {"applicable": true, "status": "pass", "reason": "All 17 titled tinted boxes contain their declared members; source-backed families correspond to captured nodes. Similar singleton hues are disambiguated by titles."}},
+    "border_integrity": {"rataflow": {"applicable": true, "status": "blocked"}, "reactflow": {"applicable": true, "status": "pass", "reason": "All 25 normal node occurrences have complete and color-continuous borders in the capture; group title cutouts are not node defects. The adapted criterion is captured border state; selection is disabled."}},
+    "workflow_evidence": {"rataflow": {"applicable": true, "status": "fail"}, "reactflow": {"applicable": true, "status": "blocked", "reason": "Commands and draft attempts exist; html/capture and blind hashes verify. Reload digest is narrative, without both raw outputs; execution statuses, lifecycle closure and time-series/full-lap capture are not preserved. No actual rerun or nondeterminism is inferred."}},
+    "animation": {"rataflow": {"applicable": true, "status": "fail"}, "reactflow": {"applicable": true, "status": "blocked", "reason": "HTML creates one SMIL circle per 23 edges, path length/55 duration, path starts at source handle. Capture shows only 4/3/4/0 distinguishable marks; missing timestamped t=0, movement/full lap and unobscured per-edge proof precludes a pass or a claim of observed motion failure."}}
+  },
+  "overall": {"reactflow": "fail", "green": false, "reason": "Known semantic and arrow-traceability failures; additional animation and workflow evidence blockers."},
+  "convergence": "docs/visualize-eval/rounds/07/reviews/modal-machine-manager/convergence.md",
+  "critique": "docs/visualize-eval/rounds/07/reviews/modal-machine-manager/critique.md"
+}

@@ -1,0 +1,1125 @@
+{
+  "protocol_version": 1,
+  "round": 3,
+  "case_id": "network",
+  "candidate_sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+  "renderer_sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7",
+  "rubric_sha256": "5519fd84f6b75973dbf7b5f5544c909a8f32a8841a876c8e7af00a1fcb119335",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "837bf8059d6e7b84ffafade70a675361d607adbabcecdfc0011049fd30281c81",
+  "generator": {
+    "worker_id": "viz-ds03-2",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge03-network",
+    "model": "openai/gpt-6.1-sol"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": null,
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/03/reviews/network/observed-first.md",
+      "sha256": "d87936682a613fa39925dc984e6310ce966e89b4d1b4dce46dd9030bccc62631",
+      "description": "Stage A blind observation record saved before expectations were revealed; hash preserved unchanged.",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/03/reviews/network/spec-manifest.json",
+      "sha256": "837bf8059d6e7b84ffafade70a675361d607adbabcecdfc0011049fd30281c81",
+      "description": "Deterministic sorted repository-relative final-spec path and SHA-256 pairs.",
+      "capture": null
+    },
+    {
+      "id": "hash-verification",
+      "path": "docs/visualize-eval/rounds/03/reviews/network/hash-verification.json",
+      "sha256": "95b6723cdb68f4198847d465184aade49688032c0a9fb619165bb93942d1d052",
+      "description": "Actual-byte verification against frozen metadata and per-view manifests, including the actual frozen renderer binary.",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/03/rubric.json",
+      "sha256": "5519fd84f6b75973dbf7b5f5544c909a8f32a8841a876c8e7af00a1fcb119335",
+      "description": "Frozen round-03 rubric, revision 4, including the corrected Sol reviewer identity and full result schema.",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/03/metadata.json",
+      "sha256": "2b8b65daab2e7c34565fa8ed90f7b83fb4c9475b9e88a029be27168fa6afcb86",
+      "description": "Frozen round-03 input hashes, worker-label mapping, model identities and pre-result clerical identity correction record.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Fixed dataset manifest; network requires animation.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/network/source.md",
+      "sha256": "9d23a7b50d1d26a69f95523a9586bab96ec588afb9628ae274c896992b147947",
+      "description": "Only permitted network source excerpts and qualified relationships.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/network/expected.json",
+      "sha256": "8cb86d269c21176d775e79f8592f09067049031a0e581df38d66705e73a8caa9",
+      "description": "Seven historical source-backed relations and fixed constraints; not independent external fact verification.",
+      "capture": null
+    },
+    {
+      "id": "variants",
+      "path": "docs/visualize-eval/cases/network/historical-variants.json",
+      "sha256": "6af06039e172f0ef75d83c87703f85541b24e61d8706c64d8bba31ce742c2cbe",
+      "description": "Historical network variant, not a current rendering or an independent factual authority.",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/03/SKILL.md",
+      "sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+      "description": "Hash-verified frozen candidate skill; no claim of renderer improvement attributable to this skill.",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/03/network/generation.json",
+      "sha256": "4b13cc09fb592c1f4a3e1ba1fad0e45cf0dd5730840b421c659d02f62c74494f",
+      "description": "Generator identity, exact capture/direct-frame commands, coverage ledger, self-audit and cleanup claims; claims are not substituted for captures.",
+      "capture": null
+    },
+    {
+      "id": "generation-report",
+      "path": "docs/visualize-eval/rounds/03/network/generation.md",
+      "sha256": "177c594c5df8e55eb7bae3554774a2e387b44b4a4ad3b7c8dc4a65f5dfbf3c2b",
+      "description": "Generator narrative, attempts, motion assertions and limitations.",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/03/network/attempts.json",
+      "sha256": "cb932946d4df701c370fd6656ed0511e8c4fc93913997da70351605608c1da62",
+      "description": "Three v1 and two v2 layout attempts with recorded hashes.",
+      "capture": null
+    },
+    {
+      "id": "validate-root",
+      "path": "docs/visualize-eval/rounds/03/network/validate-case-root.txt",
+      "sha256": "4a238ed9a10091570aace5451ec859e029e1d229857efcb02a0b3413ee8785c5",
+      "description": "Case-root validation fails because this directory is not a per-view bundle.",
+      "capture": null
+    },
+    {
+      "id": "v1-spec",
+      "path": "docs/visualize-eval/rounds/03/network/specs/v1.json",
+      "sha256": "fead45b1bab31f168dbbac73a67b5a8a32901fc6e666e0fc0ea963ed8e081b60",
+      "description": "Final v1 specification; actual hash matches manifest and generation record.",
+      "capture": null
+    },
+    {
+      "id": "v1-manifest",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v1/manifest.json",
+      "sha256": "19d9b48ece410c37b990b9dc163b91ac13c12fe61bbda39ef802b043c9f0fe1a",
+      "description": "Frozen capture window, pane identity, check exit 0, artifact hashes, confirmed_closed cleanup; pane_cols/pane_rect are null.",
+      "capture": null
+    },
+    {
+      "id": "v1-check",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v1/check.txt",
+      "sha256": "7302737b189085928e7c3dba2c21ed3125eac9ced44154332a329c504aea3a48",
+      "description": "Preserved check output; its origin and synchronization claims conflict with the visible frame evidence.",
+      "capture": null
+    },
+    {
+      "id": "v1-bin-record",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v1/bin.sha256",
+      "sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "description": "Executed binary SHA-256 record; record-file hash differs from the binary hash by design.",
+      "capture": null
+    },
+    {
+      "id": "v1-validate",
+      "path": "docs/visualize-eval/rounds/03/network/validate-v1.txt",
+      "sha256": "4e46700d9608600eca0a03dc2e2eb64aadaec8381d2d477bcea5701738b8092a",
+      "description": "Frozen validator reports all checks passed; not an independent pixel/motion or pane-geometry proof.",
+      "capture": null
+    },
+    {
+      "id": "v1-text",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v1/v1-text.txt",
+      "sha256": "571fd3b9cf29a39e6a23a6618366828644a996407e09a490a3b5a0708b6a6902",
+      "description": "Actual pane capture; dimensions here describe captured render grid, not an independent pane rectangle measurement.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "unnumbered static capture",
+        "timestamp": "2026-11-02T11:17:24Z to 2026-11-02T11:17:28Z; individual frame instant not separately recorded",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-ansi",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v1/v1-ansi.ansi",
+      "sha256": "5cb4ed2ae46b205343d94653240383c6913d10b6e9753420624c29fe0d33b889",
+      "description": "Actual pane capture; dimensions here describe captured render grid, not an independent pane rectangle measurement.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "unnumbered static capture",
+        "timestamp": "2026-11-02T11:17:24Z to 2026-11-02T11:17:28Z; individual frame instant not separately recorded",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-selected",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v1/v1-selected.ansi",
+      "sha256": "8336da9d9086b34c90ad0cf26045464db3be0cf26b57979cd3c613c8e7e2f5b6",
+      "description": "Actual pane capture; dimensions here describe captured render grid, not an independent pane rectangle measurement.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "unnumbered static capture",
+        "timestamp": "2026-11-02T11:17:24Z to 2026-11-02T11:17:28Z; individual frame instant not separately recorded",
+        "state": "all nodes selected simultaneously",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-frames-text",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v1/v1-frames.txt",
+      "sha256": "969b4648c9a1dea2ef2c2f94504935c044b4f67625b8a1798dfdce0297928262",
+      "description": "Actual pane capture; dimensions here describe captured render grid, not an independent pane rectangle measurement.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "1-20 at 100ms intervals, plus incomplete initial fragment",
+        "timestamp": "2026-11-02T11:17:24Z to 2026-11-02T11:17:28Z; relative frame times 100-2000ms",
+        "state": "animated; partial initial screen, full numbered frames 1-20",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-frames-ansi",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v1/v1-frames.ansi",
+      "sha256": "4e3b998f610bef3916d4ee9639796e392ccfe87f3d145a75c52321672d8e64c2",
+      "description": "Actual pane capture; dimensions here describe captured render grid, not an independent pane rectangle measurement.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "1-20 at 100ms intervals, plus incomplete initial fragment",
+        "timestamp": "2026-11-02T11:17:24Z to 2026-11-02T11:17:28Z; relative frame times 100-2000ms",
+        "state": "animated; later numbered frame bodies have no per-cell ANSI colors",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-direct",
+      "path": "docs/visualize-eval/rounds/03/network/frames/v1-direct-frames.txt",
+      "sha256": "e2579e54d3d0eb7f8c423d1d88df7342ff207c10e2f1955910e3feae3d6843d6",
+      "description": "Complete direct dump from the frozen binary at COLUMNS=77 LINES=47; viewport line and frames 0-20; not a newly launched reviewer session.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0-20 inclusive at 100ms intervals",
+        "timestamp": "relative 0-2000ms; direct-run wall-clock capture instant not separately recorded",
+        "state": "animated full-cycle direct dump, including frame 0 and all-empty frame 20",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-spec",
+      "path": "docs/visualize-eval/rounds/03/network/specs/v2.json",
+      "sha256": "1babbfc8af2f71d751c58e9e5adbdf4b5f01a46973033e8db6802b3369a27510",
+      "description": "Final v2 specification; actual hash matches manifest and generation record.",
+      "capture": null
+    },
+    {
+      "id": "v2-manifest",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v2/manifest.json",
+      "sha256": "fd989fb507d5e602e7384ea474dc49fe5cf47f27fb285e7ff1ad71d136183491",
+      "description": "Frozen capture window, pane identity, check exit 0, artifact hashes, confirmed_closed cleanup; pane_cols/pane_rect are null.",
+      "capture": null
+    },
+    {
+      "id": "v2-check",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v2/check.txt",
+      "sha256": "f9f912d13a89a8b0f1932a5b6630de415de027b26ad09fe2fb4fee7b92820414",
+      "description": "Preserved check output; its origin and synchronization claims conflict with the visible frame evidence.",
+      "capture": null
+    },
+    {
+      "id": "v2-bin-record",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v2/bin.sha256",
+      "sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "description": "Executed binary SHA-256 record; record-file hash differs from the binary hash by design.",
+      "capture": null
+    },
+    {
+      "id": "v2-validate",
+      "path": "docs/visualize-eval/rounds/03/network/validate-v2.txt",
+      "sha256": "4e46700d9608600eca0a03dc2e2eb64aadaec8381d2d477bcea5701738b8092a",
+      "description": "Frozen validator reports all checks passed; not an independent pixel/motion or pane-geometry proof.",
+      "capture": null
+    },
+    {
+      "id": "v2-text",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v2/v2-text.txt",
+      "sha256": "96d7e1c7269e9293d4ac4b6c3bce4530b169aa528d58f855442d600f76be2836",
+      "description": "Actual pane capture; dimensions here describe captured render grid, not an independent pane rectangle measurement.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "unnumbered static capture",
+        "timestamp": "2026-11-02T11:17:33Z to 2026-11-02T11:17:37Z; individual frame instant not separately recorded",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-ansi",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v2/v2-ansi.ansi",
+      "sha256": "8692396d72afcd4d10b8fb81901a1cc1da94fe8eb3da3a3f8271cfa83540703f",
+      "description": "Actual pane capture; dimensions here describe captured render grid, not an independent pane rectangle measurement.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "unnumbered static capture",
+        "timestamp": "2026-11-02T11:17:33Z to 2026-11-02T11:17:37Z; individual frame instant not separately recorded",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-selected",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v2/v2-selected.ansi",
+      "sha256": "9fc59cfadf49062f5a343341bd661a08bded46605ddfe3c81d8b340d090201a1",
+      "description": "Actual pane capture; dimensions here describe captured render grid, not an independent pane rectangle measurement.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "unnumbered static capture",
+        "timestamp": "2026-11-02T11:17:33Z to 2026-11-02T11:17:37Z; individual frame instant not separately recorded",
+        "state": "all nodes selected simultaneously",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-frames-text",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v2/v2-frames.txt",
+      "sha256": "4603addf7889dc58fa8f3532a75b06d75ad8af949c67644d93e8a9c955affb46",
+      "description": "Actual pane capture; dimensions here describe captured render grid, not an independent pane rectangle measurement.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "1-20 at 100ms intervals, plus incomplete initial fragment",
+        "timestamp": "2026-11-02T11:17:33Z to 2026-11-02T11:17:37Z; relative frame times 100-2000ms",
+        "state": "animated; partial initial screen, full numbered frames 1-20",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-frames-ansi",
+      "path": "docs/visualize-eval/rounds/03/network/evidence/v2/v2-frames.ansi",
+      "sha256": "4c8198f287db5639e9799a7c0fccb53388b783b0689af32f506be7dd9b5db46a",
+      "description": "Actual pane capture; dimensions here describe captured render grid, not an independent pane rectangle measurement.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "1-20 at 100ms intervals, plus incomplete initial fragment",
+        "timestamp": "2026-11-02T11:17:33Z to 2026-11-02T11:17:37Z; relative frame times 100-2000ms",
+        "state": "animated; later numbered frame bodies have no per-cell ANSI colors",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-direct",
+      "path": "docs/visualize-eval/rounds/03/network/frames/v2-direct-frames.txt",
+      "sha256": "b9540c3f452990705430df5a300fef1da02898979fe7b35a6076f77c68438624",
+      "description": "Complete direct dump from the frozen binary at COLUMNS=77 LINES=47; viewport line and frames 0-20; not a newly launched reviewer session.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0-20 inclusive at 100ms intervals",
+        "timestamp": "relative 0-2000ms; direct-run wall-clock capture instant not separately recorded",
+        "state": "animated full-cycle direct dump, including frame 0 and all-empty frame 20",
+        "format": "text"
+      }
+    },
+    {
+      "id": "attempt-v1-a1-check-txt",
+      "path": "docs/visualize-eval/rounds/03/network/specs/v1-a1.check.txt",
+      "sha256": "89ed31b1790e58c5e393739397be4439c1a87beb0e7fa99da18b8dcacf565832",
+      "description": "Recorded local attempt or its check output; not a final view and not used as final visual proof.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v1-a1-json",
+      "path": "docs/visualize-eval/rounds/03/network/specs/v1-a1.json",
+      "sha256": "58c3a5660e985b6dd9f2384ddbdadec27b4bf790b0b6b17c303788de6bd359d5",
+      "description": "Recorded local attempt or its check output; not a final view and not used as final visual proof.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v1-a2-check-txt",
+      "path": "docs/visualize-eval/rounds/03/network/specs/v1-a2.check.txt",
+      "sha256": "7b1ef0f651f5049cc1603f581a2c8618a4be6b688d039ef20a31317105687188",
+      "description": "Recorded local attempt or its check output; not a final view and not used as final visual proof.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v1-a2-json",
+      "path": "docs/visualize-eval/rounds/03/network/specs/v1-a2.json",
+      "sha256": "f3aa25d81a3ff3b220356d79fea60d532da29f39e368ce59319d2198269fa5d6",
+      "description": "Recorded local attempt or its check output; not a final view and not used as final visual proof.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v1-a3-json",
+      "path": "docs/visualize-eval/rounds/03/network/specs/v1-a3.json",
+      "sha256": "fead45b1bab31f168dbbac73a67b5a8a32901fc6e666e0fc0ea963ed8e081b60",
+      "description": "Recorded local attempt or its check output; not a final view and not used as final visual proof.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v2-a1-check-txt",
+      "path": "docs/visualize-eval/rounds/03/network/specs/v2-a1.check.txt",
+      "sha256": "f9f912d13a89a8b0f1932a5b6630de415de027b26ad09fe2fb4fee7b92820414",
+      "description": "Recorded local attempt or its check output; not a final view and not used as final visual proof.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v2-a1-json",
+      "path": "docs/visualize-eval/rounds/03/network/specs/v2-a1.json",
+      "sha256": "1babbfc8af2f71d751c58e9e5adbdf4b5f01a46973033e8db6802b3369a27510",
+      "description": "Recorded local attempt or its check output; not a final view and not used as final visual proof.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v2-a2-check-txt",
+      "path": "docs/visualize-eval/rounds/03/network/specs/v2-a2.check.txt",
+      "sha256": "5bceed151eedcc2f6a0053b9fd0bd52a15b9cd650693cde352a5dbbba24b0426",
+      "description": "Recorded local attempt or its check output; not a final view and not used as final visual proof.",
+      "capture": null
+    },
+    {
+      "id": "attempt-v2-a2-json",
+      "path": "docs/visualize-eval/rounds/03/network/specs/v2-a2.json",
+      "sha256": "8831bfc64d708c6b38d92982bbeb935e21363843a9442852a13d11f960b593ee",
+      "description": "Recorded local attempt or its check output; not a final view and not used as final visual proof.",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All six concepts and seven endpoints are represented across v1/v2, including separate core->Redis and Web->Redis links, and speed labels are intact. However v2 session [33,20,7,1] directly abuts the Web->DB stem instead of unambiguously identifying Web->Redis. The blind owner uncertainty remains a meaning-level defect after reveal; JSON ownership does not repair it. No unrelated relation was knowingly added.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/rounds/03/rubric.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "source",
+        "expected",
+        "v1-text",
+        "v2-text",
+        "v1-spec",
+        "v2-spec",
+        "generation"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Static stems and unique downward arrowheads are geometrically traceable on all seven independent routes, with no fake bus or junction. But every frame-0 dot starts one cell downstream of the first drawn exterior origin. The rubric explicitly makes direction unproven in this case; static arrowheads do not waive that rule. The session owner ambiguity further prevents a reliable labelled-edge reading.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/rounds/03/rubric.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "v1-direct",
+        "v2-direct",
+        "v1-text",
+        "v2-text"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Both captured grids are 77x47 at natural 100% and no graph content is clipped. Splitting is allowed and the endpoint coverage map is complete. There are 0 crossings in v1 and 1 at (40,21) in v2. That crossing is avoidable by source-port ordering without changing any node tier, source group or relation: Web->Redis can leave the left port and Web->DB the right port. The claim that the crossing is structural is not supported. Separately the actual live pane width/rectangle is missing, so the pane-size portion remains an evidence gap, not a pass.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/rounds/03/rubric.json"
+      ],
+      "evidence_ids": [
+        "v1-direct",
+        "v2-direct",
+        "v1-ansi",
+        "v2-ansi",
+        "v1-manifest",
+        "v2-manifest",
+        "attempts",
+        "generation"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Gruvbox hue families follow concepts, not depth: WAN/Firewall are adjacent warm edge nodes; Core is switching; Web is app; Redis and DB share a nearby related teal data family in v2. The application chain respects Web->Redis->DB order. Different normal colors for repeated Web/Redis between views are not a separate gate. No alphabetical/depth-based group claim is needed.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/rounds/03/rubric.json"
+      ],
+      "evidence_ids": [
+        "v1-ansi",
+        "v2-ansi",
+        "v1-spec",
+        "v2-spec",
+        "source"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All sides and four rounded corners are complete and have a single per-node RGB color in normal ANSI captures. Selected ANSI proves all 5 v1 and all 3 v2 node occurrences have continuous bold (216,166,87) selected borders: 8/8 occurrence coverage. All-selected appearance does not prove separate interactive click behavior; that is not claimed.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/rounds/03/rubric.json"
+      ],
+      "evidence_ids": [
+        "blind",
+        "v1-ansi",
+        "v2-ansi",
+        "v1-selected",
+        "v2-selected"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Candidate, actual frozen binary, corrected rubric, dataset, source and every manifest artifact hash verify. Final specs have a deterministic hashed manifest; blind record is unchanged and predates reveal; actual DeepSeek generator and independent Sol identities are recorded. However pane_cols/pane_rect are null for both evidence panes, so actual live width and independent half-pane geometry are unproven. Only the two evidence-pane IDs have closure records; unnamed geometry probes have internally inconsistent counts and no identity/closure proof. These missing required records block a workflow pass. Green validator/self-audit claims do not resolve these gaps or the known rendered failures.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/rounds/03/rubric.json"
+      ],
+      "evidence_ids": [
+        "hash-verification",
+        "metadata",
+        "rubric",
+        "dataset",
+        "generation",
+        "generation-report",
+        "attempts",
+        "spec-manifest",
+        "blind",
+        "v1-manifest",
+        "v2-manifest",
+        "v1-check",
+        "v2-check",
+        "v1-validate",
+        "v2-validate",
+        "validate-root"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Required by the network source. Full-cycle direct frames 0-20 show all seven dots on the second exterior route cell at frame 0, never at the first drawn source-adjacent origin. No sampled frame shows a visible dot at any arrowhead. v1 short routes disappear at frame 15 while long routes persist through 19; v2 DB-bound routes disappear at 19 while Web->Redis persists. Frame 20 is empty, not one-dot-per-line simultaneous arrival. There are 19 missing-dot route-frame samples, no excess dots, no reversed visible movement, and no source-specified rate exception. Sparse/slow interior movement alone cannot pass.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md#task",
+        "docs/visualize-eval/cases/network/expected.json#animation",
+        "docs/visualize-eval/rounds/03/rubric.json#categories/animation"
+      ],
+      "evidence_ids": [
+        "blind",
+        "source",
+        "expected",
+        "dataset",
+        "v1-direct",
+        "v2-direct",
+        "v1-frames-text",
+        "v2-frames-text",
+        "v1-check",
+        "v2-check"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/network/expected.json#historical_reference/edges"
+      ],
+      "expected": "wan -> fw: 1 GbE; independent directed relation, no bus or source-specific motion-duration exception.",
+      "observed": "WAN bottom stem at (35,15), straight down to unique Firewall arrowhead (35,18); label at [37,16,5,1]. No crossing or junction. Frame-0 dot is downstream of the first exterior cell; no visible arrowhead arrival. Static geometry alone would preserve direction, but the explicit origin rule makes this edge audit fail.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            35,
+            15,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-direct",
+          "region": [
+            35,
+            15,
+            1,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2",
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/network/expected.json#historical_reference/edges"
+      ],
+      "expected": "fw -> core: 10 GbE; independent directed relation, no bus or source-specific motion-duration exception.",
+      "observed": "Firewall stem (35,23) straight down to Core arrowhead (35,26); label [37,24,6,1]. No crossing or junction. Frame-0 dot is downstream of the first exterior cell; no visible arrowhead arrival. Static geometry alone would preserve direction, but the explicit origin rule makes this edge audit fail.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            35,
+            23,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-direct",
+          "region": [
+            35,
+            23,
+            1,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2",
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/network/expected.json#historical_reference/edges"
+      ],
+      "expected": "core -> web: 10 GbE; independent directed relation, no bus or source-specific motion-duration exception.",
+      "observed": "Core right stem (37,31) down to (37,33), right to (48,33), down to Web arrowhead (48,34); label [39,32,6,1]. Independent fan-out port, no shared trunk. Frame-0 dot is downstream of the first exterior cell; no visible arrowhead arrival. Static geometry alone would preserve direction, but the explicit origin rule makes this edge audit fail.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            37,
+            31,
+            12,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-direct",
+          "region": [
+            37,
+            31,
+            12,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2",
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/network/expected.json#historical_reference/edges"
+      ],
+      "expected": "core -> cache: 25 GbE; independent directed relation, no bus or source-specific motion-duration exception.",
+      "observed": "Core left stem (35,31) down to (35,33), left to (22,33), down to Redis arrowhead (22,34); label [26,32,6,1]. Separate from both Core->Web and the Web->Redis relation in v2. Frame-0 dot is downstream of the first exterior cell; no visible arrowhead arrival. Static geometry alone would preserve direction, but the explicit origin rule makes this edge audit fail.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-text",
+          "region": [
+            22,
+            31,
+            14,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-direct",
+          "region": [
+            22,
+            31,
+            14,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2",
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/network/expected.json#historical_reference/edges"
+      ],
+      "expected": "web -> cache: session; independent directed relation, no bus or source-specific motion-duration exception.",
+      "observed": "Web right stem (42,19) down to (42,21), left over the bridge (40,21), then down at column 30 to Redis arrowhead (30,22). Geometric route is traceable; session [33,20,7,1] instead abuts the other Web stem and has uncertain ownership. Frame-0 dot is downstream of the first exterior cell; no visible arrowhead arrival. Static geometry alone would preserve direction, but the explicit origin rule makes this edge audit fail.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            30,
+            19,
+            13,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-direct",
+          "region": [
+            30,
+            19,
+            13,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2",
+        "F3",
+        "F1",
+        "F4"
+      ]
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/network/expected.json#historical_reference/edges"
+      ],
+      "expected": "web -> db: queries; independent directed relation, no bus or source-specific motion-duration exception.",
+      "observed": "Web left stem (40,19) down column 40 under the row-21 bridge, right at row 28 to column 42, then down to DB arrowhead (42,30). queries [33,22,7,1] is beside the correct vertical leg, but session can also appear attached to this route. The near-touch with the fill bend (40,29) is not a junction. Frame-0 dot is downstream of the first exterior cell; no visible arrowhead arrival. Static geometry alone would preserve direction, but the explicit origin rule makes this edge audit fail.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            40,
+            19,
+            3,
+            12
+          ]
+        },
+        {
+          "evidence_id": "v2-direct",
+          "region": [
+            40,
+            19,
+            3,
+            12
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2",
+        "F3",
+        "F1",
+        "F4"
+      ]
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/network/expected.json#historical_reference/edges"
+      ],
+      "expected": "cache -> db: fill; independent directed relation, no bus or source-specific motion-duration exception.",
+      "observed": "Redis stem (30,27) down to (30,29), right to (40,29), then down to DB arrowhead (40,30); fill [33,28,4,1] belongs to this horizontal run. Independent DB port; no merge with queries, despite adjacent bends (40,28)/(40,29). Frame-0 dot is downstream of the first exterior cell; no visible arrowhead arrival. Static geometry alone would preserve direction, but the explicit origin rule makes this edge audit fail.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            30,
+            27,
+            11,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-direct",
+          "region": [
+            30,
+            27,
+            11,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F2",
+        "F3"
+      ]
+    },
+    {
+      "edge_id": "apparent-session-to-db",
+      "kind": "unexpected_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/network/expected.json#historical_reference/edges"
+      ],
+      "expected": null,
+      "observed": "Extra apparent LABELLED relation only, not an eighth geometric route: session immediately abuts the Web->DB stem and can be read as Web->DB session traffic. The source assigns session exclusively to Web->Redis. The actual queries route and label still exist; no extra bus/junction is visible.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            33,
+            19,
+            10,
+            4
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F1"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "semantic_fidelity",
+      "edge_ids": [
+        "e5",
+        "e6",
+        "apparent-session-to-db"
+      ],
+      "severity": "high",
+      "description": "Defect: session is legible but its owner is not. At [33,20,7,1] it touches the queries/Web->DB stem at column 40; the actual Web->Redis source leg is at column 42. A reader can assign session to Web->DB even though the expected relation is Web->Redis. This is visible semantic ambiguity, not an unsupported-format evidence gap.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/network/expected.json#historical_reference/edges"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            33,
+            19,
+            10,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            33,
+            20,
+            7,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "animation",
+      "edge_ids": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6",
+        "e7"
+      ],
+      "severity": "high",
+      "description": "Defect: frame-0 dots on all seven routes start one drawn cell downstream from the actual route origin. v1 origin/dot pairs are (35,15)/(35,16), (35,23)/(35,24), (35,31)/(35,32), (37,31)/(37,32); v2 pairs are (42,19)/(42,20), (40,19)/(40,20), (30,27)/(30,28). This fails animation and invokes the explicit arrow-traceability direction-unproven rule. Coordinates refer to frame 0 in each direct dump.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#categories/animation",
+        "docs/visualize-eval/rounds/03/rubric.json#categories/arrow_traceability",
+        "docs/visualize-eval/cases/network/source.md#task"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-direct",
+          "region": [
+            35,
+            15,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-direct",
+          "region": [
+            35,
+            23,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-direct",
+          "region": [
+            35,
+            31,
+            3,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v2-direct",
+          "region": [
+            40,
+            19,
+            3,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v2-direct",
+          "region": [
+            30,
+            27,
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "category": "animation",
+      "edge_ids": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6",
+        "e7"
+      ],
+      "severity": "high",
+      "description": "Defect: no full-cycle sample contains one visible dot at each arrowhead together. Short v1 routes have no dot at frames 15-20 while long routes retain theirs through 19; v2 DB-bound dots vanish at 19 while Web->Redis retains a dot through 19. No route ever visibly reaches its arrowhead, and frame 20 is all empty. Nineteen route-frame dots are missing. Absorption by arrowhead glyphs is not the required visible finished state. Full-cycle contradictory evidence makes this failure, not merely a missing-frame blocker. Regions identify the terminal arrowheads; relevant frame numbers are 15-20 in v1 and 19-20 in v2.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#categories/animation",
+        "docs/visualize-eval/cases/network/source.md#task",
+        "docs/visualize-eval/cases/network/expected.json#constraints"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-direct",
+          "region": [
+            35,
+            18,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-direct",
+          "region": [
+            35,
+            26,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v1-direct",
+          "region": [
+            22,
+            34,
+            27,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-direct",
+          "region": [
+            30,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "evidence_id": "v2-direct",
+          "region": [
+            40,
+            30,
+            3,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "category": "layout_fit",
+      "edge_ids": [
+        "e5",
+        "e6"
+      ],
+      "severity": "medium",
+      "description": "Defect: the v2 crossing at (40,21) is distinguishable with a bridge but avoidable. Keeping the same Web/Redis/DB boxes and tiers, assigning the Web->Redis stem to the left port and Web->DB to the right allows the former to turn left without crossing the latter. This is a geometric counterargument, not a newly rendered replacement. No source group reordering, link merging or tier change is needed. Both attempted orientations retaining a crossing do not prove a topological necessity.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#categories/layout_fit",
+        "docs/visualize-eval/cases/network/source.md#relationship-facts-from-the-historical-attempt"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-text",
+          "region": [
+            30,
+            19,
+            13,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-ansi",
+          "region": [
+            40,
+            21,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B1",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Evidence gap / blocker: both manifests record pane_cols=null and pane_rect=null. Header tokens and direct viewport lines prove the rendered grid, not a separate actual live-pane width or the even-split composition. No independent pane geometry capture is present. The manifest and generation record are non-grid records, so this finding has no fabricated screen region.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#categories/layout_fit",
+        "docs/visualize-eval/rounds/03/rubric.json#categories/workflow_evidence",
+        "docs/visualize-eval/cases/network/source.md#original-line-48-user"
+      ],
+      "locations": []
+    },
+    {
+      "id": "B2",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Evidence gap / blocker: w7E:pBN and w7E:pBQ are confirmed closed by their manifests, but geometry probe pane IDs and corresponding closure records are absent. generation.json claims three opened/closed panes yet describes two geometry probes plus the two evidence panes; generation.md gives a different interpretation of a probe pair. Cannot certify cleanup of every owned pane or failed probe. No pane is asserted leaked, and no foreign pane was touched by this reviewer.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#categories/workflow_evidence"
+      ],
+      "locations": []
+    }
+  ],
+  "blockers": [
+    "B1: Actual live pane width/rectangle and independent half-pane geometry missing for both final views; pane_cols/pane_rect null. Render grid is verified, actual pane dimensions are not.",
+    "B2: Unnamed geometry probe pane IDs and closure evidence missing; generator pane-count narrative inconsistent. Only the two evidence panes have exact confirmed_closed records."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pBN",
+      "w7E:pBQ"
+    ],
+    "closed_pane_ids": [
+      "w7E:pBN",
+      "w7E:pBQ"
+    ],
+    "status": "blocked",
+    "reason": "Known evidence panes are confirmed_closed in both frozen manifests. These lists are the identifiable subset, not a claim that no other panes were owned. Geometry probes have no IDs/closure proof and inconsistent counts, preventing all-owned cleanup certification. Reviewer opened no panes and did not issue live cleanup commands."
+  },
+  "overall": "fail"
+}

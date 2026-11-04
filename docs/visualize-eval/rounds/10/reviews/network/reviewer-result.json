@@ -1,0 +1,980 @@
+{
+  "protocol_version": 1,
+  "round": 10,
+  "case_id": "network",
+  "candidate_sha256": "9c1256791069e27207db2e5138527e45587e7096955f5ed4f86c79d46f77e56d",
+  "renderer_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+  "rubric_sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "548c6880d5b100ce733bc20ed1bfc94516984bebe460ef72e8fa8766b08a0679",
+  "generator": {
+    "worker_id": "viz-ds10-2",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge10-network",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 82,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/10/reviews/network/observed-first.md",
+      "sha256": "1ed206fbd227f5afee8d415008a8fd8b89dc0e55475f2113e9c3e97e1c822684",
+      "description": "Blind record saved before expectations",
+      "capture": null
+    },
+    {
+      "id": "spec_manifest",
+      "path": "docs/visualize-eval/rounds/10/reviews/network/spec-manifest.json",
+      "sha256": "548c6880d5b100ce733bc20ed1bfc94516984bebe460ef72e8fa8766b08a0679",
+      "description": "Sorted final-spec paths and hashes",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/network/source.md",
+      "sha256": "9d23a7b50d1d26a69f95523a9586bab96ec588afb9628ae274c896992b147947",
+      "description": "Source and human constraints",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/network/expected.json",
+      "sha256": "8cb86d269c21176d775e79f8592f09067049031a0e581df38d66705e73a8caa9",
+      "description": "Expected relations",
+      "capture": null
+    },
+    {
+      "id": "variants",
+      "path": "docs/visualize-eval/cases/network/historical-variants.json",
+      "sha256": "6af06039e172f0ef75d83c87703f85541b24e61d8706c64d8bba31ce742c2cbe",
+      "description": "Historical graph not independent verification",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Dataset index, actual hash differs from frozen metadata",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/10/metadata.json",
+      "sha256": "b532cd6b26f975b955c8aa05fc3b0534f122559c1f8f9e2c7694dd23bfd7c167",
+      "description": "Frozen metadata",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/10/rubric.json",
+      "sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+      "description": "Frozen rubric",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/10/SKILL.md",
+      "sha256": "9c1256791069e27207db2e5138527e45587e7096955f5ed4f86c79d46f77e56d",
+      "description": "Frozen candidate skill",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/10/network/generation.json",
+      "sha256": "2596173694f5540e96a12c00de200a005dda2b8c2e81937f212d60b710c45a7e",
+      "description": "Generator classification, claims, commands and coverage",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/10/network/attempts.json",
+      "sha256": "db9d2f4436f1267d6e3213baacc5752f481e7ff538e1e0020fdb3af3bfe574aa",
+      "description": "Attempts and abandoned shapes",
+      "capture": null
+    },
+    {
+      "id": "attempt_log",
+      "path": "docs/visualize-eval/rounds/10/network/attempts-log.jsonl",
+      "sha256": "3ffa540e84122dafc7d9afe7b0ed7461dfa39940e7afec2948920667dfc754b8",
+      "description": "Command, exit, binary/spec and raw-byte hashes",
+      "capture": null
+    },
+    {
+      "id": "v1_spec",
+      "path": "docs/visualize-eval/rounds/10/network/specs/v1.json",
+      "sha256": "1503a71fd98001e5ce89502f6905560de425ccbab43f8c341ec3889b85b916ba",
+      "description": "Final spec",
+      "capture": null
+    },
+    {
+      "id": "v1_check",
+      "path": "docs/visualize-eval/rounds/10/network/evidence/v1/check.txt",
+      "sha256": "7d67a41b8079e7ef1e64114b97c8bf6c6241be567eafc6cd143e9ba4e029e320",
+      "description": "Check stdout",
+      "capture": null
+    },
+    {
+      "id": "v1_manifest",
+      "path": "docs/visualize-eval/rounds/10/network/evidence/v1/manifest.json",
+      "sha256": "0b1b2394be5ff2129cba79d39275dbba88ad0629cca0090acacd56d4c1a44380",
+      "description": "Live capture manifest and cleanup",
+      "capture": null
+    },
+    {
+      "id": "v1_validator",
+      "path": "docs/visualize-eval/rounds/10/network/validator/v1.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "Recorded validator output",
+      "capture": null
+    },
+    {
+      "id": "v1_pinned",
+      "path": "docs/visualize-eval/rounds/10/network/evidence/v1/v1-77x47.txt",
+      "sha256": "61d0c69e11a52bc7f381ebd9165bc9877a8501f52b4272f1a739497b478e50ff",
+      "description": "v1-77x47.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0",
+        "timestamp": "2026-11-02T23:39:32Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1_lap",
+      "path": "docs/visualize-eval/rounds/10/network/evidence/v1/v1-frames-77x47.txt",
+      "sha256": "4a2adb2b0100d8a0d6265014aa24b0739ca4b0cbe1e361d074bbef56bd7a251a",
+      "description": "v1-frames-77x47.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0–40",
+        "timestamp": "2026-11-02T23:39:32Z",
+        "state": "animated full lap",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1_live",
+      "path": "docs/visualize-eval/rounds/10/network/evidence/v1/v1-text.txt",
+      "sha256": "94ed579ec35cd89df590f85b0ce4f2373ee0f23f627c4bfd1625dec0e08e339b",
+      "description": "v1-text.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "live",
+        "timestamp": "2026-11-02T23:39:03Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1_ansi",
+      "path": "docs/visualize-eval/rounds/10/network/evidence/v1/v1-ansi.ansi",
+      "sha256": "aca7bf4eaafb16a5d59842d9700a30db49b3270363abca3f00f63261c2c68a7c",
+      "description": "v1-ansi.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "live",
+        "timestamp": "2026-11-02T23:39:03Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1_selected",
+      "path": "docs/visualize-eval/rounds/10/network/evidence/v1/v1-selected.ansi",
+      "sha256": "15ab95cbdc392a212529a9b8ffd006b9b0ccaad7ae14e5de562e7e27eac9d529",
+      "description": "v1-selected.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T23:39:03Z",
+        "state": "selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1_live_frames",
+      "path": "docs/visualize-eval/rounds/10/network/evidence/v1/v1-frames.txt",
+      "sha256": "044dec495dd57e0f84e20a003134370dfe98c1d14df3e10fe3ccb5e61553264d",
+      "description": "v1-frames.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "partial live sequence",
+        "timestamp": "2026-11-02T23:39:03Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1_live_frames_ansi",
+      "path": "docs/visualize-eval/rounds/10/network/evidence/v1/v1-frames.ansi",
+      "sha256": "b795e4f96246fa49e69bd2d613d995e73b24f9b80de2cf05559635bce9d37985",
+      "description": "v1-frames.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "partial live sequence",
+        "timestamp": "2026-11-02T23:39:03Z",
+        "state": "animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2_spec",
+      "path": "docs/visualize-eval/rounds/10/network/specs/v2.json",
+      "sha256": "5cdec6d982ff0f380d182ee989abacdc60b44a3fbd3391e1b1a907e7b2907959",
+      "description": "Final spec",
+      "capture": null
+    },
+    {
+      "id": "v2_check",
+      "path": "docs/visualize-eval/rounds/10/network/evidence/v2/check.txt",
+      "sha256": "ce32872746ef844da3b3743d2e2e6543f6c0bbac4f9ea1d72aff82098114a2d6",
+      "description": "Check stdout",
+      "capture": null
+    },
+    {
+      "id": "v2_manifest",
+      "path": "docs/visualize-eval/rounds/10/network/evidence/v2/manifest.json",
+      "sha256": "cc32438e444fa29875adff201c07393407967daa5c58d24328f428fec586880f",
+      "description": "Live capture manifest and cleanup",
+      "capture": null
+    },
+    {
+      "id": "v2_validator",
+      "path": "docs/visualize-eval/rounds/10/network/validator/v2.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "Recorded validator output",
+      "capture": null
+    },
+    {
+      "id": "v2_pinned",
+      "path": "docs/visualize-eval/rounds/10/network/evidence/v2/v2-77x47.txt",
+      "sha256": "a24f70a4c73cb7b3f29182ec86e74cc692f6f67f56660af154ff33e512123a85",
+      "description": "v2-77x47.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0",
+        "timestamp": "2026-11-02T23:39:33Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2_lap",
+      "path": "docs/visualize-eval/rounds/10/network/evidence/v2/v2-frames-77x47.txt",
+      "sha256": "71473577649b2ada85ced5149ba6b4fef601fc408593ac83da42b16751a9c7bd",
+      "description": "v2-frames-77x47.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0–60",
+        "timestamp": "2026-11-02T23:39:33Z",
+        "state": "animated full lap",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2_live",
+      "path": "docs/visualize-eval/rounds/10/network/evidence/v2/v2-text.txt",
+      "sha256": "9eb1610b4f94cbbbf12a8a7aae401c8039b0f349a5b89019725175afa9b538a5",
+      "description": "v2-text.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "live",
+        "timestamp": "2026-11-02T23:39:23Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2_ansi",
+      "path": "docs/visualize-eval/rounds/10/network/evidence/v2/v2-ansi.ansi",
+      "sha256": "395655d965e81790640c1b9b5f6f19bb578bef74353f8389e6f2b245d045f858",
+      "description": "v2-ansi.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "live",
+        "timestamp": "2026-11-02T23:39:23Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2_selected",
+      "path": "docs/visualize-eval/rounds/10/network/evidence/v2/v2-selected.ansi",
+      "sha256": "c0fe37514b13c6aa346331e4057967718f2f00aae1a455dff1486d3f0a3b0a33",
+      "description": "v2-selected.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T23:39:23Z",
+        "state": "selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2_live_frames",
+      "path": "docs/visualize-eval/rounds/10/network/evidence/v2/v2-frames.txt",
+      "sha256": "a413bd0fb54fddf0df11d9fdbeda1b83a2444bfba88063e9cb15014f28dc98e3",
+      "description": "v2-frames.txt",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "partial live sequence",
+        "timestamp": "2026-11-02T23:39:23Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2_live_frames_ansi",
+      "path": "docs/visualize-eval/rounds/10/network/evidence/v2/v2-frames.ansi",
+      "sha256": "597ae02ba595b67bf9e67fcc9aed0eb3ad7f28bb239664a04a01bee11b8a8c88",
+      "description": "v2-frames.ansi",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "partial live sequence",
+        "timestamp": "2026-11-02T23:39:23Z",
+        "state": "animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "raw_v1-1_stderr",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v1-1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "raw_v1-1_stdout",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v1-1.stdout",
+      "sha256": "45735d60601c27e71af6193a4344225e31baf083b010167f1cb64a98ed831302",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "raw_v1-2_stderr",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v1-2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "raw_v1-2_stdout",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v1-2.stdout",
+      "sha256": "7d67a41b8079e7ef1e64114b97c8bf6c6241be567eafc6cd143e9ba4e029e320",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "raw_v1-a_stderr",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v1-a.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "raw_v1-a_stdout",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v1-a.stdout",
+      "sha256": "33b75b450be9ab1542bf2fff5310397f132ac682194ebc8dcbff2741dc3f97b9",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "raw_v1-b_stderr",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v1-b.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "raw_v1-b_stdout",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v1-b.stdout",
+      "sha256": "4a38112b55106a99ec51d0d2383206e33bd50fcfed2c4b366a8fffda5278d581",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "raw_v1-c_stderr",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v1-c.stderr",
+      "sha256": "ce9c663281304e615db1aa967acc34cc1ad1f5727f23a92596371f92861f935b",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "raw_v1-c_stdout",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v1-c.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "raw_v1-lap-77x47_stderr",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v1-lap-77x47.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "raw_v1-lap-77x47_stdout",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v1-lap-77x47.stdout",
+      "sha256": "4a2adb2b0100d8a0d6265014aa24b0739ca4b0cbe1e361d074bbef56bd7a251a",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "raw_v1-pinned-77x47_stderr",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v1-pinned-77x47.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "raw_v1-pinned-77x47_stdout",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v1-pinned-77x47.stdout",
+      "sha256": "61d0c69e11a52bc7f381ebd9165bc9877a8501f52b4272f1a739497b478e50ff",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "raw_v2-1_stderr",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v2-1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "raw_v2-1_stdout",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v2-1.stdout",
+      "sha256": "ce32872746ef844da3b3743d2e2e6543f6c0bbac4f9ea1d72aff82098114a2d6",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "raw_v2-lap-77x47_stderr",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v2-lap-77x47.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "raw_v2-lap-77x47_stdout",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v2-lap-77x47.stdout",
+      "sha256": "71473577649b2ada85ced5149ba6b4fef601fc408593ac83da42b16751a9c7bd",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "raw_v2-pinned-77x47_stderr",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v2-pinned-77x47.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "raw_v2-pinned-77x47_stdout",
+      "path": "docs/visualize-eval/rounds/10/network/recorded/v2-pinned-77x47.stdout",
+      "sha256": "a24f70a4c73cb7b3f29182ec86e74cc692f6f67f56660af154ff33e512123a85",
+      "description": "Raw recorded probe bytes",
+      "capture": null
+    },
+    {
+      "id": "draft_v1_1",
+      "path": "docs/visualize-eval/rounds/10/network/specs/v1-1.json",
+      "sha256": "b928319e9c4ea2639f4534bb438effcf85fcf6a9701732f0c669cbaa92962e6d",
+      "description": "Recorded attempted spec",
+      "capture": null
+    },
+    {
+      "id": "draft_v1_2",
+      "path": "docs/visualize-eval/rounds/10/network/specs/v1-2.json",
+      "sha256": "1503a71fd98001e5ce89502f6905560de425ccbab43f8c341ec3889b85b916ba",
+      "description": "Recorded attempted spec",
+      "capture": null
+    },
+    {
+      "id": "draft_v1_a",
+      "path": "docs/visualize-eval/rounds/10/network/specs/v1-a.json",
+      "sha256": "0af4f080279dbd7ab335df566e26ae10b4d34a91e225f7f34093a6d01f003586",
+      "description": "Recorded attempted spec",
+      "capture": null
+    },
+    {
+      "id": "draft_v1_b",
+      "path": "docs/visualize-eval/rounds/10/network/specs/v1-b.json",
+      "sha256": "a140908193474dedd3a3d0c9b182789c1ac0eb34023af9d105c2b05234087ab2",
+      "description": "Recorded attempted spec",
+      "capture": null
+    },
+    {
+      "id": "draft_v1_c",
+      "path": "docs/visualize-eval/rounds/10/network/specs/v1-c.json",
+      "sha256": "acf5dbf3b8df1896296e18f9bedf87b85a01aa9e34d35b2273b64d7518831b12",
+      "description": "Recorded attempted spec",
+      "capture": null
+    },
+    {
+      "id": "draft_v2_1",
+      "path": "docs/visualize-eval/rounds/10/network/specs/v2-1.json",
+      "sha256": "5cdec6d982ff0f380d182ee989abacdc60b44a3fbd3391e1b1a907e7b2907959",
+      "description": "Recorded attempted spec",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All 6 concepts and 7 directed relations and labels visible across views; core→Redis repeated to demonstrate convergence, not an extra source relation; default dot rate does not encode GbE.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "v1_pinned",
+        "v2_pinned",
+        "v1_spec",
+        "v2_spec"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Every source stem leads to an independent arrowhead without crossing, fake branch or avoidable loop. Frame-zero dots are at origins.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "evidence_ids": [
+        "v1_pinned",
+        "v2_pinned",
+        "v1_lap",
+        "v2_lap"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Both final-spec recorded target dumps prove 77×47 natural fit, no overflow or clipping; 0 crossings. Live app headers report 82×51.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "evidence_ids": [
+        "v1_pinned",
+        "v2_pinned",
+        "v1_manifest",
+        "v2_manifest"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Distinct aqua, magenta and orange hue families support network/app/state, no group enclosures, and source tier names remain legible.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "evidence_ids": [
+        "v1_ansi",
+        "v2_ansi",
+        "v1_pinned",
+        "v2_pinned"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All nine occurrence borders complete, color-continuous in normal and select-all ANSI, not occluded; select-all is not independent interaction coverage.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "evidence_ids": [
+        "v1_ansi",
+        "v2_ansi",
+        "v1_selected",
+        "v2_selected"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Frozen cases.json SHA in metadata is wrong relative to actual index, so claimed reproducible frozen dataset identity is unverified. Generator also describes several capture coordinates one row/column off and v1-c actually exited 1, despite prompt claiming all 0. Ten recorded probes and raw hashes do verify; both validators pass.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "dataset",
+        "generation",
+        "attempt_log",
+        "v1_validator",
+        "v2_validator",
+        "blind"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Four single dots each view, origins correct, frames 0→6 advance three eligible route cells on each, full longest-route laps at target size. All eligible cells have the same cadence; bends are intentionally skipped rather than occupied, so speed is not constant in literal grid distance at bends. No corner/head/label occupancy; same-arrival was not requested.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "evidence_ids": [
+        "v1_lap",
+        "v2_lap",
+        "v1_check",
+        "v2_check"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Correct service-meshes classification and supported family line, triangle co-viewed, no anti-parallel source pair to fabricate; however source lists core→Web before core→Redis while v1 fan ports and target order are Redis above Web. This is the reverse of the required source-list fan order; no recorded yield proves this specific port-order demand impossible. The declared flow-chain secondary recipe is visible.",
+      "judged_family": "service-meshes",
+      "generator_family": "service-meshes",
+      "evidence_line": "The core switch fans two links into the application tier (core->web 10 GbE, core->cache 25 GbE) and the three application nodes close a triangle (web->cache session, web->db queries, cache->db fill), so the graph is a fan around a core with mesh relations, not a chain (density: 7 relations over 6 nodes) and not a fabric (no redundant parallel links, no double arrowheads).",
+      "recipe_facts": [
+        "Source fan listing web then cache; rendered top-to-bottom cache then web, reverse order.",
+        "Application triangle is co-viewed and converging links have distinct arrowheads.",
+        "No source anti-parallel pair; no invented reverse.",
+        "Transit secondary chain is short and legible.",
+        "Single-view measured attempts document split, not a yield for reversed fan order."
+      ],
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "evidence_ids": [
+        "generation",
+        "source",
+        "v1_pinned",
+        "v2_pinned",
+        "attempts"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "expected": "WAN → Firewall, 1 GbE",
+      "observed": "stem (12,24) to ▶ (19,24); label (13,23); no intersections; complete source-to-head route is traceable and has no junction or crossing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1_pinned",
+          "region": [
+            12,
+            23,
+            8,
+            2
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "expected": "Firewall → Core switch, 10 GbE",
+      "observed": "stem (30,24) to ▶ (38,24); label (31,23); no intersections; complete source-to-head route is traceable and has no junction or crossing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1_pinned",
+          "region": [
+            30,
+            23,
+            9,
+            2
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "expected": "Core switch → Web tier, 10 GbE",
+      "observed": "lower stem (52,25), turns down to ▶ (60,26); label (52,26); complete source-to-head route is traceable and has no junction or crossing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1_pinned",
+          "region": [
+            52,
+            25,
+            9,
+            2
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "expected": "Core switch → Redis, 25 GbE",
+      "observed": "upper stem (52,23), bends up to ▶ (62,21); label (53,22); independently repeated in v2 with stem (32,14), ▼ (33,23); complete source-to-head route is traceable and has no junction or crossing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v1_pinned",
+          "region": [
+            52,
+            21,
+            11,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v2_pinned",
+          "region": [
+            32,
+            14,
+            8,
+            10
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "expected": "Web tier → Redis, session",
+      "observed": "stem (45,14), down and left to ▼ (35,23), label (37,21); distinct from e4; complete source-to-head route is traceable and has no junction or crossing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2_pinned",
+          "region": [
+            35,
+            14,
+            11,
+            10
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "expected": "Web tier → DB tier, queries",
+      "observed": "stem (47,14), down and left to ▼ (40,34), label (40,27); complete source-to-head route is traceable and has no junction or crossing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2_pinned",
+          "region": [
+            40,
+            14,
+            8,
+            21
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "expected": "Redis → DB tier, fill",
+      "observed": "stem (34,28), down and right to ▼ (38,34), label (36,30); complete source-to-head route is traceable and has no junction or crossing.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "v2_pinned",
+          "region": [
+            34,
+            28,
+            6,
+            7
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "category_fit",
+      "edge_ids": [
+        "e3",
+        "e4"
+      ],
+      "severity": "medium",
+      "description": "Defect: source-list fan order is core→Web then core→Redis, but the capture orders Redis above Web and uses the upper port for Redis and lower for Web. The one-view split experiments do not document an impossibility yield for this port-order requirement. Generator asserts the reverse order is correct.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1_pinned",
+          "region": [
+            39,
+            20,
+            32,
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Evidence identity defect: metadata freezes cases.json as e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05, while the actual index hashes to e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05. The network source, expected and variant hashes individually match; the frozen dataset index as a whole is not identified reliably.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/10/metadata.json"
+      ],
+      "locations": []
+    },
+    {
+      "id": "F3",
+      "category": "workflow_evidence",
+      "edge_ids": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6",
+        "e7"
+      ],
+      "severity": "low",
+      "description": "Defect in evidence narration: generation.json describes several target coordinates one row and column lower than 1-based capture coordinates, and inconsistently claims 11 drawn longest-route cells yet a 20-frame lap at 0.5 cells/step. Raw pinned captures remain usable and blind coordinates are independently measured.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/10/network/generation.json"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1_pinned",
+          "region": [
+            7,
+            20,
+            64,
+            9
+          ]
+        },
+        {
+          "evidence_id": "v2_pinned",
+          "region": [
+            26,
+            10,
+            26,
+            29
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "Frozen dataset-index hash mismatch: cannot confirm cases.json is byte-identical to the round-10 frozen dataset index without corrected authoritative metadata or the matching frozen index."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pQQ",
+      "w7E:pQR"
+    ],
+    "closed_pane_ids": [
+      "w7E:pQQ",
+      "w7E:pQR"
+    ],
+    "status": "done",
+    "reason": "Both capture manifests report confirmed_closed; pinned dumps are headless; judge opened no viewer."
+  },
+  "overall": "fail"
+}

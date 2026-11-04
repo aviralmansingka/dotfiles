@@ -1,0 +1,1 @@
+{"direction":"lr","nodes":[{"id":"a","label":"alpha"},{"id":"b","label":"beta"}],"edges":[{"from":"a","to":"b"}]}

@@ -1,0 +1,600 @@
+{
+  "case_id": "modal-machine-manager-c4-retry",
+  "run": "v3",
+  "round": "14",
+  "generator": {
+    "label": "viz-ds13-c4",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "frozen_inputs": {
+    "skill": "docs/visualize-eval/proposals/13/SKILL.md",
+    "skill_sha256": "72ea719752b6a955f357a087fe823d6a17266a03d341edaf0101dbb356bf3dff",
+    "renderer": "/tmp/visualize-eval/round-14/bin/rataflow-view",
+    "renderer_sha256": "9b3baf0496bb2b5d9a8e708ceea2830ec88bbd00fce52b28a4bd9aeb0cafee31",
+    "source": "docs/visualize-eval/cases/modal-machine-manager/source.md"
+  },
+  "what_changed_vs_v2": [
+    "multi-box enclosure: l2a now declares `enclosures: [[cp,wapi,pgrpc,q,rec,reg,db],[boot]]`; the boot server has its own dotted box (15x7 at 237,36) so every manager service reads as inside SOME box - the v2 ownership seam is gone.",
+    "all live routes animated: the three boundary-crossing routes (web->wapi, reg->prov, wapi->slack) carry one dot each again; the frame audit now tracks 12/12 routes with 12 dots in every frame (v2: 9/9 with three static).",
+    "paint-order fix verified from the capture: all 25 distinct relation labels render intact in frame 0 and all 12 dots are visible - the v2 'enclosure overwrites label characters' defect does not reproduce.",
+    "coverage-map fix: the L1 expansion ids are now correct (l1:e4 'boot, audit' -> boot->mch + ssh->mch; l1:e5 'iPXE, heartbeat' -> mch->boot + agent->pub). v2 had them swapped."
+  ],
+  "triage": {
+    "annex": "round-14 c4-retry brief plus the generation task message that carries the owner directives",
+    "questions_used": [
+      {
+        "id": "C4R14v3-1",
+        "question": "Where does the boot server belong now that multi-box enclosures exist?",
+        "answer": "In its own dotted box: the source chain reg->prov->mch->boot puts the boot service past two externals, so the control-plane group keeps one box and boot gets a second one. Every manager service is inside some box; nothing is left outside.",
+        "answer_source": "task-message fix 3 + brief framing"
+      },
+      {
+        "id": "C4R14v3-2",
+        "question": "Do boundary-crossing routes keep their dots now that the boundary is scenery?",
+        "answer": "Yes: all 12 live routes carry one dot, including the three that enter or leave a box. The frame audit confirms 12/12 tracked with 12 dots in every frame.",
+        "answer_source": "task-message fix 2 + measured frame audit"
+      },
+      {
+        "id": "C4R14v3-3",
+        "question": "Can whole-canvas ANSI/selected evidence be captured?",
+        "answer": "No. Measured three ways: (a) the pinned dump strips escape bytes - `python3 scripts/viz-pinned-dump.py --bin /tmp/visualize-eval/round-14/bin/rataflow-view --spec specs/c4-canvas.json --cols 260 --rows 90 --frames 1` returned 0 ANSI sequences (the script does `.replace(\"\\x1b\",\"\")`); (b) the evidence script's ANSI capture is a pane read and the half pane is 68x44 (manifest `viewport_token: 68x44 @100%`); (c) the tab itself is 140x46, smaller than the 253x74 canvas, so no pane can show it whole at 100% and zooming out is forbidden.",
+        "answer_source": "measured; see blockers"
+      },
+      {
+        "id": "C4R14v3-4",
+        "question": "Any layout iteration needed?",
+        "answer": "None: the first candidate checked clean (0 near-miss, 30/30 labels, 0 ambiguous, 0 pin conflicts, 12/12 origins).",
+        "answer_source": "measured (v3-canvas-attempt1b)"
+      }
+    ],
+    "converged_when": "All three v2 causes had a prescribed fix; only the enclosure grouping needed a judgment call (boot in its own box), and the first candidate passed every check.",
+    "shape_decision": "one canvas, three described diagrams: l1 (context, focus on mm), l2a (two member-based boxes), l2b (one member-based box)"
+  },
+  "classification": {
+    "family": "lifecycle-machines",
+    "evidence": "wide fan out of the queue/machine spine with one live dot per transition; phase order request -> provisioning -> boot.",
+    "secondary_recipe": "service-meshes (anti-parallel boot pair in one diagram, two separate arrows)",
+    "reclassification": null
+  },
+  "surfaces": [
+    {
+      "surface": "canvas",
+      "spec": "specs/c4-canvas.json",
+      "spec_sha256": "187b43785109521872263f267d7f956d620a762f3c1eed4676b7e3a1e0ca3991",
+      "bundle": "evidence/canvas",
+      "check": "evidence/canvas/check.txt",
+      "text": "evidence/canvas/canvas-text.txt",
+      "ansi": "evidence/canvas/canvas-ansi.ansi",
+      "selected_ansi": "evidence/canvas/canvas-selected.ansi",
+      "frames": "evidence/canvas/canvas-frames.txt",
+      "whole_canvas_frames": "evidence/canvas/canvas-260x90-frames.txt",
+      "frame_audit": "evidence/canvas/frame-audit.txt",
+      "validator": "evidence/canvas/validator.txt",
+      "measured": {
+        "pane_capture": "68x44 @100% (half of the 140x46 tab - the left slice of the canvas)",
+        "pinned_viewport_line": "viewport: 260x90 zoom: 1.00 natural",
+        "direction": "lr, declared once at canvas scope, no per-diagram override"
+      },
+      "cleanup": "confirmed_closed",
+      "totals": {
+        "nodes": 28,
+        "edges": 30,
+        "routes": 30,
+        "extent": "253x74",
+        "animated_routes": 12,
+        "crossings": "4 bridges, 0 touching bends",
+        "near_misses": 0,
+        "labels": "30/30 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners",
+        "origins": "12/12",
+        "dot_violations": 0,
+        "pin_conflicts": 0,
+        "enclosure_entrances": 7,
+        "enclosure_crossings": "line absent = 0 (the build prints it only above zero; a v2 probe printed 'enclosure-crossings: 1 cell(s)' so the metric is live)"
+      },
+      "diagrams": [
+        {
+          "id": "l1",
+          "level": "C4 L1 - system context",
+          "extent": "112x21",
+          "origin": [
+            0,
+            5
+          ],
+          "nodes": 6,
+          "edges": 7,
+          "dots": 4,
+          "focus_node": "mm (double border: 'double border: 1 zoom parent(s) - l1:mm')",
+          "enclosure": null
+        },
+        {
+          "id": "l2a",
+          "level": "C4 L2 - containers (request, provisioning, boot)",
+          "extent": "253x20",
+          "origin": [
+            0,
+            31
+          ],
+          "nodes": 12,
+          "edges": 14,
+          "dots": 6,
+          "enclosures": [
+            {
+              "box": "131x16 at 23,31",
+              "members": [
+                "cp",
+                "wapi",
+                "pgrpc",
+                "q",
+                "rec",
+                "reg",
+                "db"
+              ]
+            },
+            {
+              "box": "15x7 at 237,36",
+              "members": [
+                "boot"
+              ]
+            }
+          ],
+          "outside": [
+            "web",
+            "prov",
+            "mch",
+            "s3"
+          ]
+        },
+        {
+          "id": "l2b",
+          "level": "C4 L2 - containers (heartbeat, audits, diagnostics)",
+          "extent": "189x18",
+          "origin": [
+            0,
+            56
+          ],
+          "nodes": 10,
+          "edges": 9,
+          "dots": 2,
+          "enclosures": [
+            {
+              "box": "140x14 at 22,56",
+              "members": [
+                "pub",
+                "wapi",
+                "q",
+                "ssh",
+                "agent",
+                "db",
+                "jan"
+              ]
+            }
+          ],
+          "outside": [
+            "mch",
+            "s3",
+            "slack"
+          ]
+        }
+      ],
+      "canvas_chrome": {
+        "top_rule_above_first_section": "row 8, width 257",
+        "uniform_dividers": "rows 8, 34, 59 - all 257 cells (widest band)",
+        "dotted_boxes": "rows 31-46 (l2a control group, cols 23-153), rows 36-42 (l2a boot box, cols 237-251), rows 56-69 (l2b, cols 22-161)",
+        "legend": "row 84, below the drawing which ends at row 69",
+        "labels_intact": "25/25 distinct relation labels present verbatim in frame 0",
+        "dots_visible_frame0": 12
+      }
+    }
+  ],
+  "coverage_map": {
+    "rule": "all 23 relations verbatim once at the container level; context edges are aggregates with recorded expansions",
+    "relations": [
+      {
+        "id": 1,
+        "source": "cp -> pgrpc",
+        "verb": "create / terminate / repair",
+        "level": "L2",
+        "surface": "l2a:e1"
+      },
+      {
+        "id": 2,
+        "source": "web -> wapi",
+        "verb": "http",
+        "level": "L2",
+        "surface": "l2a:e0 (l1:e0 aggregate)"
+      },
+      {
+        "id": 3,
+        "source": "pgrpc -> q",
+        "verb": "enqueue job",
+        "level": "L2",
+        "surface": "l2a:e2"
+      },
+      {
+        "id": 4,
+        "source": "wapi -> q",
+        "verb": "reinstall / reprovision",
+        "level": "L2",
+        "surface": "l2a:e3"
+      },
+      {
+        "id": 5,
+        "source": "q -> reg",
+        "verb": "provision job",
+        "level": "L2",
+        "surface": "l2a:e4"
+      },
+      {
+        "id": 6,
+        "source": "reg -> prov",
+        "verb": "provider API",
+        "level": "L2",
+        "surface": "l2a:e5 (l1:e1 aggregate)"
+      },
+      {
+        "id": 7,
+        "source": "prov -> mch",
+        "verb": "allocate instance",
+        "level": "L2",
+        "surface": "l2a:e6 (l1:e6 aggregate)"
+      },
+      {
+        "id": 8,
+        "source": "mch -> boot",
+        "verb": "iPXE request",
+        "level": "L2",
+        "surface": "l2a:e7 (l1:e5 aggregate)"
+      },
+      {
+        "id": 9,
+        "source": "boot -> mch",
+        "verb": "boot.ipxe + S3 args",
+        "level": "L2",
+        "surface": "l2a:e8 (l1:e4 aggregate)"
+      },
+      {
+        "id": 10,
+        "source": "mch -> agent",
+        "verb": "runs on host",
+        "level": "L2",
+        "surface": "l2b:e2"
+      },
+      {
+        "id": 11,
+        "source": "agent -> pub",
+        "verb": "register + heartbeat",
+        "level": "L2",
+        "surface": "l2b:e3 (l1:e5 aggregate)"
+      },
+      {
+        "id": 12,
+        "source": "pub -> db",
+        "verb": "machine state",
+        "level": "L2",
+        "surface": "l2b:e4"
+      },
+      {
+        "id": 13,
+        "source": "pgrpc -> db",
+        "verb": "machine rows",
+        "level": "L2",
+        "surface": "l2a:e10"
+      },
+      {
+        "id": 14,
+        "source": "q -> db",
+        "verb": "job rows",
+        "level": "L2",
+        "surface": "l2a:e11"
+      },
+      {
+        "id": 15,
+        "source": "q -> ssh",
+        "verb": "audit / verify reimage",
+        "level": "L2",
+        "surface": "l2b:e0"
+      },
+      {
+        "id": 16,
+        "source": "ssh -> mch",
+        "verb": "run machine-audit",
+        "level": "L2",
+        "surface": "l2b:e1 (l1:e4 aggregate)"
+      },
+      {
+        "id": 17,
+        "source": "mch -> s3",
+        "verb": "pull boot image",
+        "level": "L2",
+        "surface": "l2a:e9"
+      },
+      {
+        "id": 18,
+        "source": "q -> s3",
+        "verb": "diagnose uploads",
+        "level": "L2",
+        "surface": "l2b:e8"
+      },
+      {
+        "id": 19,
+        "source": "q -> jan",
+        "verb": "diagnostic events",
+        "level": "L2",
+        "surface": "l2b:e5"
+      },
+      {
+        "id": 20,
+        "source": "jan -> wapi",
+        "verb": "proposed actions",
+        "level": "L2",
+        "surface": "l2b:e6"
+      },
+      {
+        "id": 21,
+        "source": "wapi -> slack",
+        "verb": "confirm + alerts",
+        "level": "L2",
+        "surface": "l2b:e7 (l1:e3 aggregate)"
+      },
+      {
+        "id": 22,
+        "source": "rec -> prov",
+        "verb": "gcore sync, 1 min",
+        "level": "L2",
+        "surface": "l2a:e12 (l1:e1 aggregate)"
+      },
+      {
+        "id": 23,
+        "source": "rec -> db",
+        "verb": "cluster state",
+        "level": "L2",
+        "surface": "l2a:e13"
+      }
+    ],
+    "expansions": [
+      {
+        "context_edge": "l1:e0",
+        "label": "http",
+        "expands_to": [
+          "web -> wapi http"
+        ]
+      },
+      {
+        "context_edge": "l1:e1",
+        "label": "provider API",
+        "expands_to": [
+          "reg -> prov provider API",
+          "rec -> prov gcore sync, 1 min"
+        ]
+      },
+      {
+        "context_edge": "l1:e2",
+        "label": "diagnose",
+        "expands_to": [
+          "q -> s3 diagnose uploads"
+        ]
+      },
+      {
+        "context_edge": "l1:e3",
+        "label": "confirm + alerts",
+        "expands_to": [
+          "wapi -> slack confirm + alerts"
+        ]
+      },
+      {
+        "context_edge": "l1:e4",
+        "label": "boot, audit",
+        "expands_to": [
+          "boot -> mch boot.ipxe + S3 args",
+          "ssh -> mch run machine-audit"
+        ]
+      },
+      {
+        "context_edge": "l1:e5",
+        "label": "iPXE, heartbeat",
+        "expands_to": [
+          "mch -> boot iPXE request",
+          "agent -> pub register + heartbeat"
+        ]
+      },
+      {
+        "context_edge": "l1:e6",
+        "label": "allocate instance",
+        "expands_to": [
+          "prov -> mch allocate instance"
+        ]
+      }
+    ],
+    "expansion_id_fix": "v2 swapped l1:e4 and l1:e5; corrected against the shipped spec's edge order (e4 = mm -> mch 'boot, audit', e5 = mch -> mm 'iPXE, heartbeat')",
+    "components_covered": "all 17",
+    "drops": "none",
+    "qualifier_on_canvas": [
+      "audit/verify reimage",
+      "boot.ipxe + S3 args",
+      "create/terminate/repair",
+      "reinstall/reprovision",
+      "gcore sync, 1 min",
+      "run machine-audit",
+      "register + heartbeat",
+      "diagnostic events",
+      "proposed actions",
+      "confirm + alerts",
+      "diagnose uploads",
+      "pull boot image",
+      "allocate instance",
+      "machine state",
+      "machine rows",
+      "job rows",
+      "cluster state",
+      "runs on host"
+    ]
+  },
+  "meaning_ledger": [
+    {
+      "fact": "17 component names",
+      "kind": "identifier",
+      "fate": "drawn"
+    },
+    {
+      "fact": "bare-metal providers/machines",
+      "kind": "role",
+      "fate": "drawn",
+      "note": "BM = bare metal keyed in all three on-canvas descriptions"
+    },
+    {
+      "fact": "audit / verify reimage",
+      "kind": "verbs",
+      "fate": "drawn",
+      "note": "l2b:e0"
+    },
+    {
+      "fact": "boot.ipxe + S3 args",
+      "kind": "payload",
+      "fate": "drawn",
+      "note": "l2a:e8"
+    },
+    {
+      "fact": "create/terminate/repair and reinstall/reprovision",
+      "kind": "verbs",
+      "fate": "drawn",
+      "note": "l2a:e1, l2a:e3"
+    },
+    {
+      "fact": "gcore sync, 1 min",
+      "kind": "qualifier",
+      "fate": "drawn",
+      "note": "l2a:e12"
+    },
+    {
+      "fact": "register + heartbeat, run machine-audit, diagnostic events, proposed actions, confirm + alerts, diagnose uploads",
+      "kind": "verbs",
+      "fate": "drawn",
+      "note": "l2b:e3, e1, e5, e6, e7, e8"
+    },
+    {
+      "fact": "both machines <-> boot server directions",
+      "kind": "direction pair",
+      "fate": "drawn",
+      "note": "l2a:e7/e8 inside the boot box; L1 keeps its own pair l1:e4/l1:e5"
+    },
+    {
+      "fact": "'diagnose uploads' on the context aggregate",
+      "kind": "convention",
+      "fate": "abbreviated",
+      "note": "L1 label 'diagnose'; full phrase on l2b:e8"
+    },
+    {
+      "fact": "'historical claims' qualifier",
+      "kind": "qualifier",
+      "fate": "recorded",
+      "note": "no relation individually unconfirmed -> no dashed edge"
+    }
+  ],
+  "relationship_audit": {
+    "l1": [
+      "e0 web->mm http",
+      "e1 mm->prov provider API",
+      "e2 mm->s3 diagnose",
+      "e3 mm->slack confirm + alerts",
+      "e4 mm->mch boot, audit",
+      "e5 mch->mm iPXE, heartbeat",
+      "e6 prov->mch allocate instance"
+    ],
+    "l2a": [
+      "e0 web->wapi http",
+      "e1 cp->pgrpc create/terminate/repair",
+      "e2 pgrpc->q enqueue job",
+      "e3 wapi->q reinstall/reprovision",
+      "e4 q->reg provision job",
+      "e5 reg->prov provider API",
+      "e6 prov->mch allocate instance",
+      "e7 mch->boot iPXE request",
+      "e8 boot->mch boot.ipxe + S3 args",
+      "e9 mch->s3 pull boot image",
+      "e10 pgrpc->db machine rows",
+      "e11 q->db job rows",
+      "e12 rec->prov gcore sync, 1 min",
+      "e13 rec->db cluster state"
+    ],
+    "l2b": [
+      "e0 q->ssh audit/verify reimage",
+      "e1 ssh->mch run machine-audit",
+      "e2 mch->agent runs on host",
+      "e3 agent->pub register + heartbeat",
+      "e4 pub->db machine state",
+      "e5 q->jan diagnostic events",
+      "e6 jan->wapi proposed actions",
+      "e7 wapi->slack confirm + alerts",
+      "e8 q->s3 diagnose uploads"
+    ],
+    "antiparallel_pairs": [
+      {
+        "pair": "machines <-> boot server",
+        "edges": [
+          "l2a:e7",
+          "l2a:e8"
+        ],
+        "one_diagram": true
+      }
+    ]
+  },
+  "routing_record": {
+    "final": {
+      "near_misses": 0,
+      "ambiguous_labels": 0,
+      "crossings": "4 bridges",
+      "pin_conflicts": 0,
+      "enclosure_entrances": 7,
+      "enclosure_crossings": 0
+    },
+    "note": "no routing iteration this round: the enclosure split and the dot re-enable did not perturb the v2 geometry."
+  },
+  "hue_record": {
+    "groups": "humans(2) external(10) control(5) async(4) hostops(3) state(2) ops(1)",
+    "case_wide": "one group tag, one hue family across both enclosed halves",
+    "dot_hues": "dot hues: 8 by source, 1 by destination, 0 shared-hue pair(s) (source-only 1, destination-only 2)",
+    "caveat": "per-route hue binding cannot be shown from a whole-canvas ANSI capture because none exists (see blockers); the pane ANSI proves the L1 hues only"
+  },
+  "defects": [
+    "L1's context label reads 'diagnose' (full 'diagnose uploads' on l2b:e8) - the only abbreviation on the canvas besides the keyed 'BM'.",
+    "the canvas is 253x74, so the 68x44 pane capture shows only its left slice; whole-canvas navigation proof is the pinned 260x90 dump (text only).",
+    "the boot server's box is small (15x7) and sits at the far right of l2a; the reader must notice that it is a second box of the same boundary.",
+    "no whole-canvas ANSI/selected-state evidence exists (harness limit, see blockers), so color consistency across both L2 halves and per-route dot hue remain unproven to a judge.",
+    "the frozen binary was SIGKILLed by the OS signature cache on both replaced builds; re-materialising identical bytes at the same path fixed it (sha unchanged) and is recorded rather than hidden."
+  ],
+  "blockers": {
+    "whole_canvas_ansi": "gave up after three measured attempts",
+    "whole_canvas_ansi_attempts": [
+      "python3 scripts/viz-pinned-dump.py --bin /tmp/visualize-eval/round-14/bin/rataflow-view --spec docs/visualize-eval/rounds/14/c4-retry/specs/c4-canvas.json --cols 260 --rows 90 --frames 1  -> 0 ANSI escape sequences; the script strips them (data.replace(\"\\x1b\", \"\"))",
+      "scripts/viz-evidence.sh --spec ... --out evidence/canvas --label canvas ... -> ANSI is a `herdr pane read` of the split pane; manifest records viewport_token 68x44 @100% (a half pane of the tab)",
+      "herdr pane layout -> tab area 140x46, smaller than the 253x74 canvas, so no pane can display it whole at 100% and zooming out is forbidden by the contract"
+    ],
+    "other": [
+      "one-diagram L2 remains impossible at lr on this build (measured in v1 and v2)",
+      "L3 stays unsupported by the source",
+      "OS-level SIGKILL of a freshly replaced binary at its frozen path (workaround: re-materialise identical bytes)"
+    ]
+  },
+  "frame_audit": {
+    "input": "evidence/canvas/canvas-260x90-frames.txt",
+    "frames": 60,
+    "longest_route_cells": 28,
+    "frames_required": 56,
+    "verdict": "PASS - 12/12 routes tracked, 12 dots in every frame, one rate 0.500 cells/frame, equal distance"
+  },
+  "validator": {
+    "command": "viz-validate.py ... --require-select --require-frames --require-records --frame-audit",
+    "exit": 0,
+    "output": "evidence/canvas/validator.txt",
+    "summary": "all checks passed"
+  },
+  "cleanup": {
+    "pane": "closed by the evidence script",
+    "manifest": "confirmed_closed",
+    "other_panes": "none"
+  },
+  "archives": {
+    "v1": "v1/ (externals inside the box, audit dropped, L1 directions folded)",
+    "v2": "v2/ (boot outside the boundary, labels overwritten by the boundary, three crossing routes static)"
+  }
+}

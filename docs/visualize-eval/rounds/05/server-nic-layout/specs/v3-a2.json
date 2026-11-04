@@ -1,0 +1,18 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "gw", "label": "Arista 103.19.91.57", "group": "nxtgen /29" },
+    { "id": "airtel", "label": "Airtel 14.143.x", "group": "isp transit" },
+    { "id": "airtelbb", "label": "Airtel BB 14.141.x", "group": "isp transit" },
+    { "id": "cf", "label": "1.1.1.1 AS13335", "group": "cloudflare" },
+    { "id": "silent", "label": "hops 3,6 silent", "group": "trace caveats" },
+    { "id": "l2q", "label": "L2? fabric", "group": "trace caveats" }
+  ],
+  "edges": [
+    { "from": "gw", "to": "airtel", "label": "1.8 ms, 1 ISP", "dots": 0 },
+    { "from": "airtel", "to": "airtelbb", "label": "7.1 ms", "dots": 0 },
+    { "from": "airtelbb", "to": "cf", "label": "8.3-8.6 ms", "dots": 0 },
+    { "from": "silent", "to": "l2q", "label": "not proven", "dots": 0, "style": "dashed" }
+  ]
+}

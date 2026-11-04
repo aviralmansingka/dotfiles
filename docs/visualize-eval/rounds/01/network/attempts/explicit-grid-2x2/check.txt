@@ -1,0 +1,4 @@
+ok: nodes=4 edges=2 flows=2 direction=tb theme=gruvbox
+layers=2 (explicit placement, sugiyama skipped)
+extent=28x13 cells
+exit=0

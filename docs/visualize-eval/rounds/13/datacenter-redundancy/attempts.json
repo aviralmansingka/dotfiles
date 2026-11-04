@@ -1,0 +1,74 @@
+{
+  "case_id": "datacenter-redundancy",
+  "round": "13",
+  "binary_path": "/tmp/visualize-eval/round-13/bin/rataflow-view",
+  "binary_sha256": "1f28d87d9f791dda81f21a1d083d459f6103ee383ab97116d9355124f8824f13",
+  "budget": "at most three spec candidates per rendered diagram; the canvas renders three diagrams, so three distinct canvas specs were checked and every one is recorded in attempts-log.jsonl",
+  "views": [
+    {
+      "view": "v1",
+      "form": "canvas",
+      "spec": "specs/canvas-3.json",
+      "diagrams": ["uplinks", "security", "fabric"],
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "specs/canvas-1.json",
+          "record_label": "canvas-1",
+          "raw_check": "recorded/canvas-1.stdout",
+          "diagram_directions": { "uplinks": "tb", "security": "tb", "fabric": "tb" },
+          "node_labels": "short identifiers (MUX 1 / FW1 / BL 1 / Leaf 1)",
+          "near_miss_cells": 19,
+          "near_miss_routes": ["security:e2", "fabric:e2", "fabric:e6", "fabric:e7"],
+          "labels": "23/24 placed, 1 skipped, 7 ambiguous owners",
+          "canvas_extent": "71x104",
+          "rejected_because": "1 skipped label and 7 ambiguous owners (validator fails labels_complete, labels_not_skipped, labels_ownership_clear) plus 19 near-miss cells"
+        },
+        {
+          "attempt": 2,
+          "spec": "specs/canvas-2.json",
+          "record_label": "canvas-2",
+          "raw_check": "recorded/canvas-2.stdout",
+          "diagram_directions": { "uplinks": "lr", "security": "lr", "fabric": "tb" },
+          "node_labels": "short identifiers",
+          "near_miss_cells": 16,
+          "near_miss_routes": ["uplinks:e6", "security:e2", "security:e6", "fabric:e2", "fabric:e6", "fabric:e7"],
+          "labels": "24/24 placed, 0 skipped, 8 ambiguous owners",
+          "canvas_extent": "71x73",
+          "rejected_because": "the lr orientation made label ownership worse (8 ambiguous vs 7) and added two near-miss routes; the fabric was unchanged so its defects persisted"
+        },
+        {
+          "attempt": 3,
+          "spec": "specs/canvas-3.json",
+          "record_label": "canvas-3",
+          "raw_check": "recorded/canvas-3.stdout",
+          "diagram_directions": { "uplinks": "tb", "security": "tb", "fabric": "tb" },
+          "node_labels": "source-backed full identifiers (MUX appliance 1 / Core router 1 / FW1 active / Border leaf 1 / Rack leaf 1)",
+          "near_miss_cells": 29,
+          "near_miss_routes": ["uplinks:e5", "security:e5", "fabric:e2", "fabric:e6"],
+          "labels": "24/24 placed, 0 skipped, 0 leader-ticked, 0 ambiguous owners",
+          "canvas_extent": "71x106",
+          "shipped": true,
+          "remaining_defects": "4 routes pass inside the 2-cell margin of an unrelated node; fabric:e2 (bl2 -> sp1) is the worst at 22 cells because its inside-hop return path can only climb two rows above the spine row before the drawing's own top margin ends"
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "shape": "single view, all 28 relations, 7 rank-pinned tiers, tb",
+      "spec": "specs/probe-single-view.json",
+      "record_label": "probe-single-view",
+      "raw_check": "recorded/probe-single-view.stdout",
+      "diagnostic_record_labels": ["canvas-1-visual", "canvas-3-visual"],
+      "measured_extent": "60x82",
+      "measured_against": "77x47 target viewport",
+      "rejected_because": "extent 60x82 overflows the 77x47 pane in height by 35 rows, plus 31 near-miss cells, 4 ambiguous owners and the 18/28 readable-budget warning; rung 1 is not an honest fit at natural zoom"
+    }
+  ],
+  "attempts_per_diagram": {
+    "uplinks": 3,
+    "security": 3,
+    "fabric": 3
+  }
+}

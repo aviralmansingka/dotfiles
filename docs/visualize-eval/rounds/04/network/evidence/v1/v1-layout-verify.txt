@@ -1,0 +1,26 @@
+source: docs/visualize-eval/rounds/04/network/evidence/v1/v1-text.txt (scripts/viz-evidence.sh -> herdr pane read, --source visible, plain text)
+coordinates are (column, graph row): graph row 0 = file line 1 (file line 0 is the app header).
+file lines: 46 | header line 0: rataflow-view · 77x47 @100% · v1-a3.json · 6 nodes · 7 edges · q quit
+
+label '1 GbE'    count=1 at (col,graph row) [(36, 5)]
+label '10 GbE'   count=2 at (col,graph row) [(34, 13), (34, 21)]
+label '25 GbE'   count=1 at (col,graph row) [(22, 21)]
+label 'session'  count=1 at (col,graph row) [(24, 30)]
+label 'queries'  count=1 at (col,graph row) [(40, 37)]
+label 'fill'     count=1 at (col,graph row) [(33, 40)]
+
+node 'WAN'         border top-left (col 33, graph row 0); label cells: 'WAN'
+node 'Firewall'    border top-left (col 31, graph row 8); label cells: 'Firewall'
+node 'Core switch' border top-left (col 29, graph row 16); label cells: 'Core switch'
+node 'Web tier'    border top-left (col 31, graph row 24); label cells: 'Web tier'
+node 'Redis'       border top-left (col 18, graph row 33); label cells: 'Redis'
+node 'DB tier'     border top-left (col 50, graph row 41); label cells: 'DB tier'
+
+bridge glyphs (U+232C) in the whole frame: [] => visible route crossings: 0
+
+arrowheads (U+25BC): 7 [(32, 7), (30, 15), (32, 23), (19, 32), (21, 32), (51, 40), (53, 40)]
+flow dots (U+25CF) in this live frame: 7 [(32, 6), (30, 14), (32, 21), (28, 22), (31, 31), (34, 31), (21, 39)]
+
+graph cells excluding the floating palette: x 18..58, graph rows 0..44
+pane header token 77x47 @100% => 35 columns and 1 row of slack around the 42x46 extent; no pan, no zoom
+graph route/dot cells inside the palette rect (cols 1-9, graph rows 39-44): none

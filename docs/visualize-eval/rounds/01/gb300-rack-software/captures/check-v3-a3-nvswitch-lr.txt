@@ -1,0 +1,6 @@
+$ rataflow-view --check specs/v3-a3-nvswitch-lr.json
+2026-11-02T08:29:32Z
+ok: nodes=4 edges=3 flows=0 direction=lr theme=gruvbox
+layers=3 (explicit placement, sugiyama skipped)
+extent=68x11 cells
+exit=0

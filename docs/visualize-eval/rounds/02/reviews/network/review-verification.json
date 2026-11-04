@@ -1,0 +1,13 @@
+{
+  "result_schema_validation": "pass (stdlib recursive validation of all embedded schema constraint keywords)",
+  "evidence_hash_checks": 56,
+  "evidence_ids_and_locations": "pass",
+  "repository_relative_evidence_paths": "pass",
+  "source_reference_paths_and_json_pointers": "pass",
+  "sorted_final_spec_manifest": "pass",
+  "blind_record_unchanged": true,
+  "reviewer_result_sha256": "d52995e61adb3d2f49098f4646342558bd7fd15ebe3a7657554ae2265f46ea6d",
+  "critique_sha256": "7e8340607547e8e32bb25ba626b70851f68650e7c97356419e7f82d487d851b5",
+  "spec_manifest_sha256": "62fded1cd6c2da97d0068800604f475d4285fc59084831329747d6f5a9fd996e",
+  "overall": "fail"
+}

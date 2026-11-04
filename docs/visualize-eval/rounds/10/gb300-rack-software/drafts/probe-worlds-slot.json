@@ -1,0 +1,100 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "oob",
+      "label": "OOB LAN",
+      "group": "plant"
+    },
+    {
+      "id": "bmc_c",
+      "label": "Compute BMC",
+      "group": "devices"
+    },
+    {
+      "id": "bmc_s",
+      "label": "NVSwitch BMC",
+      "group": "devices"
+    },
+    {
+      "id": "pwr",
+      "label": "Power shelf",
+      "group": "devices"
+    },
+    {
+      "id": "k8s",
+      "label": "Kubernetes",
+      "group": "inband"
+    },
+    {
+      "id": "gpuop",
+      "label": "GPU Operator",
+      "group": "inband"
+    },
+    {
+      "id": "dcgm",
+      "label": "DCGM",
+      "group": "inband"
+    },
+    {
+      "id": "dcgmx",
+      "label": "dcgm-exporter",
+      "group": "inband"
+    },
+    {
+      "id": "drvk",
+      "label": "Driver+CUDA",
+      "group": "inband"
+    },
+    {
+      "id": "fm",
+      "label": "Fabric Mgr",
+      "group": "inband"
+    }
+  ],
+  "trunks": [
+    {
+      "id": "oobbus",
+      "label": "OOB LAN",
+      "from": "oob",
+      "to": "bmc_c",
+      "branches": [
+        "bmc_s",
+        "pwr"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "k8s",
+      "to": "gpuop",
+      "label": "runs under",
+      "label_slot": true
+    },
+    {
+      "from": "gpuop",
+      "to": "dcgm",
+      "label": "DaemonSet",
+      "label_slot": true
+    },
+    {
+      "from": "dcgm",
+      "to": "dcgmx",
+      "label": "Prom :9400",
+      "label_slot": true
+    },
+    {
+      "from": "dcgm",
+      "to": "drvk",
+      "label": "NVML (local)",
+      "label_slot": true
+    },
+    {
+      "from": "drvk",
+      "to": "fm",
+      "label": "host-local",
+      "label_slot": true
+    }
+  ]
+}

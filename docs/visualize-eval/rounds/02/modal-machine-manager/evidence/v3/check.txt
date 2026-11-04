@@ -1,0 +1,8 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=7 edges=7 flows=7 direction=tb theme=gruvbox
+layers=4 (explicit placement, sugiyama skipped)
+extent=42x32 cells
+labels: 7/7 placed, 0 on route cells, 0 skipped
+groups: jobs(1) ops(2) artifact(1) metal(1) control(1) humans(1)
+trunks:
+dots: 7 single-dot routes, 0 periodic routes, 0 violations

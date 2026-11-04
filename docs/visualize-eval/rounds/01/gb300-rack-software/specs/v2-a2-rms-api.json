@@ -1,0 +1,19 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "layers": [
+    ["rms"],
+    ["bmc_c", "pwr", "nvos"]
+  ],
+  "nodes": [
+    { "id": "rms", "label": "nv-rms" },
+    { "id": "bmc_c", "label": "Compute BMC" },
+    { "id": "pwr", "label": "Power shelf" },
+    { "id": "nvos", "label": "NVOS" }
+  ],
+  "edges": [
+    { "from": "rms", "to": "bmc_c", "label": "Redfish" },
+    { "from": "rms", "to": "pwr", "label": "Redfish" },
+    { "from": "rms", "to": "nvos", "label": "NVUE REST" }
+  ]
+}

@@ -1,0 +1,159 @@
+{
+  "case_id": "network",
+  "round": "00",
+  "candidate_skill_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+  "renderer_sha256": "b6e11b05b4fb79ce969dc2646c667572535a949bd1a396fd711e1a5466298c8f",
+  "renderer": "/tmp/visualize-eval/round-00/bin/rataflow-view",
+  "source_brief": "docs/visualize-eval/cases/network/source.md",
+  "original_chat_source": {
+    "path": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-dotfiles-fix-visualize--/2026-10-13T05-35-27-649Z_01a133c2-33a0-74b7-9033-3ad246285cff.jsonl",
+    "pointers": [
+      "line 5 (styling and flow request)",
+      "line 48 (even split request)",
+      "line 180, chatcmpl-tool-bfad145e3b78162e (historical relation facts as transcribed in source.md)"
+    ],
+    "access": "Only source.md excerpts read; original session not opened"
+  },
+  "full_relation_spec": "full-spec.json",
+  "full_relation_spec_note": "Unrendered union inventory; use the two focused view specs for reproduced captures.",
+  "views": [
+    {
+      "id": "links",
+      "spec": "links/spec.json",
+      "text": "links/visible.txt",
+      "ansi": "links/visible.ansi",
+      "check": "links/check.txt",
+      "check_exit": "links/check.exit",
+      "check_exit_code": 0,
+      "dimensions": "links/dimensions.txt",
+      "actual_columns": 77,
+      "actual_rows": 47,
+      "extent_columns_rows": [
+        39,
+        26
+      ],
+      "phase2_text": "links/visible-phase2.txt",
+      "phase2_ansi": "links/visible-phase2.ansi",
+      "animation_phases_differ": true,
+      "local_spec_attempts": 1,
+      "natural_zoom": 1,
+      "pane_id": "w7E:p12",
+      "tab_id": "w7E:tA",
+      "header_verified": true,
+      "pane_closed_after_capture": true
+    },
+    {
+      "id": "application",
+      "spec": "application/spec.json",
+      "text": "application/visible.txt",
+      "ansi": "application/visible.ansi",
+      "check": "application/check.txt",
+      "check_exit": "application/check.exit",
+      "check_exit_code": 0,
+      "dimensions": "application/dimensions.txt",
+      "actual_columns": 77,
+      "actual_rows": 47,
+      "extent_columns_rows": [
+        24,
+        19
+      ],
+      "phase2_text": "application/visible-phase2.txt",
+      "phase2_ansi": "application/visible-phase2.ansi",
+      "animation_phases_differ": true,
+      "local_spec_attempts": 2,
+      "natural_zoom": 1,
+      "pane_id": "w7E:p18",
+      "tab_id": "w7E:tA",
+      "header_verified": true,
+      "pane_closed_after_capture": true
+    }
+  ],
+  "coverage": [
+    {
+      "original_relation": "wan -> fw: 1 GbE",
+      "view": "links",
+      "view_relation": {
+        "from": "wan",
+        "to": "fw",
+        "label": "1 GbE"
+      },
+      "evidence_status": "historical claim, not independently verified"
+    },
+    {
+      "original_relation": "fw -> core: 10 GbE",
+      "view": "links",
+      "view_relation": {
+        "from": "fw",
+        "to": "core",
+        "label": "10 GbE"
+      },
+      "evidence_status": "historical claim, not independently verified"
+    },
+    {
+      "original_relation": "core -> web: 10 GbE",
+      "view": "links",
+      "view_relation": {
+        "from": "core",
+        "to": "web",
+        "label": "10 GbE"
+      },
+      "evidence_status": "historical claim, not independently verified"
+    },
+    {
+      "original_relation": "core -> cache: 25 GbE",
+      "view": "links",
+      "view_relation": {
+        "from": "core",
+        "to": "cache",
+        "label": "25 GbE"
+      },
+      "evidence_status": "historical claim, not independently verified"
+    },
+    {
+      "original_relation": "web -> cache: session",
+      "view": "application",
+      "view_relation": {
+        "from": "web",
+        "to": "cache",
+        "label": "session"
+      },
+      "evidence_status": "historical claim, not independently verified"
+    },
+    {
+      "original_relation": "web -> db: queries",
+      "view": "application",
+      "view_relation": {
+        "from": "web",
+        "to": "db",
+        "label": "queries"
+      },
+      "evidence_status": "historical claim, not independently verified"
+    },
+    {
+      "original_relation": "cache -> db: fill",
+      "view": "application",
+      "view_relation": {
+        "from": "cache",
+        "to": "db",
+        "label": "fill"
+      },
+      "evidence_status": "historical claim, not independently verified"
+    }
+  ],
+  "qualification": "All links and application relations are historical claims, not current network measurements. Redis -> DB fill is retained as historical direction, not verified behavior. Physical link arrows show the supplied downstream direction, not a claim that Ethernet is unidirectional.",
+  "motion": "All edges use flow=0.15 (about 1.5 cells/s); dots are directional illustration, not measured throughput and not scaled to speed labels.",
+  "blockers": [],
+  "known_defects": [
+    "links: WAN -> Firewall, Firewall -> Core switch, and Core switch -> Web tier lack clearly visible target arrowheads in captures.",
+    "links: the two Core switch output routes appear joined near their source; distinct relationships are not visually unambiguous.",
+    "application: Web tier -> Redis crosses Web tier -> DB tier at a junction-like glyph, leaving an ambiguous crossing.",
+    "application: Web tier -> Redis and Web tier -> DB tier lack clearly visible target arrowheads; Redis -> DB tier has a visible arrowhead.",
+    "Distinct port attachments and border-color correctness are not established by generation checks. ANSI evidence is saved for independent review."
+  ],
+  "check_history": [
+    "links attempt 1: extent 39x26, no warnings.",
+    "application attempt 1: extent 24x19, one omitted-label warning.",
+    "application attempt 2: shifted Redis right with an empty layer slot; extent 24x19, no warnings."
+  ],
+  "review_status": "Not self-approved. Independent Astra review is owned by captain and was not spawned here."
+}

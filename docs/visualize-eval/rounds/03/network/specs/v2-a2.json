@@ -1,0 +1,14 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "web", "label": "Web tier", "group": "app" },
+    { "id": "cache", "label": "Redis", "group": "data" },
+    { "id": "db", "label": "DB tier", "group": "data" }
+  ],
+  "edges": [
+    { "from": "web", "to": "cache", "label": "session", "dots": 1, "flow": true },
+    { "from": "web", "to": "db", "label": "queries", "dots": 1, "flow": true },
+    { "from": "cache", "to": "db", "label": "fill", "dots": 1, "flow": true }
+  ]
+}

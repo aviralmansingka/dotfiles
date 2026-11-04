@@ -1,0 +1,124 @@
+viewport: 135x40 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 135x40 @100% · modal-runtime-canvas.json · 11 nodes · 8 edges · q quit
+
+       worker and runtime: the two RPC seams
+       Task input plus control RPCs down; events plus management RPCs back. Two directed seams, never one arrow.
+
+       ╭─────────────╮                                  ╭────────────╮
+       │             │◀─────────────────────────────────│            │
+       │modal-runtime│     task input + control RPCs    │modal-worker│
+       │             │───╮ events + management RPCs   ╭▶│            │
+       ╰─────────────╯   ╰────────────────────────────╯ ╰────────────╯
+
+
+       ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+       task dispatch down to the container
+       modal-runtime dispatches to the Task engine, which starts a Container backend that runs the user process.
+
+       ╭─────────────╮                   ╭───────────╮                   ╭─────────────────╮                    ╭──────────────╮
+       │modal-runtime│──────────────────▶│Task engine│──────────────────▶│Container backend│───────────────────▶│Task container│
+       │             │ dispatches tasks  │           │ starts / manages  │                 │ runs user process  │              │
+       ╰─────────────╯                   ╰───────────╯                   ╰─────────────────╯                    ╰──────────────╯
+
+
+       ───────────────────────────────────────────────────────────────────────────────────────────────────────────
+       storage and daemon interfaces
+       Engine mounts/snapshots Filesystem + volumes, then Blobnet; runtime to daemon: HTTP/UDS, not worker gRPC.
+
+        ╭───────────╮                            ╭────────────────────╮
+        │Task engine│───────────────────────────▶│Filesystem + volumes│────────────────────╮
+        │           │    mounts / snapshots      │                    │ image + volume data│
+        ╰───────────╯                            ╰────────────────────╯                    │ ╭───────╮
+                                                                                           ╰▶│Blobnet│
+       ╭─────────────╮   filesystem HTTP over UDS    ╭────────────╮                          │       │
+       │modal-runtime│──────────────────────────────▶│modal-daemon│                          ╰───────╯
+ ┌───────┐           │                               │            │
+ │ + [+]─│───────────╯                               ╰────────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 135x40 @100% · modal-runtime-canvas.json · 11 nodes · 8 edges · q quit
+
+       worker and runtime: the two RPC seams
+       Task input plus control RPCs down; events plus management RPCs back. Two directed seams, never one arrow.
+
+       ╭─────────────╮                                  ╭────────────╮
+       │             │◀─────────────────────────────────│            │
+       │modal-runtime│     task input + control RPCs    │modal-worker│
+       │             │───╮ events + management RPCs   ╭▶│            │
+       ╰─────────────╯   ╰────────────────────────────╯ ╰────────────╯
+
+
+       ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+       task dispatch down to the container
+       modal-runtime dispatches to the Task engine, which starts a Container backend that runs the user process.
+
+       ╭─────────────╮                   ╭───────────╮                   ╭─────────────────╮                    ╭──────────────╮
+       │modal-runtime│──────────────────▶│Task engine│──────────────────▶│Container backend│───────────────────▶│Task container│
+       │             │ dispatches tasks  │           │ starts / manages  │                 │ runs user process  │              │
+       ╰─────────────╯                   ╰───────────╯                   ╰─────────────────╯                    ╰──────────────╯
+
+
+       ───────────────────────────────────────────────────────────────────────────────────────────────────────────
+       storage and daemon interfaces
+       Engine mounts/snapshots Filesystem + volumes, then Blobnet; runtime to daemon: HTTP/UDS, not worker gRPC.
+
+        ╭───────────╮                            ╭────────────────────╮
+        │Task engine│───────────────────────────▶│Filesystem + volumes│────────────────────╮
+        │           │    mounts / snapshots      │                    │ image + volume data│
+        ╰───────────╯                            ╰────────────────────╯                    │ ╭───────╮
+                                                                                           ╰▶│Blobnet│
+       ╭─────────────╮   filesystem HTTP over UDS    ╭────────────╮                          │       │
+       │modal-runtime│──────────────────────────────▶│modal-daemon│                          ╰───────╯
+ ┌───────┐           │                               │            │
+ │ + [+]─│───────────╯                               ╰────────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 135x40 @100% · modal-runtime-canvas.json · 11 nodes · 8 edges · q quit
+
+       worker and runtime: the two RPC seams
+       Task input plus control RPCs down; events plus management RPCs back. Two directed seams, never one arrow.
+
+       ╭─────────────╮                                  ╭────────────╮
+       │             │◀─────────────────────────────────│            │
+       │modal-runtime│     task input + control RPCs    │modal-worker│
+       │             │───╮ events + management RPCs   ╭▶│            │
+       ╰─────────────╯   ╰────────────────────────────╯ ╰────────────╯
+
+
+       ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+       task dispatch down to the container
+       modal-runtime dispatches to the Task engine, which starts a Container backend that runs the user process.
+
+       ╭─────────────╮                   ╭───────────╮                   ╭─────────────────╮                    ╭──────────────╮
+       │modal-runtime│──────────────────▶│Task engine│──────────────────▶│Container backend│───────────────────▶│Task container│
+       │             │ dispatches tasks  │           │ starts / manages  │                 │ runs user process  │              │
+       ╰─────────────╯                   ╰───────────╯                   ╰─────────────────╯                    ╰──────────────╯
+
+
+       ───────────────────────────────────────────────────────────────────────────────────────────────────────────
+       storage and daemon interfaces
+       Engine mounts/snapshots Filesystem + volumes, then Blobnet; runtime to daemon: HTTP/UDS, not worker gRPC.
+
+        ╭───────────╮                            ╭────────────────────╮
+        │Task engine│───────────────────────────▶│Filesystem + volumes│────────────────────╮
+        │           │    mounts / snapshots      │                    │ image + volume data│
+        ╰───────────╯                            ╰────────────────────╯                    │ ╭───────╮
+                                                                                           ╰▶│Blobnet│
+       ╭─────────────╮   filesystem HTTP over UDS    ╭────────────╮                          │       │
+       │modal-runtime│──────────────────────────────▶│modal-daemon│                          ╰───────╯
+ ┌───────┐           │                               │            │
+ │ + [+]─│───────────╯                               ╰────────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+

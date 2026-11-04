@@ -1,0 +1,6 @@
+{ "direction": "lr", "theme": "gruvbox",
+  "nodes": [
+    { "id": "rtr", "label": "Fios rtr\nToR/spine/border/FW" },
+    { "id": "ont", "label": "ONT" }
+  ],
+  "edges": [ { "from": "rtr", "to": "ont", "label": "NAT out" } ] }

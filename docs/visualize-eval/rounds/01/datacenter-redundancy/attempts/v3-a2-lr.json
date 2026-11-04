@@ -1,0 +1,86 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "layers": [
+    [
+      "core1",
+      "core2"
+    ],
+    [
+      "fw1",
+      "fw2"
+    ],
+    [
+      "bl1",
+      "bl2"
+    ]
+  ],
+  "nodes": [
+    {
+      "id": "core1",
+      "label": "Core 1"
+    },
+    {
+      "id": "core2",
+      "label": "Core 2"
+    },
+    {
+      "id": "fw1",
+      "label": "FW1 active"
+    },
+    {
+      "id": "fw2",
+      "label": "FW2 stdby"
+    },
+    {
+      "id": "bl1",
+      "label": "BL 1"
+    },
+    {
+      "id": "bl2",
+      "label": "BL 2"
+    }
+  ],
+  "edges": [
+    {
+      "from": "core1",
+      "to": "fw1",
+      "label": "act"
+    },
+    {
+      "from": "core2",
+      "to": "fw1",
+      "label": "act"
+    },
+    {
+      "from": "core1",
+      "to": "fw2",
+      "label": "stby"
+    },
+    {
+      "from": "core2",
+      "to": "fw2",
+      "label": "stby"
+    },
+    {
+      "from": "fw1",
+      "to": "bl1",
+      "label": "act"
+    },
+    {
+      "from": "fw1",
+      "to": "bl2",
+      "label": "act"
+    },
+    {
+      "from": "fw2",
+      "to": "bl1",
+      "label": "stby"
+    },
+    {
+      "from": "fw2",
+      "to": "bl2",
+      "label": "stby"
+    }
+  ]
+}

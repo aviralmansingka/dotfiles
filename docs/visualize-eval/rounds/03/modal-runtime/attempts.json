@@ -1,0 +1,21 @@
+{
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "spec_sha256": "be018c71d3c763b7feab67b38054d9e39fbe43a3952e7452d17e7947e012f0e4",
+          "note": "auto layering, direction lr: crossings 2, labels 8/8, but extent 155x39 overflows the 77-column pane; rejected on fit, not on crossings"
+        },
+        {
+          "spec_sha256": "321e6278e69780ae6114bee74968ab91873cbe6a9a6880d950740343a454d7ba",
+          "note": "auto layering, direction tb: extent 106x32 still too wide and crossings rose to 4; rejected"
+        },
+        {
+          "spec_sha256": "ab0fe1d35c3742ab58fde65dcf284aa758d68faa91a517358323cca5285608f0",
+          "note": "explicit layers worker|runtime|(engine,daemon)|(backend,filesystem)|(container,blobnet): extent 46x37, crossings 0, labels 8/8 placed, none on route cells; kept. Layer order inside a band was free (source fixes only the planes), so intra-band order was chosen to remove crossings; no group moved out of its band, no relation merged, no label dropped"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,162 @@
+{
+  "case_id": "datacenter-redundancy",
+  "round": "10",
+  "views": [
+    {
+      "view": "v1",
+      "spec": "specs/v1-uplinks-final2.json",
+      "final_spec_sha256": "7459a047230e9764e5afff7ed7a70f0105f2e9db35b6fa4ae1f0e4e2ed8687aa",
+      "attempts": [
+        {
+          "label": "v1-a1",
+          "spec": "specs/v1-uplinks.json",
+          "spec_sha256": "07aba4a2ecb7323156c240ee92b3152f548693e5d4bfa7aa8cc26186736d5f58",
+          "note": "all four MUX->core links carried the duplicate text x-connect: labels 4/4 placed, 2 ambiguous owners, 1 bridge. Rejected: an ambiguous label owner is unreadable."
+        },
+        {
+          "label": "v1-final",
+          "spec": "specs/v1-uplinks-final.json",
+          "spec_sha256": "fcd1bbf9418361a9ce1327a4c36966aea8ac12f9b2c1afe1086a50dcc267c970",
+          "note": "label text kept on MUX 1's whole fan (2 edges): labels 2/2 placed, 1 ambiguous owner, 1 bridge. Rejected for the same ownership reason."
+        },
+        {
+          "label": "v1-final2",
+          "spec": "specs/v1-uplinks-final2.json",
+          "spec_sha256": "7459a047230e9764e5afff7ed7a70f0105f2e9db35b6fa4ae1f0e4e2ed8687aa",
+          "note": "SHIPPED. one x-connect label on the tier transition: labels 1/1 placed, 0 ambiguous, 1 bridge, extent 48x29."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "spec": "specs/v2-security-final.json",
+      "final_spec_sha256": "da598580a3bc2114cc4db882741caf5d4143368850cf7c34df09ce0d75fafc5a",
+      "attempts": [
+        {
+          "label": "v2-a1",
+          "spec": "specs/v2-security.json",
+          "spec_sha256": "3347b605082204cfe196e024b29c518763e5a51c2a71033a88dafe96caffa134",
+          "note": "all 8 active/standby links labelled: labels 8/8 placed, 2 ambiguous owners, 2 bridges. Rejected."
+        },
+        {
+          "label": "v2-a3-lr",
+          "spec": "specs/v2-security-lr.json",
+          "spec_sha256": "e7e296ab14889a64742244d37480c1b09ee953477c9306f4dbe6f831579d99b2",
+          "note": "lr orientation probe of the same two crosses: 8 labels, 4 ambiguous owners, 2 bridges. Rejected."
+        },
+        {
+          "label": "v2-final",
+          "spec": "specs/v2-security-final.json",
+          "spec_sha256": "da598580a3bc2114cc4db882741caf5d4143368850cf7c34df09ce0d75fafc5a",
+          "note": "SHIPPED. FW1 active / FW2 standby on the node text, core1's fan labelled active+standby: labels 2/2, 0 ambiguous, 2 bridges, extent 39x27."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "spec": "specs/v3-fabric-final3.json",
+      "final_spec_sha256": "8de42d11588f4a6cc0c2336fbe9901073e3cbd66df817932371ce793a4490f80",
+      "attempts": [
+        {
+          "label": "probe-fabric-ab",
+          "spec": "specs/probe-fabric-ab.json",
+          "spec_sha256": "8ac6139c15856ecd2e3c0bf8c8dd3ba640ec6c411f33a1f5fac0b5bc92779a3d",
+          "note": "all 8 BL<->spine and spine->leaf lanes labelled ECMP: labels 8/8 placed, 2 ambiguous owners, 6 bridges. Rejected."
+        },
+        {
+          "label": "v3-fabric-final",
+          "spec": "specs/v3-fabric-final.json",
+          "spec_sha256": "ccde6535e752d0b8c271e32c1e95a0e539fadb05dac8db50a33d550f7c612702",
+          "note": "ECMP on BL 1's fan plus Spine 1's fan (4 labels): 2 ambiguous owners, 6 bridges. Rejected."
+        },
+        {
+          "label": "v3-fabric-final3",
+          "spec": "specs/v3-fabric-final3.json",
+          "spec_sha256": "8de42d11588f4a6cc0c2336fbe9901073e3cbd66df817932371ce793a4490f80",
+          "note": "SHIPPED. ECMP on Spine 1's fan (2 labels), BL and rack leaves on one rank, both spines above: labels 2/2, 0 ambiguous, 6 bridges, extent 48x16."
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "spec": "specs/v4-racks-final.json",
+      "final_spec_sha256": "6670a03bde4a80fe62651aff0d65cc1c9ecb67428107dce05868487f0567cd6d",
+      "attempts": [
+        {
+          "label": "probe-racks",
+          "spec": "specs/probe-racks.json",
+          "spec_sha256": "e316fe549174c88d57a26ee2b751d66475dd572a474a7b7bb081bb192b5f2243",
+          "note": "all 4 dual-homed rack links labelled dual: labels 4/4 placed, 1 ambiguous owner, 1 bridge. Rejected."
+        },
+        {
+          "label": "probe-racks-2split",
+          "spec": "specs/probe-racks-2split.json",
+          "spec_sha256": "7b911242e35e9c96123020594c30ec20afde64d428b64882688af5b10dcdec2a",
+          "note": "dual on one link of each leaf: labels 2/2 placed, 1 ambiguous owner. Rejected."
+        },
+        {
+          "label": "v4-racks-final",
+          "spec": "specs/v4-racks-final.json",
+          "spec_sha256": "6670a03bde4a80fe62651aff0d65cc1c9ecb67428107dce05868487f0567cd6d",
+          "note": "SHIPPED. dual on Leaf 1's fan (2 edges): labels 2/2, 0 ambiguous, 1 bridge, extent 30x15."
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "label": "v1-a2",
+      "spec": "specs/v1-uplinks-b.json",
+      "spec_sha256": "a34607a654aec2baaef7c977bb85664235c1546f071922c29ac15b0db8d4f417",
+      "reason": "label_slot lever probe on the four duplicate x-connect labels: extent dropped 29->22 rows but 2 ambiguous owners remained; lever cannot fix ownership on a redundant cross."
+    },
+    {
+      "label": "v1-a3-spare-rank",
+      "spec": "specs/v1-uplinks-c.json",
+      "spec_sha256": "056ee3cb3b6255a4931b94ca4687ca3649d4ce71290b597f95329571232217b6",
+      "reason": "spare rank slot between MUX and Core to give the crossing corridor height: 4 labels, still 2 ambiguous owners, 1 bridge."
+    },
+    {
+      "label": "v2-a2",
+      "spec": "specs/v2-security-b.json",
+      "spec_sha256": "f2db3f72a4fb1651b22678db3e2de96b7bccacfb287299b4a9c12eaebc3df5a7",
+      "reason": "minlen:2 on all edges: rejected shape, 8 pins-conflict entries (declared ranks give 1 gap), labels still 2 ambiguous. minlen needs spare layer slots, which changes the tier pins."
+    },
+    {
+      "label": "probe-cross-isolated",
+      "spec": "specs/probe-cross-isolated.json",
+      "spec_sha256": "64d05d621544ab8920854d5e26a479cdc70e62a426211b37b4380d86991571a6",
+      "reason": "isolation probe: a bare MUX->core K2,2 with 4 x-connect labels is worse, 3/4 placed with 1 skipped and 2 ambiguous. Proves the duplicate-label limit is not a view-density artifact."
+    },
+    {
+      "label": "probe-fabric-ab-labelslot",
+      "spec": "specs/probe-fabric-ab-labelslot.json",
+      "spec_sha256": "d5da6d3386e4a9c3f21fd317db89bcb374151652b909d4affd3af8f9d929f031",
+      "reason": "label_slot on all 8 ECMP lanes: extent 48->52 wide, still 2 ambiguous owners. Lever does not fix duplicate-label ownership."
+    },
+    {
+      "label": "probe-racks-1label",
+      "spec": "specs/probe-racks-1label.json",
+      "spec_sha256": "4d689fea8501d4602f79277c34f2b74a656bf528ad7d776a95992c2d7ae02344",
+      "reason": "calibration: one dual label in the rack cross -> 0 ambiguous owners."
+    },
+    {
+      "label": "probe-racks-2labels",
+      "spec": "specs/probe-racks-2labels.json",
+      "spec_sha256": "4d689fea8501d4602f79277c34f2b74a656bf528ad7d776a95992c2d7ae02344",
+      "reason": "accidental duplicate of probe-racks-1label (same bytes, same sha256); kept in the log for completeness."
+    },
+    {
+      "label": "probe-racks-2same-fan",
+      "spec": "specs/probe-racks-2same-fan.json",
+      "spec_sha256": "89a1276e5ecd4f71fe7e5b97699ba5bb8b4f6b00840a05a5df137a8632169b63",
+      "reason": "calibration: two dual labels on one leaf's fan -> 0 ambiguous owners; this is the rule the shipped views follow."
+    },
+    {
+      "label": "v3-fabric-final2",
+      "spec": "specs/v3-fabric-final2.json",
+      "spec_sha256": "7511edb7f8982707bef1426ffbce10ac3a312e39b216eed3d9b6998d2800aeee",
+      "reason": "ECMP on BL 1's fan only (the inside-hop back edges): both labels ambiguous because the BL->spine routes crowd the inside lane. Rejected in favour of the Spine 1 fan."
+    }
+  ]
+}

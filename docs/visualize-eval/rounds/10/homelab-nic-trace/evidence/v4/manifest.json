@@ -1,0 +1,34 @@
+{
+  "spec_path": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/10/homelab-nic-trace/specs/v4-egress-chain.json",
+  "spec_sha256": "e8907659668ae98fdd4a173d869b3bdb4c92cdcdd68da5a13618a8aa9e62f0db",
+  "binary_path": "/tmp/visualize-eval/round-10/bin/rataflow-view",
+  "binary_sha256": "db70722b92777467544b8ac0c9f03c52d48706e21f604e47da084cb0dfb92df8",
+  "pane_id": "w7E:pR5",
+  "pane_rect": null,
+  "pane_cols": null,
+  "pane_rows": 51,
+  "viewport_line": null,
+  "viewport_token": "82x51 @100%",
+  "check_exit": 0,
+  "check_window": [
+    "2026-11-02T23:41:59Z",
+    "2026-11-02T23:41:59Z"
+  ],
+  "capture_window": [
+    "2026-11-02T23:41:59Z",
+    "2026-11-02T23:42:03Z"
+  ],
+  "cleanup": "confirmed_closed",
+  "select_all_frame": true,
+  "frames": 3,
+  "frame_step_ms": 100,
+  "artifacts": {
+    "bin.sha256": "d70e8ea3bb8149f3dc64e07eee15048aec287592055089d0c6f2dbedeebc37d9",
+    "check.txt": "894621e4bf6354e1803d4a89a7780d2c2d05ac593a1c27eb5fa54ae7ea494ddd",
+    "v4-ansi.ansi": "5d1cccf739938ab4334dd8f92ef6cf86526f0e1336a16cf80a65929620947809",
+    "v4-frames.ansi": "44b81a487dc8f74d51c68262edb46d547034a9bd46d4084ff03766caa4188479",
+    "v4-frames.txt": "d90bcb1ec1b32e31b092387268718f49b80c71680a794cb1d64543c846cde707",
+    "v4-selected.ansi": "3a4422abfb042fdb59862236b20d877970a2473f1312f16fd64400107af720a8",
+    "v4-text.txt": "15f1bfba61c3aa214b3926d8a65afddabdee443eabed04ae29a405d5495a8431"
+  }
+}

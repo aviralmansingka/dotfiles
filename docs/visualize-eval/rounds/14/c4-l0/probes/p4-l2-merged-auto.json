@@ -1,0 +1,146 @@
+{
+ "direction": "lr",
+ "theme": "gruvbox",
+ "diagrams": [
+  {
+   "id": "l2",
+   "title": "L2 \u00b7 Inside the manager",
+   "description": "The manager's inside: requests land on the River queue, which dispatches provision jobs, audits and diagnostic events; the janitor proposes actions back to webapi, and the queue, private gRPC, public gRPC and reconcile write into Postgres. Every node here is inside the box.",
+   "containers": [
+    {
+     "label": "Machine manager",
+     "members": [
+      "pgrpc",
+      "wapi",
+      "q",
+      "reg",
+      "rec",
+      "ssh",
+      "pub",
+      "jan",
+      "db"
+     ]
+    }
+   ],
+   "nodes": [
+    {
+     "id": "pgrpc",
+     "label": "private gRPC",
+     "group": "manager"
+    },
+    {
+     "id": "wapi",
+     "label": "webapi",
+     "group": "manager"
+    },
+    {
+     "id": "q",
+     "label": "River job queue",
+     "group": "manager"
+    },
+    {
+     "id": "reg",
+     "label": "provider registry",
+     "group": "manager"
+    },
+    {
+     "id": "rec",
+     "label": "cluster reconcile",
+     "group": "manager"
+    },
+    {
+     "id": "ssh",
+     "label": "SSH + BMC ops",
+     "group": "manager"
+    },
+    {
+     "id": "pub",
+     "label": "public gRPC",
+     "group": "manager"
+    },
+    {
+     "id": "jan",
+     "label": "janitor app",
+     "group": "manager"
+    },
+    {
+     "id": "db",
+     "label": "Postgres",
+     "group": "storage"
+    }
+   ],
+   "edges": [
+    {
+     "from": "pgrpc",
+     "to": "q",
+     "label": "enqueue job",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "wapi",
+     "to": "q",
+     "label": "reinstall / reprovision",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "q",
+     "to": "reg",
+     "label": "provision job",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "q",
+     "to": "ssh",
+     "label": "audit / verify reimage",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "q",
+     "to": "jan",
+     "label": "diagnostic events",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "jan",
+     "to": "wapi",
+     "label": "proposed actions",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "q",
+     "to": "db",
+     "label": "job rows",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "pgrpc",
+     "to": "db",
+     "label": "machine rows",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "pub",
+     "to": "db",
+     "label": "machine state",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "rec",
+     "to": "db",
+     "label": "cluster state",
+     "flow": true,
+     "dots": 1
+    }
+   ]
+  }
+ ]
+}

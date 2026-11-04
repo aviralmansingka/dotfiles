@@ -1,0 +1,10 @@
+{ "direction": "lr", "theme": "gruvbox",
+  "nodes": [
+    { "id": "a", "label": "alpha", "group": "g1" },
+    { "id": "b", "label": "bravo", "group": "g2" },
+    { "id": "c", "label": "charlie", "group": "g2" }
+  ],
+  "edges": [
+    { "from": "a", "to": "b", "label": "link one" },
+    { "from": "a", "to": "c", "label": "link two" }
+  ] }

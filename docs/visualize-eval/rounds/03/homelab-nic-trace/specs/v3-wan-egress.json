@@ -1,0 +1,18 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "layers": [["rtr"], ["ont"], ["vzagg"], ["vzbb"], ["cf"]],
+  "nodes": [
+    { "id": "rtr", "label": "claimed Fios rtr 192.168.1.1", "group": "edge" },
+    { "id": "ont", "label": "ONT 169.254.3.1 historical", "group": "edge" },
+    { "id": "vzagg", "label": "VZ edge 100.41.x historical", "group": "isp" },
+    { "id": "vzbb", "label": "VZ bb AS701 historical", "group": "isp" },
+    { "id": "cf", "label": "cf 1.1.1.1 AS13335", "group": "wan" }
+  ],
+  "edges": [
+    { "from": "rtr", "to": "ont", "label": "NAT+DHCP 71.251.12.240", "style": "dashed" },
+    { "from": "ont", "to": "vzagg", "label": "4.5 ms", "style": "dashed" },
+    { "from": "vzagg", "to": "vzbb", "label": "6.6 ms", "style": "dashed" },
+    { "from": "vzbb", "to": "cf", "label": "6-9 ms", "style": "dashed" }
+  ]
+}

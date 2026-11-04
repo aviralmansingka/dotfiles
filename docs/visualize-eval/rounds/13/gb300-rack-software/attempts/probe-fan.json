@@ -1,0 +1,58 @@
+{
+  "theme": "gruvbox",
+  "direction": "tb",
+  "diagrams": [
+    {
+      "id": "a",
+      "title": "probe A tb fan, terminus centred",
+      "description": "layout probe only: tb fan with the trunk corridor over the middle box",
+      "direction": "tb",
+      "nodes": [
+        { "id": "rms", "label": "nv-rms (free src)", "group": "oob-mgmt" },
+        { "id": "oob", "label": "OOB LAN", "group": "oob-lan" },
+        { "id": "bmc_c", "label": "Compute BMC", "group": "oob-lan" },
+        { "id": "pwr", "label": "Power shelf", "group": "oob-lan" },
+        { "id": "sw", "label": "NVSwitch BMC", "group": "oob-lan" }
+      ],
+      "trunks": [
+        { "id": "lane", "label": "Redfish/HTTPS", "from": "oob", "to": "pwr", "branches": ["bmc_c", "sw"] }
+      ],
+      "edges": [{ "from": "rms", "to": "oob", "label": "client" }]
+    },
+    {
+      "id": "b",
+      "title": "probe B lr stack, terminus at the bottom",
+      "description": "layout probe only: lr stack with the trunk corridor below the branch boxes",
+      "direction": "lr",
+      "nodes": [
+        { "id": "rms", "label": "nv-rms (free src)", "group": "oob-mgmt" },
+        { "id": "oob", "label": "OOB LAN", "group": "oob-lan" },
+        { "id": "bmc_c", "label": "Compute BMC", "group": "oob-lan" },
+        { "id": "nvsw", "label": "NVSwitch BMC", "group": "oob-lan" },
+        { "id": "shelf", "label": "Power shelf", "group": "oob-lan" }
+      ],
+      "trunks": [
+        { "id": "lane", "label": "Redfish/HTTPS", "from": "oob", "to": "shelf", "branches": ["bmc_c", "nvsw"] }
+      ],
+      "edges": [{ "from": "rms", "to": "oob", "label": "client" }]
+    },
+    {
+      "id": "c",
+      "title": "probe C tb fan, terminus a rank below",
+      "description": "layout probe only: tb with the trunk terminus pinned one rank under the branches",
+      "direction": "tb",
+      "nodes": [
+        { "id": "rms", "label": "nv-rms (free src)", "group": "oob-mgmt" },
+        { "id": "oob", "label": "OOB LAN", "group": "oob-lan" },
+        { "id": "bmc_c", "label": "Compute BMC", "group": "oob-lan" },
+        { "id": "nvsw", "label": "NVSwitch BMC", "group": "oob-lan" },
+        { "id": "shelf", "label": "Power shelf", "group": "oob-lan" }
+      ],
+      "layers": [["rms"], ["oob"], ["bmc_c", "nvsw"], ["shelf"]],
+      "trunks": [
+        { "id": "lane", "label": "Redfish/HTTPS", "from": "oob", "to": "shelf", "branches": ["bmc_c", "nvsw"] }
+      ],
+      "edges": [{ "from": "rms", "to": "oob", "label": "client" }]
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "theme": "gruvbox",
+  "diagrams": [
+    {
+      "id": "d1",
+      "title": "worker and runtime: the two RPC seams",
+      "description": "Task input plus control RPCs go down to modal-runtime; events plus management RPCs come back. Two directed seams, never one merged arrow.",
+      "direction": "tb",
+      "nodes": [
+        { "id": "worker", "label": "modal-worker" },
+        { "id": "runtime", "label": "modal-runtime", "group": "orchestration" }
+      ],
+      "edges": [
+        { "from": "worker", "to": "runtime", "label": "task input + control RPCs" },
+        { "from": "runtime", "to": "worker", "label": "events + management RPCs" }
+      ]
+    },
+    {
+      "id": "d2",
+      "title": "task dispatch down to the container",
+      "description": "modal-runtime dispatches tasks to the Task engine, which starts and manages a Container backend that runs the user process in the Task container.",
+      "direction": "lr",
+      "nodes": [
+        { "id": "runtime", "label": "modal-runtime", "group": "orchestration" },
+        { "id": "engine", "label": "Task engine", "group": "orchestration" },
+        { "id": "backend", "label": "Container backend", "group": "compute" },
+        { "id": "container", "label": "Task container", "group": "compute" }
+      ],
+      "edges": [
+        { "from": "runtime", "to": "engine", "label": "dispatches tasks" },
+        { "from": "engine", "to": "backend", "label": "starts / manages" },
+        { "from": "backend", "to": "container", "label": "runs user process" }
+      ]
+    },
+    {
+      "id": "d3",
+      "title": "storage and daemon interfaces",
+      "description": "The engine mounts and snapshots Filesystem + volumes, whose data flows to Blobnet; modal-runtime reaches modal-daemon over filesystem HTTP on UDS, not worker gRPC.",
+      "direction": "lr",
+      "nodes": [
+        { "id": "engine", "label": "Task engine", "group": "orchestration" },
+        { "id": "runtime", "label": "modal-runtime", "group": "orchestration" },
+        { "id": "filesystem", "label": "Filesystem + volumes", "group": "storage" },
+        { "id": "daemon", "label": "modal-daemon" },
+        { "id": "blobnet", "label": "Blobnet", "group": "storage" }
+      ],
+      "edges": [
+        { "from": "engine", "to": "filesystem", "label": "mounts / snapshots" },
+        { "from": "filesystem", "to": "blobnet", "label": "image + volume data" },
+        { "from": "runtime", "to": "daemon", "label": "filesystem HTTP over UDS" }
+      ]
+    }
+  ]
+}

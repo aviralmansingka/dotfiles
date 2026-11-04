@@ -1,0 +1,503 @@
+{
+ "direction": "lr",
+ "theme": "gruvbox",
+ "diagrams": [
+  {
+   "id": "l0",
+   "title": "L0 \u00b7 System context",
+   "description": "System context: the machine manager is one box. The control plane and humans + mmctl call it; it drives the bare-metal providers, boots and audits the machines, keeps images and diagnostics in S3, and alerts in Slack. Nothing inside is shown yet, so L1 opens it.",
+   "nodes": [
+    {
+     "id": "cp",
+     "label": "Modal control plane",
+     "group": "modal"
+    },
+    {
+     "id": "web",
+     "label": "humans + mmctl",
+     "group": "operators"
+    },
+    {
+     "id": "agent",
+     "label": "machine-agent",
+     "group": "machines"
+    },
+    {
+     "id": "mm",
+     "label": "Machine manager",
+     "group": "manager"
+    },
+    {
+     "id": "prov",
+     "label": "bare-metal providers",
+     "group": "providers"
+    },
+    {
+     "id": "mch",
+     "label": "bare-metal machines",
+     "group": "machines"
+    },
+    {
+     "id": "s3",
+     "label": "S3 object store",
+     "group": "storage"
+    },
+    {
+     "id": "slack",
+     "label": "Slack",
+     "group": "tooling"
+    }
+   ],
+   "edges": [
+    {
+     "from": "cp",
+     "to": "mm",
+     "label": "provisioning",
+     "dots": 0
+    },
+    {
+     "from": "web",
+     "to": "mm",
+     "label": "http",
+     "dots": 0
+    },
+    {
+     "from": "agent",
+     "to": "mm",
+     "label": "register + heartbeat",
+     "dots": 0
+    },
+    {
+     "from": "mm",
+     "to": "prov",
+     "label": "provider API",
+     "dots": 0
+    },
+    {
+     "from": "mm",
+     "to": "mch",
+     "label": "boot + audit",
+     "dots": 0
+    },
+    {
+     "from": "mm",
+     "to": "s3",
+     "label": "images + diagnostics",
+     "dots": 0
+    },
+    {
+     "from": "mm",
+     "to": "slack",
+     "label": "confirm + alerts",
+     "dots": 0
+    }
+   ]
+  },
+  {
+   "id": "l1",
+   "title": "L1 \u00b7 The machine manager",
+   "description": "L0's box opened one level: its boundary services \u2014 private gRPC, webapi, provider registry, cluster reconcile, SSH + BMC ops and the boot server \u2014 sit in the Machine manager box, while the control plane, humans, providers, machines and S3 stay outside it.",
+   "containers": [
+    {
+     "label": "Machine manager",
+     "members": [
+      "pgrpc",
+      "wapi",
+      "reg",
+      "rec",
+      "ssh",
+      "boot"
+     ]
+    }
+   ],
+   "layers": [
+    [
+     "cp",
+     "web"
+    ],
+    [
+     "pgrpc",
+     "wapi"
+    ],
+    [
+     "reg",
+     "rec",
+     "ssh",
+     "boot"
+    ],
+    [
+     "prov",
+     "s3"
+    ],
+    [
+     "mch"
+    ]
+   ],
+   "nodes": [
+    {
+     "id": "cp",
+     "label": "Modal control plane",
+     "group": "modal"
+    },
+    {
+     "id": "web",
+     "label": "humans + mmctl",
+     "group": "operators"
+    },
+    {
+     "id": "pgrpc",
+     "label": "private gRPC",
+     "group": "manager"
+    },
+    {
+     "id": "wapi",
+     "label": "webapi",
+     "group": "manager"
+    },
+    {
+     "id": "reg",
+     "label": "provider registry",
+     "group": "manager"
+    },
+    {
+     "id": "rec",
+     "label": "cluster reconcile",
+     "group": "manager"
+    },
+    {
+     "id": "ssh",
+     "label": "SSH + BMC ops",
+     "group": "manager"
+    },
+    {
+     "id": "boot",
+     "label": "boot server",
+     "group": "manager"
+    },
+    {
+     "id": "prov",
+     "label": "bare-metal providers",
+     "group": "providers"
+    },
+    {
+     "id": "mch",
+     "label": "bare-metal machines",
+     "group": "machines"
+    },
+    {
+     "id": "s3",
+     "label": "S3 object store",
+     "group": "storage"
+    }
+   ],
+   "edges": [
+    {
+     "from": "cp",
+     "to": "pgrpc",
+     "label": "create / terminate / repair",
+     "dots": 0
+    },
+    {
+     "from": "web",
+     "to": "wapi",
+     "label": "http",
+     "dots": 0
+    },
+    {
+     "from": "reg",
+     "to": "prov",
+     "label": "provider API",
+     "dots": 0
+    },
+    {
+     "from": "rec",
+     "to": "prov",
+     "label": "gcore sync, 1 min",
+     "dots": 0
+    },
+    {
+     "from": "ssh",
+     "to": "mch",
+     "label": "audit / verify reimage",
+     "dots": 0
+    },
+    {
+     "from": "boot",
+     "to": "mch",
+     "label": "boot.ipxe + S3 args",
+     "dots": 0
+    },
+    {
+     "from": "mch",
+     "to": "boot",
+     "label": "iPXE request",
+     "dots": 0
+    },
+    {
+     "from": "prov",
+     "to": "mch",
+     "label": "allocate instance",
+     "dots": 0
+    },
+    {
+     "from": "mch",
+     "to": "s3",
+     "label": "pull boot image",
+     "dots": 0
+    }
+   ]
+  },
+  {
+   "id": "l1b",
+   "title": "L1b \u00b7 The machine side",
+   "description": "The fleet end of the same system. Bare-metal machines run the machine-agent, which registers and heartbeats into public gRPC inside the manager's box; the River queue uploads diagnostics to S3 and webapi confirms actions in Slack, both outside. The fleet drives these outward relations.",
+   "containers": [
+    {
+     "label": "Machine manager",
+     "members": [
+      "q",
+      "wapi",
+      "pub"
+     ]
+    }
+   ],
+   "layers": [
+    [
+     "mch"
+    ],
+    [
+     "agent"
+    ],
+    [
+     "q",
+     "wapi",
+     "pub"
+    ],
+    [
+     "s3",
+     "slack"
+    ]
+   ],
+   "nodes": [
+    {
+     "id": "mch",
+     "label": "bare-metal machines",
+     "group": "machines"
+    },
+    {
+     "id": "agent",
+     "label": "machine-agent",
+     "group": "machines"
+    },
+    {
+     "id": "q",
+     "label": "River job queue",
+     "group": "manager"
+    },
+    {
+     "id": "wapi",
+     "label": "webapi",
+     "group": "manager"
+    },
+    {
+     "id": "pub",
+     "label": "public gRPC",
+     "group": "manager"
+    },
+    {
+     "id": "s3",
+     "label": "S3 object store",
+     "group": "storage"
+    },
+    {
+     "id": "slack",
+     "label": "Slack",
+     "group": "tooling"
+    }
+   ],
+   "edges": [
+    {
+     "from": "mch",
+     "to": "agent",
+     "label": "runs on host",
+     "dots": 0
+    },
+    {
+     "from": "agent",
+     "to": "pub",
+     "label": "register + heartbeat",
+     "dots": 0
+    },
+    {
+     "from": "q",
+     "to": "s3",
+     "label": "diagnose uploads",
+     "dots": 0
+    },
+    {
+     "from": "wapi",
+     "to": "slack",
+     "label": "confirm + alerts",
+     "dots": 0
+    }
+   ]
+  },
+  {
+   "id": "l2",
+   "title": "L2 \u00b7 Inside the manager",
+   "description": "The manager's inside: requests land on the River queue, which dispatches provision jobs, audits and diagnostic events; the janitor proposes actions back to webapi, and the queue, private gRPC, public gRPC and reconcile write into Postgres. Every node here is inside the box.",
+   "containers": [
+    {
+     "label": "Machine manager",
+     "members": [
+      "pgrpc",
+      "wapi",
+      "q",
+      "reg",
+      "rec",
+      "ssh",
+      "pub",
+      "jan",
+      "db"
+     ]
+    }
+   ],
+   "layers": [
+    [
+     "pgrpc",
+     "wapi"
+    ],
+    [
+     "q",
+     "pub",
+     "rec"
+    ],
+    [
+     "reg",
+     "ssh",
+     "jan",
+     "db"
+    ]
+   ],
+   "nodes": [
+    {
+     "id": "pgrpc",
+     "label": "private gRPC",
+     "group": "manager"
+    },
+    {
+     "id": "wapi",
+     "label": "webapi",
+     "group": "manager"
+    },
+    {
+     "id": "q",
+     "label": "River job queue",
+     "group": "manager"
+    },
+    {
+     "id": "reg",
+     "label": "provider registry",
+     "group": "manager"
+    },
+    {
+     "id": "rec",
+     "label": "cluster reconcile",
+     "group": "manager"
+    },
+    {
+     "id": "ssh",
+     "label": "SSH + BMC ops",
+     "group": "manager"
+    },
+    {
+     "id": "pub",
+     "label": "public gRPC",
+     "group": "manager"
+    },
+    {
+     "id": "jan",
+     "label": "janitor app",
+     "group": "manager"
+    },
+    {
+     "id": "db",
+     "label": "Postgres",
+     "group": "storage"
+    }
+   ],
+   "edges": [
+    {
+     "from": "pgrpc",
+     "to": "q",
+     "label": "enqueue job",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "wapi",
+     "to": "q",
+     "label": "reinstall / reprovision",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "q",
+     "to": "reg",
+     "label": "provision job",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "q",
+     "to": "ssh",
+     "label": "audit / verify reimage",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "q",
+     "to": "jan",
+     "label": "diagnostic events",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "jan",
+     "to": "wapi",
+     "label": "proposed actions",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "q",
+     "to": "db",
+     "label": "job rows",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "pgrpc",
+     "to": "db",
+     "label": "machine rows",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "pub",
+     "to": "db",
+     "label": "machine state",
+     "flow": true,
+     "dots": 1
+    },
+    {
+     "from": "rec",
+     "to": "db",
+     "label": "cluster state",
+     "flow": true,
+     "dots": 1
+    }
+   ]
+  }
+ ]
+}

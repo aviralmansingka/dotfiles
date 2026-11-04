@@ -1,0 +1,18 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/09/datacenter-redundancy/views/v1.json",
+    "sha256": "01e46b4746373afc71f2717b4079f75de67259c1f4398c4a785d17c309ddcc6a"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/09/datacenter-redundancy/views/v2.json",
+    "sha256": "df2505bc739009f5fa803fae9b1afafaa96583f9388f0c8467ddfe07e693eb9f"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/09/datacenter-redundancy/views/v3.json",
+    "sha256": "ca3c86a14350ceca0c47d02d7a90cd6db5da4a49d61f78d930c1cf3999691bc1"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/09/datacenter-redundancy/views/v4.json",
+    "sha256": "49425ffad45a72995fb412a22c0d049a6e0328a87db32394c0b968490a7da006"
+  }
+]

@@ -1,0 +1,52 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "worker",
+      "label": "modal-worker",
+      "group": "worker-plane"
+    },
+    {
+      "id": "runtime",
+      "label": "modal-runtime",
+      "group": "orchestration"
+    },
+    {
+      "id": "engine",
+      "label": "Task engine",
+      "group": "orchestration"
+    },
+    {
+      "id": "daemon",
+      "label": "modal-daemon",
+      "group": "worker-plane"
+    }
+  ],
+  "edges": [
+    {
+      "from": "worker",
+      "to": "runtime",
+      "label": "task input + ctrl gRPC",
+      "label_slot": true
+    },
+    {
+      "from": "runtime",
+      "to": "worker",
+      "label": "events + mgmt gRPC",
+      "label_slot": true
+    },
+    {
+      "from": "runtime",
+      "to": "engine",
+      "label": "dispatches tasks",
+      "label_slot": true
+    },
+    {
+      "from": "runtime",
+      "to": "daemon",
+      "label": "fs HTTP over UDS",
+      "label_slot": true
+    }
+  ]
+}

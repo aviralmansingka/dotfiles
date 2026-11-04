@@ -1,0 +1,13 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "oob", "label": "OOB LAN", "group": "plant" },
+    { "id": "a", "label": "Compute BMC", "group": "devices" },
+    { "id": "b", "label": "NVSwitch BMC", "group": "devices" }
+  ],
+  "trunks": [
+    { "id": "bus", "label": "Redfish", "from": "oob", "to": "a", "branches": ["b"] }
+  ],
+  "edges": []
+}

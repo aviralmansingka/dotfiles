@@ -1,0 +1,2 @@
+warning: edge e1 label "boot.ipxe + S3 args" had no clear cell; shorten it or add routing space
+warning: edge e10 label "proposed actions" had no clear cell; shorten it or add routing space

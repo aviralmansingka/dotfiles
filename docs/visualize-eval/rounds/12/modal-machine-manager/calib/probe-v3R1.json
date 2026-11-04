@@ -1,0 +1,65 @@
+{
+ "direction": "tb",
+ "theme": "gruvbox",
+ "nodes": [
+  {
+   "id": "q",
+   "label": "River job queue",
+   "group": "ops"
+  },
+  {
+   "id": "ssh",
+   "label": "SSH + BMC ops",
+   "group": "ops"
+  },
+  {
+   "id": "jan",
+   "label": "janitor app",
+   "group": "ops"
+  },
+  {
+   "id": "wapi",
+   "label": "webapi server",
+   "group": "control"
+  },
+  {
+   "id": "slack",
+   "label": "Slack",
+   "group": "humans"
+  }
+ ],
+ "edges": [
+  {
+   "from": "q",
+   "to": "jan",
+   "label": "diagnostic events",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "q",
+   "to": "ssh",
+   "label": "audit/verify reimage",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "jan",
+   "to": "wapi",
+   "label": "proposed actions",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "wapi",
+   "to": "slack",
+   "label": "confirm + alerts",
+   "label_slot": true,
+   "dots": 1,
+   "flow": true
+  }
+ ]
+}

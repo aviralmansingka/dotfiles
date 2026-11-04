@@ -1,0 +1,21 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "worker", "label": "modal-worker", "group": "services" },
+    { "id": "runtime", "label": "modal-runtime", "group": "orchestration" },
+    { "id": "engine", "label": "Task engine", "group": "orchestration" },
+    { "id": "daemon", "label": "modal-daemon", "group": "services" }
+  ],
+  "layers": [
+    ["worker", ""],
+    ["runtime", ""],
+    ["engine", "daemon"]
+  ],
+  "edges": [
+    { "from": "worker", "to": "runtime", "label": "task+ctrl RPC", "dots": 1, "flow": true },
+    { "from": "runtime", "to": "worker", "label": "events+mgmt RPC", "dots": 1, "flow": true },
+    { "from": "runtime", "to": "engine", "label": "task dispatch", "dots": 1, "flow": true },
+    { "from": "runtime", "to": "daemon", "label": "HTTP over UDS", "dots": 1, "flow": true }
+  ]
+}

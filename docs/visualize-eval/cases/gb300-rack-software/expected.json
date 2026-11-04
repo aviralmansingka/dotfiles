@@ -1,0 +1,121 @@
+{
+  "case_id": "gb300-rack-software",
+  "reference_kind": "historical_generated_relations_not_independent_fact_verification",
+  "source_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-vault-research-grace-blackwell--/2026-10-31T11-22-16-652Z_01a191b2-30cc-7236-b360-f3de1efcfa9a.jsonl",
+  "source_spec_line": 285,
+  "source_call_id": "call_db40c48257f14413bd538516",
+  "historical_reference": {
+    "nodes": [
+      {
+        "id": "rms",
+        "label": "nv-rms"
+      },
+      {
+        "id": "oob",
+        "label": "OOB LAN"
+      },
+      {
+        "id": "k8s",
+        "label": "Kubernetes"
+      },
+      {
+        "id": "bmc_c",
+        "label": "Compute BMC"
+      },
+      {
+        "id": "bmc_s",
+        "label": "NVSwitch BMC"
+      },
+      {
+        "id": "pwr",
+        "label": "Power shelf"
+      },
+      {
+        "id": "gpuop",
+        "label": "GPU Operator"
+      },
+      {
+        "id": "nvos",
+        "label": "NVOS"
+      },
+      {
+        "id": "dcgm",
+        "label": "DCGM"
+      },
+      {
+        "id": "nmxc",
+        "label": "NMX-C/T"
+      },
+      {
+        "id": "dcgmx",
+        "label": "dcgm-exporter"
+      },
+      {
+        "id": "drvk",
+        "label": "Driver+CUDA"
+      },
+      {
+        "id": "fm",
+        "label": "Fabric Mgr"
+      }
+    ],
+    "edges": [
+      {
+        "from": "rms",
+        "to": "oob"
+      },
+      {
+        "from": "oob",
+        "to": "bmc_c"
+      },
+      {
+        "from": "oob",
+        "to": "bmc_s"
+      },
+      {
+        "from": "oob",
+        "to": "pwr"
+      },
+      {
+        "from": "oob",
+        "to": "nvos"
+      },
+      {
+        "from": "nvos",
+        "to": "nmxc"
+      },
+      {
+        "from": "k8s",
+        "to": "gpuop"
+      },
+      {
+        "from": "gpuop",
+        "to": "dcgm"
+      },
+      {
+        "from": "dcgm",
+        "to": "dcgmx"
+      },
+      {
+        "from": "dcgm",
+        "to": "drvk"
+      },
+      {
+        "from": "drvk",
+        "to": "fm"
+      }
+    ]
+  },
+  "constraints": [
+    "Exclude paid-only software, including Mission Control/UFM/NetQ. nv-rms source may be built freely; do not imply gated NGC images are freely available.",
+    "Distinguish OOB physical reachability from controller API calls. Never draw OOB -> DCGM.",
+    "Show the explicitly requested ONE OOB trunk that splits ONCE into compute BMC, NVSwitch BMC, and power shelf branches. Independent lines that only touch accidentally do not satisfy this.",
+    "Preserve NVOS hosting NMX-C/T and RMS NVOS/NMX control, with protocols from source excerpts.",
+    "Do not turn the unlabeled historical DCGM -> driver -> Fabric Manager chain into an invented deploys/manages dependency. Use explicit read/monitor/host semantics supported by the excerpts, or mark unsupported facts as blocked.",
+    "Driver/CUDA/DCGM/Fabric Manager run on compute hosts, not literally on the GPU die.",
+    "Use plain text and source citations to qualify uncertain interface claims; do not promote prior assistant guesses into verified facts."
+  ],
+  "animation": "optional",
+  "historical_reference_is_not_semantic_oracle": true,
+  "semantic_oracle": "Explicit user corrections and qualified interface facts in source.md override unlabeled historical edges."
+}

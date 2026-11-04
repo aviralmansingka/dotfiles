@@ -1,0 +1,49 @@
+viewport: 77x47 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 77x47 @100% · probe-multiline.json · 2 nodes · 1 edges · q q
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    ╭───────────────────╮          ╭───╮
+                    │     Fios rtr      │─────────▶│ONT│
+                    │ToR/spine/border/FW│ NAT out  │   │
+                    ╰───────────────────╯          ╰───╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+

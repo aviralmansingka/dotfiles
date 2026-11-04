@@ -1,0 +1,1101 @@
+{
+  "protocol_version": 1,
+  "round": 3,
+  "case_id": "pipeline",
+  "candidate_sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+  "renderer_sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7",
+  "rubric_sha256": "5519fd84f6b75973dbf7b5f5544c909a8f32a8841a876c8e7af00a1fcb119335",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "4e0c24c911506682e6788059e8075fc85aa6659c7426714b6e53cf33bf04a7d8",
+  "generator": {
+    "worker_id": "viz-ds03-1",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge03-pipeline",
+    "model": "openai/gpt-6.1-sol"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 79,
+    "rows": 49
+  },
+  "evidence": [
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/03/metadata.json",
+      "sha256": "2b8b65daab2e7c34565fa8ed90f7b83fb4c9475b9e88a029be27168fa6afcb86",
+      "description": "Frozen input hashes, actual worker-label map, models, and reviewer-identity clerical correction.",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/03/rubric.json",
+      "sha256": "5519fd84f6b75973dbf7b5f5544c909a8f32a8841a876c8e7af00a1fcb119335",
+      "description": "Round-03 revision-4 rubric and embedded result schema; verified against metadata.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen dataset manifest; only pipeline entry used for applicability.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/pipeline/source.md",
+      "sha256": "68aa197fdc597c3a22d1b8ca88a3ebee861dcda34684da15ae69b6946b741e58",
+      "description": "Qualified source excerpts, six historical relations, presentation constraints, and required sparse slow traffic.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/pipeline/expected.json",
+      "sha256": "ea177d01af818876ff04bf707b923326b153185fd425f21ea96250486b504ec3",
+      "description": "Source-backed expected concepts and relationships; historical generated relations are not independent fact verification.",
+      "capture": null
+    },
+    {
+      "id": "history",
+      "path": "docs/visualize-eval/cases/pipeline/historical-variants.json",
+      "sha256": "5d351c45f055d2ca115036d10ab4bd50fb1d22ccd87f31e018f01c3039b48659",
+      "description": "Pipeline historical variant only; no historical numeric flow setting treated as a new source traffic-rate request.",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/03/SKILL.md",
+      "sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+      "description": "Frozen candidate skill, verified against metadata; documentation inspected, not executed.",
+      "capture": null
+    },
+    {
+      "id": "capture-harness",
+      "path": "scripts/viz-evidence.sh",
+      "sha256": "2a804dea703e5a9da9cdd788d4eb89690860a02606ec681948670dfe19e8e069",
+      "description": "Bytes match frozen harness hash; records combined check stdout/stderr, exact pane commands, half split, dimension conversion and close probe. Not executed by reviewer.",
+      "capture": null
+    },
+    {
+      "id": "validator-harness",
+      "path": "scripts/viz-validate.py",
+      "sha256": "4a13878de22dd9dc28ac098658c0dc0c07727e7a03228af994a6f839e7d54ade",
+      "description": "Bytes hash-verified against frozen metadata; not executed or treated as visual proof.",
+      "capture": null
+    },
+    {
+      "id": "spec",
+      "path": "docs/visualize-eval/rounds/03/pipeline/spec-v1.json",
+      "sha256": "4e0c24c911506682e6788059e8075fc85aa6659c7426714b6e53cf33bf04a7d8",
+      "description": "Only final spec, using its actual file SHA-256 directly as spec_sha256.",
+      "capture": null
+    },
+    {
+      "id": "generation-json",
+      "path": "docs/visualize-eval/rounds/03/pipeline/generation.json",
+      "sha256": "b82e35dfb85649614a0c0accd930a99eba99581fe978986a765178ff8409169d",
+      "description": "Generator identity, commands, coverage, claims and cleanup summary. Motion origin/arrival conclusions contradict captures.",
+      "capture": null
+    },
+    {
+      "id": "generation-md",
+      "path": "docs/visualize-eval/rounds/03/pipeline/generation.md",
+      "sha256": "baaccd3b29c3c568ce433c40e4c7069ac9cfbe7163986ddbe0a4ffab66b5fb7b",
+      "description": "Generator narrative including false positive frame-zero and frame-20 claims; not substituted for captures.",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/03/pipeline/attempts.json",
+      "sha256": "6959d28ecfc72609656451b0b22a834fa3b5625619a5961c0d105e4f3a87c478",
+      "description": "Three final-view attempts, an LR orientation probe, and two unpreserved rejected drafts.",
+      "capture": null
+    },
+    {
+      "id": "validator-primary",
+      "path": "docs/visualize-eval/rounds/03/pipeline/validator-v1.txt",
+      "sha256": "4e46700d9608600eca0a03dc2e2eb64aadaec8381d2d477bcea5701738b8092a",
+      "description": "Recorded validator output: 28 PASS lines, not an independent visual pass.",
+      "capture": null
+    },
+    {
+      "id": "validator-origin",
+      "path": "docs/visualize-eval/rounds/03/pipeline/validator-v1-origin.txt",
+      "sha256": "92aefbba8c9a8a91f3da555ca62f3efdd69553244de8d4d5e24ace00aaca7a5f",
+      "description": "Only three attempt-budget PASS lines and all-checks-passed text retained; not full capture validation proof.",
+      "capture": null
+    },
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/03/reviews/pipeline/observed-first.md",
+      "sha256": "e43aabafac6c9590a73074eaa5a586fc90d25508e7f81669df8ab4b6ee21cae2",
+      "description": "Immutable stage-A blind record; saved_before_expected_reveal=true; SHA-256 reverified unchanged.",
+      "capture": null
+    },
+    {
+      "id": "primary-manifest",
+      "path": "docs/visualize-eval/rounds/03/pipeline/evidence/v1/manifest.json",
+      "sha256": "d5af7e09234ee704f86886e1fbba5411daea5d51668ee158834d395df7242808",
+      "description": "Frozen pane, dimension, timestamp, check-exit, artifact-hash and confirmed-close record.",
+      "capture": null
+    },
+    {
+      "id": "primary-check",
+      "path": "docs/visualize-eval/rounds/03/pipeline/evidence/v1/check.txt",
+      "sha256": "0fb4bbcf5320ae449f5a4aaae55a3c96047811a0125eba9d76de51fcf1b8a44d",
+      "description": "Combined --check stdout+stderr; exit 0 in manifest. Claims origins 6/6 and synchronization at 3000ms, contradicted by actual frames.",
+      "capture": null
+    },
+    {
+      "id": "primary-bin",
+      "path": "docs/visualize-eval/rounds/03/pipeline/evidence/v1/bin.sha256",
+      "sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "description": "Executed absolute binary path and hash, independently verified against executable bytes and metadata.",
+      "capture": null
+    },
+    {
+      "id": "normal-text",
+      "path": "docs/visualize-eval/rounds/03/pipeline/evidence/v1/v1-text.txt",
+      "sha256": "a4a0dc344af1ba8a7cf2c43ae2267c9df7a862f442d62cf069e7f5a58a27bf81",
+      "description": "Actual viewer grid. Same single final view, not another view or more node occurrences.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "single static sample; relative animation time not recorded",
+        "timestamp": "2026-11-02T11:17:33Z/2026-11-02T11:17:37Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "normal-ansi",
+      "path": "docs/visualize-eval/rounds/03/pipeline/evidence/v1/v1-ansi.ansi",
+      "sha256": "548d48bafabb5480e798a46a66b7fa078efbf3bf5295b01ea37e8cd5dd72c2c6",
+      "description": "Actual viewer grid. Same single final view, not another view or more node occurrences.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "single static sample; relative animation time not recorded",
+        "timestamp": "2026-11-02T11:17:33Z/2026-11-02T11:17:37Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected-ansi",
+      "path": "docs/visualize-eval/rounds/03/pipeline/evidence/v1/v1-selected.ansi",
+      "sha256": "bc1977a8ea08193beb47ebc203125ce9088ba266062eca19015a2f9a29820858",
+      "description": "Actual viewer grid. Same single final view, not another view or more node occurrences.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "single static sample; relative animation time not recorded",
+        "timestamp": "2026-11-02T11:17:33Z/2026-11-02T11:17:37Z",
+        "state": "all six nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "motion-text",
+      "path": "docs/visualize-eval/rounds/03/pipeline/evidence/v1/v1-frames.txt",
+      "sha256": "816064e29ca3f0b4bc220690d243bc455e6ec74c432bb1fb77d3c4def11cab9b",
+      "description": "Timestamped motion capture; grid bodies are plain text even in ANSI file. Long capture loses first eight lines of frame 0.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "partial frame 0; complete frames 1-20, 150-3000ms",
+        "timestamp": "2026-11-02T11:17:33Z/2026-11-02T11:17:37Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "motion-ansi",
+      "path": "docs/visualize-eval/rounds/03/pipeline/evidence/v1/v1-frames.ansi",
+      "sha256": "97ed2322194864cfbb92816195ed3b795e437d7a2875db2a599cddc99efb1e08",
+      "description": "Timestamped motion capture; grid bodies are plain text even in ANSI file. Long capture loses first eight lines of frame 0.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "partial frame 0; complete frames 1-20, 150-3000ms",
+        "timestamp": "2026-11-02T11:17:33Z/2026-11-02T11:17:37Z",
+        "state": "animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "origin-manifest",
+      "path": "docs/visualize-eval/rounds/03/pipeline/evidence/v1-origin/manifest.json",
+      "sha256": "1a958af21af48b0e4362846349bd5e6599c42f62de9b660a5526a0344f6bfa44",
+      "description": "Frozen pane, dimension, timestamp, check-exit, artifact-hash and confirmed-close record.",
+      "capture": null
+    },
+    {
+      "id": "origin-check",
+      "path": "docs/visualize-eval/rounds/03/pipeline/evidence/v1-origin/check.txt",
+      "sha256": "0fb4bbcf5320ae449f5a4aaae55a3c96047811a0125eba9d76de51fcf1b8a44d",
+      "description": "Combined --check stdout+stderr; exit 0 in manifest. Claims origins 6/6 and synchronization at 3000ms, contradicted by actual frames.",
+      "capture": null
+    },
+    {
+      "id": "origin-bin",
+      "path": "docs/visualize-eval/rounds/03/pipeline/evidence/v1-origin/bin.sha256",
+      "sha256": "5616e426486212c052a1b8b56ceb9811196928bd4fdda28f48b7b19ee7a0bf40",
+      "description": "Executed absolute binary path and hash, independently verified against executable bytes and metadata.",
+      "capture": null
+    },
+    {
+      "id": "origin-text",
+      "path": "docs/visualize-eval/rounds/03/pipeline/evidence/v1-origin/v1-origin-text.txt",
+      "sha256": "a4a0dc344af1ba8a7cf2c43ae2267c9df7a862f442d62cf069e7f5a58a27bf81",
+      "description": "Actual viewer grid. Same single final view, not another view or more node occurrences.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "single static sample; relative animation time not recorded",
+        "timestamp": "2026-11-02T11:18:18Z/2026-11-02T11:18:22Z",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "origin-ansi",
+      "path": "docs/visualize-eval/rounds/03/pipeline/evidence/v1-origin/v1-origin-ansi.ansi",
+      "sha256": "dc26d1732e1d2a174bb2b44c464eeabeed270d900751064dbb6cd21da36660ec",
+      "description": "Actual viewer grid. Same single final view, not another view or more node occurrences.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "single static sample; relative animation time not recorded",
+        "timestamp": "2026-11-02T11:18:18Z/2026-11-02T11:18:22Z",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "origin-selected",
+      "path": "docs/visualize-eval/rounds/03/pipeline/evidence/v1-origin/v1-origin-selected.ansi",
+      "sha256": "bc1977a8ea08193beb47ebc203125ce9088ba266062eca19015a2f9a29820858",
+      "description": "Actual viewer grid. Same single final view, not another view or more node occurrences.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "single static sample; relative animation time not recorded",
+        "timestamp": "2026-11-02T11:18:18Z/2026-11-02T11:18:22Z",
+        "state": "all six nodes selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "origin-motion-text",
+      "path": "docs/visualize-eval/rounds/03/pipeline/evidence/v1-origin/v1-origin-frames.txt",
+      "sha256": "730b7809dfaea0891be5fe6c7945ca1fadde82460a3a85bfa7db3b82017cd006",
+      "description": "Timestamped motion capture; grid bodies are plain text even in ANSI file. Same single final view, not another view or more node occurrences.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "complete frames 0-3, 0-450ms",
+        "timestamp": "2026-11-02T11:18:18Z/2026-11-02T11:18:22Z",
+        "state": "animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "origin-motion-ansi",
+      "path": "docs/visualize-eval/rounds/03/pipeline/evidence/v1-origin/v1-origin-frames.ansi",
+      "sha256": "4c97d29103e29bd2682794c2707eae1d88f9453f363c4aff7bcee89787906932",
+      "description": "Timestamped motion capture; grid bodies are plain text even in ANSI file. Same single final view, not another view or more node occurrences.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "complete frames 0-3, 0-450ms",
+        "timestamp": "2026-11-02T11:18:18Z/2026-11-02T11:18:22Z",
+        "state": "animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "origin-frame-0",
+      "path": "docs/visualize-eval/rounds/03/pipeline/evidence/v1-origin/v1-origin-frames.txt",
+      "sha256": "730b7809dfaea0891be5fe6c7945ca1fadde82460a3a85bfa7db3b82017cd006",
+      "description": "Frame-specific alias of origin-motion-text for 1-based grid locations. Timestamp is capture window, not invented frame UTC; relative time is 0ms.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frame 0 at 0ms",
+        "timestamp": "2026-11-02T11:18:18Z/2026-11-02T11:18:22Z",
+        "state": "animated; six dots visible one cell downstream of their origins",
+        "format": "text"
+      }
+    },
+    {
+      "id": "final-frame-20",
+      "path": "docs/visualize-eval/rounds/03/pipeline/evidence/v1/v1-frames.txt",
+      "sha256": "816064e29ca3f0b4bc220690d243bc455e6ec74c432bb1fb77d3c4def11cab9b",
+      "description": "Frame-specific alias of motion-text. Timestamp is capture window; relative time is 3000ms. No dot occupies an arrowhead.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "frame 20 at 3000ms",
+        "timestamp": "2026-11-02T11:17:33Z/2026-11-02T11:17:37Z",
+        "state": "animated; six dots still upstream of arrowheads",
+        "format": "text"
+      }
+    },
+    {
+      "id": "lr-probe-spec",
+      "path": "docs/visualize-eval/rounds/03/pipeline/attempts/v0-lr-overview.json",
+      "sha256": "22166a651a1ccd57de2694e3c983e70e34ded22f40f6370677561d5d75e18303",
+      "description": "Preserved local attempt/probe spec, not final-view capture evidence.",
+      "capture": null
+    },
+    {
+      "id": "lr-probe-check",
+      "path": "docs/visualize-eval/rounds/03/pipeline/attempts/v0-lr-overview.check.txt",
+      "sha256": "57a7a1a0c3c375b4126eb01db6bc4561a4fe11a37256cea7437e2361081f3cb6",
+      "description": "Preserved local --check output. No new run performed.",
+      "capture": null
+    },
+    {
+      "id": "attempt-1-spec",
+      "path": "docs/visualize-eval/rounds/03/pipeline/attempts/v1-attempt1.json",
+      "sha256": "6cf73930c797538bef1af8238fc9d298014bb756fe98973142a6442043195677",
+      "description": "Preserved local attempt/probe spec, not final-view capture evidence.",
+      "capture": null
+    },
+    {
+      "id": "attempt-1-check",
+      "path": "docs/visualize-eval/rounds/03/pipeline/attempts/v1-attempt1.check.txt",
+      "sha256": "5d72391eaf69c53faf27cc49cd54408463a60cfb9c91596fc80f2756f0232402",
+      "description": "Preserved local --check output. No new run performed.",
+      "capture": null
+    },
+    {
+      "id": "attempt-2-spec",
+      "path": "docs/visualize-eval/rounds/03/pipeline/attempts/v1-attempt2.json",
+      "sha256": "003588e9c884f7be3e37feb0c4351bff447cff33e6d8af220d3dd63c0109f776",
+      "description": "Preserved local attempt/probe spec, not final-view capture evidence.",
+      "capture": null
+    },
+    {
+      "id": "attempt-2-check",
+      "path": "docs/visualize-eval/rounds/03/pipeline/attempts/v1-attempt2.check.txt",
+      "sha256": "8552a9ec8452ec76dbef724b9210f5403fedd8c504c5dcb59cf87131a56c6374",
+      "description": "Preserved local --check output. No new run performed.",
+      "capture": null
+    },
+    {
+      "id": "attempt-3-spec",
+      "path": "docs/visualize-eval/rounds/03/pipeline/attempts/v1-attempt3.json",
+      "sha256": "4e0c24c911506682e6788059e8075fc85aa6659c7426714b6e53cf33bf04a7d8",
+      "description": "Preserved local attempt/probe spec, not final-view capture evidence.",
+      "capture": null
+    },
+    {
+      "id": "attempt-3-check",
+      "path": "docs/visualize-eval/rounds/03/pipeline/attempts/v1-attempt3.check.txt",
+      "sha256": "0fb4bbcf5320ae449f5a4aaae55a3c96047811a0125eba9d76de51fcf1b8a44d",
+      "description": "Preserved local --check output. No new run performed.",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All six source concepts and six directed historical relationships are visible, with verify/enqueue/write/read correctly owned. CLI-to-gateway and queue-to-worker remain unlabeled; no protocol invented. Separate auth read and worker write routes are preserved, with no extra visible relation. Static semantic meaning passes; the separate origin/direction-proof gate fails under arrow_traceability.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "spec",
+        "normal-text",
+        "normal-ansi",
+        "blind"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "All six static source stems and unique downward arrowheads are traceable without crossings or fake external branches. However the fixed category explicitly says an off-origin starting dot makes direction unproven: all six frame-0 dots start one cell after the first drawn cell. Therefore all six required-edge audits fail this strengthened gate (F01), despite correct static arrow topology.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/pipeline/expected.json#/historical_reference",
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/arrow_traceability"
+      ],
+      "evidence_ids": [
+        "normal-text",
+        "normal-ansi",
+        "origin-frame-0",
+        "blind"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Actual ANSI grid is 77x47 at natural 100%; origin scrollback preserves viewport: 77x47 zoom: 1.00 natural. Live outer Herdr pane is 79x49 at x80,y0; 1-cell chrome leaves 77x47. All six boxes, ten graph labels and six routes fit, without palette occlusion, clipping, hidden content or pan/zoom. Visible crossings=0, the mathematical minimum. Final source tiers and all relations are preserved, without any source-specified intra-tier order being changed.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "evidence_ids": [
+        "normal-ansi",
+        "normal-text",
+        "origin-motion-text",
+        "primary-manifest",
+        "origin-manifest",
+        "attempts",
+        "blind"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Client CLI, gateway edge, control Auth/Job queue, compute Worker pool, and state Postgres are role-based tiers rather than arbitrary depth colors. The two near, same-tier gateway destinations use related pinks RGB(211,134,155) and RGB(226,156,175); other role groups use distinct Gruvbox hues. Plain RGB(40,40,40) is shared by boxes and field. No source-defined order is reversed, and no unsupported grouping label is asserted.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "evidence_ids": [
+        "source",
+        "spec",
+        "normal-ansi",
+        "origin-ansi",
+        "blind"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All six complete perimeters (140 cells total) retain every side and rounded corner with one continuous RGB per node. Selected ANSI captures cover 6/6 occurrences in the single final view, all perimeter cells bold RGB(216,166,87); CLI gains bold despite unchanged RGB. No handle is drawn or claimed. Duplicate evidence bundles do not double occurrence counts; isolated selection/drag states were not captured and are not claimed.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json"
+      ],
+      "evidence_ids": [
+        "normal-ansi",
+        "selected-ansi",
+        "origin-ansi",
+        "origin-selected",
+        "blind"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Frozen skill, binary, corrected rubric, dataset, case inputs, all manifest artifacts and final spec hashes verify. Actual DeepSeek worker viz-ds03-1 and independent Sol reviewer are recorded; blind file is unchanged; final combined --check stdout/stderr, exit 0, dimensions, timestamps and both pane closures are preserved. Nevertheless the generator certifies frame-zero origins and frame-20 arrowhead arrival that the captures visibly contradict (F03), a material verification defect. Full actual-cycle arrival evidence and two rejected drafts/raw command/status records are absent (F02/F04). Known verification failure is not replaced with blocked/pass. The stale Astra identity prose is superseded by the corrected Sol fields and explicit captain instruction.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/03/metadata.json#/frozen_input_corrections"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "rubric",
+        "skill",
+        "dataset",
+        "spec",
+        "generation-json",
+        "generation-md",
+        "attempts",
+        "capture-harness",
+        "primary-check",
+        "origin-check",
+        "primary-manifest",
+        "origin-manifest",
+        "validator-primary",
+        "validator-origin",
+        "blind"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Required by pipeline source and dataset. All 21 distinct sampled times show one slow dot per route, no border/label/corner/bridge dot, and source-to-target movement. F01 is a known origin defect on 6/6 routes, so this category fails. Synchronization subtest is blocked (F02): none of the six dots reaches an arrowhead in any sampled frame through the claimed 3000ms endpoint, so no complete rendered cycle or common arrival frame is evidenced. This is not proof of unequal eventual durations. Check lines and matching duration_ms fields do not repair missing visible arrival.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#task",
+        "docs/visualize-eval/cases/pipeline/expected.json#/animation",
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/animation"
+      ],
+      "evidence_ids": [
+        "source",
+        "dataset",
+        "spec",
+        "motion-text",
+        "motion-ansi",
+        "origin-frame-0",
+        "final-frame-20",
+        "blind"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/pipeline/expected.json#/historical_reference/edges/0"
+      ],
+      "expected": "cli -> api; unlabeled, no invented protocol; independent directed relation, not a shared bus.",
+      "observed": "Static endpoints and meaning correct: (37,11) down to intact downward arrowhead (37,14). No label added. No crossing, shared corridor, bridge or external junction. Whole static route traceable. Frame 0 dot (37,12) is one cell downstream of actual first cell (37,11), so the fixed origin-direction gate fails despite the intact arrow. At frame 20 dot (37,13) has not reached head (37,14); no common arrival proven. API outgoing fan-out and Postgres incoming convergence, where relevant, use separate ports rather than fake external branches.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "normal-ansi",
+          "region": [
+            37,
+            11,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "origin-frame-0",
+          "region": [
+            37,
+            11,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "final-frame-20",
+          "region": [
+            37,
+            13,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F02"
+      ]
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/pipeline/expected.json#/historical_reference/edges/1"
+      ],
+      "expected": "api -> auth; label verify; independent directed relation, not a shared bus.",
+      "observed": "Static endpoints and meaning correct: (39,19) down through bend (39,21), right through bend (50,21), then down to intact arrowhead (50,22). Label verify has unique ownership. No crossing, shared corridor, bridge or external junction. Whole static route traceable. Frame 0 dot (39,20) is one cell downstream of actual first cell (39,19), so the fixed origin-direction gate fails despite the intact arrow. At frame 20 dot (46,21) has not reached head (50,22); no common arrival proven. API outgoing fan-out and Postgres incoming convergence, where relevant, use separate ports rather than fake external branches.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "normal-ansi",
+          "region": [
+            39,
+            19,
+            12,
+            4
+          ]
+        },
+        {
+          "evidence_id": "origin-frame-0",
+          "region": [
+            39,
+            19,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "final-frame-20",
+          "region": [
+            46,
+            21,
+            5,
+            2
+          ]
+        },
+        {
+          "evidence_id": "normal-ansi",
+          "region": [
+            41,
+            20,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F02"
+      ]
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/pipeline/expected.json#/historical_reference/edges/2"
+      ],
+      "expected": "api -> queue; label enqueue; independent directed relation, not a shared bus.",
+      "observed": "Static endpoints and meaning correct: (37,19) down through bend (37,21), left through bend (24,21), then down to intact arrowhead (24,22). Label enqueue has unique ownership. No crossing, shared corridor, bridge or external junction. Whole static route traceable. Frame 0 dot (37,20) is one cell downstream of actual first cell (37,19), so the fixed origin-direction gate fails despite the intact arrow. At frame 20 dot (28,21) has not reached head (24,22); no common arrival proven. API outgoing fan-out and Postgres incoming convergence, where relevant, use separate ports rather than fake external branches.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "normal-ansi",
+          "region": [
+            24,
+            19,
+            14,
+            4
+          ]
+        },
+        {
+          "evidence_id": "origin-frame-0",
+          "region": [
+            37,
+            19,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "final-frame-20",
+          "region": [
+            24,
+            21,
+            5,
+            2
+          ]
+        },
+        {
+          "evidence_id": "normal-ansi",
+          "region": [
+            28,
+            20,
+            7,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F02"
+      ]
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/pipeline/expected.json#/historical_reference/edges/3"
+      ],
+      "expected": "queue -> worker; unlabeled, no invented protocol; independent directed relation, not a shared bus.",
+      "observed": "Static endpoints and meaning correct: (24,27) down to intact downward arrowhead (24,30). No label added. No crossing, shared corridor, bridge or external junction. Whole static route traceable. Frame 0 dot (24,28) is one cell downstream of actual first cell (24,27), so the fixed origin-direction gate fails despite the intact arrow. At frame 20 dot (24,29) has not reached head (24,30); no common arrival proven. API outgoing fan-out and Postgres incoming convergence, where relevant, use separate ports rather than fake external branches.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "normal-ansi",
+          "region": [
+            24,
+            27,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "origin-frame-0",
+          "region": [
+            24,
+            27,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "final-frame-20",
+          "region": [
+            24,
+            29,
+            1,
+            2
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F02"
+      ]
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/pipeline/expected.json#/historical_reference/edges/4"
+      ],
+      "expected": "worker -> db; label write; independent directed relation, not a shared bus.",
+      "observed": "Static endpoints and meaning correct: (24,35) down through bend (24,37), right through bend (37,37), then down to intact arrowhead (37,38). Label write has unique ownership. No crossing, shared corridor, bridge or external junction. Whole static route traceable. Frame 0 dot (24,36) is one cell downstream of actual first cell (24,35), so the fixed origin-direction gate fails despite the intact arrow. At frame 20 dot (33,37) has not reached head (37,38); no common arrival proven. API outgoing fan-out and Postgres incoming convergence, where relevant, use separate ports rather than fake external branches.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "normal-ansi",
+          "region": [
+            24,
+            35,
+            14,
+            4
+          ]
+        },
+        {
+          "evidence_id": "origin-frame-0",
+          "region": [
+            24,
+            35,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "final-frame-20",
+          "region": [
+            33,
+            37,
+            5,
+            2
+          ]
+        },
+        {
+          "evidence_id": "normal-ansi",
+          "region": [
+            28,
+            36,
+            5,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F02"
+      ]
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/pipeline/expected.json#/historical_reference/edges/5"
+      ],
+      "expected": "auth -> db; label read; independent directed relation, not a shared bus.",
+      "observed": "Static endpoints and meaning correct: (50,27) down through bend (50,37), left through bend (39,37), then down to intact arrowhead (39,38). Label read has unique ownership. No crossing, shared corridor, bridge or external junction. Whole static route traceable. Frame 0 dot (50,28) is one cell downstream of actual first cell (50,27), so the fixed origin-direction gate fails despite the intact arrow. At frame 20 dot (45,37) has not reached head (39,38); no common arrival proven. API outgoing fan-out and Postgres incoming convergence, where relevant, use separate ports rather than fake external branches.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "normal-ansi",
+          "region": [
+            39,
+            27,
+            12,
+            12
+          ]
+        },
+        {
+          "evidence_id": "origin-frame-0",
+          "region": [
+            50,
+            27,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "final-frame-20",
+          "region": [
+            39,
+            37,
+            7,
+            2
+          ]
+        },
+        {
+          "evidence_id": "normal-ansi",
+          "region": [
+            43,
+            36,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "F01",
+        "F02"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F01",
+      "category": "animation",
+      "edge_ids": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6"
+      ],
+      "severity": "high",
+      "description": "KNOWN DEFECT: all six frame-0 dots start on the second drawn route cell, one cell downstream of the actual first cell after their source port. This directly fails animation origin and, under the explicit arrow_traceability rule, leaves every animated direction unproven. Static arrowheads and label meanings remain recoverable; no source relation is claimed reversed.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/animation",
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/arrow_traceability",
+        "docs/visualize-eval/cases/pipeline/source.md#task"
+      ],
+      "locations": [
+        {
+          "evidence_id": "origin-frame-0",
+          "region": [
+            37,
+            11,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "origin-frame-0",
+          "region": [
+            39,
+            19,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "origin-frame-0",
+          "region": [
+            37,
+            19,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "origin-frame-0",
+          "region": [
+            24,
+            27,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "origin-frame-0",
+          "region": [
+            24,
+            35,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "origin-frame-0",
+          "region": [
+            50,
+            27,
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F02",
+      "category": "animation",
+      "edge_ids": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6"
+      ],
+      "severity": "high",
+      "description": "EVIDENCE GAP / BLOCKER: frame 20 at the claimed 3000ms finish still shows all six dots upstream of their arrowheads. No sampled frame shows even one arrowhead arrival, much less all six together. The long capture plus recovered frame 0 is a 0-3000ms window, not evidence of a completed rendered cycle. Eventual synchronization, eventual unequal duration, or impossibility of arrival cannot be inferred. Synchronization is blocked; known origin failure still makes animation fail.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/animation",
+        "docs/visualize-eval/rounds/03/judge-full-task.md#deep-review"
+      ],
+      "locations": [
+        {
+          "evidence_id": "final-frame-20",
+          "region": [
+            37,
+            13,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "final-frame-20",
+          "region": [
+            46,
+            21,
+            5,
+            2
+          ]
+        },
+        {
+          "evidence_id": "final-frame-20",
+          "region": [
+            24,
+            21,
+            5,
+            2
+          ]
+        },
+        {
+          "evidence_id": "final-frame-20",
+          "region": [
+            24,
+            29,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "final-frame-20",
+          "region": [
+            33,
+            37,
+            5,
+            2
+          ]
+        },
+        {
+          "evidence_id": "final-frame-20",
+          "region": [
+            39,
+            37,
+            7,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F03",
+      "category": "workflow_evidence",
+      "edge_ids": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6"
+      ],
+      "severity": "high",
+      "description": "KNOWN VERIFICATION DEFECT: generation.md claims frame 0 shows origins and frame 20 shows all dots at their arrowheads, while the cited captured cells show neither. generation.json, --check origins 6/6 and synchronization diagnostics, and the green primary validator do not establish those visual assertions. Reproducible hashes are valid, but this materially incorrect interpretation breaks required reliable evidence. Full origin validator output is also not retained: its file has only three attempt-budget PASS lines.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/03/pipeline/generation.md#motion-evidence",
+        "docs/visualize-eval/rounds/03/pipeline/generation.json#/views/0/supplementary_evidence"
+      ],
+      "locations": [
+        {
+          "evidence_id": "origin-frame-0",
+          "region": [
+            37,
+            11,
+            3,
+            10
+          ]
+        },
+        {
+          "evidence_id": "final-frame-20",
+          "region": [
+            24,
+            13,
+            27,
+            26
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F04",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "medium",
+      "description": "EVIDENCE GAP / BLOCKER: attempts.json reports two rejected preflight drafts (top-level duration_ms rejection and explicit-layer routing failure) but explicitly says their specs were not preserved. Exact failed invocation records, full raw stdout/stderr and exit statuses are absent from this bundle. Reported field/spacing capability gaps are therefore not independently reproducible from these failed-attempt records; do not invent missing logs or treat their summaries as executed proof.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/03/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/03/pipeline/attempts.json#/rejected_specs"
+      ],
+      "locations": []
+    }
+  ],
+  "blockers": [
+    "B01 (F02): no actual rendered full-cycle/arrival evidence. Need preserved origin and final common-arrowhead-arrival frames for all six routes; eventual arrival behavior is unobserved, not pass. No new session was run to repair this review.",
+    "B02 (F04): two rejected draft specs and their exact raw failed command/stdout/stderr/exit records are unavailable; origin-validator output is only an excerpt. These workflow gaps do not erase known F01/F03 failures."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pBP",
+      "w7E:pBT"
+    ],
+    "closed_pane_ids": [
+      "w7E:pBP",
+      "w7E:pBT"
+    ],
+    "status": "done",
+    "reason": "Both hash-verified capture manifests record confirmed_closed. The frozen-hash capture harness establishes that this result follows a close and failed pane-get probe. No live pane was opened, queried, or closed by the reviewer; no reviewer-owned visualization pane exists."
+  },
+  "overall": "fail"
+}

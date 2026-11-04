@@ -44,11 +44,22 @@ except ImportError:  # python 3.9/3.10 (local macs)
 # Spec schema, mirrored from rataflow/src/lib.rs (the Rust code is the
 # source of truth for behavior; this mirror exists to validate the examples
 # and the skill's documented block against drift).
-ALLOWED_TOP = {"direction", "theme", "nodes", "edges"}
-ALLOWED_NODE = {"id", "label"}
-ALLOWED_EDGE = {"from", "to", "label", "flow"}
+ALLOWED_TOP = {"direction", "theme", "nodes", "edges", "layers", "trunks", "diagrams"}
+# One diagram of the multi-diagram canvas form: several named, described graphs
+# drawn as sections of one canvas (`diagrams` replaces the top-level graph).
+ALLOWED_DIAGRAM = {
+    "id", "title", "description", "direction", "nodes", "edges", "layers", "trunks",
+    "containers",
+}
+ALLOWED_NODE = {"id", "label", "group", "focus"}
+ALLOWED_CONTAINER = {"label", "members"}
+ALLOWED_EDGE = {"from", "to", "label", "flow", "dots", "style", "duration_ms", "timing", "label_slot"}
+ALLOWED_TRUNK = {"id", "label", "from", "to", "branches"}
 DIRECTIONS = {"tb", "lr"}
 THEMES = {"gruvbox", "dark", "light"}
+DOT_CHOICES = {0, 1}
+EDGE_STYLES = {"solid", "dashed"}
+TIMING_MODES = {"constant", "same-arrival"}
 
 RESULTS = []
 
@@ -61,13 +72,95 @@ def record(name, ok, reason=""):
 
 
 def validate_spec(doc):
-    """Return a list of schema problems for a parsed spec document."""
-    problems = []
+    """Return a list of schema problems for a parsed spec document.
+
+    Two forms: a single graph (`nodes`/`edges` at the top level), or a canvas of
+    named diagrams (`{"diagrams": [{id, title, description, nodes, edges}]}`).
+    The description is optional in the Rust schema, but the eval validator
+    requires it per diagram: a reader navigates a large canvas by those
+    headings, so a described canvas is the documented form, not a nicety.
+    """
     if not isinstance(doc, dict):
         return ["spec is not a JSON object"]
     unknown = set(doc) - ALLOWED_TOP
-    if unknown:
-        problems.append(f"unknown top-level field(s): {sorted(unknown)}")
+    problems = [f"unknown top-level field(s): {sorted(unknown)}"] if unknown else []
+    diagrams = doc.get("diagrams")
+    if diagrams is None:
+        return problems + validate_graph(doc)
+    if doc.get("theme", "gruvbox") not in THEMES:
+        problems.append(f"bad theme {doc.get('theme')!r}")
+    if not isinstance(diagrams, list) or not diagrams:
+        return problems + ["diagrams must be a non-empty list"]
+    if doc.get("nodes") or doc.get("edges"):
+        problems.append("diagrams is mutually exclusive with top-level nodes/edges")
+    seen_ids = set()
+    for index, diagram in enumerate(diagrams):
+        where = f"diagram {index}"
+        if not isinstance(diagram, dict):
+            problems.append(f"{where} is not an object")
+            continue
+        unknown_keys = set(diagram) - ALLOWED_DIAGRAM
+        if unknown_keys:
+            problems.append(f"{where} has unknown field(s): {sorted(unknown_keys)}")
+        if not str(diagram.get("id", "")).strip():
+            problems.append(f"{where} has an empty id")
+            continue
+        where = f"diagram {diagram['id']}"
+        if diagram["id"] in seen_ids:
+            problems.append(f"duplicate diagram id {diagram['id']}")
+        seen_ids.add(diagram["id"])
+        if not str(diagram.get("title", "")).strip():
+            problems.append(f"{where} has an empty title")
+        description = diagram.get("description")
+        if description is not None and not str(description).strip():
+            problems.append(f"{where} description is empty")
+        problems += [
+            f"{where}: {problem}"
+            for problem in validate_containers(diagram, diagram.get("nodes", []))
+        ]
+        problems += [f"{where}: {problem}" for problem in validate_graph(diagram)]
+    return problems
+
+
+def validate_containers(diagram, nodes):
+    """Check a diagram's container boxes against its own node ids.
+
+    Nodes are optional in the spec (every edge endpoint becomes a node), so a
+    member may name an endpoint that was never declared.
+    """
+    containers = diagram.get("containers")
+    if containers is None:
+        return []
+    if not isinstance(containers, list) or not containers:
+        return ["containers must be a non-empty list"]
+    node_ids = {
+        node.get("id") for node in nodes if isinstance(node, dict) and "id" in node
+    }
+    for edge in diagram.get("edges") or []:
+        if isinstance(edge, dict):
+            node_ids |= {edge.get("from"), edge.get("to")}
+    problems = []
+    for index, container in enumerate(containers):
+        if not isinstance(container, dict) or set(container) - ALLOWED_CONTAINER:
+            problems.append(f"container {index} is malformed")
+            continue
+        if not str(container.get("label", "")).strip():
+            problems.append(f"container {index} has an empty label")
+        members = container.get("members")
+        if not isinstance(members, list) or not members:
+            problems.append(f"container {index} needs at least one member")
+            continue
+        for member in members:
+            if member not in node_ids:
+                problems.append(
+                    f"container {index} member {member} is not a node of this diagram"
+                )
+    return problems
+
+
+def validate_graph(doc):
+    """Schema problems for one graph: a top-level spec or one canvas diagram."""
+    problems = []
     if doc.get("direction", "tb") not in DIRECTIONS:
         problems.append(f"bad direction {doc.get('direction')!r}")
     if doc.get("theme", "gruvbox") not in THEMES:
@@ -83,9 +176,26 @@ def validate_spec(doc):
             continue
         if not str(node["id"]).strip():
             problems.append(f"node {index} has an empty id")
+        group = node.get("group")
+        if group is not None and (not isinstance(group, str) or not group.strip()):
+            problems.append(f"node {index} group must be a non-empty string")
+        focus = node.get("focus")
+        if focus is not None and not isinstance(focus, bool):
+            problems.append(f"node {index} focus must be true or false")
         if node["id"] in seen:
             problems.append(f"duplicate node id {node['id']}")
         seen.add(node["id"])
+    layers = doc.get("layers")
+    if layers is not None:
+        if not isinstance(layers, list) or not all(
+            isinstance(layer, list) and all(isinstance(slot, str) for slot in layer)
+            for layer in layers
+        ):
+            problems.append("layers must be a list of lists of strings")
+        else:
+            placed = [slot for layer in layers for slot in layer if slot]
+            if len(placed) != len(set(placed)):
+                problems.append("a node appears in more than one layer slot")
     edges = doc.get("edges")
     if not isinstance(edges, list) or not edges:
         problems.append("edges is missing or empty")
@@ -108,6 +218,70 @@ def validate_spec(doc):
             problems.append(
                 f"edge {index} flow must be true or a positive number"
             )
+        dots = edge.get("dots")
+        if dots is not None and (isinstance(dots, bool) or dots not in DOT_CHOICES):
+            problems.append(f"edge {index} dots must be 0 or 1")
+        style = edge.get("style")
+        if style is not None and style not in EDGE_STYLES:
+            problems.append(f"edge {index} style must be solid or dashed")
+        duration = edge.get("duration_ms")
+        timing = edge.get("timing")
+        if timing is not None and timing not in TIMING_MODES:
+            problems.append(f"edge {index} timing must be constant or same-arrival")
+        if timing == "same-arrival" and flow is not True:
+            problems.append(
+                f"edge {index} timing same-arrival needs flow true and rejects a numeric flow"
+            )
+        if duration is not None:
+            if isinstance(duration, bool) or not isinstance(duration, int) or duration <= 0:
+                problems.append(
+                    f"edge {index} duration_ms must be a positive whole number"
+                )
+            elif timing != "same-arrival" or flow is not True:
+                problems.append(
+                    f"edge {index} duration_ms is valid only with timing same-arrival and flow true"
+                )
+    problems += validate_trunks(doc, seen)
+    return problems
+
+
+def validate_trunks(doc, node_ids):
+    """Check the optional trunk declarations against node ids and each other."""
+    problems = []
+    trunks = doc.get("trunks")
+    if trunks is None:
+        return problems
+    if not isinstance(trunks, list):
+        return ["trunks is not a list"]
+    seen = set()
+    for index, trunk in enumerate(trunks):
+        if not isinstance(trunk, dict) or set(trunk) - ALLOWED_TRUNK:
+            problems.append(f"trunk {index} is malformed")
+            continue
+        missing = {"id", "from", "to", "branches"} - set(trunk)
+        if missing:
+            problems.append(f"trunk {index} is missing {sorted(missing)}")
+            continue
+        if trunk["id"] in seen:
+            problems.append(f"duplicate trunk id {trunk['id']}")
+        seen.add(trunk["id"])
+        endpoints = {trunk["from"], trunk["to"]}
+        if trunk["from"] == trunk["to"]:
+            problems.append(f"trunk {index} has the same from and to")
+        branches = trunk["branches"]
+        if not isinstance(branches, list) or not branches:
+            problems.append(f"trunk {index} needs at least one branch")
+            continue
+        if len(branches) != len(set(branches)):
+            problems.append(f"trunk {index} repeats a branch")
+        for branch in branches:
+            if branch in endpoints:
+                problems.append(f"trunk {index} branch {branch} is an endpoint")
+            if branch not in node_ids:
+                problems.append(f"trunk {index} branch {branch} is not a node")
+        for endpoint in endpoints:
+            if endpoint not in node_ids:
+                problems.append(f"trunk {index} endpoint {endpoint} is not a node")
     return problems
 
 
@@ -131,25 +305,28 @@ def check_example_spec():
     return (not problems), problems
 
 
-def skill_spec_block():
-    """Extract the first ```json spec block from the skill's SKILL.md."""
+def skill_spec_blocks():
+    """Extract every ```json spec block from the skill's SKILL.md."""
     rel = "agents/.agents/skills/visualize/SKILL.md"
     text = (REPO / rel).read_text()
-    match = re.search(r"```json\n(.*?)```", text, re.DOTALL)
-    if not match:
-        return None, f"{rel}: no ```json spec block found"
-    return match.group(1), None
+    blocks = re.findall(r"```json\n(.*?)```", text, re.DOTALL)
+    if not blocks:
+        return [], f"{rel}: no ```json spec block found"
+    return blocks, None
 
 
 def check_skill_spec_block():
-    block, error = skill_spec_block()
+    blocks, error = skill_spec_blocks()
     if error:
         return False, [error]
-    try:
-        doc = json.loads(block)
-    except Exception as exc:  # noqa: BLE001
-        return False, [f"skill spec block does not parse as JSON: {exc}"]
-    problems = [f"skill spec block: {p}" for p in validate_spec(doc)]
+    problems = []
+    for index, block in enumerate(blocks):
+        try:
+            doc = json.loads(block)
+        except Exception as exc:  # noqa: BLE001
+            problems.append(f"skill spec block {index} does not parse as JSON: {exc}")
+            continue
+        problems += [f"skill spec block {index}: {p}" for p in validate_spec(doc)]
     return (not problems), problems
 
 

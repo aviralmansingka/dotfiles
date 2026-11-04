@@ -1,0 +1,88 @@
+{
+  "case_id": "modal-runtime",
+  "round": "12",
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "spec_sha256": "bc551e22f48f3d7ba223267216ee35fcea8eeaf44923a3f4d864d434ec3b4c6c",
+          "spec": "specs/v1-1.json",
+          "record_label": "v1-1",
+          "note": "lr, 3 nodes / 3 edges (worker pair + dispatches tasks), no label_slot. 0 bridges, 3/3 labels, 1 ambiguous owner: e1's label rides one row under the dispatch route and one row over e2's route (tie)."
+        },
+        {
+          "spec_sha256": "873bcd691aa59b8341ddfd530c625a5dcf53c812a71a33587595c1ca4da9b25d",
+          "spec": "specs/v1.json",
+          "record_label": "v1-2",
+          "note": "SHIPPED. Same nodes/edges, label_slot on the two long gRPC labels only: each pair label gets its own reserved gutter band, so ownership is structural. 57x11, 0 bridges, 3/3 labels, 0 ambiguous."
+        },
+        {
+          "spec_sha256": "1523a9d2bea4495a87ce9234f690a107529c22343357e2dcdd66f270ba9e92ee",
+          "spec": "specs/v1-3.json",
+          "record_label": "v1-3",
+          "note": "Rejected: v1 + runtime -> daemon (fs HTTP over UDS) to pull the seam into this view. 57x15, 2 bridges + 1 ambiguous — the daemon lane crosses the pair lanes. Density demand yielded here; see abandoned_shapes/recipe_yield."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "attempts": [
+        {
+          "spec_sha256": "e2ee56a56b9f756991df4b8b21b32b1d1e7315926175bad77ad3d737a2f97a4b",
+          "spec": "specs/v2-1.json",
+          "record_label": "v2-1",
+          "note": "lr, 7 nodes / 5 edges (fs seam + execution + storage). 0 bridges, 5/5 labels, 0 ambiguous, but extent 104x14 — over the 77-column target."
+        },
+        {
+          "spec_sha256": "0e769c51d4c26afe8f46c5f7e1a5488a80103479f1677f0e4d70b19eab4044ea",
+          "spec": "specs/v2-2.json",
+          "record_label": "v2-2",
+          "note": "Same spec, tb: 58x55, 0 bridges, 5/5 labels, 0 ambiguous, but 55 rows — over the 47-row target; every label sat in a rank gap as tall as its text."
+        },
+        {
+          "spec_sha256": "53390239cb7979d1e7d47fdfd0dbcf42de8e4c562992a229e30b625525e10576",
+          "spec": "specs/v2.json",
+          "record_label": "v2-3",
+          "note": "SHIPPED. tb with label_slot on all five edges: labels move into reserved side gutters. 58x21, 0 bridges, 5/5 labels, 0 ambiguous."
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "shape": "single dense view: the whole graph (8 nodes / 8 edges) in one picture",
+      "record_labels": ["v1-a1", "v1-a2", "v1-a3", "v1-a4", "v1-a5"],
+      "specs": ["specs/v1-a1.json", "specs/v1-a2.json", "specs/v1-a3.json", "specs/v1-a4.json", "specs/v1-a5.json"],
+      "measured": [
+        "a1 tb, no label_slot: 47x84 — 37 rows over the 47-row target; 1 label unplaced, 1 ambiguous.",
+        "a2 lr, label_slot everywhere: 89x18 — 12 columns over target; 2 bridges, 2 labels unplaced.",
+        "a3 tb, label_slot everywhere: 65x30, 0 bridges, 8/8 labels, 2 ambiguous owners (the two fan labels stack in one gutter beside the same run).",
+        "a4 tb + minlen 2 on runtime/engine edges: 56x42, 0 bridges, 2 ambiguous.",
+        "a5 tb + minlen 3 on the engine edges: 56x47, 0 bridges, 2 ambiguous — the box is big enough, the label ownership is not."
+      ],
+      "why_abandoned": "Two fan labels keep a tie owner in a 2-cell-spaced fan gutter at every room setting tried; extra rows/columns move the drawing but never the tie."
+    },
+    {
+      "shape": "merged seam view: worker pair + dispatches tasks + fs HTTP over UDS (4 nodes / 4 edges) in one picture",
+      "record_labels": ["seams-1", "seams-2", "seams-3", "seams-4", "seams-5", "seams-6"],
+      "specs": ["specs/seams-1.json", "specs/seams-2.json", "specs/seams-3.json", "specs/seams-4.json", "specs/seams-5.json", "specs/seams-6.json"],
+      "measured": [
+        "seams-1 lr, label_slot everywhere: 46x17, 2 bridges, 1 label unplaced.",
+        "seams-2 tb, label_slot everywhere: 76x14, 0 bridges, 4/4 labels, 2 ambiguous.",
+        "seams-3 tb, pair bands + minlen 2 on the fan: 70x22, 0 ambiguous but 2 bridges + 1 touching bend.",
+        "seams-4 tb, label_slot on the pair only: 76x27, 0 bridges, 1 ambiguous, and the band anchor pushes e1's label to the pane edge where it clips.",
+        "seams-5 tb, all bands, shorter fan labels: 76x14, 0 bridges, 2 ambiguous.",
+        "seams-6 lr, no bands, minlen 2 on the pair: 83x13 — over width, 1 bridge, 1 ambiguous."
+      ],
+      "why_abandoned": "Same tie. Shipped instead as v1 (pair + dispatch, 3 edges) + v2 (seam + 4 execution/storage edges, 5 edges), both defect-free."
+    },
+    {
+      "shape": "tails-only view: engine + backend/container + filesystem/blobnet (5 nodes / 4 edges)",
+      "record_labels": ["tails-1"],
+      "specs": ["specs/tails-1.json"],
+      "measured": ["lr, no label_slot: 67x11, 0 bridges, 4/4 labels, 0 ambiguous."],
+      "why_abandoned": "Clean but thinner than v2, which folds the fs-over-UDS seam into the same picture (7 nodes / 5 edges, still 0 bridges / 0 ambiguous)."
+    }
+  ]
+}

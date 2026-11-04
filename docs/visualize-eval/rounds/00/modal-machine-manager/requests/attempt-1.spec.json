@@ -1,0 +1,81 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "cp",
+      "label": "Control plane"
+    },
+    {
+      "id": "web",
+      "label": "Humans + mmctl"
+    },
+    {
+      "id": "pgrpc",
+      "label": "Private gRPC"
+    },
+    {
+      "id": "wapi",
+      "label": "Webapi"
+    },
+    {
+      "id": "q",
+      "label": "River jobs"
+    },
+    {
+      "id": "db",
+      "label": "Postgres"
+    }
+  ],
+  "layers": [
+    [
+      "cp",
+      "web"
+    ],
+    [
+      "pgrpc",
+      "wapi"
+    ],
+    [
+      "",
+      "q"
+    ],
+    [
+      "",
+      "db"
+    ]
+  ],
+  "edges": [
+    {
+      "to": "pgrpc",
+      "label": "create/end/fix",
+      "from": "cp"
+    },
+    {
+      "to": "wapi",
+      "label": "HTTP",
+      "from": "web",
+      "flow": 0.1
+    },
+    {
+      "to": "q",
+      "label": "enqueue job",
+      "from": "pgrpc"
+    },
+    {
+      "to": "q",
+      "label": "reinstall/reprov",
+      "from": "wapi"
+    },
+    {
+      "to": "db",
+      "label": "machine rows",
+      "from": "pgrpc"
+    },
+    {
+      "to": "db",
+      "label": "job rows",
+      "from": "q"
+    }
+  ]
+}

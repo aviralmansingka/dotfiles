@@ -1,0 +1,15 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "rms", "label": "nv-rms (mgmt)", "group": "off-rack mgmt" },
+    { "id": "bmc_c", "label": "Compute BMC", "group": "rack hardware" },
+    { "id": "bmc_s", "label": "NVSwitch BMC", "group": "rack hardware" },
+    { "id": "pwr", "label": "Power shelf", "group": "rack hardware" }
+  ],
+  "edges": [
+    { "from": "rms", "to": "bmc_c", "label": "Redfish/HTTPS" },
+    { "from": "rms", "to": "bmc_s", "label": "BMC path", "style": "dashed" },
+    { "from": "rms", "to": "pwr", "label": "Redfish shelf" }
+  ]
+}

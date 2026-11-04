@@ -1,0 +1,16 @@
+viewport: 100x14 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 100x14 @100% · canvas 145x18 · containment-l2.json · 6 nodes · 6 edges · q quit
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+L2 · Inside the box — queue and dispatch
+The same box opened: requests land on the River queue, which dispatches to                         h
+═Machine manager══════════════════════════════════════════════════════════                         ═
+                                   ╭──────╮
+ ┌───────┐                   ╭────▶│webapi│●──────────────────────────╮ ╭─       ▄▖    ▄▄▄    ▗▄▄▄
+ │ + [+] │                   │     │      │  reinstall / reprovision  │ │  ▀▀   ▗▄▄    ▀▀▀     ▄▄▖ s
+╭│ − [-]─│──╮proposed actions│     ╰──────╯                           ╰▶│                          ─
+││ ⊡ [f] │pp│●───────────────╯                                          │R
+││ □ [i] │  │                   ╭────────────╮       enqueue job      ╭▶│                          ─
+╰└───────┘──╯                   │private gRPC│●───────────────────────╯ │                          r
+      ▲                         │            │                          ╰───────────────╯

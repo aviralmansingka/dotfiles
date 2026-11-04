@@ -1,0 +1,67 @@
+{
+ "direction": "tb",
+ "theme": "gruvbox",
+ "nodes": [
+  {
+   "id": "n0",
+   "label": "n0"
+  },
+  {
+   "id": "n1",
+   "label": "n1"
+  },
+  {
+   "id": "n2",
+   "label": "n2"
+  },
+  {
+   "id": "n3",
+   "label": "n3"
+  },
+  {
+   "id": "n4",
+   "label": "n4"
+  },
+  {
+   "id": "n5",
+   "label": "n5"
+  }
+ ],
+ "edges": [
+  {
+   "from": "n0",
+   "to": "n1",
+   "label": "abc",
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "n1",
+   "to": "n2",
+   "label": "abc",
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "n2",
+   "to": "n3",
+   "label": "abc",
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "n3",
+   "to": "n4",
+   "label": "abc",
+   "dots": 1,
+   "flow": true
+  },
+  {
+   "from": "n4",
+   "to": "n5",
+   "label": "abc",
+   "dots": 1,
+   "flow": true
+  }
+ ]
+}

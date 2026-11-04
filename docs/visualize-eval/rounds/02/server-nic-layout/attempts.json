@@ -1,0 +1,115 @@
+{
+  "case_id": "server-nic-layout",
+  "round": "02",
+  "worker_id": "viz-ds02-server-nic-layout",
+  "budget": { "final_views": 4, "attempts_per_view": 3 },
+  "views": [
+    {
+      "view": "v1",
+      "scope": "server1 port bed and the routed /29 segment",
+      "final_spec": "v1.json",
+      "final_spec_sha256": "da86859d62efecd2c25ab261c2ddb7644fefd8ae6cfeec3b16bed07661c637d0",
+      "evidence": "evidence/v1",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "attempts/a1-v1-merged-9node.json",
+          "spec_sha256": "1974daf5aebc76f18e5451d1e842ac35b044462dfbb49123070ef47b6593adc0",
+          "check": "attempts/a1-v1-merged-9node.check.txt",
+          "result": "extent 95x56, labels 8/8 placed, 0 warnings",
+          "outcome": "rejected",
+          "note": "One 9-node overview of the whole layout. Extent 95x56 overflows the 77x47 target on both axes, so a capture would have shown 'graph overflows · drag to pan'. Split into v1 (ports + /29 segment) and v2 (upstream path) instead of deleting facts."
+        },
+        {
+          "attempt": 2,
+          "spec": "attempts/a2-v1-segment-flat.json",
+          "spec_sha256": "226fead8efb87eef99516de3bce192440c3f6f5c6b05b860132a17c41c03ebe6",
+          "check": "attempts/a2-v1-segment-flat.check.txt",
+          "result": "extent 66x29, labels 5/5 placed, 0 warnings",
+          "outcome": "superseded",
+          "note": "First 6-node segment view. Explicit layers were flat (['dark','','']) so the three single-node ranks hugged the left edge and the chain drew a long stair-step corridor that read as accidental. It also carried the cramped gateway label 'Arista .57 noNAT/v6', which packs two facts and can be misread as NAT/v6 being present."
+        },
+        {
+          "attempt": 3,
+          "spec": "v1.json",
+          "spec_sha256": "da86859d62efecd2c25ab261c2ddb7644fefd8ae6cfeec3b16bed07661c637d0",
+          "check": "v1.check.txt",
+          "result": "extent 58x29; labels 5/5 placed, 0 on route cells, 0 skipped; dots 2 single-dot routes, 0 violations; 0 warnings",
+          "outcome": "captured",
+          "note": "Centred the three single-node ranks with empty layer slots so the chain is one straight column, and moved the NAT/IPv6 fact to the v2 hop where it belongs. Gateway label reduced to 'Arista .57 L3': the MAC OUI supports the vendor, not a ToR role, and the source only establishes that .57 routes the /29."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "scope": "observed upstream hops from the host to Cloudflare",
+      "final_spec": "v2.json",
+      "final_spec_sha256": "8f4ccba2eacadae5c1a24157a44c42ced9ba87d304c0d3e5be5f96022e7cdfa7",
+      "evidence": "evidence/v2",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "attempts/a3-v2-path-5node.json",
+          "spec_sha256": "87b2f305a8af07e80a0f42972b5351aa9996191f09503f09321780018b3efc55",
+          "check": "attempts/a3-v2-path-5node.check.txt",
+          "result": "extent 25x40, labels 4/4 placed, 0 warnings",
+          "outcome": "superseded",
+          "note": "Five-node hop chain that fits, but its host-to-gateway edge repeated v1's RTT label and left the source's no-NAT / no-IPv6 fact with no home in the round."
+        },
+        {
+          "attempt": 2,
+          "spec": "attempts/a4-v2-before-colorfix.json",
+          "spec_sha256": "3c9781b017dfb75186bfbcbdccdd7b4b7c1be76339f47704acdfc565717715e9",
+          "check": "attempts/a4-v2-before-colorfix.check.txt",
+          "result": "extent 25x40, labels 4/4 placed, 0 warnings",
+          "outcome": "captured then superseded",
+          "note": "Host-to-gateway hop labelled 'no NAT, no v6'. Captured and validated, then the colour audit of the ANSI frames showed the shared gateway drawn in a different hue family here than in v1. Its capture is kept at attempts/superseded-capture/v2-pre-colorfix (pane w7E:p7F, confirmed closed) so the replaced bundle is not confused with the certified one."
+        },
+        {
+          "attempt": 3,
+          "spec": "v2.json",
+          "spec_sha256": "8f4ccba2eacadae5c1a24157a44c42ced9ba87d304c0d3e5be5f96022e7cdfa7",
+          "check": "v2.check.txt",
+          "result": "extent 25x40; labels 4/4 placed, 0 on route cells, 0 skipped; dots 4 single-dot routes, 0 violations; 0 warnings",
+          "outcome": "captured",
+          "note": "Only the node declaration order changed, so the two groups that also exist in v1 keep their family index (ports first, fabric third): the gateway is the same pink in both views and the NIC the same gold. Extent, labels and dots are unchanged."
+        }
+      ]
+    }
+  ],
+  "capability_preflight": [
+    {
+      "need": "trunks — one declared shared bus that splits",
+      "specs": [
+        "attempts/preflight/trunk-seg29-branches-midrank.json",
+        "attempts/preflight/trunk-seg29-branches-gwrank.json"
+      ],
+      "check": [
+        "attempts/preflight/trunk-seg29-branches-midrank.check.txt",
+        "attempts/preflight/trunk-seg29-branches-gwrank.check.txt"
+      ],
+      "result": "both placements refused: 'no obstacle-safe route for nic -> s2, nic -> spare; increase node/layer spacing'",
+      "used": false,
+      "note": "Not used for two independent reasons. (1) The renderer refused the only candidate bus in both placements tried. (2) The source has no genuine one-to-many shared bus on the observed path: the /29 is a routed prefix whose members hold independent links to the gateway, and two of them carry their own qualifier ('free?' unconfirmed for .60-.62, 'no link seen' for the dark ports) that a trunk spur cannot express, because SpecTrunk has no per-branch label or style. Drawing one corridor would have faked a shared physical bus and dropped per-member uncertainty. The segment is drawn as same-rank peers with per-member arrow direction and dash instead."
+    },
+    {
+      "need": "group — semantic colour families",
+      "used": true,
+      "result": "ports, hosts, pool, fabric (v1); ports, fabric, transit, internet (v2)"
+    },
+    {
+      "need": "dots: 1 — exactly one live dot per route",
+      "used": true,
+      "result": "dots: 1 on the active routes (s1->nic, nic->gw, gw->airtel, airtel->airtelbb, airtelbb->cf) and dots: 0 on the inactive or unused ones (dark ports, server2, free pool), so 'one active uplink, seven dark' and 'no traffic to the neighbour or the pool' are visible as motion and not only as text"
+    },
+    {
+      "need": "style: dashed — visible uncertainty",
+      "used": true,
+      "result": "dark->s1 'no link seen' (inactive interfaces do not prove no cable) and spare->gw 'free?' (unresponsive addresses do not prove free)"
+    }
+  ],
+  "superseded_probes": {
+    "note": "Layout probes run as --check plus 77x47 --frames 1 previews on temporary spec copies (lane order, label wording, layer slots) before each recorded spec was written. They opened no pane and produced no capture; each differs from a recorded spec only in label text or layer-slot placement.",
+    "merged_9node_layered_probe": "The same 9-node graph with explicit 7-layer placement measured 59x53, so the split is required by the renderer, not by a preference for more views."
+  }
+}

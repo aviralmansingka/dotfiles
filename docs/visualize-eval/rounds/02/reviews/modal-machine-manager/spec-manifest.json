@@ -1,0 +1,18 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/02/modal-machine-manager/v1.json",
+    "sha256": "00b5d6a0084fe359f1695d8ca2bef82ab41ff0d6d3c95d9e706c8a4b904f4f03"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/02/modal-machine-manager/v2.json",
+    "sha256": "8b908f1b38de152a082615adf30cc55a34feb6aa219da4eac0b18463fe074daf"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/02/modal-machine-manager/v3.json",
+    "sha256": "f6f0e6741ead65180717d803a24f1dcaab45790978748acd2ea109be5d856616"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/02/modal-machine-manager/v4.json",
+    "sha256": "08c68a5c52191cb8064f9c837137d6af8715650c8093d13388b1a6a17e27d83e"
+  }
+]

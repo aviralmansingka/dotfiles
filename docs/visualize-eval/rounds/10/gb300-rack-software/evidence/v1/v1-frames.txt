@@ -1,0 +1,184 @@
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/10/gb300-rack-software/spec-v1
+.json
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+󰂄 7% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/10/gb300-rack-software/
+spec-v1.json
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+󰂄 7% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/10/gb300-rack-software/
+spec-v1.json --select-all
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+󰂄 7% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/10/gb300-rack-software/
+spec-v1.json --frames 3 --step-ms 100
+viewport: 82x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 82x51 @100% · spec-v1.json · 10 nodes · 5 edges · q quit
+
+
+
+
+                             ╭──────────╮   ╭───────╮
+                             │Kubernetes│   │OOB LAN│
+                             │          │   │       │
+                             ╰──────────╯   ╰───────╯
+                                  │  hosts      │
+                                  │             │
+                                  │             │
+                                  │             │
+                                  │             │
+                                  │             │
+             ╭────────────────────╯             ⌒──────────╮
+             │                       Redfish    ⌒          │
+             │                  ╭───────────────┴─╮        │
+             ▼                  ▼                 ▼        │
+       ╭────────────╮   ╭───────────────╮   ╭────────────╮ │ ╭───────────╮
+       │GPU Operator│   │Compute BMC x18│   │NVSwitch BMC│ ╰▶│Power shelf│
+       │            │   │               │   │            │   │           │
+       ╰────────────╯   ╰───────────────╯   ╰────────────╯   ╰───────────╯
+             │  DaemonSet
+             │
+             ╰──────────────────────────╮
+                                        ▼
+                                      ╭────╮
+                                      │DCGM│
+                                      │    │
+                                      ╰────╯
+                                       │ │ Prom :9400
+                                       │ │
+                                ╭──────╯ ╰───────╮
+                                ▼    NVML (local)▼
+                         ╭─────────────╮   ╭───────────╮
+                         │dcgm-exporter│   │Driver+CUDA│
+                         │             │   │           │
+                         ╰─────────────╯   ╰───────────╯
+                                                 │ same host
+                                                 │
+                                        ╭────────╯
+                                        ▼
+                                   ╭──────────╮
+ ┌───────┐                         │Fabric Mgr│
+ │ + [+] │                         │          │
+ │ − [-] │                         ╰──────────╯
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 82x51 @100% · spec-v1.json · 10 nodes · 5 edges · q quit
+
+
+
+
+                             ╭──────────╮   ╭───────╮
+                             │Kubernetes│   │OOB LAN│
+                             │          │   │       │
+                             ╰──────────╯   ╰───────╯
+                                  │  hosts      │
+                                  │             │
+                                  │             │
+                                  │             │
+                                  │             │
+                                  │             │
+             ╭────────────────────╯             ⌒──────────╮
+             │                       Redfish    ⌒          │
+             │                  ╭───────────────┴─╮        │
+             ▼                  ▼                 ▼        │
+       ╭────────────╮   ╭───────────────╮   ╭────────────╮ │ ╭───────────╮
+       │GPU Operator│   │Compute BMC x18│   │NVSwitch BMC│ ╰▶│Power shelf│
+       │            │   │               │   │            │   │           │
+       ╰────────────╯   ╰───────────────╯   ╰────────────╯   ╰───────────╯
+             │  DaemonSet
+             │
+             ╰──────────────────────────╮
+                                        ▼
+                                      ╭────╮
+                                      │DCGM│
+                                      │    │
+                                      ╰────╯
+                                       │ │ Prom :9400
+                                       │ │
+                                ╭──────╯ ╰───────╮
+                                ▼    NVML (local)▼
+                         ╭─────────────╮   ╭───────────╮
+                         │dcgm-exporter│   │Driver+CUDA│
+                         │             │   │           │
+                         ╰─────────────╯   ╰───────────╯
+                                                 │ same host
+                                                 │
+                                        ╭────────╯
+                                        ▼
+                                   ╭──────────╮
+ ┌───────┐                         │Fabric Mgr│
+ │ + [+] │                         │          │
+ │ − [-] │                         ╰──────────╯
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 82x51 @100% · spec-v1.json · 10 nodes · 5 edges · q quit
+
+
+
+
+                             ╭──────────╮   ╭───────╮
+                             │Kubernetes│   │OOB LAN│
+                             │          │   │       │
+                             ╰──────────╯   ╰───────╯
+                                  │  hosts      │
+                                  │             │
+                                  │             │
+                                  │             │
+                                  │             │
+                                  │             │
+             ╭────────────────────╯             ⌒──────────╮
+             │                       Redfish    ⌒          │
+             │                  ╭───────────────┴─╮        │
+             ▼                  ▼                 ▼        │
+       ╭────────────╮   ╭───────────────╮   ╭────────────╮ │ ╭───────────╮
+       │GPU Operator│   │Compute BMC x18│   │NVSwitch BMC│ ╰▶│Power shelf│
+       │            │   │               │   │            │   │           │
+       ╰────────────╯   ╰───────────────╯   ╰────────────╯   ╰───────────╯
+             │  DaemonSet
+             │
+             ╰──────────────────────────╮
+                                        ▼
+                                      ╭────╮
+                                      │DCGM│
+                                      │    │
+                                      ╰────╯
+                                       │ │ Prom :9400
+                                       │ │
+                                ╭──────╯ ╰───────╮
+                                ▼    NVML (local)▼
+                         ╭─────────────╮   ╭───────────╮
+                         │dcgm-exporter│   │Driver+CUDA│
+                         │             │   │           │
+                         ╰─────────────╯   ╰───────────╯
+                                                 │ same host
+                                                 │
+                                        ╭────────╯
+                                        ▼
+                                   ╭──────────╮
+ ┌───────┐                         │Fabric Mgr│
+ │ + [+] │                         │          │
+ │ − [-] │                         ╰──────────╯
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+󰂄 7% ❯

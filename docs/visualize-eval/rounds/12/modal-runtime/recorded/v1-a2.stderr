@@ -1,0 +1,2 @@
+warning: edge e2 label "dispatches tasks" had no clear cell; shorten it or add routing space
+warning: edge e4 label "starts / manages" had no clear cell; shorten it or add routing space

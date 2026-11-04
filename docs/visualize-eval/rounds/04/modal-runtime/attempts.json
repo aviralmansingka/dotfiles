@@ -1,0 +1,67 @@
+{
+  "case_id": "modal-runtime",
+  "round": "04",
+  "views": [
+    {
+      "view": "v1",
+      "spec": "specs/v1-b.json",
+      "status": "kept",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "specs/v1-a.json",
+          "spec_sha256": "d99d367bbc122057bc17af1aa7d065350c2ecdc70dc3ae4a265aa06ca1db0b7f",
+          "check_log": "checks/v1-a.check.txt",
+          "note": "First layout: tb, five layers, single vertical spine (worker->runtime->engine->backend->container), filesystem/blobnet in a second column, daemon in a third. extent 64x37, 0 crossings, 0 detours, 8/8 origins, but labels reported 1 ambiguous owner (warning).",
+          "verdict": "rejected: 1 ambiguous label owner"
+        },
+        {
+          "attempt": 2,
+          "spec": "specs/v1-b.json",
+          "spec_sha256": "5048cd78f17c25d03b40df241f04c8d17bf0459b0f2dd67e7f5d740614d293c9",
+          "check_log": "checks/v1-b.check.txt",
+          "note": "Identical geometry; one label shortened: backend->container from 'runs user process' (17 chars) to 'runs process' (12). At 17 chars the label anchored 9 cells from its own route while the engine->backend run sat 8 cells away, so no unambiguous slot existed at that length; at 12 chars the anchor clears its own route by 7 cells. All other lines unchanged.",
+          "verdict": "kept (captured in evidence/v1, validator clean)"
+        },
+        {
+          "attempt": 3,
+          "spec": "specs/v1-c.json",
+          "spec_sha256": "151345b2b307c35970be04b4c83976fc75e85a5bfa618dc12aef3f3611fea523",
+          "check_log": "checks/v1-c.check.txt",
+          "note": "Tried to clear the control palette off the bottom-left node by reserving an empty leading column (extent 64 -> 68). The check stayed clean, but a frame dump proved the drawn coordinates were unchanged: the view fits and centres on the node bounding box (63 columns wide, offset 7 in a 77-column pane), so an empty column at the edge is absorbed by the centring and does not move any box. Palette overlap therefore unfixed.",
+          "verdict": "rejected: no visible change, palette overlap remains"
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "spec": "specs/v2-a.json",
+      "status": "rejected-split",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "specs/v2-a.json",
+          "spec_sha256": "6684e3485b89732576faa99690cdd0163e4e4181bea933d02b6709bb02c25b8a",
+          "check_log": "checks/v2-a.check.txt",
+          "note": "Split candidate A: runtime seams and task dispatch only (worker, runtime, engine, daemon). 3 layers put both of e2's sides inside a 4-row channel; the return label 'events+mgmt RPC' had no clear cell (1 skipped) and 2 labels came out ambiguous. Worse than the single view on the hard gates.",
+          "verdict": "rejected: 1 skipped label, 2 ambiguous owners"
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "spec": "specs/v3-a.json",
+      "status": "rejected-split",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "specs/v3-a.json",
+          "spec_sha256": "d28059e17e35687e983c64f5fcaefc76db6ee24f9519c0017993398ba02e9f26",
+          "check_log": "checks/v3-a.check.txt",
+          "note": "Split candidate B: engine fan-out only (engine, backend, container, filesystem, blobnet). 4/4 labels placed but 2 ambiguous: in a 3-layer graph the single 4-row channel carries both fan-out routes, so 'starts/manages' and 'mounts/snapshots' each ended up as close to the other route as to their own.",
+          "verdict": "rejected: 2 ambiguous owners"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,288 @@
+/tmp/visualize-eval/round-09/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/09/modal-runtime/specs/v4-core
+-fan.json
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+❯ /tmp/visualize-eval/round-09/bin/rataflow-view /Users/aviral/.herdr/worktrees/do
+tfiles/fix-visualize-skill/docs/visualize-eval/rounds/09/modal-runtime/specs/v4-co
+re-fan.json
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+❯ /tmp/visualize-eval/round-09/bin/rataflow-view /Users/aviral/.herdr/worktrees/do
+tfiles/fix-visualize-skill/docs/visualize-eval/rounds/09/modal-runtime/specs/v4-co
+re-fan.json --select-all
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+❯ /tmp/visualize-eval/round-09/bin/rataflow-view /Users/aviral/.herdr/worktrees/do
+tfiles/fix-visualize-skill/docs/visualize-eval/rounds/09/modal-runtime/specs/v4-co
+re-fan.json --frames 5 --step-ms 100
+viewport: 82x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 82x51 @100% · v4-core-fan.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+                                  ╭─────────────╮
+                                  │modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                      HTTP over UDS│ │ dispatches tasks
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                           ╭───────╯ ╰──────╮
+                           ▼                ▼
+                          ╭────────────╮   ╭───────────╮
+                          │modal-daemon│   │Task engine│
+                          │            │   │           │
+                          ╰────────────╯   ╰───────────╯
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 82x51 @100% · v4-core-fan.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+                                  ╭─────────────╮
+                                  │modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                      HTTP over UDS│ │ dispatches tasks
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                           ╭───────╯ ╰──────╮
+                           ▼                ▼
+                          ╭────────────╮   ╭───────────╮
+                          │modal-daemon│   │Task engine│
+                          │            │   │           │
+                          ╰────────────╯   ╰───────────╯
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 82x51 @100% · v4-core-fan.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+                                  ╭─────────────╮
+                                  │modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                      HTTP over UDS│ │ dispatches tasks
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                           ╭───────╯ ╰──────╮
+                           ▼                ▼
+                          ╭────────────╮   ╭───────────╮
+                          │modal-daemon│   │Task engine│
+                          │            │   │           │
+                          ╰────────────╯   ╰───────────╯
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 82x51 @100% · v4-core-fan.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+                                  ╭─────────────╮
+                                  │modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                      HTTP over UDS│ │ dispatches tasks
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                           ╭───────╯ ╰──────╮
+                           ▼                ▼
+                          ╭────────────╮   ╭───────────╮
+                          │modal-daemon│   │Task engine│
+                          │            │   │           │
+                          ╰────────────╯   ╰───────────╯
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 82x51 @100% · v4-core-fan.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+                                  ╭─────────────╮
+                                  │modal-runtime│
+                                  │             │
+                                  ╰─────────────╯
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                      HTTP over UDS│ │ dispatches tasks
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                                   │ │
+                           ╭───────╯ ╰──────╮
+                           ▼                ▼
+                          ╭────────────╮   ╭───────────╮
+                          │modal-daemon│   │Task engine│
+                          │            │   │           │
+                          ╰────────────╯   ╰───────────╯
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+❯

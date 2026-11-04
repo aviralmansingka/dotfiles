@@ -1,0 +1,80 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "vm",
+      "label": "VM vnet0",
+      "group": "virtnets"
+    },
+    {
+      "id": "ctr",
+      "label": "container veth",
+      "group": "virtnets"
+    },
+    {
+      "id": "ts",
+      "label": "tailscale0 100.113.153.49",
+      "group": "tailnet"
+    },
+    {
+      "id": "virbr",
+      "label": "virbr0 libvirt NAT",
+      "group": "virtnets"
+    },
+    {
+      "id": "dkbr",
+      "label": "docker0 172.18.2.1",
+      "group": "virtnets"
+    },
+    {
+      "id": "box",
+      "label": "homelab host: ASUS, Linux 7.0, ~/rack-bench, v6 ULA-only",
+      "group": "host"
+    },
+    {
+      "id": "bond0",
+      "label": "bond0 192.168.1.197",
+      "group": "nics"
+    }
+  ],
+  "edges": [
+    {
+      "from": "vm",
+      "to": "virbr",
+      "label": "192.168.122.x",
+      "label_slot": true
+    },
+    {
+      "from": "virbr",
+      "to": "box",
+      "label": "NAT bridge",
+      "label_slot": true
+    },
+    {
+      "from": "ctr",
+      "to": "dkbr",
+      "label": "172.18.2.x",
+      "label_slot": true
+    },
+    {
+      "from": "dkbr",
+      "to": "box",
+      "label": "docker bridge",
+      "label_slot": true
+    },
+    {
+      "from": "ts",
+      "to": "box",
+      "label": "overlay",
+      "label_slot": true
+    },
+    {
+      "from": "ts",
+      "to": "bond0",
+      "label": "UDP encap",
+      "label_slot": true,
+      "minlen": 3
+    }
+  ]
+}

@@ -1,0 +1,656 @@
+{
+  "protocol_version": 1,
+  "round": 9,
+  "case_id": "pipeline",
+  "candidate_sha256": "ba2878c5194cd6fc4bc1af5299a156064130de9be1b0ccf4c6eeb0236d431381",
+  "renderer_sha256": "405a61a674a7cc6271ae1276794eb270c9425dfc38585f4cbb1c48e9b6db495b",
+  "rubric_sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "2623986f89d0bc134eef5e0b58ef7b40a818012d48ac793f7eb9bce0aabb9357",
+  "generator": {
+    "worker_id": "viz-ds09-1",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge09-pipeline",
+    "model": "openai/gpt-6.1-terra:high"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 82,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/09/reviews/pipeline/observed-first.md",
+      "sha256": "3a4de3ece2f99ebafcc76c58fcf456caef1c6f11e6e081deae15aaa7fdbb308f",
+      "description": "Blind observations saved before reveal",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/pipeline/source.md",
+      "sha256": "68aa197fdc597c3a22d1b8ca88a3ebee861dcda34684da15ae69b6946b741e58",
+      "description": "Frozen source",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/pipeline/expected.json",
+      "sha256": "ea177d01af818876ff04bf707b923326b153185fd425f21ea96250486b504ec3",
+      "description": "Expected case relations",
+      "capture": null
+    },
+    {
+      "id": "variants",
+      "path": "docs/visualize-eval/cases/pipeline/historical-variants.json",
+      "sha256": "5d351c45f055d2ca115036d10ab4bd50fb1d22ccd87f31e018f01c3039b48659",
+      "description": "Historical variant; not independent factual proof",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/09/SKILL.md",
+      "sha256": "ba2878c5194cd6fc4bc1af5299a156064130de9be1b0ccf4c6eeb0236d431381",
+      "description": "Frozen skill",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/09/rubric.json",
+      "sha256": "10590383f5829ec57f93f9349fa8b6ff45e559b3d437272a8243b7daabf82dca",
+      "description": "Frozen rubric",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/09/metadata.json",
+      "sha256": "abc75dda9ee0149980533966ab7d640689a4caf961900938cff810a2d9750ddd",
+      "description": "Frozen metadata",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen dataset manifest",
+      "capture": null
+    },
+    {
+      "id": "spec",
+      "path": "docs/visualize-eval/rounds/09/pipeline/specs/pipeline-v1-a1.json",
+      "sha256": "2623986f89d0bc134eef5e0b58ef7b40a818012d48ac793f7eb9bce0aabb9357",
+      "description": "Final spec",
+      "capture": null
+    },
+    {
+      "id": "a2",
+      "path": "docs/visualize-eval/rounds/09/pipeline/specs/pipeline-v1-a2.json",
+      "sha256": "222a042be54841a5856591cfe0c712ace6feca9f1531131c749e5f052df2102c",
+      "description": "Rejected label-slot candidate",
+      "capture": null
+    },
+    {
+      "id": "a3",
+      "path": "docs/visualize-eval/rounds/09/pipeline/specs/pipeline-v1-a3.json",
+      "sha256": "c9424f91064629d04f684117f2a7795492eaafefe835326c6df6e50704600d28",
+      "description": "Rejected compact candidate",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/09/pipeline/generation.json",
+      "sha256": "381b7cc16876e16fc119bbfa673e7f1a7f48c807479513266a8cb2fae919693d",
+      "description": "Family line, facts, attempts, and disclosed gaps",
+      "capture": null
+    },
+    {
+      "id": "notes",
+      "path": "docs/visualize-eval/rounds/09/pipeline/generation.md",
+      "sha256": "0722f72746e09764fedac99e2dc8d88cacef6682b3c335f4a34d9e50dbf403b3",
+      "description": "Generator notes and classification line",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/09/pipeline/attempts.json",
+      "sha256": "7e875482ca6842cc3ac89ea9813dddc4164d65c49f91477c675e231d0f55d2cc",
+      "description": "Attempt index",
+      "capture": null
+    },
+    {
+      "id": "log",
+      "path": "docs/visualize-eval/rounds/09/pipeline/attempts-log.jsonl",
+      "sha256": "1b2c270725f442ed6fb9629178361e64f4b8c310c5a44b58291fd492b151afc3",
+      "description": "Recorded command, status, output hashes",
+      "capture": null
+    },
+    {
+      "id": "validator",
+      "path": "docs/visualize-eval/rounds/09/pipeline/validator-v1.txt",
+      "sha256": "8c93c4fd06ac1a955d1338d2988b0dfdae9e304a323cf784aec80cff0fe97bce",
+      "description": "Validator 33 PASS including record checks",
+      "capture": null
+    },
+    {
+      "id": "manifest",
+      "path": "docs/visualize-eval/rounds/09/pipeline/evidence/v1/manifest.json",
+      "sha256": "a792f3580ddb6328e6b617018b7d6fa4753cab29382d39573f11240bfe58523b",
+      "description": "Capture manifest and cleanup",
+      "capture": null
+    },
+    {
+      "id": "check",
+      "path": "docs/visualize-eval/rounds/09/pipeline/evidence/v1/check.txt",
+      "sha256": "ccf22c6e2ba8ae76ddea61a8b897da95b2dcb9b94093163cd7a088597f9d12e0",
+      "description": "Final check output",
+      "capture": null
+    },
+    {
+      "id": "v1-a1-stdout",
+      "path": "docs/visualize-eval/rounds/09/pipeline/recorded/v1-a1.stdout",
+      "sha256": "ccf22c6e2ba8ae76ddea61a8b897da95b2dcb9b94093163cd7a088597f9d12e0",
+      "description": "v1-a1 recorded stdout",
+      "capture": null
+    },
+    {
+      "id": "v1-a1-stderr",
+      "path": "docs/visualize-eval/rounds/09/pipeline/recorded/v1-a1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v1-a1 recorded stderr",
+      "capture": null
+    },
+    {
+      "id": "v1-a2-stdout",
+      "path": "docs/visualize-eval/rounds/09/pipeline/recorded/v1-a2.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v1-a2 recorded stdout",
+      "capture": null
+    },
+    {
+      "id": "v1-a2-stderr",
+      "path": "docs/visualize-eval/rounds/09/pipeline/recorded/v1-a2.stderr",
+      "sha256": "3e1a3d7b65faacd8d5c772c6a37ffb847d2b69b293531c976d7811d0588e6395",
+      "description": "v1-a2 recorded stderr",
+      "capture": null
+    },
+    {
+      "id": "v1-a3-stdout",
+      "path": "docs/visualize-eval/rounds/09/pipeline/recorded/v1-a3.stdout",
+      "sha256": "4ad788d1d8ef14d4ba89adb94d8dab0c986d983106edb19d841e655cd5b5c9b9",
+      "description": "v1-a3 recorded stdout",
+      "capture": null
+    },
+    {
+      "id": "v1-a3-stderr",
+      "path": "docs/visualize-eval/rounds/09/pipeline/recorded/v1-a3.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "v1-a3 recorded stderr",
+      "capture": null
+    },
+    {
+      "id": "text",
+      "path": "docs/visualize-eval/rounds/09/pipeline/evidence/v1/v1-text.txt",
+      "sha256": "6230ebac03f4469a3fc0fa735b520c1bc8a820a9208ec6826a68a24a108aa284",
+      "description": "Live normal text, measured 82x51",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "normal",
+        "timestamp": "2026-11-02T21:53:01Z–2026-11-02T21:53:05Z (capture window)",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "ansi",
+      "path": "docs/visualize-eval/rounds/09/pipeline/evidence/v1/v1-ansi.ansi",
+      "sha256": "efde75cc0a91be1141b8698468bd8f0303d3cd608435686fdbe1ab3ee3a97a71",
+      "description": "Live normal ANSI",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "normal",
+        "timestamp": "2026-11-02T21:53:01Z–2026-11-02T21:53:05Z (capture window)",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "selected",
+      "path": "docs/visualize-eval/rounds/09/pipeline/evidence/v1/v1-selected.ansi",
+      "sha256": "156fdad90ebd8bafb1230f7d52dbe4791703dcbb7d079aa3fcf157b08819f6e3",
+      "description": "Live simultaneous select-all ANSI",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "select-all",
+        "timestamp": "2026-11-02T21:53:01Z–2026-11-02T21:53:05Z (capture window)",
+        "state": "selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "pinned",
+      "path": "docs/visualize-eval/rounds/09/pipeline/evidence/v1/v1-77x47-pinned-frames.txt",
+      "sha256": "f9093da752906040d4130afdf613782825041f8254309f068e2414e4e8dd44b2",
+      "description": "Final-spec target-size direct dump, 21 frames",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0–20 at 100ms",
+        "timestamp": "frame-relative 0–2000ms; capture date not recorded",
+        "state": "animated normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "frames",
+      "path": "docs/visualize-eval/rounds/09/pipeline/evidence/v1/v1-frames.txt",
+      "sha256": "738cd922ad3d112fa3af1ea52e9a70ad8840a7695564ba272b498a3fab2ca405",
+      "description": "Live animation text; first two frames scrolled",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "2–20 at 100ms",
+        "timestamp": "2026-11-02T21:53:01Z–2026-11-02T21:53:05Z (capture window)",
+        "state": "animated normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "frames-ansi",
+      "path": "docs/visualize-eval/rounds/09/pipeline/evidence/v1/v1-frames.ansi",
+      "sha256": "6ceb53f252e3fdf9576dd0d60b887f4139933c89072df15a3600870f8aeba3df",
+      "description": "Live animation ANSI",
+      "capture": {
+        "dimensions": {
+          "columns": 82,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "recorded animation",
+        "timestamp": "2026-11-02T21:53:01Z–2026-11-02T21:53:05Z (capture window)",
+        "state": "animated normal",
+        "format": "ansi"
+      }
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All six nodes and six source relations, including distinct verify/enqueue and read/write, are present with correct directions; no extra protocol or relationship.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "text"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Six separate, economical obstacle-safe corridors, six correct arrowheads, no crossings, fake branches, shared runs, or ambiguous label owners.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "evidence_ids": [
+        "text",
+        "check",
+        "pinned"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Pinned final-spec 77x47 natural dump shows complete graph without overlay or overflow. Live pane measured 82x51 separately; thin margin and truncated header quit text do not clip graph content.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "text",
+        "manifest",
+        "check"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Control Auth and compute Worker pool have exactly the same pink RGB 211;134;155. Four source-relevant semantic group tags have only three visible hue families; group distinction by color is misleading. No group outlines are required.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "evidence_ids": [
+        "ansi",
+        "spec",
+        "generation"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Six complete uninterrupted normal-color borders and six simultaneous selected borders evidenced in ANSI; no node/control overlay. Select-all does not prove separate selection interactions.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "evidence_ids": [
+        "ansi",
+        "selected",
+        "pinned"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Recorded attempts and validator 33/33, frozen input hashes, separate judge, blind-first record, pinned fit and cleanup are present; however 21 target frames do not cover a full lap of the longest Auth→Postgres route, required by the rubric. Family evidence is properly recorded before the ledger in generation.json; it need not be repeated inside spec/capture.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "evidence_ids": [
+        "generation",
+        "log",
+        "attempts",
+        "validator",
+        "manifest",
+        "blind",
+        "pinned"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "All six dots begin at their own first route cells, advance equally from frame 0 to 2, are sparse and slow, and avoid corners/labels in all 21 frames; no same-arrival requested. A complete cycle of the longest route is not captured at target size, so behavior over its remaining path cannot be verified.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "evidence_ids": [
+        "pinned",
+        "check",
+        "source"
+      ]
+    },
+    "category_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Correct flow-chains classification and supported source-backed line; one short-stage depth progression, distinct corridors, source-required fan/convergence and one dot per traffic hop. The shipped tb orientation differs from the skill lr preference, but orientation is not an additional fixed category_fit pass condition in this rubric; no measured lr attempt exists, so no evidenced impossibility/yield is claimed.",
+      "judged_family": "flow-chains",
+      "generator_family": "flow-chains",
+      "evidence_line": [
+        "family: flow-chains",
+        "evidence: six stages and exactly six relations (E = N = 6, shallow one-hop hops) plus the brief's 'slow, sparse motion for traffic', which is the animated chain signature."
+      ],
+      "recipe_facts": [
+        "Five visible stage levels, with parallel Auth/Job queue on one level",
+        "All six corridors traceable, four labels owned",
+        "One dot per route in target frames",
+        "No secondary recipe necessary; no anti-parallel pair or bus",
+        "Unmeasured lr preference is an evidence gap, not an evidenced yield"
+      ],
+      "evidence_ids": [
+        "generation",
+        "text",
+        "pinned"
+      ],
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "expected": "CLI → API gateway, unlabeled",
+      "observed": "CLI bottom stem down then left to API top ▼; unlabeled, no junction. No crossings or fake branches.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text",
+          "region": [
+            37,
+            7,
+            5,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "expected": "API gateway → Auth, verify",
+      "observed": "API left port down beside verify then left to Auth top ▼; distinct from queue. No crossings or fake branches.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text",
+          "region": [
+            30,
+            15,
+            8,
+            11
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "expected": "API gateway → Job queue, enqueue",
+      "observed": "API right port down beside enqueue then right to queue top ▼; distinct from auth. No crossings or fake branches.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text",
+          "region": [
+            39,
+            15,
+            9,
+            11
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "expected": "Job queue → Worker pool, unlabeled",
+      "observed": "Queue bottom stem down then left to Worker top ▼; unlabeled. No crossings or fake branches.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text",
+          "region": [
+            39,
+            29,
+            4,
+            5
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "expected": "Worker pool → Postgres, write",
+      "observed": "Worker bottom down beside write to Postgres right-hand top ▼; distinct read route. No crossings or fake branches.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text",
+          "region": [
+            40,
+            37,
+            7,
+            9
+          ]
+        }
+      ],
+      "finding_ids": []
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "expected": "Auth → Postgres, read",
+      "observed": "Auth bottom down beside read then right to Postgres left-hand top ▼; distinct write route. No crossings or fake branches.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "text",
+          "region": [
+            28,
+            29,
+            11,
+            17
+          ]
+        }
+      ],
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "conceptual_grouping_color",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Defect: distinct semantic groups control (Auth) and compute (Worker pool) have identical RGB 211;134;155; four groups collapse to three hue families. This prevents dependable tier distinction by color; candidate cap explains but does not waive it.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "ansi",
+          "region": [
+            32,
+            26,
+            6,
+            4
+          ]
+        },
+        {
+          "evidence_id": "ansi",
+          "region": [
+            39,
+            34,
+            13,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "category": "workflow_evidence",
+      "edge_ids": [
+        "e6"
+      ],
+      "severity": "high",
+      "description": "Evidence gap: 21 frames through 2000ms do not show a complete lap for the longest Auth→Postgres route. Its dot begins at (30,28) and at frame 20 is still on the outbound vertical at (30,38), before its bottom bend/arrowhead; the requirement cannot be inferred from validator success.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            30,
+            28,
+            1,
+            11
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "category": "animation",
+      "edge_ids": [
+        "e6"
+      ],
+      "severity": "high",
+      "description": "Evidence gap: the target-sized sample ends before the Auth→Postgres dot completes a lap, so the remainder of that route and wraparound cannot be audited for motion violations. All 126 observed dot instances pass.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md"
+      ],
+      "locations": [
+        {
+          "evidence_id": "pinned",
+          "region": [
+            30,
+            28,
+            1,
+            11
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "Target-size full-lap capture of the longest animated Auth→Postgres route is missing; needed for animation and workflow verification.",
+    "Four visually distinguishable semantic group hue families are not achieved in the frozen candidate; a different group palette/name choice is untested under the exhausted candidate cap.",
+    "No lr attempt measured; this blocks an impossibility/yield claim, not category_fit under the fixed rubric."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pNH"
+    ],
+    "closed_pane_ids": [
+      "w7E:pNH"
+    ],
+    "status": "done",
+    "reason": "Capture manifest reports confirmed_closed; generation records a post-close pane probe. Reviewer opened no pane."
+  },
+  "overall": "fail"
+}

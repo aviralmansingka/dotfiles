@@ -1,0 +1,49 @@
+viewport: 77x47 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 77x47 @100% · v2-b.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                ╭───────────╮
+                                │Task engine│
+                                │           │
+                                ╰───────────╯
+                  mounts / snapshots │ │
+                     starts / manages│ │
+                         ╭───────────╯ ╰────────╮
+                         ▼                      ▼
+                ╭─────────────────╮   ╭────────────────────╮
+                │Container backend│   │Filesystem + volumes│
+                │                 │   │                    │
+                ╰─────────────────╯   ╰────────────────────╯
+                         │                      │
+                         │ runs user process    │ image + volume data
+                         ╰─────╮               ╭╯
+                               ▼               ▼
+                        ╭──────────────╮   ╭───────╮
+                        │Task container│   │Blobnet│
+                        │              │   │       │
+                        ╰──────────────╯   ╰───────╯
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+

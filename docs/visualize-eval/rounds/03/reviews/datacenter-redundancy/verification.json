@@ -1,0 +1,182 @@
+{
+  "verified_inputs": {
+    "docs/visualize-eval/rounds/03/SKILL.md": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+    "docs/visualize-eval/rounds/03/rubric.json": "5519fd84f6b75973dbf7b5f5544c909a8f32a8841a876c8e7af00a1fcb119335",
+    "docs/visualize-eval/cases.json": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+    "/tmp/visualize-eval/round-03/bin/rataflow-view": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7",
+    "docs/visualize-eval/cases/datacenter-redundancy/source.md": "a3051af3eeeec31aee53558dafbbea5d061dc74253618fd6940eba5c39b5bb98",
+    "docs/visualize-eval/cases/datacenter-redundancy/expected.json": "926e866fbdbb3eaac5b7a21360905d1f621a7a6386139afab303e8ba7e62ed47",
+    "docs/visualize-eval/cases/datacenter-redundancy/historical-variants.json": "a5753817a621b846abcb4105d028dbd0d0152214495f5b225044b3882f4f34b9"
+  },
+  "blind_sha256": "fad23e2a7cbb1a760b485737def2f5e7f415ed7dc06bcd092bc30a7ddce13224",
+  "manifest_artifact_hashes_verified": 28,
+  "attempt_hashes_verified": 8,
+  "source_relation_pairs": 28,
+  "captured_relation_pairs": 28,
+  "missing_pairs": [],
+  "extra_pairs": [],
+  "views": {
+    "v1": {
+      "app_columns": 77,
+      "app_rows": 47,
+      "nodes": 8,
+      "edges": 8,
+      "bridges": [
+        [
+          22,
+          29
+        ]
+      ],
+      "selected_borders_complete": 8,
+      "frame_count": 11,
+      "distinct_frame_bodies_per_format": 1,
+      "flow_dots_per_frame": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "outer_pane_dimensions_captured": false
+    },
+    "v2": {
+      "app_columns": 77,
+      "app_rows": 47,
+      "nodes": 6,
+      "edges": 8,
+      "bridges": [
+        [
+          30,
+          20
+        ],
+        [
+          42,
+          29
+        ],
+        [
+          44,
+          29
+        ],
+        [
+          45,
+          29
+        ]
+      ],
+      "selected_borders_complete": 6,
+      "frame_count": 11,
+      "distinct_frame_bodies_per_format": 1,
+      "flow_dots_per_frame": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "outer_pane_dimensions_captured": false
+    },
+    "v3": {
+      "app_columns": 77,
+      "app_rows": 47,
+      "nodes": 6,
+      "edges": 8,
+      "bridges": [
+        [
+          32,
+          22
+        ],
+        [
+          33,
+          22
+        ],
+        [
+          26,
+          24
+        ],
+        [
+          28,
+          24
+        ],
+        [
+          45,
+          24
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          28,
+          26
+        ],
+        [
+          15,
+          29
+        ],
+        [
+          28,
+          29
+        ]
+      ],
+      "selected_borders_complete": 6,
+      "frame_count": 11,
+      "distinct_frame_bodies_per_format": 1,
+      "flow_dots_per_frame": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "outer_pane_dimensions_captured": false
+    },
+    "v4": {
+      "app_columns": 77,
+      "app_rows": 47,
+      "nodes": 4,
+      "edges": 4,
+      "bridges": [
+        [
+          33,
+          24
+        ]
+      ],
+      "selected_borders_complete": 4,
+      "frame_count": 11,
+      "distinct_frame_bodies_per_format": 1,
+      "flow_dots_per_frame": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "outer_pane_dimensions_captured": false
+    }
+  },
+  "local_avoidability": "Two existing routes each contain a shorter corridor that is a subset of their own captured cells and intersects no other captured route. No alternative render or fix was executed.",
+  "classification": "Evidence verification, not a replacement for independent visual judgment."
+}

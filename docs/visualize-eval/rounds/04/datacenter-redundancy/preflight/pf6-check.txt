@@ -1,0 +1,15 @@
+warning: edge e3 label "x-connect" had no clear cell; shorten it or add routing space
+viewport: unknown zoom: 1.00 natural
+ok: nodes=4 edges=4 flows=0 direction=tb theme=gruvbox
+layers=2 (explicit placement, sugiyama skipped)
+extent=49x14 cells
+crossings: 1 bridges, 1 touching bends
+warning: 1 edge label(s) had no free slot; shorten the labels or split the graph
+labels: 3/4 placed, 0 on route cells, 1 skipped, 1 ambiguous owners
+warning: 1 label(s) have an ambiguous owner: another route is as close to the label as its own edge, so a reader cannot tell which edge the label names
+groups: mux(2) core(2)
+trunks:
+routes: 4/4 near-minimal, 0 detours, 0 shortened
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

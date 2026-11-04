@@ -1,0 +1,148 @@
+{
+ "direction": "lr",
+ "theme": "gruvbox",
+ "diagrams": [
+  {
+   "id": "l1",
+   "title": "L1 \u00b7 The machine manager",
+   "description": "L0's box opened one level: its boundary services \u2014 private gRPC, webapi, provider registry, cluster reconcile, SSH + BMC ops and the boot server \u2014 sit in the Machine manager box, while the control plane, humans, providers and machines stay outside it.",
+   "containers": [
+    {
+     "label": "Machine manager",
+     "members": [
+      "pgrpc",
+      "wapi",
+      "reg",
+      "rec",
+      "ssh",
+      "boot"
+     ]
+    }
+   ],
+   "layers": [
+    [
+     "cp",
+     "web"
+    ],
+    [
+     "pgrpc",
+     "wapi"
+    ],
+    [
+     "reg",
+     "rec",
+     "ssh",
+     "boot"
+    ],
+    [
+     "prov"
+    ],
+    [
+     "mch"
+    ]
+   ],
+   "nodes": [
+    {
+     "id": "cp",
+     "label": "Modal control plane",
+     "group": "modal"
+    },
+    {
+     "id": "web",
+     "label": "humans + mmctl",
+     "group": "operators"
+    },
+    {
+     "id": "pgrpc",
+     "label": "private gRPC",
+     "group": "manager"
+    },
+    {
+     "id": "wapi",
+     "label": "webapi",
+     "group": "manager"
+    },
+    {
+     "id": "reg",
+     "label": "provider registry",
+     "group": "manager"
+    },
+    {
+     "id": "rec",
+     "label": "cluster reconcile",
+     "group": "manager"
+    },
+    {
+     "id": "ssh",
+     "label": "SSH + BMC ops",
+     "group": "manager"
+    },
+    {
+     "id": "boot",
+     "label": "boot server",
+     "group": "manager"
+    },
+    {
+     "id": "prov",
+     "label": "bare-metal providers",
+     "group": "providers"
+    },
+    {
+     "id": "mch",
+     "label": "bare-metal machines",
+     "group": "machines"
+    }
+   ],
+   "edges": [
+    {
+     "from": "cp",
+     "to": "pgrpc",
+     "label": "create / terminate / repair",
+     "dots": 0
+    },
+    {
+     "from": "web",
+     "to": "wapi",
+     "label": "http",
+     "dots": 0
+    },
+    {
+     "from": "reg",
+     "to": "prov",
+     "label": "provider API",
+     "dots": 0
+    },
+    {
+     "from": "rec",
+     "to": "prov",
+     "label": "gcore sync, 1 min",
+     "dots": 0
+    },
+    {
+     "from": "ssh",
+     "to": "mch",
+     "label": "run machine-audit",
+     "dots": 0
+    },
+    {
+     "from": "boot",
+     "to": "mch",
+     "label": "boot.ipxe + S3 args",
+     "dots": 0
+    },
+    {
+     "from": "mch",
+     "to": "boot",
+     "label": "iPXE request",
+     "dots": 0
+    },
+    {
+     "from": "prov",
+     "to": "mch",
+     "label": "allocate instance",
+     "dots": 0
+    }
+   ]
+  }
+ ]
+}

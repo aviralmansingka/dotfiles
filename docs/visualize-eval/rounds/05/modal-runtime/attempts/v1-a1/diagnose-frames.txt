@@ -1,0 +1,40 @@
+viewport: 77x47 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 77x47 @100% · v1-a1.json · 4 nodes · 4 edges · q quit
+                                               graph overflows · drag to pan
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                               task+ctrl RPC
+                                            ╭─────────────────╮
+                                            │                 │
+                                            │ ╭─────────────╮ │
+                                            ╰▶│modal-runtime│ │
+                                              │             │ │
+                                task dispatch ╰─────────────╯ │
+            HTTP over UDS       ╭───────────╮  │ │ │          │
+  ╭─────────────────────────────⌒╮          ╰╮ │ │ │      ╭───╯
+  │                             │╰───────────⌒─╯ │ ╰──────⌒───╮
+  ▼                             ▼            ╰───╯        │   ▼
+ ╭────────────╮                ╭───────────╮ events+mg RPC│  ╭────────────╮
+ │modal-daemon│                │Task engine│              ╰──│modal-worker│
+ │            │                │           │                 │            │
+ ╰────────────╯                ╰───────────╯                 ╰────────────╯
+
+
+
+
+
+
+
+

@@ -1,0 +1,274 @@
+/tmp/visualize-eval/round-02/bin/rataflow-view /Users/aviral/.herdr/worktrees
+/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/02/modal-machine-man
+ager/v2.json
+
+rounds/02/modal-machine-manager on  fix/visualize-skill [$!?] on ☁️  (ap-sou
+th-1) on ☁️  aviralmansingka@gmail.com
+❯ /tmp/visualize-eval/round-02/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/02/modal-machine-m
+anager/v2.json
+warning: edge e1 label "boot.ipxe+S3" had no clear cell; shorten it or add ro
+uting space
+viewport: 77x47 zoom: 1.00 natural
+
+rounds/02/modal-machine-manager on  fix/visualize-skill [$!?] on ☁️  (ap-sou
+th-1) on ☁️  aviralmansingka@gmail.com
+❯ /tmp/visualize-eval/round-02/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/02/modal-machine-m
+anager/v2.json --select-all
+warning: edge e1 label "boot.ipxe+S3" had no clear cell; shorten it or add ro
+uting space
+viewport: 77x47 zoom: 1.00 natural
+
+rounds/02/modal-machine-manager on  fix/visualize-skill [$!?] on ☁️  (ap-sou
+th-1) on ☁️  aviralmansingka@gmail.com
+❯ /tmp/visualize-eval/round-02/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/02/modal-machine-m
+anager/v2.json --frames 5 --step-ms 100
+warning: edge e1 label "boot.ipxe+S3" had no clear cell; shorten it or add ro
+uting space
+viewport: 77x47 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 77x47 @100% · v2.json · 5 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+
+                  ╭───────────────────╮
+                ╭▶│bare-metal machines│
+                │ │                   │
+                │ ╰───────────────────╯
+                │  │ │    runs on host
+                │  ● ╰●─────────────────────╮
+                │  │ iPXE request           │
+                │  ╰───╮                    │
+                │      ▼                    ▼
+                │     ╭───────────╮        ╭─────────────╮
+                ╰───●─│boot server│        │machine-agent│
+                      │           │        │             │
+                      ╰───────────╯        ╰─────────────╯
+                                            │
+                         register+heartbeat ●
+                       ╭────────────────────╯
+                       ▼
+                      ╭───────────╮
+                      │public gRPC│
+                      │           │
+                      ╰───────────╯
+                       │
+                       ● machine state
+                       ╰─╮
+                         ▼
+                        ╭────────╮
+                        │Postgres│
+                        │        │
+                        ╰────────╯
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 77x47 @100% · v2.json · 5 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+
+                  ╭───────────────────╮
+                ╭▶│bare-metal machines│
+                │ │                   │
+                │ ╰───────────────────╯
+                │  │ │    runs on host
+                │  │ ╰─●────────────────────╮
+                │  ● iPXE request           │
+                │  ╰───╮                    │
+                │      ▼                    ▼
+                │     ╭───────────╮        ╭─────────────╮
+                ╰──●──│boot server│        │machine-agent│
+                      │           │        │             │
+                      ╰───────────╯        ╰─────────────╯
+                                            │
+                         register+heartbeat │
+                       ╭───────────────────●╯
+                       ▼
+                      ╭───────────╮
+                      │public gRPC│
+                      │           │
+                      ╰───────────╯
+                       │
+                       │ machine state
+                       ╰●╮
+                         ▼
+                        ╭────────╮
+                        │Postgres│
+                        │        │
+                        ╰────────╯
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 77x47 @100% · v2.json · 5 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+
+                  ╭───────────────────╮
+                ╭▶│bare-metal machines│
+                │ │                   │
+                │ ╰───────────────────╯
+                │  │ │    runs on host
+                │  │ ╰──●───────────────────╮
+                │  │ iPXE request           │
+                │  ╰●──╮                    │
+                │      ▼                    ▼
+                │     ╭───────────╮        ╭─────────────╮
+                ╰─●───│boot server│        │machine-agent│
+                      │           │        │             │
+                      ╰───────────╯        ╰─────────────╯
+                                            │
+                         register+heartbeat │
+                       ╭──────────────────●─╯
+                       ▼
+                      ╭───────────╮
+                      │public gRPC│
+                      │           │
+                      ╰───────────╯
+                       │
+                       ● machine state
+                       ╰─╮
+                         ▼
+                        ╭────────╮
+                        │Postgres│
+                        │        │
+                        ╰────────╯
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 77x47 @100% · v2.json · 5 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+
+                  ╭───────────────────╮
+                ╭▶│bare-metal machines│
+                │ │                   │
+                │ ╰───────────────────╯
+                │  │ │    runs on host
+                │  │ ╰───●──────────────────╮
+                │  │ iPXE request           │
+                │  ╰─●─╮                    │
+                │      ▼                    ▼
+                │     ╭───────────╮        ╭─────────────╮
+                ╰●────│boot server│        │machine-agent│
+                      │           │        │             │
+                      ╰───────────╯        ╰─────────────╯
+                                            │
+                         register+heartbeat │
+                       ╭─────────────────●──╯
+                       ▼
+                      ╭───────────╮
+                      │public gRPC│
+                      │           │
+                      ╰───────────╯
+                       │
+                       │ machine state
+                       ╰●╮
+                         ▼
+                        ╭────────╮
+                        │Postgres│
+                        │        │
+                        ╰────────╯
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 77x47 @100% · v2.json · 5 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+
+                  ╭───────────────────╮
+                ╭▶│bare-metal machines│
+                │ │                   │
+                │ ╰───────────────────╯
+                │  │ │    runs on host
+                │  │ ╰────●─────────────────╮
+                │  │ iPXE request           │
+                │  ╰──●╮                    │
+                │      ▼                    ▼
+                ●     ╭───────────╮        ╭─────────────╮
+                ╰─────│boot server│        │machine-agent│
+                      │           │        │             │
+                      ╰───────────╯        ╰─────────────╯
+                                            │
+                         register+heartbeat │
+                       ╭────────────────●───╯
+                       ▼
+                      ╭───────────╮
+                      │public gRPC│
+                      │           │
+                      ╰───────────╯
+                       │
+                       ● machine state
+                       ╰─╮
+                         ▼
+                        ╭────────╮
+                        │Postgres│
+                        │        │
+                        ╰────────╯
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+rounds/02/modal-machine-manager on  fix/visualize-skill [$!?] on ☁️  (ap-sou
+th-1) on ☁️  aviralmansingka@gmail.com
+❯

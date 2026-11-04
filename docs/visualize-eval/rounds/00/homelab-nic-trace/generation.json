@@ -1,0 +1,343 @@
+{
+  "case_id": "homelab-nic-trace",
+  "round": "00",
+  "candidate_skill_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+  "renderer_sha256": "b6e11b05b4fb79ce969dc2646c667572535a949bd1a396fd711e1a5466298c8f",
+  "renderer": "/tmp/visualize-eval/round-00/bin/rataflow-view",
+  "views": [
+    {
+      "id": "01-local",
+      "spec": "01-local/spec.json",
+      "text": "01-local/visible.txt",
+      "ansi": "01-local/visible.ansi",
+      "check": "01-local/check.txt",
+      "check_exit": "01-local/check.exit",
+      "dimensions": "01-local/dimensions.txt",
+      "actual_columns": 77,
+      "actual_rows": 47,
+      "pane_id": "w7E:p26",
+      "tab_id": "w7E:tB",
+      "natural_zoom": 1,
+      "local_spec_attempts": 2,
+      "known_defects": [
+        "No visible target arrowheads for vm -> virbr, ctr -> dkbr, and virbr -> box; only dkbr -> box has a clear downward arrow."
+      ],
+      "selected_text": "01-local/selected.txt",
+      "selected_ansi": "01-local/selected.ansi",
+      "capture_metadata": "01-local/capture.json",
+      "check_stderr": "01-local/check.stderr",
+      "sha256": {
+        "spec.json": "4cfea2bc65d1e9a810cd9e67d918ae972905b8fbe5b81801dd0424597e666996",
+        "dimensions.txt": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+        "visible.txt": "50448bc421d0b7210783c9e79ff5d49668f311478f13a11bc204079fff32cd11",
+        "selected.txt": "50448bc421d0b7210783c9e79ff5d49668f311478f13a11bc204079fff32cd11",
+        "check.txt": "a997208d6ef5d22dd23137b7ed9671d0c135523c8f122cf27ce1d68fb1f034bf",
+        "check.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "capture.json": "b1110c3cd8742e8d31990446053dc4a61bd66f4ad9d68069aae55838a5382a42",
+        "check.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "selected.ansi": "8b5b3215195ae3e7f5474826f644b436133dd46ae40e6bedffc5d2ef2c30e5b8",
+        "visible.ansi": "0c93922e1f66870d20e724e58bb816d268f1e833e2a67a494d637a0770c55455"
+      }
+    },
+    {
+      "id": "02-uplinks",
+      "spec": "02-uplinks/spec.json",
+      "text": "02-uplinks/visible.txt",
+      "ansi": "02-uplinks/visible.ansi",
+      "check": "02-uplinks/check.txt",
+      "check_exit": "02-uplinks/check.exit",
+      "dimensions": "02-uplinks/dimensions.txt",
+      "actual_columns": 77,
+      "actual_rows": 47,
+      "pane_id": "w7E:p27",
+      "tab_id": "w7E:tB",
+      "natural_zoom": 1,
+      "local_spec_attempts": 2,
+      "known_defects": [
+        "No visible target arrowheads for box -> bond0, box -> wlp, bond0 -> rtr, or wlp -> rtr."
+      ],
+      "selected_text": "02-uplinks/selected.txt",
+      "selected_ansi": "02-uplinks/selected.ansi",
+      "capture_metadata": "02-uplinks/capture.json",
+      "check_stderr": "02-uplinks/check.stderr",
+      "sha256": {
+        "spec.json": "11948e243c74dcdcb6c1c1261be2a5af022223d30424d4c58f494d1cd5dac3de",
+        "dimensions.txt": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+        "visible.txt": "677c73e775ea6fe5b3af9f616aa360a3cdedee221cdaed8a819d890a2664a268",
+        "selected.txt": "677c73e775ea6fe5b3af9f616aa360a3cdedee221cdaed8a819d890a2664a268",
+        "check.txt": "8d41cd2c1f356a474cd43b6d2ad4e52adc945b12ca247274535cdc6b64bee5df",
+        "check.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "capture.json": "72df8d669a9a68f08c8c21a8e61bda4f30a5bca35943ed63df26495b576137de",
+        "check.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "selected.ansi": "4a8f5a135e5a1c8fdb9f5141f8a9d7d6bc5ba4e139d681e975ba1bf0c0fa0c3e",
+        "visible.ansi": "b4c02179e6053ecce598f5af205cd5608e251e226f304fa0eb052ceaa463d32a"
+      }
+    },
+    {
+      "id": "03-overlay",
+      "spec": "03-overlay/spec.json",
+      "text": "03-overlay/visible.txt",
+      "ansi": "03-overlay/visible.ansi",
+      "check": "03-overlay/check.txt",
+      "check_exit": "03-overlay/check.exit",
+      "dimensions": "03-overlay/dimensions.txt",
+      "actual_columns": 77,
+      "actual_rows": 47,
+      "pane_id": "w7E:p28",
+      "tab_id": "w7E:tB",
+      "natural_zoom": 1,
+      "local_spec_attempts": 3,
+      "known_defects": [
+        "ts -> box and ts -> bond0 lack visible target arrowheads.",
+        "box -> bond0 starts sideways below the host box rather than with a clear vertical source stem.",
+        "box -> bond0 crosses ts -> bond0 near the target, with a junction-like glyph that can imply a false branch."
+      ],
+      "selected_text": "03-overlay/selected.txt",
+      "selected_ansi": "03-overlay/selected.ansi",
+      "capture_metadata": "03-overlay/capture.json",
+      "check_stderr": "03-overlay/check.stderr",
+      "sha256": {
+        "spec.json": "1e5902bdec87804c423b29d7a4b0f1dd31dd315d6503f286c7a01891153a9fb2",
+        "dimensions.txt": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+        "visible.txt": "046ae0623bd31964abae513b3149a810d49fe86c0a5ebc6cf3cc095f1f4fee1e",
+        "selected.txt": "046ae0623bd31964abae513b3149a810d49fe86c0a5ebc6cf3cc095f1f4fee1e",
+        "check.txt": "338b00d84acdedc1e149666d74f998db5fc36eef5a1844ba050699d7b179c754",
+        "check.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "capture.json": "efcef610765c68ae5f6fb2149a75b108e71affdb60db44ecdadf84447c8392f0",
+        "check.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "selected.ansi": "1ea10a0a39b8ce243bafdb31590d47c43eb5bc05a001859a91da61d839eb4615",
+        "visible.ansi": "f936ac2432cc6e65d516a276f15537b78e8affd3c23562010d3e10485a1395d8"
+      }
+    },
+    {
+      "id": "04-wan",
+      "spec": "04-wan/spec.json",
+      "text": "04-wan/visible.txt",
+      "ansi": "04-wan/visible.ansi",
+      "check": "04-wan/check.txt",
+      "check_exit": "04-wan/check.exit",
+      "dimensions": "04-wan/dimensions.txt",
+      "actual_columns": 77,
+      "actual_rows": 47,
+      "pane_id": "w7E:p29",
+      "tab_id": "w7E:tB",
+      "natural_zoom": 1,
+      "local_spec_attempts": 2,
+      "known_defects": [
+        "All four WAN edges lack visible target arrowheads.",
+        "The 4.5 ms and 6.6 ms labels interrupt source stems below ont and vzagg."
+      ],
+      "selected_text": "04-wan/selected.txt",
+      "selected_ansi": "04-wan/selected.ansi",
+      "capture_metadata": "04-wan/capture.json",
+      "check_stderr": "04-wan/check.stderr",
+      "sha256": {
+        "spec.json": "2327bdd3507e3c741b0a623a27516ce0907dea4e61d8e0c2b5c0c21e5393a516",
+        "dimensions.txt": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+        "visible.txt": "f7e5d32fd06adb8ffc53107346bd0ca3c288f46bfe1629b499fa9e8045a74aca",
+        "selected.txt": "f7e5d32fd06adb8ffc53107346bd0ca3c288f46bfe1629b499fa9e8045a74aca",
+        "check.txt": "02a6a9e9d348eef0ffd4e762128f9b14ef6a873cdd25a9af1995dda982414988",
+        "check.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "capture.json": "89759dc4388e120753e9b09847b8092f86c93b8b876d2d760335398d4a104b6f",
+        "check.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "selected.ansi": "a7838274ab18eb9fbe062978c047c7151ff1afcb234c8d29e308f26e42d639be",
+        "visible.ansi": "93028215df9e6e83181fcb2b3bca13599a1cac8073418dd78d533f50e35dfc13"
+      }
+    }
+  ],
+  "coverage": {
+    "vm -> virbr : 192.168.122.x": [
+      {
+        "view": "01-local",
+        "from": "vm",
+        "to": "virbr",
+        "label": "192.168.122.x"
+      }
+    ],
+    "ctr -> dkbr : 172.18.2.x": [
+      {
+        "view": "01-local",
+        "from": "ctr",
+        "to": "dkbr",
+        "label": "172.18.2.x"
+      }
+    ],
+    "virbr -> box : NAT bridge": [
+      {
+        "view": "01-local",
+        "from": "virbr",
+        "to": "box",
+        "label": "NAT bridge"
+      }
+    ],
+    "dkbr -> box : docker bridge": [
+      {
+        "view": "01-local",
+        "from": "dkbr",
+        "to": "box",
+        "label": "docker bridge"
+      }
+    ],
+    "box -> bond0 : eno1 2.5 GbE": [
+      {
+        "view": "02-uplinks",
+        "from": "box",
+        "to": "bond0",
+        "label": "eno1 2.5 GbE"
+      },
+      {
+        "view": "03-overlay",
+        "from": "box",
+        "to": "bond0",
+        "label": "eno1 2.5 GbE"
+      }
+    ],
+    "box -> wlp : backup path": [
+      {
+        "view": "02-uplinks",
+        "from": "box",
+        "to": "wlp",
+        "label": "backup path"
+      }
+    ],
+    "bond0 -> rtr : default gw 0.5 ms": [
+      {
+        "view": "02-uplinks",
+        "from": "bond0",
+        "to": "rtr",
+        "label": "def gw 0.5 ms"
+      }
+    ],
+    "wlp -> rtr : metric 600": [
+      {
+        "view": "02-uplinks",
+        "from": "wlp",
+        "to": "rtr",
+        "label": "metric 600"
+      }
+    ],
+    "ts -> box : overlay": [
+      {
+        "view": "03-overlay",
+        "from": "ts",
+        "to": "box",
+        "label": "overlay"
+      }
+    ],
+    "ts -> bond0 : encap over UDP": [
+      {
+        "view": "03-overlay",
+        "from": "ts",
+        "to": "bond0",
+        "label": "encap over UDP"
+      }
+    ],
+    "rtr -> ont : NAT out": [
+      {
+        "view": "04-wan",
+        "from": "rtr",
+        "to": "ont",
+        "label": "NAT out"
+      }
+    ],
+    "ont -> vzagg : 4.5 ms": [
+      {
+        "view": "04-wan",
+        "from": "ont",
+        "to": "vzagg",
+        "label": "4.5 ms"
+      }
+    ],
+    "vzagg -> vzbb : 6.6 ms": [
+      {
+        "view": "04-wan",
+        "from": "vzagg",
+        "to": "vzbb",
+        "label": "6.6 ms"
+      }
+    ],
+    "vzbb -> cf : 6-9 ms": [
+      {
+        "view": "04-wan",
+        "from": "vzbb",
+        "to": "cf",
+        "label": "6-9 ms"
+      }
+    ]
+  },
+  "full_spec": "full-spec.json",
+  "full_spec_role": "Unrendered canonical relation ledger; not a fifth view. Use the four focused specs for presentation.",
+  "full_check": "full-check.txt",
+  "full_check_exit": "full-check.exit",
+  "source_pointers": [
+    {
+      "read": "docs/visualize-eval/cases/homelab-nic-trace/source.md",
+      "original_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-rack-bench-feat-network-diagram--/2026-10-13T05-14-42-097Z_01a133af-3231-71ff-87c1-c56889a12a6c.jsonl",
+      "references": [
+        "user line 48",
+        "assistant line 68",
+        "original graph write line 62, call chatcmpl-tool-b004896d418e23a3 (pointer only)",
+        "What the probes found",
+        "Mapped onto the datacenter model",
+        "Relationship facts from the historical attempt",
+        "Fixed constraints"
+      ],
+      "direct_chat_read": false
+    }
+  ],
+  "blockers": [],
+  "known_defects": [
+    {
+      "view": "01-local",
+      "issues": [
+        "No visible target arrowheads for vm -> virbr, ctr -> dkbr, and virbr -> box; only dkbr -> box has a clear downward arrow."
+      ]
+    },
+    {
+      "view": "02-uplinks",
+      "issues": [
+        "No visible target arrowheads for box -> bond0, box -> wlp, bond0 -> rtr, or wlp -> rtr."
+      ]
+    },
+    {
+      "view": "03-overlay",
+      "issues": [
+        "ts -> box and ts -> bond0 lack visible target arrowheads.",
+        "box -> bond0 starts sideways below the host box rather than with a clear vertical source stem.",
+        "box -> bond0 crosses ts -> bond0 near the target, with a junction-like glyph that can imply a false branch."
+      ]
+    },
+    {
+      "view": "04-wan",
+      "issues": [
+        "All four WAN edges lack visible target arrowheads.",
+        "The 4.5 ms and 6.6 ms labels interrupt source stems below ont and vzagg."
+      ]
+    }
+  ],
+  "independent_review": "Pending captain-owned separate Astra review; no self-approval. ANSI evidence saved but border-color correctness not certified.",
+  "animation": "Not required by case; no flow dots fabricated for historical topology.",
+  "qualifications": [
+    "All observations are historical, not a current host probe.",
+    "Fios? denotes inferred Verizon Fios router identity from WNC OUI; ONT? denotes a historical interpretation of 169.254.3.1, not verified physical topology.",
+    "WAN arrows preserve reported hop order and timing labels, not physical device adjacency or per-link latency.",
+    "Uplinks are wired-primary / Wi-Fi metric-600 backup, not ECMP."
+  ],
+  "abbreviations": {
+    "Fios?": "Historically inferred Verizon Fios router, 192.168.1.1",
+    "ONT?": "Historically inferred ONT / Verizon edge role, 169.254.3.1",
+    "VZ": "Verizon",
+    "CF": "Cloudflare AS13335",
+    "def gw": "default gateway",
+    ".213": "192.168.1.213, Wi-Fi on the same 192.168.1.0/24 LAN"
+  },
+  "panes_closed": true,
+  "execution_log": "execution.json",
+  "full_check_stderr": "full-check.stderr",
+  "evidence_recorded_at": "2026-11-02T08:19:57.885721+00:00",
+  "hashes_verified": {
+    "candidate": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+    "renderer": "b6e11b05b4fb79ce969dc2646c667572535a949bd1a396fd711e1a5466298c8f"
+  },
+  "selection_evidence": "Unselected launch followed by Tab; both text and ANSI recorded, pending independent validation."
+}

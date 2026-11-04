@@ -1,0 +1,50 @@
+ rataflow-view · 82x51 @100% · v3-compute-final.json · 5 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                   ╭───────────╮
+                                   │Task engine│
+                                   │           │
+                                   ╰───────────╯
+                     mounts / snapshots │ │
+                        starts / manages│ │
+                            ╭───────────╯ ╰────────╮
+                            ▼                      ▼
+                   ╭─────────────────╮   ╭────────────────────╮
+                   │Container backend│   │Filesystem + volumes│
+                   │                 │   │                    │
+                   ╰─────────────────╯   ╰────────────────────╯
+                            │                      │
+                            │ runs user process    │ image + volume data
+                            ╰─────╮               ╭╯
+                                  ▼               ▼
+                           ╭──────────────╮   ╭───────╮
+                           │Task container│   │Blobnet│
+                           │              │   │       │
+                           ╰──────────────╯   ╰───────╯
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘

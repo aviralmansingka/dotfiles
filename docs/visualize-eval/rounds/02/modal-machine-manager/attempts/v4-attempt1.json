@@ -1,0 +1,72 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "pgrpc",
+      "label": "private gRPC",
+      "group": "control"
+    },
+    {
+      "id": "q",
+      "label": "River job queue",
+      "group": "jobs"
+    },
+    {
+      "id": "rec",
+      "label": "cluster reconcile loop",
+      "group": "jobs"
+    },
+    {
+      "id": "db",
+      "label": "Postgres",
+      "group": "state"
+    },
+    {
+      "id": "prov",
+      "label": "bare-metal providers",
+      "group": "cloud"
+    }
+  ],
+  "layers": [
+    [
+      "pgrpc",
+      "q",
+      "rec"
+    ],
+    [
+      "db",
+      "prov"
+    ]
+  ],
+  "edges": [
+    {
+      "from": "pgrpc",
+      "to": "db",
+      "label": "machine rows",
+      "dots": 1,
+      "flow": 0.5
+    },
+    {
+      "from": "q",
+      "to": "db",
+      "label": "job rows",
+      "dots": 1,
+      "flow": 0.5
+    },
+    {
+      "from": "rec",
+      "to": "db",
+      "label": "cluster state",
+      "dots": 1,
+      "flow": 0.5
+    },
+    {
+      "from": "rec",
+      "to": "prov",
+      "label": "gcore sync 1min",
+      "dots": 1,
+      "flow": 0.5
+    }
+  ]
+}

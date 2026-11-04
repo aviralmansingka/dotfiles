@@ -1,0 +1,12 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=8 edges=8 flows=0 direction=tb theme=gruvbox
+layers=4 (explicit placement, sugiyama skipped)
+extent=65x35 cells
+crossings: 4 bridges, 2 touching bends
+labels: 8/8 placed, 0 on route cells, 0 skipped, 0 ambiguous owners
+groups: spine(2) edge(2) leaf(2) racks(2)
+trunks:
+routes: 8/8 near-minimal, 0 detours, 0 shortened
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

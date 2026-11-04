@@ -1,0 +1,18 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "diagrams": [
+    {
+      "id": "ports",
+      "title": "Probe: canvas schema",
+      "description": "Two nodes only, checking the canvas check block prints.",
+      "nodes": [
+        { "id": "a", "label": "A", "group": "host" },
+        { "id": "b", "label": "B", "group": "plant" }
+      ],
+      "edges": [
+        { "from": "a", "to": "b", "label": "1 ms" }
+      ]
+    }
+  ]
+}

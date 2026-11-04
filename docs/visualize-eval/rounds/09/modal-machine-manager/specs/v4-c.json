@@ -1,0 +1,30 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "layers": [
+    ["web", "pgrpc"],
+    ["wapi"],
+    ["q", "ssh"],
+    ["jan", "mch", "slack"]
+  ],
+  "nodes": [
+    { "id": "web", "label": "humans + mmctl", "group": "humans" },
+    { "id": "pgrpc", "label": "private gRPC", "group": "control" },
+    { "id": "wapi", "label": "webapi server", "group": "control" },
+    { "id": "q", "label": "River job queue", "group": "control" },
+    { "id": "ssh", "label": "SSH + BMC ops", "group": "ops" },
+    { "id": "jan", "label": "janitor app", "group": "ops" },
+    { "id": "db", "label": "Postgres", "group": "state" },
+    { "id": "mch", "label": "bare-metal machines", "group": "hosts" },
+    { "id": "slack", "label": "Slack", "group": "humans" }
+  ],
+  "edges": [
+    { "from": "web", "to": "wapi", "label": "http", "label_slot": true, "dots": 1, "flow": true },
+    { "from": "wapi", "to": "q", "label": "reinstall/reprovision", "label_slot": true, "dots": 1, "flow": true },
+    { "from": "q", "to": "jan", "label": "diagnostics", "dots": 1, "flow": true },
+    { "from": "jan", "to": "wapi", "label": "proposed actions", "dots": 1, "flow": true },
+    { "from": "wapi", "to": "slack", "label": "confirm + alerts", "dots": 1, "flow": true },
+    { "from": "ssh", "to": "mch", "label": "machine-audit", "dots": 1, "flow": true },
+    { "from": "pgrpc", "to": "db", "label": "machine rows", "dots": 1, "flow": true }
+  ]
+}

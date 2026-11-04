@@ -1,0 +1,10 @@
+warning: edge e1 label "boot.ipxe+S3" had no clear cell; shorten it or add routing space
+viewport: unknown zoom: 1.00 natural
+ok: nodes=5 edges=5 flows=5 direction=tb theme=gruvbox
+layers=4 (explicit placement, sugiyama skipped)
+extent=42x30 cells
+warning: 1 edge label(s) had no free slot; shorten the labels or split the graph
+labels: 4/5 placed, 0 on route cells, 1 skipped
+groups: metal(2) artifact(1) control(1) state(1)
+trunks:
+dots: 5 single-dot routes, 0 periodic routes, 0 violations

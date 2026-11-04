@@ -1,0 +1,49 @@
+{
+  "case_id": "network",
+  "round": "02",
+  "worker_id": "viz-ds02-network",
+  "views": [
+    {
+      "view": "v1",
+      "carries": "physical path and link speeds: e1 1 GbE, e2 10 GbE, e3 10 GbE, e4 25 GbE",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "attempts/v1-attempt1.json",
+          "spec_sha256": "cc00ef4665938ca054b404fee449066884e70bb1f79cff51b60deb5fcccce16e",
+          "note": "All-in-one first design: 6 nodes, 7 edges, direction tb, automatic sugiyama placement. --check: extent=40x48 cells, 1 row taller than the 47-row pane, so the graph would overflow and need a pan. Rejected on fit. Within this same iteration I probed direction lr on the same spec (attempts/v1-probe-lr.json, sha256 fe9cb35c11f641d06e1657a061ef4e35696f24db183a8cd9286465b05765d94f): extent=144x20 cells, 67 columns too wide. Orientation stays tb."
+        },
+        {
+          "attempt": 2,
+          "spec": "attempts/v1-attempt2-allinone.json",
+          "spec_sha256": "d8233ebbd41c1a077a374c1b4ea20fc5af7793ebdff8e3577bffef8322322157",
+          "note": "All-in-one second design: explicit 4-layer placement [wan][fw][core][web,cache,db]. --check clean: extent=40x35, labels 7/7 placed, 0 on route, 0 skipped, 7 single-dot routes, 0 violations. Captured at 77x47 (evidence/v1-pre-split). Rejected after reading the capture: two corridors enclose the DB tier box on all four sides and read as a false second border, and the 'session' label sits beside the core->cache route, so arrow/label ownership is ambiguous for e5 and e7. Kept as evidence, superseded by the two-view split."
+        },
+        {
+          "attempt": 3,
+          "spec": "v1.json",
+          "spec_sha256": "6f4e4d15aab2ae01e539f78424a20176eec88f1bf0102738f21d6e75ba5893cd",
+          "note": "Kept: physical-path view. 5 nodes (wan, fw, core, web, cache), 4 edges (e1-e4), direction tb with automatic placement. --check: extent=40x32, labels 4/4 placed, 0 on route, 0 skipped, 4 single-dot routes, 0 violations, 0 warnings. Captured at 77x47."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "carries": "application relations: e5 web->cache session, e6 web->db queries, e7 cache->db fill",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "attempts/v2-attempt1-auto.json",
+          "spec_sha256": "e929f11fdf3a12070214b1113090de5874cbc8da569ce3913b4c4a711c8913b4",
+          "note": "Draft: 3 nodes, 3 edges, automatic placement (web / cache / db stacked). --check clean (extent=24x24, 3/3 labels) but the local plain-text render showed DB tier receiving two adjacent arrowheads with 'queries' crowded under 'session'. Rejected on label ownership."
+        },
+        {
+          "attempt": 2,
+          "spec": "v2.json",
+          "spec_sha256": "73810910c94dbf26ace0ab263e3c4606b720395d865b56986ed0ce85e3b9d6f4",
+          "note": "Kept: explicit 2-layer placement [web][cache, db]. Each of the three app relations gets its own short route and its own label: session enters Redis from the top, queries enters DB tier from the top, fill enters DB tier from the left. --check: extent=24x13, labels 3/3 placed, 0 on route, 0 skipped, 3 single-dot routes, 0 violations, 0 warnings."
+        }
+      ]
+    }
+  ]
+}

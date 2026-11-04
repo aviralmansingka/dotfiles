@@ -1,0 +1,288 @@
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/11/gb300-rack-software/specs/v
+3-rms-api-a2.json
+
+fix-visualize-skill on  fix/visualize-skill [$✘!?] on ☁️  (ap-south-1) on ☁️  avi
+ralmansingka@gmail.com
+󰂄 7% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/gb300-rack-software/
+specs/v3-rms-api-a2.json
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$✘!?] on ☁️  (ap-south-1) on ☁️  avi
+ralmansingka@gmail.com
+󰂄 7% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/gb300-rack-software/
+specs/v3-rms-api-a2.json --select-all
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$✘!?] on ☁️  (ap-south-1) on ☁️  avi
+ralmansingka@gmail.com
+󰂄 7% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/gb300-rack-software/
+specs/v3-rms-api-a2.json --frames 5 --step-ms 100
+viewport: 82x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 82x51 @100% · v3-rms-api-a2.json · 5 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                    ╭───────────────╮
+                                  ╭▶│Compute BMC x18│
+                                  │ │               │
+                                  │ ╰───────────────╯
+            ╭──────╮ Redfish/HTTPS│NVUE REST/SSH
+            │      │──────────────╯       ╭────╮   hosts
+            │      │                    ╭▶│NVOS│───────────╮ ╭───────╮
+            │      │────────────────────╯ │    │           ╰▶│       │
+            │nv-rms│                      ╰────╯             │NMX-C/T│
+            │      │───────────────╮                       ╭▶│       │
+            │      │               │  ╭───────────╮        │ ╰───────╯
+            │      │───────────────⌒─▶│Power shelf│        │
+            ╰──────╯  Redfish/HTTPS│  │           │        │
+                                   │  ╰───────────╯        │
+                                   │      NMX-C gRPC       │
+                                   ╰───────────────────────╯
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 82x51 @100% · v3-rms-api-a2.json · 5 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                    ╭───────────────╮
+                                  ╭▶│Compute BMC x18│
+                                  │ │               │
+                                  │ ╰───────────────╯
+            ╭──────╮ Redfish/HTTPS│NVUE REST/SSH
+            │      │──────────────╯       ╭────╮   hosts
+            │      │                    ╭▶│NVOS│───────────╮ ╭───────╮
+            │      │────────────────────╯ │    │           ╰▶│       │
+            │nv-rms│                      ╰────╯             │NMX-C/T│
+            │      │───────────────╮                       ╭▶│       │
+            │      │               │  ╭───────────╮        │ ╰───────╯
+            │      │───────────────⌒─▶│Power shelf│        │
+            ╰──────╯  Redfish/HTTPS│  │           │        │
+                                   │  ╰───────────╯        │
+                                   │      NMX-C gRPC       │
+                                   ╰───────────────────────╯
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 82x51 @100% · v3-rms-api-a2.json · 5 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                    ╭───────────────╮
+                                  ╭▶│Compute BMC x18│
+                                  │ │               │
+                                  │ ╰───────────────╯
+            ╭──────╮ Redfish/HTTPS│NVUE REST/SSH
+            │      │──────────────╯       ╭────╮   hosts
+            │      │                    ╭▶│NVOS│───────────╮ ╭───────╮
+            │      │────────────────────╯ │    │           ╰▶│       │
+            │nv-rms│                      ╰────╯             │NMX-C/T│
+            │      │───────────────╮                       ╭▶│       │
+            │      │               │  ╭───────────╮        │ ╰───────╯
+            │      │───────────────⌒─▶│Power shelf│        │
+            ╰──────╯  Redfish/HTTPS│  │           │        │
+                                   │  ╰───────────╯        │
+                                   │      NMX-C gRPC       │
+                                   ╰───────────────────────╯
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 82x51 @100% · v3-rms-api-a2.json · 5 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                    ╭───────────────╮
+                                  ╭▶│Compute BMC x18│
+                                  │ │               │
+                                  │ ╰───────────────╯
+            ╭──────╮ Redfish/HTTPS│NVUE REST/SSH
+            │      │──────────────╯       ╭────╮   hosts
+            │      │                    ╭▶│NVOS│───────────╮ ╭───────╮
+            │      │────────────────────╯ │    │           ╰▶│       │
+            │nv-rms│                      ╰────╯             │NMX-C/T│
+            │      │───────────────╮                       ╭▶│       │
+            │      │               │  ╭───────────╮        │ ╰───────╯
+            │      │───────────────⌒─▶│Power shelf│        │
+            ╰──────╯  Redfish/HTTPS│  │           │        │
+                                   │  ╰───────────╯        │
+                                   │      NMX-C gRPC       │
+                                   ╰───────────────────────╯
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 82x51 @100% · v3-rms-api-a2.json · 5 nodes · 5 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                    ╭───────────────╮
+                                  ╭▶│Compute BMC x18│
+                                  │ │               │
+                                  │ ╰───────────────╯
+            ╭──────╮ Redfish/HTTPS│NVUE REST/SSH
+            │      │──────────────╯       ╭────╮   hosts
+            │      │                    ╭▶│NVOS│───────────╮ ╭───────╮
+            │      │────────────────────╯ │    │           ╰▶│       │
+            │nv-rms│                      ╰────╯             │NMX-C/T│
+            │      │───────────────╮                       ╭▶│       │
+            │      │               │  ╭───────────╮        │ ╰───────╯
+            │      │───────────────⌒─▶│Power shelf│        │
+            ╰──────╯  Redfish/HTTPS│  │           │        │
+                                   │  ╰───────────╯        │
+                                   │      NMX-C gRPC       │
+                                   ╰───────────────────────╯
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$✘!?] on ☁️  (ap-south-1) on ☁️  avi
+ralmansingka@gmail.com
+󰂄 7% ❯

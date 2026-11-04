@@ -1,0 +1,18 @@
+{
+  "round": "02",
+  "case_id": "pipeline",
+  "worker_id": "viz-ds02-pipeline",
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "v1.json",
+          "spec_sha256": "ac2d00ec9ba3f61092f46de4486e5f7749612bb2cb756527fe2f6afa932df2ec",
+          "note": "First draft: 5 semantic tiers in tb, all 6 source relations, dots:1 + flow 0.5 for slow sparse traffic. --check clean on the first run (extent 36x40, 4/4 labels, 0 dot violations, 0 warnings) so it was kept as final; no rewrite was needed."
+        }
+      ]
+    }
+  ]
+}

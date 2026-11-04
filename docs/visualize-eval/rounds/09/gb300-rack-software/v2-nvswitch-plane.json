@@ -1,0 +1,14 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "rms", "label": "nv-rms", "group": "off-rack mgmt" },
+    { "id": "nvos", "label": "NVOS", "group": "NVSwitch sw" },
+    { "id": "nmxc", "label": "NMX-C/T", "group": "NVSwitch sw" }
+  ],
+  "edges": [
+    { "from": "rms", "to": "nvos", "label": "NVUE/SSH/SFTP", "label_slot": true, "dots": 0 },
+    { "from": "rms", "to": "nmxc", "label": "gRPC", "label_slot": true, "dots": 0 },
+    { "from": "nvos", "to": "nmxc", "label": "hosts", "label_slot": true, "dots": 0 }
+  ]
+}

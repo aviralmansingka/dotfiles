@@ -1,0 +1,594 @@
+{
+  "case_id": "gb300-rack-software",
+  "round": "01",
+  "generator": {
+    "role": "fresh diagram generator (replaces user-cancelled Astra generation)",
+    "agent_profile": "worker",
+    "subagent_name": "viz-ds01-gb300-rack-software",
+    "provider": "fireworks",
+    "model_env": "PI_MODEL=accounts/fireworks/routers/deepseek-flash-latest",
+    "model_exact": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "reasoning_level_env": "high",
+    "session_file": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-dotfiles-fix-visualize-skill--/2026-11-02T08-24-41-580Z_76e4ed69-db359e76-8245c22b-2b16.jsonl",
+    "own_pane": "w7E:p2Y",
+    "own_tab": "w7E:tR",
+    "worktree": "/Users/aviral/.herdr/worktrees/dotfiles/fix-visualize-skill",
+    "separate_judge_spawned": false,
+    "judge_note": "the candidate skill's Astra review section was overridden by the round task: the captain owns the separate Astra judge"
+  },
+  "candidate_skill": {
+    "path": "docs/visualize-eval/rounds/01/SKILL.md",
+    "sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+    "freshly_read": true,
+    "stale_installed_skill_used": false
+  },
+  "renderer": {
+    "path": "/tmp/visualize-eval/round-01/bin/rataflow-view",
+    "sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+    "global_installed_binary_used": false,
+    "build_or_install_run": false
+  },
+  "viewport": {
+    "target": "77 columns x 47 rows at natural 100% zoom",
+    "measured_pty": "47 rows x 77 columns (`stty size` inside a no-focus half split of tab w7E:tR)",
+    "measured_evidence": "captures/dims-probe-raw.txt, captures/dims-probe.txt, captures/split-dims-probe.json",
+    "herdr_reported_viewport_rows": 49,
+    "herdr_viewport_note": "herdr reports 49 rows for the pane widget; the PTY inside it is 47 rows, which is what the viewer draws into",
+    "panned": false,
+    "zoomed": false,
+    "fit_key_pressed": false
+  },
+  "views": [
+    {
+      "id": "v1-rail",
+      "title": "Off-rack nv-rms on the OOB rail, one drop per device class",
+      "spec": "specs/v1-a4-rail-lr.json",
+      "spec_sha256": "f08337e6dd19cb08e63a8ad02e68fe8c52e9785cd672a6443053da8cda660f86",
+      "direction": "lr",
+      "layers": 3,
+      "nodes": 5,
+      "edges": 4,
+      "check": {
+        "stdout_stderr_file": "captures/check-v1-a4-rail-lr.txt",
+        "summary": "ok: nodes=5 edges=4 flows=0 direction=lr theme=gruvbox / layers=3 (explicit placement, sugiyama skipped) / extent=69x18 cells",
+        "exit_code": 0,
+        "warnings": []
+      },
+      "check_sha256": "7dd369460b2c18667aa74898ff610e2285ee31b296c9e7d0d1af5015bb39757c",
+      "extent_cells": "69x18",
+      "fits_viewport": true,
+      "pane_id": "w7E:p3D",
+      "pane_dimensions": "47x77",
+      "timestamps": {
+        "split": "2026-11-02T08:26:03Z (tab w7E:tR, no-focus right split, ratio 0.5)",
+        "viewer_launch_window": "2026-11-02T08:26:04Z..2026-11-02T08:26:43Z",
+        "unselected_capture": "2026-11-02T08:26:44Z",
+        "selected_capture": "2026-11-02T08:26:44Z (Tab pressed, then captured)",
+        "pane_closed": "2026-11-02T08:26:45Z (q sent to the viewer; its self-closing command removed the pane)"
+      },
+      "captures": {
+        "text_unselected": "captures/v1-a4-unselected.txt",
+        "text_unselected_sha256": "b43fe51a162737c241a35855f2ff6c338caa95ec859569873a708624ddaab2c9",
+        "ansi_unselected": "captures/v1-a4-unselected.ansi",
+        "ansi_unselected_sha256": "ab193166452975e76f8cfa7d02d7fde3241b3da0392980d13f4e34237866c51e",
+        "text_selected": "captures/v1-a4-selected.txt",
+        "ansi_selected": "captures/v1-a4-selected.ansi",
+        "ansi_selected_sha256": "e8807bf4aa06c5ed4d8060cf4a9aeb8e65a9177e66b3ee0747fe8c7900c8bc3f",
+        "selection_effect": "accent colour on the selected node border only; plain text identical (cmp of the two .txt captures is equal)",
+        "extra_probe": "captures/v1-a4-selected2.txt (Down arrow; still text-identical)",
+        "animation_frames": "none - source requests no animation and the spec sets no `flow` on any edge (flows=0)"
+      },
+      "commands": [
+        "herdr pane split --current --direction right --ratio 0.5 --cwd $PWD --no-focus",
+        "herdr pane run w7E:p3D \"stty size; /tmp/visualize-eval/round-01/bin/rataflow-view $PWD/specs/v1-a4-rail-lr.json; herdr pane close w7E:p3D\"",
+        "herdr pane read w7E:p3D --source visible > captures/v1-a4-unselected.txt",
+        "herdr pane read w7E:p3D --source visible --format ansi > captures/v1-a4-unselected.ansi",
+        "herdr pane send-keys w7E:p3D Tab",
+        "herdr pane read w7E:p3D --source visible --format ansi > captures/v1-a4-selected.ansi",
+        "herdr pane send-keys w7E:p3D q"
+      ],
+      "header_verified": " rataflow-view · v1-a4-rail-lr.json · 5 nodes · 4 edges · 0 flows · drag pan",
+      "overflow_badge": false,
+      "defects": [
+        "The user asked for ONE OOB trunk that splits once; this view shows three independent corridors from three ports on the OOB LAN border (rows 17/19/21, columns 38-56). The renderer has no shared-trunk/junction primitive (see blockers.trunk-split-once).",
+        "All three drop labels read `power serial`, so text alone cannot distinguish the three drops; association rests on geometry (each label sits one row above its own corridor).",
+        "Two corridors turn at adjacent cells (row 19: `╮` at column 56 and `╰` at column 57) and can be misread as a single junction.",
+        "The nv-rms arrow enters the OOB LAN left border at row 17, two rows above the box centre, while the three exits sit at rows 17/19/21.",
+        "The nv-rms -> OOB LAN label `client` states network attachment only, never a protocol, as the source requires."
+      ]
+    },
+    {
+      "id": "v2-rms-api",
+      "title": "nv-rms southbound control of each rack device class",
+      "spec": "specs/v2-a2-rms-api.json",
+      "spec_sha256": "0015e2ea7ecdba0f0cc2575b310293743073641e8d75efadd6183f1577f4713e",
+      "direction": "tb",
+      "layers": 2,
+      "nodes": 4,
+      "edges": 3,
+      "check": {
+        "stdout_stderr_file": "captures/check-v2-a2-rms-api.txt",
+        "summary": "ok: nodes=4 edges=3 flows=0 direction=tb theme=gruvbox / layers=2 (explicit placement, sugiyama skipped) / extent=41x14 cells",
+        "exit_code": 0,
+        "warnings": []
+      },
+      "check_sha256": "8fd09d90863072ded6bd827b62633b72f5e1e16661aad29c1523a41e098c9663",
+      "extent_cells": "41x14",
+      "fits_viewport": true,
+      "pane_id": "w7E:p3V",
+      "pane_dimensions": "47x77",
+      "timestamps": {
+        "split": "2026-11-02T08:27:16Z",
+        "unselected_capture": "2026-11-02T08:27:32Z",
+        "selected_capture": "2026-11-02T08:27:32Z",
+        "pane_closed": "2026-11-02T08:27:33Z"
+      },
+      "captures": {
+        "text_unselected": "captures/v2-a2-unselected.txt",
+        "text_unselected_sha256": "33d2fe708f21999931c3edfa2fd9bc4d837125cfff54bddbc9ad2ad6ad7f466c",
+        "ansi_unselected": "captures/v2-a2-unselected.ansi",
+        "ansi_unselected_sha256": "ee4b37c4eb1f3c399157b22728aa6e2bf8d75b3bd59a052e1263891beaf3c21f",
+        "text_selected": "captures/v2-a2-selected.txt",
+        "ansi_selected": "captures/v2-a2-selected.ansi",
+        "ansi_selected_sha256": "8a6ee0b7b6b6f257efba6472bcaa98794dda3561863ea1e74c37dabc6413f66d",
+        "selection_effect": "accent colour on the selected node border only; plain text identical",
+        "animation_frames": "none - no `flow` set, source requests no animation"
+      },
+      "commands": [
+        "herdr pane split --current --direction right --ratio 0.5 --cwd $PWD --no-focus",
+        "herdr pane run w7E:p3V \"stty size; /tmp/visualize-eval/round-01/bin/rataflow-view $PWD/specs/v2-a2-rms-api.json; herdr pane close w7E:p3V\"",
+        "herdr pane read w7E:p3V --source visible > captures/v2-a2-unselected.txt",
+        "herdr pane read w7E:p3V --source visible --format ansi > captures/v2-a2-unselected.ansi",
+        "herdr pane send-keys w7E:p3V Tab",
+        "herdr pane read w7E:p3V --source visible --format ansi > captures/v2-a2-selected.ansi",
+        "herdr pane send-keys w7E:p3V q"
+      ],
+      "header_verified": " rataflow-view · v2-a2-rms-api.json · 4 nodes · 3 edges · 0 flows · drag pan",
+      "overflow_badge": false,
+      "defects": [
+        "Two edges carry the identical label `Redfish`; the lower one (row 26) sits below its corridor rather than above it, so its association needs tracing.",
+        "These three control edges are not in the historical 11-edge graph; they are added from the correction at source line 283 (see relationship_coverage.added_from_source)."
+      ]
+    },
+    {
+      "id": "v3-nvswitch",
+      "title": "NVSwitch tray: OOB drop to the BMC, NVOS hosting NMX-C/T",
+      "spec": "specs/v3-a3-nvswitch-lr.json",
+      "spec_sha256": "1db5f97359523dabbc15f7cd22719772f41df8db7b04efd1b3203af9ba6c2998",
+      "direction": "lr",
+      "layers": 3,
+      "nodes": 4,
+      "edges": 3,
+      "check": {
+        "stdout_stderr_file": "captures/check-v3-a3-nvswitch-lr.txt",
+        "summary": "ok: nodes=4 edges=3 flows=0 direction=lr theme=gruvbox / layers=3 (explicit placement, sugiyama skipped) / extent=68x11 cells",
+        "exit_code": 0,
+        "warnings": []
+      },
+      "check_sha256": "99bcd9b9128308e55e3015e1f254917914e061e21916da725968e8a3f1a893b1",
+      "extent_cells": "68x11",
+      "fits_viewport": true,
+      "pane_id": "w7E:p43",
+      "pane_dimensions": "47x77",
+      "timestamps": {
+        "split": "2026-11-02T08:28:00Z",
+        "unselected_capture": "2026-11-02T08:28:12Z",
+        "selected_capture": "2026-11-02T08:28:12Z",
+        "pane_closed": "2026-11-02T08:28:13Z"
+      },
+      "captures": {
+        "text_unselected": "captures/v3-a3-unselected.txt",
+        "text_unselected_sha256": "0a7ab4b624e1d74c74723c1143d60a4f6c132c35f095c2c1bd0578708f2a4394",
+        "ansi_unselected": "captures/v3-a3-unselected.ansi",
+        "ansi_unselected_sha256": "e767a8cad31ea67fc82dd5c04c5aaf4355dd1c3e7068e70ec19e2be36d406e5a",
+        "text_selected": "captures/v3-a3-selected.txt",
+        "ansi_selected": "captures/v3-a3-selected.ansi",
+        "ansi_selected_sha256": "48f335b42cc394d2c590945f61ea8fcd0e3066559a244680828fbf1e54b0e486",
+        "selection_effect": "accent colour on the selected node border only; plain text identical",
+        "animation_frames": "none - no `flow` set, source requests no animation"
+      },
+      "commands": [
+        "herdr pane split --current --direction right --ratio 0.5 --cwd $PWD --no-focus",
+        "herdr pane run w7E:p43 \"stty size; /tmp/visualize-eval/round-01/bin/rataflow-view $PWD/specs/v3-a3-nvswitch-lr.json; herdr pane close w7E:p43\"",
+        "herdr pane read w7E:p43 --source visible > captures/v3-a3-unselected.txt",
+        "herdr pane read w7E:p43 --source visible --format ansi > captures/v3-a3-unselected.ansi",
+        "herdr pane send-keys w7E:p43 Tab",
+        "herdr pane read w7E:p43 --source visible --format ansi > captures/v3-a3-selected.ansi",
+        "herdr pane send-keys w7E:p43 q"
+      ],
+      "header_verified": " rataflow-view · v3-a3-nvswitch-lr.json · 4 nodes · 3 edges · 0 flows · drag",
+      "overflow_badge": false,
+      "defects": [
+        "Label-to-edge association for the two OOB drops is ambiguous: `reach hist.` sits between the NVSwitch BMC corridor and the NVOS corridor, on the same row as the NVSwitch BMC arrowhead.",
+        "`reach hist.` is a qualification, not a protocol: the historical oob->nvos edge is not confirmed by the corrected text at source line 283 (see source pointers)."
+      ]
+    },
+    {
+      "id": "v4-inband",
+      "title": "In-band compute stack: Kubernetes to DCGM, driver, Fabric Manager",
+      "spec": "specs/v4-a2-inband.json",
+      "spec_sha256": "66da98a3891f4547f7c7f12ddd3fecb7051322b24c285d42a176baf0380ff851",
+      "direction": "tb",
+      "layers": 5,
+      "nodes": 6,
+      "edges": 5,
+      "check": {
+        "stdout_stderr_file": "captures/check-v4-a2-inband.txt",
+        "summary": "ok: nodes=6 edges=5 flows=0 direction=tb theme=gruvbox / layers=5 (explicit placement, sugiyama skipped) / extent=37x37 cells",
+        "exit_code": 0,
+        "warnings": []
+      },
+      "check_sha256": "c14ccfd45946a693d9d27431685daa9836a5980b04a0829cf195e27a0fc5d8f7",
+      "extent_cells": "37x37",
+      "fits_viewport": true,
+      "pane_id": "w7E:p4C",
+      "pane_dimensions": "47x77",
+      "timestamps": {
+        "split": "2026-11-02T08:28:43Z",
+        "unselected_capture": "2026-11-02T08:29:04Z",
+        "selected_capture": "2026-11-02T08:29:04Z",
+        "pane_closed": "2026-11-02T08:29:05Z"
+      },
+      "captures": {
+        "text_unselected": "captures/v4-a2-unselected.txt",
+        "text_unselected_sha256": "832386799c0adb9fa44017ac7c8db5810c2fffb46c79b8c1d22775cb84f82a2d",
+        "ansi_unselected": "captures/v4-a2-unselected.ansi",
+        "ansi_unselected_sha256": "d883bd522ab6a18e03356728eed0da99a73f74a70b4395083f368e312fd2cd3f",
+        "text_selected": "captures/v4-a2-selected.txt",
+        "ansi_selected": "captures/v4-a2-selected.ansi",
+        "ansi_selected_sha256": "881d1de89acf3c419766ac6becfbdb002e933cf61646504667853b6fdfea0617",
+        "selection_effect": "accent colour on the selected node border only; plain text identical",
+        "animation_frames": "none - no `flow` set, source requests no animation"
+      },
+      "commands": [
+        "herdr pane split --current --direction right --ratio 0.5 --cwd $PWD --no-focus",
+        "herdr pane run w7E:p4C \"stty size; /tmp/visualize-eval/round-01/bin/rataflow-view $PWD/specs/v4-a2-inband.json; herdr pane close w7E:p4C\"",
+        "herdr pane read w7E:p4C --source visible > captures/v4-a2-unselected.txt",
+        "herdr pane read w7E:p4C --source visible --format ansi > captures/v4-a2-unselected.ansi",
+        "herdr pane send-keys w7E:p4C Tab",
+        "herdr pane read w7E:p4C --source visible --format ansi > captures/v4-a2-selected.ansi",
+        "herdr pane send-keys w7E:p4C q"
+      ],
+      "header_verified": " rataflow-view · v4-a2-inband.json · 6 nodes · 5 edges · 0 flows · drag pan",
+      "overflow_badge": false,
+      "defects": [
+        "`serves :9400` sits directly beneath the Driver+CUDA corridor and just above dcgm-exporter's top border; its association relies on adjacency to the exporter box, not to its own corridor start.",
+        "Host residency (all four in-band components run on compute hosts) is carried only by the `same host` label; the renderer cannot draw a containment boundary (see blockers.grouping).",
+        "The control palette occupies rows 41-43 / columns 2-10 beside the graph; it covers no node, corridor, or label in this capture."
+      ]
+    }
+  ],
+  "relationship_coverage": [
+    {
+      "original": "rms -> oob",
+      "views": [
+        {
+          "view": "v1-rail",
+          "rendered_as": "nv-rms -> OOB LAN",
+          "label": "client",
+          "direction_preserved": true,
+          "note": "label states network attachment only; source line 277 says nv-rms is a client on that network. No protocol invented."
+        }
+      ],
+      "covered": true
+    },
+    {
+      "original": "oob -> bmc_c",
+      "views": [
+        {
+          "view": "v1-rail",
+          "rendered_as": "OOB LAN -> Compute BMC",
+          "label": "power serial",
+          "direction_preserved": true,
+          "note": "drop of the rail; the rail's service class, not a per-edge protocol claim (source line 277 lists power, telemetry, serial console, re-imaging)."
+        }
+      ],
+      "covered": true
+    },
+    {
+      "original": "oob -> bmc_s",
+      "views": [
+        {
+          "view": "v1-rail",
+          "rendered_as": "OOB LAN -> NVSwitch BMC",
+          "label": "power serial",
+          "direction_preserved": true,
+          "note": "source line 283: the NVSwitch BMC sits on the OOB LAN for power and serial console only."
+        },
+        {
+          "view": "v3-nvswitch",
+          "rendered_as": "OOB LAN -> NVSwitch BMC",
+          "label": "power serial",
+          "direction_preserved": true,
+          "note": "same drop repeated in the NVSwitch tray view so the tray's two independent paths sit side by side."
+        }
+      ],
+      "covered": true
+    },
+    {
+      "original": "oob -> pwr",
+      "views": [
+        {
+          "view": "v1-rail",
+          "rendered_as": "OOB LAN -> Power shelf",
+          "label": "power serial",
+          "direction_preserved": true,
+          "note": "power-shelf controller drop on the rail."
+        }
+      ],
+      "covered": true
+    },
+    {
+      "original": "oob -> nvos",
+      "views": [
+        {
+          "view": "v3-nvswitch",
+          "rendered_as": "OOB LAN -> NVOS",
+          "label": "reach hist.",
+          "direction_preserved": true,
+          "note": "QUALIFIED: kept as a historical relation but labelled as unconfirmed. Source line 283 places NVOS off nv-rms (`NVOS hangs off rms and not off the BMC`) and says the NVSwitch BMC is the OOB endpoint for the tray, so this drop is not verified."
+        }
+      ],
+      "covered": true,
+      "qualified_uncertain": true
+    },
+    {
+      "original": "nvos -> nmxc",
+      "views": [
+        {
+          "view": "v3-nvswitch",
+          "rendered_as": "NVOS -> NMX-C/T",
+          "label": "NMX-C gRPC",
+          "direction_preserved": true,
+          "note": "source line 283: NVOS hosts NMX-C/T and the NVSwitch southbound path is NMX-C gRPC."
+        }
+      ],
+      "covered": true
+    },
+    {
+      "original": "k8s -> gpuop",
+      "views": [
+        {
+          "view": "v4-inband",
+          "rendered_as": "Kubernetes -> GPU Operator",
+          "label": "hosts",
+          "direction_preserved": true,
+          "note": "source line 277: the GPU Operator works `over Kubernetes`."
+        }
+      ],
+      "covered": true
+    },
+    {
+      "original": "gpuop -> dcgm",
+      "views": [
+        {
+          "view": "v4-inband",
+          "rendered_as": "GPU Operator -> DCGM",
+          "label": "DaemonSet",
+          "direction_preserved": true,
+          "note": "source line 277: DCGM is deployed as a DaemonSet by the GPU Operator."
+        }
+      ],
+      "covered": true
+    },
+    {
+      "original": "dcgm -> dcgmx",
+      "views": [
+        {
+          "view": "v4-inband",
+          "rendered_as": "DCGM -> dcgm-exporter",
+          "label": "serves :9400",
+          "direction_preserved": true,
+          "note": "source line 277: dcgm-exporter serves Prometheus metrics on :9400."
+        }
+      ],
+      "covered": true
+    },
+    {
+      "original": "dcgm -> drvk",
+      "views": [
+        {
+          "view": "v4-inband",
+          "rendered_as": "DCGM -> Driver+CUDA",
+          "label": "reads NVML",
+          "direction_preserved": true,
+          "note": "read semantics, not a deploy/manage relation: source line 277 says DCGM reads GPU state via NVML against the driver."
+        }
+      ],
+      "covered": true
+    },
+    {
+      "original": "drvk -> fm",
+      "views": [
+        {
+          "view": "v4-inband",
+          "rendered_as": "Driver+CUDA -> Fabric Mgr",
+          "label": "same host",
+          "direction_preserved": true,
+          "note": "colocation only. The excerpts give no protocol for this pair, so the label asserts nothing beyond the fixed constraint that Driver/CUDA and Fabric Manager run on compute hosts."
+        }
+      ],
+      "covered": true,
+      "qualified_uncertain": true
+    }
+  ],
+  "added_from_source": [
+    {
+      "edge": "rms -> bmc_c",
+      "view": "v2-rms-api",
+      "label": "Redfish",
+      "source": "source.md line 283 (nv-rms southbound table: Compute BMCs via Redfish/HTTPS) and line 277 (`opens Redfish/HTTPS connections to each BMC`)",
+      "why": "the correction at line 283 replaced the earlier single rms->oob edge with direct device-class control edges; the user asked for the rack-management relation to the device classes to be visible (line 278)"
+    },
+    {
+      "edge": "rms -> pwr",
+      "view": "v2-rms-api",
+      "label": "Redfish",
+      "source": "source.md line 283 (Power-shelf controllers via Redfish/HTTPS)",
+      "why": "same correction"
+    },
+    {
+      "edge": "rms -> nvos",
+      "view": "v2-rms-api",
+      "label": "NVUE REST",
+      "source": "source.md line 283 (NVSwitch trays via NVUE REST, SSH/SFTP and NMX-C gRPC) and `nv-rms reaches the NVSwitch through NVOS, not through the NVSwitch BMC`",
+      "why": "the fixed constraints require preserving RMS NVOS/NMX control with the source protocols"
+    }
+  ],
+  "excluded": [
+    {
+      "item": "Mission Control, BCM, UFM, NetQ, NGC gated images",
+      "reason": "paid-only or entitlement-gated software; fixed constraint and source line 271"
+    },
+    {
+      "item": "Slurm",
+      "reason": "free but the source dropped it for adding no distinct edge (line 271)"
+    }
+  ],
+  "source_pointers": [
+    "docs/visualize-eval/cases/gb300-rack-software/source.md line 228 (user: visualize a rack/datacenter and where each software component resides)",
+    "docs/visualize-eval/cases/gb300-rack-software/source.md line 266 (user: what the OOB LAN is connected to; no paid software)",
+    "docs/visualize-eval/cases/gb300-rack-software/source.md line 271 (assistant: OOB LAN is a separate physical management Ethernet network carrying Redfish over HTTPS; paid software removed)",
+    "docs/visualize-eval/cases/gb300-rack-software/source.md line 272 (user: confirm nv-rms rides the OOB LAN; OOB must not reach DCGM)",
+    "docs/visualize-eval/cases/gb300-rack-software/source.md line 277 (assistant: nv-rms is a client on the OOB LAN; DCGM is host-resident, NVML in / Prometheus :9400 out, DaemonSet by the GPU Operator)",
+    "docs/visualize-eval/cases/gb300-rack-software/source.md line 278 (user: rack software should relate to compute BMC, NVSwitch, power shelf)",
+    "docs/visualize-eval/cases/gb300-rack-software/source.md line 283 (assistant: nv-rms is the rack aggregator with direct southbound paths; NVOS hosts NMX-C/T; NVSwitch BMC is OOB-only)",
+    "docs/visualize-eval/cases/gb300-rack-software/source.md line 284 (user: one OOB arrow that splits once, not many mixed-up arrows)",
+    "docs/visualize-eval/cases/gb300-rack-software/source.md line 291 (user: too many overlapping arrows; simplify)"
+  ],
+  "abbreviations": {
+    "rms": "nv-rms (rack management software, Apache-2.0 source; prebuilt NGC image is entitlement-gated)",
+    "oob": "OOB LAN (out-of-band management Ethernet, 1/10/25G, Redfish over HTTPS, legacy IPMI)",
+    "bmc_c": "Compute BMC (18 per GB300 NVL72)",
+    "bmc_s": "NVSwitch tray BMC",
+    "pwr": "Power shelf controller",
+    "nvos": "NVOS (NVSwitch operating system)",
+    "nmxc": "NMX-C/T (NVLink fabric management software)",
+    "k8s": "Kubernetes",
+    "gpuop": "GPU Operator",
+    "dcgm": "DCGM (host-resident GPU daemon)",
+    "dcgmx": "dcgm-exporter (Prometheus :9400)",
+    "drvk": "Driver + CUDA",
+    "fm": "Fabric Mgr"
+  },
+  "prior_attempts": [
+    {
+      "spec": "attempts/v1-a1-rail.json",
+      "view": "v1-rail",
+      "outcome": "rejected",
+      "reason": "extent 81x22 exceeded the 77-column pane; four drop targets in one row",
+      "check": "clean (no warnings)"
+    },
+    {
+      "spec": "attempts/v1-a2-rail.json",
+      "view": "v1-rail",
+      "outcome": "rendered then rejected",
+      "capture": "captures/v1-a2-rail.txt",
+      "reason": "tb fan-out to four targets produced long crossing runs and labels far from their arrows",
+      "check": "clean; extent 59x22"
+    },
+    {
+      "spec": "attempts/v1-a3-rail.json",
+      "view": "v1-rail",
+      "outcome": "rendered then rejected",
+      "capture": "captures/v1-a3-rail.txt",
+      "reason": "tb fan-out to three targets still stacked the three identical labels in the gaps between corridors",
+      "check": "clean; extent 49x22"
+    },
+    {
+      "spec": "attempts/v2-a1-rms-api.json",
+      "view": "v2-rms-api",
+      "outcome": "rejected before render",
+      "reason": "`warning: 1 edge label(s) had no free slot` with `Redfish HTTPS` labels",
+      "check": "exit 0 with 1 label warning"
+    },
+    {
+      "spec": "attempts/v3-a1-nvswitch.json",
+      "view": "v3-nvswitch",
+      "outcome": "rendered then rejected",
+      "capture": "captures/v3-a1-unselected.txt",
+      "reason": "label order put `power serial` on the arrow row between the two arrows, so the two drops' labels could be read backwards",
+      "check": "clean; extent 25x21"
+    },
+    {
+      "spec": "attempts/v3-a2-nvswitch.json",
+      "view": "v3-nvswitch",
+      "outcome": "rejected before render",
+      "reason": "`warning: 2 edge label(s) had no free slot` after swapping NVOS/NVSwitch BMC order",
+      "check": "exit 0 with 2 label warnings"
+    },
+    {
+      "spec": "attempts/v4-a1-inband.json",
+      "view": "v4-inband",
+      "outcome": "rendered then rejected",
+      "capture": "captures/v4-a1-unselected.txt",
+      "reason": "`serves :9400` abutted the Driver+CUDA arrowhead with no gap (`serves :9400▼`)",
+      "check": "clean; extent 33x37"
+    }
+  ],
+  "checks": {
+    "tool": "/tmp/visualize-eval/round-01/bin/rataflow-view --check",
+    "run_timestamp": "2026-11-02T08:29:32Z",
+    "all_final_specs": "exit 0, no warnings",
+    "warnings_on_final_specs": 0,
+    "check_files": [
+      "captures/check-v1-a4-rail-lr.txt",
+      "captures/check-v2-a2-rms-api.txt",
+      "captures/check-v3-a3-nvswitch-lr.txt",
+      "captures/check-v4-a2-inband.txt"
+    ],
+    "colour_and_border_audit": {
+      "script": "color-audit.py",
+      "outputs": ["captures/color-audit.txt", "captures/color-audit-selected.txt"],
+      "result": "every detected box has one uniform border colour with no off-colour border cell, no arrow or dot glyph on a border, and zero flow dots; layer hue families are distinct (V1 orange / teal / three pink shades; V2 orange / three teal shades; V3 orange / teal pair + pink; V4 orange / teal / pink / two olive shades / blue)",
+      "selection_observation": "the selected node's border turns accent orange (216,166,87) in all four views, which is the same RGB as the first layer family - a selected node can therefore look like a layer-0 node in the unselected capture set"
+    },
+    "arrow_glyph_word_check": "no arrow glyph is adjacent to a letter in any final capture; attempts/v4-a1 had `serves :9400▼` and was replaced",
+    "overflow_badge_present": false,
+    "pan_or_zoom_used": false
+  },
+  "blockers": {
+    "trunk_split_once": {
+      "status": "blocked",
+      "requirement": "the user asked for ONE OOB trunk that splits in exactly one spot into compute BMC, NVSwitch BMC and power shelf (source line 284); the fixed constraints repeat it",
+      "why_unsupported": "the renderer gives every edge its own port and its own A*-planned corridor with no shared runs, so three drops are drawn as three separate lines from three ports; there is no trunk, junction, or edge-merge primitive in the spec schema",
+      "evidence": "spec fields are direction/theme/nodes/edges only, edge fields are from/to/label/flow (`--help`, and `unknown field \\`style\\`` rejection in captures/probe-feature-surface.txt); the frozen render never shares a corridor in any attempt (v1-a1, v1-a2, v1-a3, v1-a4 captures)"
+    },
+    "edge_kind_encoding": {
+      "status": "blocked",
+      "requirement": "distinguish OOB physical reachability from controller API calls",
+      "why_unsupported": "no edge style, category, dash, or legend field; the only visual channel is the single muted stroke plus optional flow dots, so the distinction is carried by label wording (`power serial` / `reach hist.` on rail drops, `Redfish` / `NVUE REST` / `NMX-C gRPC` on controller calls) and by splitting the rail and API relations into separate views"
+    },
+    "grouping": {
+      "status": "blocked",
+      "requirement": "Driver/CUDA, DCGM and Fabric Manager run on compute hosts, not on the GPU die",
+      "why_unsupported": "no subgraph, container, or boundary field; containment is carried only by the `same host` edge label and by this report"
+    },
+    "negative_relation": {
+      "status": "blocked",
+      "requirement": "never draw OOB -> DCGM; the only OOB relation to DCGM is negative",
+      "why_unsupported": "absence of an edge is not a drawable relationship and there is no annotation primitive; the guarantee is that no OOB edge exists in any view, which a judge must verify by absence"
+    }
+  },
+  "unmet_needs": [
+    "no animation frames: the source requests no animation and no edge sets `flow` (flows=0 in every view)",
+    "no single OOB trunk with exactly one split (blocker above)",
+    "no visual encoding for physical reachability vs API call (blocker above)",
+    "no containment boundary for compute-host residency (blocker above)",
+    "independent readability review not run by this generator - the captain starts the separate Astra judge after this result"
+  ],
+  "cleanup": {
+    "panes_created": ["w7E:p35", "w7E:p3B", "w7E:p3D", "w7E:p3V", "w7E:p3Z", "w7E:p43", "w7E:p47", "w7E:p4C", "w7E:p4K"],
+    "panes_closed": "all nine; each viewer pane was launched with the self-closing `... ; herdr pane close <pane-id>` command and exited with `q`, the stty-size probe pane was closed with `herdr pane close`",
+    "verified": "`herdr pane list` shows tab w7E:tR holding only the generator's own pane w7E:p2Y",
+    "cleanup_failures": "none",
+    "left_alone": "a rataflow-view process for another case's spec (v2-host-nics.json, pid 85639) and other agents' panes in other tabs belong to parallel generators and were not touched",
+    "captain_pane_touched": false,
+    "raw_tmux_used": false
+  },
+  "claims": {
+    "green": false,
+    "independent_approval": false,
+    "statement": "not marked green; no review verdict is claimed. Defects and blockers above are the honest remaining state of the four views."
+  }
+}

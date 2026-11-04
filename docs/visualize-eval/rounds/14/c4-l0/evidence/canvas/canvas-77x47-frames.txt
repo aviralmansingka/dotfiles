@@ -1,0 +1,577 @@
+viewport: 77x47 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 77x47 @100% · canvas 173x128 · c4-l0-final.json · 36 nodes ·
+
+─────────────────────────────────────────────────────────────────────────────
+L0 · System context
+System context: the machine manager is one box. The control plane and humans
+drives the bare-metal providers, boots and audits the machines, which pull th
+S3, and it alerts in Slack. Nothing inside is shown yet, so L1 opens it.
+
+   ╭─────────────╮
+   │machine-agent│────────────────────────╮
+   │             │  register + heartbeat  │
+   ╰─────────────╯                        │               provider API
+                                          │ ╭───────────────╮  boot + audit
+╭───────────────────╮    provisioning     ╰▶│               │────────────────
+│Modal control plane│─────────────────────╮ │               │
+│                   │                     ╰▶│Machine manager│────────────────
+╰───────────────────╯                       │               │
+                                          ╭▶│               │────────────────
+   ╭──────────────╮         http          │ ╰───────────────╯confirm + alerts
+   │humans + mmctl│───────────────────────╯
+   │              │
+   ╰──────────────╯
+
+
+─────────────────────────────────────────────────────────────────────────────
+L1 · The machine manager
+L0's box opened one level: its boundary services — private gRPC, webapi, prov
+cluster reconcile, SSH + BMC ops and the boot server — sit in the Machine man
+control plane, humans, providers and machines stay outside it.
+
+
+
+                                                   ╔═Machine manager═════════
+                                                   ║                    ╭────
+                                                   ║                    │boot
+                                                   ║                    │
+                                                                            ─
+                                                          █▖▗▖ █▌▗▖
+ ╭───────────────────╮ create / terminate / repair        ▀    ▝            ─
+ │Modal control plane│─────────────────────────────       █▘ ▜█▘▝▀ ▝▀       r
+ ┌───────┐           │                                        ▐▌
+ │ + [+]─│───────────╯                                    ▀▘▀ ▝▌ ▀          ─
+ │ − [-] │                                                ▄ ▙ ▝▘ █
+ │ ⊡ [f]─│─────────╮               http                   ▄                 ─
+ │ □ [i]a│s + mmctl│───────────────────────────────       █ ▘               e
+ └───────┘         │
+    ╰──────────────╯                               ║   ╰──────╯      ╰───────
+frame 1 at 100ms
+ rataflow-view · 77x47 @100% · canvas 173x128 · c4-l0-final.json · 36 nodes ·
+
+─────────────────────────────────────────────────────────────────────────────
+L0 · System context
+System context: the machine manager is one box. The control plane and humans
+drives the bare-metal providers, boots and audits the machines, which pull th
+S3, and it alerts in Slack. Nothing inside is shown yet, so L1 opens it.
+
+   ╭─────────────╮
+   │machine-agent│────────────────────────╮
+   │             │  register + heartbeat  │
+   ╰─────────────╯                        │               provider API
+                                          │ ╭───────────────╮  boot + audit
+╭───────────────────╮    provisioning     ╰▶│               │────────────────
+│Modal control plane│─────────────────────╮ │               │
+│                   │                     ╰▶│Machine manager│────────────────
+╰───────────────────╯                       │               │
+                                          ╭▶│               │────────────────
+   ╭──────────────╮         http          │ ╰───────────────╯confirm + alerts
+   │humans + mmctl│───────────────────────╯
+   │              │
+   ╰──────────────╯
+
+
+─────────────────────────────────────────────────────────────────────────────
+L1 · The machine manager
+L0's box opened one level: its boundary services — private gRPC, webapi, prov
+cluster reconcile, SSH + BMC ops and the boot server — sit in the Machine man
+control plane, humans, providers and machines stay outside it.
+
+
+
+                                                   ╔═Machine manager═════════
+                                                   ║                    ╭────
+                                                   ║                    │boot
+                                                   ║                    │
+                                                                            ─
+                                                          █▖▗▖ █▌▗▖
+ ╭───────────────────╮ create / terminate / repair        ▀    ▝            ─
+ │Modal control plane│─────────────────────────────       █▘ ▜█▘▝▀ ▝▀       r
+ ┌───────┐           │                                        ▐▌
+ │ + [+]─│───────────╯                                    ▀▘▀ ▝▌ ▀          ─
+ │ − [-] │                                                ▄ ▙ ▝▘ █
+ │ ⊡ [f]─│─────────╮               http                   ▄                 ─
+ │ □ [i]a│s + mmctl│───────────────────────────────       █ ▘               e
+ └───────┘         │
+    ╰──────────────╯                               ║   ╰──────╯      ╰───────
+frame 2 at 200ms
+ rataflow-view · 77x47 @100% · canvas 173x128 · c4-l0-final.json · 36 nodes ·
+
+─────────────────────────────────────────────────────────────────────────────
+L0 · System context
+System context: the machine manager is one box. The control plane and humans
+drives the bare-metal providers, boots and audits the machines, which pull th
+S3, and it alerts in Slack. Nothing inside is shown yet, so L1 opens it.
+
+   ╭─────────────╮
+   │machine-agent│────────────────────────╮
+   │             │  register + heartbeat  │
+   ╰─────────────╯                        │               provider API
+                                          │ ╭───────────────╮  boot + audit
+╭───────────────────╮    provisioning     ╰▶│               │────────────────
+│Modal control plane│─────────────────────╮ │               │
+│                   │                     ╰▶│Machine manager│────────────────
+╰───────────────────╯                       │               │
+                                          ╭▶│               │────────────────
+   ╭──────────────╮         http          │ ╰───────────────╯confirm + alerts
+   │humans + mmctl│───────────────────────╯
+   │              │
+   ╰──────────────╯
+
+
+─────────────────────────────────────────────────────────────────────────────
+L1 · The machine manager
+L0's box opened one level: its boundary services — private gRPC, webapi, prov
+cluster reconcile, SSH + BMC ops and the boot server — sit in the Machine man
+control plane, humans, providers and machines stay outside it.
+
+
+
+                                                   ╔═Machine manager═════════
+                                                   ║                    ╭────
+                                                   ║                    │boot
+                                                   ║                    │
+                                                                            ─
+                                                          █▖▗▖ █▌▗▖
+ ╭───────────────────╮ create / terminate / repair        ▀    ▝            ─
+ │Modal control plane│─────────────────────────────       █▘ ▜█▘▝▀ ▝▀       r
+ ┌───────┐           │                                        ▐▌
+ │ + [+]─│───────────╯                                    ▀▘▀ ▝▌ ▀          ─
+ │ − [-] │                                                ▄ ▙ ▝▘ █
+ │ ⊡ [f]─│─────────╮               http                   ▄                 ─
+ │ □ [i]a│s + mmctl│───────────────────────────────       █ ▘               e
+ └───────┘         │
+    ╰──────────────╯                               ║   ╰──────╯      ╰───────
+frame 3 at 300ms
+ rataflow-view · 77x47 @100% · canvas 173x128 · c4-l0-final.json · 36 nodes ·
+
+─────────────────────────────────────────────────────────────────────────────
+L0 · System context
+System context: the machine manager is one box. The control plane and humans
+drives the bare-metal providers, boots and audits the machines, which pull th
+S3, and it alerts in Slack. Nothing inside is shown yet, so L1 opens it.
+
+   ╭─────────────╮
+   │machine-agent│────────────────────────╮
+   │             │  register + heartbeat  │
+   ╰─────────────╯                        │               provider API
+                                          │ ╭───────────────╮  boot + audit
+╭───────────────────╮    provisioning     ╰▶│               │────────────────
+│Modal control plane│─────────────────────╮ │               │
+│                   │                     ╰▶│Machine manager│────────────────
+╰───────────────────╯                       │               │
+                                          ╭▶│               │────────────────
+   ╭──────────────╮         http          │ ╰───────────────╯confirm + alerts
+   │humans + mmctl│───────────────────────╯
+   │              │
+   ╰──────────────╯
+
+
+─────────────────────────────────────────────────────────────────────────────
+L1 · The machine manager
+L0's box opened one level: its boundary services — private gRPC, webapi, prov
+cluster reconcile, SSH + BMC ops and the boot server — sit in the Machine man
+control plane, humans, providers and machines stay outside it.
+
+
+
+                                                   ╔═Machine manager═════════
+                                                   ║                    ╭────
+                                                   ║                    │boot
+                                                   ║                    │
+                                                                            ─
+                                                          █▖▗▖ █▌▗▖
+ ╭───────────────────╮ create / terminate / repair        ▀    ▝            ─
+ │Modal control plane│─────────────────────────────       █▘ ▜█▘▝▀ ▝▀       r
+ ┌───────┐           │                                        ▐▌
+ │ + [+]─│───────────╯                                    ▀▘▀ ▝▌ ▀          ─
+ │ − [-] │                                                ▄ ▙ ▝▘ █
+ │ ⊡ [f]─│─────────╮               http                   ▄                 ─
+ │ □ [i]a│s + mmctl│───────────────────────────────       █ ▘               e
+ └───────┘         │
+    ╰──────────────╯                               ║   ╰──────╯      ╰───────
+frame 4 at 400ms
+ rataflow-view · 77x47 @100% · canvas 173x128 · c4-l0-final.json · 36 nodes ·
+
+─────────────────────────────────────────────────────────────────────────────
+L0 · System context
+System context: the machine manager is one box. The control plane and humans
+drives the bare-metal providers, boots and audits the machines, which pull th
+S3, and it alerts in Slack. Nothing inside is shown yet, so L1 opens it.
+
+   ╭─────────────╮
+   │machine-agent│────────────────────────╮
+   │             │  register + heartbeat  │
+   ╰─────────────╯                        │               provider API
+                                          │ ╭───────────────╮  boot + audit
+╭───────────────────╮    provisioning     ╰▶│               │────────────────
+│Modal control plane│─────────────────────╮ │               │
+│                   │                     ╰▶│Machine manager│────────────────
+╰───────────────────╯                       │               │
+                                          ╭▶│               │────────────────
+   ╭──────────────╮         http          │ ╰───────────────╯confirm + alerts
+   │humans + mmctl│───────────────────────╯
+   │              │
+   ╰──────────────╯
+
+
+─────────────────────────────────────────────────────────────────────────────
+L1 · The machine manager
+L0's box opened one level: its boundary services — private gRPC, webapi, prov
+cluster reconcile, SSH + BMC ops and the boot server — sit in the Machine man
+control plane, humans, providers and machines stay outside it.
+
+
+
+                                                   ╔═Machine manager═════════
+                                                   ║                    ╭────
+                                                   ║                    │boot
+                                                   ║                    │
+                                                                            ─
+                                                          █▖▗▖ █▌▗▖
+ ╭───────────────────╮ create / terminate / repair        ▀    ▝            ─
+ │Modal control plane│─────────────────────────────       █▘ ▜█▘▝▀ ▝▀       r
+ ┌───────┐           │                                        ▐▌
+ │ + [+]─│───────────╯                                    ▀▘▀ ▝▌ ▀          ─
+ │ − [-] │                                                ▄ ▙ ▝▘ █
+ │ ⊡ [f]─│─────────╮               http                   ▄                 ─
+ │ □ [i]a│s + mmctl│───────────────────────────────       █ ▘               e
+ └───────┘         │
+    ╰──────────────╯                               ║   ╰──────╯      ╰───────
+frame 5 at 500ms
+ rataflow-view · 77x47 @100% · canvas 173x128 · c4-l0-final.json · 36 nodes ·
+
+─────────────────────────────────────────────────────────────────────────────
+L0 · System context
+System context: the machine manager is one box. The control plane and humans
+drives the bare-metal providers, boots and audits the machines, which pull th
+S3, and it alerts in Slack. Nothing inside is shown yet, so L1 opens it.
+
+   ╭─────────────╮
+   │machine-agent│────────────────────────╮
+   │             │  register + heartbeat  │
+   ╰─────────────╯                        │               provider API
+                                          │ ╭───────────────╮  boot + audit
+╭───────────────────╮    provisioning     ╰▶│               │────────────────
+│Modal control plane│─────────────────────╮ │               │
+│                   │                     ╰▶│Machine manager│────────────────
+╰───────────────────╯                       │               │
+                                          ╭▶│               │────────────────
+   ╭──────────────╮         http          │ ╰───────────────╯confirm + alerts
+   │humans + mmctl│───────────────────────╯
+   │              │
+   ╰──────────────╯
+
+
+─────────────────────────────────────────────────────────────────────────────
+L1 · The machine manager
+L0's box opened one level: its boundary services — private gRPC, webapi, prov
+cluster reconcile, SSH + BMC ops and the boot server — sit in the Machine man
+control plane, humans, providers and machines stay outside it.
+
+
+
+                                                   ╔═Machine manager═════════
+                                                   ║                    ╭────
+                                                   ║                    │boot
+                                                   ║                    │
+                                                                            ─
+                                                          █▖▗▖ █▌▗▖
+ ╭───────────────────╮ create / terminate / repair        ▀    ▝            ─
+ │Modal control plane│─────────────────────────────       █▘ ▜█▘▝▀ ▝▀       r
+ ┌───────┐           │                                        ▐▌
+ │ + [+]─│───────────╯                                    ▀▘▀ ▝▌ ▀          ─
+ │ − [-] │                                                ▄ ▙ ▝▘ █
+ │ ⊡ [f]─│─────────╮               http                   ▄                 ─
+ │ □ [i]a│s + mmctl│───────────────────────────────       █ ▘               e
+ └───────┘         │
+    ╰──────────────╯                               ║   ╰──────╯      ╰───────
+frame 6 at 600ms
+ rataflow-view · 77x47 @100% · canvas 173x128 · c4-l0-final.json · 36 nodes ·
+
+─────────────────────────────────────────────────────────────────────────────
+L0 · System context
+System context: the machine manager is one box. The control plane and humans
+drives the bare-metal providers, boots and audits the machines, which pull th
+S3, and it alerts in Slack. Nothing inside is shown yet, so L1 opens it.
+
+   ╭─────────────╮
+   │machine-agent│────────────────────────╮
+   │             │  register + heartbeat  │
+   ╰─────────────╯                        │               provider API
+                                          │ ╭───────────────╮  boot + audit
+╭───────────────────╮    provisioning     ╰▶│               │────────────────
+│Modal control plane│─────────────────────╮ │               │
+│                   │                     ╰▶│Machine manager│────────────────
+╰───────────────────╯                       │               │
+                                          ╭▶│               │────────────────
+   ╭──────────────╮         http          │ ╰───────────────╯confirm + alerts
+   │humans + mmctl│───────────────────────╯
+   │              │
+   ╰──────────────╯
+
+
+─────────────────────────────────────────────────────────────────────────────
+L1 · The machine manager
+L0's box opened one level: its boundary services — private gRPC, webapi, prov
+cluster reconcile, SSH + BMC ops and the boot server — sit in the Machine man
+control plane, humans, providers and machines stay outside it.
+
+
+
+                                                   ╔═Machine manager═════════
+                                                   ║                    ╭────
+                                                   ║                    │boot
+                                                   ║                    │
+                                                                            ─
+                                                          █▖▗▖ █▌▗▖
+ ╭───────────────────╮ create / terminate / repair        ▀    ▝            ─
+ │Modal control plane│─────────────────────────────       █▘ ▜█▘▝▀ ▝▀       r
+ ┌───────┐           │                                        ▐▌
+ │ + [+]─│───────────╯                                    ▀▘▀ ▝▌ ▀          ─
+ │ − [-] │                                                ▄ ▙ ▝▘ █
+ │ ⊡ [f]─│─────────╮               http                   ▄                 ─
+ │ □ [i]a│s + mmctl│───────────────────────────────       █ ▘               e
+ └───────┘         │
+    ╰──────────────╯                               ║   ╰──────╯      ╰───────
+frame 7 at 700ms
+ rataflow-view · 77x47 @100% · canvas 173x128 · c4-l0-final.json · 36 nodes ·
+
+─────────────────────────────────────────────────────────────────────────────
+L0 · System context
+System context: the machine manager is one box. The control plane and humans
+drives the bare-metal providers, boots and audits the machines, which pull th
+S3, and it alerts in Slack. Nothing inside is shown yet, so L1 opens it.
+
+   ╭─────────────╮
+   │machine-agent│────────────────────────╮
+   │             │  register + heartbeat  │
+   ╰─────────────╯                        │               provider API
+                                          │ ╭───────────────╮  boot + audit
+╭───────────────────╮    provisioning     ╰▶│               │────────────────
+│Modal control plane│─────────────────────╮ │               │
+│                   │                     ╰▶│Machine manager│────────────────
+╰───────────────────╯                       │               │
+                                          ╭▶│               │────────────────
+   ╭──────────────╮         http          │ ╰───────────────╯confirm + alerts
+   │humans + mmctl│───────────────────────╯
+   │              │
+   ╰──────────────╯
+
+
+─────────────────────────────────────────────────────────────────────────────
+L1 · The machine manager
+L0's box opened one level: its boundary services — private gRPC, webapi, prov
+cluster reconcile, SSH + BMC ops and the boot server — sit in the Machine man
+control plane, humans, providers and machines stay outside it.
+
+
+
+                                                   ╔═Machine manager═════════
+                                                   ║                    ╭────
+                                                   ║                    │boot
+                                                   ║                    │
+                                                                            ─
+                                                          █▖▗▖ █▌▗▖
+ ╭───────────────────╮ create / terminate / repair        ▀    ▝            ─
+ │Modal control plane│─────────────────────────────       █▘ ▜█▘▝▀ ▝▀       r
+ ┌───────┐           │                                        ▐▌
+ │ + [+]─│───────────╯                                    ▀▘▀ ▝▌ ▀          ─
+ │ − [-] │                                                ▄ ▙ ▝▘ █
+ │ ⊡ [f]─│─────────╮               http                   ▄                 ─
+ │ □ [i]a│s + mmctl│───────────────────────────────       █ ▘               e
+ └───────┘         │
+    ╰──────────────╯                               ║   ╰──────╯      ╰───────
+frame 8 at 800ms
+ rataflow-view · 77x47 @100% · canvas 173x128 · c4-l0-final.json · 36 nodes ·
+
+─────────────────────────────────────────────────────────────────────────────
+L0 · System context
+System context: the machine manager is one box. The control plane and humans
+drives the bare-metal providers, boots and audits the machines, which pull th
+S3, and it alerts in Slack. Nothing inside is shown yet, so L1 opens it.
+
+   ╭─────────────╮
+   │machine-agent│────────────────────────╮
+   │             │  register + heartbeat  │
+   ╰─────────────╯                        │               provider API
+                                          │ ╭───────────────╮  boot + audit
+╭───────────────────╮    provisioning     ╰▶│               │────────────────
+│Modal control plane│─────────────────────╮ │               │
+│                   │                     ╰▶│Machine manager│────────────────
+╰───────────────────╯                       │               │
+                                          ╭▶│               │────────────────
+   ╭──────────────╮         http          │ ╰───────────────╯confirm + alerts
+   │humans + mmctl│───────────────────────╯
+   │              │
+   ╰──────────────╯
+
+
+─────────────────────────────────────────────────────────────────────────────
+L1 · The machine manager
+L0's box opened one level: its boundary services — private gRPC, webapi, prov
+cluster reconcile, SSH + BMC ops and the boot server — sit in the Machine man
+control plane, humans, providers and machines stay outside it.
+
+
+
+                                                   ╔═Machine manager═════════
+                                                   ║                    ╭────
+                                                   ║                    │boot
+                                                   ║                    │
+                                                                            ─
+                                                          █▖▗▖ █▌▗▖
+ ╭───────────────────╮ create / terminate / repair        ▀    ▝            ─
+ │Modal control plane│─────────────────────────────       █▘ ▜█▘▝▀ ▝▀       r
+ ┌───────┐           │                                        ▐▌
+ │ + [+]─│───────────╯                                    ▀▘▀ ▝▌ ▀          ─
+ │ − [-] │                                                ▄ ▙ ▝▘ █
+ │ ⊡ [f]─│─────────╮               http                   ▄                 ─
+ │ □ [i]a│s + mmctl│───────────────────────────────       █ ▘               e
+ └───────┘         │
+    ╰──────────────╯                               ║   ╰──────╯      ╰───────
+frame 9 at 900ms
+ rataflow-view · 77x47 @100% · canvas 173x128 · c4-l0-final.json · 36 nodes ·
+
+─────────────────────────────────────────────────────────────────────────────
+L0 · System context
+System context: the machine manager is one box. The control plane and humans
+drives the bare-metal providers, boots and audits the machines, which pull th
+S3, and it alerts in Slack. Nothing inside is shown yet, so L1 opens it.
+
+   ╭─────────────╮
+   │machine-agent│────────────────────────╮
+   │             │  register + heartbeat  │
+   ╰─────────────╯                        │               provider API
+                                          │ ╭───────────────╮  boot + audit
+╭───────────────────╮    provisioning     ╰▶│               │────────────────
+│Modal control plane│─────────────────────╮ │               │
+│                   │                     ╰▶│Machine manager│────────────────
+╰───────────────────╯                       │               │
+                                          ╭▶│               │────────────────
+   ╭──────────────╮         http          │ ╰───────────────╯confirm + alerts
+   │humans + mmctl│───────────────────────╯
+   │              │
+   ╰──────────────╯
+
+
+─────────────────────────────────────────────────────────────────────────────
+L1 · The machine manager
+L0's box opened one level: its boundary services — private gRPC, webapi, prov
+cluster reconcile, SSH + BMC ops and the boot server — sit in the Machine man
+control plane, humans, providers and machines stay outside it.
+
+
+
+                                                   ╔═Machine manager═════════
+                                                   ║                    ╭────
+                                                   ║                    │boot
+                                                   ║                    │
+                                                                            ─
+                                                          █▖▗▖ █▌▗▖
+ ╭───────────────────╮ create / terminate / repair        ▀    ▝            ─
+ │Modal control plane│─────────────────────────────       █▘ ▜█▘▝▀ ▝▀       r
+ ┌───────┐           │                                        ▐▌
+ │ + [+]─│───────────╯                                    ▀▘▀ ▝▌ ▀          ─
+ │ − [-] │                                                ▄ ▙ ▝▘ █
+ │ ⊡ [f]─│─────────╮               http                   ▄                 ─
+ │ □ [i]a│s + mmctl│───────────────────────────────       █ ▘               e
+ └───────┘         │
+    ╰──────────────╯                               ║   ╰──────╯      ╰───────
+frame 10 at 1000ms
+ rataflow-view · 77x47 @100% · canvas 173x128 · c4-l0-final.json · 36 nodes ·
+
+─────────────────────────────────────────────────────────────────────────────
+L0 · System context
+System context: the machine manager is one box. The control plane and humans
+drives the bare-metal providers, boots and audits the machines, which pull th
+S3, and it alerts in Slack. Nothing inside is shown yet, so L1 opens it.
+
+   ╭─────────────╮
+   │machine-agent│────────────────────────╮
+   │             │  register + heartbeat  │
+   ╰─────────────╯                        │               provider API
+                                          │ ╭───────────────╮  boot + audit
+╭───────────────────╮    provisioning     ╰▶│               │────────────────
+│Modal control plane│─────────────────────╮ │               │
+│                   │                     ╰▶│Machine manager│────────────────
+╰───────────────────╯                       │               │
+                                          ╭▶│               │────────────────
+   ╭──────────────╮         http          │ ╰───────────────╯confirm + alerts
+   │humans + mmctl│───────────────────────╯
+   │              │
+   ╰──────────────╯
+
+
+─────────────────────────────────────────────────────────────────────────────
+L1 · The machine manager
+L0's box opened one level: its boundary services — private gRPC, webapi, prov
+cluster reconcile, SSH + BMC ops and the boot server — sit in the Machine man
+control plane, humans, providers and machines stay outside it.
+
+
+
+                                                   ╔═Machine manager═════════
+                                                   ║                    ╭────
+                                                   ║                    │boot
+                                                   ║                    │
+                                                                            ─
+                                                          █▖▗▖ █▌▗▖
+ ╭───────────────────╮ create / terminate / repair        ▀    ▝            ─
+ │Modal control plane│─────────────────────────────       █▘ ▜█▘▝▀ ▝▀       r
+ ┌───────┐           │                                        ▐▌
+ │ + [+]─│───────────╯                                    ▀▘▀ ▝▌ ▀          ─
+ │ − [-] │                                                ▄ ▙ ▝▘ █
+ │ ⊡ [f]─│─────────╮               http                   ▄                 ─
+ │ □ [i]a│s + mmctl│───────────────────────────────       █ ▘               e
+ └───────┘         │
+    ╰──────────────╯                               ║   ╰──────╯      ╰───────
+frame 11 at 1100ms
+ rataflow-view · 77x47 @100% · canvas 173x128 · c4-l0-final.json · 36 nodes ·
+
+─────────────────────────────────────────────────────────────────────────────
+L0 · System context
+System context: the machine manager is one box. The control plane and humans
+drives the bare-metal providers, boots and audits the machines, which pull th
+S3, and it alerts in Slack. Nothing inside is shown yet, so L1 opens it.
+
+   ╭─────────────╮
+   │machine-agent│────────────────────────╮
+   │             │  register + heartbeat  │
+   ╰─────────────╯                        │               provider API
+                                          │ ╭───────────────╮  boot + audit
+╭───────────────────╮    provisioning     ╰▶│               │────────────────
+│Modal control plane│─────────────────────╮ │               │
+│                   │                     ╰▶│Machine manager│────────────────
+╰───────────────────╯                       │               │
+                                          ╭▶│               │────────────────
+   ╭──────────────╮         http          │ ╰───────────────╯confirm + alerts
+   │humans + mmctl│───────────────────────╯
+   │              │
+   ╰──────────────╯
+
+
+─────────────────────────────────────────────────────────────────────────────
+L1 · The machine manager
+L0's box opened one level: its boundary services — private gRPC, webapi, prov
+cluster reconcile, SSH + BMC ops and the boot server — sit in the Machine man
+control plane, humans, providers and machines stay outside it.
+
+
+
+                                                   ╔═Machine manager═════════
+                                                   ║                    ╭────
+                                                   ║                    │boot
+                                                   ║                    │
+                                                                            ─
+                                                          █▖▗▖ █▌▗▖
+ ╭───────────────────╮ create / terminate / repair        ▀    ▝            ─
+ │Modal control plane│─────────────────────────────       █▘ ▜█▘▝▀ ▝▀       r
+ ┌───────┐           │                                        ▐▌
+ │ + [+]─│───────────╯                                    ▀▘▀ ▝▌ ▀          ─
+ │ − [-] │                                                ▄ ▙ ▝▘ █
+ │ ⊡ [f]─│─────────╮               http                   ▄                 ─
+ │ □ [i]a│s + mmctl│───────────────────────────────       █ ▘               e
+ └───────┘         │
+    ╰──────────────╯                               ║   ╰──────╯      ╰───────

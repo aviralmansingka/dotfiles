@@ -1,0 +1,32 @@
+viewport: 100x30 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 100x30 @100% · q4fan-idsort.json · 5 nodes · 4 edges · q quit
+
+
+
+
+                                 ╭──────────────╮   ╭─────────────╮
+                                 │humans + mmctl│   │control plane│
+                                 │              │   │             │
+                                 ╰──────────────╯   ╰─────────────╯
+                                        │  http            │ create/terminate/repair
+                                        │                  │
+                                        ╰╮                ╭╯
+                                         ▼                ▼
+                                  ╭─────────────╮   ╭────────────╮
+                                  │webapi server│   │private gRPC│
+                                  │             │   │            │
+                                  ╰─────────────╯   ╰────────────╯
+                                         │                │  enqueue job
+                                         │                │
+                                         ╰───────╮ ╭──────╯
+                                                 ▼ ▼reinstall+reprov
+                                            ╭───────────╮
+                                            │River queue│
+ ┌───────┐                                  │           │
+ │ + [+] │                                  ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+

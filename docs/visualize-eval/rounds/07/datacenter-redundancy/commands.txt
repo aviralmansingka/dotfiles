@@ -1,0 +1,19 @@
+# Round-07 datacenter-redundancy — exact commands (run from docs/visualize-eval/rounds/07)
+# 1. build (verifies each round-05 spec sha256 before writing)
+python3 build_reactflow.py
+
+# 2. open in a browser pane
+terminal-browser open "$PWD/datacenter-redundancy/reactflow.html" --split right --size 0.55
+
+# 3. wait for fitView to settle, then read facts (ready flag + counts + zoom)
+terminal-browser action --tab t2 -- eval "JSON.stringify({ready:!!window.__rfReady, views:[...document.querySelectorAll('.view')].map(v=>[v.id, v.querySelectorAll('.react-flow__node-plain').length, v.querySelectorAll('.react-flow__edge').length, v.querySelectorAll('.rf-edge-label').length, v.querySelectorAll('animateMotion').length])})"
+
+# 4. capture the whole page
+terminal-browser action --tab t2 -- screenshot --full "$PWD/datacenter-redundancy/capture-raw.png"
+
+# 5. trim to the page box (4884x9268 -> 2442x4634 = page 1221x2317 CSS at 2x)
+python3 - <<'PY'
+from PIL import Image
+im = Image.open('datacenter-redundancy/capture-raw.png')
+im.crop((0, 0, 1221*2, 2317*2)).save('datacenter-redundancy/capture.png')
+PY

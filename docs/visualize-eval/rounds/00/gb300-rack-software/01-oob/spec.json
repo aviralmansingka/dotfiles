@@ -1,0 +1,62 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "rms",
+      "label": "nv-rms"
+    },
+    {
+      "id": "oob",
+      "label": "OOB Ethernet"
+    },
+    {
+      "id": "c",
+      "label": "Compute BMCs"
+    },
+    {
+      "id": "s",
+      "label": "Switch BMCs"
+    },
+    {
+      "id": "p",
+      "label": "Power shelf"
+    }
+  ],
+  "edges": [
+    {
+      "from": "rms",
+      "to": "oob",
+      "label": "client on"
+    },
+    {
+      "from": "oob",
+      "to": "c",
+      "label": "reaches"
+    },
+    {
+      "from": "oob",
+      "to": "s",
+      "label": "reaches"
+    },
+    {
+      "from": "oob",
+      "to": "p",
+      "label": "reaches"
+    }
+  ],
+  "layers": [
+    [
+      "rms"
+    ],
+    [
+      "oob"
+    ],
+    [
+      "",
+      "c",
+      "s",
+      "p"
+    ]
+  ]
+}

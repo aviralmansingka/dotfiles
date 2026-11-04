@@ -1,0 +1,280 @@
+{
+  "case_id": "gb300-rack-software",
+  "round": "00",
+  "candidate_skill_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+  "renderer_sha256": "b6e11b05b4fb79ce969dc2646c667572535a949bd1a396fd711e1a5466298c8f",
+  "renderer": "/tmp/visualize-eval/round-00/bin/rataflow-view",
+  "views": [
+    {
+      "id": "01-oob",
+      "spec": "01-oob/spec.json",
+      "text": "01-oob/visible.txt",
+      "ansi": "01-oob/visible.ansi",
+      "check": "01-oob/check.txt",
+      "check_exit": "01-oob/check.exit.txt",
+      "check_stderr": "01-oob/check.stderr.txt",
+      "dimensions": "01-oob/dimensions.txt",
+      "capture_metadata": "01-oob/capture.json",
+      "rows": 47,
+      "cols": 77,
+      "zoom": 1,
+      "local_spec_attempts": 2,
+      "known_defects": [
+        "Independent OOB routes form ambiguous crossings and apparent branches; not a real shared trunk.",
+        "Missing visible target arrowheads: rms -> oob, oob -> c, oob -> p.",
+        "OOB -> p begins sideways instead of a clear downward source stem."
+      ],
+      "selected_text": "01-oob/selected.txt",
+      "selected_ansi": "01-oob/selected.ansi",
+      "check_metadata": "01-oob/check.metadata.json",
+      "spec_sha256": "12931f2578d4838e36dacf4acb6ee7a3479825828f735241da960a9df6762e0c",
+      "tab_selection_changed_ansi": true
+    },
+    {
+      "id": "02-control",
+      "spec": "02-control/spec.json",
+      "text": "02-control/visible.txt",
+      "ansi": "02-control/visible.ansi",
+      "check": "02-control/check.txt",
+      "check_exit": "02-control/check.exit.txt",
+      "check_stderr": "02-control/check.stderr.txt",
+      "dimensions": "02-control/dimensions.txt",
+      "capture_metadata": "02-control/capture.json",
+      "rows": 47,
+      "cols": 77,
+      "zoom": 1,
+      "local_spec_attempts": 3,
+      "known_defects": [
+        "Check reports one omitted edge label; rms -> c Redfish/HTTPS is absent from capture.",
+        "Routes around RMS/OOB cross and visually join; source ownership is ambiguous.",
+        "Missing visible target arrowheads: rms -> c, rms -> os, rms -> nmx, os -> nmx."
+      ],
+      "selected_text": "02-control/selected.txt",
+      "selected_ansi": "02-control/selected.ansi",
+      "check_metadata": "02-control/check.metadata.json",
+      "spec_sha256": "0328dbb76396410fb2e4911aa7d885406d273d585d5e13a8a2f4f59ed28471f7",
+      "tab_selection_changed_ansi": true
+    },
+    {
+      "id": "03-inband",
+      "spec": "03-inband/spec.json",
+      "text": "03-inband/visible.txt",
+      "ansi": "03-inband/visible.ansi",
+      "check": "03-inband/check.txt",
+      "check_exit": "03-inband/check.exit.txt",
+      "check_stderr": "03-inband/check.stderr.txt",
+      "dimensions": "03-inband/dimensions.txt",
+      "capture_metadata": "03-inband/capture.json",
+      "rows": 47,
+      "cols": 77,
+      "zoom": 1,
+      "local_spec_attempts": 2,
+      "known_defects": [
+        "Missing visible target arrowheads: k -> op, op -> d, d -> drv.",
+        "d -> x begins sideways and visually joins d -> drv.",
+        "ANSI shows muted gray cells in node borders instead of continuous layer color, including Kubernetes, GPU Operator and DCGM."
+      ],
+      "selected_text": "03-inband/selected.txt",
+      "selected_ansi": "03-inband/selected.ansi",
+      "check_metadata": "03-inband/check.metadata.json",
+      "spec_sha256": "73fefa7bbee821d6dd569d596ac8f589d5e59c3ae6a0282afcf02356f6abbac5",
+      "tab_selection_changed_ansi": true
+    },
+    {
+      "id": "04-hosts",
+      "spec": "04-hosts/spec.json",
+      "text": "04-hosts/visible.txt",
+      "ansi": "04-hosts/visible.ansi",
+      "check": "04-hosts/check.txt",
+      "check_exit": "04-hosts/check.exit.txt",
+      "check_stderr": "04-hosts/check.stderr.txt",
+      "dimensions": "04-hosts/dimensions.txt",
+      "capture_metadata": "04-hosts/capture.json",
+      "rows": 47,
+      "cols": 77,
+      "zoom": 1,
+      "local_spec_attempts": 3,
+      "known_defects": [
+        "Host fan-out forms apparent joins/crossings.",
+        "Missing visible target arrowheads: host -> d and host -> fm.",
+        "host -> fm starts sideways."
+      ],
+      "selected_text": "04-hosts/selected.txt",
+      "selected_ansi": "04-hosts/selected.ansi",
+      "check_metadata": "04-hosts/check.metadata.json",
+      "spec_sha256": "85812bf763f0f3f572914f8d58ef3854309deba14bb50511c09931bbb192ff2a",
+      "tab_selection_changed_ansi": true
+    }
+  ],
+  "coverage": [
+    {
+      "original_relation": "rms -> oob",
+      "view": "01-oob",
+      "view_relation": "rms -> oob: client on",
+      "status": "represented",
+      "qualification": "Historical source qualified in generation.md; reaches is physical reachability, not a protocol. Represented in spec does not mean visually readable."
+    },
+    {
+      "original_relation": "oob -> bmc_c",
+      "view": "01-oob",
+      "view_relation": "oob -> c: reaches",
+      "status": "represented",
+      "qualification": "Historical source qualified in generation.md; reaches is physical reachability, not a protocol. Represented in spec does not mean visually readable."
+    },
+    {
+      "original_relation": "oob -> bmc_s",
+      "view": "01-oob",
+      "view_relation": "oob -> s: reaches",
+      "status": "represented",
+      "qualification": "Historical source qualified in generation.md; reaches is physical reachability, not a protocol. Represented in spec does not mean visually readable."
+    },
+    {
+      "original_relation": "oob -> pwr",
+      "view": "01-oob",
+      "view_relation": "oob -> p: reaches",
+      "status": "represented",
+      "qualification": "Historical source qualified in generation.md; reaches is physical reachability, not a protocol. Represented in spec does not mean visually readable."
+    },
+    {
+      "original_relation": "oob -> nvos",
+      "view": "02-control",
+      "view_relation": "oob -> os: reaches",
+      "status": "represented",
+      "qualification": "Historical source qualified in generation.md; reaches is physical reachability, not a protocol. Represented in spec does not mean visually readable."
+    },
+    {
+      "original_relation": "nvos -> nmxc",
+      "view": "02-control",
+      "view_relation": "os -> nmx: hosts",
+      "status": "represented",
+      "qualification": "Historical source qualified in generation.md; reaches is physical reachability, not a protocol. Represented in spec does not mean visually readable."
+    },
+    {
+      "original_relation": "k8s -> gpuop",
+      "view": "03-inband",
+      "view_relation": "k -> op: runs operator",
+      "status": "represented",
+      "qualification": "Historical source qualified in generation.md; reaches is physical reachability, not a protocol. Represented in spec does not mean visually readable."
+    },
+    {
+      "original_relation": "gpuop -> dcgm",
+      "view": "03-inband",
+      "view_relation": "op -> d: DaemonSet",
+      "status": "represented",
+      "qualification": "Historical source qualified in generation.md; reaches is physical reachability, not a protocol. Represented in spec does not mean visually readable."
+    },
+    {
+      "original_relation": "dcgm -> dcgmx",
+      "view": "03-inband",
+      "view_relation": "d -> x: metrics",
+      "status": "represented",
+      "qualification": "Historical source qualified in generation.md; reaches is physical reachability, not a protocol. Represented in spec does not mean visually readable."
+    },
+    {
+      "original_relation": "dcgm -> drvk",
+      "view": "03-inband",
+      "view_relation": "d -> drv: NVML reads",
+      "status": "represented",
+      "qualification": "Historical source qualified in generation.md; reaches is physical reachability, not a protocol. Represented in spec does not mean visually readable."
+    },
+    {
+      "original_relation": "drvk -> fm",
+      "view": "04-hosts",
+      "view_relation": "host -> drv: hosts; host -> fm: hosts",
+      "status": "blocked-original; co-residency-only",
+      "qualification": "No supported driver-to-Fabric-Manager dependency in excerpts; not invented."
+    },
+    {
+      "original_relation": "nv-rms -> Compute BMCs: Redfish/HTTPS",
+      "view": "02-control",
+      "view_relation": "rms -> c: Redfish/HTTPS",
+      "status": "represented",
+      "qualification": "Line 283 historical assistant claim, not independently verified; NMX-C call does not assert NMX-T gRPC."
+    },
+    {
+      "original_relation": "nv-rms -> power-shelf controllers: Redfish/HTTPS",
+      "view": "02-control",
+      "view_relation": "rms -> p: Redfish/HTTPS",
+      "status": "represented",
+      "qualification": "Line 283 historical assistant claim, not independently verified; NMX-C call does not assert NMX-T gRPC."
+    },
+    {
+      "original_relation": "nv-rms -> NVOS: NVUE REST and SSH/SFTP",
+      "view": "02-control",
+      "view_relation": "rms -> os: NVUE SSH/SFTP",
+      "status": "represented",
+      "qualification": "Line 283 historical assistant claim, not independently verified; NMX-C call does not assert NMX-T gRPC."
+    },
+    {
+      "original_relation": "nv-rms -> NMX-C: gRPC",
+      "view": "02-control",
+      "view_relation": "rms -> nmx: NMX-C gRPC",
+      "status": "represented",
+      "qualification": "Line 283 historical assistant claim, not independently verified; NMX-C call does not assert NMX-T gRPC."
+    },
+    {
+      "original_relation": "ONE OOB trunk splitting ONCE to three hardware branches",
+      "view": "01-oob",
+      "view_relation": null,
+      "status": "blocked",
+      "qualification": "No shared trunk/junction primitive; independent routed edges are not a substitute."
+    },
+    {
+      "original_relation": "OOB -> DCGM prohibited",
+      "view": null,
+      "view_relation": null,
+      "status": "preserved-negative",
+      "qualification": "No such edge or shared node across the OOB and in-band graphs."
+    },
+    {
+      "original_relation": "Compute host OS hosts DCGM, exporter, driver/CUDA and Fabric Manager",
+      "view": "04-hosts",
+      "view_relation": "host -> d; host -> drv; host -> fm",
+      "status": "represented",
+      "qualification": "Host residency, not GPU-die placement or deployment dependency."
+    },
+    {
+      "original_relation": "OOB reaches CDU controller and PDUs",
+      "view": null,
+      "view_relation": null,
+      "status": "text-only",
+      "qualification": "Source lines 271/277; contextual endpoints not drawn in the three-branch focused OOB view."
+    },
+    {
+      "original_relation": "dcgm-exporter -> Prometheus metrics on :9400",
+      "view": null,
+      "view_relation": null,
+      "status": "text-only",
+      "qualification": "Line 277; stated in generation.md, not a fabricated OOB relation."
+    }
+  ],
+  "blockers": [
+    "Candidate has no shared-trunk/junction primitive: the explicitly requested one trunk / one split is unsatisfied.",
+    "Unlabeled historical driver/CUDA -> Fabric Manager chain lacks supported dependency semantics; only shared compute-host residency is shown."
+  ],
+  "known_defects": [
+    "See per-view defects; no independent visual approval. Off-rack and NVSwitch residency are described in accompanying report rather than explicit pane containers.",
+    "CDU/PDU reachability and exporter :9400 are text-only."
+  ],
+  "review_status": "pending captain-owned separate Astra review; not self-approved",
+  "source": {
+    "brief": "docs/visualize-eval/cases/gb300-rack-software/source.md",
+    "original_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-vault-research-grace-blackwell--/2026-10-31T11-22-16-652Z_01a191b2-30cc-7236-b360-f3de1efcfa9a.jsonl",
+    "excerpt_lines": [
+      228,
+      266,
+      271,
+      272,
+      277,
+      278,
+      283,
+      284,
+      291
+    ],
+    "historical_write_pointer": "line 285, call_db40c48257f14413bd538516; pointer only, original JSON not read"
+  },
+  "animation": "No case animation requirement; no flow edges or second-phase capture.",
+  "cleanup": "All created viewer panes closed; only generator tab w7E:tG was used.",
+  "execution": "execution.json",
+  "evidence_note": "Final evidence recaptured with timestamps, exact commands and Tab selection after clarification; earlier exploratory invocations only exist in session transcript, not in execution.json."
+}

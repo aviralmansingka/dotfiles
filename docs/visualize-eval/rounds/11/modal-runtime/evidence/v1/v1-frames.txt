@@ -1,0 +1,288 @@
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/v1-seam
+-pair.json
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+󰂃 4% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/
+v1-seam-pair.json
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+󰂃 4% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/
+v1-seam-pair.json --select-all
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+󰂃 4% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/
+v1-seam-pair.json --frames 5 --step-ms 100
+viewport: 82x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 82x51 @100% · v1-seam-pair.json · 2 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        ╭─────────────╮    ╭────────────╮
+                        │             │◀───│            │
+                        │modal-runtime│    │modal-worker│
+                        │             │───▶│            │
+                        ╰─────────────╯    ╰────────────╯
+                              task input + ctrl RPCs
+                               events + mgmt RPCs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 82x51 @100% · v1-seam-pair.json · 2 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        ╭─────────────╮    ╭────────────╮
+                        │             │◀───│            │
+                        │modal-runtime│    │modal-worker│
+                        │             │───▶│            │
+                        ╰─────────────╯    ╰────────────╯
+                              task input + ctrl RPCs
+                               events + mgmt RPCs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 82x51 @100% · v1-seam-pair.json · 2 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        ╭─────────────╮    ╭────────────╮
+                        │             │◀───│            │
+                        │modal-runtime│    │modal-worker│
+                        │             │───▶│            │
+                        ╰─────────────╯    ╰────────────╯
+                              task input + ctrl RPCs
+                               events + mgmt RPCs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 82x51 @100% · v1-seam-pair.json · 2 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        ╭─────────────╮    ╭────────────╮
+                        │             │◀───│            │
+                        │modal-runtime│    │modal-worker│
+                        │             │───▶│            │
+                        ╰─────────────╯    ╰────────────╯
+                              task input + ctrl RPCs
+                               events + mgmt RPCs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 82x51 @100% · v1-seam-pair.json · 2 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        ╭─────────────╮    ╭────────────╮
+                        │             │◀───│            │
+                        │modal-runtime│    │modal-worker│
+                        │             │───▶│            │
+                        ╰─────────────╯    ╰────────────╯
+                              task input + ctrl RPCs
+                               events + mgmt RPCs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+󰂃 4% ❯

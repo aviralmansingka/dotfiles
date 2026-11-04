@@ -1,0 +1,50 @@
+ rataflow-view · 82x51 @100% · v2-boot-heartbeat.json · 7 nodes · 7 edges · q quit
+
+
+
+
+
+
+
+                                  ╭───────────╮
+                                  │boot server│
+                                  │           │
+                                  ╰───────────╯
+                                       ▲ │
+                                       ● │boot.ipxe + S3 args
+                          iPXE request │ ●
+                                       │ ▼
+                              ╭───────────────────╮
+                              │bare-metal machines│
+                              │                   │
+                              ╰───────────────────╯
+                                       │ │
+                           runs on host│ │
+                              ╭────────╯ ╰───●───╮
+                              ▼   pull boot image▼
+                       ╭─────────────╮   ╭───────────────╮
+                       │machine-agent│   │S3 object store│
+                       │             │   │               │
+                       ╰─────────────╯   ╰───────────────╯
+                              │ register + heartbeat
+                              │
+                              ╰●╮
+                                ▼
+                          ╭───────────╮   ╭────────────╮
+                          │public gRPC│   │private gRPC│
+                          │           │   │            │
+                          ╰───────────╯   ╰────────────╯
+                                │ machine state │  machine rows
+                                │               │
+                                ╰───●──╮ ╭──●───╯
+                                       ▼ ▼
+                                    ╭────────╮
+                                    │Postgres│
+                                    │        │
+                                    ╰────────╯
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘

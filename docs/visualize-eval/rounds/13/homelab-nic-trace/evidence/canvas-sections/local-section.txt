@@ -1,0 +1,13 @@
+# crop of whole-canvas-215x45-frames.txt frame 0, lines 16-27 (title, description, drawing)
+        Local virtual nets
+        Local to the host: VM behind the libvirt NAT bridge, container behind the Docker bridge.
+
+        ╭─────────╮                ╭─────────────────╮
+        │container│───────────────▶│docker 172.18.2.1│──────────────╮
+        │         │  172.18.2.x    │                 │ docker bridge│ ╭────────────╮
+        ╰─────────╯                ╰─────────────────╯              ╰▶│            │
+                                                                      │homelab host│
+         ╭────────╮    192.168.122.x     ╭──────╮    NAT bridge     ╭▶│            │
+         │VM vnet0│─────────────────────▶│virbr0│───────────────────╯ ╰────────────╯
+         │        │                      │      │
+         ╰────────╯                      ╰──────╯

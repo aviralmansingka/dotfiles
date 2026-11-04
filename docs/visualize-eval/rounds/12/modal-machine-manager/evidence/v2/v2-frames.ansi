@@ -1,0 +1,1000 @@
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 101 at 10100ms
+ rataflow-view · 83x51 @100% · spec-v2-final.json · 11 nodes · 11 edges · q quit
+
+
+
+
+                       ╭───────────╮   ╭───────────────╮
+           ╭──────────▶│boot server│   │River job queue│
+           │           │           │   │               │
+           ●           ╰───────────╯   ╰───────────────╯
+           │                 │                │ │
+           │                 │                │ │
+           │diagnostic events│                │ │
+           │       ╭──────●──⌒────────────────╯ │
+           │       │       ╭─╯      ╭─────────●─╯
+           │       ▼       │        ▼audit/verify reimage
+           │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+           │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+           │ │           │ │ │             │   │                    │
+           │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+           │       │       │        │                    ●
+           │       │       │        │run machine-audit   │
+           │       │       │        ╰───●───────╮        │
+           │       │       ╰───────●──────────╮ │        │
+           │       ╰──●────╮boot.ipxe+S3 args │ │ ╭──────╯
+           │      proposals▼                  ▼ ▼ ▼allocate inst
+           │        ╭─────────────╮   ╭───────────────────╮
+           │        │webapi server│ ╭─│bare-metal machines│
+           │        │             │ │ │                   │
+           │        ╰─────────────╯ │ ╰───────────────────╯
+           │               ●        │          │ ●
+           │   iPXE request│        │          │ │
+           ╰───────────────⌒────────╯          │ │ pull boot image
+                          ╭╯            ╭───●──╯ ╰──╮
+                          ▼             ▼           ▼
+                       ╭─────╮   ╭─────────────╮   ╭──╮
+                       │Slack│   │machine-agent│   │S3│
+                       │     │   │             │   │  │
+                       ╰─────╯   ╰─────────────╯   ╰──╯
+                   confirm + alerts     ●runs on host
+                                        │
+                                       ╭╯reg + heartbeat
+                                       ▼
+                                 ╭───────────╮
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 102 at 10200ms
+ rataflow-view · 83x51 @100% · spec-v2-final.json · 11 nodes · 11 edges · q quit
+
+
+
+
+                       ╭───────────╮   ╭───────────────╮
+           ╭──────────▶│boot server│   │River job queue│
+           ●           │           │   │               │
+           │           ╰───────────╯   ╰───────────────╯
+           │                 │                │ │
+           │                 │                │ │
+           │diagnostic events│                │ │
+           │       ╭─────●───⌒────────────────╯ │
+           │       │       ╭─╯      ╭────────●──╯
+           │       ▼       │        ▼audit/verify reimage
+           │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+           │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+           │ │           │ │ │             │   │                    │
+           │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+           │       │       │        │                    │
+           │       │       │        │run machine-audit   ●
+           │       │       │        ╰────●──────╮        │
+           │       │       ╰────────●─────────╮ │        │
+           │       ╰───●───╮boot.ipxe+S3 args │ │ ╭──────╯
+           │      proposals▼                  ▼ ▼ ▼allocate inst
+           │        ╭─────────────╮   ╭───────────────────╮
+           │        │webapi server│ ╭─│bare-metal machines│
+           │        │             │ │ │                   │
+           │        ╰─────────────╯ │ ╰───────────────────╯
+           │               │        │          │ │
+           │   iPXE request●        │          │ ●
+           ╰───────────────⌒────────╯          │ │ pull boot image
+                          ╭╯            ╭──●───╯ ╰──╮
+                          ▼             ▼           ▼
+                       ╭─────╮   ╭─────────────╮   ╭──╮
+                       │Slack│   │machine-agent│   │S3│
+                       │     │   │             │   │  │
+                       ╰─────╯   ╰─────────────╯   ╰──╯
+                   confirm + alerts     │runs on host
+                                        ●
+                                       ╭╯reg + heartbeat
+                                       ▼
+                                 ╭───────────╮
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 103 at 10300ms
+ rataflow-view · 83x51 @100% · spec-v2-final.json · 11 nodes · 11 edges · q quit
+
+
+
+
+                       ╭───────────╮   ╭───────────────╮
+           ╭──────────▶│boot server│   │River job queue│
+           ●           │           │   │               │
+           │           ╰───────────╯   ╰───────────────╯
+           │                 │                │ │
+           │                 │                │ │
+           │diagnostic events│                │ │
+           │       ╭─────●───⌒────────────────╯ │
+           │       │       ╭─╯      ╭────────●──╯
+           │       ▼       │        ▼audit/verify reimage
+           │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+           │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+           │ │           │ │ │             │   │                    │
+           │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+           │       │       │        │                    │
+           │       │       │        │run machine-audit   ●
+           │       │       │        ╰────●──────╮        │
+           │       │       ╰────────●─────────╮ │        │
+           │       ╰───●───╮boot.ipxe+S3 args │ │ ╭──────╯
+           │      proposals▼                  ▼ ▼ ▼allocate inst
+           │        ╭─────────────╮   ╭───────────────────╮
+           │        │webapi server│ ╭─│bare-metal machines│
+           │        │             │ │ │                   │
+           │        ╰─────────────╯ │ ╰───────────────────╯
+           │               │        │          │ │
+           │   iPXE request●        │          │ ●
+           ╰───────────────⌒────────╯          │ │ pull boot image
+                          ╭╯            ╭──●───╯ ╰──╮
+                          ▼             ▼           ▼
+                       ╭─────╮   ╭─────────────╮   ╭──╮
+                       │Slack│   │machine-agent│   │S3│
+                       │     │   │             │   │  │
+                       ╰─────╯   ╰─────────────╯   ╰──╯
+                   confirm + alerts     │runs on host
+                                        ●
+                                       ╭╯reg + heartbeat
+                                       ▼
+                                 ╭───────────╮
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 104 at 10400ms
+ rataflow-view · 83x51 @100% · spec-v2-final.json · 11 nodes · 11 edges · q quit
+
+
+
+
+                       ╭───────────╮   ╭───────────────╮
+           ╭●─────────▶│boot server│   │River job queue│
+           │           │           │   │               │
+           │           ╰───────────╯   ╰───────────────╯
+           │                 │                │ │
+           │                 │                │ │
+           │diagnostic events│                │ │
+           │       ╭────●────⌒────────────────╯ │
+           │       │       ╭─╯      ╭───────●───╯
+           │       ▼       │        ▼audit/verify reimage
+           │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+           │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+           │ │           │ │ │             │   │                    │
+           │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+           │       │       │        │                    │
+           │       │       │        │run machine-audit   │
+           │       │       │        ╰─────●─────╮        ●
+           │       │       ╰─────────●────────╮ │        │
+           │       ╰────●──╮boot.ipxe+S3 args │ │ ╭──────╯
+           │      proposals▼                  ▼ ▼ ▼allocate inst
+           │        ╭─────────────╮   ╭───────────────────╮
+           │        │webapi server│ ╭─│bare-metal machines│
+           │        │             │ │ │                   │
+           │        ╰─────────────╯ │ ╰───────────────────╯
+           │               ●        │          │ │
+           │   iPXE request│        │          │ │
+           ╰───────────────⌒────────╯          │ ● pull boot image
+                          ╭╯            ╭─●────╯ ╰──╮
+                          ▼             ▼           ▼
+                       ╭─────╮   ╭─────────────╮   ╭──╮
+                       │Slack│   │machine-agent│   │S3│
+                       │     │   │             │   │  │
+                       ╰─────╯   ╰─────────────╯   ╰──╯
+                   confirm + alerts     ●runs on host
+                                        │
+                                       ╭╯reg + heartbeat
+                                       ▼
+                                 ╭───────────╮
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 105 at 10500ms
+ rataflow-view · 83x51 @100% · spec-v2-final.json · 11 nodes · 11 edges · q quit
+
+
+
+
+                       ╭───────────╮   ╭───────────────╮
+           ╭●─────────▶│boot server│   │River job queue│
+           │           │           │   │               │
+           │           ╰───────────╯   ╰───────────────╯
+           │                 │                │ │
+           │                 │                │ │
+           │diagnostic events│                │ │
+           │       ╭────●────⌒────────────────╯ │
+           │       │       ╭─╯      ╭───────●───╯
+           │       ▼       │        ▼audit/verify reimage
+           │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+           │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+           │ │           │ │ │             │   │                    │
+           │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+           │       │       │        │                    │
+           │       │       │        │run machine-audit   │
+           │       │       │        ╰─────●─────╮        ●
+           │       │       ╰─────────●────────╮ │        │
+           │       ╰────●──╮boot.ipxe+S3 args │ │ ╭──────╯
+           │      proposals▼                  ▼ ▼ ▼allocate inst
+           │        ╭─────────────╮   ╭───────────────────╮
+           │        │webapi server│ ╭─│bare-metal machines│
+           │        │             │ │ │                   │
+           │        ╰─────────────╯ │ ╰───────────────────╯
+           │               ●        │          │ │
+           │   iPXE request│        │          │ │
+           ╰───────────────⌒────────╯          │ ● pull boot image
+                          ╭╯            ╭─●────╯ ╰──╮
+                          ▼             ▼           ▼
+                       ╭─────╮   ╭─────────────╮   ╭──╮
+                       │Slack│   │machine-agent│   │S3│
+                       │     │   │             │   │  │
+                       ╰─────╯   ╰─────────────╯   ╰──╯
+                   confirm + alerts     ●runs on host
+                                        │
+                                       ╭╯reg + heartbeat
+                                       ▼
+                                 ╭───────────╮
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 106 at 10600ms
+ rataflow-view · 83x51 @100% · spec-v2-final.json · 11 nodes · 11 edges · q quit
+
+
+
+
+                       ╭───────────╮   ╭───────────────╮
+           ╭─●────────▶│boot server│   │River job queue│
+           │           │           │   │               │
+           │           ╰───────────╯   ╰───────────────╯
+           │                 │                │ │
+           │                 │                │ │
+           │diagnostic events│                │ │
+           │       ╭───●─────⌒────────────────╯ │
+           │       │       ╭─╯      ╭──────●────╯
+           │       ▼       │        ▼audit/verify reimage
+           │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+           │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+           │ │           │ │ │             │   │                    │
+           │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+           │       │       │        │                    │
+           │       │       │        │run machine-audit   │
+           │       │       │        ╰──────●────╮        │
+           │       │       ╰──────────●───────╮ │        ●
+           │       ╰─────●─╮boot.ipxe+S3 args │ │ ╭──────╯
+           │      proposals▼                  ▼ ▼ ▼allocate inst
+           │        ╭─────────────╮   ╭───────────────────╮
+           │        │webapi server│ ╭─│bare-metal machines│
+           │        │             │ │ │                   │
+           │        ╰─────────────╯ │ ╰───────────────────╯
+           │               │        │          │ │
+           │   iPXE request●        │          │ │
+           ╰───────────────⌒────────╯          │ │ pull boot image
+                          ╭╯            ╭●─────╯ ╰●─╮
+                          ▼             ▼           ▼
+                       ╭─────╮   ╭─────────────╮   ╭──╮
+                       │Slack│   │machine-agent│   │S3│
+                       │     │   │             │   │  │
+                       ╰─────╯   ╰─────────────╯   ╰──╯
+                   confirm + alerts     │runs on host
+                                        ●
+                                       ╭╯reg + heartbeat
+                                       ▼
+                                 ╭───────────╮
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 107 at 10700ms
+ rataflow-view · 83x51 @100% · spec-v2-final.json · 11 nodes · 11 edges · q quit
+
+
+
+
+                       ╭───────────╮   ╭───────────────╮
+           ╭─●────────▶│boot server│   │River job queue│
+           │           │           │   │               │
+           │           ╰───────────╯   ╰───────────────╯
+           │                 │                │ │
+           │                 │                │ │
+           │diagnostic events│                │ │
+           │       ╭───●─────⌒────────────────╯ │
+           │       │       ╭─╯      ╭──────●────╯
+           │       ▼       │        ▼audit/verify reimage
+           │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+           │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+           │ │           │ │ │             │   │                    │
+           │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+           │       │       │        │                    │
+           │       │       │        │run machine-audit   │
+           │       │       │        ╰──────●────╮        │
+           │       │       ╰──────────●───────╮ │        ●
+           │       ╰─────●─╮boot.ipxe+S3 args │ │ ╭──────╯
+           │      proposals▼                  ▼ ▼ ▼allocate inst
+           │        ╭─────────────╮   ╭───────────────────╮
+           │        │webapi server│ ╭─│bare-metal machines│
+           │        │             │ │ │                   │
+           │        ╰─────────────╯ │ ╰───────────────────╯
+           │               │        │          │ │
+           │   iPXE request●        │          │ │
+           ╰───────────────⌒────────╯          │ │ pull boot image
+                          ╭╯            ╭●─────╯ ╰●─╮
+                          ▼             ▼           ▼
+                       ╭─────╮   ╭─────────────╮   ╭──╮
+                       │Slack│   │machine-agent│   │S3│
+                       │     │   │             │   │  │
+                       ╰─────╯   ╰─────────────╯   ╰──╯
+                   confirm + alerts     │runs on host
+                                        ●
+                                       ╭╯reg + heartbeat
+                                       ▼
+                                 ╭───────────╮
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 108 at 10800ms
+ rataflow-view · 83x51 @100% · spec-v2-final.json · 11 nodes · 11 edges · q quit
+
+
+
+
+                       ╭───────────╮   ╭───────────────╮
+           ╭──●───────▶│boot server│   │River job queue│
+           │           │           │   │               │
+           │           ╰───────────╯   ╰───────────────╯
+           │                 │                │ │
+           │                 │                │ │
+           │diagnostic events│                │ │
+           │       ╭──●──────⌒────────────────╯ │
+           │       │       ╭─╯      ╭─────●─────╯
+           │       ▼       │        ▼audit/verify reimage
+           │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+           │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+           │ │           │ │ │             │   │                    │
+           │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+           │       │       │        │                    │
+           │       │       │        │run machine-audit   │
+           │       │       │        ╰───────●───╮        │
+           │       │       ╰───────────●──────╮ │        │
+           │       ╰──────●╮boot.ipxe+S3 args │ │ ╭─────●╯
+           │      proposals▼                  ▼ ▼ ▼allocate inst
+           │        ╭─────────────╮   ╭───────────────────╮
+           │        │webapi server│ ╭─│bare-metal machines│
+           │        │             │ │ │                   │
+           │        ╰─────────────╯ │ ╰───────────────────╯
+           │               ●        │          ● │
+           │   iPXE request│        │          │ │
+           ╰───────────────⌒────────╯          │ │ pull boot image
+                          ╭╯            ╭──────╯ ╰─●╮
+                          ▼             ▼           ▼
+                       ╭─────╮   ╭─────────────╮   ╭──╮
+                       │Slack│   │machine-agent│   │S3│
+                       │     │   │             │   │  │
+                       ╰─────╯   ╰─────────────╯   ╰──╯
+                   confirm + alerts     ●runs on host
+                                        │
+                                       ╭╯reg + heartbeat
+                                       ▼
+                                 ╭───────────╮
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 109 at 10900ms
+ rataflow-view · 83x51 @100% · spec-v2-final.json · 11 nodes · 11 edges · q quit
+
+
+
+
+                       ╭───────────╮   ╭───────────────╮
+           ╭──●───────▶│boot server│   │River job queue│
+           │           │           │   │               │
+           │           ╰───────────╯   ╰───────────────╯
+           │                 │                │ │
+           │                 │                │ │
+           │diagnostic events│                │ │
+           │       ╭──●──────⌒────────────────╯ │
+           │       │       ╭─╯      ╭─────●─────╯
+           │       ▼       │        ▼audit/verify reimage
+           │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+           │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+           │ │           │ │ │             │   │                    │
+           │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+           │       │       │        │                    │
+           │       │       │        │run machine-audit   │
+           │       │       │        ╰───────●───╮        │
+           │       │       ╰───────────●──────╮ │        │
+           │       ╰──────●╮boot.ipxe+S3 args │ │ ╭─────●╯
+           │      proposals▼                  ▼ ▼ ▼allocate inst
+           │        ╭─────────────╮   ╭───────────────────╮
+           │        │webapi server│ ╭─│bare-metal machines│
+           │        │             │ │ │                   │
+           │        ╰─────────────╯ │ ╰───────────────────╯
+           │               ●        │          ● │
+           │   iPXE request│        │          │ │
+           ╰───────────────⌒────────╯          │ │ pull boot image
+                          ╭╯            ╭──────╯ ╰─●╮
+                          ▼             ▼           ▼
+                       ╭─────╮   ╭─────────────╮   ╭──╮
+                       │Slack│   │machine-agent│   │S3│
+                       │     │   │             │   │  │
+                       ╰─────╯   ╰─────────────╯   ╰──╯
+                   confirm + alerts     ●runs on host
+                                        │
+                                       ╭╯reg + heartbeat
+                                       ▼
+                                 ╭───────────╮
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 110 at 11000ms
+ rataflow-view · 83x51 @100% · spec-v2-final.json · 11 nodes · 11 edges · q quit
+
+
+
+
+                       ╭───────────╮   ╭───────────────╮
+           ╭───●──────▶│boot server│   │River job queue│
+           │           │           │   │               │
+           │           ╰───────────╯   ╰───────────────╯
+           │                 │                │ │
+           │                 │                │ │
+           │diagnostic events│                │ │
+           │       ╭─●───────⌒────────────────╯ │
+           │       │       ╭─╯      ╭────●──────╯
+           │       ▼       │        ▼audit/verify reimage
+           │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+           │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+           │ │           │ │ │             │   │                    │
+           │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+           │       ●       │        │                    │
+           │       │       │        │run machine-audit   │
+           │       │       │        ╰────────●──╮        │
+           │       │       ╰────────────●─────╮ │        │
+           │       ╰───────╮boot.ipxe+S3 args │ │ ╭────●─╯
+           │      proposals▼                  ▼ ▼ ▼allocate inst
+           │        ╭─────────────╮   ╭───────────────────╮
+           │        │webapi server│ ╭─│bare-metal machines│
+           │        │             │ │ │                   │
+           │        ╰─────────────╯ │ ╰───────────────────╯
+           │               │        │          │ ●
+           │   iPXE request●        │          ● │
+           ╰───────────────⌒────────╯          │ │ pull boot image
+                          ╭╯            ╭──────╯ ╰──╮
+                          ▼             ▼           ▼
+                       ╭─────╮   ╭─────────────╮   ╭──╮
+                       │Slack│   │machine-agent│   │S3│
+                       │     │   │             │   │  │
+                       ╰─────╯   ╰─────────────╯   ╰──╯
+                   confirm + alerts     │runs on host
+                                        ●
+                                       ╭╯reg + heartbeat
+                                       ▼
+                                 ╭───────────╮
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 111 at 11100ms
+ rataflow-view · 83x51 @100% · spec-v2-final.json · 11 nodes · 11 edges · q quit
+
+
+
+
+                       ╭───────────╮   ╭───────────────╮
+           ╭───●──────▶│boot server│   │River job queue│
+           │           │           │   │               │
+           │           ╰───────────╯   ╰───────────────╯
+           │                 │                │ │
+           │                 │                │ │
+           │diagnostic events│                │ │
+           │       ╭─●───────⌒────────────────╯ │
+           │       │       ╭─╯      ╭────●──────╯
+           │       ▼       │        ▼audit/verify reimage
+           │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+           │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+           │ │           │ │ │             │   │                    │
+           │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+           │       ●       │        │                    │
+           │       │       │        │run machine-audit   │
+           │       │       │        ╰────────●──╮        │
+           │       │       ╰────────────●─────╮ │        │
+           │       ╰───────╮boot.ipxe+S3 args │ │ ╭────●─╯
+           │      proposals▼                  ▼ ▼ ▼allocate inst
+           │        ╭─────────────╮   ╭───────────────────╮
+           │        │webapi server│ ╭─│bare-metal machines│
+           │        │             │ │ │                   │
+           │        ╰─────────────╯ │ ╰───────────────────╯
+           │               │        │          │ ●
+           │   iPXE request●        │          ● │
+           ╰───────────────⌒────────╯          │ │ pull boot image
+                          ╭╯            ╭──────╯ ╰──╮
+                          ▼             ▼           ▼
+                       ╭─────╮   ╭─────────────╮   ╭──╮
+                       │Slack│   │machine-agent│   │S3│
+                       │     │   │             │   │  │
+                       ╰─────╯   ╰─────────────╯   ╰──╯
+                   confirm + alerts     │runs on host
+                                        ●
+                                       ╭╯reg + heartbeat
+                                       ▼
+                                 ╭───────────╮
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 112 at 11200ms
+ rataflow-view · 83x51 @100% · spec-v2-final.json · 11 nodes · 11 edges · q quit
+
+
+
+
+                       ╭───────────╮   ╭───────────────╮
+           ╭────●─────▶│boot server│   │River job queue│
+           │           │           │   │               │
+           │           ╰───────────╯   ╰───────────────╯
+           │                 │                │ │
+           │                 │                │ │
+           │diagnostic events│                │ │
+           │       ╭●────────⌒────────────────╯ │
+           │       │       ╭─╯      ╭───●───────╯
+           │       ▼       │        ▼audit/verify reimage
+           │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+           │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+           │ │           │ │ │             │   │                    │
+           │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+           │       │       │        │                    │
+           │       ●       │        │run machine-audit   │
+           │       │       │        ╰─────────●─╮        │
+           │       │       ╰─────────────●────╮ │        │
+           │       ╰───────╮boot.ipxe+S3 args │ │ ╭───●──╯
+           │      proposals▼                  ▼ ▼ ▼allocate inst
+           │        ╭─────────────╮   ╭───────────────────╮
+           │        │webapi server│ ╭─│bare-metal machines│
+           │        │             │ │ │                   │
+           │        ╰─────────────╯ │ ╰───────────────────╯
+           │               ●        │          │ │
+           │   iPXE request│        │          │ ●
+           ╰───────────────⌒────────╯          ● │ pull boot image
+                          ╭╯            ╭──────╯ ╰──╮
+                          ▼             ▼           ▼
+                       ╭─────╮   ╭─────────────╮   ╭──╮
+                       │Slack│   │machine-agent│   │S3│
+                       │     │   │             │   │  │
+                       ╰─────╯   ╰─────────────╯   ╰──╯
+                   confirm + alerts     ●runs on host
+                                        │
+                                       ╭╯reg + heartbeat
+                                       ▼
+                                 ╭───────────╮
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 113 at 11300ms
+ rataflow-view · 83x51 @100% · spec-v2-final.json · 11 nodes · 11 edges · q quit
+
+
+
+
+                       ╭───────────╮   ╭───────────────╮
+           ╭────●─────▶│boot server│   │River job queue│
+           │           │           │   │               │
+           │           ╰───────────╯   ╰───────────────╯
+           │                 │                │ │
+           │                 │                │ │
+           │diagnostic events│                │ │
+           │       ╭●────────⌒────────────────╯ │
+           │       │       ╭─╯      ╭───●───────╯
+           │       ▼       │        ▼audit/verify reimage
+           │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+           │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+           │ │           │ │ │             │   │                    │
+           │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+           │       │       │        │                    │
+           │       ●       │        │run machine-audit   │
+           │       │       │        ╰─────────●─╮        │
+           │       │       ╰─────────────●────╮ │        │
+           │       ╰───────╮boot.ipxe+S3 args │ │ ╭───●──╯
+           │      proposals▼                  ▼ ▼ ▼allocate inst
+           │        ╭─────────────╮   ╭───────────────────╮
+           │        │webapi server│ ╭─│bare-metal machines│
+           │        │             │ │ │                   │
+           │        ╰─────────────╯ │ ╰───────────────────╯
+           │               ●        │          │ │
+           │   iPXE request│        │          │ ●
+           ╰───────────────⌒────────╯          ● │ pull boot image
+                          ╭╯            ╭──────╯ ╰──╮
+                          ▼             ▼           ▼
+                       ╭─────╮   ╭─────────────╮   ╭──╮
+                       │Slack│   │machine-agent│   │S3│
+                       │     │   │             │   │  │
+                       ╰─────╯   ╰─────────────╯   ╰──╯
+                   confirm + alerts     ●runs on host
+                                        │
+                                       ╭╯reg + heartbeat
+                                       ▼
+                                 ╭───────────╮
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 114 at 11400ms
+ rataflow-view · 83x51 @100% · spec-v2-final.json · 11 nodes · 11 edges · q quit
+
+
+
+
+                       ╭───────────╮   ╭───────────────╮
+           ╭─────●────▶│boot server│   │River job queue│
+           │           │           │   │               │
+           │           ╰───────────╯   ╰───────────────╯
+           │                 │                │ │
+           │                 │                │ │
+           │diagnostic events│                │ │
+           │       ╭─────────⌒────────────────╯ │
+           │       ●       ╭─╯      ╭──●────────╯
+           │       ▼       │        ▼audit/verify reimage
+           │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+           │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+           │ │           │ │ │             │   │                    │
+           │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+           │       │       │        │                    │
+           │       │       │        │run machine-audit   │
+           │       ●       │        ╰──────────●╮        │
+           │       │       ╰──────────────●───╮ │        │
+           │       ╰───────╮boot.ipxe+S3 args │ │ ╭──●───╯
+           │      proposals▼                  ▼ ▼ ▼allocate inst
+           │        ╭─────────────╮   ╭───────────────────╮
+           │        │webapi server│ ╭─│bare-metal machines│
+           │        │             │ │ │                   │
+           │        ╰─────────────╯ │ ╰───────────────────╯
+           │               │        │          │ │
+           │   iPXE request●        │          │ │
+           ╰───────────────⌒────────╯          │ ● pull boot image
+                          ╭╯            ╭─────●╯ ╰──╮
+                          ▼             ▼           ▼
+                       ╭─────╮   ╭─────────────╮   ╭──╮
+                       │Slack│   │machine-agent│   │S3│
+                       │     │   │             │   │  │
+                       ╰─────╯   ╰─────────────╯   ╰──╯
+                   confirm + alerts     │runs on host
+                                        ●
+                                       ╭╯reg + heartbeat
+                                       ▼
+                                 ╭───────────╮
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 115 at 11500ms
+ rataflow-view · 83x51 @100% · spec-v2-final.json · 11 nodes · 11 edges · q quit
+
+
+
+
+                       ╭───────────╮   ╭───────────────╮
+           ╭─────●────▶│boot server│   │River job queue│
+           │           │           │   │               │
+           │           ╰───────────╯   ╰───────────────╯
+           │                 │                │ │
+           │                 │                │ │
+           │diagnostic events│                │ │
+           │       ╭─────────⌒────────────────╯ │
+           │       ●       ╭─╯      ╭──●────────╯
+           │       ▼       │        ▼audit/verify reimage
+           │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+           │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+           │ │           │ │ │             │   │                    │
+           │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+           │       │       │        │                    │
+           │       │       │        │run machine-audit   │
+           │       ●       │        ╰──────────●╮        │
+           │       │       ╰──────────────●───╮ │        │
+           │       ╰───────╮boot.ipxe+S3 args │ │ ╭──●───╯
+           │      proposals▼                  ▼ ▼ ▼allocate inst
+           │        ╭─────────────╮   ╭───────────────────╮
+           │        │webapi server│ ╭─│bare-metal machines│
+           │        │             │ │ │                   │
+           │        ╰─────────────╯ │ ╰───────────────────╯
+           │               │        │          │ │
+           │   iPXE request●        │          │ │
+           ╰───────────────⌒────────╯          │ ● pull boot image
+                          ╭╯            ╭─────●╯ ╰──╮
+                          ▼             ▼           ▼
+                       ╭─────╮   ╭─────────────╮   ╭──╮
+                       │Slack│   │machine-agent│   │S3│
+                       │     │   │             │   │  │
+                       ╰─────╯   ╰─────────────╯   ╰──╯
+                   confirm + alerts     │runs on host
+                                        ●
+                                       ╭╯reg + heartbeat
+                                       ▼
+                                 ╭───────────╮
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 116 at 11600ms
+ rataflow-view · 83x51 @100% · spec-v2-final.json · 11 nodes · 11 edges · q quit
+
+
+
+
+                       ╭───────────╮   ╭───────────────╮
+           ╭──────●───▶│boot server│   │River job queue│
+           │           │           │   │               │
+           │           ╰───────────╯   ╰───────────────╯
+           │                 │                ● │
+           │                 │                │ │
+           │diagnostic events│                │ │
+           │       ╭─────────⌒────────────────╯ │
+           │       │       ╭─╯      ╭─●─────────╯
+           │       ▼       │        ▼audit/verify reimage
+           │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+           │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+           │ │           │ │ │             │   │                    │
+           │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+           │       │       │        │                    │
+           │       │       │        │run machine-audit   │
+           │       │       │        ╰───────────╮        │
+           │       ●       ╰───────────────●──╮ ●        │
+           │       ╰───────╮boot.ipxe+S3 args │ │ ╭─●────╯
+           │      proposals▼                  ▼ ▼ ▼allocate inst
+           │        ╭─────────────╮   ╭───────────────────╮
+           │        │webapi server│ ╭─│bare-metal machines│
+           │        │             │ │ │                   │
+           │        ╰─────────────╯ │ ╰───────────────────╯
+           │               ●        │          │ │
+           │   iPXE request│        │          │ │
+           ╰───────────────⌒────────╯          │ │ pull boot image
+                          ╭╯            ╭────●─╯ ╰●─╮
+                          ▼             ▼           ▼
+                       ╭─────╮   ╭─────────────╮   ╭──╮
+                       │Slack│   │machine-agent│   │S3│
+                       │     │   │             │   │  │
+                       ╰─────╯   ╰─────────────╯   ╰──╯
+                   confirm + alerts     ●runs on host
+                                        │
+                                       ╭╯reg + heartbeat
+                                       ▼
+                                 ╭───────────╮
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 117 at 11700ms
+ rataflow-view · 83x51 @100% · spec-v2-final.json · 11 nodes · 11 edges · q quit
+
+
+
+
+                       ╭───────────╮   ╭───────────────╮
+           ╭──────●───▶│boot server│   │River job queue│
+           │           │           │   │               │
+           │           ╰───────────╯   ╰───────────────╯
+           │                 │                ● │
+           │                 │                │ │
+           │diagnostic events│                │ │
+           │       ╭─────────⌒────────────────╯ │
+           │       │       ╭─╯      ╭─●─────────╯
+           │       ▼       │        ▼audit/verify reimage
+           │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+           │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+           │ │           │ │ │             │   │                    │
+           │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+           │       │       │        │                    │
+           │       │       │        │run machine-audit   │
+           │       │       │        ╰───────────╮        │
+           │       ●       ╰───────────────●──╮ ●        │
+           │       ╰───────╮boot.ipxe+S3 args │ │ ╭─●────╯
+           │      proposals▼                  ▼ ▼ ▼allocate inst
+           │        ╭─────────────╮   ╭───────────────────╮
+           │        │webapi server│ ╭─│bare-metal machines│
+           │        │             │ │ │                   │
+           │        ╰─────────────╯ │ ╰───────────────────╯
+           │               ●        │          │ │
+           │   iPXE request│        │          │ │
+           ╰───────────────⌒────────╯          │ │ pull boot image
+                          ╭╯            ╭────●─╯ ╰●─╮
+                          ▼             ▼           ▼
+                       ╭─────╮   ╭─────────────╮   ╭──╮
+                       │Slack│   │machine-agent│   │S3│
+                       │     │   │             │   │  │
+                       ╰─────╯   ╰─────────────╯   ╰──╯
+                   confirm + alerts     ●runs on host
+                                        │
+                                       ╭╯reg + heartbeat
+                                       ▼
+                                 ╭───────────╮
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 118 at 11800ms
+ rataflow-view · 83x51 @100% · spec-v2-final.json · 11 nodes · 11 edges · q quit
+
+
+
+
+                       ╭───────────╮   ╭───────────────╮
+           ╭───────●──▶│boot server│   │River job queue│
+           │           │           │   │               │
+           │           ╰───────────╯   ╰───────────────╯
+           │                 │                │ │
+           │                 │                ● │
+           │diagnostic events│                │ │
+           │       ╭─────────⌒────────────────╯ │
+           │       │       ╭─╯      ╭●──────────╯
+           │       ▼       │        ▼audit/verify reimage
+           │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+           │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+           │ │           │ │ │             │   │                    │
+           │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+           │       │       │        │                    │
+           │       │       │        │run machine-audit   │
+           │       │       │        ╰───────────╮        │
+           │       │       ╰────────────────●─╮ │        │
+           │       ╰●──────╮boot.ipxe+S3 args │ ● ╭●─────╯
+           │      proposals▼                  ▼ ▼ ▼allocate inst
+           │        ╭─────────────╮   ╭───────────────────╮
+           │        │webapi server│ ╭─│bare-metal machines│
+           │        │             │ │ │                   │
+           │        ╰─────────────╯ │ ╰───────────────────╯
+           │               │        │          │ │
+           │   iPXE request●        │          │ │
+           ╰───────────────⌒────────╯          │ │ pull boot image
+                          ╭╯            ╭───●──╯ ╰─●╮
+                          ▼             ▼           ▼
+                       ╭─────╮   ╭─────────────╮   ╭──╮
+                       │Slack│   │machine-agent│   │S3│
+                       │     │   │             │   │  │
+                       ╰─────╯   ╰─────────────╯   ╰──╯
+                   confirm + alerts     │runs on host
+                                        ●
+                                       ╭╯reg + heartbeat
+                                       ▼
+                                 ╭───────────╮
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 119 at 11900ms
+ rataflow-view · 83x51 @100% · spec-v2-final.json · 11 nodes · 11 edges · q quit
+
+
+
+
+                       ╭───────────╮   ╭───────────────╮
+           ╭───────●──▶│boot server│   │River job queue│
+           │           │           │   │               │
+           │           ╰───────────╯   ╰───────────────╯
+           │                 │                │ │
+           │                 │                ● │
+           │diagnostic events│                │ │
+           │       ╭─────────⌒────────────────╯ │
+           │       │       ╭─╯      ╭●──────────╯
+           │       ▼       │        ▼audit/verify reimage
+           │ ╭───────────╮ │ ╭─────────────╮   ╭────────────────────╮
+           │ │janitor app│ │ │SSH + BMC ops│   │bare-metal providers│
+           │ │           │ │ │             │   │                    │
+           │ ╰───────────╯ │ ╰─────────────╯   ╰────────────────────╯
+           │       │       │        │                    │
+           │       │       │        │run machine-audit   │
+           │       │       │        ╰───────────╮        │
+           │       │       ╰────────────────●─╮ │        │
+           │       ╰●──────╮boot.ipxe+S3 args │ ● ╭●─────╯
+           │      proposals▼                  ▼ ▼ ▼allocate inst
+           │        ╭─────────────╮   ╭───────────────────╮
+           │        │webapi server│ ╭─│bare-metal machines│
+           │        │             │ │ │                   │
+           │        ╰─────────────╯ │ ╰───────────────────╯
+           │               │        │          │ │
+           │   iPXE request●        │          │ │
+           ╰───────────────⌒────────╯          │ │ pull boot image
+                          ╭╯            ╭───●──╯ ╰─●╮
+                          ▼             ▼           ▼
+                       ╭─────╮   ╭─────────────╮   ╭──╮
+                       │Slack│   │machine-agent│   │S3│
+                       │     │   │             │   │  │
+                       ╰─────╯   ╰─────────────╯   ╰──╯
+                   confirm + alerts     │runs on host
+                                        ●
+                                       ╭╯reg + heartbeat
+                                       ▼
+                                 ╭───────────╮
+                                 │public gRPC│
+ ┌───────┐                       │           │
+ │ + [+] │                       ╰───────────╯
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+[0m[1m[38;5;6mfix-visualize-skill[0m on [0m[1m[38;5;5m fix/visualize-skill[0m [0m[1m[38;5;1m[$!?][0m on [0m[1m[38;5;3m☁️  (ap-south-1) [0mon [0m[1m[38;5;4m☁️  avira[0m
+[0m[1m[38;5;4mlmansingka@gmail.com[0m 
+[0m[1m[38;5;2m❯[0m 

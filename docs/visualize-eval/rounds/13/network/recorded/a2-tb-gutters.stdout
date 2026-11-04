@@ -1,0 +1,17 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=6 edges=7 flows=4 direction=tb theme=gruvbox
+extent=27x45 cells
+crossings: 0 bridges, 0 touching bends
+near-misses: 5 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)
+passes-near-unrelated-node: 5
+near-miss: route e3 passes 5 cell(s) at ring 2 of node 'web' (nearest cell 19,22)
+warning: 5 route cell(s) hug a node their relation does not serve; move the affected relations or let them route around
+labels: 7/7 placed, 0 leader-ticked, 0 on route, 0 skipped, 1 ambiguous owners
+unowned label: e4 "session"
+warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge
+groups: fabric(2) tiers(3)
+trunks:
+dots: 4 single-dot routes, 0 periodic routes, 0 violations, 4 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 0 by source, 4 by destination, 0 shared-hue pair(s) (source-only 1, destination-only 0)
+origins: 4/4 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

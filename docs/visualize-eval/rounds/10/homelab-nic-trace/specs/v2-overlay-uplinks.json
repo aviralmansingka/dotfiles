@@ -1,0 +1,16 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "ts", "label": "tailscale0", "group": "overlay" },
+    { "id": "box", "label": "homelab ASUS Linux 7.0 · no committed rate", "group": "host" },
+    { "id": "bond0", "label": "bond0 192.168.1.197/24", "group": "wired" },
+    { "id": "wlp", "label": "wlp8s0 .213", "group": "wifi" }
+  ],
+  "edges": [
+    { "from": "ts", "to": "box", "label": "100.113.153.49", "label_slot": true },
+    { "from": "ts", "to": "bond0", "label": "UDP encap", "label_slot": true },
+    { "from": "box", "to": "bond0", "label": "eno1 2.5 GbE", "label_slot": true },
+    { "from": "box", "to": "wlp", "label": "Wi-Fi backup", "label_slot": true }
+  ]
+}

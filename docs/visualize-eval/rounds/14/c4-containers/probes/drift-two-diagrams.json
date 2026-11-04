@@ -1,0 +1,11 @@
+{"direction":"lr","theme":"gruvbox",
+ "diagrams":[
+  {"id":"d1","title":"T1","description":"D1",
+   "containers":[{"label":"BOX1","members":["a","b"]}],
+   "nodes":[{"id":"x","label":"x"},{"id":"a","label":"a"},{"id":"b","label":"b"},{"id":"y","label":"y"}],
+   "edges":[{"from":"x","to":"a","label":"l1"},{"from":"a","to":"b","label":"l2"},{"from":"b","to":"y","label":"l3"}]},
+  {"id":"d2","title":"T2","description":"D2",
+   "containers":[{"label":"BOX2","members":["p","q"]}],
+   "nodes":[{"id":"m","label":"m"},{"id":"p","label":"p"},{"id":"q","label":"q"},{"id":"n","label":"n"}],
+   "edges":[{"from":"m","to":"p","label":"k1"},{"from":"p","to":"q","label":"k2"},{"from":"q","to":"n","label":"k3"}]}
+ ]}

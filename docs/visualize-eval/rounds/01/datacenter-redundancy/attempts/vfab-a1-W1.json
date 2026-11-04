@@ -1,0 +1,90 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "layers": [
+    [
+      "",
+      "sp1",
+      "",
+      "sp2",
+      ""
+    ],
+    [
+      "bl1",
+      "",
+      "bl2",
+      "",
+      "leaf1",
+      "",
+      "leaf2"
+    ]
+  ],
+  "nodes": [
+    {
+      "id": "sp1",
+      "label": "Spine 1"
+    },
+    {
+      "id": "sp2",
+      "label": "Spine 2"
+    },
+    {
+      "id": "bl1",
+      "label": "BL 1"
+    },
+    {
+      "id": "bl2",
+      "label": "BL 2"
+    },
+    {
+      "id": "leaf1",
+      "label": "Leaf 1"
+    },
+    {
+      "id": "leaf2",
+      "label": "Leaf 2"
+    }
+  ],
+  "edges": [
+    {
+      "from": "bl1",
+      "to": "sp1",
+      "label": "ECMP"
+    },
+    {
+      "from": "bl1",
+      "to": "sp2",
+      "label": "ECMP"
+    },
+    {
+      "from": "bl2",
+      "to": "sp1",
+      "label": "ECMP"
+    },
+    {
+      "from": "bl2",
+      "to": "sp2",
+      "label": "ECMP"
+    },
+    {
+      "from": "sp1",
+      "to": "leaf1",
+      "label": "ECMP"
+    },
+    {
+      "from": "sp1",
+      "to": "leaf2",
+      "label": "ECMP"
+    },
+    {
+      "from": "sp2",
+      "to": "leaf1",
+      "label": "ECMP"
+    },
+    {
+      "from": "sp2",
+      "to": "leaf2",
+      "label": "ECMP"
+    }
+  ]
+}

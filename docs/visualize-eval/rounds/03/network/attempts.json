@@ -1,0 +1,36 @@
+{
+  "case_id": "network",
+  "round": "03",
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "spec_sha256": "58c3a5660e985b6dd9f2384ddbdadec27b4bf790b0b6b17c303788de6bd359d5",
+          "note": "single-view whole graph, tb, 6 layers (wan/fw/core/web/cache/db): extent 40x48 overflows the 47-row target by one row; crossings 1. Rejected on fit, not on meaning."
+        },
+        {
+          "spec_sha256": "f3aa25d81a3ff3b220356d79fea60d532da29f39e368ce59319d2198269fa5d6",
+          "note": "same whole graph in lr: extent 144x20, far past the 77-column target (each layer gap is ~20 cells wide); crossings 1. Rejected on fit."
+        },
+        {
+          "spec_sha256": "fead45b1bab31f168dbbac73a67b5a8a32901fc6e666e0fc0ea963ed8e081b60",
+          "note": "final v1: physical/speed path wan-fw-core-web plus core-Redis 25 GbE, tb, 4 layers, 5 nodes, 4 edges. extent 40x32, crossings 0, labels 4/4, origins 4/4."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "attempts": [
+        {
+          "spec_sha256": "1babbfc8af2f71d751c58e9e5adbdf4b5f01a46973033e8db6802b3369a27510",
+          "note": "final v2: application relations web/Redis/db, tb, 3 layers, 3 nodes, 3 edges. extent 24x24, crossings 1 (structural: the 2-hop web->db route leaves web beside web->Redis and must pass the middle Redis band), labels 3/3, origins 3/3."
+        },
+        {
+          "spec_sha256": "8831bfc64d708c6b38d92982bbeb935e21363843a9442852a13d11f960b593ee",
+          "note": "same v2 in lr: extent 54x15, crossings still 1 for the same structural reason, so the tb layout was kept for the smaller, centred drawing."
+        }
+      ]
+    }
+  ]
+}

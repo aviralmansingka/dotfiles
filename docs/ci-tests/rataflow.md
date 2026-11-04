@@ -21,14 +21,19 @@ requests to it by default and builds single-file HTML for everything else.
 ## What the suite covers
 
 - Example specs. Every file in `rataflow/examples/` (`pipeline.json`,
-  `network.json`) parses as JSON and validates against the spec schema:
+  `network.json`, `rack-software.json`) parses as JSON and validates against the spec schema:
   known top-level fields only, `direction` in `{tb, lr}`, `theme` in
   `{gruvbox, dark, light}`, unique non-empty node ids, non-empty edge
-  endpoints, at least one edge, and `flow` (when present) equal to `true`
-  or a positive number.
-- Skill spec block. The `json` block documented in the `visualize` skill's
-  SKILL.md validates against the same schema, so the docs cannot drift
-  from the format the binary accepts.
+  endpoints, at least one edge, `flow` (when present) equal to `true`
+  or a positive number, `dots` in `{0, 1}`, `style` in `{solid, dashed}`,
+  a non-empty `group` string, and `trunks` entries with distinct
+  non-endpoint `branches` that name real nodes, and canvas diagrams whose
+  `containers` name non-empty labels and members that exist in that diagram
+  (`focus` must be a boolean).
+- Skill spec blocks. Every `json` block documented in the `visualize` skill's
+  SKILL.md — the single graph and the described canvas — validates against
+  the same schema, so the docs cannot drift from the format the binary
+  accepts.
 - Skill frontmatter. `name: visualize` and a non-empty description.
 - Manifest. `Cargo.toml` parses; package `rataflow-view`; dependencies
   rataflow, ratatui, serde, serde_json, anyhow; edition 2024.
@@ -44,10 +49,11 @@ requests to it by default and builds single-file HTML for everything else.
   name, and the upstream provenance line. A plain re-vendor from upstream
   drops these; the check catches the drift.
 - Cargo tests (opt-in). `RATAFLOW_BUILD=1` runs `cargo test --offline` in
-  `rataflow/`: 30 tests — 16 spec/schema/theme/flow unit tests, 9 headless
-  `TestBackend` render proofs (labels, plain canvas, node fills, gruvbox
-  accent cycle, flow-dot motion), and 5 CLI tests exercising `--check`
-  and `--help` through the real binary.
+  `rataflow/`: 95 tests — 44 spec/schema/theme/flow/layout/routing unit
+  tests, 41 headless `TestBackend` render proofs (labels, plain canvas, node
+  fills, gruvbox accent cycle, group hues with no drawn box, flow-dot
+  motion), and 5 CLI tests exercising `--check` and `--help` through the
+  real binary.
 
 ## How to run
 
@@ -69,7 +75,7 @@ takes minutes and needs the network). The suite writes nothing outside
 
 All offline checks pass on macOS python 3.9 (TOML checks SKIP) and on CI
 python 3.12. `RATAFLOW_BUILD=1` passes with cargo 1.94 and a warm
-registry cache: 16 lib + 9 render + 5 CLI tests, 0 failures.
+registry cache: 44 lib + 44 render + 5 CLI + 2 guard tests, 0 failures.
 
 ## Known gaps
 

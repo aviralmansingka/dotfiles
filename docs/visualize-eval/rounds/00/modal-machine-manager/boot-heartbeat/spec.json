@@ -1,0 +1,87 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "boot",
+      "label": "Boot server"
+    },
+    {
+      "id": "mch",
+      "label": "BM machines"
+    },
+    {
+      "id": "s3",
+      "label": "S3"
+    },
+    {
+      "id": "agent",
+      "label": "Machine-agent"
+    },
+    {
+      "id": "pub",
+      "label": "Public gRPC"
+    },
+    {
+      "id": "db",
+      "label": "Postgres"
+    }
+  ],
+  "layers": [
+    [
+      "boot",
+      "",
+      ""
+    ],
+    [
+      "mch",
+      "",
+      "s3"
+    ],
+    [
+      "",
+      "agent"
+    ],
+    [
+      "",
+      "pub"
+    ],
+    [
+      "",
+      "db"
+    ]
+  ],
+  "edges": [
+    {
+      "to": "boot",
+      "label": "iPXE request",
+      "from": "mch"
+    },
+    {
+      "to": "mch",
+      "label": "boot.ipxe+S3",
+      "from": "boot"
+    },
+    {
+      "to": "agent",
+      "label": "runs on host",
+      "from": "mch"
+    },
+    {
+      "to": "pub",
+      "label": "reg+heartbeat",
+      "from": "agent",
+      "flow": 0.1
+    },
+    {
+      "to": "db",
+      "label": "machine state",
+      "from": "pub"
+    },
+    {
+      "to": "s3",
+      "label": "pull boot img",
+      "from": "mch"
+    }
+  ]
+}

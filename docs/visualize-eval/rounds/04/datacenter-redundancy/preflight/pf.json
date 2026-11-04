@@ -1,0 +1,15 @@
+{
+  "direction": "tb",
+  "nodes": [
+    {"id": "a", "label": "A", "group": "carrier"},
+    {"id": "b", "label": "B", "group": "carrier"},
+    {"id": "c", "label": "C", "group": "core"},
+    {"id": "d", "label": "D", "group": "racks"}
+  ],
+  "layers": [["c"], ["a", "b"], ["d"]],
+  "edges": [
+    {"from": "a", "to": "c", "label": "up one", "dots": 0},
+    {"from": "b", "to": "c", "label": "up two", "dots": 0},
+    {"from": "c", "to": "d", "label": "down", "dots": 0, "style": "dashed"}
+  ]
+}

@@ -1,0 +1,656 @@
+{
+  "case_id": "server-nic-layout",
+  "round": "03",
+  "generator": {
+    "identity": "pi worker subagent PI_SUBAGENT_NAME=viz-ds03-4 (agent profile 'worker'), fresh generation, no reviewer spawned",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "provider": "fireworks",
+    "reasoning_level": "high"
+  },
+  "candidate_skill": {
+    "path": "docs/visualize-eval/rounds/03/SKILL.md",
+    "sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c"
+  },
+  "renderer": {
+    "path": "/tmp/visualize-eval/round-03/bin/rataflow-view",
+    "sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7",
+    "built_or_substituted": false
+  },
+  "target_viewport": "77x47 at natural zoom (100%)",
+  "views": [
+    {
+      "view": "v1",
+      "scope": "server1 physical ports and the shared /29 segment",
+      "spec": "specs/v1-attempt3.json",
+      "spec_sha256": "3fcecbcfdcfb1dd15fdf72f4cf771f465bf22d2ac056ec7544071c79404da9d0",
+      "evidence_dir": "evidence/v1",
+      "check": "evidence/v1/check.txt",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "frames": {
+        "txt": "evidence/v1/v1-frames.txt",
+        "ansi": "evidence/v1/v1-frames.ansi",
+        "count": 3,
+        "step_ms": 100
+      },
+      "manifest": "evidence/v1/manifest.json",
+      "measured": {
+        "extent": "55x28",
+        "viewport_token": "77x47 @100%",
+        "viewport_line": null,
+        "natural_zoom": "1.00",
+        "crossings": 2,
+        "nodes": 6,
+        "edges": 2,
+        "trunks": 1
+      },
+      "pane": {
+        "pane_id": "w7E:pC4",
+        "cleanup": "confirmed_closed"
+      },
+      "validator": "validator/v1.txt",
+      "validator_verdict": "all checks passed (28 PASS, 0 FAIL)"
+    },
+    {
+      "view": "v2",
+      "scope": "observed upstream hops: latency, prefixes, AS numbers, v4-only, no ECMP",
+      "spec": "specs/v2-attempt2.json",
+      "spec_sha256": "9da8685bf2abf8944b7c78307f5690dcb6c829e06288408e1ad07bc40cc17574",
+      "evidence_dir": "evidence/v2",
+      "check": "evidence/v2/check.txt",
+      "text": "evidence/v2/v2-text.txt",
+      "ansi": "evidence/v2/v2-ansi.ansi",
+      "selected_ansi": "evidence/v2/v2-selected.ansi",
+      "frames": {
+        "txt": "evidence/v2/v2-frames.txt",
+        "ansi": "evidence/v2/v2-frames.ansi",
+        "count": 3,
+        "step_ms": 100
+      },
+      "manifest": "evidence/v2/manifest.json",
+      "measured": {
+        "extent": "35x37",
+        "viewport_token": "77x47 @100%",
+        "viewport_line": null,
+        "natural_zoom": "1.00",
+        "crossings": 0,
+        "nodes": 5,
+        "edges": 4,
+        "trunks": 0
+      },
+      "pane": {
+        "pane_id": "w7E:pC5",
+        "cleanup": "confirmed_closed"
+      },
+      "validator": "validator/v2.txt",
+      "validator_verdict": "all checks passed (28 PASS, 0 FAIL)"
+    },
+    {
+      "view": "v3",
+      "scope": "qualified claims: what the OUI, dark ports, quiet pool and mute hops do not prove",
+      "spec": "specs/v3-attempt1.json",
+      "spec_sha256": "12110a71ab2acbb6b8d2b75a02fe4ab2083e1879900d70e824532734a7d9b4df",
+      "evidence_dir": "evidence/v3",
+      "check": "evidence/v3/check.txt",
+      "text": "evidence/v3/v3-text.txt",
+      "ansi": "evidence/v3/v3-ansi.ansi",
+      "selected_ansi": "evidence/v3/v3-selected.ansi",
+      "frames": {
+        "txt": "evidence/v3/v3-frames.txt",
+        "ansi": "evidence/v3/v3-frames.ansi",
+        "count": 3,
+        "step_ms": 100
+      },
+      "manifest": "evidence/v3/manifest.json",
+      "measured": {
+        "extent": "53x25",
+        "viewport_token": "77x47 @100%",
+        "viewport_line": null,
+        "natural_zoom": "1.00",
+        "crossings": 2,
+        "nodes": 5,
+        "edges": 4,
+        "trunks": 0
+      },
+      "pane": {
+        "pane_id": "w7E:pC7",
+        "cleanup": "confirmed_closed"
+      },
+      "validator": "validator/v3.txt",
+      "validator_verdict": "all checks passed (28 PASS, 0 FAIL)"
+    }
+  ],
+  "coverage_map": {
+    "v1": "e1-e5 physical ports, dark ports, the shared /29 trunk with its two spurs, /29 prefix, no NAT",
+    "v2": "e3 latency, e6-e8 upstream hops with prefixes, AS132717/AS13335, full host quad, v4-only, no ECMP",
+    "v3": "q1-q4 qualified claims: OUI/ToR role, dark/cable, quiet pool/free, mute hops/Layer 2"
+  },
+  "meaning_ledger": [
+    {
+      "fact": "server1 = 103.19.91.58, Dell PowerEdge R7725, bare metal, NxtGen Cloud, Bengaluru",
+      "kind": "address + residency",
+      "fate": "drawn / abbreviated",
+      "where": "v1 node 'server1 R7725' + trunk '.58/29'; v2 node '103.19.91.58 v4-only'. 'bare metal', 'NxtGen', 'Bengaluru' compressed to the AS132717 token on v2's ToR node; no box for datacentre residency"
+    },
+    {
+      "fact": "server2 = 103.19.91.59, same R7725, same /29",
+      "kind": "address + residency",
+      "fate": "drawn",
+      "where": "v1 node 'server2 .59' on a p29 trunk spur"
+    },
+    {
+      "fact": "8 physical NICs, one active",
+      "kind": "count / role",
+      "fate": "abbreviated",
+      "where": "v1 '7 ports dark' + one active port; the literal '8' is implied, not written (defect noted)"
+    },
+    {
+      "fact": "eno16595np0, 25 GbE",
+      "kind": "identifier + speed",
+      "fate": "drawn",
+      "where": "v1 node 'eno16595np0 25G'"
+    },
+    {
+      "fact": "/29 with gateway .57, .58, .59, .60-.62 free",
+      "kind": "addresses + pool",
+      "fate": "drawn",
+      "where": "v1 trunk p29 '.58/29 no NAT' with spurs to s2 and the pool; v2 full quads 103.19.91.58 / 103.19.91.57"
+    },
+    {
+      "fact": "no NAT; public L3 straight to the host",
+      "kind": "limitation",
+      "fate": "drawn",
+      "where": "v1 trunk label '.58/29 no NAT'"
+    },
+    {
+      "fact": "no IPv6",
+      "kind": "limitation",
+      "fate": "drawn",
+      "where": "v2 node '103.19.91.58 v4-only'"
+    },
+    {
+      "fact": "ToR gateway .57 at 0.1 ms",
+      "kind": "identifier + latency",
+      "fate": "drawn",
+      "where": "v1 node 'Arista .57'; v2 edge '0.1 ms'"
+    },
+    {
+      "fact": "MAC OUI = Arista Networks; NxtGen access layer is Arista",
+      "kind": "vendor evidence",
+      "fate": "drawn / qualified",
+      "where": "v1 'Arista .57'; v2 'Arista ToR ... AS132717'; v3 'Arista OUI .57' + edge 'ToR role?' (OUI does not prove the role)"
+    },
+    {
+      "fact": "Airtel 14.143.x at 1.8 ms",
+      "kind": "prefix + latency",
+      "fate": "drawn",
+      "where": "v2 node + edge"
+    },
+    {
+      "fact": "Airtel backbone 14.141.x at 7.1 ms",
+      "kind": "prefix + latency",
+      "fate": "drawn",
+      "where": "v2 node + edge"
+    },
+    {
+      "fact": "Cloudflare 1.1.1.1 AS13335; 8.6 ms in the chat line, 8.3 ms in the relationship list",
+      "kind": "address + latency",
+      "fate": "drawn as a range",
+      "where": "v2 node 'Cloudflare 1.1.1.1 AS13335', edge '8.3-8.6 ms'. The two source statements disagree; both kept in the one label rather than picking one"
+    },
+    {
+      "fact": "one uplink, one visible ISP, no ECMP from this box",
+      "kind": "limitation",
+      "fate": "drawn",
+      "where": "v2 node 'Airtel 14.143.x, no ECMP'"
+    },
+    {
+      "fact": "everything above the ToR is invisible; the fabric between .57 and Airtel either bridges, tunnels or stays silent",
+      "kind": "qualifier",
+      "fate": "partly drawn",
+      "where": "v3 'still unproven' + edge 'layer 2?'. The three-reading list (bridge/tunnel/silent) has no box: see known defect 5"
+    },
+    {
+      "fact": "a missing hop proves nothing about Layer 2",
+      "kind": "qualification",
+      "fate": "drawn",
+      "where": "v3 claim node 'still unproven' with edge label 'layer 2?'"
+    },
+    {
+      "fact": "tunneling (VXLAN/MPLS outer TTL) hides fabric hops",
+      "kind": "mechanism",
+      "fate": "dropped",
+      "reason": "prose explanation of why the trace is silent; the abandoned trace-limits view could not fit it (85 and 112 columns wide, then a label with no free slot) and v3 instead states the resulting uncertainty"
+    },
+    {
+      "fact": "ICMP suppression/rate-limit; hops 3 and 6 answered nothing, hop 5 lost 80%",
+      "kind": "observation",
+      "fate": "drawn (hops) / dropped (ICMP)",
+      "where": "v3 node 'hops 3,6 quiet, 5@80%'; the ICMP-rate-limit mechanism itself is dropped, same reason"
+    },
+    {
+      "fact": "Arista .57 is Layer 3: it routes the /29 and answers probes (routed-leaf / border-leaf pattern)",
+      "kind": "role",
+      "fate": "drawn",
+      "where": "v2 chain through the ToR; v3 'still unproven' + 'layer 2?' - the wording 'routed leaf' is not printed"
+    },
+    {
+      "fact": "fresh handoff: no GPUs, no rack-bench installed, up 1.5 days",
+      "kind": "host state",
+      "fate": "dropped",
+      "reason": "host provisioning state, not NIC or egress layout; the brief asks for the NIC and observed egress layout"
+    },
+    {
+      "fact": "previous spec paths on disk (/tmp/server1-network-layout.json, /tmp/homelab-network-layout.json)",
+      "kind": "artifact pointer",
+      "fate": "dropped",
+      "reason": "paths of earlier attempts, not layout facts; also frozen/critical to keep the historical attempt out of this fresh generation"
+    },
+    {
+      "fact": "constraints: dark ports do not prove no cable; addresses that do not answer do not prove free; OUI does not prove the ToR role",
+      "kind": "qualifiers",
+      "fate": "drawn",
+      "where": "v1 'no cable' edge drawn dashed; v3 edges 'ToR role?', 'no cable?', 'free?' drawn dashed, all feeding 'still unproven'"
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "dark",
+      "to": "s1",
+      "verb": "7 ports dark, no cable (unconfirmed: darkness does not prove no cable)",
+      "label_owner": "v1/e1 'no cable'",
+      "style": "dashed",
+      "view": "v1"
+    },
+    {
+      "id": "e2",
+      "from": "s1",
+      "to": "nic",
+      "verb": "only active uplink of 8 ports",
+      "label_owner": "v1/e2 'only uplink'",
+      "style": "solid",
+      "view": "v1"
+    },
+    {
+      "id": "e3",
+      "from": "nic",
+      "to": "gw",
+      "verb": "default gateway, public /29, 0.1 ms",
+      "label_owner": "v1/trunk p29 '.58/29 no NAT' + v2/e3 '0.1 ms'",
+      "style": "solid",
+      "view": "v1 + v2"
+    },
+    {
+      "id": "e4",
+      "from": "s2",
+      "to": "gw",
+      "verb": "same /29, .59",
+      "label_owner": "v1/trunk p29 spur to 'server2 .59'",
+      "style": "solid",
+      "view": "v1"
+    },
+    {
+      "id": "e5",
+      "from": "spare",
+      "to": "gw",
+      "verb": "free .60-.62 in the /29 (unconfirmed: no reply does not prove free)",
+      "label_owner": "v1/trunk p29 spur to '.60-.62 free'; v3/e12 'free?'",
+      "style": "solid (v1) / dashed (v3)",
+      "view": "v1 + v3"
+    },
+    {
+      "id": "e6",
+      "from": "gw",
+      "to": "airtel",
+      "verb": "transit Airtel 14.143.x, 1.8 ms",
+      "label_owner": "v2/e6 '1.8 ms'",
+      "style": "solid",
+      "view": "v2"
+    },
+    {
+      "id": "e7",
+      "from": "airtel",
+      "to": "airtelbb",
+      "verb": "Airtel backbone 14.141.x, 7.1 ms",
+      "label_owner": "v2/e7 '7.1 ms'",
+      "style": "solid",
+      "view": "v2"
+    },
+    {
+      "id": "e8",
+      "from": "airtelbb",
+      "to": "cf",
+      "verb": "Cloudflare 1.1.1.1 AS13335, 8.3-8.6 ms",
+      "label_owner": "v2/e8 '8.3-8.6 ms'",
+      "style": "solid",
+      "view": "v2"
+    },
+    {
+      "id": "q1",
+      "from": "oui",
+      "to": "claim",
+      "verb": "Arista OUI does not settle the ToR role (derived qualifier, not a source relation)",
+      "label_owner": "v3/q1 'ToR role?'",
+      "style": "dashed",
+      "view": "v3"
+    },
+    {
+      "id": "q2",
+      "from": "dark",
+      "to": "claim",
+      "verb": "dark ports do not settle cabling (derived qualifier)",
+      "label_owner": "v3/q2 'no cable?'",
+      "style": "dashed",
+      "view": "v3"
+    },
+    {
+      "id": "q3",
+      "from": "pool",
+      "to": "claim",
+      "verb": "silence does not settle pool freshness (derived qualifier)",
+      "label_owner": "v3/q3 'free?'",
+      "style": "dashed",
+      "view": "v3"
+    },
+    {
+      "id": "q4",
+      "from": "hop",
+      "to": "claim",
+      "verb": "mute traceroute hops do not settle Layer 2 (derived qualifier)",
+      "label_owner": "v3/q4 'layer 2?'",
+      "style": "dashed",
+      "view": "v3"
+    }
+  ],
+  "original_relationship_to_view_mapping": [
+    {
+      "original": "dark -> s1: no cable",
+      "visible": "v1 edge dashed 'no cable' (dark -> server1 R7725)"
+    },
+    {
+      "original": "s1 -> nic: only uplink",
+      "visible": "v1 edge 'only uplink' (server1 R7725 -> eno16595np0 25G)"
+    },
+    {
+      "original": "nic -> gw: default gw 0.1 ms",
+      "visible": "v1 trunk p29 corridor to the Arista .57 (address + no NAT) and v2 edge '0.1 ms' (103.19.91.58 -> Arista ToR)"
+    },
+    {
+      "original": "s2 -> gw: same /29",
+      "visible": "v1 trunk p29 spur to 'server2 .59'"
+    },
+    {
+      "original": "spare -> gw: free in /29",
+      "visible": "v1 trunk p29 spur to '.60-.62 free' plus v3 dashed 'free?' into 'still unproven'"
+    },
+    {
+      "original": "gw -> airtel: transit 1.8 ms",
+      "visible": "v2 edge '1.8 ms' (Arista ToR -> Airtel 14.143.x, no ECMP)"
+    },
+    {
+      "original": "airtel -> airtelbb: 7.1 ms",
+      "visible": "v2 edge '7.1 ms'"
+    },
+    {
+      "original": "airtelbb -> cf: 8.3 ms (chat line says 8.6 ms)",
+      "visible": "v2 edge '8.3-8.6 ms' (Airtel bb -> Cloudflare 1.1.1.1 AS13335)"
+    },
+    {
+      "original": "no hop proves nothing about Layer 2 (historical answer)",
+      "visible": "v3 claim node 'still unproven' with edges 'ToR role?', 'no cable?', 'free?', 'layer 2?'"
+    }
+  ],
+  "source_pointers": [
+    {
+      "pointer": "cases/server-nic-layout/source.md: 'The box' bullet - 103.19.91.58/.59, R7725, bare metal, NxtGen (AS132717), Bengaluru",
+      "used_in": "v1 s1/s2 nodes, v2 gw node"
+    },
+    {
+      "pointer": "source.md: 'The layout' bullet 1 - 8 NICs, eno16595np0, 25 GbE, .58/29 on the NIC, seven ports dark",
+      "used_in": "v1"
+    },
+    {
+      "pointer": "source.md: 'The layout' bullet 2 - /29 gw .57, .58, .59, .60-.62 free, no NAT, no IPv6",
+      "used_in": "v1 trunk, v2 v4-only"
+    },
+    {
+      "pointer": "source.md: 'The layout' bullet 3 - ToR .57 0.1 ms, MAC OUI Arista",
+      "used_in": "v1 gw, v2 0.1 ms edge, v3 'Arista OUI .57' + 'ToR role?'"
+    },
+    {
+      "pointer": "source.md: 'The layout' bullet 4 - Airtel 14.143.x 1.8 ms, Airtel backbone 14.141.x 7.1 ms, Cloudflare 1.1.1.1 8.6 ms",
+      "used_in": "v2"
+    },
+    {
+      "pointer": "source.md: 'Mapped onto the datacenter model' - routed /29 border-leaf pattern, one uplink/one visible ISP, no ECMP, everything above the ToR invisible",
+      "used_in": "v1 trunk (routed /29), v2 'no ECMP', v3 'still unproven'"
+    },
+    {
+      "pointer": "source.md: line 121/125 - the Layer-2 question, tunneling and ICMP suppression, hops 3/6 silent, hop 5 80% loss",
+      "used_in": "v3 node 'hops 3,6 quiet, 5@80%' + claim; mechanisms dropped (see drops)"
+    },
+    {
+      "pointer": "source.md: 'Relationship facts' list (9 nodes, 9 edges) and 'Historical claims' qualifier",
+      "used_in": "relationship audit e1-e8"
+    },
+    {
+      "pointer": "source.md: 'Fixed constraints' - no WhatsApp/SSH access; OUI/dark/no-reply/absent-hop qualification; no invented spines",
+      "used_in": "dashed edge styles in v1 and v3; no spine or leaf node was invented"
+    }
+  ],
+  "abbreviations": [
+    {
+      "text": "Arista",
+      "means": "Arista Networks, established from MAC OUI only (v3 draws the OUI and questions the ToR role)"
+    },
+    {
+      "text": "Arista ToR",
+      "means": "the .57 gateway box described as the ToR in the source narrative; role treated as claimed, not proved"
+    },
+    {
+      "text": "Arista bb",
+      "means": "Airtel backbone at 14.141.x"
+    },
+    {
+      "text": "v4-only",
+      "means": "no IPv6 on the public /29"
+    },
+    {
+      "text": ".58/29",
+      "means": "103.19.91.58 assigned out of the /29 103.19.91.56/29, gateway .57 (full quad printed in v2)"
+    },
+    {
+      "text": "5@80%",
+      "means": "traceroute hop 5 lost 80% of its probes"
+    },
+    {
+      "text": "quiet",
+      "means": "did not answer probes"
+    }
+  ],
+  "deliberate_drops": [
+    {
+      "fact": "VXLAN/MPLS tunneling and ICMP suppression as mechanisms",
+      "reason": "prose explanation of silence; the dedicated trace-limits view failed its three specs on fit (85x23, 112x18 wide) then on a dropped label (3/4 placed), and v3 records the resulting uncertainty instead"
+    },
+    {
+      "fact": "the three possible readings of the fabric between .57 and Airtel (bridge, tunnel, silent)",
+      "reason": "no room left in v3 after the four qualifier edges; recorded here rather than guessed into a node"
+    },
+    {
+      "fact": "'bare metal', 'NxtGen Cloud', 'Bengaluru' as boxes",
+      "reason": "residency, not a link; compressed into the AS132717 token on v2's ToR node"
+    },
+    {
+      "fact": "no GPUs / no rack-bench / up 1.5 days",
+      "reason": "host provisioning state, not NIC or egress layout"
+    },
+    {
+      "fact": "the literal '8 physical NICs'",
+      "reason": "v1 shows 7 dark + 1 active; the sum is implied, not printed (v1 hit its 3-spec cap before labels could be widened)"
+    },
+    {
+      "fact": "full quad 103.19.91.57 for the gateway",
+      "reason": "v1 and v2 print '.57' with the /29 prefix; the full quad is derivable and never printed (abbreviation)"
+    },
+    {
+      "fact": "/tmp/server1-network-layout.json and /tmp/homelab-network-layout.json",
+      "reason": "paths of earlier attempts, not layout facts"
+    }
+  ],
+  "known_defects": [
+    {
+      "id": "d1",
+      "severity": "minor",
+      "view": "v1",
+      "detail": "the count '8 physical NICs' is not printed; only '7 ports dark' plus the active port. v1 was frozen at its third spec attempt before labels could be widened."
+    },
+    {
+      "id": "d2",
+      "severity": "minor",
+      "view": "v1",
+      "detail": "the p29 trunk arrow points gateway -> member (the /29 served from the ToR), while the source's dominant direction for that relation is host -> default gateway. v2 draws the host -> gateway direction explicitly with the 0.1 ms edge."
+    },
+    {
+      "id": "d3",
+      "severity": "minor",
+      "view": "v1/v2",
+      "detail": "103.19.91.57 (gateway) is only ever printed as '.57'; the full quad is derivable from '103.19.91.58/29' but not written."
+    },
+    {
+      "id": "d4",
+      "severity": "minor",
+      "view": "v2",
+      "detail": "the Cloudflare hop latency is a range '8.3-8.6 ms' because the two source statements disagree (chat line 120 says 8.6 ms, the relationship list says 8.3 ms); no single value was picked, so the pane does not show one authoritative number."
+    },
+    {
+      "id": "d5",
+      "severity": "moderate",
+      "view": "coverage",
+      "detail": "the traceroute mechanism list (VXLAN/MPLS outer TTL, ICMP suppression) and the bridge/tunnel/silent reading are not drawn anywhere; only the resulting uncertainty is. The dedicated view for them was abandoned after three specs."
+    },
+    {
+      "id": "d6",
+      "severity": "minor",
+      "view": "v3",
+      "detail": "the claim node 'still unproven' is a tall box with four arrowheads converging; readable in the capture, but the label is terse and does not name the four questions on its own."
+    },
+    {
+      "id": "d7",
+      "severity": "minor",
+      "view": "evidence",
+      "detail": "manifest.json records pane_cols as null (the pane rect width was not read back by herdr in this session); the measured size is proven by the app's own header token '77x47 @100%', which the validator accepts."
+    },
+    {
+      "id": "d8",
+      "severity": "info",
+      "view": "all",
+      "detail": "static case: no flow, no dots. The check line therefore reads '0 synchronized at 2000ms' and 'origins: 0/0'; the three captured frames are identical by design, and no motion claim is made."
+    }
+  ],
+  "blockers": [
+    {
+      "id": "b1",
+      "status": "none for the drawn views",
+      "detail": "trunks routed cleanly in v1 (one corridor, two branch spurs, no shared-corridor warning); no renderer capability was missing for the static case."
+    },
+    {
+      "id": "b2",
+      "status": "capability gap (recorded, not invented)",
+      "detail": "no view-title field in the spec, so each view's scope is stated in generation.md rather than in the pane; the pane header only shows the spec file name."
+    },
+    {
+      "id": "b3",
+      "status": "attempt budget",
+      "detail": "the trace-limits design used its three specs (85x23, 112x18, 61x23 with 1 skipped label) and was abandoned rather than given a fourth; its content was re-composed inside v3 (a different relationship structure: qualifier fan, not mechanism fan)."
+    }
+  ],
+  "cleanup": {
+    "panes": [
+      {
+        "pane_id": "w7E:pC4",
+        "result": "confirmed_closed",
+        "view": "v1"
+      },
+      {
+        "pane_id": "w7E:pC5",
+        "result": "confirmed_closed",
+        "view": "v2"
+      },
+      {
+        "pane_id": "w7E:pC6",
+        "result": "confirmed_closed",
+        "view": "v3 tb attempt3 (rejected capture, kept as evidence/v3-rejected-tb-attempt3)"
+      },
+      {
+        "pane_id": "w7E:pC7",
+        "result": "confirmed_closed",
+        "view": "v3 final"
+      }
+    ],
+    "stray_panes": "none; herdr pane list shows no pC4..pC7 left",
+    "captain_tab_used": false,
+    "raw_tmux_used": false
+  },
+  "commands": [
+    "sha256sum docs/visualize-eval/rounds/03/SKILL.md /tmp/visualize-eval/round-03/bin/rataflow-view",
+    "/tmp/visualize-eval/round-03/bin/rataflow-view --check <spec>   # every attempt, output kept in specs/ and evidence/*/check.txt",
+    "scripts/viz-evidence.sh --spec <spec> --bin /tmp/visualize-eval/round-03/bin/rataflow-view --out docs/visualize-eval/rounds/03/server-nic-layout/evidence/<view> --label <view> --frames 3 --step-ms 100",
+    "python3 scripts/viz-validate.py docs/visualize-eval/rounds/03/server-nic-layout/evidence/<view> --require-select --require-frames --attempts docs/visualize-eval/rounds/03/server-nic-layout/attempts.json"
+  ],
+  "validator_summary": {
+    "v1": "all checks passed",
+    "v2": "all checks passed",
+    "v3": "all checks passed",
+    "rejected_capture": "evidence/v3-rejected-tb-attempt3 is not a final view; not validated as one"
+  },
+  "checks_verbatim": {
+    "v1": {
+      "path": "evidence/v1/check.txt",
+      "lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=6 edges=2 flows=0 direction=tb theme=gruvbox",
+        "layers=4 (explicit placement, sugiyama skipped)",
+        "extent=55x28 cells",
+        "crossings: 2",
+        "labels: 3/3 placed, 0 on route cells, 0 skipped",
+        "groups: hardware(3) hosts(1) pool(1) network(1)",
+        "trunks: p29 from gw to nic, 2 branches",
+        "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 synchronized at 2000ms",
+        "origins: 0/0 routes start at their arrow origin"
+      ]
+    },
+    "v2": {
+      "path": "evidence/v2/check.txt",
+      "lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=5 edges=4 flows=0 direction=tb theme=gruvbox",
+        "layers=5 (explicit placement, sugiyama skipped)",
+        "extent=35x37 cells",
+        "crossings: 0",
+        "labels: 4/4 placed, 0 on route cells, 0 skipped",
+        "groups: host(1) nxtgen(1) transit(2) internet(1)",
+        "trunks:",
+        "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 synchronized at 2000ms",
+        "origins: 0/0 routes start at their arrow origin"
+      ]
+    },
+    "v3": {
+      "path": "evidence/v3/check.txt",
+      "lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=5 edges=4 flows=0 direction=lr theme=gruvbox",
+        "layers=2 (explicit placement, sugiyama skipped)",
+        "extent=53x25 cells",
+        "crossings: 2",
+        "labels: 4/4 placed, 0 on route cells, 0 skipped",
+        "groups: observed(4) claim(1)",
+        "trunks:",
+        "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 synchronized at 2000ms",
+        "origins: 0/0 routes start at their arrow origin"
+      ]
+    }
+  }
+}

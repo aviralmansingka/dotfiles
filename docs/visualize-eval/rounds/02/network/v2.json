@@ -1,0 +1,53 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "web",
+      "label": "Web tier",
+      "group": "compute"
+    },
+    {
+      "id": "cache",
+      "label": "Redis",
+      "group": "state"
+    },
+    {
+      "id": "db",
+      "label": "DB tier",
+      "group": "state"
+    }
+  ],
+  "edges": [
+    {
+      "from": "web",
+      "to": "cache",
+      "label": "session",
+      "flow": 0.4,
+      "dots": 1
+    },
+    {
+      "from": "web",
+      "to": "db",
+      "label": "queries",
+      "flow": 0.4,
+      "dots": 1
+    },
+    {
+      "from": "cache",
+      "to": "db",
+      "label": "fill",
+      "flow": 0.4,
+      "dots": 1
+    }
+  ],
+  "layers": [
+    [
+      "web"
+    ],
+    [
+      "cache",
+      "db"
+    ]
+  ]
+}

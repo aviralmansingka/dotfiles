@@ -1,0 +1,42 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "runtime",
+      "label": "modal-runtime"
+    },
+    {
+      "id": "engine",
+      "label": "Task engine",
+      "group": "orchestration"
+    },
+    {
+      "id": "backend",
+      "label": "Container backend",
+      "group": "compute"
+    },
+    {
+      "id": "filesystem",
+      "label": "Filesystem + volumes",
+      "group": "storage"
+    }
+  ],
+  "edges": [
+    {
+      "from": "runtime",
+      "to": "engine",
+      "label": "task dispatch"
+    },
+    {
+      "from": "engine",
+      "to": "backend",
+      "label": "starts/manages"
+    },
+    {
+      "from": "engine",
+      "to": "filesystem",
+      "label": "mount/snapshot"
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+# Round 10 independent review — datacenter-redundancy
+
+**Overall: FAIL.** All 18 distinct devices and all 28 independent physical links are represented, and the correct family recipe is substantially visible. However, ECMP meaning is not visibly preserved on six historical relation facts, and the dataset-manifest hash recorded in frozen metadata does not match the actual manifest. Both are known failures, not missing-evidence substitutes for a green verdict. Paths in this critique and `reviewer-result.json` are repository-relative. Viewport regions are 1-based `[column,row,width,height]`; the pinned files have two metadata lines before viewport row 1.
+
+## Category decisions
+
+| Category | Decision | Reason |
+|---|---|---|
+| semantic_fidelity | **fail** | 18 components and 28 links are covered. The ECMP label is shown only on Spine 1→Leaf 1/2; the entire BL→Spine fan and Spine 2→Leaf fan do not visibly carry its historical label meaning. An external report's assertion of uniform scope is not a diagram annotation. |
+| arrow_traceability | **pass** | 28 distinct stems and heads, no trunk, correct drawing convention and no demonstrated avoidable detour. The v3 cell-by-cell audit resolves the blind-stage uncertainty, although its close crossings remain demanding to read. |
+| layout_fit | **pass** | Every final-spec pinned dump proves 77×47 at 100% with no graph clipping; live app headers say 82×51. The visible 1/2/6/1 bridges are consistent with the fixed tier geometry and independent K2,2 fans. |
+| conceptual_grouping_color | **pass** | Related tiers have hue families and grouped rank proximity; sibling order is stable. Groups correctly have no enclosing box, border or title. |
+| category_fit | **pass** | `redundant-fabrics` matches the source: E/N = 28/18 ≈ 1.56, paired incoming arrowheads, no-flow correction. Ranks are pinned, independent lanes and no motion are visible. This does not waive the separate semantic defect. |
+| border_integrity | **pass** | ANSI shows complete continuous node borders; select-all captures cover all 24 occurrences with selected-colored borders. This is simultaneous selection, not a sequence proving independent interaction for each node. |
+| workflow_evidence | **fail** | The actual frozen dataset manifest hash differs from metadata's `cases_sha256`. All 21 recorded spec, stdout and stderr hash bindings checked out, and captured validator results pass; those facts cannot repair the dataset hash discrepancy. |
+| animation | **pass** | Source original line 134 explicitly says “remove the dots flowing for now”; all four pinned captures have five identical timestamped frames and zero visible dots. |
+
+## Defect F1 — qualifier attribution is lost in the fabric view
+
+Source relationship facts and `expected.json` associate `ECMP` with all four BL→spine and all four spine→leaf historical links. These are qualified historical claims, not independent protocol verification, but they are part of the supplied relation/label ledger and there is no human correction removing them. The actual `v3` capture places `ECMP` only beside the two Spine 1→leaf routes, at [25,25,4,1] and [30,28,4,1]; the BL→spine fan occupies [34,21,22,8]. There is no label on that fan and no non-edge tier label or legend stating that the two visible labels apply to all eight links. Specifically e17–e20 and e23–e24 lack visible ECMP attribution. A reader cannot infer ECMP merely from dual physical paths. This is a **critical semantic defect** under the rubric's missing-concept rule, not an observed invention of a contradictory protocol.
+
+The generator did try materially different placements: `recorded/probe-fabric-ab.stdout` reports two ambiguous owners with eight labels; `recorded/probe-fabric-ab-labelslot.stdout` still reports two; `recorded/v3-fabric-final2.stdout` reports two ambiguous owners on the BL fan. Other recorded cross-connect and rack probes likewise show problems with duplicate labels. The record is credible evidence of difficulty and supports not counting the recipe yield itself as a `category_fit` failure. It does **not** establish that every possible annotation or layout is impossible, and cannot make six unlabeled relationship meanings visible. Preserve the qualifier as a clearly scoped non-edge annotation, another view, or another genuinely readable representation if the renderer/skill supports it; do not lower crossings by removing labels or merging links.
+
+The `x-connect` and `dual` words also appear on fewer than all lanes. Their underlying physical cross-connect and dual-homed topology are nonetheless visible in the independent K2,2 routes and the target pairs; `active`/`standby` are recoverable from the firewall nodes. A lone edge label is not a universal legend, so this is a scope limitation, but the structure and device state preserve those meanings. In v2, `standby` [36,24,7,1] lies near two arrowheads; its closest route is identifiable, and FW2's node text independently confirms its role. That proximity is a caution, not a separate established defect.
+
+## Defect F2 — frozen dataset binding
+
+`docs/visualize-eval/rounds/10/metadata.json` records `cases_sha256` as `e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05`. Independent `shasum -a 256 docs/visualize-eval/cases.json` produces `e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05`. This is a **high workflow/evidence defect**: the asserted dataset freeze does not identify the bytes supplied to this review. The current case's source, expected and historical-variants hashes do match metadata, as do the candidate skill, renderer binary and rubric hashes, so the demonstrated mismatch is narrow; it nevertheless prevents certifying the full manifest binding. Do not silently replace the frozen hash; resolve provenance separately.
+
+## Edge and crossing audit
+
+`reviewer-result.json` contains a separate source-backed audit for each e1–e28, including expected relationship, observed direction, a capture region and qualifier status. The four views share Core 1/2, BL 1/2 and Leaf 1/2, so the four splits cover the full chain without inventing cross-view edges. Physical direction is the drawing convention explicitly recorded in `generation.json`, not a claim that traffic flows only one way. No extra apparent relationship, junction, branch, or source-named bus is visible.
+
+After saving the blind record I inspected the v3 cells in detail. The BL1 stems at (44,28) and (46,28) reach Spine 1's (34,21) and Spine 2's (46,21) heads respectively. BL2's stems at (53,28) and (55,28) reach Spine 1's (36,21) and Spine 2's (48,21) heads. Spine 1 stems (30,21), (32,21) reach leaf heads (23,28), (34,28); Spine 2 stems (42,21), (44,21) reach leaf heads (25,28), (36,28). Bridge glyphs pass one route over the other and are not branches. Thus the uncertainty recorded blind is resolved by cell-by-cell tracing, though this is harder than merely counting heads.
+
+Observed bridge cells: v1 (35,31); v2 (34,21), (35,31); v3 (42,23), (44,23), (46,23), (42,24), (44,24), (32,26); v4 (35,25). The checker additionally reports 1/2/2/1 touching bends, which are not themselves crossings; their exact individual coordinates were not independently established. On the fixed geometry shown in v3, two BL→Spine 1 routes pass the two Spine 2→leaf routes (four inter-fan crossings), the BL/spine K2,2 contributes its crossed pair, and the spine/leaf K2,2 contributes its crossed pair: six. This is stronger than the original blind observation, but conditional on the shown rank and port ordering; it is not a general proof for arbitrary geometries. No recorded alternative with the mandated tiers and independently traceable links demonstrates fewer. The other three views have one bridge per K2,2 fan. No crossing was removed by changing the relations.
+
+## Workflow, provenance and cleanup
+
+- Blind record: `docs/visualize-eval/rounds/10/reviews/datacenter-redundancy/observed-first.md`, SHA-256 `95e8ad92dac29632326ef4c6911f52d87f3c7cb89e8456074122004afab439bf`, saved before expectation reveal and unchanged.
+- `spec-manifest.json` lists all four final specs in sorted repository-relative order with their independently computed hashes. Its SHA-256 is `d1f08b822bb75907be67de6af6c5a550ab71b65e52bc61bf522848c89462c05a`.
+- All 21 attempt records have exit 0 and matching current spec, stdout and stderr hashes. The four preserved validator outputs report `PASS attempts_records_complete` and the other checks. This is not independent confirmation that no unrecorded command was ever run.
+- Generator: `viz-ds10-5`, `fireworks/accounts/fireworks/routers/deepseek-flash-latest`. Reviewer: `viz-judge10-datacenter-redundancy`, `openai/gpt-6.1-terra:high`. The round number in the result is 10, as directed in the case-specific request; the generic full-task document's round-9 sentence is stale.
+- Manifests identify four generator-owned panes `w7E:pQY`, `w7E:pQZ`, `w7E:pQ0`, `w7E:pR2` and report `confirmed_closed` for each. This reviewer opened no pane.
+
+## Correction candidates and blockers
+
+- **Skill-level:** require explicitly scoped qualifier coverage in the visual itself rather than treating a lone edge label or an external generation ledger as evidence for every relation. Preserve uncertainty about historical labels rather than presenting them as independently verified facts. For the v3 fan, make source-to-head traceability a concrete cell-level check.
+- **Renderer-level:** improve label ownership and non-edge annotation support for dense parallel fans; improve inside-hop corridor readability without deleting independent links. The probe results demonstrate a real limitation on the tested placements but do not prove every valid representation impossible.
+- **Provenance blocker:** the dataset manifest hash mismatch requires independent investigation of the frozen metadata and actual manifest. The sample is already red on semantic and workflow defects; it is not green even if this provenance discrepancy is later resolved. No new viewer session was run and no candidate evidence or blind record was modified.

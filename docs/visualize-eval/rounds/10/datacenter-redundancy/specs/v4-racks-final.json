@@ -1,0 +1,20 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "leaf1", "label": "Leaf 1", "group": "leaf" },
+    { "id": "leaf2", "label": "Leaf 2", "group": "leaf" },
+    { "id": "rack1", "label": "Rack 1", "group": "rack" },
+    { "id": "rack2", "label": "Rack 2", "group": "rack" }
+  ],
+  "layers": [
+    ["leaf1", "leaf2"],
+    ["rack1", "rack2"]
+  ],
+  "edges": [
+    { "from": "leaf1", "to": "rack1", "label": "dual" },
+    { "from": "leaf1", "to": "rack2", "label": "dual" },
+    { "from": "leaf2", "to": "rack1" },
+    { "from": "leaf2", "to": "rack2" }
+  ]
+}

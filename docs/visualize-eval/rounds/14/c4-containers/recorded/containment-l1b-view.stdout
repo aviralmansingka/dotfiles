@@ -1,0 +1,18 @@
+viewport: 100x16 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 100x16 @100% · canvas 128x20 · containment-l1b.json · 7 nodes · 4 edges · q quit
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+L1b · The machine side and the outward edges
+The same context from the fleet's end: heartbeat registration into public gRPC, plus queue-to-S3 upl
+                                                                         ╔
+                                                                         ║
+                                                                       ╭──
+                                                                       │ ║
+ ┌───────┐                                                             │ ║              ▝▀▀   ▗▄▄▖
+ │ + [+] │                                                             │ ║ ▀▀▀▀  ▝▀▀    ▀▀▀    ▗▄
+╭│ − [-]─│──────────╮ runs on host  ╭─────────────╮register + heartbeat│ ║               ▀▘
+││ ⊡ [f]t│l machines│──────────────▶│machine-agent│────────────────────╯ ║                         ─
+││ □ [i] │          │               │             │                      ║
+╰└───────┘──────────╯               ╰─────────────╯                      ║
+                                                                         ║                 ║

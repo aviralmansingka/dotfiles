@@ -1,0 +1,1019 @@
+[
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-rack-bench-feat-network-diagram--/2026-10-13T05-14-42-097Z_01a133af-3231-71ff-87c1-c56889a12a6c.jsonl",
+    "line": 127,
+    "call_id": "chatcmpl-tool-a89b99d987d8f04b",
+    "path": "docs/graphs/datacenter-network.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "ispA",
+          "label": "ISP A"
+        },
+        {
+          "id": "ispB",
+          "label": "ISP B"
+        },
+        {
+          "id": "ispC",
+          "label": "ISP C"
+        },
+        {
+          "id": "ispD",
+          "label": "ISP D"
+        },
+        {
+          "id": "mux1",
+          "label": "MUX 1"
+        },
+        {
+          "id": "mux2",
+          "label": "MUX 2"
+        },
+        {
+          "id": "core1",
+          "label": "Core router 1"
+        },
+        {
+          "id": "core2",
+          "label": "Core router 2"
+        },
+        {
+          "id": "fw1",
+          "label": "Firewall 1 active"
+        },
+        {
+          "id": "fw2",
+          "label": "Firewall 2 standby"
+        },
+        {
+          "id": "bl",
+          "label": "Border leaf"
+        },
+        {
+          "id": "sp1",
+          "label": "Spine router 1"
+        },
+        {
+          "id": "sp2",
+          "label": "Spine router 2"
+        },
+        {
+          "id": "leaf1",
+          "label": "Rack leaf 1"
+        },
+        {
+          "id": "leaf2",
+          "label": "Rack leaf 2"
+        },
+        {
+          "id": "rack1",
+          "label": "Rack 1"
+        },
+        {
+          "id": "rack2",
+          "label": "Rack 2"
+        }
+      ],
+      "edges": [
+        {
+          "from": "ispA",
+          "to": "mux1",
+          "label": "circuit",
+          "flow": 1
+        },
+        {
+          "from": "ispB",
+          "to": "mux1",
+          "label": "circuit",
+          "flow": 1
+        },
+        {
+          "from": "ispC",
+          "to": "mux2",
+          "label": "circuit",
+          "flow": 1
+        },
+        {
+          "from": "ispD",
+          "to": "mux2",
+          "label": "circuit",
+          "flow": 1
+        },
+        {
+          "from": "mux1",
+          "to": "core1",
+          "label": "uplink",
+          "flow": 1
+        },
+        {
+          "from": "mux1",
+          "to": "core2",
+          "label": "uplink",
+          "flow": 1
+        },
+        {
+          "from": "mux2",
+          "to": "core1",
+          "label": "uplink",
+          "flow": 1
+        },
+        {
+          "from": "mux2",
+          "to": "core2",
+          "label": "uplink",
+          "flow": 1
+        },
+        {
+          "from": "core1",
+          "to": "fw1",
+          "label": "active",
+          "flow": 1
+        },
+        {
+          "from": "core2",
+          "to": "fw1",
+          "label": "active",
+          "flow": 1
+        },
+        {
+          "from": "core1",
+          "to": "fw2",
+          "label": "standby"
+        },
+        {
+          "from": "core2",
+          "to": "fw2",
+          "label": "standby"
+        },
+        {
+          "from": "fw1",
+          "to": "bl",
+          "label": "active",
+          "flow": 1.5
+        },
+        {
+          "from": "fw2",
+          "to": "bl",
+          "label": "standby"
+        },
+        {
+          "from": "bl",
+          "to": "sp1",
+          "label": "ECMP",
+          "flow": 1.5
+        },
+        {
+          "from": "bl",
+          "to": "sp2",
+          "label": "ECMP",
+          "flow": 1.5
+        },
+        {
+          "from": "sp1",
+          "to": "leaf1",
+          "label": "ECMP",
+          "flow": 1.5
+        },
+        {
+          "from": "sp1",
+          "to": "leaf2",
+          "label": "ECMP",
+          "flow": 1.5
+        },
+        {
+          "from": "sp2",
+          "to": "leaf1",
+          "label": "ECMP",
+          "flow": 1.5
+        },
+        {
+          "from": "sp2",
+          "to": "leaf2",
+          "label": "ECMP",
+          "flow": 1.5
+        },
+        {
+          "from": "leaf1",
+          "to": "rack1",
+          "label": "to servers",
+          "flow": 1
+        },
+        {
+          "from": "leaf2",
+          "to": "rack2",
+          "label": "to servers",
+          "flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-rack-bench-feat-network-diagram--/2026-10-13T05-14-42-097Z_01a133af-3231-71ff-87c1-c56889a12a6c.jsonl",
+    "line": 135,
+    "call_id": "chatcmpl-tool-992091e9351bb2e4",
+    "path": "docs/graphs/datacenter-network.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "ispA",
+          "label": "ISP A"
+        },
+        {
+          "id": "ispB",
+          "label": "ISP B"
+        },
+        {
+          "id": "ispC",
+          "label": "ISP C"
+        },
+        {
+          "id": "ispD",
+          "label": "ISP D"
+        },
+        {
+          "id": "mux1",
+          "label": "MUX 1"
+        },
+        {
+          "id": "mux2",
+          "label": "MUX 2"
+        },
+        {
+          "id": "core1",
+          "label": "Core router 1"
+        },
+        {
+          "id": "core2",
+          "label": "Core router 2"
+        },
+        {
+          "id": "fw1",
+          "label": "Firewall 1 active"
+        },
+        {
+          "id": "fw2",
+          "label": "Firewall 2 standby"
+        },
+        {
+          "id": "bl",
+          "label": "Border leaf"
+        },
+        {
+          "id": "sp1",
+          "label": "Spine router 1"
+        },
+        {
+          "id": "sp2",
+          "label": "Spine router 2"
+        },
+        {
+          "id": "leaf1",
+          "label": "Rack leaf 1"
+        },
+        {
+          "id": "leaf2",
+          "label": "Rack leaf 2"
+        },
+        {
+          "id": "rack1",
+          "label": "Rack 1"
+        },
+        {
+          "id": "rack2",
+          "label": "Rack 2"
+        }
+      ],
+      "edges": [
+        {
+          "from": "ispA",
+          "to": "mux1",
+          "label": "circuit"
+        },
+        {
+          "from": "ispB",
+          "to": "mux1",
+          "label": "circuit"
+        },
+        {
+          "from": "ispC",
+          "to": "mux2",
+          "label": "circuit"
+        },
+        {
+          "from": "ispD",
+          "to": "mux2",
+          "label": "circuit"
+        },
+        {
+          "from": "mux1",
+          "to": "core1",
+          "label": "uplink"
+        },
+        {
+          "from": "mux1",
+          "to": "core2",
+          "label": "uplink"
+        },
+        {
+          "from": "mux2",
+          "to": "core1",
+          "label": "uplink"
+        },
+        {
+          "from": "mux2",
+          "to": "core2",
+          "label": "uplink"
+        },
+        {
+          "from": "core1",
+          "to": "fw1",
+          "label": "active"
+        },
+        {
+          "from": "core2",
+          "to": "fw1",
+          "label": "active"
+        },
+        {
+          "from": "core1",
+          "to": "fw2",
+          "label": "standby"
+        },
+        {
+          "from": "core2",
+          "to": "fw2",
+          "label": "standby"
+        },
+        {
+          "from": "fw1",
+          "to": "bl",
+          "label": "active"
+        },
+        {
+          "from": "fw2",
+          "to": "bl",
+          "label": "standby"
+        },
+        {
+          "from": "bl",
+          "to": "sp1",
+          "label": "ECMP"
+        },
+        {
+          "from": "bl",
+          "to": "sp2",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp1",
+          "to": "leaf1",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp1",
+          "to": "leaf2",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp2",
+          "to": "leaf1",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp2",
+          "to": "leaf2",
+          "label": "ECMP"
+        },
+        {
+          "from": "leaf1",
+          "to": "rack1",
+          "label": "to servers"
+        },
+        {
+          "from": "leaf2",
+          "to": "rack2",
+          "label": "to servers"
+        }
+      ]
+    }
+  },
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-rack-bench-feat-network-diagram--/2026-10-13T05-14-42-097Z_01a133af-3231-71ff-87c1-c56889a12a6c.jsonl",
+    "line": 143,
+    "call_id": "chatcmpl-tool-88ff41cafd80e228",
+    "path": "docs/graphs/datacenter-network.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "ispA",
+          "label": "ISP A"
+        },
+        {
+          "id": "ispB",
+          "label": "ISP B"
+        },
+        {
+          "id": "ispC",
+          "label": "ISP C"
+        },
+        {
+          "id": "ispD",
+          "label": "ISP D"
+        },
+        {
+          "id": "mux1",
+          "label": "MUX 1"
+        },
+        {
+          "id": "mux2",
+          "label": "MUX 2"
+        },
+        {
+          "id": "core1",
+          "label": "Core router 1"
+        },
+        {
+          "id": "core2",
+          "label": "Core router 2"
+        },
+        {
+          "id": "fw1",
+          "label": "Firewall 1 active"
+        },
+        {
+          "id": "fw2",
+          "label": "Firewall 2 standby"
+        },
+        {
+          "id": "bl1",
+          "label": "Border leaf 1"
+        },
+        {
+          "id": "bl2",
+          "label": "Border leaf 2"
+        },
+        {
+          "id": "sp1",
+          "label": "Spine router 1"
+        },
+        {
+          "id": "sp2",
+          "label": "Spine router 2"
+        },
+        {
+          "id": "leaf1",
+          "label": "Rack leaf 1"
+        },
+        {
+          "id": "leaf2",
+          "label": "Rack leaf 2"
+        },
+        {
+          "id": "rack1",
+          "label": "Rack 1"
+        },
+        {
+          "id": "rack2",
+          "label": "Rack 2"
+        }
+      ],
+      "edges": [
+        {
+          "from": "ispA",
+          "to": "mux1",
+          "label": "circuit"
+        },
+        {
+          "from": "ispB",
+          "to": "mux1",
+          "label": "circuit"
+        },
+        {
+          "from": "ispC",
+          "to": "mux2",
+          "label": "circuit"
+        },
+        {
+          "from": "ispD",
+          "to": "mux2",
+          "label": "circuit"
+        },
+        {
+          "from": "mux1",
+          "to": "core1",
+          "label": "cross-connect"
+        },
+        {
+          "from": "mux1",
+          "to": "core2",
+          "label": "cross-connect"
+        },
+        {
+          "from": "mux2",
+          "to": "core1",
+          "label": "cross-connect"
+        },
+        {
+          "from": "mux2",
+          "to": "core2",
+          "label": "cross-connect"
+        },
+        {
+          "from": "core1",
+          "to": "fw1",
+          "label": "active"
+        },
+        {
+          "from": "core2",
+          "to": "fw1",
+          "label": "active"
+        },
+        {
+          "from": "core1",
+          "to": "fw2",
+          "label": "standby"
+        },
+        {
+          "from": "core2",
+          "to": "fw2",
+          "label": "standby"
+        },
+        {
+          "from": "fw1",
+          "to": "bl1",
+          "label": "active"
+        },
+        {
+          "from": "fw1",
+          "to": "bl2",
+          "label": "active"
+        },
+        {
+          "from": "fw2",
+          "to": "bl1",
+          "label": "standby"
+        },
+        {
+          "from": "fw2",
+          "to": "bl2",
+          "label": "standby"
+        },
+        {
+          "from": "bl1",
+          "to": "sp1",
+          "label": "ECMP"
+        },
+        {
+          "from": "bl1",
+          "to": "sp2",
+          "label": "ECMP"
+        },
+        {
+          "from": "bl2",
+          "to": "sp1",
+          "label": "ECMP"
+        },
+        {
+          "from": "bl2",
+          "to": "sp2",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp1",
+          "to": "leaf1",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp1",
+          "to": "leaf2",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp2",
+          "to": "leaf1",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp2",
+          "to": "leaf2",
+          "label": "ECMP"
+        },
+        {
+          "from": "leaf1",
+          "to": "rack1",
+          "label": "dual-homed"
+        },
+        {
+          "from": "leaf2",
+          "to": "rack1",
+          "label": "dual-homed"
+        },
+        {
+          "from": "leaf1",
+          "to": "rack2",
+          "label": "dual-homed"
+        },
+        {
+          "from": "leaf2",
+          "to": "rack2",
+          "label": "dual-homed"
+        }
+      ]
+    }
+  },
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-rack-bench-feat-network-diagram--/2026-10-13T05-14-42-097Z_01a133af-3231-71ff-87c1-c56889a12a6c.jsonl",
+    "line": 151,
+    "call_id": "chatcmpl-tool-be19bcbf0f891dc0",
+    "path": "docs/graphs/datacenter-network.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "ispA",
+          "label": "ISP A"
+        },
+        {
+          "id": "ispB",
+          "label": "ISP B"
+        },
+        {
+          "id": "ispC",
+          "label": "ISP C"
+        },
+        {
+          "id": "ispD",
+          "label": "ISP D"
+        },
+        {
+          "id": "mux1",
+          "label": "MUX 1"
+        },
+        {
+          "id": "mux2",
+          "label": "MUX 2"
+        },
+        {
+          "id": "core1",
+          "label": "Core 1"
+        },
+        {
+          "id": "core2",
+          "label": "Core 2"
+        },
+        {
+          "id": "fw1",
+          "label": "FW1 active"
+        },
+        {
+          "id": "fw2",
+          "label": "FW2 standby"
+        },
+        {
+          "id": "bl1",
+          "label": "BL 1"
+        },
+        {
+          "id": "bl2",
+          "label": "BL 2"
+        },
+        {
+          "id": "sp1",
+          "label": "Spine 1"
+        },
+        {
+          "id": "sp2",
+          "label": "Spine 2"
+        },
+        {
+          "id": "leaf1",
+          "label": "Leaf 1"
+        },
+        {
+          "id": "leaf2",
+          "label": "Leaf 2"
+        },
+        {
+          "id": "rack1",
+          "label": "Rack 1"
+        },
+        {
+          "id": "rack2",
+          "label": "Rack 2"
+        }
+      ],
+      "edges": [
+        {
+          "from": "ispA",
+          "to": "mux1"
+        },
+        {
+          "from": "ispB",
+          "to": "mux1"
+        },
+        {
+          "from": "ispC",
+          "to": "mux2"
+        },
+        {
+          "from": "ispD",
+          "to": "mux2"
+        },
+        {
+          "from": "mux1",
+          "to": "core1",
+          "label": "x-connect"
+        },
+        {
+          "from": "mux1",
+          "to": "core2",
+          "label": "x-connect"
+        },
+        {
+          "from": "mux2",
+          "to": "core1",
+          "label": "x-connect"
+        },
+        {
+          "from": "mux2",
+          "to": "core2",
+          "label": "x-connect"
+        },
+        {
+          "from": "core1",
+          "to": "fw1",
+          "label": "active"
+        },
+        {
+          "from": "core2",
+          "to": "fw1",
+          "label": "active"
+        },
+        {
+          "from": "core1",
+          "to": "fw2",
+          "label": "standby"
+        },
+        {
+          "from": "core2",
+          "to": "fw2",
+          "label": "standby"
+        },
+        {
+          "from": "fw1",
+          "to": "bl1",
+          "label": "active"
+        },
+        {
+          "from": "fw1",
+          "to": "bl2",
+          "label": "active"
+        },
+        {
+          "from": "fw2",
+          "to": "bl1",
+          "label": "standby"
+        },
+        {
+          "from": "fw2",
+          "to": "bl2",
+          "label": "standby"
+        },
+        {
+          "from": "bl1",
+          "to": "sp1",
+          "label": "ECMP"
+        },
+        {
+          "from": "bl1",
+          "to": "sp2",
+          "label": "ECMP"
+        },
+        {
+          "from": "bl2",
+          "to": "sp1",
+          "label": "ECMP"
+        },
+        {
+          "from": "bl2",
+          "to": "sp2",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp1",
+          "to": "leaf1",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp1",
+          "to": "leaf2",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp2",
+          "to": "leaf1",
+          "label": "ECMP"
+        },
+        {
+          "from": "sp2",
+          "to": "leaf2",
+          "label": "ECMP"
+        },
+        {
+          "from": "leaf1",
+          "to": "rack1",
+          "label": "dual"
+        },
+        {
+          "from": "leaf2",
+          "to": "rack1",
+          "label": "dual"
+        },
+        {
+          "from": "leaf1",
+          "to": "rack2",
+          "label": "dual"
+        },
+        {
+          "from": "leaf2",
+          "to": "rack2",
+          "label": "dual"
+        }
+      ]
+    }
+  },
+  {
+    "source": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-rack-bench-feat-network-diagram--/2026-10-13T05-14-42-097Z_01a133af-3231-71ff-87c1-c56889a12a6c.jsonl",
+    "line": 159,
+    "call_id": "chatcmpl-tool-8c7a126121cb2941",
+    "path": "docs/graphs/datacenter-network.json",
+    "spec": {
+      "direction": "tb",
+      "theme": "gruvbox",
+      "nodes": [
+        {
+          "id": "mux1",
+          "label": "MUX 1 - ISP A+B"
+        },
+        {
+          "id": "mux2",
+          "label": "MUX 2 - ISP C+D"
+        },
+        {
+          "id": "core1",
+          "label": "Core 1"
+        },
+        {
+          "id": "core2",
+          "label": "Core 2"
+        },
+        {
+          "id": "fw1",
+          "label": "FW1 active"
+        },
+        {
+          "id": "fw2",
+          "label": "FW2 standby"
+        },
+        {
+          "id": "bl1",
+          "label": "BL 1"
+        },
+        {
+          "id": "bl2",
+          "label": "BL 2"
+        },
+        {
+          "id": "sp1",
+          "label": "Spine 1"
+        },
+        {
+          "id": "sp2",
+          "label": "Spine 2"
+        },
+        {
+          "id": "leaf1",
+          "label": "Leaf 1"
+        },
+        {
+          "id": "leaf2",
+          "label": "Leaf 2"
+        },
+        {
+          "id": "rack1",
+          "label": "Rack 1"
+        },
+        {
+          "id": "rack2",
+          "label": "Rack 2"
+        }
+      ],
+      "edges": [
+        {
+          "from": "mux1",
+          "to": "core1"
+        },
+        {
+          "from": "mux1",
+          "to": "core2"
+        },
+        {
+          "from": "mux2",
+          "to": "core1"
+        },
+        {
+          "from": "mux2",
+          "to": "core2"
+        },
+        {
+          "from": "core1",
+          "to": "fw1"
+        },
+        {
+          "from": "core2",
+          "to": "fw1"
+        },
+        {
+          "from": "core1",
+          "to": "fw2"
+        },
+        {
+          "from": "core2",
+          "to": "fw2"
+        },
+        {
+          "from": "fw1",
+          "to": "bl1"
+        },
+        {
+          "from": "fw1",
+          "to": "bl2"
+        },
+        {
+          "from": "fw2",
+          "to": "bl1"
+        },
+        {
+          "from": "fw2",
+          "to": "bl2"
+        },
+        {
+          "from": "bl1",
+          "to": "sp1"
+        },
+        {
+          "from": "bl1",
+          "to": "sp2"
+        },
+        {
+          "from": "bl2",
+          "to": "sp1"
+        },
+        {
+          "from": "bl2",
+          "to": "sp2"
+        },
+        {
+          "from": "sp1",
+          "to": "leaf1"
+        },
+        {
+          "from": "sp1",
+          "to": "leaf2"
+        },
+        {
+          "from": "sp2",
+          "to": "leaf1"
+        },
+        {
+          "from": "sp2",
+          "to": "leaf2"
+        },
+        {
+          "from": "leaf1",
+          "to": "rack1"
+        },
+        {
+          "from": "leaf2",
+          "to": "rack1"
+        },
+        {
+          "from": "leaf1",
+          "to": "rack2"
+        },
+        {
+          "from": "leaf2",
+          "to": "rack2"
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "bond0", "label": "bond0", "group": "wired" },
+    { "id": "wlp", "label": "wlp8s0", "group": "wifi" },
+    { "id": "rtr", "label": "Fios rtr 192.168.1.1 · NAT+DHCP · WNC (hist.)", "group": "egress" }
+  ],
+  "edges": [
+    { "from": "bond0", "to": "rtr", "label": "default gw 0.5 ms", "label_slot": true },
+    { "from": "wlp", "to": "rtr", "label": "metric 600 · failover, no ECMP", "label_slot": true }
+  ]
+}

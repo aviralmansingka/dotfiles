@@ -1,0 +1,4 @@
+command: /tmp/visualize-eval/round-01/bin/rataflow-view --check specs/view4-fabric.json
+timestamp_utc: 20261102T083542Z
+exit: 0
+spec_sha256: ff24f445d9e2ef696063142efbf63e18ab7d0756c4d4ce3be402b19a10093257

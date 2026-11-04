@@ -1,0 +1,14 @@
+[
+  {
+    "path": "docs/visualize-eval/rounds/04/gb300-rack-software/specs/v1-oob-rail.json",
+    "sha256": "1f909cae469b2d37668fb8dfafe0a69750704d625a9b63a8d8f3e85ab5c67e96"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/04/gb300-rack-software/specs/v2-mgmt-api.json",
+    "sha256": "ef9dcfb927a6bfdf22eba4d028aad51c48a9abe20771b97e337fe83c669847c1"
+  },
+  {
+    "path": "docs/visualize-eval/rounds/04/gb300-rack-software/specs/v3-inband-host.json",
+    "sha256": "c810d8e2762b023c61c2f5410ae3c2e30f4ee7fc34388c6e98400b06363217e0"
+  }
+]

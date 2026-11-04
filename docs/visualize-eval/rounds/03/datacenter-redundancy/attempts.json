@@ -1,0 +1,70 @@
+{
+  "case_id": "datacenter-redundancy",
+  "round": "03",
+  "views": [
+    {
+      "view": "v1",
+      "carries": "4 ISPs -> 2 MUXes -> 2 cores (e1-e8)",
+      "attempts": [
+        {
+          "spec_path": "attempts/v1-attempt1.json",
+          "spec_sha256": "e973aa007d70fecc8f6b530eeb85b8ec4436b2b934a730ae1fce9655582c6509",
+          "note": "chosen. tb, explicit 3 layers (ISP A-D / MUX 1-2 / Core 1-2). extent 43x23, crossings 1 (the K2,2 mux->core fabric is a structural crossing), 4/4 x-connect labels placed, ISP edges carry no label per source."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "carries": "cores -> active/standby firewalls -> border leaves (e9-e16)",
+      "attempts": [
+        {
+          "spec_path": "attempts/v2-attempt1.json",
+          "spec_sha256": "a0467fb222ac36b78e70330b033c4d4daa4c79a25c272abf698a9e6ac22fe36a",
+          "note": "dropped: 14-char 'standby unconf' labels had no free cell (5/8 placed, 3 skipped warnings)."
+        },
+        {
+          "spec_path": "attempts/v2-attempt2.json",
+          "spec_sha256": "4735e2c6917bac298f875d0b72461787fce8b1088f3e95876251aab270a8f762",
+          "note": "chosen. 'standby?' keeps the uncertainty in the label text and fits every slot: extent 30x23, crossings 4, 8/8 labels placed, 4 standby routes dashed."
+        },
+        {
+          "spec_path": "attempts/v2-attempt3.json",
+          "spec_sha256": "0ebbc9dacf7d6c7cef47903a6a246c12700c0bbd68baf3260f80362198138273",
+          "note": "dropped: reversed within-layer order changed nothing (30x23, crossings 4) and loses the source's core1/fw1 order, so the neutral order was kept."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "carries": "border leaves + rack leaves -> 2 spines (e17-e24), both leaves at one level, spines above",
+      "attempts": [
+        {
+          "spec_path": "attempts/v3-attempt1.json",
+          "spec_sha256": "1e27b326ffaaa3a1709c58f92065c19cbd813879b176323a04f01d83c6066ef9",
+          "note": "dropped: one 3-layer view including racks (spines / bl+leaf / racks) reached crossings 12 at extent 49x30."
+        },
+        {
+          "spec_path": "attempts/v3-attempt2.json",
+          "spec_sha256": "2b1644825e696789082c74e01cc712217c910c8a0bd79639f9dfccfa4280486b",
+          "note": "chosen. Fabric only: spines on top, BL 1-2 and Leaf 1-2 in one shared level. extent 49x20, crossings 9 (up-arrows into the spines braid with the spine->leaf arrows; splitting the racks out lowers the total from 12 to 9+1)."
+        },
+        {
+          "spec_path": "attempts/v3-attempt3.json",
+          "spec_sha256": "cddaa0b842530057c4d75a0ae1309b073ca12657669fc52d76a3380c0d7502bd",
+          "note": "dropped: a reserved slot between the BL pair and the Leaf pair gained no crossing reduction (53x20, crossings 9) and only widened the graph."
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "carries": "each rack dual-homed to both rack leaves (e25-e28)",
+      "attempts": [
+        {
+          "spec_path": "attempts/v4-attempt1.json",
+          "spec_sha256": "a4374676a03c55cb92fad1f4037041ca4404bc0010677d43d55b6f9f252045d0",
+          "note": "chosen. Leaf 1-2 -> Rack 1-2 complete bipartite: extent 21x14, crossings 1, 4/4 dual labels placed."
+        }
+      ]
+    }
+  ]
+}

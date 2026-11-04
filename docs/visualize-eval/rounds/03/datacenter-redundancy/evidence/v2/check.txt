@@ -1,0 +1,10 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=6 edges=8 flows=0 direction=tb theme=gruvbox
+layers=3 (explicit placement, sugiyama skipped)
+extent=30x23 cells
+crossings: 4
+labels: 8/8 placed, 0 on route cells, 0 skipped
+groups: core(2) fw(2) bl(2)
+trunks:
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 synchronized at 2000ms
+origins: 0/0 routes start at their arrow origin

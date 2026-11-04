@@ -1,0 +1,814 @@
+[
+ {
+  "row": 18,
+  "col": 30,
+  "before": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  }
+ },
+ {
+  "row": 18,
+  "col": 33,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  }
+ },
+ {
+  "row": 18,
+  "col": 37,
+  "before": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  }
+ },
+ {
+  "row": 18,
+  "col": 40,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  }
+ },
+ {
+  "row": 18,
+  "col": 44,
+  "before": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  }
+ },
+ {
+  "row": 18,
+  "col": 47,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  }
+ },
+ {
+  "row": 18,
+  "col": 51,
+  "before": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  }
+ },
+ {
+  "row": 18,
+  "col": 54,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  }
+ },
+ {
+  "row": 18,
+  "col": 58,
+  "before": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  }
+ },
+ {
+  "row": 18,
+  "col": 61,
+  "before": {
+   "char": "\u256e",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  }
+ },
+ {
+  "row": 20,
+  "col": 28,
+  "before": {
+   "char": "\u2502",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  }
+ },
+ {
+  "row": 20,
+  "col": 63,
+  "before": {
+   "char": "\u256d",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u256d",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 20,
+  "col": 64,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 20,
+  "col": 65,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 20,
+  "col": 66,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 20,
+  "col": 67,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 20,
+  "col": 68,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 20,
+  "col": 69,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 20,
+  "col": 70,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 20,
+  "col": 71,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 20,
+  "col": 72,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 20,
+  "col": 73,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 20,
+  "col": 74,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 20,
+  "col": 75,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 20,
+  "col": 76,
+  "before": {
+   "char": "\u256e",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u256e",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 21,
+  "col": 19,
+  "before": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  }
+ },
+ {
+  "row": 21,
+  "col": 22,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  }
+ },
+ {
+  "row": 21,
+  "col": 26,
+  "before": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  }
+ },
+ {
+  "row": 21,
+  "col": 46,
+  "before": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  }
+ },
+ {
+  "row": 21,
+  "col": 49,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  }
+ },
+ {
+  "row": 21,
+  "col": 53,
+  "before": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  }
+ },
+ {
+  "row": 21,
+  "col": 56,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  }
+ },
+ {
+  "row": 21,
+  "col": 60,
+  "before": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u256e",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  }
+ },
+ {
+  "row": 21,
+  "col": 63,
+  "before": {
+   "char": "\u2502",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2502",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 21,
+  "col": 76,
+  "before": {
+   "char": "\u2502",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2502",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 22,
+  "col": 63,
+  "before": {
+   "char": "\u2502",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2502",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 22,
+  "col": 76,
+  "before": {
+   "char": "\u2502",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2502",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 23,
+  "col": 19,
+  "before": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  }
+ },
+ {
+  "row": 23,
+  "col": 22,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  }
+ },
+ {
+  "row": 23,
+  "col": 26,
+  "before": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  }
+ },
+ {
+  "row": 23,
+  "col": 29,
+  "before": {
+   "char": "\u256f",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  }
+ },
+ {
+  "row": 23,
+  "col": 61,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(124,111,100)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u25cf",
+   "fg": "rgb(216,166,87)",
+   "bold": false
+  }
+ },
+ {
+  "row": 23,
+  "col": 63,
+  "before": {
+   "char": "\u2502",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2502",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 23,
+  "col": 76,
+  "before": {
+   "char": "\u2502",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2502",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 24,
+  "col": 63,
+  "before": {
+   "char": "\u2570",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2570",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 24,
+  "col": 64,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 24,
+  "col": 65,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 24,
+  "col": 66,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 24,
+  "col": 67,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 24,
+  "col": 68,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 24,
+  "col": 69,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 24,
+  "col": 70,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 24,
+  "col": 71,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 24,
+  "col": 72,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 24,
+  "col": 73,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 24,
+  "col": 74,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 24,
+  "col": 75,
+  "before": {
+   "char": "\u2500",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u2500",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ },
+ {
+  "row": 24,
+  "col": 76,
+  "before": {
+   "char": "\u256f",
+   "fg": "rgb(211,134,155)",
+   "bold": false
+  },
+  "after": {
+   "char": "\u256f",
+   "fg": "rgb(216,166,87)",
+   "bold": true
+  }
+ }
+]

@@ -1,0 +1,604 @@
+{
+  "case_id": "server-nic-layout",
+  "round": "03",
+  "round_dir": "04",
+  "round_note": "The output contract still says round \"03\"; this bundle was generated in round 04 and lives in rounds/04/server-nic-layout.",
+  "generator": {
+    "identity": "pi worker subagent (fresh DeepSeek generator, round 04)",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+    "do_not_swap_model": true,
+    "judges_spawned": 0
+  },
+  "candidate_skill": {
+    "path": "docs/visualize-eval/rounds/04/SKILL.md",
+    "sha256": "ac431c6d3035e466e29136f36d9579c551c2e070a354dc5df72999b1bb1beb3c"
+  },
+  "renderer": {
+    "path": "/tmp/visualize-eval/round-04/bin/rataflow-view",
+    "sha256": "0da16d8d8ed46e2a25eb773fc71ecad4de9e310cd33e303a4c7fe77231ad95bc",
+    "note": "absolute path only; never rebuilt, never substituted"
+  },
+  "source_pointers": {
+    "case_source": "docs/visualize-eval/cases/server-nic-layout/source.md",
+    "original_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-rack-bench-feat-network-diagram--/2026-10-13T05-14-42-097Z_01a133af-3231-71ff-87c1-c56889a12a6c.jsonl",
+    "original_graph_write": "line 110, call chatcmpl-tool-bd5526a999aeb873",
+    "excerpt_lines_used": [
+      "120 (assistant: the box, the layout, upstream)",
+      "121 (user: spine/leaf question)",
+      "125 (assistant: why L3 switches stay invisible)"
+    ],
+    "excerpts_not_read": "no credentials, SSH, WhatsApp or remote-host material was opened; only source.md was read."
+  },
+  "orientation": {
+    "v1": "tb (4 layers or fewer)",
+    "v2": "lr (member->gateway fan, sources stacked in one column so every label owns a long run)",
+    "v3": "tb (chain of 4 hops)"
+  },
+  "theme": "gruvbox",
+  "trunks": {
+    "declared": [],
+    "why_not": "Every relation terminates at the gateway (nic->gw, s2->gw, spare->gw). A trunk whose `from` is the gateway and whose branches are the members would state gateway->member, reversing the direction the source gives; a trunk from one member cannot fan out to sibling members without inventing relations. Per the round-04 trunk-direction rule the views use plain edges, and every `--check` prints an empty `trunks:` line."
+  },
+  "motion": {
+    "mode": "static",
+    "dots": 0,
+    "why": "The round-04 note for this case says the source is static: no dots unless flair clearly helps. Nothing here is a transfer or a live flow, so flair would only decorate. All edges declare dots: 0; each check prints `0 single-dot routes, 0 periodic routes, 0 violations ... 0 same-arrival at 2000ms`."
+  },
+  "views": [
+    {
+      "view": "v1-host",
+      "purpose": "server1's physical host side: eight NICs, the seven dark ports and the one active uplink.",
+      "spec": "specs/v1-host.json",
+      "spec_sha256": "a68544d0acc4fc1efbf2b864e3b65094e735bc397acbad605242b3312e8815e5",
+      "evidence_dir": "evidence/v1",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "check": "evidence/v1/check.txt",
+      "frames": null,
+      "frames_reason": "static view: every edge declares dots: 0 and the case note says no dots unless flair clearly helps, so no animation evidence is claimed or captured.",
+      "validator_output": "evidence/v1/validate.txt",
+      "viewer_header": " rataflow-view · 77x47 @100% · v1-host.json · 4 nodes · 2 edges · q quit  (evidence/v1/v1-text.txt line 1)",
+      "viewport_line": null,
+      "viewport_token": "77x47 @100%",
+      "measured_dimensions": {
+        "columns": 77,
+        "rows": 47,
+        "source": "the running app's own header token, evidence/v1/v1-text.txt line 1; viz-evidence.sh read pane_rows=47, pane_rect was null so the width comes from the token"
+      },
+      "graph_extent": "48x21 cells",
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=4 edges=2 flows=0 direction=tb theme=gruvbox",
+        "layers=3 (explicit placement, sugiyama skipped)",
+        "extent=48x21 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 2/2 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: plant(2) facts(1) host(1)",
+        "trunks:",
+        "routes: 2/2 near-minimal, 0 detours, 0 shortened",
+        "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 0/0 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "check_viewport_line": "viewport: unknown zoom: 1.00 natural",
+      "check_viewport_note": "that is what --check prints with no pane; the measured size proof is the header token above"
+    },
+    {
+      "view": "v2-subnet",
+      "purpose": "the routed /29: active NIC, neighbouring server, free addresses, gateway with latency, and the no-NAT/no-v6 limitation.",
+      "spec": "specs/v2-subnet.json",
+      "spec_sha256": "ce4cf67d58718dbb7a017de5b6ea363614ee71b649f63b2a8b0669163cb27ced",
+      "evidence_dir": "evidence/v2",
+      "text": "evidence/v2/v2-text.txt",
+      "ansi": "evidence/v2/v2-ansi.ansi",
+      "selected_ansi": "evidence/v2/v2-selected.ansi",
+      "check": "evidence/v2/check.txt",
+      "frames": null,
+      "frames_reason": "static view: every edge declares dots: 0 (case note: static source, no dots).",
+      "validator_output": "evidence/v2/validate.txt",
+      "viewer_header": " rataflow-view · 77x47 @100% · v2-subnet.json · 5 nodes · 3 edges · q quit  (evidence/v2/v2-text.txt line 1)",
+      "viewport_line": null,
+      "viewport_token": "77x47 @100%",
+      "measured_dimensions": {
+        "columns": 77,
+        "rows": 47,
+        "source": "the running app's own header token, evidence/v2/v2-text.txt line 1; viz-evidence.sh read pane_rows=47"
+      },
+      "graph_extent": "69x18 cells",
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=5 edges=3 flows=0 direction=lr theme=gruvbox",
+        "layers=2 (explicit placement, sugiyama skipped)",
+        "extent=69x18 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 3/3 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: plant(1) host(1) pool(1) access(1) facts(1)",
+        "trunks:",
+        "routes: 3/3 near-minimal, 0 detours, 0 shortened",
+        "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 0/0 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "check_viewport_line": "viewport: unknown zoom: 1.00 natural",
+      "check_viewport_note": "that is what --check prints with no pane; the measured size proof is the header token above"
+    },
+    {
+      "view": "v3-upstream",
+      "purpose": "observed upstream hops and where visibility stops: gateway, Airtel, Airtel backbone, Cloudflare, with the invisible-fabric uncertainty.",
+      "spec": "specs/v3-upstream.json",
+      "spec_sha256": "78d192cf1b141bf48a3afd6017a9ca43a3d0a942881bfad2e826ecb86d782e7a",
+      "evidence_dir": "evidence/v3",
+      "text": "evidence/v3/v3-text.txt",
+      "ansi": "evidence/v3/v3-ansi.ansi",
+      "selected_ansi": "evidence/v3/v3-selected.ansi",
+      "check": "evidence/v3/check.txt",
+      "frames": null,
+      "frames_reason": "static view: every edge declares dots: 0 (case note: static source, no dots).",
+      "validator_output": "evidence/v3/validate.txt",
+      "viewer_header": " rataflow-view · 77x47 @100% · v3-upstream.json · 6 nodes · 3 edges · q quit  (evidence/v3/v3-text.txt line 1)",
+      "viewport_line": null,
+      "viewport_token": "77x47 @100%",
+      "measured_dimensions": {
+        "columns": 77,
+        "rows": 47,
+        "source": "the running app's own header token, evidence/v3/v3-text.txt line 1; viz-evidence.sh read pane_rows=47"
+      },
+      "graph_extent": "68x29 cells",
+      "check_lines": [
+        "viewport: unknown zoom: 1.00 natural",
+        "ok: nodes=6 edges=3 flows=0 direction=tb theme=gruvbox",
+        "layers=4 (explicit placement, sugiyama skipped)",
+        "extent=68x29 cells",
+        "crossings: 0 bridges, 0 touching bends",
+        "labels: 3/3 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+        "groups: access(1) transit(2) internet(1) facts(2)",
+        "trunks:",
+        "routes: 3/3 near-minimal, 0 detours, 0 shortened",
+        "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms",
+        "origins: 0/0 routes start at their arrow origin",
+        "arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step"
+      ],
+      "check_viewport_line": "viewport: unknown zoom: 1.00 natural",
+      "check_viewport_note": "that is what --check prints with no pane; the measured size proof is the header token above"
+    }
+  ],
+  "meaning_ledger": [
+    {
+      "fact": "103.19.91.58 = server1",
+      "kind": "address",
+      "fate": "drawn",
+      "evidence": "v1 node label `server1 R7725 103.19.91.58` (evidence/v1/v1-text.txt line 24, col 17)."
+    },
+    {
+      "fact": "103.19.91.59 = server2",
+      "kind": "address",
+      "fate": "abbreviated (`.59`), keyed",
+      "evidence": "v2 node label `server2 R7725 .59` (line 25, col 5); the same view carries the `/29 · no NAT · no v6` key (line 25, col 47)."
+    },
+    {
+      "fact": "103.19.91.57 = /29 gateway",
+      "kind": "address",
+      "fate": "drawn",
+      "evidence": "v2 `Arista ToR? 103.19.91.57` (line 19, col 47) and v3 `Arista 103.19.91.57 AS132717` (v3 line 12, col 6)."
+    },
+    {
+      "fact": ".60-.62 free in the /29",
+      "kind": "address + uncertainty",
+      "fate": "drawn with qualifier",
+      "evidence": "v2 node `.60-.62` (line 30, col 5) plus edge label `free? in /29` (line 29, col 22)."
+    },
+    {
+      "fact": "both boxes are Dell PowerEdge R7725",
+      "kind": "identifier",
+      "fate": "drawn",
+      "evidence": "v1 `server1 R7725 103.19.91.58` (line 24) and v2 `server2 R7725 .59` (line 25)."
+    },
+    {
+      "fact": "NxtGen Cloud AS132717, Bengaluru",
+      "kind": "role + identifier",
+      "fate": "abbreviated",
+      "evidence": "AS132717 rides the gateway label in v3 (line 12, col 38); `bare metal` and `Bengaluru` dropped - the site's physical form and city carry no link meaning in a routed-path view."
+    },
+    {
+      "fact": "8 physical NICs, one active: eno16595np0 25 GbE",
+      "kind": "identifier",
+      "fate": "drawn",
+      "evidence": "v1 `eno16595np0 25 GbE` (line 32, col 21) plus `only uplink` on the s1->nic edge (line 28, col 19)."
+    },
+    {
+      "fact": "seven ports dark",
+      "kind": "state",
+      "fate": "drawn",
+      "evidence": "v1 node `7 of 8 dark` (line 16, col 50) with `no cable?` on its edge (line 20, col 30)."
+    },
+    {
+      "fact": "no NAT, public L3 straight to the host, no IPv6",
+      "kind": "limitation",
+      "fate": "drawn",
+      "evidence": "v2 key node `/29 · no NAT · no v6` (line 25, col 47)."
+    },
+    {
+      "fact": "gateway .57 answers at 0.1 ms",
+      "kind": "measurement",
+      "fate": "drawn",
+      "evidence": "v2 edge label `0.1 ms` (line 18, col 30)."
+    },
+    {
+      "fact": "MAC OUI = Arista Networks; the access layer is Arista",
+      "kind": "identifier + qualifier",
+      "fate": "drawn, qualified",
+      "evidence": "v2 `Arista ToR? 103.19.91.57` (line 19, col 47): the `ToR?` keeps the OUI-to-role doubt the brief requires."
+    },
+    {
+      "fact": "Airtel 14.143.x at 1.8 ms",
+      "kind": "hop + measurement",
+      "fate": "drawn",
+      "evidence": "v3 `Airtel 14.143.x` (line 20, col 13) and label `1.8 ms · L2?` (line 16, col 7)."
+    },
+    {
+      "fact": "Airtel backbone 14.141.x at 7.1 ms",
+      "kind": "hop + measurement",
+      "fate": "drawn",
+      "evidence": "v3 `Airtel BB 14.141.x` (line 28, col 11) and label `7.1 ms` (line 24, col 15)."
+    },
+    {
+      "fact": "Cloudflare 1.1.1.1 at 8.6 ms (relationship list says 8.3)",
+      "kind": "hop + measurement",
+      "fate": "drawn with the range kept",
+      "evidence": "v3 `Cloudflare 1.1.1.1 AS13335` (line 36, col 7) and label `8.3-8.6 ms` (line 32, col 13)."
+    },
+    {
+      "fact": "between .57 and Airtel the fabric bridges, tunnels or stays silent - a missing hop proves nothing about L2",
+      "kind": "uncertainty",
+      "fate": "drawn",
+      "evidence": "v3 dashed gw->airtel edge (evidence/v3/v3-text.txt lines 15-17: the `╎ ╎ ╶╌╌╌╌╌╌╷` dashed run) with label `1.8 ms · L2?` (line 16, col 7) and note `fabric: bridge? tunnel? silent?` (line 20, col 40)."
+    },
+    {
+      "fact": "one uplink, one visible ISP, no ECMP from this box",
+      "kind": "conclusion",
+      "fate": "drawn",
+      "evidence": "v3 note `1 uplink · no ECMP` (line 28, col 47)."
+    },
+    {
+      "fact": "fresh handoff: no GPUs, no rack-bench installed, up 1.5 days",
+      "kind": "state",
+      "fate": "abbreviated",
+      "evidence": "v1 note `up 1.5 d · no GPU · no bench` (line 16, col 16); `no rack-bench installed yet` shortened to `no bench`."
+    },
+    {
+      "fact": "TTL/ICMP rationale: hops 3 and 6 answered nothing, hop 5 lost 80%",
+      "kind": "explanation",
+      "fate": "dropped with reason",
+      "evidence": "it is the argument for the invisibility, not a link: the drawn conclusion (`fabric: bridge? tunnel? silent?`, dashed edge, `L2?`) already carries what the source asks a diagram to keep, and the per-hop loss percentages have no node to attach to."
+    },
+    {
+      "fact": "the /29 is the border-leaf, routed-access pattern",
+      "kind": "interpretive model",
+      "fate": "dropped with reason",
+      "evidence": "a model name, not a new object or link; the routed-access facts it summarises (public /29, no NAT, gateway that routes and answers) are drawn in v2."
+    },
+    {
+      "fact": "spec files on disk /tmp/server1-network-layout.json, /tmp/homelab-network-layout.json",
+      "kind": "provenance",
+      "fate": "dropped with reason",
+      "evidence": "filenames of local scratch specs, not network facts."
+    }
+  ],
+  "relationship_audit": [
+    {
+      "id": "e1",
+      "from": "dark",
+      "to": "s1",
+      "verb": "no cable (inactive ports only - unconfirmed)",
+      "label": "no cable?",
+      "label_owner": "e1",
+      "view": "v1",
+      "label_cell": "evidence/v1/v1-text.txt line 20 col 30"
+    },
+    {
+      "id": "e2",
+      "from": "s1",
+      "to": "nic",
+      "verb": "only uplink; 25 GbE speed rides the nic node label",
+      "label": "only uplink",
+      "label_owner": "e2",
+      "view": "v1",
+      "label_cell": "evidence/v1/v1-text.txt line 28 col 19"
+    },
+    {
+      "id": "e3",
+      "from": "nic",
+      "to": "gw",
+      "verb": "routed /29 access, next hop answers at 0.1 ms",
+      "label": "0.1 ms",
+      "label_owner": "e3",
+      "view": "v2",
+      "label_cell": "evidence/v2/v2-text.txt line 18 col 30"
+    },
+    {
+      "id": "e4",
+      "from": "s2",
+      "to": "gw",
+      "verb": "same /29 as server1",
+      "label": "same /29",
+      "label_owner": "e4",
+      "view": "v2",
+      "label_cell": "evidence/v2/v2-text.txt line 24 col 29"
+    },
+    {
+      "id": "e5",
+      "from": "spare",
+      "to": "gw",
+      "verb": "addresses .60-.62, unresponsive (free? not proven)",
+      "label": "free? in /29",
+      "label_owner": "e5",
+      "view": "v2",
+      "label_cell": "evidence/v2/v2-text.txt line 29 col 22"
+    },
+    {
+      "id": "e6",
+      "from": "gw",
+      "to": "airtel",
+      "verb": "transit 1.8 ms; the path between is not visible (bridge/tunnel/silent)",
+      "label": "1.8 ms · L2?",
+      "label_owner": "e6",
+      "view": "v3",
+      "label_cell": "evidence/v3/v3-text.txt line 16 col 7",
+      "style": "dashed"
+    },
+    {
+      "id": "e7",
+      "from": "airtel",
+      "to": "airtelbb",
+      "verb": "Airtel backbone 7.1 ms",
+      "label": "7.1 ms",
+      "label_owner": "e7",
+      "view": "v3",
+      "label_cell": "evidence/v3/v3-text.txt line 24 col 15"
+    },
+    {
+      "id": "e8",
+      "from": "airtelbb",
+      "to": "cf",
+      "verb": "Cloudflare 8.3-8.6 ms (sources disagree)",
+      "label": "8.3-8.6 ms",
+      "label_owner": "e8",
+      "view": "v3",
+      "label_cell": "evidence/v3/v3-text.txt line 32 col 13"
+    }
+  ],
+  "split_coverage_map": {
+    "v1-host": {
+      "edges": [
+        "e1",
+        "e2"
+      ],
+      "identifiers": [
+        "103.19.91.58",
+        "R7725 (server1)",
+        "eno16595np0",
+        "25 GbE",
+        "7 dark ports"
+      ],
+      "qualifiers": [
+        "no cable?"
+      ],
+      "ledger_rows": [
+        "103.19.91.58",
+        "both boxes R7725",
+        "8 NICs / one active",
+        "seven ports dark",
+        "fresh handoff"
+      ]
+    },
+    "v2-subnet": {
+      "edges": [
+        "e3",
+        "e4",
+        "e5"
+      ],
+      "identifiers": [
+        "103.19.91.57",
+        ".59",
+        ".60-.62",
+        "/29",
+        "AS-free gateway model"
+      ],
+      "qualifiers": [
+        "ToR?",
+        "free?"
+      ],
+      "ledger_rows": [
+        "103.19.91.57",
+        "103.19.91.59",
+        ".60-.62",
+        "no NAT / no v6",
+        "0.1 ms",
+        "Arista OUI"
+      ]
+    },
+    "v3-upstream": {
+      "edges": [
+        "e6",
+        "e7",
+        "e8"
+      ],
+      "identifiers": [
+        "AS132717",
+        "14.143.x",
+        "14.141.x",
+        "1.1.1.1",
+        "AS13335"
+      ],
+      "qualifiers": [
+        "L2?",
+        "8.3-8.6 ms",
+        "bridge? tunnel? silent?"
+      ],
+      "ledger_rows": [
+        "Airtel 1.8 ms",
+        "Airtel backbone 7.1 ms",
+        "Cloudflare 8.3-8.6 ms",
+        "fabric invisible",
+        "one uplink no ECMP",
+        "NxtGen AS132717"
+      ]
+    }
+  },
+  "relationship_mapping": [
+    {
+      "original": "dark -> s1 (no cable)",
+      "view_relationship": "v1 e1: down arrow from `7 of 8 dark` into `server1 R7725 103.19.91.58`, label `no cable?`"
+    },
+    {
+      "original": "s1 -> nic (only uplink)",
+      "view_relationship": "v1 e2: down arrow from server1 into `eno16595np0 25 GbE`, label `only uplink`"
+    },
+    {
+      "original": "nic -> gw (default gw 0.1 ms)",
+      "view_relationship": "v2 e3: right arrow from the NIC column into the Arista column, label `0.1 ms`"
+    },
+    {
+      "original": "s2 -> gw (same /29)",
+      "view_relationship": "v2 e4: right arrow from `server2 R7725 .59` into the Arista column, label `same /29`"
+    },
+    {
+      "original": "spare -> gw (free in /29)",
+      "view_relationship": "v2 e5: right arrow from `.60-.62` into the Arista column, label `free? in /29`"
+    },
+    {
+      "original": "gw -> airtel (transit 1.8 ms)",
+      "view_relationship": "v3 e6: dashed down arrow from `Arista 103.19.91.57 AS132717` to `Airtel 14.143.x`, label `1.8 ms · L2?`"
+    },
+    {
+      "original": "airtel -> airtelbb (7.1 ms)",
+      "view_relationship": "v3 e7: down arrow from `Airtel 14.143.x` to `Airtel BB 14.141.x`, label `7.1 ms`"
+    },
+    {
+      "original": "airtelbb -> cf (8.3 ms; prose 8.6 ms)",
+      "view_relationship": "v3 e8: down arrow from `Airtel BB 14.141.x` to `Cloudflare 1.1.1.1 AS13335`, label `8.3-8.6 ms`"
+    }
+  ],
+  "abbreviations": [
+    {
+      "short": ".59",
+      "full": "103.19.91.59",
+      "key_on_view": "v2 key node `/29 · no NAT · no v6` plus the full `103.19.91.57` on the same view"
+    },
+    {
+      "short": ".60-.62",
+      "full": "103.19.91.60-103.19.91.62",
+      "key_on_view": "same v2 /29 key"
+    },
+    {
+      "short": "no bench",
+      "full": "no rack-bench installed yet",
+      "key_on_view": "v1 note, same view as the host"
+    },
+    {
+      "short": "Airtel BB",
+      "full": "Airtel backbone",
+      "key_on_view": "v3 node label `Airtel BB 14.141.x`"
+    },
+    {
+      "short": "gw / ToR",
+      "full": "gateway at 103.19.91.57, Arista access switch",
+      "key_on_view": "v2 node `Arista ToR? 103.19.91.57`"
+    }
+  ],
+  "deliberate_drops": [
+    {
+      "fact": "TTL/ICMP suppression rationale (hops 3 and 6 silent, hop 5 lost 80%)",
+      "reason": "it argues for invisibility rather than adding a link; the drawn conclusion (dashed edge, `L2?`, fabric note) keeps the claim the source asks a diagram to keep"
+    },
+    {
+      "fact": "border-leaf / routed-access model name",
+      "reason": "an interpretive label, not an object or a link; its facts (public /29, no NAT, a gateway that routes and answers) are drawn in v2"
+    },
+    {
+      "fact": "NxtGen spines and other transits",
+      "reason": "the source forbids inventing invisible switches from traceroute; nothing was drawn for them"
+    },
+    {
+      "fact": "bare metal, Bengaluru",
+      "reason": "site form and city carry no link meaning in a routed-path view; AS132717 is kept"
+    },
+    {
+      "fact": "/tmp/...-layout.json spec paths",
+      "reason": "local scratch filenames, not network facts"
+    },
+    {
+      "fact": "the rest of the historical chat (panel-selection, panel-switching, credential and host-access discussion)",
+      "reason": "the brief supplies the extracted facts and forbids reading those parts; only source.md's three excerpts were used"
+    }
+  ],
+  "known_defects": [
+    "v2: the three member routes enter the Arista box's left edge as short risers that run up beside the box (evidence/v2/v2-text.txt lines 15-31). Each arrowhead is separate and no two routes share a corridor, but a reader has to follow a riser column upward instead of reading one straight line.",
+    "v1 is deliberately small (2 edges, 4 nodes). The three-edge host-plus-gateway shape was tried first and rejected: the short gateway-side route had no unambiguous label slot.",
+    "The dashed gw->airtel edge (v3) shows the *uncertainty of the path between*, not a polarity or a rate; its label carries `L2?` in text so the meaning does not depend on the dash.",
+    "Isolated note nodes (v1 `up 1.5 d ...`, v2 `/29 ...`, v3 both notes) carry facts, not relations; they have no edges and the check places no route for them."
+  ],
+  "blockers": [
+    "None on capability: group, style: dashed, dots: 0 and explicit layers covered every shape these views needed.",
+    "Measurement caveat, not a blocker: `--check` runs outside a pane and prints `viewport: unknown zoom: 1.00 natural`, so the size proof is the live app's own header token `77x47 @100%` captured in each *-text.txt line 1. viz-evidence.sh recorded pane_rect=null but pane_rows=47."
+  ],
+  "cleanup": {
+    "status": "confirmed_closed for all three panes",
+    "panes": [
+      {
+        "view": "v1",
+        "pane_id": "w7E:pDZ",
+        "cleanup": "confirmed_closed"
+      },
+      {
+        "view": "v2",
+        "pane_id": "w7E:pDV",
+        "cleanup": "confirmed_closed"
+      },
+      {
+        "view": "v3",
+        "pane_id": "w7E:pDW",
+        "cleanup": "confirmed_closed"
+      }
+    ],
+    "failures": [],
+    "note": "viz-evidence.sh splits, captures, closes and proves the close per bundle in manifest.json."
+  },
+  "attempts": {
+    "file": "attempts.json",
+    "budget": "3 spec candidates per view, every --check run on a distinct spec counted",
+    "used": {
+      "v0-access-single-view (abandoned)": 2,
+      "v1": 3,
+      "v2": 2,
+      "v3": 3,
+      "total_checked_specs": 10
+    },
+    "checks_preserved": "every attempt keeps its raw --check output beside its spec in attempts/<name>.check.txt",
+    "abandoned_view": "v0-access-single-view: before the split I tried to put all five access relations in one graph. Its two probes are recorded as their own attempt list because they belong to that view design, not to final v1. No evidence bundle exists for v0 - it was abandoned before capture.",
+    "disclosure": "The v0 probes originally reused the filenames attempts/v1-attempt{1,2}.check.txt, which were later overwritten when the split turned v1 into a 2-edge chain. The two v0 check files in this bundle are deterministic re-runs of the same spec bytes (spec sha256 unchanged, listed in attempts.json); nothing was edited or reconstructed by hand."
+  },
+  "validators": {
+    "v1-host": {
+      "output": "evidence/v1/validate.txt",
+      "verdict": "all checks passed"
+    },
+    "v2-subnet": {
+      "output": "evidence/v2/validate.txt",
+      "verdict": "all checks passed"
+    },
+    "v3-upstream": {
+      "output": "evidence/v3/validate.txt",
+      "verdict": "all checks passed"
+    }
+  },
+  "commands": [
+    "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/04/server-nic-layout/specs/v1-host.json --bin /tmp/visualize-eval/round-04/bin/rataflow-view --out docs/visualize-eval/rounds/04/server-nic-layout/evidence/v1 --label v1",
+    "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/04/server-nic-layout/specs/v2-subnet.json --bin /tmp/visualize-eval/round-04/bin/rataflow-view --out docs/visualize-eval/rounds/04/server-nic-layout/evidence/v2 --label v2",
+    "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/04/server-nic-layout/specs/v3-upstream.json --bin /tmp/visualize-eval/round-04/bin/rataflow-view --out docs/visualize-eval/rounds/04/server-nic-layout/evidence/v3 --label v3",
+    "scripts/viz-validate.py docs/visualize-eval/rounds/04/server-nic-layout/evidence/<v> --require-select --attempts docs/visualize-eval/rounds/04/server-nic-layout/attempts.json"
+  ],
+  "approval": "not claimed: no independent review was run (the captain starts a separate Sol judge), and this generator does not mark its own output green.",
+  "views_note": "Three delivered views (v1, v2, v3) plus one abandoned view design (v0) documented in attempts.json."
+}

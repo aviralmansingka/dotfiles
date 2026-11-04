@@ -1,0 +1,18 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "vm", "label": "vm · vnet0", "group": "libvirt" },
+    { "id": "virbr", "label": "virbr0 NAT", "group": "libvirt" },
+    { "id": "ctr", "label": "ctr · veth", "group": "docker" },
+    { "id": "dkbr", "label": "docker 172.18.2.1", "group": "docker" },
+    { "id": "box", "label": "homelab (ASUS, Linux 7.0)", "group": "host" },
+    { "id": "limits", "label": "no v6 (ULA), no committed rate" }
+  ],
+  "edges": [
+    { "from": "vm", "to": "virbr", "label": "192.168.122.x" },
+    { "from": "virbr", "to": "box", "label": "NAT bridge" },
+    { "from": "ctr", "to": "dkbr", "label": "172.18.2.x" },
+    { "from": "dkbr", "to": "box", "label": "docker bridge" }
+  ]
+}

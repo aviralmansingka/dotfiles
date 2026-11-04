@@ -1,0 +1,92 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "layers": [
+    [
+      "ispA",
+      "ispB",
+      "ispC",
+      "ispD"
+    ],
+    [
+      "mux1",
+      "mux2"
+    ],
+    [
+      "core1",
+      "core2"
+    ]
+  ],
+  "nodes": [
+    {
+      "id": "ispA",
+      "label": "ISP A"
+    },
+    {
+      "id": "ispB",
+      "label": "ISP B"
+    },
+    {
+      "id": "ispC",
+      "label": "ISP C"
+    },
+    {
+      "id": "ispD",
+      "label": "ISP D"
+    },
+    {
+      "id": "mux1",
+      "label": "MUX 1"
+    },
+    {
+      "id": "mux2",
+      "label": "MUX 2"
+    },
+    {
+      "id": "core1",
+      "label": "Core 1"
+    },
+    {
+      "id": "core2",
+      "label": "Core 2"
+    }
+  ],
+  "edges": [
+    {
+      "from": "ispA",
+      "to": "mux1"
+    },
+    {
+      "from": "ispB",
+      "to": "mux1"
+    },
+    {
+      "from": "ispC",
+      "to": "mux2"
+    },
+    {
+      "from": "ispD",
+      "to": "mux2"
+    },
+    {
+      "from": "mux1",
+      "to": "core1",
+      "label": "x-conn"
+    },
+    {
+      "from": "mux1",
+      "to": "core2",
+      "label": "x-conn"
+    },
+    {
+      "from": "mux2",
+      "to": "core1",
+      "label": "x-conn"
+    },
+    {
+      "from": "mux2",
+      "to": "core2",
+      "label": "x-conn"
+    }
+  ]
+}

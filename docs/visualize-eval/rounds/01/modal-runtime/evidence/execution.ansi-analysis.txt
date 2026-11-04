@@ -1,0 +1,12 @@
+file: captures/execution.ansi.none.txt
+grid: 77x47
+boxes: 5
+  box 'Task engine'            at (19,14) 13x4 border-colours={'#d8a657': 34}
+  box 'Container backend'      at (16,22) 19x4 border-colours={'#7daea3': 46}
+  box 'Filesystem + volumes'   at (39,22) 22x4 border-colours={'#93c2b7': 52}
+  box 'Task container'         at (18,30) 16x4 border-colours={'#d3869b': 40}
+  box 'Blobnet'                at (46,30) 9x4 border-colours={'#e29caf': 26}
+arrows: {'▼': 4}
+dot glyphs: 0
+overflow badge: False
+

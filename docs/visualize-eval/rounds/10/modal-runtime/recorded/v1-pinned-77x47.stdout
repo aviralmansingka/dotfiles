@@ -1,0 +1,145 @@
+viewport: 77x47 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 77x47 @100% · v1-seams.json · 4 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ╭────────────╮
+                               │modal-worker│
+                               │            │
+                               ╰────────────╯
+                                    │ ▲ task in + ctrl gRPC
+                                    │ │ events + mgmt gRPC
+                                    ╰╮╰╮
+                                     ▼ │
+                               ╭─────────────╮
+                               │modal-runtime│
+                               │             │
+                               ╰─────────────╯
+                                     │ │dispatch tasks
+                     fs HTTP over UDS│ │
+                             ╭───────╯ ╰──────╮
+                             ▼                ▼
+                       ╭────────────╮   ╭───────────╮
+                       │modal-daemon│   │Task engine│
+                       │            │   │           │
+                       ╰────────────╯   ╰───────────╯
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 77x47 @100% · v1-seams.json · 4 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ╭────────────╮
+                               │modal-worker│
+                               │            │
+                               ╰────────────╯
+                                    │ ▲ task in + ctrl gRPC
+                                    │ │ events + mgmt gRPC
+                                    ╰╮╰╮
+                                     ▼ │
+                               ╭─────────────╮
+                               │modal-runtime│
+                               │             │
+                               ╰─────────────╯
+                                     │ │dispatch tasks
+                     fs HTTP over UDS│ │
+                             ╭───────╯ ╰──────╮
+                             ▼                ▼
+                       ╭────────────╮   ╭───────────╮
+                       │modal-daemon│   │Task engine│
+                       │            │   │           │
+                       ╰────────────╯   ╰───────────╯
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 77x47 @100% · v1-seams.json · 4 nodes · 4 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ╭────────────╮
+                               │modal-worker│
+                               │            │
+                               ╰────────────╯
+                                    │ ▲ task in + ctrl gRPC
+                                    │ │ events + mgmt gRPC
+                                    ╰╮╰╮
+                                     ▼ │
+                               ╭─────────────╮
+                               │modal-runtime│
+                               │             │
+                               ╰─────────────╯
+                                     │ │dispatch tasks
+                     fs HTTP over UDS│ │
+                             ╭───────╯ ╰──────╮
+                             ▼                ▼
+                       ╭────────────╮   ╭───────────╮
+                       │modal-daemon│   │Task engine│
+                       │            │   │           │
+                       ╰────────────╯   ╰───────────╯
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+

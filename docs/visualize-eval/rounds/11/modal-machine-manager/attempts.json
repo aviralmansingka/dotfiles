@@ -1,0 +1,208 @@
+{
+  "case_id": "modal-machine-manager",
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "spec": "specs/v1-provision.json",
+          "spec_sha256": "e2c37e734990758741f6530ee865f3f4447d10a771d764dd436e2a6a67e7db43",
+          "record_label": "v1-provision-att1",
+          "record_stdout": "recorded/v1-provision-att1.stdout",
+          "note": "first draft: all five edges animated and label_slot only on the 26-char edge; extent 52x93 (the un-slotched rank gaps each grow to label length) -> overflows the 47 rows",
+          "check_summary": {
+            "extent": "52x93",
+            "crossings": "crossings: 0 bridges, 0 touching bends",
+            "labels": "labels: 5/5 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+            "dots": "dots: 5 single-dot routes, 0 periodic routes",
+            "origins": "origins: 5/5 routes start at their arrow origin"
+          }
+        },
+        {
+          "spec": "specs/v1-provision-att2.json",
+          "spec_sha256": "01ce68d4f36b6f410b7916a6c06267d03df5a7fedf007d5670bf70403149cc47",
+          "record_label": "v1-provision-att2",
+          "record_stdout": "recorded/v1-provision-att2.stdout",
+          "note": "dropped dots on two edges to test whether motion drove the height; extent stayed 52x93, isolating label_slot (not dots) as the rank-gap driver",
+          "check_summary": {
+            "extent": "52x93",
+            "crossings": "crossings: 0 bridges, 0 touching bends",
+            "labels": "labels: 5/5 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+            "dots": "dots: 3 single-dot routes, 0 periodic routes",
+            "origins": "origins: 3/3 routes start at their arrow origin"
+          }
+        },
+        {
+          "spec": "specs/v1-provision-att3.json",
+          "spec_sha256": "aa6d9416fdd740b4135db3da97ddfef410214fa3ada5e64df09db0bc023e4fbb",
+          "record_label": "v1-provision-att3",
+          "record_stdout": "recorded/v1-provision-att3.stdout",
+          "note": "final: label_slot on every labelled edge, one dot on create/terminate/repair, provision job and allocate instance; 52x44, 0 crossings, 0 ambiguous",
+          "check_summary": {
+            "extent": "52x44",
+            "crossings": "crossings: 0 bridges, 0 touching bends",
+            "labels": "labels: 5/5 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+            "dots": "dots: 3 single-dot routes, 0 periodic routes",
+            "origins": "origins: 3/3 routes start at their arrow origin"
+          }
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "attempts": [
+        {
+          "spec": "specs/v2-boot-heartbeat.json",
+          "spec_sha256": "87e4f913e4ae812e17ddba23e19d06876451bd747872b21d4bb51141f2994073",
+          "record_label": "v2-boot-heartbeat-att1",
+          "record_stdout": "recorded/v2-boot-heartbeat-att1.stdout",
+          "note": "final: iPXE request/response pair + heartbeat + state writes (e8,e9,e10,e11,e12,e13,e17); 41x36, 0 crossings, 7/7 labels, 0 ambiguous",
+          "check_summary": {
+            "extent": "41x36",
+            "crossings": "crossings: 0 bridges, 0 touching bends",
+            "labels": "labels: 7/7 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+            "dots": "dots: 6 single-dot routes, 0 periodic routes",
+            "origins": "origins: 6/6 routes start at their arrow origin"
+          }
+        },
+        {
+          "spec": "specs/v2-boot-heartbeat-att2.json",
+          "spec_sha256": "594b48159adc0c462dff58567296d891a0ae9845e782328c78ed50eba4c1aa80",
+          "record_label": "v2-boot-heartbeat-att2",
+          "record_stdout": "recorded/v2-boot-heartbeat-att2.stdout",
+          "note": "rejected by the renderer: duplicate node id pgrpc (I tried to add pgrpc before noticing it was already in the view)",
+          "check_summary": {}
+        },
+        {
+          "spec": "specs/v2-boot-heartbeat-att3.json",
+          "spec_sha256": "3b20a524edcaeea405b58653767beee65e3ea4d99e8a63c2b8d20011acb53047",
+          "record_label": "v2-boot-heartbeat-att3",
+          "record_stdout": "recorded/v2-boot-heartbeat-att3.stdout",
+          "note": "variant adding River jobs -> Postgres 'job rows' (e14): 50x37, 0 crossings, 0 ambiguous; not shipped because e14 sits more naturally in v4 where River jobs and Postgres already live, and v2 stays the boot/heartbeat view",
+          "check_summary": {
+            "extent": "50x37",
+            "crossings": "crossings: 0 bridges, 0 touching bends",
+            "labels": "labels: 8/8 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+            "dots": "dots: 7 single-dot routes, 0 periodic routes",
+            "origins": "origins: 7/7 routes start at their arrow origin"
+          }
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "attempts": [
+        {
+          "spec": "specs/v3-ops.json",
+          "spec_sha256": "73c1eb81b702430a3d5a1a83624440cfc3b3b30fb74e8319b3bc529210b19e9c",
+          "record_label": "v3-ops-att1",
+          "record_stdout": "recorded/v3-ops-att1.stdout",
+          "note": "first draft: the queue fans to Postgres, janitor, S3 and SSH; 76x21 with 1 ambiguous owner (the janitor and job-rows labels sit between parallel runs)",
+          "check_summary": {
+            "extent": "76x22",
+            "crossings": "crossings: 0 bridges, 0 touching bends",
+            "labels": "labels: 5/5 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+            "warning": "warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge",
+            "dots": "dots: 5 single-dot routes, 0 periodic routes",
+            "origins": "origins: 5/5 routes start at their arrow origin"
+          }
+        },
+        {
+          "spec": "specs/v3-ops-att2.json",
+          "spec_sha256": "5bd432aa59c075e24efae23e7e4792c5d613fad966c7147ae437151b51e81da3",
+          "record_label": "v3-ops-att2",
+          "record_stdout": "recorded/v3-ops-att2.stdout",
+          "note": "job rows moved out (Postgres dropped from the fan): 63x21, still 1 ambiguous owner on the leftward janitor branch",
+          "check_summary": {
+            "extent": "63x21",
+            "crossings": "crossings: 0 bridges, 0 touching bends",
+            "labels": "labels: 4/4 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+            "warning": "warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge",
+            "dots": "dots: 4 single-dot routes, 0 periodic routes",
+            "origins": "origins: 4/4 routes start at their arrow origin"
+          }
+        },
+        {
+          "spec": "specs/v3-ops-att3.json",
+          "spec_sha256": "546d31086c6330b0f2f837d9cb1ef3e32fb227aa855148a66bf7690fa03fa776",
+          "record_label": "v3-ops-att3",
+          "record_stdout": "recorded/v3-ops-att3.stdout",
+          "note": "final: same fan, targets declared in ascending label width (S3, janitor, SSH); 63x21, 0 crossings, 1 ambiguous owner remains (the engine writes a leftward branch's label to the right of its route, onto the next branch's run)",
+          "check_summary": {
+            "extent": "63x21",
+            "crossings": "crossings: 0 bridges, 0 touching bends",
+            "labels": "labels: 4/4 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+            "warning": "warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge",
+            "dots": "dots: 4 single-dot routes, 0 periodic routes",
+            "origins": "origins: 4/4 routes start at their arrow origin"
+          }
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "attempts": [
+        {
+          "spec": "specs/v4-humans-reconcile.json",
+          "spec_sha256": "e365c840ce0ad3920d3289a222b98cb9295cc5ee3e4c254c6e8e39037726b6f5",
+          "record_label": "v4-humans-reconcile-att1",
+          "record_stdout": "recorded/v4-humans-reconcile-att1.stdout",
+          "note": "first draft: console + janitor proposals + reconcile; 75x23, 0 ambiguous, 2 bridges, but 'reinstall / reprovision' is clipped at the 77-column edge",
+          "check_summary": {
+            "extent": "75x23",
+            "crossings": "crossings: 2 bridges, 1 touching bends",
+            "labels": "labels: 6/6 placed, 0 on route cells, 0 skipped, 0 ambiguous owners",
+            "dots": "dots: 6 single-dot routes, 0 periodic routes",
+            "origins": "origins: 6/6 routes start at their arrow origin"
+          }
+        },
+        {
+          "spec": "specs/v4-humans-reconcile-att2.json",
+          "spec_sha256": "5b650b5c7f6819bda43748e817d77bdfd7ff7a79864712685b9d1db5c177b77c",
+          "record_label": "v4-humans-reconcile-att2",
+          "record_stdout": "recorded/v4-humans-reconcile-att2.stdout",
+          "note": "final: reconcile abbreviated to 'reconcile loop' and job rows (e14) added, pulling the graph in to 62x30 so every long label prints whole; 1 ambiguous owner and 3 bridges remain",
+          "check_summary": {
+            "extent": "62x30",
+            "crossings": "crossings: 3 bridges, 3 touching bends",
+            "labels": "labels: 7/7 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+            "warning": "warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge",
+            "dots": "dots: 7 single-dot routes, 0 periodic routes",
+            "origins": "origins: 7/7 routes start at their arrow origin"
+          }
+        },
+        {
+          "spec": "specs/v4-humans-reconcile-att3.json",
+          "spec_sha256": "e1904dd91e4488be45836d3fa9cd4a630ba802c7f3e7a01e59b9a074f1de5d51",
+          "record_label": "v4-humans-reconcile-att3",
+          "record_stdout": "recorded/v4-humans-reconcile-att3.stdout",
+          "note": "kept the shorter node label but reverted e14: 71x23, 4 bridges, 1 ambiguous owner and 1 dot violation -> worse than att2 on every count",
+          "check_summary": {
+            "extent": "71x23",
+            "crossings": "crossings: 4 bridges, 4 touching bends",
+            "labels": "labels: 6/6 placed, 0 on route cells, 0 skipped, 1 ambiguous owners",
+            "warning": "warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge",
+            "dots": "dots: 6 single-dot routes, 0 periodic routes",
+            "origins": "origins: 6/6 routes start at their arrow origin"
+          }
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "label": "probe-lr-6chain",
+      "spec": "recorded/probe-lr-6chain.json",
+      "spec_sha256": "e158ff87710b55061660a5f30b008194f45c0247f9d379add3df5c68a309ff0c",
+      "record_stdout": "recorded/probe-lr-6chain.stdout",
+      "note": "synthetic 6-node provisioning-shaped chain carrying the case's real label lengths, direction lr: 123x7, so lr cannot hold a six-rank spine at 77 columns; no case facts, orientation only"
+    },
+    {
+      "label": "probe-tb-6chain",
+      "spec": "recorded/probe-tb-6chain.json",
+      "spec_sha256": "73490c0a0687183782c0e3ba4dad696898ee72ee95f71ce16b632dd88f32574f",
+      "record_stdout": "recorded/probe-tb-6chain.stdout",
+      "note": "the same synthetic chain in tb with label_slot on every edge: 52x44, which became v1's budget; established that tb + label_slot is the only orientation that fits 77x47"
+    }
+  ]
+}

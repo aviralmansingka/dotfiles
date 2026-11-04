@@ -1,0 +1,1208 @@
+{
+  "protocol_version": 1,
+  "round": 1,
+  "case_id": "pipeline",
+  "candidate_sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+  "renderer_sha256": "4a883e73b822f009c504bd21d0c2fc383067bf1b83b9791ccbda431912e3a1d8",
+  "rubric_sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "d5e59fa46e19f77f6841cf382c0794a45dca2aadf1a2142d6d7d1830d031d4cb",
+  "generator": {
+    "worker_id": "viz-ds01-pipeline",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge01-pipeline",
+    "model": "openai/gpt-6-astra"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 77,
+    "rows": 47
+  },
+  "evidence": [
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/01/metadata.json",
+      "sha256": "b99735d09760e77b21a21c7491e7e03663c20e1787ad8ac900d319c4d7ad240a",
+      "description": "Frozen round baseline and model/input identities",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/01/rubric.json",
+      "sha256": "60997237bd996f1e1b6a16e0b68133859b9f03fd83c85e7f508e286743240f5d",
+      "description": "Frozen rubric and result schema",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen eight-case manifest; only pipeline reviewed",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/pipeline/source.md",
+      "sha256": "68aa197fdc597c3a22d1b8ca88a3ebee861dcda34684da15ae69b6946b741e58",
+      "description": "Source excerpts and fixed constraints",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/pipeline/expected.json",
+      "sha256": "ea177d01af818876ff04bf707b923326b153185fd425f21ea96250486b504ec3",
+      "description": "Qualified historical directed relation reference",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/01/SKILL.md",
+      "sha256": "9c5cea272a88300644cacda52c853c7c9169eeec91f0355d3460ee8741308d92",
+      "description": "Executed candidate skill snapshot",
+      "capture": null
+    },
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/01/reviews/pipeline/observed-first.md",
+      "sha256": "433079ce2330ef2fbb6a378f60e48378a59aa077ac3ccede3342facf701d3743",
+      "description": "Stage A saved before expected reveal, unchanged",
+      "capture": null
+    },
+    {
+      "id": "verification",
+      "path": "docs/visualize-eval/rounds/01/reviews/pipeline/hash-verification.json",
+      "sha256": "8863c7da7b6a6d104e294201a386a4190e9c0218dd30a73518a2c2e5dd4f8ee7",
+      "description": "Independent hash and identity verification; external binary verified by hash only",
+      "capture": null
+    },
+    {
+      "id": "attempts__view1-attempt1.json",
+      "path": "docs/visualize-eval/rounds/01/pipeline/attempts/view1-attempt1.json",
+      "sha256": "ab6597b056bc92707da9b81074f6417216db2a9205bc948df587bd4627eb6162",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "attempts__view1-attempt2.json",
+      "path": "docs/visualize-eval/rounds/01/pipeline/attempts/view1-attempt2.json",
+      "sha256": "38010e16f4ad1fff4ab715e6f5abbd735f104d80ce0e60ec4e3a2cba0a58886e",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "attempts__view1-attempt3.json",
+      "path": "docs/visualize-eval/rounds/01/pipeline/attempts/view1-attempt3.json",
+      "sha256": "d5e59fa46e19f77f6841cf382c0794a45dca2aadf1a2142d6d7d1830d031d4cb",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "captures__view1-ansi-unselected.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-ansi-unselected.txt",
+      "sha256": "6564d17d36aba26b6e6eb2c676bb6bc44f8b2d4158c2f1793c6011e7cfecdb40",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "view1-ansi-unselected",
+        "timestamp": "paired text 2026-11-02T08:27:04Z",
+        "state": "unselected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "captures__view1-attempt1-ansi.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-attempt1-ansi.txt",
+      "sha256": "4a778b2a7dde49daa0b5476b32d95e0bf32cf0cb02b871f744cb792a908bfe09",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "superseded-attempt1",
+        "frame": "view1-attempt1-ansi",
+        "timestamp": "paired text 2026-11-02T08:24:53Z",
+        "state": "unselected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "captures__view1-attempt1-visible.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-attempt1-visible.txt",
+      "sha256": "af0b1fc09a8ea2ed6cf1d781b2cc2478edff2fecd0c8e74f475c3da5a4f9265c",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "superseded-attempt1",
+        "frame": "view1-attempt1-visible",
+        "timestamp": "2026-11-02T08:24:53Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "captures__view1-attempt2-dims.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-attempt2-dims.txt",
+      "sha256": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "captures__view1-attempt2-visible.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-attempt2-visible.txt",
+      "sha256": "660622834e35b16226824e925e351ea2530efe4cb365d4be2b6f780dd5879b5a",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "superseded-attempt2",
+        "frame": "view1-attempt2-visible",
+        "timestamp": "2026-11-02T08:26:05Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "captures__view1-attempt3-dims.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-attempt3-dims.txt",
+      "sha256": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "captures__view1-attempt3-visible.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-attempt3-visible.txt",
+      "sha256": "9219ecb67ef2f1dfbd9d4f28cdaae6d63fddd223babee62b3a47a564c7b6f3c1",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "view1-attempt3-visible",
+        "timestamp": "2026-11-02T08:26:18Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "captures__view1-dims.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-dims.txt",
+      "sha256": "7a06e2e0a5498d9fa7a47d1816f6a0a69b45fc59e5e6db9ecd316b2b9916f3ae",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "captures__view1-frame1.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-frame1.txt",
+      "sha256": "f8bdb6c61ab0c03f07cb1cd273be5378fc306099383eed658597f67ca9d033df",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "view1-frame1",
+        "timestamp": "2026-11-02T08:26:36Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "captures__view1-frame2.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-frame2.txt",
+      "sha256": "0bea5db81ab42d6c77d9f35eb00adfcec54d6584626f3ebf593e7e899cf78cd1",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "view1-frame2",
+        "timestamp": "2026-11-02T08:26:38Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "captures__view1-frame3.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-frame3.txt",
+      "sha256": "a60a4985dccb4d3808f15853980871f9dbdb34e287e36c120c057a4e4e04156b",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "view1-frame3",
+        "timestamp": "2026-11-02T08:26:40Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "captures__view1-frame4.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-frame4.txt",
+      "sha256": "567d571e327be4faa7b4d3e6cbd02aeb6be1d7f0edc88cfb4ff511011fa21ad1",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "view1-frame4",
+        "timestamp": "2026-11-02T08:26:42Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "captures__view1-live-frame1.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-live-frame1.txt",
+      "sha256": "a781c3ce9f6383ec59893aa715b23cc1871a942c0f0e02598ff178a2c498d22f",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "view1-live-frame1",
+        "timestamp": "2026-11-02T08:27:30Z",
+        "state": "Worker pool selected according to capture metadata; plain text cannot establish color",
+        "format": "text"
+      }
+    },
+    {
+      "id": "captures__view1-live-frame2.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-live-frame2.txt",
+      "sha256": "18201fb9bc197b2796dff0e210efe13bc63b2b67ab88ae7c2dec6568fd39806a",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "view1-live-frame2",
+        "timestamp": "2026-11-02T08:27:32Z",
+        "state": "Worker pool selected according to capture metadata; plain text cannot establish color",
+        "format": "text"
+      }
+    },
+    {
+      "id": "captures__view1-live-frame3.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-live-frame3.txt",
+      "sha256": "f6a6f3dd38db9d35b4b5d382ebfb8b5847ad55f912cff9fc051b03ac6f431ebb",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "view1-live-frame3",
+        "timestamp": "2026-11-02T08:27:34Z",
+        "state": "Worker pool selected according to capture metadata; plain text cannot establish color",
+        "format": "text"
+      }
+    },
+    {
+      "id": "captures__view1-selected1-ansi.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-selected1-ansi.txt",
+      "sha256": "98a03ef08c944654813147a45bd9ba85d0cbccae686f8a8c4da6b82ae98577b8",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "view1-selected1-ansi",
+        "timestamp": "paired text 2026-11-02T08:27:07Z",
+        "state": "API gateway selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "captures__view1-selected1-visible.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-selected1-visible.txt",
+      "sha256": "cccff7e3802010347fbc63eea7f3d0fc048cbdbae377c31a622cb30406e54baf",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "view1-selected1-visible",
+        "timestamp": "2026-11-02T08:27:07Z",
+        "state": "API gateway selected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "captures__view1-selected2-ansi.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-selected2-ansi.txt",
+      "sha256": "5606aabcdcf9624176aa2a1bdce1abf0214819f42ea8e4c591d2593d41f7c4c2",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "view1-selected2-ansi",
+        "timestamp": "paired text 2026-11-02T08:27:16Z",
+        "state": "Auth selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "captures__view1-selected2-visible.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-selected2-visible.txt",
+      "sha256": "c245117aee0cdd325fdac8c7e396ec2ad10c2d57855c3fc9d87844cdee5bd4e2",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "view1-selected2-visible",
+        "timestamp": "2026-11-02T08:27:16Z",
+        "state": "Auth selected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "captures__view1-timestamps.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-timestamps.txt",
+      "sha256": "fba3eddc83ce4aeb91304de0a58bade1ed6b1b3c1d56f9ab86aabb882cc0f237",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "captures__view1-visible.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/captures/view1-visible.txt",
+      "sha256": "d162e1634878b892b3555cfc56617b177ab8b451e5cfa27238f246ae1c5b7ba3",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "view1",
+        "frame": "view1-visible",
+        "timestamp": "2026-11-02T08:27:04Z",
+        "state": "unselected",
+        "format": "text"
+      }
+    },
+    {
+      "id": "checks__hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/checks/hashes.txt",
+      "sha256": "d03359429ce242806dba355c5ea0ff629e1e80a4bd32a955a9d2622cf7c6d6dc",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "checks__report-hashes.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/checks/report-hashes.txt",
+      "sha256": "691d2f849322b560057bc9f95dfa98a0142353b86950209aae3efb8d8d596558",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "checks__view1-attempt1.check.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/checks/view1-attempt1.check.txt",
+      "sha256": "1807d209b29dc27f01ccced046047ae65aadf2780d76192b567ab09dd039a71b",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "checks__view1-attempt2.check.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/checks/view1-attempt2.check.txt",
+      "sha256": "5bd5a77feb91c04fdb975b9b2f89ec362b8e62792b7ceb2206aca039a11e017d",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "checks__view1-attempt3.check.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/checks/view1-attempt3.check.txt",
+      "sha256": "58db8357cc4dd678dec640de4e50013b116df0fd6923d24294a695e7413773fa",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "checks__view1-render-audit.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/checks/view1-render-audit.txt",
+      "sha256": "b81f454104b704dd394bda01ff59900ae522a670760f0bd5039da7cd62eda474",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "checks__view1.check.exit",
+      "path": "docs/visualize-eval/rounds/01/pipeline/checks/view1.check.exit",
+      "sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "checks__view1.check.stderr.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/checks/view1.check.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "checks__view1.check.stdout.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/checks/view1.check.stdout.txt",
+      "sha256": "0cf943ad60f9abec10eedcfa5b4da2459d2fdd5e069bab73590679399de4e4d5",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "checks__view1.check.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/checks/view1.check.txt",
+      "sha256": "f0a36329f59cb18f53076367055bd6708e4e623e1779fc919ae39150f7f0ae90",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "commands__commands.md",
+      "path": "docs/visualize-eval/rounds/01/pipeline/commands/commands.md",
+      "sha256": "b17e02dc99df7b3844c267233ec10564ca10cfc81dbf7679d63081d4748e6e9a",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "commands__split-view1-attempt2.json",
+      "path": "docs/visualize-eval/rounds/01/pipeline/commands/split-view1-attempt2.json",
+      "sha256": "3fb673578ca567baab3e3135226fcfffaca69893ef44af9c031eb85d76c45a56",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "commands__split-view1-attempt3.json",
+      "path": "docs/visualize-eval/rounds/01/pipeline/commands/split-view1-attempt3.json",
+      "sha256": "9c0b3af8fd98d0aa1e17d1fe49090f7d03c472e5f2378f6fcd3e63bae68fd87c",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "commands__split-view1-final.json",
+      "path": "docs/visualize-eval/rounds/01/pipeline/commands/split-view1-final.json",
+      "sha256": "784202122d56337fa1381437dbf5d892f027f90206fd6609d7efbd1ea7e2cbf5",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "commands__split-view1.json",
+      "path": "docs/visualize-eval/rounds/01/pipeline/commands/split-view1.json",
+      "sha256": "a4cef2bc5ed46150376be5a8ea56fec22ffdbb4193b43c141fcd4770c1188b25",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "commands__view1-attempt2-launch.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/commands/view1-attempt2-launch.txt",
+      "sha256": "8c28ef49376f93678bebab2e65fda613f045f78faa0bb1b4960ff877828d8792",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "commands__view1-attempt3-launch.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/commands/view1-attempt3-launch.txt",
+      "sha256": "fe604803ee4d023d3a4b18a9a59924a1d5d06ebea01a1513df88856076617586",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "commands__view1-launch-final.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/commands/view1-launch-final.txt",
+      "sha256": "34d493784b16b49c3c1ddab170d1fbc9ab7317e319823877a2f97598bb89bd68",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "commands__view1-launch.txt",
+      "path": "docs/visualize-eval/rounds/01/pipeline/commands/view1-launch.txt",
+      "sha256": "c8b12475d6a8905ff8da2bf8726b74742a696d4dedec9e2403153af10ce4860e",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "generation.json",
+      "path": "docs/visualize-eval/rounds/01/pipeline/generation.json",
+      "sha256": "ab6a7d633ba3f6a8d609a4cd727ea4c76e3b17c67dd5effd1cfb8581c6917e69",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "generation.md",
+      "path": "docs/visualize-eval/rounds/01/pipeline/generation.md",
+      "sha256": "3676bbd4982c5b44ea051b0816b33501b7ca0753e3b3e3721a1bf2bb10a857fb",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    },
+    {
+      "id": "spec__view1.json",
+      "path": "docs/visualize-eval/rounds/01/pipeline/spec/view1.json",
+      "sha256": "d5e59fa46e19f77f6841cf382c0794a45dca2aadf1a2142d6d7d1830d031d4cb",
+      "description": "Saved generator evidence; self-audit claims are not substituted for independent capture inspection",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All six concepts and six source-directed relationships appear in the blind reconstruction and final capture. verify/enqueue/read/write retain meaning; request/dispatch are neutral verbs and invent no protocol. One view covers everything; no invented apparent link or missing cross-view relation.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json",
+        "docs/visualize-eval/rounds/01/rubric.json"
+      ],
+      "evidence_ids": [
+        "captures__view1-visible.txt",
+        "blind",
+        "spec__view1.json"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Every source stem reaches its own downward target arrow. Source branching at API gateway and two distinct Postgres entries remain separate, with no crossing/shared junction or false branch. Dot-masked elbows are recoverable from adjacent cells and do not erase any arrow or label.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json",
+        "docs/visualize-eval/rounds/01/rubric.json"
+      ],
+      "evidence_ids": [
+        "captures__view1-visible.txt",
+        "captures__view1-selected1-ansi.txt",
+        "captures__view1-selected2-ansi.txt",
+        "captures__view1-frame1.txt",
+        "captures__view1-frame2.txt",
+        "captures__view1-frame3.txt",
+        "captures__view1-live-frame1.txt",
+        "captures__view1-live-frame2.txt",
+        "captures__view1-live-frame3.txt",
+        "blind"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Actual captures and in-pane stty measurements are 77 columns by 47 rows. Final frozen launch and command/state history establish natural unzoomed startup, with no f/scroll/pan/zoom action. Graph [23,7,32,36] and controls [2,41,9,6] fit without overlap; all labels and borders complete. Split JSON viewport_rows=49 is a pre-launch pane metadata value, not the actual 47-row captured grid. Stage A alone could not establish zoom; revealed executed records now supply it.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json",
+        "docs/visualize-eval/rounds/01/rubric.json"
+      ],
+      "evidence_ids": [
+        "captures__view1-visible.txt",
+        "captures__view1-ansi-unselected.txt",
+        "captures__view1-dims.txt",
+        "commands__view1-launch-final.txt",
+        "commands__commands.md",
+        "generation.json",
+        "commands__split-view1-final.json"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "The source-supported branch hierarchy is clear: CLI ingress, gateway, two sibling gateway destinations, queue-following worker, common persistence. Auth and queue share related pinks as sibling gateway destinations; queue/worker stay vertically near on the write branch, distinct from the Auth/read branch. No source-defined tier or order is reversed. This is not a claim that geometric depth proves common function. CLI shares selection gold, but the frozen category does not require exclusive accent allocation.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json",
+        "docs/visualize-eval/rounds/01/rubric.json"
+      ],
+      "evidence_ids": [
+        "captures__view1-ansi-unselected.txt",
+        "captures__view1-selected1-ansi.txt",
+        "captures__view1-selected2-ansi.txt",
+        "blind"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "All observed perimeters are complete and uniform, including all corners and side cells: six unselected nodes, API selected and Auth selected. Missing selected-state ANSI/buffer evidence for CLI, queue, worker and Postgres prevents the every-node selected-state claim. Plain text cannot resolve it.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json",
+        "docs/visualize-eval/rounds/01/rubric.json"
+      ],
+      "evidence_ids": [
+        "captures__view1-ansi-unselected.txt",
+        "captures__view1-selected1-ansi.txt",
+        "captures__view1-selected2-ansi.txt",
+        "captures__view1-live-frame1.txt",
+        "blind"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "Frozen skill, binary, rubric, dataset/source and final spec hashes independently verified; correct separate DeepSeek generator and Astra reviewer, blind-first hash, exact final launch, complete final --check streams/exit, actual text/ANSI sizes and cleanup records preserved. Full selected-state coverage and unaliased motion evidence are missing. Older hashes.txt generation.json hash is superseded by matching report-hashes.txt, not an unexplained final input mismatch.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json",
+        "docs/visualize-eval/rounds/01/rubric.json"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "verification",
+        "blind",
+        "generation.json",
+        "commands__commands.md",
+        "commands__view1-launch-final.txt",
+        "checks__view1.check.stdout.txt",
+        "checks__view1.check.stderr.txt",
+        "checks__view1.check.exit",
+        "checks__report-hashes.txt",
+        "captures__view1-ansi-unselected.txt",
+        "captures__view1-selected1-ansi.txt",
+        "captures__view1-selected2-ansi.txt"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "Required, not N/A. AN1 is an observed sparse-dot failure on both short routes (adjacent dots in multiple actual frames). On all six routes, dots change position without covering words or node borders, but two-second samples alias direction/speed (AN2). Known failure remains fail despite that separate evidence blocker; flow settings cannot substitute for actual motion proof.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md",
+        "docs/visualize-eval/cases/pipeline/expected.json",
+        "docs/visualize-eval/rounds/01/rubric.json"
+      ],
+      "evidence_ids": [
+        "captures__view1-frame1.txt",
+        "captures__view1-frame2.txt",
+        "captures__view1-frame3.txt",
+        "captures__view1-frame4.txt",
+        "captures__view1-live-frame1.txt",
+        "captures__view1-live-frame2.txt",
+        "captures__view1-live-frame3.txt",
+        "captures__view1-selected2-ansi.txt",
+        "spec__view1.json"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "cli-api",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/pipeline/expected.json#/historical_reference/edges"
+      ],
+      "expected": "CLI -> API gateway; historical unlabeled relation, no invented protocol",
+      "observed": "CLI bottom row 10 adjoins stem at column 37 rows 11-13 and down-arrow [37,14,1,1] immediately above API gateway top row 15. request at [39,12,7,1] is a neutral verb, not a protocol. No crossing or branch.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "captures__view1-visible.txt",
+          "region": [
+            37,
+            10,
+            1,
+            5
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-visible.txt",
+          "region": [
+            36,
+            15,
+            13,
+            4
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-visible.txt",
+          "region": [
+            39,
+            12,
+            7,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "AN1",
+        "AN2"
+      ]
+    },
+    {
+      "edge_id": "api-auth",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/pipeline/expected.json#/historical_reference/edges"
+      ],
+      "expected": "API gateway -> Auth: verify",
+      "observed": "API gateway bottom row 18 feeds separate stem at column 39 rows 19-20, run [39,21,12,1], down-arrow [50,22,1,1], Auth top row 23. verify [41,20,6,1] belongs to the right branch. No crossing; blank column 38 separates the queue route.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "captures__view1-visible.txt",
+          "region": [
+            39,
+            18,
+            12,
+            6
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-visible.txt",
+          "region": [
+            41,
+            20,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "AN2"
+      ]
+    },
+    {
+      "edge_id": "api-queue",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/pipeline/expected.json#/historical_reference/edges"
+      ],
+      "expected": "API gateway -> Job queue: enqueue",
+      "observed": "Gateway bottom row 18 feeds stem at column 37 rows 19-20, left-going run [24,21,14,1], down-arrow [24,22,1,1], queue top row 23. enqueue [28,20,7,1] belongs to the left branch. Independent of verify, no false junction. A dot sometimes masks the corner but adjacent cells preserve the trace.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "captures__view1-visible.txt",
+          "region": [
+            24,
+            18,
+            14,
+            6
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-visible.txt",
+          "region": [
+            28,
+            20,
+            7,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "AN2"
+      ]
+    },
+    {
+      "edge_id": "queue-worker",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/pipeline/expected.json#/historical_reference/edges"
+      ],
+      "expected": "Job queue -> Worker pool; historical unlabeled relation, no invented protocol",
+      "observed": "Queue bottom row 26 adjoins column 24 stem rows 27-29 and down-arrow [24,30,1,1] immediately above worker top row 31. dispatch [26,28,8,1] is a neutral verb, not a protocol. No crossing or branch.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "captures__view1-visible.txt",
+          "region": [
+            24,
+            26,
+            1,
+            6
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-visible.txt",
+          "region": [
+            26,
+            28,
+            8,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "AN1",
+        "AN2"
+      ]
+    },
+    {
+      "edge_id": "worker-db",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/pipeline/expected.json#/historical_reference/edges"
+      ],
+      "expected": "Worker pool -> Postgres: write",
+      "observed": "Worker bottom row 34 adjoins column 24 stem rows 35-36, right-going run [24,37,14,1] and down-arrow [37,38,1,1] above Postgres top row 39. write [28,36,5,1] is over its run. Blank column 38 separates the read entry; the routes do not merge.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "captures__view1-visible.txt",
+          "region": [
+            24,
+            34,
+            14,
+            5
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-visible.txt",
+          "region": [
+            36,
+            39,
+            10,
+            4
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-visible.txt",
+          "region": [
+            28,
+            36,
+            5,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "AN2"
+      ]
+    },
+    {
+      "edge_id": "auth-db",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#relationship-facts-from-the-historical-attempt",
+        "docs/visualize-eval/cases/pipeline/expected.json#/historical_reference/edges"
+      ],
+      "expected": "Auth -> Postgres: read",
+      "observed": "Auth bottom row 26 adjoins column 50 stem rows 27-36, left-going run [39,37,12,1], down-arrow [39,38,1,1] above Postgres top row 39. read [43,36,4,1] is associated with this run, not write. Stem clears Worker pool by 14 blank columns. No crossing, reversal or intermediate attachment.",
+      "status": "pass",
+      "locations": [
+        {
+          "evidence_id": "captures__view1-visible.txt",
+          "region": [
+            50,
+            26,
+            1,
+            11
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-visible.txt",
+          "region": [
+            39,
+            37,
+            12,
+            2
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-visible.txt",
+          "region": [
+            36,
+            39,
+            10,
+            4
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-visible.txt",
+          "region": [
+            43,
+            36,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "AN2"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "AN1",
+      "category": "animation",
+      "edge_ids": [
+        "cli-api",
+        "queue-worker"
+      ],
+      "severity": "medium",
+      "description": "Known sparse-motion violation: simultaneous adjacent gold dots occupy two of the three pre-arrow stem cells on both short edges. frame1, frame4, live-frame3 and selected2 show request dots [37,12,1,2] and dispatch dots [24,28,1,2]. This is a dense two-cell bead, not sparse separated traffic. It directly contradicts the generator claim of never less than seven cells spacing. Labels, borders and arrowheads remain intact; severity does not waive the failed animation gate.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#task",
+        "docs/visualize-eval/rounds/01/rubric.json#/categories/animation"
+      ],
+      "locations": [
+        {
+          "evidence_id": "captures__view1-frame1.txt",
+          "region": [
+            37,
+            12,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-frame1.txt",
+          "region": [
+            24,
+            28,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-selected2-ansi.txt",
+          "region": [
+            37,
+            12,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-selected2-ansi.txt",
+          "region": [
+            24,
+            28,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-live-frame3.txt",
+          "region": [
+            37,
+            12,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-live-frame3.txt",
+          "region": [
+            24,
+            28,
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AN2",
+      "category": "animation",
+      "edge_ids": [
+        "cli-api",
+        "api-auth",
+        "api-queue",
+        "queue-worker",
+        "worker-db",
+        "auth-db"
+      ],
+      "severity": "high",
+      "description": "Motion direction and speed evidence is incomplete for all six required routes. Both actual-render series sample at two-second intervals. Seven-cell periodic dot spacing aliases a forward four-cell shift with a backward three-cell shift. flow=0.2 and a generator drift claim are not proof of actual directed slow motion. The drawn arrows pass independently. This is an evidence blocker in addition to AN1, not grounds to replace animation fail with blocked.",
+      "source_refs": [
+        "docs/visualize-eval/cases/pipeline/source.md#task",
+        "docs/visualize-eval/rounds/01/rubric.json#/categories/animation"
+      ],
+      "locations": [
+        {
+          "evidence_id": "captures__view1-frame2.txt",
+          "region": [
+            24,
+            21,
+            27,
+            1
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-frame3.txt",
+          "region": [
+            24,
+            21,
+            27,
+            1
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-live-frame1.txt",
+          "region": [
+            50,
+            27,
+            1,
+            10
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-live-frame2.txt",
+          "region": [
+            50,
+            27,
+            1,
+            10
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-live-frame3.txt",
+          "region": [
+            50,
+            27,
+            1,
+            10
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BI1",
+      "category": "border_integrity",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "All six unselected borders and the selected API gateway/Auth borders are complete and color-continuous. The frozen captures do not establish selected CLI, Job queue, Worker pool or Postgres border/handle colors: no ANSI/buffer captures of those selected states are supplied. Worker-selected live frames are plain text. The universal selected-state part of the gate therefore remains blocked, not failed by an observed broken border.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/01/rubric.json#/categories/border_integrity"
+      ],
+      "locations": [
+        {
+          "evidence_id": "captures__view1-ansi-unselected.txt",
+          "region": [
+            36,
+            7,
+            5,
+            4
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-ansi-unselected.txt",
+          "region": [
+            23,
+            23,
+            11,
+            4
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-live-frame1.txt",
+          "region": [
+            23,
+            31,
+            13,
+            4
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-ansi-unselected.txt",
+          "region": [
+            36,
+            39,
+            10,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WE1",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "Required full state/motion verification is incomplete: two selected nodes have ANSI, four do not; timestamped animation samples alias. Inputs, identities, final check outputs, target dimensions and recorded cleanup otherwise exist. Preserve blocked workflow status rather than certify a complete reproducible visual verification from self-audit assertions.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/01/rubric.json#/categories/workflow_evidence"
+      ],
+      "locations": [
+        {
+          "evidence_id": "captures__view1-live-frame1.txt",
+          "region": [
+            23,
+            31,
+            13,
+            4
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-frame2.txt",
+          "region": [
+            24,
+            21,
+            27,
+            1
+          ]
+        },
+        {
+          "evidence_id": "captures__view1-frame3.txt",
+          "region": [
+            24,
+            21,
+            27,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "Selected-state ANSI/buffer evidence is absent for CLI, Job queue, Worker pool and Postgres. This blocks the complete border and workflow gates; no live rendering is authorized to supply it.",
+    "Two-second periodic-dot samples alias on all six animated routes; direction and speed remain unverified. Need non-aliased timestamped actual-render evidence in a later authorized capture round. Animation already fails on the separately observed adjacent-dot defect."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:p2X",
+      "w7E:p3A",
+      "w7E:p3E",
+      "w7E:p3R"
+    ],
+    "closed_pane_ids": [
+      "w7E:p2X",
+      "w7E:p3A",
+      "w7E:p3E",
+      "w7E:p3R"
+    ],
+    "status": "done",
+    "reason": "generation.json cleanup and commands/commands.md record closing all four generator-owned panes and final pane_not_found plus generator-only tab listing. Launch files include self-close commands. These are preserved cleanup records, not a fresh live probe; reviewer created no panes and did not touch other sessions."
+  },
+  "overall": "fail"
+}

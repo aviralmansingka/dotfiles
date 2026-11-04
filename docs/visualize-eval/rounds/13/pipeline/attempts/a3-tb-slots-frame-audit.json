@@ -1,0 +1,276 @@
+{
+ "capture": "/tmp/a3-pinned.txt",
+ "viewport": {
+  "columns": 77,
+  "rows": 47,
+  "zoom": 1.0,
+  "mode": "natural"
+ },
+ "frames": 40,
+ "frame_range": [
+  0,
+  39
+ ],
+ "window": 10,
+ "tolerance": 1,
+ "rate_tolerance": 0.05,
+ "problems": [
+  "routes run at different rates: 0.000..0.500 cells/frame (spread 0.5 > 0.05)"
+ ],
+ "notes": [],
+ "routes": [
+  {
+   "route": 1,
+   "start": [
+    10,
+    38
+   ],
+   "end": [
+    11,
+    38
+   ],
+   "laps": 7,
+   "lap_cells": [
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    1
+   ],
+   "cells": 13,
+   "steps": 13,
+   "first_frame": 0,
+   "last_move_frame": 38,
+   "rate_cells_per_frame": 0.5,
+   "window_distances": [],
+   "window_spread": 0,
+   "longest_stall": 1,
+   "steady": true
+  },
+  {
+   "route": 2,
+   "start": [
+    18,
+    37
+   ],
+   "end": [
+    19,
+    34
+   ],
+   "laps": 8,
+   "lap_cells": [
+    0,
+    5,
+    0,
+    0,
+    5,
+    0,
+    0,
+    2
+   ],
+   "cells": 12,
+   "steps": 12,
+   "first_frame": 0,
+   "last_move_frame": 38,
+   "rate_cells_per_frame": 0.0,
+   "window_distances": [
+    5,
+    5,
+    5,
+    5
+   ],
+   "window_spread": 0,
+   "longest_stall": 1,
+   "steady": true,
+   "lap_lengths_differ": true
+  },
+  {
+   "route": 3,
+   "start": [
+    18,
+    39
+   ],
+   "end": [
+    20,
+    41
+   ],
+   "laps": 10,
+   "lap_cells": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "cells": 10,
+   "steps": 10,
+   "first_frame": 0,
+   "last_move_frame": 38,
+   "rate_cells_per_frame": 0.5,
+   "window_distances": [],
+   "window_spread": 0,
+   "longest_stall": 1,
+   "steady": true
+  },
+  {
+   "route": 4,
+   "start": [
+    26,
+    30
+   ],
+   "end": [
+    27,
+    42
+   ],
+   "laps": 5,
+   "lap_cells": [
+    9,
+    4,
+    1,
+    0,
+    1
+   ],
+   "cells": 15,
+   "steps": 15,
+   "first_frame": 0,
+   "last_move_frame": 38,
+   "rate_cells_per_frame": 0.5,
+   "window_distances": [
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5
+   ],
+   "window_spread": 0,
+   "longest_stall": 1,
+   "steady": true,
+   "lap_lengths_differ": true
+  },
+  {
+   "route": 5,
+   "start": [
+    26,
+    42
+   ],
+   "end": [
+    35,
+    40
+   ],
+   "laps": 13,
+   "lap_cells": [
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1
+   ],
+   "cells": 7,
+   "steps": 7,
+   "first_frame": 0,
+   "last_move_frame": 38,
+   "rate_cells_per_frame": 0.5,
+   "window_distances": [],
+   "window_spread": 0,
+   "longest_stall": 1,
+   "steady": true,
+   "lap_lengths_differ": true
+  },
+  {
+   "route": 6,
+   "start": [
+    34,
+    40
+   ],
+   "end": [
+    30,
+    30
+   ],
+   "laps": 11,
+   "lap_cells": [
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    4
+   ],
+   "cells": 9,
+   "steps": 9,
+   "first_frame": 0,
+   "last_move_frame": 38,
+   "rate_cells_per_frame": 0.5,
+   "window_distances": [],
+   "window_spread": 0,
+   "longest_stall": 1,
+   "steady": true,
+   "lap_lengths_differ": true
+  }
+ ],
+ "windows": [
+  {
+   "from": 2,
+   "to": 12,
+   "distances": {
+    "r2": 5,
+    "r4": 5
+   },
+   "spread": 0,
+   "routes": 2
+  },
+  {
+   "from": 3,
+   "to": 13,
+   "distances": {
+    "r2": 5,
+    "r4": 5
+   },
+   "spread": 0,
+   "routes": 2
+  }
+ ],
+ "step_ms": 100,
+ "frames_even": true,
+ "late_routes": [],
+ "dots_per_frame": [
+  6
+ ],
+ "window_used": 10,
+ "spread_allowed": 1,
+ "equal_distance_windows": 2,
+ "equal_distance_failures": [],
+ "window_means": [
+  5.0,
+  5.0
+ ],
+ "rate_spread": 0.5,
+ "rate_limit": 0.05,
+ "steady_routes": 6,
+ "routes_tracked": 6,
+ "verdict": "fail"
+}

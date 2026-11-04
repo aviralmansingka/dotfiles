@@ -1,0 +1,22 @@
+viewport: 100x20 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 100x20 @100% · canvas 149x25 · containment-l2b.json · 5 nodes · 4 edges · q quit
+                              ╭────────────╮
+                              │private gRPC│●───────────────╮
+                              │            │  machine rows  │
+═Machine manager══════════════╰────────────╯═╗              │
+                                             ║              │
+                              ╭───────────╮  machine state  │ ╭────────╮
+                              │public gRPC│●───────────────╮╰▶│        │
+                              │           │  ║             │  │        │
+                              ╰───────────╯  ║             ╰─▶│        │
+                                             ║                │Postgres│
+                            ╭───────────────╮║  job rows   ╭─▶│        │          ▄▄▄
+                            │River job queue│●─────────────╯  │        │          ███    ▄▄▖
+ ┌───────┐                  │               │║              ╭▶│        │          ▀▀▀    ██▌
+ │ + [+] │                  ╰───────────────╯║              │ ╰────────╯         ▐███▌   ▀▀▘
+ │ − [-] │                                   ║              │                    ████▌
+ │ ⊡ [f] │                 ╭─────────────────╮ cluster state│
+ │ □ [i] │                 │cluster reconcile│●─────────────╯
+ └───────┘                 │                 │
+                           ╰─────────────────╯

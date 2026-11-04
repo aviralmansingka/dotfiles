@@ -1,0 +1,15 @@
+warning: edge e0 label "up one" had no clear cell; shorten it or add routing space
+viewport: unknown zoom: 1.00 natural
+ok: nodes=4 edges=3 flows=0 direction=tb theme=gruvbox
+layers=3 (explicit placement, sugiyama skipped)
+extent=17x24 cells
+crossings: 2 bridges, 1 touching bends
+warning: 1 edge label(s) had no free slot; shorten the labels or split the graph
+labels: 2/3 placed, 0 on route cells, 1 skipped, 0 ambiguous owners
+groups: carrier(2) core(1) racks(1)
+trunks:
+routes: 3/3 near-minimal, 0 detours, 1 forced, 0 shortened
+note: route e2 (c -> d) runs 25 cells against a 15 cell straight stair; no obstacle-safe route is shorter, so the length is forced, not a detour
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

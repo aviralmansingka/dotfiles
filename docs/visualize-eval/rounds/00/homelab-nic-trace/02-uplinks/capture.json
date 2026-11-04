@@ -1,0 +1,26 @@
+{
+  "pane_id": "w7E:p27",
+  "tab_id": "w7E:tB",
+  "rows": 47,
+  "columns": 77,
+  "frames": [
+    {
+      "state": "unselected",
+      "capture_started_at": "2026-11-02T08:19:55.995789+00:00",
+      "capture_finished_at": "2026-11-02T08:19:56.014083+00:00",
+      "text": "visible.txt",
+      "ansi": "visible.ansi",
+      "header_verified": true,
+      "natural_zoom": 1
+    },
+    {
+      "state": "selected",
+      "capture_started_at": "2026-11-02T08:19:56.227410+00:00",
+      "capture_finished_at": "2026-11-02T08:19:56.244533+00:00",
+      "text": "selected.txt",
+      "ansi": "selected.ansi",
+      "header_verified": true,
+      "natural_zoom": 1
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "case_id": "homelab-nic-trace",
+  "round": "03",
+  "views": [
+    {
+      "view": "v1-virtual-nets",
+      "spec": "specs/v1-virtual-nets.json",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "attempts/v1-attempt1-combined-7nodes.json",
+          "spec_sha256": "7ce69e4cf5df31013c6ba73f0d5273a93c28a3c699178c70be5e016f38e80989",
+          "extent": "139x32",
+          "crossings": 1,
+          "note": "tried one host view with overlay + uplinks (7 nodes, edges e1-e7): overflowed the 77-col target by 62 columns and carried 1 crossing; split the host into v1 (virtual nets) and v2 (overlay + uplinks) without dropping or merging any relation."
+        },
+        {
+          "attempt": 2,
+          "spec": "specs/v1-virtual-nets.json",
+          "spec_sha256": "f6dcb5d64b17f49f3ef41668682a0b876e1802183ed9fec52c9342d0d45ca9e5",
+          "extent": "44x21",
+          "crossings": 0,
+          "note": "chosen: explicit 2-2-1 layer placement, 4/4 labels placed, 0 crossings, 0 dot violations."
+        }
+      ]
+    },
+    {
+      "view": "v2-overlay-uplinks",
+      "spec": "specs/v2-overlay-uplinks.json",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "attempts/v2-attempt1-no-caption.json",
+          "spec_sha256": "1c2c779edf6923905445ea1665f83f131f0eb9a581bf25ecf650cc35fc540153",
+          "extent": "45x37",
+          "crossings": 0,
+          "note": "local uplink and overlay relations only (5 nodes, 6 edges); clean but carried no egress limitation, so the IPv6 fact had no home."
+        },
+        {
+          "attempt": 2,
+          "spec": "attempts/v2-attempt2-claimed-rtr-crossing.json",
+          "spec_sha256": "dc65ca9982c69b5fe746957b5bb4837295aae6dbb5284e16d5328bfd7c2b8729",
+          "extent": "49x37",
+          "crossings": 1,
+          "note": "added the limitation caption and the 'claimed' router qualifier: the wider router box shifted the ports and the long ts->bond0 corridor now crossed a route, 1 crossing; rejected rather than dropping or reordering a relation."
+        },
+        {
+          "attempt": 3,
+          "spec": "specs/v2-overlay-uplinks.json",
+          "spec_sha256": "6610bdef07888a59b0b93513dc4ba5984cf7b79cae9a355f7273c54a3db3ea6c",
+          "extent": "54x37",
+          "crossings": 0,
+          "note": "chosen: keeps the limitation caption and the full wlp8s0 address, moves the 'claimed' router qualifier into v3 where the interpreted ISP chain lives -> back to 0 crossings, 6/6 labels placed."
+        }
+      ]
+    },
+    {
+      "view": "v3-wan-egress",
+      "spec": "specs/v3-wan-egress.json",
+      "attempts": [
+        {
+          "attempt": 1,
+          "spec": "attempts/v3-attempt1-plain.json",
+          "spec_sha256": "1676e1f5cc2f99c4f589c40778d9066339396e76d58bc687e6df7645eecfc3ab",
+          "extent": "27x40",
+          "crossings": 0,
+          "note": "plain labels, automatic layering: 0 crossings but 40 rows (sugiyama spacing) and no historical qualification on the traceroute hops."
+        },
+        {
+          "attempt": 2,
+          "spec": "specs/v3-wan-egress.json",
+          "spec_sha256": "03d008a8804140b0b07e39f13c27787fcd5c202d61c9387520a0fcb16b915cb8",
+          "extent": "31x37",
+          "crossings": 0,
+          "note": "chosen: explicit 5-layer chain, historical/claimed qualifiers on the interpreted hops, dashed style on every traceroute-derived hop, NAT+DHCP pool address on the rtr->ONT edge; 0 crossings, 4/4 labels placed, 37 rows."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+{
+  "intent": "Independent offline verification; no viewer execution or repairs.",
+  "blind_sha256": "ffc7db3b1f380a01e8f509408cf73916d7343be1d59fb23abab55bedca9aa587",
+  "frozen_metadata_hashes_match": [
+    "candidate_skill",
+    "renderer_binary",
+    "rubric",
+    "dataset_manifest",
+    "case_source",
+    "case_expected",
+    "case_historical_variants"
+  ],
+  "attempt_spec_hashes": [
+    {
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/specs/v1-a1.json",
+      "recorded_sha256": "8aa57bddccd34e2cbbe569af3f6f9a0ba6b6c5a9659024e1d01d52c8e8cf6a2",
+      "actual_sha256": "8aa57bddccd34e2cbbe569af3f6f9a0ba6b6c5a9659024e1d01d52c8e83cf6a2",
+      "matches": false,
+      "recorded_hash_length": 63,
+      "raw_check": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v1-a1.check.txt",
+      "raw_exit_status_preserved_in_attempt_index": false
+    },
+    {
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/specs/v1-a2.json",
+      "recorded_sha256": "9c5ade09f99ec65af6788c41805a45d6af89cf935dc60fe11b7ec5995e372452",
+      "actual_sha256": "9c5ade09f99ec65af6788c41805a45d6af89cf935dc60fe11b7ec5995e372452",
+      "matches": true,
+      "recorded_hash_length": 64,
+      "raw_check": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v1-a2.check.txt",
+      "raw_exit_status_preserved_in_attempt_index": false
+    },
+    {
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/specs/v1-a3.json",
+      "recorded_sha256": "9a168877e235238ef065eeeddf3c3424273ac85a9d1a745d23f73aff62b5e19e",
+      "actual_sha256": "9a168877e235238ef065eeeddf3c3424273ac85a9d1a745d23f73aff62b5e19e",
+      "matches": true,
+      "recorded_hash_length": 64,
+      "raw_check": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v1-a3.check.txt",
+      "raw_exit_status_preserved_in_attempt_index": false
+    },
+    {
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/specs/v2-a1.json",
+      "recorded_sha256": "293c1514bf0bec55e2ca13a1d940c81aa772e9ad1343bd32384f45920f1443fd",
+      "actual_sha256": "293c1514bf0bec55e2ca13a1d940c81aa772e9ad1343bd32384f45920f1443fd",
+      "matches": true,
+      "recorded_hash_length": 64,
+      "raw_check": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v2-a1.check.txt",
+      "raw_exit_status_preserved_in_attempt_index": false
+    },
+    {
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/specs/v2-a2.json",
+      "recorded_sha256": "36288a634dbcb7c4a832f4e63576f8c831059ba17e6575b2b3c9c926270813c6",
+      "actual_sha256": "36288a634dbcb7c4a832f4e63576f8c831059ba17e6575b2b3c9c926270813c6",
+      "matches": true,
+      "recorded_hash_length": 64,
+      "raw_check": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v2-a2.check.txt",
+      "raw_exit_status_preserved_in_attempt_index": false
+    },
+    {
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/specs/v2-a3.json",
+      "recorded_sha256": "6dae9bfaf9bfd9e43d2ab686212471d4f91c9b11ca0d688c625323505ef0e5d6",
+      "actual_sha256": "6dae9bfaf9bfd9e43d2ab686212471d4f91c9b11ca0d688c625323505ef0e5d6",
+      "matches": true,
+      "recorded_hash_length": 64,
+      "raw_check": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v2-a3.check.txt",
+      "raw_exit_status_preserved_in_attempt_index": false
+    },
+    {
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/specs/v3-a1.json",
+      "recorded_sha256": "0fc94f9a4225f32aaf4a50e96533475272abdf891f024b17656beee34894bbdf",
+      "actual_sha256": "0fc94f9a4225f32aaf4a50e96533475272abdf891f024b17656beee34894bbdf",
+      "matches": true,
+      "recorded_hash_length": 64,
+      "raw_check": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v3-a1.check.txt",
+      "raw_exit_status_preserved_in_attempt_index": false
+    },
+    {
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/specs/v3-a2.json",
+      "recorded_sha256": "8c706f780a81b943b3839ada69c7fd791118fa0d85cea1b14514101a87629a67",
+      "actual_sha256": "8c706f780a81b943b3839ada69c7fd791118fa0d85cea1b14514101a87629a67",
+      "matches": true,
+      "recorded_hash_length": 64,
+      "raw_check": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v3-a2.check.txt",
+      "raw_exit_status_preserved_in_attempt_index": false
+    },
+    {
+      "path": "docs/visualize-eval/rounds/05/server-nic-layout/specs/v3-a3.json",
+      "recorded_sha256": "e763922cf2b57393818e9c176ee697d63a25fc6906bd40ba7d0fd5cb8e9131a6",
+      "actual_sha256": "e763922cf2b57393818e9c176ee697d63a25fc6906bd40ba7d0fd5cb8e9131a6",
+      "matches": true,
+      "recorded_hash_length": 64,
+      "raw_check": "docs/visualize-eval/rounds/05/server-nic-layout/attempts/v3-a3.check.txt",
+      "raw_exit_status_preserved_in_attempt_index": false
+    }
+  ],
+  "view_manifests": [
+    {
+      "view": "v1",
+      "all_seven_artifact_hashes_match": true,
+      "final_spec_hash_matches": true,
+      "pane_id": "w7E:pGB",
+      "viewport_token": "83x51 @100%",
+      "cleanup": "confirmed_closed",
+      "final_check_exit": 0
+    },
+    {
+      "view": "v2",
+      "all_seven_artifact_hashes_match": true,
+      "final_spec_hash_matches": true,
+      "pane_id": "w7E:pGE",
+      "viewport_token": "83x51 @100%",
+      "cleanup": "confirmed_closed",
+      "final_check_exit": 0
+    },
+    {
+      "view": "v3",
+      "all_seven_artifact_hashes_match": true,
+      "final_spec_hash_matches": true,
+      "pane_id": "w7E:pGG",
+      "viewport_token": "83x51 @100%",
+      "cleanup": "confirmed_closed",
+      "final_check_exit": 0
+    }
+  ],
+  "actual_generator_worker_label_from_frozen_generation": "viz-ds05-4",
+  "result_generator_worker_id_convention": "viz-ds05-server-nic-layout (round/case key mandated by judge-full-task.md, not a claim that the raw tab was renamed)",
+  "actual_reviewer_worker_label_from_environment": "viz-judge05-server",
+  "actual_reviewer_model_from_environment": "gpt-6.1-sol",
+  "missing_rejected_attempt_raw_command_status": [
+    "v1-a1",
+    "v1-a2",
+    "v2-a1",
+    "v2-a3",
+    "v3-a1",
+    "v3-a2"
+  ],
+  "new_viewer_sessions": 0
+}

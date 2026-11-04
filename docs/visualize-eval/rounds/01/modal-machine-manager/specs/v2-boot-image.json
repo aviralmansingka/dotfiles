@@ -1,0 +1,17 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "mch", "label": "Bare-metal machines" },
+    { "id": "boot", "label": "Boot server" },
+    { "id": "s3", "label": "S3 object store" },
+    { "id": "agent", "label": "machine-agent" }
+  ],
+  "layers": [["mch"], ["boot", "s3", "agent"]],
+  "edges": [
+    { "from": "mch", "to": "boot", "label": "iPXE request", "flow": 0.15 },
+    { "from": "boot", "to": "mch", "label": "boot.ipxe" },
+    { "from": "mch", "to": "s3", "label": "pull image" },
+    { "from": "mch", "to": "agent", "label": "runs on host" }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "layers": [["vm", "ctr"], ["virbr", "dkbr"], ["box"]],
+  "nodes": [
+    { "id": "vm", "label": "vm vnet0", "group": "virtual" },
+    { "id": "ctr", "label": "ctr veth", "group": "virtual" },
+    { "id": "virbr", "label": "virbr0 libvirt NAT", "group": "virtual" },
+    { "id": "dkbr", "label": "docker 172.18.2.1", "group": "virtual" },
+    { "id": "box", "label": "homelab rack-bench", "group": "host" }
+  ],
+  "edges": [
+    { "from": "vm", "to": "virbr", "label": "192.168.122.x" },
+    { "from": "virbr", "to": "box", "label": "NAT bridge" },
+    { "from": "ctr", "to": "dkbr", "label": "172.18.2.x" },
+    { "from": "dkbr", "to": "box", "label": "docker bridge" }
+  ]
+}

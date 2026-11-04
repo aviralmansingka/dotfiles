@@ -1,0 +1,22 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "mch", "label": "Bare-metal machines" },
+    { "id": "pgrpc", "label": "private gRPC" },
+    { "id": "agent", "label": "machine-agent" },
+    { "id": "q", "label": "River job queue" },
+    { "id": "pub", "label": "public gRPC" },
+    { "id": "rec", "label": "Reconcile loop" },
+    { "id": "db", "label": "Postgres" }
+  ],
+  "layers": [["mch", "pgrpc"], ["agent", "q"], ["pub", "rec"], ["db"]],
+  "edges": [
+    { "from": "mch", "to": "agent", "label": "runs on host" },
+    { "from": "agent", "to": "pub", "label": "register+hb", "flow": 0.15 },
+    { "from": "pub", "to": "db", "label": "machine state", "flow": 0.15 },
+    { "from": "pgrpc", "to": "db", "label": "machine rows" },
+    { "from": "q", "to": "db", "label": "job rows" },
+    { "from": "rec", "to": "db", "label": "cluster state" }
+  ]
+}

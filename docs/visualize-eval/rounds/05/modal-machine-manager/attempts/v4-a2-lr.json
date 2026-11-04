@@ -1,0 +1,22 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "q", "label": "River queue", "group": "queue" },
+    { "id": "rec", "label": "reconcile loop", "group": "control" },
+    { "id": "ssh", "label": "SSH + BMC ops", "group": "ops" },
+    { "id": "jan", "label": "janitor", "group": "ops" },
+    { "id": "prov", "label": "metal providers", "group": "providers" },
+    { "id": "db", "label": "Postgres", "group": "state" },
+    { "id": "mch", "label": "machines", "group": "machines" },
+    { "id": "wapi", "label": "webapi", "group": "control" }
+  ],
+  "edges": [
+    { "from": "q", "to": "ssh", "label": "audit/verify reimage", "dots": 1, "flow": true },
+    { "from": "ssh", "to": "mch", "label": "machine-audit", "dots": 1, "flow": true },
+    { "from": "q", "to": "jan", "label": "diagnostic events", "dots": 1, "flow": true },
+    { "from": "jan", "to": "wapi", "label": "proposed actions", "dots": 1, "flow": true },
+    { "from": "rec", "to": "prov", "label": "gcore 1min sync", "dots": 1, "flow": true },
+    { "from": "rec", "to": "db", "label": "cluster state", "dots": 1, "flow": true }
+  ]
+}

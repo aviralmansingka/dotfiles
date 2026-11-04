@@ -1,0 +1,192 @@
+{
+  "case_id": "modal-runtime",
+  "round": "03",
+  "generator": {
+    "identity": "fresh DeepSeek generator subagent (viz-ds03-7, surface w7E:pB9)",
+    "model": "accounts/fireworks/routers/deepseek-flash-latest",
+    "provider": "fireworks",
+    "reasoning_level": "high",
+    "session_id": "01a19bf8-4e50-72fb-bfb2-fd05315f87d9",
+    "skill_read": "docs/visualize-eval/rounds/03/SKILL.md",
+    "skill_sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+    "renderer_path": "/tmp/visualize-eval/round-03/bin/rataflow-view",
+    "renderer_sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7",
+    "renderer_rebuilt": false
+  },
+  "source_pointers": {
+    "case_file": "docs/visualize-eval/cases/modal-runtime/source.md",
+    "chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-modal-learn-runtime-arch--/2026-10-14T20-36-14-065Z_01a13c21-3e70-754d-a101-f5817da3e05a.jsonl",
+    "user_request_lines": [5, 12],
+    "assistant_graph_write": "line 55, call call_KfPSNBd2yyDv7opUAXFM86v8|fc_0bc8bde248d91e7d016acfe9bb22b087d0a1ac21927a3569fb",
+    "go_rust_runtime_source": "original chat lines 27-51, discussed but not supplied in the excerpts; not read",
+    "excerpts_only": true
+  },
+  "views": [
+    {
+      "view": "v1",
+      "carries": "all 8 components and all 8 directed relations with labels (single overview view; no split needed)",
+      "spec": "specs/v1.json",
+      "spec_sha256": "ab0fe1d35c3742ab58fde65dcf284aa758d68faa91a517358323cca5285608f0",
+      "prior_attempts": [
+        "specs/v1-attempt1-lr-auto.json",
+        "specs/v1-attempt2-tb-auto.json",
+        "specs/v1-attempt3-tb-layers.json"
+      ],
+      "check": "evidence/v1/check.txt",
+      "text": "evidence/v1/v1-text.txt",
+      "ansi": "evidence/v1/v1-ansi.ansi",
+      "selected_ansi": "evidence/v1/v1-selected.ansi",
+      "frames": "evidence/v1/v1-frames.txt",
+      "frames_ansi": "evidence/v1/v1-frames.ansi",
+      "manifest": "evidence/v1/manifest.json",
+      "bin_sha256_file": "evidence/v1/bin.sha256",
+      "validator_output": "evidence/v1/validator.txt",
+      "measured": {
+        "viewport_token": "77x47 @100%",
+        "viewport_line_from_capture": null,
+        "viewport_line_in_frames_mode": "viewport: 77x47 zoom: 1.00 natural",
+        "zoom": "1.00 natural",
+        "extent": "46x37",
+        "pane": "77 columns x 47 rows",
+        "fits_without_pan": true,
+        "overflow_banner_in_capture": false
+      },
+      "crossings_chosen": 0,
+      "crossings_history": [
+        { "attempt": "v1-attempt1-lr-auto", "crossings": 2, "extent": "155x39", "rejected_because": "extent 155 columns overflows the 77-column pane" },
+        { "attempt": "v1-attempt2-tb-auto", "crossings": 4, "extent": "106x32", "rejected_because": "still overflows width and doubles crossings" },
+        { "attempt": "v1-attempt3-tb-layers", "crossings": 0, "extent": "46x37", "kept_because": "fits 77x47, zero crossings, all 8 labels placed off routes" }
+      ],
+      "capture_frames": 5,
+      "capture_step_ms": 100,
+      "animated": false
+    }
+  ],
+  "meaning_ledger": [
+    { "fact": "modal-worker", "kind": "identifier/component", "fate": "drawn", "where": "v1 node worker, label modal-worker" },
+    { "fact": "modal-runtime", "kind": "identifier/component", "fate": "drawn", "where": "v1 node runtime, label modal-runtime" },
+    { "fact": "Task engine", "kind": "identifier/component", "fate": "drawn", "where": "v1 node engine" },
+    { "fact": "Container backend", "kind": "identifier/component", "fate": "drawn", "where": "v1 node backend" },
+    { "fact": "Task container", "kind": "identifier/component", "fate": "drawn", "where": "v1 node container" },
+    { "fact": "Filesystem + volumes", "kind": "identifier/component", "fate": "drawn", "where": "v1 node filesystem" },
+    { "fact": "Blobnet", "kind": "identifier/component", "fate": "drawn", "where": "v1 node blobnet" },
+    { "fact": "modal-daemon", "kind": "identifier/component", "fate": "drawn", "where": "v1 node daemon" },
+    { "fact": "worker -> runtime: task input + control RPCs", "kind": "relation/protocol", "fate": "abbreviated", "where": "v1 e1 label 'task+ctrl RPC' (task input + control collapsed; 'RPC' stands for the worker gRPC seam)" },
+    { "fact": "runtime -> worker: events + management RPCs", "kind": "relation/protocol", "fate": "abbreviated", "where": "v1 e2 label 'events+mgmt RPC' (management -> mgmt)" },
+    { "fact": "runtime -> engine: dispatches tasks", "kind": "relation/verb", "fate": "abbreviated", "where": "v1 e3 label 'task dispatch'" },
+    { "fact": "engine -> backend: starts / manages", "kind": "relation/verb", "fate": "drawn", "where": "v1 e4 label 'starts/manages'" },
+    { "fact": "backend -> container: runs user process", "kind": "relation/verb", "fate": "drawn", "where": "v1 e5 label 'user process'" },
+    { "fact": "engine -> filesystem: mounts / snapshots", "kind": "relation/verb", "fate": "abbreviated", "where": "v1 e6 label 'mount+snapshot'" },
+    { "fact": "filesystem -> blobnet: image + volume data", "kind": "relation/payload", "fate": "abbreviated", "where": "v1 e7 label 'image+vol data'" },
+    { "fact": "runtime -> daemon: filesystem HTTP over UDS", "kind": "relation/protocol + path", "fate": "drawn", "where": "v1 e8 label 'HTTP over UDS' (local socket transport, not gRPC)" },
+    { "fact": "planes: task orchestration, container backends, storage, worker RPC seams", "kind": "taxonomy", "fate": "drawn", "where": "v1 groups: worker / runtime / daemon / compute / storage" },
+    { "fact": "worker gRPC and daemon HTTP-over-UDS are different interfaces", "kind": "constraint (protocol distinction)", "fate": "drawn", "where": "separate edges e1/e2 labelled RPC vs e8 labelled HTTP over UDS" },
+    { "fact": "three worker RPC seams", "kind": "historical claim", "fate": "dropped with reason", "where": "the excerpt names only two directed worker<->runtime relations (task input + control RPCs; events + management RPCs); the third seam is unnamed in the supplied evidence, and inventing it would fabricate a relation" },
+    { "fact": "historical chat is evidence, not authority to replay commands", "kind": "qualifier", "fate": "drawn as note", "where": "no command from the chat was replayed; no remote execution performed" },
+    { "fact": "go and Rust runtime source discussed at original lines 27-51", "kind": "source pointer", "fate": "abbreviated", "where": "recorded here as a pointer only; the excerpt supplies no module/file facts to draw" },
+    { "fact": "relation set is a historical claim, not independently verified", "kind": "qualifier/uncertainty", "fate": "drawn as note", "where": "no relation in the brief is marked unconfirmed, so no dashed style is used; the qualification is recorded here rather than promoted to certainty" }
+  ],
+  "relationship_audit": [
+    { "id": "e1", "from": "worker", "to": "runtime", "verb_tech": "task input + control RPCs (worker gRPC seam)", "label_owner": "e1", "label": "task+ctrl RPC", "view": "v1" },
+    { "id": "e2", "from": "runtime", "to": "worker", "verb_tech": "events + management RPCs (worker gRPC seam)", "label_owner": "e2", "label": "events+mgmt RPC", "view": "v1" },
+    { "id": "e3", "from": "runtime", "to": "engine", "verb_tech": "dispatches tasks", "label_owner": "e3", "label": "task dispatch", "view": "v1" },
+    { "id": "e4", "from": "engine", "to": "backend", "verb_tech": "starts / manages", "label_owner": "e4", "label": "starts/manages", "view": "v1" },
+    { "id": "e5", "from": "backend", "to": "container", "verb_tech": "runs user process", "label_owner": "e5", "label": "user process", "view": "v1" },
+    { "id": "e6", "from": "engine", "to": "filesystem", "verb_tech": "mounts / snapshots", "label_owner": "e6", "label": "mount+snapshot", "view": "v1" },
+    { "id": "e7", "from": "filesystem", "to": "blobnet", "verb_tech": "image + volume data", "label_owner": "e7", "label": "image+vol data", "view": "v1" },
+    { "id": "e8", "from": "runtime", "to": "daemon", "verb_tech": "filesystem HTTP over Unix-domain socket", "label_owner": "e8", "label": "HTTP over UDS", "view": "v1" }
+  ],
+  "groups": [
+    { "id": "worker", "members": ["worker"], "basis": "modal-worker is the worker process the runtime serves; the source lists worker RPC seams as their own seam, not as runtime internals" },
+    { "id": "runtime", "members": ["runtime", "engine"], "basis": "modal-runtime and its task-orchestration module (source plane: task orchestration)" },
+    { "id": "daemon", "members": ["daemon"], "basis": "modal-daemon is reached only over its own filesystem HTTP/UDS interface; the source does not place it inside the runtime, so it is its own concept and gets its own colour" },
+    { "id": "compute", "members": ["backend", "container"], "basis": "source plane: container backends (a backend starts and runs task containers)" },
+    { "id": "storage", "members": ["filesystem", "blobnet"], "basis": "source plane: storage (volumes/images and the blob network carrying them)" }
+  ],
+  "coverage_map": [
+    { "view": "v1", "carries": "all 8 nodes (worker, runtime, engine, daemon, backend, container, filesystem, blobnet) and e1-e8 with labels", "note": "single view; no split required because the explicit-layers layout fits 77x47 at natural zoom" }
+  ],
+  "relationship_mapping": [
+    { "original": "worker -> runtime: task input + control RPCs", "visible": "v1 e1 worker -> runtime, label 'task+ctrl RPC'" },
+    { "original": "runtime -> worker: events + management RPCs", "visible": "v1 e2 runtime -> worker, label 'events+mgmt RPC' (separate arrow, opposite direction)" },
+    { "original": "runtime -> engine: dispatches tasks", "visible": "v1 e3 runtime -> engine, label 'task dispatch'" },
+    { "original": "engine -> backend: starts / manages", "visible": "v1 e4 engine -> backend, label 'starts/manages'" },
+    { "original": "backend -> container: runs user process", "visible": "v1 e5 backend -> container, label 'user process'" },
+    { "original": "engine -> filesystem: mounts / snapshots", "visible": "v1 e6 engine -> filesystem, label 'mount+snapshot'" },
+    { "original": "filesystem -> blobnet: image + volume data", "visible": "v1 e7 filesystem -> blobnet, label 'image+vol data'" },
+    { "original": "runtime -> daemon: filesystem HTTP over UDS", "visible": "v1 e8 runtime -> daemon, label 'HTTP over UDS'" }
+  ],
+  "abbreviations": [
+    "task+ctrl RPC = task input + control RPCs (the worker gRPC seam)",
+    "events+mgmt RPC = events + management RPCs",
+    "task dispatch = dispatches tasks",
+    "mount+snapshot = mounts / snapshots",
+    "image+vol data = image + volume data",
+    "UDS = Unix-domain socket",
+    "Labels were kept to 14 characters or fewer per the skill's label budget; the protocol distinction is carried by spelling out 'HTTP over UDS' on the daemon edge, while the worker seam label stays at 'RPC'."
+  ],
+  "deliberate_drops": [
+    { "fact": "third worker RPC seam (source: 'three worker RPC seams')", "reason": "the excerpt records only two directed worker<->runtime relations and does not name the third; drawing an unnamed seam would fabricate a relation" },
+    { "fact": "go / Rust runtime module details from original chat lines 27-51", "reason": "not supplied in the case excerpts; reading the chat beyond the excerpts is forbidden, so there is no evidence to draw" },
+    { "fact": "the historical assistant's meta-statement 'the graph will keep those paths distinct'", "reason": "not a component, relation, or payload" }
+  ],
+  "capability_preflight": [
+    { "need": "one bus that splits into branches (trunks)", "used": false, "why": "the source declares no shared bus; worker<->runtime and runtime<->{engine,daemon} are independent links, and bundling them would be a false trunk" },
+    { "need": "exactly one moving dot per route (dots: 1 / flow)", "used": false, "why": "no animation was requested for this case; the view is static so dots stay off (check: 0 single-dot routes, 0 periodic routes)" },
+    { "need": "visible uncertainty (style: dashed)", "used": false, "why": "no relation is marked unconfirmed in the frozen brief" },
+    { "need": "related colours by concept (group)", "used": true, "why": "5 semantic groups, verified in the ANSI capture: worker 216;166;87, runtime family 125;174;163 / 147;194;183, daemon 211;134;155, compute family 169;182;101 / 189;201;124, storage family 125;160;184 / 151;184;206" },
+    { "need": "explicit layer placement (layers)", "used": true, "why": "auto layering overflowed 155x39 (lr) and 106x32 (tb); explicit bands were required to fit 77x47" }
+  ],
+  "check_output_v1": [
+    "viewport: unknown zoom: 1.00 natural",
+    "ok: nodes=8 edges=8 flows=0 direction=tb theme=gruvbox",
+    "layers=5 (explicit placement, sugiyama skipped)",
+    "extent=46x37 cells",
+    "crossings: 0",
+    "labels: 8/8 placed, 0 on route cells, 0 skipped",
+    "groups: worker(1) runtime(2) daemon(1) compute(2) storage(2)",
+    "trunks:",
+    "dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 synchronized at 2000ms",
+    "origins: 0/0 routes start at their arrow origin"
+  ],
+  "validator": {
+    "command": "python3 scripts/viz-validate.py docs/visualize-eval/rounds/03/modal-runtime/evidence/v1 --require-select --require-frames --attempts docs/visualize-eval/rounds/03/modal-runtime/attempts.json",
+    "verdict": "all checks passed (28 PASS, 0 FAIL)",
+    "output_file": "evidence/v1/validator.txt",
+    "failing_checks": []
+  },
+  "known_defects": [
+    "manifest.json records pane_rect/pane_cols as null because the `herdr pane layout` rect lookup returned nothing during the capture; viewport_line is therefore null and the size/zoom proof rests on the app's own header token '77x47 @100%' (manifest viewport_token and the pane text) plus the frames-mode line 'viewport: 77x47 zoom: 1.00 natural' inside v1-frames.txt.",
+    "Label adjacency, not a check failure: 'task dispatch' sits immediately right of the Task engine arrowhead and only a few cells below the runtime fan, so a fast reader can momentarily attach it to the daemon route. --check reports 0 labels on route cells and 0 skipped.",
+    "'mount+snapshot' and 'starts/manages' both hang off the same runtime/engine fan junction (engine -> filesystem and engine -> backend); they are separated by ~18 columns and each sits on its own route, but the junction is the busiest region of the view.",
+    "The worker seam label says 'RPC', not 'gRPC'; the brief's constraint (worker gRPC is not HTTP over UDS) is honoured by distinct labels and distinct edges, but the literal token 'gRPC' does not appear on the canvas.",
+    "Layout is narrower than the pane: extent 46 columns in a 77-column viewport, leaving whitespace on the right. This is a natural consequence of fitting a 5-band tb graph; nothing is clipped and no pan/zoom is needed.",
+    "Protocol deviation, reported rather than hidden: choosing the view split and the intra-band order took 15 additional `--check` layout probes beyond the three recorded attempts for v1 (probe_log below). No relation was merged, dropped, or reversed in any probe; probing stopped as soon as extent fit and crossings reached 0."
+  ],
+  "probe_log": [
+    { "purpose": "single view, auto layering", "probes": ["lr -> 155x39, crossings 2 (kept as attempt1)", "tb -> 106x32, crossings 4 (kept as attempt2)"] },
+    { "purpose": "single view, explicit bands", "probes": ["tb [worker|runtime|daemon,engine|backend,filesystem|container,blobnet] -> 48x37, crossings 1", "tb [worker|runtime|engine,daemon|filesystem,backend|blobnet,container] -> 46x37, crossings 0, 1 label skipped (rejected: skipped label)", "lr explicit -> 177x14, crossings 0 (rejected: overflow)"] },
+    { "purpose": "intra-band order sweep on the chosen 5 bands (8 combinations)", "probes": ["crossings 0-2 and 7/8-8/8 labels placed; the chosen combination [engine,daemon][backend,filesystem][container,blobnet] is the only one with 8/8 labels AND 0 crossings"] },
+    { "purpose": "two-view split fallback (abandoned once the single view fit)", "probes": ["seam view (worker/runtime/engine/daemon), lr 51x39 crossings 2, tb 78x16 crossings 3 with 1 label skipped", "compute+storage view (engine/backend/container/filesystem/blobnet), tb 70x24 crossings 0, lr 109x19 crossings 0"] }
+  ],
+  "blockers": [],
+  "cleanup": {
+    "panes_created": ["w7E:pBF"],
+    "close_result": "confirmed_closed",
+    "manifest_cleanup": "confirmed_closed",
+    "failures": []
+  },
+  "animation": {
+    "requested": false,
+    "static": true,
+    "flow_used": false,
+    "dots_used": false,
+    "frames_capture": "5 static frames at 100ms steps, captured only to satisfy the harness --require-frames requirement; they are not motion evidence"
+  },
+  "commands": [
+    "/tmp/visualize-eval/round-03/bin/rataflow-view --check docs/visualize-eval/rounds/03/modal-runtime/specs/v1.json",
+    "shasum -a 256 /tmp/visualize-eval/round-03/bin/rataflow-view",
+    "scripts/viz-evidence.sh --spec docs/visualize-eval/rounds/03/modal-runtime/specs/v1.json --bin /tmp/visualize-eval/round-03/bin/rataflow-view --out docs/visualize-eval/rounds/03/modal-runtime/evidence/v1 --label v1 --frames 5",
+    "python3 scripts/viz-validate.py docs/visualize-eval/rounds/03/modal-runtime/evidence/v1 --require-select --require-frames --attempts docs/visualize-eval/rounds/03/modal-runtime/attempts.json"
+  ]
+}

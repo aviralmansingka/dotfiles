@@ -1,0 +1,13 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=13 edges=11 flows=0 direction=tb theme=gruvbox
+extent=81x77 cells
+crossings: 9 bridges, 4 touching bends
+warning: 13 nodes / 11 edges is above the readable budget (12/16); split it into an overview and detail graphs
+warning: two edges share 3 cell(s), including ports; increase routing space
+labels: 12/12 placed, 0 on route cells, 0 skipped, 2 ambiguous owners
+warning: 2 label(s) have an ambiguous owner: another route is as close to the text as its own edge
+groups: management(1) plant(1) devices(3) tray(2) inband(6)
+trunks: oobbus from oob to bmc_c, 2 branches, 1 junctions
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

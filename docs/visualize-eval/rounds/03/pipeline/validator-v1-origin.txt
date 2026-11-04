@@ -1,0 +1,5 @@
+PASS attempts_readable
+PASS attempts_view_budget
+PASS attempts_spec_budget
+
+all checks passed

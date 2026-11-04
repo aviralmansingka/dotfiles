@@ -1,0 +1,173 @@
+/tmp/e11/rv /tmp/e11/v2.json
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+󰂃 3% ❯ /tmp/e11/rv /tmp/e11/v2.json
+viewport: 82x51 zoom: 1.00 natural
+/tmp/e11/rv /tmp/e11/v2.json --select-all
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com took 2s
+󰂃 3% ❯ /tmp/e11/rv /tmp/e11/v2.json --select-all
+viewport: 82x51 zoom: 1.00 natural
+/tmp/e11/rv /tmp/e11/v2.json --frames 3 --step-ms 100
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+󰂃 3% ❯ /tmp/e11/rv /tmp/e11/v2.json --frames 3 --step-ms 100
+viewport: 82x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 82x51 @100% · v2.json · 4 nodes · 3 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+         ╭──────────────────╮
+         │eno16595np0 .58/29│────────────────╮
+         │                  │                │
+         ╰──────────────────╯                │
+                routed /29 · no NAT/proxy/v6 │ ╭────────────────────────╮
+          ╭─────────────────╮   same /29     ╰▶│                        │
+          │server2 .59 R7725│───────────────╮  │                        │
+          │                 │               ╰─▶│.57 Arista ToR · MAC OUI│
+          ╰─────────────────╯                  │                        │
+                                             ╭▶│                        │
+            ╭────────────╮  free · unprobed  ╎ ╰────────────────────────╯
+            │.60-.62 free│╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯
+            │            │
+            ╰────────────╯
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 82x51 @100% · v2.json · 4 nodes · 3 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+         ╭──────────────────╮
+         │eno16595np0 .58/29│────────────────╮
+         │                  │                │
+         ╰──────────────────╯                │
+                routed /29 · no NAT/proxy/v6 │ ╭────────────────────────╮
+          ╭─────────────────╮   same /29     ╰▶│                        │
+          │server2 .59 R7725│───────────────╮  │                        │
+          │                 │               ╰─▶│.57 Arista ToR · MAC OUI│
+          ╰─────────────────╯                  │                        │
+                                             ╭▶│                        │
+            ╭────────────╮  free · unprobed  ╎ ╰────────────────────────╯
+            │.60-.62 free│╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯
+            │            │
+            ╰────────────╯
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 82x51 @100% · v2.json · 4 nodes · 3 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+         ╭──────────────────╮
+         │eno16595np0 .58/29│────────────────╮
+         │                  │                │
+         ╰──────────────────╯                │
+                routed /29 · no NAT/proxy/v6 │ ╭────────────────────────╮
+          ╭─────────────────╮   same /29     ╰▶│                        │
+          │server2 .59 R7725│───────────────╮  │                        │
+          │                 │               ╰─▶│.57 Arista ToR · MAC OUI│
+          ╰─────────────────╯                  │                        │
+                                             ╭▶│                        │
+            ╭────────────╮  free · unprobed  ╎ ╰────────────────────────╯
+            │.60-.62 free│╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯
+            │            │
+            ╰────────────╯
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘

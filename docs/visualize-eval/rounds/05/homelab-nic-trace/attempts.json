@@ -1,0 +1,115 @@
+{
+  "case_id": "homelab-nic-trace",
+  "round": "05",
+  "budget": "3 spec candidates per view; orientation probes included",
+  "note": "Rejected specs marked reconstructed were rewritten in place during iteration and are restored verbatim from the attempt that produced the preserved check output. Final specs are the ones in specs/ whose sha256 matches the bundle's evidence manifest.",
+  "views": [
+    {
+      "view": "v1",
+      "attempts": [
+        {
+          "attempt": "v1-a1",
+          "spec": "specs/v1.json",
+          "spec_sha256": "7c23ec5bf060ea5e18cff4d08738773990bb1b787e438a7d3b004ec2363e8a1c",
+          "raw_check": "attempts/v1-a1-check.txt",
+          "note": "5 nodes, 4 edges, tb. extent 70x24, 0 crossings, 0 ambiguous owners, 0 skipped labels. Final: fits the pinned 77x47 dump."
+        },
+        {
+          "attempt": "v1-a2",
+          "spec": "specs/rejected/v1-a2.json (reconstructed)",
+          "spec_sha256": "c462ea17255a715426c2d3060b04754b58ad2a0ff17b2c14ecf2618487194d5e",
+          "raw_check": "attempts/v1-a2-check.txt",
+          "note": "Added the 'no v6 (ULA), no committed rate' annotation here to shrink v4. extent grew 70x24 -> 80x24 because an isolated node joins rank 0 beside vm and ctr. Rejected: it would have pushed v1 itself over the 77-column target for no gain, so the annotation stayed in v4."
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "attempts": [
+        {
+          "attempt": "v2-a1",
+          "spec": "specs/rejected/v2-a1.json",
+          "spec_sha256": "055f1ae46d26b6d4da9fa26c3269d930bd470a131da263cd65fdd115b8f72014",
+          "raw_check": "attempts/v2-a1-check.txt",
+          "note": "4 nodes, 4 edges incl. the ts->bond0 skip edge; extent 82x24, 1 ambiguous owner. Rejected: wider still, plus one ambiguous label owner."
+        },
+        {
+          "attempt": "v2-a2",
+          "spec": "specs/rejected/v2-a2.json (reconstructed)",
+          "spec_sha256": "262c525af23d7e6a2eea8ce10cf594ef446b5e8777e1e6733ba7c257ddf177ef",
+          "raw_check": "attempts/v2-a2-check.txt",
+          "note": "Skip edge moved out of the view; extent 80x24, 0 ambiguous owners, labels 'eno1 2.5 GbE' and 'backup path'. Rejected in favour of the shorter-label split."
+        },
+        {
+          "attempt": "v2-a3",
+          "spec": "specs/v2.json",
+          "spec_sha256": "97b91fd312b17b2fdfa9b4890d9c8ff1be54c6ced7a6131ed440dbd0afcf89a0",
+          "raw_check": "attempts/v2-a3-check.txt",
+          "note": "Final: extent 80x24, 0 crossings, 0 ambiguous owners, 0 skipped. Label split: '2.5 GbE' here, 'eno1' on the same bond0 node in v3; 'backup' here, 'metric 600' on the same wlp path in v4. The two-edge fan out of the host box is what fixes the 80-column extent; the budget is spent, so the view ships 3 columns over the 77x47 target (documented) even though it is complete in the measured 83-col pane."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "attempts": [
+        {
+          "attempt": "v3-a1",
+          "spec": "specs/rejected/v3-a1.json",
+          "spec_sha256": "14ecddff34eaec2e743d2f25e788f5960b43eeb7c9ab1a49beefc90093ea3ff3",
+          "raw_check": "attempts/v3-a1-check.txt",
+          "note": "4 nodes (bond0, wlp, rtr, pool) with the router roles in a group name; extent 80x24. Rejected: over 77 columns, and the capture proved group names are not rendered at all in this build."
+        },
+        {
+          "attempt": "v3-a2",
+          "spec": "specs/rejected/v3-a2.json (reconstructed)",
+          "spec_sha256": "937a4fe958337f424a78ceced8eaef0ad2206bf52bd80c2d9b067bf538b999ad",
+          "raw_check": "attempts/v3-a2-check.txt",
+          "note": "5 nodes with the two uplinks side by side; extent 84x32. Rejected: two-node rank plus two gap labels."
+        },
+        {
+          "attempt": "v3-a3",
+          "spec": "specs/v3.json",
+          "spec_sha256": "4409b833c5f2d213918e2795b4a944c7035cfc29c1e36f3b0adbd03e3d04d31e",
+          "raw_check": "attempts/v3-a3-check.txt",
+          "note": "Final: single-node ranks ts->bond0->rtr->pool; extent 38x32, 0 crossings, 0 ambiguous owners. Fits the pinned 77x47 dump."
+        }
+      ]
+    },
+    {
+      "view": "v4",
+      "attempts": [
+        {
+          "attempt": "v4-a1",
+          "spec": "specs/rejected/v4-a1.json",
+          "spec_sha256": "bb910192f12f52e95238cda78ab215786e9a0992d92dae14008fe6ea506cba40",
+          "raw_check": "attempts/v4-a1-check.txt",
+          "note": "5-node chain, two isolated annotation nodes, and only four edges (no wlp->rtr). extent 31x40: fits 47 rows, but the two annotations overlapped in the render and the Wi-Fi-to-gateway relation would have been missing. Rejected."
+        },
+        {
+          "attempt": "v4-a2",
+          "spec": "specs/v4.json",
+          "spec_sha256": "922b3f7fb40b25fbf7698d8caa5061b2a4434f24404249f9a9c3948066de9017",
+          "raw_check": "attempts/v4-a2-check.txt",
+          "note": "Final: 7 nodes, 5 edges, one limits annotation, 'hist' markers on the dashed traceroute hops; extent 34x48, 0 crossings, 0 ambiguous owners. Chosen over a3 because it keeps the egress-limit facts; the 6-rank chain costs 48 rows either way, so the annotation is free."
+        },
+        {
+          "attempt": "v4-a3",
+          "spec": "specs/rejected/v4-a3.json (reconstructed)",
+          "spec_sha256": "e4e090c01cf40adb27508c814d8e39d9977dc35f4009870ec65fd452ef6c534e",
+          "raw_check": "attempts/v4-a3-check.txt",
+          "note": "Removed the limits annotation to try to reach 47 rows. extent stayed 34x48 — the six ranks, not the annotation, set the height — while the two limit facts lost their home. Rejected; the annotation stayed."
+        }
+      ]
+    }
+  ],
+  "pinned_target_dumps": {
+    "pattern": "evidence/<view>/<view>-77x47.txt",
+    "command": "COLUMNS=77 LINES=47 /tmp/visualize-eval/round-05/bin/rataflow-view --frames 5 specs/<view>.json",
+    "result": {
+      "v1": "fits: no overflow banner; graph rows 17-35, palette corner rows 41-46 complete",
+      "v2": "overflows: banner on every frame, 80-cell graph in a 77-column screen, palette bottom border clipped at row 47",
+      "v3": "fits: no overflow banner; graph rows 13-40, palette corner rows 41-46 complete",
+      "v4": "overflows: banner on every frame, 48-row graph in a 47-row screen, the cf node's bottom border clipped"
+    }
+  }
+}

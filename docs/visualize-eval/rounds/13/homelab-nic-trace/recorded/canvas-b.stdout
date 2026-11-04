@@ -1,0 +1,20 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=17 edges=14 flows=0 direction=tb theme=gruvbox
+canvas: 3 diagrams on one canvas, drawn whole at 100%
+diagram egress "Wired egress, hop by hop" at 0,3: extent=37x93 nodes=7 edges=6 routes=6
+  description: Historical hops; Fios router is the collapsed fabric; IPv6 is ULA-only.
+diagram local "Local virtual nets" at 0,101: extent=42x45 nodes=5 edges=4 routes=4
+  description: Local only: VM behind libvirt NAT, container behind the Docker bridge.
+diagram secondary "Wi-Fi backup and Tailscale overlay" at 0,151: extent=50x61 nodes=5 edges=4 routes=4
+  description: Secondary: Wi-Fi backup metric 600, Tailscale encap over UDP on bond0.
+extent=71x212 cells (whole canvas)
+crossings: 0 bridges, 0 touching bends
+near-misses: 0 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)
+passes-near-unrelated-node: 0
+labels: 14/14 placed, 0 leader-ticked, 0 on route, 0 skipped, 0 ambiguous owners
+groups: host(3) uplink(2) gateway(2) demarc(1) isp(2) internet(1) libvirt(2) docker(2) overlay(1) wifi(1)
+trunks:
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 0 by source, 0 by destination, 0 shared-hue pair(s) (source-only 0, destination-only 0)
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

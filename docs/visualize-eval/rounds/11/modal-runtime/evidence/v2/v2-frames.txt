@@ -1,0 +1,291 @@
+/tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/v2-fan-
+final.json
+[WARN] - (starship::context): Scanning current directory timed out.
+[WARN] - (starship::context): You can set scan_timeout in your config to a higher
+value to allow longer-running scans to keep executing.
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+󰂄 7% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/
+v2-fan-final.json
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+󰂄 7% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/
+v2-fan-final.json --select-all
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+󰂄 7% ❯ /tmp/visualize-eval/round-10/bin/rataflow-view /Users/aviral/.herdr/worktre
+es/dotfiles/fix-visualize-skill/docs/visualize-eval/rounds/11/modal-runtime/specs/
+v2-fan-final.json --frames 5 --step-ms 100
+viewport: 82x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 82x51 @100% · v2-fan-final.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                   ╭────────────╮
+                                                 ╭▶│modal-daemon│
+                 ╭─────────────╮fs HTTP over UDS │ │            │
+                 │             │─────────────────╯ ╰────────────╯
+                 │modal-runtime│
+                 │             │──────────────────╮ ╭───────────╮
+                 ╰─────────────╯ dispatches tasks ╰▶│Task engine│
+                                                    │           │
+                                                    ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 82x51 @100% · v2-fan-final.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                   ╭────────────╮
+                                                 ╭▶│modal-daemon│
+                 ╭─────────────╮fs HTTP over UDS │ │            │
+                 │             │─────────────────╯ ╰────────────╯
+                 │modal-runtime│
+                 │             │──────────────────╮ ╭───────────╮
+                 ╰─────────────╯ dispatches tasks ╰▶│Task engine│
+                                                    │           │
+                                                    ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 82x51 @100% · v2-fan-final.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                   ╭────────────╮
+                                                 ╭▶│modal-daemon│
+                 ╭─────────────╮fs HTTP over UDS │ │            │
+                 │             │─────────────────╯ ╰────────────╯
+                 │modal-runtime│
+                 │             │──────────────────╮ ╭───────────╮
+                 ╰─────────────╯ dispatches tasks ╰▶│Task engine│
+                                                    │           │
+                                                    ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 82x51 @100% · v2-fan-final.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                   ╭────────────╮
+                                                 ╭▶│modal-daemon│
+                 ╭─────────────╮fs HTTP over UDS │ │            │
+                 │             │─────────────────╯ ╰────────────╯
+                 │modal-runtime│
+                 │             │──────────────────╮ ╭───────────╮
+                 ╰─────────────╯ dispatches tasks ╰▶│Task engine│
+                                                    │           │
+                                                    ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 82x51 @100% · v2-fan-final.json · 3 nodes · 2 edges · q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                   ╭────────────╮
+                                                 ╭▶│modal-daemon│
+                 ╭─────────────╮fs HTTP over UDS │ │            │
+                 │             │─────────────────╯ ╰────────────╯
+                 │modal-runtime│
+                 │             │──────────────────╮ ╭───────────╮
+                 ╰─────────────╯ dispatches tasks ╰▶│Task engine│
+                                                    │           │
+                                                    ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$!?] on ☁️  (ap-south-1) on ☁️  avir
+almansingka@gmail.com
+󰂄 7% ❯

@@ -1,0 +1,25 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    { "id": "rms",   "label": "nv-rms",          "group": "mgmt" },
+    { "id": "oob",   "label": "OOB LAN",         "group": "oob" },
+    { "id": "bmc_c", "label": "Compute BMC x18", "group": "bmc" },
+    { "id": "bmc_s", "label": "NVSwitch BMC",    "group": "bmc" },
+    { "id": "pwr",   "label": "Power shelf",     "group": "bmc" },
+    { "id": "nvos",  "label": "NVOS",            "group": "nvsw" }
+  ],
+  "layers": [
+    ["rms"],
+    ["oob"],
+    ["bmc_c", "bmc_s", "pwr"],
+    ["nvos"]
+  ],
+  "trunks": [
+    { "id": "oob-bus", "label": "reach", "from": "oob", "to": "nvos",
+      "branches": ["bmc_c", "bmc_s", "pwr"] }
+  ],
+  "edges": [
+    { "from": "rms", "to": "oob", "label": "client on LAN", "label_slot": true }
+  ]
+}

@@ -1,0 +1,242 @@
+{
+  "case_id": "gb300-rack-software",
+  "round": "10",
+  "attempt_note": "Every --check run on a distinct spec is recorded in attempts-log.jsonl (45+ records, wrapper scripts/viz-evidence.sh record). Per-view attempt lists count only the structural candidates considered for that view; orientation/label/lane experiments that never shipped are listed in abandoned_shapes with their record labels.",
+  "views": [
+    {
+      "view": "v1",
+      "spec": "spec-v1.json",
+      "spec_sha256": "fc9618173b3070474f19d47817d272e66c76ee7b1e1262781ee317228267c2c1",
+      "attempts": [
+        {
+          "n": 1,
+          "spec": "drafts/probe-worlds-tb.json",
+          "spec_sha256": "71e1b6fd5f03df771465684161cd9a1888d9782322626669f5ded95f0f1a2136",
+          "record": "probe-worlds-tb",
+          "note": "Family recipe probe: OOB plant + in-band world, trunk, tb, labels left in rank gaps. Result (record): extent=63x73 cells | crossings: 2 bridges, 1 touching bends | warning: two edges share 3 cell(s), including ports; increase routing space | labels: 6/6 placed, 0 on route cells, 0 skipped, 0 ambiguous owners | trunks: oobbus from oob to bmc_c, 2 branches, 1 junctions \u2014 73 rows overflow the 47-row target; rejected."
+        },
+        {
+          "n": 2,
+          "spec": "drafts/probe-worlds-slot.json",
+          "spec_sha256": "7259a6b2e6e997ea764cf5ece304b5dc6485b7c44af2c38e5f1f1625ecad64f3",
+          "record": "probe-worlds-slot",
+          "note": "Same structure with label_slot on the five in-band hops so labels take horizontal gutters instead of rank height. Result: extent=63x42 cells | crossings: 2 bridges, 1 touching bends | warning: two edges share 3 cell(s), including ports; increase routing space | labels: 6/6 placed, 0 on route cells, 0 skipped, 0 ambiguous owners | trunks: oobbus from oob to bmc_c, 2 branches, 1 junctions \u2014 fits; kept as the structural base."
+        },
+        {
+          "n": 3,
+          "spec": "spec-v1.json",
+          "spec_sha256": "fc9618173b3070474f19d47817d272e66c76ee7b1e1262781ee317228267c2c1",
+          "record": "final2-v1",
+          "note": "Final: trunk label shortened from the 13-char 'OOB LAN'/'Redfish/HTTPS' to 'Redfish' (a 13-char trunk label cost 6 rank rows: 63x48 with 'Redfish/HTTPS', record final-v1) and the source's count carried as node label 'Compute BMC x18'. Result: extent=67x42 cells | crossings: 2 bridges, 1 touching bends | warning: two edges share 3 cell(s), including ports; increase routing space | labels: 6/6 placed, 0 on route cells, 0 skipped, 0 ambiguous owners | trunks: oobbus from oob to bmc_c, 2 branches, 1 junctions"
+        }
+      ]
+    },
+    {
+      "view": "v2",
+      "spec": "spec-v2.json",
+      "spec_sha256": "2026351a4125f57c9cf637e694e7b43a881a69fc1dbdaf60cd6728d14190923e",
+      "attempts": [
+        {
+          "n": 1,
+          "spec": "drafts/v2-a.json",
+          "spec_sha256": "1506c0b2f7874c46b1e781a1141ac8eb1c22979132b3b44e4ef069b08864f605",
+          "record": "v2-a",
+          "note": "Bus and controller fan in the same view (trunk + four API edges). Result: extent=57x34 cells | crossings: 2 bridges, 1 touching bends | warning: two edges share 2 cell(s), including ports; increase routing space | labels: 5/5 placed, 0 on route cells, 0 skipped, 2 ambiguous owners | warning: 2 label(s) have an ambiguous owner: another route is as close to the text as its own edge | trunks: oobbus from oob to bmc_c, 2 branches, 1 junctions \u2014 the fan's labels go ambiguous next to the bus corridor; rejected."
+        },
+        {
+          "n": 2,
+          "spec": "drafts/v2-b.json",
+          "spec_sha256": "7f28ec225125ea8d8c5e5886e089266c39cfe6383c3d63dd2e36953aacc0a50d",
+          "record": "v2-b",
+          "note": "Plain four-lane fan under nv-rms with label_slot on every edge (no trunk: API calls are not a bus). Result: extent=69x14 cells | crossings: 0 bridges, 0 touching bends | labels: 4/4 placed, 0 on route cells, 0 skipped, 1 ambiguous owners | warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge | trunks: \u2014 kept as the structural base."
+        },
+        {
+          "n": 3,
+          "spec": "spec-v2.json",
+          "spec_sha256": "2026351a4125f57c9cf637e694e7b43a881a69fc1dbdaf60cd6728d14190923e",
+          "record": "final2-v2",
+          "note": "Final: per-target Redfish labels ('Redfish/HTTPS', 'Redfish power', 'Redfish pshelf') so the three Redfish routes own distinct strings, plus 'Compute BMC x18'. Result: extent=73x14 cells | crossings: 0 bridges, 0 touching bends | labels: 4/4 placed, 0 on route cells, 0 skipped, 1 ambiguous owners | warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge | trunks: \u2014 one ambiguous owner remains (documented defect)."
+        }
+      ]
+    },
+    {
+      "view": "v3",
+      "spec": "spec-v3.json",
+      "spec_sha256": "d98426a8ef06ce1d5e5fdbc750b52d35737b3f5e6f8081a373c806d4dda7330d",
+      "attempts": [
+        {
+          "n": 1,
+          "spec": "drafts/v3-a.json",
+          "spec_sha256": "4f7a2c4c352ff5e55105a859b2f96407d3efabfcc021d872d3a4ba8656200900",
+          "record": "v3-a",
+          "note": "tray view in tb with label_slot. Result: extent=43x21 cells | crossings: 0 bridges, 0 touching bends | labels: 4/4 placed, 0 on route cells, 0 skipped, 1 ambiguous owners | warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge | trunks: \u2014 one ambiguous label in the two-lane NVOS/NMX-C fan; rejected."
+        },
+        {
+          "n": 2,
+          "spec": "spec-v3.json",
+          "spec_sha256": "d98426a8ef06ce1d5e5fdbc750b52d35737b3f5e6f8081a373c806d4dda7330d",
+          "record": "final-v3",
+          "note": "Same relations in lr (labels in the vertical rank gap) plus the unconfirmed historical OOB edge drawn dashed. Result: extent=65x10 cells | crossings: 0 bridges, 0 touching bends | labels: 4/4 placed, 0 on route cells, 0 skipped, 0 ambiguous owners | trunks: \u2014 final."
+        }
+      ]
+    }
+  ],
+  "abandoned_shapes": [
+    {
+      "record": "probe-all-tb",
+      "why": "13-node single overview; extent 81x77 plus the >12-node budget warning \u2014 abandoned before a view was assigned."
+    },
+    {
+      "record": "probe-plane-tb",
+      "why": "7-node plant+management in one view (bus + full rms fan); 87x55, 38 bridges, 2 ambiguous \u2014 abandoned."
+    },
+    {
+      "record": "probe-plane-lr",
+      "why": "same 7 nodes in lr; 86x29, 18 bridges, 3 ambiguous \u2014 abandoned."
+    },
+    {
+      "record": "probe-plane-tb-slot",
+      "why": "same 7 nodes with label_slot; 64x39, 9 bridges, 1 label with no free slot \u2014 abandoned."
+    },
+    {
+      "record": "probe-plane-lr-slot",
+      "why": "same 7 nodes, lr + label_slot; 63x29, 18 bridges, 4 ambiguous \u2014 abandoned."
+    },
+    {
+      "record": "probe-worlds-swap",
+      "why": "exact copy of the v1 candidate with the group declaration order swapped, to test whether declaration order moves a plane's x position; 63x48, unchanged layout \u2014 hypothesis rejected."
+    },
+    {
+      "record": "probe-worlds-rms",
+      "why": "v1 candidate plus nv-rms (11 nodes); 55x48 (one row over target) and 5 bridges \u2014 rejected."
+    },
+    {
+      "record": "v1-a",
+      "why": "plane grid pinned with six layers (one rank per in-band hop); 63x56 overflows the target \u2014 layers abandoned for v1."
+    },
+    {
+      "record": "probe-v1-layers",
+      "why": "plane grid pinned with five layers; 63x42 with the same 2 bridges as the unpinned spec \u2014 layers are a no-op here, so spec-v1 ships without them."
+    },
+    {
+      "record": "probe-v1-plainfan",
+      "why": "trunk replaced by three separate OOB edges (control experiment for the shared-cell warning): 63x37, 0 bridges, but 1 ambiguous owner and it violates the human's one-split demand \u2014 rejected."
+    },
+    {
+      "record": "probe-trunk-min",
+      "why": "minimal trunk-only spec (no plain edges) run for the shared-cell diagnostic; exit 1, 'the spec needs at least one edge' \u2014 recorded, no layout evidence."
+    },
+    {
+      "record": "v2-c",
+      "why": "v2 base with label_slot removed (labels back in the rank gap): 69x26, 1 ambiguous \u2014 label placement lever probed."
+    },
+    {
+      "record": "v2-d",
+      "why": "three-lane variant without OOB LAN: 57x13, 1 ambiguous \u2014 fan size is not the cause."
+    },
+    {
+      "record": "v2-e",
+      "why": "short per-target Redfish labels: 69x14, 1 ambiguous \u2014 label length is not the cause."
+    },
+    {
+      "record": "probe-v2f",
+      "why": "three-lane fan, labels in the rank gap: 57x26, 1 ambiguous."
+    },
+    {
+      "record": "probe-v2g",
+      "why": "label_slot on the outer edges only: 57x13, 1 ambiguous."
+    },
+    {
+      "record": "probe-v2h",
+      "why": "three-lane fan with shortened labels, no label_slot: 57x24, 1 ambiguous."
+    },
+    {
+      "record": "probe-v2i",
+      "why": "three-lane fan in lr, no label_slot: 51x14, 1 ambiguous."
+    },
+    {
+      "record": "probe-v2j",
+      "why": "two-lane fan (compute BMC + power shelf), tb: 40x26, 1 ambiguous."
+    },
+    {
+      "record": "probe-v2k",
+      "why": "three-lane fan, label_slot, 'Redfish HTTP'/'Redfish sw'/'Redfish psu': 57x13, 1 ambiguous."
+    },
+    {
+      "record": "probe-v2l",
+      "why": "same with 'Redfish'/'Redfish sw'/'Redfish psu': 57x13, 1 ambiguous."
+    },
+    {
+      "record": "probe-v2m",
+      "why": "same with 'Redfish/HTTPS'/'Redfish BMC'/'Redfish PSU': 57x13, 1 ambiguous."
+    },
+    {
+      "record": "probe-v2n",
+      "why": "single-lane control (one API edge only): 34x12, 0 ambiguous \u2014 proves the ambiguity needs at least two lanes."
+    },
+    {
+      "record": "probe-v2p",
+      "why": "reverse edge declaration order: 57x26, 1 ambiguous \u2014 declaration order does not change label ownership."
+    },
+    {
+      "record": "probe-v2q",
+      "why": "one deliberately long label to force a taller rank gap: 57x31, 1 ambiguous."
+    },
+    {
+      "record": "probe-v2r",
+      "why": "lr + label_slot + short labels: 38x14, 1 ambiguous (the gutter band re-associates labels)."
+    },
+    {
+      "record": "probe-v2s",
+      "why": "lr, two lanes, no label_slot: 50x9, 0 ambiguous \u2014 the cleanest fan geometry measured."
+    },
+    {
+      "record": "probe-v2t",
+      "why": "lr, three lanes, short labels, no label_slot: 49x14, 1 ambiguous."
+    },
+    {
+      "record": "probe-v2u",
+      "why": "lr, three lanes, three-character labels 'R-c'/'R-s'/'R-r': 39x14, 1 ambiguous \u2014 proves label text is not the cause; two-cell lane spacing is."
+    },
+    {
+      "record": "probe-v2v",
+      "why": "lr, three lanes, all labels 'Redfish': 43x14, 1 ambiguous (and duplicate strings, unusable)."
+    },
+    {
+      "record": "probe-v2w",
+      "why": "four-lane fan in lr, no label_slot: 40x19, 1 ambiguous."
+    },
+    {
+      "record": "probe-v2x",
+      "why": "four-lane fan in lr with label_slot: 28x19, 2 labels skipped \u2014 label_slot has no gutter in lr here."
+    },
+    {
+      "record": "probe-v2y",
+      "why": "four-lane fan in lr with short labels: 38x19, 1 ambiguous."
+    },
+    {
+      "record": "probe-v2z",
+      "why": "OOB LAN pinned beside nv-rms with layers so only three lanes leave nv-rms: 57x13, 'Redfish pshelf' skipped, 1 ambiguous \u2014 rejected."
+    },
+    {
+      "record": "probe-v2d-lr",
+      "why": "three-lane lr with label_slot: 38x14, 1 label skipped \u2014 rejected."
+    },
+    {
+      "record": "probe-v2b-lr",
+      "why": "four-lane lr with label_slot: 28x19, 2 labels skipped \u2014 rejected."
+    },
+    {
+      "record": "v3-b",
+      "why": "the lr tray view before the final copy (drafts/v3-b.json, identical bytes to spec-v3.json apart from the file name): 65x10, 0 bridges, 0 ambiguous \u2014 promoted to spec-v3.json."
+    },
+    {
+      "record": "probe-spec-v1-x18",
+      "why": "v1 with 'Compute BMC x18': 67x42, 2 bridges, 0 ambiguous \u2014 adopted into spec-v1.json."
+    },
+    {
+      "record": "probe-spec-v2-x18",
+      "why": "v2 with 'Compute BMC x18': 73x14, 0 bridges, 1 ambiguous \u2014 adopted into spec-v2.json."
+    }
+  ]
+}

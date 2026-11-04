@@ -1,0 +1,46 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "rms",
+      "label": "nv-rms",
+      "group": "management"
+    },
+    {
+      "id": "bmc_c",
+      "label": "Compute BMC",
+      "group": "devices"
+    },
+    {
+      "id": "bmc_s",
+      "label": "NVSwitch BMC",
+      "group": "devices"
+    },
+    {
+      "id": "pwr",
+      "label": "Power shelf",
+      "group": "devices"
+    }
+  ],
+  "edges": [
+    {
+      "from": "rms",
+      "to": "bmc_c",
+      "label": "Redfish HTTPS",
+      "label_slot": true
+    },
+    {
+      "from": "rms",
+      "to": "bmc_s",
+      "label": "Redfish sw",
+      "label_slot": true
+    },
+    {
+      "from": "rms",
+      "to": "pwr",
+      "label": "Redfish psu",
+      "label_slot": true
+    }
+  ]
+}

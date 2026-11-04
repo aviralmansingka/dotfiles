@@ -1,0 +1,92 @@
+{
+  "case_id": "modal-runtime",
+  "reference_kind": "historical_generated_relations_not_independent_fact_verification",
+  "source_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-modal-learn-runtime-arch--/2026-10-14T20-36-14-065Z_01a13c21-3e70-754d-a101-f5817da3e05a.jsonl",
+  "source_spec_line": 55,
+  "source_call_id": "call_KfPSNBd2yyDv7opUAXFM86v8|fc_0bc8bde248d91e7d016acfe9bb22b087d0a1ac21927a3569fb",
+  "historical_reference": {
+    "nodes": [
+      {
+        "id": "worker",
+        "label": "modal-worker"
+      },
+      {
+        "id": "runtime",
+        "label": "modal-runtime"
+      },
+      {
+        "id": "engine",
+        "label": "Task engine"
+      },
+      {
+        "id": "backend",
+        "label": "Container backend"
+      },
+      {
+        "id": "container",
+        "label": "Task container"
+      },
+      {
+        "id": "filesystem",
+        "label": "Filesystem + volumes"
+      },
+      {
+        "id": "blobnet",
+        "label": "Blobnet"
+      },
+      {
+        "id": "daemon",
+        "label": "modal-daemon"
+      }
+    ],
+    "edges": [
+      {
+        "from": "worker",
+        "to": "runtime",
+        "label": "task input + control RPCs"
+      },
+      {
+        "from": "runtime",
+        "to": "worker",
+        "label": "events + management RPCs"
+      },
+      {
+        "from": "runtime",
+        "to": "engine",
+        "label": "dispatches tasks"
+      },
+      {
+        "from": "engine",
+        "to": "backend",
+        "label": "starts / manages"
+      },
+      {
+        "from": "backend",
+        "to": "container",
+        "label": "runs user process"
+      },
+      {
+        "from": "engine",
+        "to": "filesystem",
+        "label": "mounts / snapshots"
+      },
+      {
+        "from": "filesystem",
+        "to": "blobnet",
+        "label": "image + volume data"
+      },
+      {
+        "from": "runtime",
+        "to": "daemon",
+        "label": "filesystem HTTP over UDS"
+      }
+    ]
+  },
+  "constraints": [
+    "Preserve all original 8 components and 8 directed relations; show worker -> runtime and runtime -> worker separately or with an explicitly bidirectional labeled relation.",
+    "Preserve filesystem/volumes, Blobnet, container backend/container, and daemon interfaces.",
+    "HTTP over Unix-domain sockets is not the same interface as worker gRPC.",
+    "Historical source references: go and Rust runtime source discussed at original chat lines 27-51. No remote execution required."
+  ],
+  "animation": "optional"
+}

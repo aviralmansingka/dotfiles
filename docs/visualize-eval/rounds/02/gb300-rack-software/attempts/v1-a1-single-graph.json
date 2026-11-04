@@ -1,0 +1,152 @@
+{
+  "direction": "tb",
+  "theme": "gruvbox",
+  "nodes": [
+    {
+      "id": "rms",
+      "label": "nv-rms",
+      "group": "mgmt"
+    },
+    {
+      "id": "oob",
+      "label": "OOB LAN",
+      "group": "oob"
+    },
+    {
+      "id": "bmc_c",
+      "label": "Compute BMC x18",
+      "group": "oob"
+    },
+    {
+      "id": "bmc_s",
+      "label": "NVSwitch BMC",
+      "group": "oob"
+    },
+    {
+      "id": "pwr",
+      "label": "Power shelf/PDU",
+      "group": "oob"
+    },
+    {
+      "id": "nvos",
+      "label": "NVOS",
+      "group": "nvsw"
+    },
+    {
+      "id": "nmxc",
+      "label": "NMX-C/T",
+      "group": "nvsw"
+    },
+    {
+      "id": "k8s",
+      "label": "Kubernetes",
+      "group": "inband"
+    },
+    {
+      "id": "gpuop",
+      "label": "GPU Operator",
+      "group": "inband"
+    },
+    {
+      "id": "dcgm",
+      "label": "DCGM",
+      "group": "inband"
+    },
+    {
+      "id": "dcgmx",
+      "label": "dcgm-exporter",
+      "group": "inband"
+    },
+    {
+      "id": "drvk",
+      "label": "Driver+CUDA",
+      "group": "inband"
+    },
+    {
+      "id": "fm",
+      "label": "Fabric Mgr",
+      "group": "inband"
+    }
+  ],
+  "trunks": [
+    {
+      "id": "oob_lan",
+      "label": "Redfish/HTTPS",
+      "from": "oob",
+      "to": "pwr",
+      "branches": [
+        "bmc_c",
+        "bmc_s"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "rms",
+      "to": "oob",
+      "label": "client on LAN",
+      "dots": 1
+    },
+    {
+      "from": "rms",
+      "to": "bmc_c",
+      "label": "Redfish/HTTPS",
+      "dots": 1
+    },
+    {
+      "from": "rms",
+      "to": "pwr",
+      "label": "Redfish/HTTPS",
+      "dots": 1
+    },
+    {
+      "from": "rms",
+      "to": "nvos",
+      "label": "NVUE REST/SSH",
+      "dots": 1
+    },
+    {
+      "from": "rms",
+      "to": "nmxc",
+      "label": "NMX-C gRPC",
+      "dots": 1
+    },
+    {
+      "from": "nvos",
+      "to": "nmxc",
+      "label": "hosts",
+      "dots": 1
+    },
+    {
+      "from": "k8s",
+      "to": "gpuop",
+      "label": "deployed in",
+      "dots": 1
+    },
+    {
+      "from": "gpuop",
+      "to": "dcgm",
+      "label": "DaemonSet",
+      "dots": 1
+    },
+    {
+      "from": "dcgm",
+      "to": "drvk",
+      "label": "NVML read",
+      "dots": 1
+    },
+    {
+      "from": "dcgm",
+      "to": "dcgmx",
+      "label": "metrics :9400",
+      "dots": 1
+    },
+    {
+      "from": "drvk",
+      "to": "fm",
+      "label": "co-resident",
+      "dots": 1,
+      "style": "dashed"
+    }
+  ]
+}

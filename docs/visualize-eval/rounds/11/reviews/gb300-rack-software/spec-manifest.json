@@ -1,0 +1,18 @@
+[
+  [
+    "docs/visualize-eval/rounds/11/gb300-rack-software/specs/v1-planes-a3.json",
+    "48cfb550e6962dfb3cf881a68a19fca334e3c1204540ec109ad451ef84f7655a"
+  ],
+  [
+    "docs/visualize-eval/rounds/11/gb300-rack-software/specs/v2-oob-bus-a2.json",
+    "547d5093bca388160f0178d052fc8852a2001107ef55e75b4be8414b05554893"
+  ],
+  [
+    "docs/visualize-eval/rounds/11/gb300-rack-software/specs/v3-rms-api-a2.json",
+    "4073104f3df2eb619ad1c4fdcc8b5ff3f86eba8e4b60d14ece9330f7a3e214bc"
+  ],
+  [
+    "docs/visualize-eval/rounds/11/gb300-rack-software/specs/v4-inband-a1.json",
+    "6c202043bccfe22b5d89a0a9d811444a2b1c287e699b43dfca9fbbab7b087de8"
+  ]
+]

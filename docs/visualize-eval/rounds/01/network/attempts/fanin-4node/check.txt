@@ -1,0 +1,3 @@
+ok: nodes=4 edges=4 flows=0 direction=tb theme=gruvbox
+extent=40x24 cells
+exit=0

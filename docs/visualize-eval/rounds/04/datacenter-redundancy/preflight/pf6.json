@@ -1,0 +1,16 @@
+{
+  "direction": "tb",
+  "nodes": [
+    {"id": "mux1", "label": "MUX 1", "group": "mux"},
+    {"id": "mux2", "label": "MUX 2", "group": "mux"},
+    {"id": "core1", "label": "Core 1", "group": "core"},
+    {"id": "core2", "label": "Core 2", "group": "core"}
+  ],
+  "layers": [["mux1", "", "", "", "", "", "", "", "mux2"], ["core1", "", "", "", "", "", "", "", "core2"]],
+  "edges": [
+    {"from": "mux1", "to": "core1", "label": "x-connect", "dots": 0},
+    {"from": "mux1", "to": "core2", "label": "x-connect", "dots": 0},
+    {"from": "mux2", "to": "core1", "label": "x-connect", "dots": 0},
+    {"from": "mux2", "to": "core2", "label": "x-connect", "dots": 0}
+  ]
+}

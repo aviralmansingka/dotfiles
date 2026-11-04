@@ -1,0 +1,288 @@
+/tmp/visualize-eval/round-09/bin/rataflow-view /Users/aviral/.herdr/worktrees/dotf
+iles/fix-visualize-skill/docs/visualize-eval/rounds/09/datacenter-redundancy/views
+/v2.json
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-09/bin/rataflow-view /Users/aviral/.herdr/worktrees/do
+tfiles/fix-visualize-skill/docs/visualize-eval/rounds/09/datacenter-redundancy/vie
+ws/v2.json
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-09/bin/rataflow-view /Users/aviral/.herdr/worktrees/do
+tfiles/fix-visualize-skill/docs/visualize-eval/rounds/09/datacenter-redundancy/vie
+ws/v2.json --select-all
+viewport: 82x51 zoom: 1.00 natural
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯ /tmp/visualize-eval/round-09/bin/rataflow-view /Users/aviral/.herdr/worktrees/do
+tfiles/fix-visualize-skill/docs/visualize-eval/rounds/09/datacenter-redundancy/vie
+ws/v2.json --frames 5 --step-ms 100
+viewport: 82x51 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 82x51 @100% · v2.json · 6 nodes · 8 edges · q quit
+
+
+
+
+
+
+
+
+                               ╭──────╮   ╭──────╮
+                               │Core 1│   │Core 2│
+                               │      │   │      │
+                               ╰──────╯   ╰──────╯
+                                │ │        │ │
+                                │ │        │ │
+                                │ │        │ │
+                                │ │        │ │
+                         active │ │        │ │
+                                │ │        │ │ standby
+                                │ │active  │ │
+                                │╭⌒────────╯ │
+                            ╭───╯││          │
+                            │ ╭──╯╰────────╮ │
+                            ▼ ▼    standby ▼ ▼
+                           ╭──────────╮   ╭───────────╮
+                           │FW1 active│   │FW2 standby│
+                           │          │   │           │
+                           ╰──────────╯   ╰───────────╯
+                            │ │            │ │
+                            │ │            │ │
+                            │ │            │ │
+                            │ │            │ │
+                            │ │     standby│ │
+                            │ │     ╭──────╯ │ standby
+                            │ │     │        │
+                            │ ╰─────⌒──────╮ │
+                            │       │active│ │
+                            ╰─────╮ │      │ │
+                            active▼ ▼      ▼ ▼
+                                 ╭────╮   ╭────╮
+                                 │BL 1│   │BL 2│
+                                 │    │   │    │
+                                 ╰────╯   ╰────╯
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 1 at 100ms
+ rataflow-view · 82x51 @100% · v2.json · 6 nodes · 8 edges · q quit
+
+
+
+
+
+
+
+
+                               ╭──────╮   ╭──────╮
+                               │Core 1│   │Core 2│
+                               │      │   │      │
+                               ╰──────╯   ╰──────╯
+                                │ │        │ │
+                                │ │        │ │
+                                │ │        │ │
+                                │ │        │ │
+                         active │ │        │ │
+                                │ │        │ │ standby
+                                │ │active  │ │
+                                │╭⌒────────╯ │
+                            ╭───╯││          │
+                            │ ╭──╯╰────────╮ │
+                            ▼ ▼    standby ▼ ▼
+                           ╭──────────╮   ╭───────────╮
+                           │FW1 active│   │FW2 standby│
+                           │          │   │           │
+                           ╰──────────╯   ╰───────────╯
+                            │ │            │ │
+                            │ │            │ │
+                            │ │            │ │
+                            │ │            │ │
+                            │ │     standby│ │
+                            │ │     ╭──────╯ │ standby
+                            │ │     │        │
+                            │ ╰─────⌒──────╮ │
+                            │       │active│ │
+                            ╰─────╮ │      │ │
+                            active▼ ▼      ▼ ▼
+                                 ╭────╮   ╭────╮
+                                 │BL 1│   │BL 2│
+                                 │    │   │    │
+                                 ╰────╯   ╰────╯
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 2 at 200ms
+ rataflow-view · 82x51 @100% · v2.json · 6 nodes · 8 edges · q quit
+
+
+
+
+
+
+
+
+                               ╭──────╮   ╭──────╮
+                               │Core 1│   │Core 2│
+                               │      │   │      │
+                               ╰──────╯   ╰──────╯
+                                │ │        │ │
+                                │ │        │ │
+                                │ │        │ │
+                                │ │        │ │
+                         active │ │        │ │
+                                │ │        │ │ standby
+                                │ │active  │ │
+                                │╭⌒────────╯ │
+                            ╭───╯││          │
+                            │ ╭──╯╰────────╮ │
+                            ▼ ▼    standby ▼ ▼
+                           ╭──────────╮   ╭───────────╮
+                           │FW1 active│   │FW2 standby│
+                           │          │   │           │
+                           ╰──────────╯   ╰───────────╯
+                            │ │            │ │
+                            │ │            │ │
+                            │ │            │ │
+                            │ │            │ │
+                            │ │     standby│ │
+                            │ │     ╭──────╯ │ standby
+                            │ │     │        │
+                            │ ╰─────⌒──────╮ │
+                            │       │active│ │
+                            ╰─────╮ │      │ │
+                            active▼ ▼      ▼ ▼
+                                 ╭────╮   ╭────╮
+                                 │BL 1│   │BL 2│
+                                 │    │   │    │
+                                 ╰────╯   ╰────╯
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 3 at 300ms
+ rataflow-view · 82x51 @100% · v2.json · 6 nodes · 8 edges · q quit
+
+
+
+
+
+
+
+
+                               ╭──────╮   ╭──────╮
+                               │Core 1│   │Core 2│
+                               │      │   │      │
+                               ╰──────╯   ╰──────╯
+                                │ │        │ │
+                                │ │        │ │
+                                │ │        │ │
+                                │ │        │ │
+                         active │ │        │ │
+                                │ │        │ │ standby
+                                │ │active  │ │
+                                │╭⌒────────╯ │
+                            ╭───╯││          │
+                            │ ╭──╯╰────────╮ │
+                            ▼ ▼    standby ▼ ▼
+                           ╭──────────╮   ╭───────────╮
+                           │FW1 active│   │FW2 standby│
+                           │          │   │           │
+                           ╰──────────╯   ╰───────────╯
+                            │ │            │ │
+                            │ │            │ │
+                            │ │            │ │
+                            │ │            │ │
+                            │ │     standby│ │
+                            │ │     ╭──────╯ │ standby
+                            │ │     │        │
+                            │ ╰─────⌒──────╮ │
+                            │       │active│ │
+                            ╰─────╮ │      │ │
+                            active▼ ▼      ▼ ▼
+                                 ╭────╮   ╭────╮
+                                 │BL 1│   │BL 2│
+                                 │    │   │    │
+                                 ╰────╯   ╰────╯
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+frame 4 at 400ms
+ rataflow-view · 82x51 @100% · v2.json · 6 nodes · 8 edges · q quit
+
+
+
+
+
+
+
+
+                               ╭──────╮   ╭──────╮
+                               │Core 1│   │Core 2│
+                               │      │   │      │
+                               ╰──────╯   ╰──────╯
+                                │ │        │ │
+                                │ │        │ │
+                                │ │        │ │
+                                │ │        │ │
+                         active │ │        │ │
+                                │ │        │ │ standby
+                                │ │active  │ │
+                                │╭⌒────────╯ │
+                            ╭───╯││          │
+                            │ ╭──╯╰────────╮ │
+                            ▼ ▼    standby ▼ ▼
+                           ╭──────────╮   ╭───────────╮
+                           │FW1 active│   │FW2 standby│
+                           │          │   │           │
+                           ╰──────────╯   ╰───────────╯
+                            │ │            │ │
+                            │ │            │ │
+                            │ │            │ │
+                            │ │            │ │
+                            │ │     standby│ │
+                            │ │     ╭──────╯ │ standby
+                            │ │     │        │
+                            │ ╰─────⌒──────╮ │
+                            │       │active│ │
+                            ╰─────╮ │      │ │
+                            active▼ ▼      ▼ ▼
+                                 ╭────╮   ╭────╮
+                                 │BL 1│   │BL 2│
+                                 │    │   │    │
+                                 ╰────╯   ╰────╯
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+
+fix-visualize-skill on  fix/visualize-skill [$?] on ☁️  (ap-south-1) on ☁️  avira
+lmansingka@gmail.com
+❯

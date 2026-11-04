@@ -1,0 +1,92 @@
+{
+ "round": 3,
+ "phase": "frozen-before-generation",
+ "skill_path": "docs/visualize-eval/rounds/03/SKILL.md",
+ "skill_sha256": "cf796bcdc527897687ec2ca19844f399c921252409b9ca7ad04fbfa1b6cc659c",
+ "renderer_path": "/tmp/visualize-eval/round-03/bin/rataflow-view",
+ "renderer_sha256": "b242b6a28e2e27934b06b7a297be638c143e5c99680495e104380cd8d9ee80f7",
+ "renderer_source_sha256": "8322f542af031ca03d687b523d86e14cb47960600e068be286183466920270fd",
+ "renderer_source_digest_formula": "sha256 over sorted walk of renderer-source: (relative path bytes + file bytes) per file",
+ "rubric_sha256": "5519fd84f6b75973dbf7b5f5544c909a8f32a8841a876c8e7af00a1fcb119335",
+ "cases_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+ "generator_model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest",
+ "reviewer_model": "openai/gpt-6.1-sol",
+ "case_hashes": {
+  "pipeline": {
+   "source_sha256": "68aa197fdc597c3a22d1b8ca88a3ebee861dcda34684da15ae69b6946b741e58",
+   "expected_sha256": "ea177d01af818876ff04bf707b923326b153185fd425f21ea96250486b504ec3",
+   "variants_sha256": "5d351c45f055d2ca115036d10ab4bd50fb1d22ccd87f31e018f01c3039b48659"
+  },
+  "network": {
+   "source_sha256": "9d23a7b50d1d26a69f95523a9586bab96ec588afb9628ae274c896992b147947",
+   "expected_sha256": "8cb86d269c21176d775e79f8592f09067049031a0e581df38d66705e73a8caa9",
+   "variants_sha256": "6af06039e172f0ef75d83c87703f85541b24e61d8706c64d8bba31ce742c2cbe"
+  },
+  "homelab-nic-trace": {
+   "source_sha256": "abe8b376eccd7d0027f2985aab55ed656603b2094c275ee66ed223a57421b4c4",
+   "expected_sha256": "91ef88d09af71cd4583cfd0f1141e10f2fc2efdd3a779f9389f1d67759cd09c7",
+   "variants_sha256": "d70fd9d33cc1966bc015b6bc4d84176984979cac15b9cb7d1d89165e1bc7fc1f"
+  },
+  "server-nic-layout": {
+   "source_sha256": "235d296fef435710c8a49bcd247455c8c82b844e71726f146c4cedf227d0308b",
+   "expected_sha256": "ada8d8b1b8a3dfda4221b22fd1bb785327d6eeda69834c35ab5ab17b0678afb4",
+   "variants_sha256": "40f060941014aeaf83ee591346e9950f71c02bf9a68c5693804877bfbcbd9eb8"
+  },
+  "datacenter-redundancy": {
+   "source_sha256": "a3051af3eeeec31aee53558dafbbea5d061dc74253618fd6940eba5c39b5bb98",
+   "expected_sha256": "926e866fbdbb3eaac5b7a21360905d1f621a7a6386139afab303e8ba7e62ed47",
+   "variants_sha256": "a5753817a621b846abcb4105d028dbd0d0152214495f5b225044b3882f4f34b9"
+  },
+  "modal-machine-manager": {
+   "source_sha256": "a41065d9ceca1ed035bfd6282f0e937abbd0034ad497a33637a76f2d8a9ebab3",
+   "expected_sha256": "c6d14814bcfa0f41e7401df3b57ea1400e15050b9fb4db3d2e12980d6fde9764",
+   "variants_sha256": "22f00c085b50f218115610ed1580e89f4c0a94d39f8ecf83c80d6712116a06b2"
+  },
+  "modal-runtime": {
+   "source_sha256": "c6e4552d5842347bc9472e53a2351897c3624c92b5a14541aaa3c28216dc4a0d",
+   "expected_sha256": "fd3963e207e9c433b7e5825c8a1691766bb13d5df7322ac97a05e379d2cbba99",
+   "variants_sha256": "1e5a6add0f9d62670f8c884a2f4df679112e233df8539b3983d80c122bdcf8e7"
+  },
+  "gb300-rack-software": {
+   "source_sha256": "10d440af0be8d3730c448e710a48d4dfbd527a966f532084e7f98fd2d4b83fda",
+   "expected_sha256": "9a947233493973c247544ae6e9c175b940feb9d87fc850d4693565c90042c0ab",
+   "variants_sha256": "fd9892244406ec1b2b09ee2cc7adb2af5534ebb52ede5036664f238b776eff31"
+  }
+ },
+ "case_hashes_match_round_02": null,
+ "harness": {
+  "viz-evidence.sh": "2a804dea703e5a9da9cdd788d4eb89690860a02606ec681948670dfe19e8e069",
+  "viz-validate.py": "4a13878de22dd9dc28ac098658c0dc0c07727e7a03228af994a6f839e7d54ade",
+  "viz-aggregate.py": "5ab3cfd4c1d84a01ae1aa3c166c2d5331bf6692e15e1d8fb97a2a0905192cffa",
+  "viz-review-panes.sh": "0d7ddf530622bf2e1944397e16acdf049ac3e2fc9f4a22d8b8c0d0f4c7190516",
+  "test-rataflow.py": "a764cdf56a0d287f9f02f853acb2b3cb58b8726025593cad611954cd75ac9eae"
+ },
+ "worker_labels": {
+  "pipeline": "viz-ds03-1",
+  "network": "viz-ds03-2",
+  "homelab-nic-trace": "viz-ds03-3",
+  "server-nic-layout": "viz-ds03-4",
+  "datacenter-redundancy": "viz-ds03-5",
+  "modal-machine-manager": "viz-ds03-6",
+  "modal-runtime": "viz-ds03-7",
+  "gb300-rack-software": "viz-ds03-8"
+ },
+ "rubric_revision": 4,
+ "rubric_changes_round_03": [
+  "animation: dots start at their own arrow origin; all animated routes arrive together unless the source specifies a rate",
+  "layout_fit: crossings reported and minimized by layout, never by reordering source groups or merging relations",
+  "arrow_traceability: a dot starting away from its origin makes direction unproven"
+ ],
+ "generator_model_note": "OpenGateway deepseek-v4.1-flash-ultrafast was configured and then reverted before any generation ran; fireworks deepseek stays.",
+ "superseded_round": null,
+ "round_02_snapshot": "docs/visualize-eval/rounds/02/harness/ holds the round-02 scripts; round-02 bundles only validate against that snapshot.",
+ "human_review_input": "rounds/02/human-review/feedback.md round-level feedback (dot timing, dot origin, overlap minimization, 'objectively better') drove rubric revision 2 and this renderer change; per-case verdicts still pending and non-blocking per user instruction to continue.",
+ "frozen_input_corrections": [
+  {
+   "what": "rubric reviewer identity (field + schema const) stale from round 01 (openai/gpt-6-astra)",
+   "found_by": "viz-judge03-runtime during stage B, before any reviewer-result.json was written",
+   "fix": "corrected to openai/gpt-6.1-sol in master and round-03 copy (field + schema const); rubric re-hashed; config/metadata updated",
+   "criteria_unchanged": true
+  }
+ ]
+}

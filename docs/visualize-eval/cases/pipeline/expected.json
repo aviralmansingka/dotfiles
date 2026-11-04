@@ -1,0 +1,70 @@
+{
+  "case_id": "pipeline",
+  "reference_kind": "historical_generated_relations_not_independent_fact_verification",
+  "source_chat": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-dotfiles-fix-visualize--/2026-10-13T05-35-27-649Z_01a133c2-33a0-74b7-9033-3ad246285cff.jsonl",
+  "source_spec_line": 180,
+  "source_call_id": "chatcmpl-tool-8bf56de848923fd1",
+  "historical_reference": {
+    "nodes": [
+      {
+        "id": "cli",
+        "label": "CLI"
+      },
+      {
+        "id": "api",
+        "label": "API gateway"
+      },
+      {
+        "id": "auth",
+        "label": "Auth"
+      },
+      {
+        "id": "queue",
+        "label": "Job queue"
+      },
+      {
+        "id": "worker",
+        "label": "Worker pool"
+      },
+      {
+        "id": "db",
+        "label": "Postgres"
+      }
+    ],
+    "edges": [
+      {
+        "from": "cli",
+        "to": "api"
+      },
+      {
+        "from": "api",
+        "to": "auth",
+        "label": "verify"
+      },
+      {
+        "from": "api",
+        "to": "queue",
+        "label": "enqueue"
+      },
+      {
+        "from": "queue",
+        "to": "worker"
+      },
+      {
+        "from": "worker",
+        "to": "db",
+        "label": "write"
+      },
+      {
+        "from": "auth",
+        "to": "db",
+        "label": "read"
+      }
+    ]
+  },
+  "constraints": [
+    "Keep every historical relation. Do not confuse the auth database read with the worker database write.",
+    "Use semantic tiers, related color shades, a plain background, and no border dots."
+  ],
+  "animation": "required"
+}

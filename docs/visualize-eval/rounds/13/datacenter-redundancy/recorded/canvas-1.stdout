@@ -1,0 +1,35 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=22 edges=28 flows=0 direction=tb theme=gruvbox
+canvas: 3 diagrams on one canvas, drawn whole at 100%
+diagram uplinks "ISP uplinks and core cross-connect" at 0,3: extent=49x30 nodes=8 edges=8 routes=8
+  description: Four ISP handoffs, two per MUX; each MUX reaches both cores.
+diagram security "Active/standby firewall pair" at 0,38: extent=31x33 nodes=6 edges=8 routes=8
+  description: FW1 active, FW2 standby, fed by both cores, feeding both border leaves.
+diagram fabric "Dual-spine fabric and dual-homed racks" at 0,76: extent=49x28 nodes=8 edges=12 routes=12
+  description: Each leaf reaches both spines; both leaves dual-home both racks.
+pins: 22 pinned, 0 conflict(s)
+extent=71x104 cells (whole canvas)
+crossings: 13 bridges, 4 touching bends
+warning: 1 edge label(s) had no free slot; shorten the labels or split the graph
+near-misses: 19 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)
+passes-near-unrelated-node: 19
+near-miss: route security:e2 passes 9 cell(s) at ring 2 of node 'fw1' (nearest cell 20,19)
+near-miss: route fabric:e2 passes 3 cell(s) at ring 2 of node 'sp2' (nearest cell 30,5)
+near-miss: route fabric:e6 passes 3 cell(s) at ring 2 of node 'leaf2' (nearest cell 21,10)
+near-miss: route fabric:e7 passes 4 cell(s) at ring 2 of node 'bl1' (nearest cell 33,10)
+warning: 19 route cell(s) hug a node their relation does not serve; move the affected relations or let them route around
+labels: 23/24 placed, 0 leader-ticked, 0 on route, 1 skipped, 7 ambiguous owners
+unowned label: uplinks:e5 "x-connect"
+unowned label: uplinks:e6 "x-connect"
+unowned label: security:e5 "active"
+unowned label: security:e6 "standby"
+unowned label: fabric:e0 "ECMP"
+unowned label: fabric:e1 "ECMP"
+unowned label: fabric:e5 "ECMP"
+warning: 7 label(s) have an ambiguous owner: another route is as close to the text as its own edge
+groups: isp(4) mux(2) core(4) firewall(2) border-leaf(4) spine(2) rack-leaf(2) rack(2)
+trunks:
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 0 by source, 0 by destination, 0 shared-hue pair(s) (source-only 0, destination-only 0)
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

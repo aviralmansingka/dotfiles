@@ -1,0 +1,1490 @@
+{
+  "protocol_version": 1,
+  "round": 5,
+  "case_id": "network",
+  "candidate_sha256": "ff4a9d3f32ba0bf86e54ee6bfbac02fdea3fac3b95b82a958b3411accef0a949",
+  "renderer_sha256": "b1ab9f2e78af11c2f2b005eea083a999079d184bf550e8d0b6d9c51867f22404",
+  "rubric_sha256": "039b96252d25ad2078a539fdb1d081ebdb6c09d6f7a3487b96ffbbf3b082e292",
+  "dataset_sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+  "spec_sha256": "c008ca5bdc6b1b7dc512fd43ed26b6f2ebb524c5243964eb5b74a742089f2561",
+  "generator": {
+    "worker_id": "viz-ds05-network",
+    "model": "fireworks/accounts/fireworks/routers/deepseek-flash-latest"
+  },
+  "reviewer": {
+    "worker_id": "viz-judge05-network",
+    "model": "openai/gpt-6.1-sol"
+  },
+  "viewport": {
+    "columns": 77,
+    "rows": 47,
+    "zoom_percent": 100,
+    "verified": true
+  },
+  "live_pane": {
+    "columns": 83,
+    "rows": 51
+  },
+  "evidence": [
+    {
+      "id": "blind",
+      "path": "docs/visualize-eval/rounds/05/reviews/network/observed-first.md",
+      "sha256": "b80b4076225a9ee5c838c09a9ce5227e6f1c7d710a954f610bf62eb554990d4a",
+      "description": "Immutable stage-A blind record, saved and hashed before the expectations reveal; original SHA-256 reverified in stage B.",
+      "capture": null
+    },
+    {
+      "id": "spec-manifest",
+      "path": "docs/visualize-eval/rounds/05/reviews/network/spec-manifest.json",
+      "sha256": "c008ca5bdc6b1b7dc512fd43ed26b6f2ebb524c5243964eb5b74a742089f2561",
+      "description": "Deterministic sorted list of repository-relative final-spec paths and actual SHA-256 pairs; this file defines spec_sha256.",
+      "capture": null
+    },
+    {
+      "id": "metadata",
+      "path": "docs/visualize-eval/rounds/05/metadata.json",
+      "sha256": "edaec7c938fa0a27dbd04a44c1932ff9ef03c05f9270951fbb39a4fe7bced84d",
+      "description": "Frozen round identity, hashes, and pre-generation harness corrections.",
+      "capture": null
+    },
+    {
+      "id": "rubric",
+      "path": "docs/visualize-eval/rounds/05/rubric.json",
+      "sha256": "039b96252d25ad2078a539fdb1d081ebdb6c09d6f7a3487b96ffbbf3b082e292",
+      "description": "Frozen revision-6 rubric and result schema, read in full.",
+      "capture": null
+    },
+    {
+      "id": "dataset",
+      "path": "docs/visualize-eval/cases.json",
+      "sha256": "e69179e59a3d36985cd7e8692b319b566701f88caef385c9cbde76d060c92d05",
+      "description": "Frozen dataset manifest; only the network case inputs were followed.",
+      "capture": null
+    },
+    {
+      "id": "skill",
+      "path": "docs/visualize-eval/rounds/05/SKILL.md",
+      "sha256": "ff4a9d3f32ba0bf86e54ee6bfbac02fdea3fac3b95b82a958b3411accef0a949",
+      "description": "Frozen candidate skill; no renderer gain is attributed to the skill.",
+      "capture": null
+    },
+    {
+      "id": "source",
+      "path": "docs/visualize-eval/cases/network/source.md",
+      "sha256": "9d23a7b50d1d26a69f95523a9586bab96ec588afb9628ae274c896992b147947",
+      "description": "Qualified source excerpts and fixed constraints; historical chat was not opened.",
+      "capture": null
+    },
+    {
+      "id": "expected",
+      "path": "docs/visualize-eval/cases/network/expected.json",
+      "sha256": "8cb86d269c21176d775e79f8592f09067049031a0e581df38d66705e73a8caa9",
+      "description": "Seven required relations, six concepts, and animation requirement.",
+      "capture": null
+    },
+    {
+      "id": "historical-variants",
+      "path": "docs/visualize-eval/cases/network/historical-variants.json",
+      "sha256": "6af06039e172f0ef75d83c87703f85541b24e61d8706c64d8bba31ce742c2cbe",
+      "description": "Historical generated reference, not independent verification; numeric historical flows do not override constant-mode rules.",
+      "capture": null
+    },
+    {
+      "id": "generation",
+      "path": "docs/visualize-eval/rounds/05/network/generation.json",
+      "sha256": "5cc61fbe9d87aefbfe265035b26ff2364d27800fa18441ea82e358a92d228556",
+      "description": "Execution identity, dimensions, timings, meaning/edge ledger, disclosures, and cleanup claims; some narrative coordinates are zero-based or inconsistent with captures.",
+      "capture": null
+    },
+    {
+      "id": "generation-notes",
+      "path": "docs/visualize-eval/rounds/05/network/generation.md",
+      "sha256": "0c8d2b72e685ddd65a3d249a16456b8c68e415b04d60dc5340934825cce5a3c9",
+      "description": "Commands, attempt summary, disclosed short-route jitter, missing diagnostics and target-pane limitation.",
+      "capture": null
+    },
+    {
+      "id": "attempts",
+      "path": "docs/visualize-eval/rounds/05/network/attempts.json",
+      "sha256": "fb0e067d4c2af264fd26760cb86e377922246a95acf9ea1ac8a6feffa0ccd0b0",
+      "description": "Three candidates per final view and one abandoned decomposition; includes disclosure that original abandoned raw output was overwritten and re-run.",
+      "capture": null
+    },
+    {
+      "id": "validator-v1",
+      "path": "docs/visualize-eval/rounds/05/network/validator-v1.txt",
+      "sha256": "869e78c67ce75c747f9edea7456a09a8d2934a0d6c1472b519798a54ef445130",
+      "description": "Preserved validator stdout for v1; passing output is not independent visual verification.",
+      "capture": null
+    },
+    {
+      "id": "validator-v2",
+      "path": "docs/visualize-eval/rounds/05/network/validator-v2.txt",
+      "sha256": "869e78c67ce75c747f9edea7456a09a8d2934a0d6c1472b519798a54ef445130",
+      "description": "Preserved validator stdout for v2; passing output is not independent visual verification.",
+      "capture": null
+    },
+    {
+      "id": "v1-spec",
+      "path": "docs/visualize-eval/rounds/05/network/specs/v1.json",
+      "sha256": "52c9e9905fa6c4bd6e1ffe8d46ce9ba2e14b37536f660785b9e334ebf3852869",
+      "description": "Final generated spec; actual hash matches the capture manifest and generation record.",
+      "capture": null
+    },
+    {
+      "id": "v1-manifest",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v1/manifest.json",
+      "sha256": "e0d5d8561db1b120e66a311571715d3589cb1678d91928479ef17b0283de61df",
+      "description": "Original capture manifest; declared artifact hashes verified against all seven listed files; final check exit 0 and confirmed_closed recorded, but no verbatim close probe.",
+      "capture": null
+    },
+    {
+      "id": "v1-binary-hash",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v1/bin.sha256",
+      "sha256": "93a87351efa820a41a27baf97e90d9945ff00a10f4b64913524cd83ec5757f8b",
+      "description": "Preserved absolute frozen-binary hash record; independently verified against the frozen binary in stage B.",
+      "capture": null
+    },
+    {
+      "id": "v1-check",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v1/check.txt",
+      "sha256": "a2b19be6272b6275e312a9b226ca64bcf28be46d305ec50f8bcd97cf28ba5805",
+      "description": "Full preserved check text. No separate stderr file; final exit 0 and check timestamps are in the manifest. Origin claims disagree with frame 0.",
+      "capture": null
+    },
+    {
+      "id": "v1-text",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v1/v1-text.txt",
+      "sha256": "d36c644f84fb3692ae383472a58f24e093d523dd35559b91e733af07f9ec4a71",
+      "description": "Static pane capture. ANSI/selected files preserve per-cell foreground and background colors; text cannot prove color.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "static; exact animation phase unrecorded",
+        "timestamp": "within 2026-11-02T15:55:51Z to 2026-11-02T15:55:55Z; exact capture instant unrecorded",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-ansi",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v1/v1-ansi.ansi",
+      "sha256": "d6f926f48972bbdc8ef23fbd1d6db0cab02912781c1b6bb3912c233c78a101d0",
+      "description": "Static pane capture. ANSI/selected files preserve per-cell foreground and background colors; text cannot prove color.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "static; exact animation phase unrecorded",
+        "timestamp": "within 2026-11-02T15:55:51Z to 2026-11-02T15:55:55Z; exact capture instant unrecorded",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-selected",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v1/v1-selected.ansi",
+      "sha256": "9a5dd3285b06e1faaae4fbe1fe588c0660442407f01bc4932824169c5ebb3c0f",
+      "description": "Static pane capture. ANSI/selected files preserve per-cell foreground and background colors; text cannot prove color.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "static; exact animation phase unrecorded",
+        "timestamp": "within 2026-11-02T15:55:51Z to 2026-11-02T15:55:55Z; exact capture instant unrecorded",
+        "state": "all-selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-pane-frames",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v1/v1-frames.txt",
+      "sha256": "862651d78b6fb9233ae274bde822f85a7da796effcaf9f0faa2467a206a2f10f",
+      "description": "Original 83x51 pane frame dump; frames 0–8 complete. Nominal ANSI frame-grid bodies have no node-border foreground color.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0–8",
+        "timestamp": "0–800ms relative; capture window 2026-11-02T15:55:51Z to 2026-11-02T15:55:55Z",
+        "state": "normal animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-pane-frames-nominal-ansi",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v1/v1-frames.ansi",
+      "sha256": "2336913f0ac94858f7343151f39d60ea325c3776784ece1958c63eb942488f6b",
+      "description": "Original 83x51 pane frame dump; frames 0–8 complete. Nominal ANSI frame-grid bodies have no node-border foreground color.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v1",
+        "frame": "0–8",
+        "timestamp": "0–800ms relative; capture window 2026-11-02T15:55:51Z to 2026-11-02T15:55:55Z",
+        "state": "normal animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v1-pinned",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v1/v1-frames-77x47.txt",
+      "sha256": "0881b19c77fdca903123fb0c3abcb038edff4176f2e508941916cda00976e42b",
+      "description": "Complete final-spec target-size timestamped direct dump; explicit viewport: 77x47 zoom: 1.00 natural. Text-only; does not certify target-size selected-state colors.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0–8",
+        "timestamp": "0–800ms relative",
+        "state": "normal animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-f0",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v1/v1-frames-77x47.txt",
+      "sha256": "0881b19c77fdca903123fb0c3abcb038edff4176f2e508941916cda00976e42b",
+      "description": "Frame 0 in the complete pinned final-spec dump; coordinates refer to its 77x47 grid, not file lines.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "0",
+        "timestamp": "0ms relative; wall-clock capture time unrecorded",
+        "state": "normal animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-f2",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v1/v1-frames-77x47.txt",
+      "sha256": "0881b19c77fdca903123fb0c3abcb038edff4176f2e508941916cda00976e42b",
+      "description": "Frame 2 in the complete pinned final-spec dump; coordinates refer to its 77x47 grid, not file lines.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "2",
+        "timestamp": "200ms relative; wall-clock capture time unrecorded",
+        "state": "normal animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v1-f4",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v1/v1-frames-77x47.txt",
+      "sha256": "0881b19c77fdca903123fb0c3abcb038edff4176f2e508941916cda00976e42b",
+      "description": "Frame 4 in the complete pinned final-spec dump; coordinates refer to its 77x47 grid, not file lines.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v1",
+        "frame": "4",
+        "timestamp": "400ms relative; wall-clock capture time unrecorded",
+        "state": "normal animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-spec",
+      "path": "docs/visualize-eval/rounds/05/network/specs/v2.json",
+      "sha256": "087943b82a67478b1117e7d63772949b47c1e7c2841aee990d89e502e22fd027",
+      "description": "Final generated spec; actual hash matches the capture manifest and generation record.",
+      "capture": null
+    },
+    {
+      "id": "v2-manifest",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v2/manifest.json",
+      "sha256": "72be1a096addd5d1d60e71b1767b41369d20ed58b52ff9da008f59340948c29e",
+      "description": "Original capture manifest; declared artifact hashes verified against all seven listed files; final check exit 0 and confirmed_closed recorded, but no verbatim close probe.",
+      "capture": null
+    },
+    {
+      "id": "v2-binary-hash",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v2/bin.sha256",
+      "sha256": "93a87351efa820a41a27baf97e90d9945ff00a10f4b64913524cd83ec5757f8b",
+      "description": "Preserved absolute frozen-binary hash record; independently verified against the frozen binary in stage B.",
+      "capture": null
+    },
+    {
+      "id": "v2-check",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v2/check.txt",
+      "sha256": "8d5d19c0e3139db973320b797ea9b3028a76b39ddb7d9a2d47103ca2a3a9379d",
+      "description": "Full preserved check text. No separate stderr file; final exit 0 and check timestamps are in the manifest. Origin claims disagree with frame 0.",
+      "capture": null
+    },
+    {
+      "id": "v2-text",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v2/v2-text.txt",
+      "sha256": "2adf7a4488b4acdbadc4c5c434a1322826688bb7d0b604afb95133779fab3937",
+      "description": "Static pane capture. ANSI/selected files preserve per-cell foreground and background colors; text cannot prove color.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "static; exact animation phase unrecorded",
+        "timestamp": "within 2026-11-02T15:56:04Z to 2026-11-02T15:56:08Z; exact capture instant unrecorded",
+        "state": "normal",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-ansi",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v2/v2-ansi.ansi",
+      "sha256": "7f72235de58dfd53f4c5187736b3837664a27ad910243eb154d6bc05c3bf8f3e",
+      "description": "Static pane capture. ANSI/selected files preserve per-cell foreground and background colors; text cannot prove color.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "static; exact animation phase unrecorded",
+        "timestamp": "within 2026-11-02T15:56:04Z to 2026-11-02T15:56:08Z; exact capture instant unrecorded",
+        "state": "normal",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-selected",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v2/v2-selected.ansi",
+      "sha256": "ee95d324740ce2a58c430d09bef211a545adc061e8eb022de18a62b7edff8391",
+      "description": "Static pane capture. ANSI/selected files preserve per-cell foreground and background colors; text cannot prove color.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "static; exact animation phase unrecorded",
+        "timestamp": "within 2026-11-02T15:56:04Z to 2026-11-02T15:56:08Z; exact capture instant unrecorded",
+        "state": "all-selected",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-pane-frames",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v2/v2-frames.txt",
+      "sha256": "7438e289b550bae03bcf766c185cddfedd1988a5a50aa2840b9a91a75df4382e",
+      "description": "Original 83x51 pane frame dump; beginning truncated: only complete frames 12–30 remain. Nominal ANSI frame-grid bodies have no node-border foreground color.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "12–30 plus preceding tail",
+        "timestamp": "1200–3000ms relative; capture window 2026-11-02T15:56:04Z to 2026-11-02T15:56:08Z",
+        "state": "normal animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-pane-frames-nominal-ansi",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v2/v2-frames.ansi",
+      "sha256": "90ed40c9479820798d307340d5949f027ed22893c78a7555932d53705407247a",
+      "description": "Original 83x51 pane frame dump; beginning truncated: only complete frames 12–30 remain. Nominal ANSI frame-grid bodies have no node-border foreground color.",
+      "capture": {
+        "dimensions": {
+          "columns": 83,
+          "rows": 51
+        },
+        "view": "v2",
+        "frame": "12–30 plus preceding tail",
+        "timestamp": "1200–3000ms relative; capture window 2026-11-02T15:56:04Z to 2026-11-02T15:56:08Z",
+        "state": "normal animated",
+        "format": "ansi"
+      }
+    },
+    {
+      "id": "v2-pinned",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v2/v2-frames-77x47.txt",
+      "sha256": "46536ad47290d95694e26ad81753b319532192e0c255c9c7664a99ec6ad9e495",
+      "description": "Complete final-spec target-size timestamped direct dump; explicit viewport: 77x47 zoom: 1.00 natural. Text-only; does not certify target-size selected-state colors.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0–30",
+        "timestamp": "0–3000ms relative",
+        "state": "normal animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-f0",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v2/v2-frames-77x47.txt",
+      "sha256": "46536ad47290d95694e26ad81753b319532192e0c255c9c7664a99ec6ad9e495",
+      "description": "Frame 0 in the complete pinned final-spec dump; coordinates refer to its 77x47 grid, not file lines.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "0",
+        "timestamp": "0ms relative; wall-clock capture time unrecorded",
+        "state": "normal animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-f2",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v2/v2-frames-77x47.txt",
+      "sha256": "46536ad47290d95694e26ad81753b319532192e0c255c9c7664a99ec6ad9e495",
+      "description": "Frame 2 in the complete pinned final-spec dump; coordinates refer to its 77x47 grid, not file lines.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "2",
+        "timestamp": "200ms relative; wall-clock capture time unrecorded",
+        "state": "normal animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-f4",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v2/v2-frames-77x47.txt",
+      "sha256": "46536ad47290d95694e26ad81753b319532192e0c255c9c7664a99ec6ad9e495",
+      "description": "Frame 4 in the complete pinned final-spec dump; coordinates refer to its 77x47 grid, not file lines.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "4",
+        "timestamp": "400ms relative; wall-clock capture time unrecorded",
+        "state": "normal animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-f20",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v2/v2-frames-77x47.txt",
+      "sha256": "46536ad47290d95694e26ad81753b319532192e0c255c9c7664a99ec6ad9e495",
+      "description": "Frame 20 in the complete pinned final-spec dump; coordinates refer to its 77x47 grid, not file lines.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "20",
+        "timestamp": "2000ms relative; wall-clock capture time unrecorded",
+        "state": "normal animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-f22",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v2/v2-frames-77x47.txt",
+      "sha256": "46536ad47290d95694e26ad81753b319532192e0c255c9c7664a99ec6ad9e495",
+      "description": "Frame 22 in the complete pinned final-spec dump; coordinates refer to its 77x47 grid, not file lines.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "22",
+        "timestamp": "2200ms relative; wall-clock capture time unrecorded",
+        "state": "normal animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-f24",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v2/v2-frames-77x47.txt",
+      "sha256": "46536ad47290d95694e26ad81753b319532192e0c255c9c7664a99ec6ad9e495",
+      "description": "Frame 24 in the complete pinned final-spec dump; coordinates refer to its 77x47 grid, not file lines.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "24",
+        "timestamp": "2400ms relative; wall-clock capture time unrecorded",
+        "state": "normal animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "v2-f26",
+      "path": "docs/visualize-eval/rounds/05/network/evidence/v2/v2-frames-77x47.txt",
+      "sha256": "46536ad47290d95694e26ad81753b319532192e0c255c9c7664a99ec6ad9e495",
+      "description": "Frame 26 in the complete pinned final-spec dump; coordinates refer to its 77x47 grid, not file lines.",
+      "capture": {
+        "dimensions": {
+          "columns": 77,
+          "rows": 47
+        },
+        "view": "v2",
+        "frame": "26",
+        "timestamp": "2600ms relative; wall-clock capture time unrecorded",
+        "state": "normal animated",
+        "format": "text"
+      }
+    },
+    {
+      "id": "attempts-1",
+      "path": "docs/visualize-eval/rounds/05/network/attempts/abandoned-single-6node-tb.check.txt",
+      "sha256": "80757117e00117883f733e3e3c62228ced14e697015faea0719f1a6fb24015a8",
+      "description": "Frozen raw check stdout; original command, separated stderr and exit status are not preserved in this file.",
+      "capture": null
+    },
+    {
+      "id": "attempts-2",
+      "path": "docs/visualize-eval/rounds/05/network/attempts/v1-a1.check.txt",
+      "sha256": "89175191c58341b0f0a00c860aa89b77114c4639849af7885a7c26f558d35096",
+      "description": "Frozen raw check stdout; original command, separated stderr and exit status are not preserved in this file.",
+      "capture": null
+    },
+    {
+      "id": "attempts-3",
+      "path": "docs/visualize-eval/rounds/05/network/attempts/v1-a2.check.txt",
+      "sha256": "a2b19be6272b6275e312a9b226ca64bcf28be46d305ec50f8bcd97cf28ba5805",
+      "description": "Frozen raw check stdout; original command, separated stderr and exit status are not preserved in this file.",
+      "capture": null
+    },
+    {
+      "id": "attempts-4",
+      "path": "docs/visualize-eval/rounds/05/network/attempts/v1-a3.check.txt",
+      "sha256": "cb8242cc404bae1820859be9929c3117606ec21490a9ae84819553feb1dea740",
+      "description": "Frozen raw check stdout; original command, separated stderr and exit status are not preserved in this file.",
+      "capture": null
+    },
+    {
+      "id": "attempts-5",
+      "path": "docs/visualize-eval/rounds/05/network/attempts/v2-a1.check.txt",
+      "sha256": "88b342c6488310e10fac49efe222b40d29e197443b6e82504405bc45ccb0aa73",
+      "description": "Frozen raw check stdout; original command, separated stderr and exit status are not preserved in this file.",
+      "capture": null
+    },
+    {
+      "id": "attempts-6",
+      "path": "docs/visualize-eval/rounds/05/network/attempts/v2-a2.check.txt",
+      "sha256": "0a2314fb06234ca6cb534e9183d7ee6d93d878a2c318b624607c3ab50360d952",
+      "description": "Frozen raw check stdout; original command, separated stderr and exit status are not preserved in this file.",
+      "capture": null
+    },
+    {
+      "id": "attempts-7",
+      "path": "docs/visualize-eval/rounds/05/network/attempts/v2-a3.check.txt",
+      "sha256": "8d5d19c0e3139db973320b797ea9b3028a76b39ddb7d9a2d47103ca2a3a9379d",
+      "description": "Frozen raw check stdout; original command, separated stderr and exit status are not preserved in this file.",
+      "capture": null
+    },
+    {
+      "id": "probes-1",
+      "path": "docs/visualize-eval/rounds/05/network/probes/v1-a1-77x47.txt",
+      "sha256": "8cf09a5d00c9836cfe1cdcbdf6bb567bd96f4e3a1cdb7382733cc117ac4f1daa",
+      "description": "Frozen direct probe dump; command/exit status not embedded, not substituted for final-spec captures.",
+      "capture": null
+    },
+    {
+      "id": "probes-2",
+      "path": "docs/visualize-eval/rounds/05/network/probes/v1-a2-25f.txt",
+      "sha256": "0cdbec7550ba980efab19e5ebd72b648b6c1b9e195604f35935fbf157d43f2c5",
+      "description": "Frozen direct probe dump; command/exit status not embedded, not substituted for final-spec captures.",
+      "capture": null
+    },
+    {
+      "id": "probes-3",
+      "path": "docs/visualize-eval/rounds/05/network/probes/v1-a2-61f.txt",
+      "sha256": "ccf0ecfec5039c3cd6c89a56d8a01cf5b10d72acae8b67558e62f5906447f33b",
+      "description": "Frozen direct probe dump; command/exit status not embedded, not substituted for final-spec captures.",
+      "capture": null
+    },
+    {
+      "id": "probes-4",
+      "path": "docs/visualize-eval/rounds/05/network/probes/v1-a2-77x47.txt",
+      "sha256": "ba888b81e1a27b6f708e100ff1b9702d02d3eaa5750f2ef5253f2a1f346cd6dd",
+      "description": "Frozen direct probe dump; command/exit status not embedded, not substituted for final-spec captures.",
+      "capture": null
+    },
+    {
+      "id": "probes-5",
+      "path": "docs/visualize-eval/rounds/05/network/probes/v1-a3-77x47.txt",
+      "sha256": "611e31d62accc8a467ee0adcef2b0c55376cf186b13ba4ea54b25d277d0b85ed",
+      "description": "Frozen direct probe dump; command/exit status not embedded, not substituted for final-spec captures.",
+      "capture": null
+    },
+    {
+      "id": "probes-6",
+      "path": "docs/visualize-eval/rounds/05/network/probes/v2-a1-77x47.txt",
+      "sha256": "9a2da2f621c2e8d601fc586fa8f7f423411885cf9859ccbf57a4f0cd7ca67a02",
+      "description": "Frozen direct probe dump; command/exit status not embedded, not substituted for final-spec captures.",
+      "capture": null
+    },
+    {
+      "id": "probes-7",
+      "path": "docs/visualize-eval/rounds/05/network/probes/v2-a2-77x47.txt",
+      "sha256": "f551f915b3b476110388bfe86a353a58778f74f51b8291395f7179f90e94afe6",
+      "description": "Frozen direct probe dump; command/exit status not embedded, not substituted for final-spec captures.",
+      "capture": null
+    },
+    {
+      "id": "probes-8",
+      "path": "docs/visualize-eval/rounds/05/network/probes/v2-a3-25f.txt",
+      "sha256": "8d79eb28946150af255d37503b07ad3f52543e186d2e9208de2129188e8bc4f6",
+      "description": "Frozen direct probe dump; command/exit status not embedded, not substituted for final-spec captures.",
+      "capture": null
+    },
+    {
+      "id": "probes-9",
+      "path": "docs/visualize-eval/rounds/05/network/probes/v2-a3-61f.txt",
+      "sha256": "b8d921655672f9392ce3f0d7267763f08641b07f5c149146d707a1366b122afc",
+      "description": "Frozen direct probe dump; command/exit status not embedded, not substituted for final-spec captures.",
+      "capture": null
+    },
+    {
+      "id": "probes-10",
+      "path": "docs/visualize-eval/rounds/05/network/probes/v2-a3-77x47.txt",
+      "sha256": "59e2a0be201f383c2250279d5252853a3c6b51d7539ec21b7aac6f6070607853",
+      "description": "Frozen direct probe dump; command/exit status not embedded, not substituted for final-spec captures.",
+      "capture": null
+    },
+    {
+      "id": "draft-spec-1",
+      "path": "docs/visualize-eval/rounds/05/network/specs/abandoned/single-6node-tb.json",
+      "sha256": "8b0a2d6e29b891e60c22a60f496d7cee5d8de28556a4fa30971f2169e3cea331",
+      "description": "Preserved draft or abandoned spec; hashes verified against attempts ledger where listed.",
+      "capture": null
+    },
+    {
+      "id": "draft-spec-2",
+      "path": "docs/visualize-eval/rounds/05/network/specs/v1-a1.json",
+      "sha256": "af96002c19d5f931d293314f0c7c0c5aa74ee49f2d46162cd22a692e11459775",
+      "description": "Preserved draft or abandoned spec; hashes verified against attempts ledger where listed.",
+      "capture": null
+    },
+    {
+      "id": "draft-spec-3",
+      "path": "docs/visualize-eval/rounds/05/network/specs/v1-a2.json",
+      "sha256": "52c9e9905fa6c4bd6e1ffe8d46ce9ba2e14b37536f660785b9e334ebf3852869",
+      "description": "Preserved draft or abandoned spec; hashes verified against attempts ledger where listed.",
+      "capture": null
+    },
+    {
+      "id": "draft-spec-4",
+      "path": "docs/visualize-eval/rounds/05/network/specs/v1-a3.json",
+      "sha256": "ec06a5f08d23acdd51621261d27baa71c3ab77e1fb49bc2285c5cafce48dab92",
+      "description": "Preserved draft or abandoned spec; hashes verified against attempts ledger where listed.",
+      "capture": null
+    },
+    {
+      "id": "draft-spec-6",
+      "path": "docs/visualize-eval/rounds/05/network/specs/v2-a1.json",
+      "sha256": "7fb9f12b53e2d413da64e8ebc3f0e2d7bfa233ee0e2c9f8c6a2b6e35b533bb83",
+      "description": "Preserved draft or abandoned spec; hashes verified against attempts ledger where listed.",
+      "capture": null
+    },
+    {
+      "id": "draft-spec-7",
+      "path": "docs/visualize-eval/rounds/05/network/specs/v2-a2.json",
+      "sha256": "94fa212e9e6d72d020746774df47c9f1b216cc1604770f089b4be5267265bbe0",
+      "description": "Preserved draft or abandoned spec; hashes verified against attempts ledger where listed.",
+      "capture": null
+    },
+    {
+      "id": "draft-spec-8",
+      "path": "docs/visualize-eval/rounds/05/network/specs/v2-a3.json",
+      "sha256": "087943b82a67478b1117e7d63772949b47c1e7c2841aee990d89e502e22fd027",
+      "description": "Preserved draft or abandoned spec; hashes verified against attempts ledger where listed.",
+      "capture": null
+    }
+  ],
+  "observed_first": {
+    "evidence_id": "blind",
+    "saved_before_expected_reveal": true
+  },
+  "categories": {
+    "semantic_fidelity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "All six concepts and seven source-qualified directed relationships appear across two fully mapped views, each relation exactly once. Separate core→Redis 25 GbE and web→Redis session remain distinct. Labels retain all speeds and application meanings. No extra link, reversal, background dot, hidden qualifier, or motion-as-GbE scale is introduced. Historical relations are not promoted to independently verified network facts. Source even-split presentation evidence is separately blocked under workflow, not a missing graph relation.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json"
+      ],
+      "evidence_ids": [
+        "source",
+        "expected",
+        "v1-spec",
+        "v2-spec",
+        "v1-f0",
+        "v2-f0",
+        "blind"
+      ]
+    },
+    "arrow_traceability": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "N01: seven static source stems and unique downward heads are clearly traceable, with zero crossings/junction ambiguity and unambiguous session/25 GbE owners. However, the frozen category expressly makes off-origin dots a direction-proof failure, so all seven edges fail this gate. Visible routes are monotone near-minimal obstacle-safe paths; no detour is observed. The absent routes diagnostic was explicitly removed from the required baseline checks and is not a new failure.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/arrow_traceability",
+        "docs/visualize-eval/rounds/05/metadata.json#/harness_corrections_before_generation"
+      ],
+      "evidence_ids": [
+        "v1-f0",
+        "v2-f0",
+        "v1-check",
+        "v2-check",
+        "blind"
+      ]
+    },
+    "layout_fit": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Complete final-spec pinned 77×47 dumps have explicit viewport lines and natural 100% zoom; every box, label, arrow and palette cell fits without pan/zoom or occlusion, with zero crossings/touching bends in both views. Coverage is complete. Larger live app viewports are separately recorded as 83×51, never relabeled as target panes. The frozen metadata explicitly accepts final-spec pinned target dumps for fit when the uncontrolled live pane is larger; no validator-only fit inference is used.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/rounds/05/metadata.json#/harness_corrections_before_generation",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/layout_fit"
+      ],
+      "evidence_ids": [
+        "v1-pinned",
+        "v2-pinned",
+        "v1-manifest",
+        "v2-manifest",
+        "metadata",
+        "blind"
+      ]
+    },
+    "conceptual_grouping_color": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Source network infrastructure WAN/Firewall/Core switch is nearby and pink; service/data tiers Web/Redis/DB are nearby and teal, with families stable across views. ANSI establishes colors. Exact RGB changes for three repeated nodes are not a separate gate. No source requirement names group blocks or group labels; their renderer absence is not a rubric defect.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/conceptual_grouping_color"
+      ],
+      "evidence_ids": [
+        "v1-ansi",
+        "v2-ansi",
+        "v1-spec",
+        "v2-spec",
+        "blind"
+      ]
+    },
+    "border_integrity": {
+      "applicable": true,
+      "status": "pass",
+      "reason": "Normal and all-selected ANSI prove all 9/9 node occurrences (202 perimeter cells across the views) have all sides/corners and continuous per-node colors at measured 83×51; selected borders are uniformly RGB(216,166,87). Pinned 77×47 text independently proves complete target geometry and zero palette-overwritten node-border cells. No border defect is observed. This pass is bounded to the captured color states; absence of a target-size color-bearing capture remains an explicit workflow evidence gap N03, not an assertion of observed 77×47 selected color.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/border_integrity"
+      ],
+      "evidence_ids": [
+        "v1-ansi",
+        "v2-ansi",
+        "v1-selected",
+        "v2-selected",
+        "v1-f0",
+        "v2-f0",
+        "blind"
+      ]
+    },
+    "workflow_evidence": {
+      "applicable": true,
+      "status": "blocked",
+      "reason": "N03–N06: frozen input and artifact hashes verify; distinct DeepSeek generator and Sol reviewer plus immutable blind-first record are documented. Complete target-size motion dumps exist, but target-size color states, raw command/stderr/status and cleanup probes, original overwritten first-run record, and the executed validator snapshot/version lineage are incomplete. V2 live pane frames 0–11 are missing but compensated for target motion by the complete pinned dump. No missing evidence is converted to a pass; validator PASS does not waive gaps.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/05/metadata.json",
+        "docs/visualize-eval/cases/network/source.md"
+      ],
+      "evidence_ids": [
+        "metadata",
+        "generation",
+        "generation-notes",
+        "attempts",
+        "v1-manifest",
+        "v2-manifest",
+        "validator-v1",
+        "validator-v2",
+        "blind",
+        "spec-manifest"
+      ]
+    },
+    "animation": {
+      "applicable": true,
+      "status": "fail",
+      "reason": "N01 independently fails all 7 origins and check/capture agreement. N02 records five two-cell jitter routes as directional-flow legibility defects. Exactly one dot per route, no label overlap, and full target-size laps are evidenced. Shared nominal 0.5c/step cadence is legal; unequal 400/2200/2600ms lap times and absence of head contact in constant mode are not same-arrival failures. Two long routes skip non-origin corners, which avoids prohibited corner rests and is not separately penalized; the corner jump limits literal grid-speed inference but cannot rescue failed origins.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md",
+        "docs/visualize-eval/cases/network/expected.json",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/animation"
+      ],
+      "evidence_ids": [
+        "v1-f0",
+        "v1-f2",
+        "v1-f4",
+        "v2-f0",
+        "v2-f2",
+        "v2-f20",
+        "v2-f22",
+        "v2-f24",
+        "v2-f26",
+        "v1-check",
+        "v2-check",
+        "blind"
+      ]
+    }
+  },
+  "edge_audit": [
+    {
+      "edge_id": "e1",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/expected.json#/historical_reference/edges/0",
+        "docs/visualize-eval/cases/network/source.md#Relationship-facts"
+      ],
+      "expected": "wan → fw, directed producer-to-consumer, label '1 GbE'; independent relation, not a named bus.",
+      "observed": "WAN box bottom port [34,10]; straight down column 34 rows 11–14 to intact ▼[34,14], then Firewall top row 15. Label '1 GbE' is complete. No crossing, bridge, touching bend, merged link, or invented branch. Static semantics pass; audit status fails only the mandatory origin/direction gate N01 and short-motion legibility N02.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-f0",
+          "region": [
+            34,
+            11,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-f0",
+          "region": [
+            36,
+            12,
+            5,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "N01",
+        "N02"
+      ]
+    },
+    {
+      "edge_id": "e2",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/expected.json#/historical_reference/edges/1",
+        "docs/visualize-eval/cases/network/source.md#Relationship-facts"
+      ],
+      "expected": "fw → core, directed producer-to-consumer, label '10 GbE'; independent relation, not a named bus.",
+      "observed": "Firewall bottom port [34,18]; straight down column 34 rows 19–22 to intact ▼[34,22], then Core switch top row 23. Label '10 GbE' is complete. No crossing, bridge, touching bend, merged link, or invented branch. Static semantics pass; audit status fails only the mandatory origin/direction gate N01 and short-motion legibility N02.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-f0",
+          "region": [
+            34,
+            19,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-f0",
+          "region": [
+            36,
+            20,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "N01",
+        "N02"
+      ]
+    },
+    {
+      "edge_id": "e3",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/expected.json#/historical_reference/edges/2",
+        "docs/visualize-eval/cases/network/source.md#Relationship-facts"
+      ],
+      "expected": "core → web, directed producer-to-consumer, label '10 GbE'; independent relation, not a named bus.",
+      "observed": "Core switch bottom port [36,18]; straight down column 36 rows 19–22 to intact ▼[36,22], then Web tier top row 23. Label '10 GbE' is complete. No crossing, bridge, touching bend, merged link, or invented branch. Static semantics pass; audit status fails only the mandatory origin/direction gate N01 and short-motion legibility N02.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-f0",
+          "region": [
+            36,
+            19,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-f0",
+          "region": [
+            38,
+            20,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "N01",
+        "N02"
+      ]
+    },
+    {
+      "edge_id": "e4",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/expected.json#/historical_reference/edges/3",
+        "docs/visualize-eval/cases/network/source.md#Relationship-facts"
+      ],
+      "expected": "core → cache, directed producer-to-consumer, label '25 GbE'; independent relation, not a named bus.",
+      "observed": "Core switch bottom port [34,26]; straight down column 34 rows 27–30 to intact ▼[34,30], then Redis top row 31. Label belongs only to this link, not the fill link. Label '25 GbE' is complete. No crossing, bridge, touching bend, merged link, or invented branch. Static semantics pass; audit status fails only the mandatory origin/direction gate N01 and short-motion legibility N02.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-f0",
+          "region": [
+            34,
+            27,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-f0",
+          "region": [
+            36,
+            28,
+            6,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "N01",
+        "N02"
+      ]
+    },
+    {
+      "edge_id": "e5",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/expected.json#/historical_reference/edges/4",
+        "docs/visualize-eval/cases/network/source.md#Relationship-facts"
+      ],
+      "expected": "web → cache, directed producer-to-consumer, label 'session'; independent relation, not a named bus.",
+      "observed": "Web tier bottom port [36,26]; stem [36,27] down through [36,28] to ╯[36,29], left along row 29 to ╭[23,29], then intact ▼[23,30] above Redis. session is unambiguously left-route-owned. Label 'session' is complete. No crossing, bridge, touching bend, merged link, or invented branch. Static semantics pass; audit status fails only the mandatory origin/direction gate N01. Corner skipping and unequal constant-mode arrival are not extra defects.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-f0",
+          "region": [
+            23,
+            27,
+            14,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-f0",
+          "region": [
+            27,
+            28,
+            7,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "N01"
+      ]
+    },
+    {
+      "edge_id": "e6",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/expected.json#/historical_reference/edges/5",
+        "docs/visualize-eval/cases/network/source.md#Relationship-facts"
+      ],
+      "expected": "web → db, directed producer-to-consumer, label 'queries'; independent relation, not a named bus.",
+      "observed": "Web tier distinct bottom port [38,26]; stem [38,27] down through [38,28] to ╰[38,29], right along row 29 to ╮[49,29], then intact ▼[49,30] above DB tier. No shared trunk or fake junction with session. Label 'queries' is complete. No crossing, bridge, touching bend, merged link, or invented branch. Static semantics pass; audit status fails only the mandatory origin/direction gate N01. Corner skipping and unequal constant-mode arrival are not extra defects.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v2-f0",
+          "region": [
+            38,
+            27,
+            12,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v2-f0",
+          "region": [
+            40,
+            28,
+            7,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "N01"
+      ]
+    },
+    {
+      "edge_id": "e7",
+      "kind": "independent_link",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/expected.json#/historical_reference/edges/6",
+        "docs/visualize-eval/cases/network/source.md#Relationship-facts"
+      ],
+      "expected": "cache → db, directed producer-to-consumer, label 'fill'; independent relation, not a named bus.",
+      "observed": "Redis bottom port [34,34]; straight down column 34 rows 35–38 to intact ▼[34,38], then DB tier top row 39. Label 'fill' is complete. No crossing, bridge, touching bend, merged link, or invented branch. Static semantics pass; audit status fails only the mandatory origin/direction gate N01 and short-motion legibility N02.",
+      "status": "fail",
+      "locations": [
+        {
+          "evidence_id": "v1-f0",
+          "region": [
+            34,
+            35,
+            1,
+            4
+          ]
+        },
+        {
+          "evidence_id": "v1-f0",
+          "region": [
+            36,
+            36,
+            4,
+            1
+          ]
+        }
+      ],
+      "finding_ids": [
+        "N01",
+        "N02"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "N01",
+      "category": "animation",
+      "edge_ids": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6",
+        "e7"
+      ],
+      "severity": "high",
+      "description": "[defect] Every frame-0 dot is on the SECOND drawn corridor cell after its source-border port, one cell past the FIRST drawn cell required by revision 6. The first cell remains an unoccupied vertical stem throughout the laps. All seven origins fail, while the check claims 7/7 in aggregate; capture and check disagree. This independently fails animation and, by the explicit rubric origin clause, arrow_traceability, even though static arrowheads and endpoints are readable.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/animation",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/arrow_traceability",
+        "docs/visualize-eval/cases/network/source.md#Original-line-5"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-f0",
+          "region": [
+            34,
+            11,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-f0",
+          "region": [
+            34,
+            19,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v2-f0",
+          "region": [
+            36,
+            19,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-f0",
+          "region": [
+            34,
+            27,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v2-f0",
+          "region": [
+            36,
+            27,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v2-f0",
+          "region": [
+            38,
+            27,
+            1,
+            2
+          ]
+        },
+        {
+          "evidence_id": "v1-f0",
+          "region": [
+            34,
+            35,
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "N02",
+      "category": "animation",
+      "edge_ids": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e7"
+      ],
+      "severity": "medium",
+      "description": "[defect: directional-motion legibility] Five required animated links have only two occupied positions: hold at position A for 200ms, one cell down to B for 200ms, then jump back up every 400ms. The blind review and generator disclosure independently identify jitter rather than readable sustained traffic flow. This is a localized failure of the source-requested slow directional motion, not a demand for synchronized arrival or a numeric GbE-rate encoding. It does not negate correct static endpoints or create a semantic relation failure.",
+      "source_refs": [
+        "docs/visualize-eval/cases/network/source.md#Task",
+        "docs/visualize-eval/cases/network/source.md#Original-line-5",
+        "docs/visualize-eval/rounds/05/SKILL.md#Step-6",
+        "docs/visualize-eval/rounds/05/network/generation.json#/known_defects/0"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-f0",
+          "region": [
+            34,
+            11,
+            1,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v1-f2",
+          "region": [
+            34,
+            11,
+            1,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v1-f4",
+          "region": [
+            34,
+            11,
+            1,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v1-f0",
+          "region": [
+            34,
+            19,
+            1,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v1-f2",
+          "region": [
+            34,
+            19,
+            1,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v1-f4",
+          "region": [
+            34,
+            19,
+            1,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v2-f0",
+          "region": [
+            36,
+            19,
+            1,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v2-f2",
+          "region": [
+            36,
+            19,
+            1,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v2-f4",
+          "region": [
+            36,
+            19,
+            1,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v1-f0",
+          "region": [
+            34,
+            27,
+            1,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v1-f2",
+          "region": [
+            34,
+            27,
+            1,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v1-f4",
+          "region": [
+            34,
+            27,
+            1,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v1-f0",
+          "region": [
+            34,
+            35,
+            1,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v1-f2",
+          "region": [
+            34,
+            35,
+            1,
+            3
+          ]
+        },
+        {
+          "evidence_id": "v1-f4",
+          "region": [
+            34,
+            35,
+            1,
+            3
+          ]
+        }
+      ]
+    },
+    {
+      "id": "N03",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "[evidence gap] Target-size captures are text-only. Normal and selected ANSI prove colors at measured 83x51, not 77x47. The 77x47 pinned full laps prove target geometry, but there is no color-bearing normal/selected target capture or live target-size pane. The generator explicitly reports its live target-size capability limitation. These are not inferred target border defects; they block complete target-state workflow verification.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/05/SKILL.md#Step-8",
+        "docs/visualize-eval/rounds/05/network/generation.json#/blockers/0"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v1-f0",
+          "region": [
+            33,
+            7,
+            13,
+            36
+          ]
+        },
+        {
+          "evidence_id": "v2-f0",
+          "region": [
+            22,
+            15,
+            35,
+            20
+          ]
+        },
+        {
+          "evidence_id": "v1-selected",
+          "region": [
+            36,
+            9,
+            13,
+            36
+          ]
+        },
+        {
+          "evidence_id": "v2-selected",
+          "region": [
+            25,
+            17,
+            35,
+            20
+          ]
+        }
+      ]
+    },
+    {
+      "id": "N04",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "[evidence gap] Full raw command/status provenance is incomplete: draft checks contain stdout but no retained exit status or separated stderr; commands use candidate placeholders and v2 exact capture invocation is not fully recorded; original abandoned first-run output was overwritten and replaced by a disclosed re-run; five manually opened probe panes have only narrative cleanup assurances, not raw launch/close/probe records. Final-pane manifests record confirmed_closed but no verbatim close result. The even-split source request cannot be independently checked from a preserved pane rectangle or split transcript. Do not infer leaks or wrong split ratios from this absence.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/workflow_evidence",
+        "docs/visualize-eval/rounds/05/network/attempts.json#/abandoned_decompositions",
+        "docs/visualize-eval/rounds/05/network/generation.json#/cleanup",
+        "docs/visualize-eval/rounds/05/network/generation.md#Commands",
+        "docs/visualize-eval/cases/network/source.md#Original-line-48"
+      ],
+      "locations": []
+    },
+    {
+      "id": "N05",
+      "category": "workflow_evidence",
+      "edge_ids": [],
+      "severity": "high",
+      "description": "[evidence gap] The executed validator hash 902370989d632a497db9ebe325ca378a1f4fd81e0214f91f44906157bc1d453e differs from frozen metadata harness hash 0f036e7a08ea04b1c23d3611bde50972dec5d4ecec6b2ab960685d4e2d7c7a99. Generation discloses concurrent edits, but no executed-version snapshot or raw edit/version timeline is preserved in this case bundle. Metadata describes the intended pre-generation fit/route-line corrections, but does not identify this later executed hash. Passing validator transcripts do not restore immutable execution provenance.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/05/metadata.json#/harness",
+        "docs/visualize-eval/rounds/05/metadata.json#/harness_corrections_before_generation",
+        "docs/visualize-eval/rounds/05/network/generation.json#/validator"
+      ],
+      "locations": []
+    },
+    {
+      "id": "N06",
+      "category": "workflow_evidence",
+      "edge_ids": [
+        "e3",
+        "e5",
+        "e6"
+      ],
+      "severity": "medium",
+      "description": "[evidence gap, partially compensated] The 83x51 v2 pane dumps omit complete frames 0–11 through scrollback truncation. Their nominal ANSI frame-grid bodies also lack border colors. Pinned 77x47 text supplies all frames 0–30 and full laps, so motion coverage itself is not blocked by this truncation. Narrative v2 advance/pane proofs in generation.json cite unavailable frame 0 or coordinates not matching the retained captures; use the independently enumerated raw pinned coordinates instead. This is not evidence of missing motion frames at the target size.",
+      "source_refs": [
+        "docs/visualize-eval/rounds/05/network/generation.json#/views/1/measured/frames_note",
+        "docs/visualize-eval/rounds/05/network/generation.json#/motion_evidence/v2",
+        "docs/visualize-eval/rounds/05/rubric.json#/categories/workflow_evidence"
+      ],
+      "locations": [
+        {
+          "evidence_id": "v2-f0",
+          "region": [
+            1,
+            1,
+            77,
+            47
+          ]
+        },
+        {
+          "evidence_id": "v2-f2",
+          "region": [
+            23,
+            19,
+            27,
+            12
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "N03: no color-bearing 77×47 normal or selected capture, and no demonstrated ability to open the live 77×47 target pane; pinned text proves fit but not those color states.",
+    "N04: raw rejected/probe command exit/stderr and verbatim pane-close probes missing; original first-run abandoned record lost and re-run; exact even-split geometry not independently evidenced.",
+    "N05: no retained snapshot/version timeline for the actually executed, concurrently edited validator whose hash differs from frozen metadata."
+  ],
+  "cleanup": {
+    "owned_pane_ids": [
+      "w7E:pGS",
+      "w7E:pGV",
+      "w7E:pFR",
+      "w7E:pFS",
+      "w7E:pFT",
+      "w7E:pFY",
+      "w7E:pF0"
+    ],
+    "closed_pane_ids": [
+      "w7E:pGS",
+      "w7E:pGV"
+    ],
+    "status": "blocked",
+    "reason": "Final capture manifests explicitly record w7E:pGS and w7E:pGV confirmed_closed. Five additional probe panes are claimed closed only in generation.json narrative (it calls them two but enumerates five); no verbatim close result/probe is retained. Therefore closed_pane_ids lists the two manifest-attested closures only, not independently re-probed live state. Reviewer created no panes. All-owned-pane cleanup is unverified, not a claim that panes leaked."
+  },
+  "overall": "fail"
+}
