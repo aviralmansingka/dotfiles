@@ -1,0 +1,278 @@
+#!/usr/bin/env bash
+# devbox — one command for the Modal devbox (ops/modal-devbox/devbox.py).
+#
+#   devbox ssh [flags] [-- cmd...]   connect; starts the sandbox if needed
+#   devbox status                    list running devbox sandboxes
+#   devbox stop                      terminate running devbox sandboxes
+#   devbox snapshot [name]           freeze the container fs into a named image
+#
+# Flags before `--` pass to the sandbox start (e.g. --gpu T4, --region ap-south,
+# --timeout-hours 2); anything after `--` becomes the remote command for
+# ssh. The app file is resolved from MODAL_DEVBOX_PY, a walk-up from the
+# current directory, or ~/dotfiles.
+#
+# The sandbox is held open by a backgrounded launcher process (a detached
+# ephemeral app gets reaped once it completes, so the launcher must stay
+# alive). It dies on its own ~2 min after the last SSH connection closes
+# (idle_timeout), so an abandoned box stops costing money. A cached
+# CONNECT line makes re-attaching take seconds; a stale cache self-heals
+# through the status probe.
+set -euo pipefail
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/modal-devbox"
+START_LOG="$STATE_DIR/start.log"
+CACHE="$STATE_DIR/connect"
+
+die() { echo "devbox: $*" >&2; exit 1; }
+
+resolve_py() {
+    if [ -n "${MODAL_DEVBOX_PY:-}" ] && [ -f "${MODAL_DEVBOX_PY}" ]; then
+        printf '%s\n' "$MODAL_DEVBOX_PY"
+        return 0
+    fi
+    local dir="$PWD"
+    while [ "$dir" != "/" ]; do
+        if [ -f "$dir/ops/modal-devbox/devbox.py" ]; then
+            printf '%s\n' "$dir/ops/modal-devbox/devbox.py"
+            return 0
+        fi
+        dir="$(dirname "$dir")"
+    done
+    if [ -f "$HOME/dotfiles/ops/modal-devbox/devbox.py" ]; then
+        printf '%s\n' "$HOME/dotfiles/ops/modal-devbox/devbox.py"
+        return 0
+    fi
+    return 1
+}
+
+# Interpreter that can import modal: the modal CLI's own venv python (its
+# shebang), so version parity is automatic. DEVBOX_PY overrides it for tests.
+modal_python() {
+    if [ -n "${DEVBOX_PY:-}" ]; then
+        printf '%s\n' "$DEVBOX_PY"
+        return 0
+    fi
+    local cli line interp next
+    cli="$(command -v modal 2>/dev/null || true)"
+    [ -n "$cli" ] || return 1
+    line="$(sed -n '1s/^#!//p' "$cli" 2>/dev/null)"
+    read -r interp line <<< "$line"   # interpreter, then its args
+    case "$interp" in
+        env|*/env)
+            # '#!/usr/bin/env python3': env names the interpreter to run, so
+            # resolve it on PATH — env itself cannot run a shebang-less script.
+            interp=""
+            while read -r next line <<< "$line" && [ -n "$next" ]; do
+                case "$next" in -*) continue ;; esac
+                interp="$(command -v "$next" 2>/dev/null || true)"
+                break
+            done
+            ;;
+    esac
+    [ -n "$interp" ] && [ -x "$interp" ] && printf '%s\n' "$interp"
+}
+
+usage() {
+    sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+connect_line() {
+    # -a: the launcher log can contain terminal control bytes (progress
+    # output), which makes plain grep report "Binary file ... matches"
+    # instead of the line. Only a line that truly starts with CONNECT counts.
+    local line
+    line="$(grep -a '^CONNECT ' "$1" | head -1 || true)"
+    case "$line" in
+        CONNECT\ *) printf '%s\n' "$line" ;;
+        *) : ;;
+    esac
+}
+
+SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/modal-devbox-%C"
+    -o ControlPersist=120 -o ConnectTimeout=8 -o StrictHostKeyChecking=accept-new)
+# ControlPersist matches the default idle_timeout grace: the master's
+# lingering connection would otherwise keep the sandbox "active" after the
+# last real session closes.
+
+ssh_from_line() {
+    # ssh_from_line <CONNECT-line> [remote-command...]
+    # The tunnel can exist a moment before sshd accepts on it, so a fresh start
+    # sometimes reports "Connection closed". Retry briefly on ssh's failure
+    # code (255) before giving up; a real session's exit code passes straight
+    # through.
+    local line="$1"
+    shift
+    local host port rc attempt
+    read -r _ host port <<< "$line"
+    for attempt in 1 2 3 4 5 6 7 8 9 10; do
+        rc=0
+        ssh "${SSH_OPTS[@]}" -p "$port" "root@$host" "$@" || rc=$?
+        [ "$rc" -ne 255 ] && exit "$rc"
+        [ "$attempt" -lt 10 ] && sleep 3
+    done
+    exit "$rc"
+}
+
+try_cached_ssh() {
+    # try_cached_ssh [remote-command...] — attach via the cached CONNECT
+    # line in a single handshake (ControlMaster keeps it warm for ~10 min:
+    # re-attaches skip the relay handshake entirely). ssh exit code 255 is a
+    # connection-level failure: clear the cache and return 1 so the caller
+    # falls back to the status probe; any other exit code is a real session
+    # outcome and propagates.
+    [ -s "$CACHE" ] || return 1
+    local line host port rc
+    line="$(cat "$CACHE")"
+    read -r _ host port <<< "$line"
+    rc=0
+    ssh "${SSH_OPTS[@]}" -p "$port" "root@$host" "$@" || rc=$?
+    if [ "$rc" -eq 255 ]; then
+        rm -f "$CACHE"
+        return 1
+    fi
+    exit "$rc"
+}
+
+tunnel_alive() {
+    # tunnel_alive <CONNECT-line> — is host:port accepting connections?
+    # A bash /dev/tcp connect is enough: it proves the relay tunnel exists,
+    # without paying for an ssh handshake. (sshd may still be starting; the
+    # attach retry covers that.)
+    local host port
+    read -r _ host port <<< "$1"
+    [ -n "$host" ] && [ -n "$port" ] || return 1
+    ( exec 3<>"/dev/tcp/$host/$port" ) 2>/dev/null
+}
+
+await_launcher() {
+    # await_launcher <pid> — poll START_LOG for CONNECT while the launcher
+    # lives; emits the line and returns 0 on success, 1 if it exits first.
+    local pid="$1" i line
+    for i in $(seq 1 3600); do
+        line="$(connect_line "$START_LOG")"
+        if [ -n "$line" ]; then printf '%s\n' "$line"; return 0; fi
+        kill -0 "$pid" 2>/dev/null || return 1
+        sleep 0.5
+    done
+    return 1
+}
+
+acquire_lock() {
+    # Portable start lock: `mkdir` is atomic everywhere, and macOS ships no
+    # flock(1). The holder records its pid; a lock whose pid is gone is stale
+    # and gets reclaimed (a crashed launcher must not wedge every later start).
+    local lock="$STATE_DIR/start.lock" waited=0 holder
+    while ! mkdir "$lock" 2>/dev/null; do
+        holder="$(cat "$lock/pid" 2>/dev/null || true)"
+        if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
+            rm -rf "$lock"
+            continue
+        fi
+        sleep 0.2
+        waited=$((waited + 1))
+        [ "$waited" -gt 9000 ] && die "timed out waiting for the devbox start lock"
+    done
+    echo $$ >"$lock/pid"
+}
+
+release_lock() {
+    [ -d "$STATE_DIR/start.lock" ] && rm -rf "$STATE_DIR/start.lock"
+    return 0
+}
+
+start_sandbox() {
+    # start_sandbox <start-flags...> — backgrounded launcher, prints CONNECT.
+    # The lock serializes starts: concurrent `devbox ssh` calls would otherwise
+    # spawn sibling launchers that truncate the shared START_LOG and race into
+    # creating duplicate sandboxes (double GPU billing).
+    local line="" pid_file="$STATE_DIR/launcher.pid" pid
+    mkdir -p "$STATE_DIR"
+    acquire_lock
+    trap 'release_lock' EXIT INT TERM
+    # A sibling launcher may still be starting (slow cold image). Never
+    # truncate the log it is writing: wait for its CONNECT line instead.
+    if [ -f "$pid_file" ] && pid="$(cat "$pid_file")" && kill -0 "$pid" 2>/dev/null; then
+        if line="$(await_launcher "$pid")"; then
+            # The line only counts if its tunnel actually accepts connections:
+            # a sibling can be exiting (preempted, idle-reaped, OOM) while its
+            # last CONNECT line still sits in the log. Reusing a dead line
+            # attached to nothing and looked like "Connection refused".
+            if [ "$#" -eq 0 ] && tunnel_alive "$line"; then
+                release_lock
+                printf '%s\n' "$line" >"$CACHE"
+                printf '%s\n' "$line"
+                return 0
+            fi
+            # Flags are present (--new etc.), or that sandbox is gone: start a
+            # fresh one. The sibling's line was already consumed above, so take
+            # the shared log slot back; a living sibling only appends teardown
+            # output from here.
+        fi
+    fi
+    : >"$START_LOG"
+    nohup modal run "$PY::main" "$@" >"$START_LOG" 2>&1 &
+    echo $! >"$pid_file"
+    local i
+    for i in $(seq 1 3600); do  # bounded 30-min wait (0.5 s polls): cold builds are slow
+        line="$(connect_line "$START_LOG")"
+        [ -n "$line" ] && { printf '%s\n' "$line" >"$CACHE"; release_lock; printf '%s\n' "$line"; return 0; }
+        if ! kill -0 "$(cat "$pid_file")" 2>/dev/null; then
+            cat "$START_LOG" >&2
+            release_lock
+            die "sandbox start failed (log: $START_LOG)"
+        fi
+        sleep 0.5
+    done
+    release_lock
+    die "no CONNECT line in $START_LOG"
+}
+
+cmd="${1:-ssh}"
+[ "$#" -gt 0 ] && shift
+
+PY="$(resolve_py)" || die "cannot find ops/modal-devbox/devbox.py; set MODAL_DEVBOX_PY"
+
+case "$cmd" in
+    ssh)
+        # Split passthrough start flags (before --) from remote ssh args (after --).
+        start_args=()
+        remote_args=()
+        seen_dd=0
+        for arg in "$@"; do
+            if [ "$seen_dd" = 0 ] && [ "$arg" = "--" ]; then
+                seen_dd=1
+            elif [ "$seen_dd" = 0 ]; then
+                start_args+=("$arg")
+            else
+                remote_args+=("$arg")
+            fi
+        done
+        if [ "${#start_args[@]}" -eq 0 ]; then
+            # Fast path: a live cached CONNECT line attaches in seconds. Skip it
+            # whenever start flags are present — they only apply at creation, so
+            # attaching to the old sandbox would silently ignore them
+            # (`--new` must really create a new one).
+            try_cached_ssh ${remote_args[@]+"${remote_args[@]}"} || true
+        fi
+        # ::main adopts a running sandbox or creates one — one modal call total.
+        line="$(start_sandbox ${start_args[@]+"${start_args[@]}"})"
+        ssh_from_line "$line" ${remote_args[@]+"${remote_args[@]}"}
+        ;;
+    status)
+        # Plain script: no ephemeral App, no app URL. Fall back to `modal run`
+        # when the interpreter cannot be resolved or the import fails.
+        if modpy="$(modal_python)" && "$modpy" "$PY" status; then
+            exit 0
+        fi
+        exec modal run "$PY::status" ;;
+    snapshot) exec modal run "$PY::snapshot" --name "${1:-devbox-snap}" ;;
+    stop)
+        rm -f "$CACHE"  # the tunnel is gone; don't probe a dead endpoint
+        if modpy="$(modal_python)" && "$modpy" "$PY" stop; then
+            exit 0
+        fi
+        exec modal run "$PY::stop"
+        ;;
+    help|-h|--help) usage ;;
+    *) die "unknown subcommand: $cmd (use ssh, status, stop, snapshot)" ;;
+esac

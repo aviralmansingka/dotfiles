@@ -1,0 +1,369 @@
+# Modal devbox — runbook
+
+An SSH-able Ubuntu 24.04 devbox on [Modal](https://modal.com), built from the
+same provisioning pipeline as the AWS devbox (`ops/packer/scripts/`) but
+running as an on-demand **Sandbox**: ephemeral container, persistent state on
+a Volume v2, SSH over an unencrypted port-22 tunnel, GPU hosts one flag away.
+
+Plan and research: `docs/modal-devbox.md` · Modal research report:
+`ops/modal-devbox/research-modal-images.md`.
+
+## Prerequisites
+
+- The `modal` CLI installed (`uv tool install modal`) and authenticated
+  (`modal setup`).
+- An SSH key pair on this machine (`~/.ssh/id_ed25519.pub` or any `*.pub`);
+  the launcher injects the public key per-launch as an ephemeral Secret.
+
+## Start
+
+One command (after `./install.sh` stows the `devbox` package, or from any
+dotfiles checkout with `devbox/.local/bin` on `PATH`):
+
+```sh
+devbox ssh                  # connect; adopts a running sandbox or starts one
+devbox ssh --gpu T4         # start with a GPU, then connect
+devbox ssh -- 'htop'        # run a remote command instead of a shell
+devbox status               # list running devbox sandboxes
+devbox stop                 # terminate them (state on /persist is kept)
+```
+
+A running sandbox is adopted instead of doubled — resource flags apply only
+at creation (`--new`, or `devbox stop` first, to change them).
+
+The equivalent manual flow, from a dotfiles checkout (the wrapper does the
+same with a backgrounded launcher holding the sandbox open):
+
+```sh
+modal run ops/modal-devbox/devbox.py                     # CPU devbox
+modal run ops/modal-devbox/devbox.py --gpu T4            # GPU devbox
+modal run ops/modal-devbox/devbox.py --timeout-hours 2   # shorter lease
+```
+
+| Flag | Default | Meaning |
+| --- | --- | --- |
+| `--gpu` | `""` (CPU) | `T4 L4 A10 L40S A100-40GB A100-80GB H100 H200` |
+| `--region` | `""` (Modal picks) | `us`, `us-east`, `us-west`, `eu`, `eu-west`, `ap`, `ap-south` — 1.15x for broad, 1.75x for narrow |
+| `--timeout-hours` | 24 | Hard lifetime cap (backstop only — idle_timeout is the real control) |
+| `--idle-timeout` | 120 | Seconds after the last SSH disconnect before teardown (0 = never) |
+| `--new` | off | Force a fresh sandbox instead of adopting a running one |
+| `--ssh-key` | first `*.pub` found | Public key to authorize |
+| `--cpu` / `--memory` | 4 / 8192 | Reserved CPU cores and MiB — billed, and burstable |
+| `--cpu-limit` / `--memory-limit` | off | Hard cgroup caps on top of the reservation |
+
+Resources are **requests**, not caps: Modal bills 4 cores / 8 GiB and lets the
+box burst into spare host capacity (`nproc` inside shows the host otherwise).
+Pass the `-limit` flags for a hard ceiling — verified inside a capped box:
+`nproc` = 4, `cpu.cfs_quota_us` = 4000000, `memory.limit_in_bytes` = 8589934592.
+`devbox status` prints what each running box was created with, e.g.
+`cpu=4/4 mem=8192/8192MiB gpu=T4 region=ap-south placement=ap-south/gcp`
+(`<request>/<limit>`, `none` and `default` when unset). `region=` is what you
+asked for; `placement=` is where the container actually landed, read once from
+`MODAL_REGION`/`MODAL_CLOUD_PROVIDER` in the container's PID 1 environment —
+worth checking when you pass no region or the broad `ap`/`us`/`eu` pools.
+
+First run builds the image (~15–30 min: apt, CLI tools, Rust + bob + Neovim
+nightly, dotfiles stow + Lazy sync, Oh My Zsh). Later runs start in seconds
+from cached layers.
+
+## Connect
+
+The launcher prints the connection line once the tunnel is up:
+
+```sh
+ssh -o StrictHostKeyChecking=accept-new -p <port> root@<host>
+```
+
+- Host keys are fresh per sandbox — use `accept-new`, or pin them in
+  `~/.ssh/config` per host and expect changes after teardown.
+- Re-attaching with `devbox ssh` uses the cached tunnel line
+  (`~/.local/state/modal-devbox/connect`) and connects in ~2–3 s; a stale
+  cache self-heals via the status probe (`devbox stop` clears it).
+- First nvim open is ~120 ms: plugins and Mason tools ship in the image, and
+  the entrypoint prewarms one headless start at boot.
+- `tmux new -s main` — the tmux server survives SSH disconnects for the
+  whole lease; reconnect and `tmux attach`.
+- Second door into the same container: `modal container list`, then
+  `modal container exec <id> htop`.
+
+## Teardown
+
+- Always works: `modal container stop <id> -y` (the `-y` skips the prompt;
+  find the id in the launcher line or `modal container list`).
+- `Ctrl+C` works when the launcher runs in a foreground terminal; a
+  backgrounded/nohup launcher may hang on SIGINT — use the container stop
+  above instead.
+- With `idle_timeout` (default 120 s) the sandbox tears itself down about
+  2 min after the last SSH connection closes — the ssh master's
+  `ControlPersist` window matches, so nothing lingers on the Mac either.
+  This was measured on CPU (245 s end to end) and on GPU (128 s). One early
+  GPU run survived ~18 min with an unexplained lingering connection on
+  port 22; that observation is not reproducible and the idle timer has
+  reaped every GPU box since. Treat `devbox stop` as the habit for GPU
+  boxes (capacity is scarce), not as a workaround for a broken timer.
+- The hard `timeout_hours` cap (default 24 h) only bounds a continuously
+  connected session.
+- `/persist` state survives every teardown path; the container filesystem
+  does not.
+
+## What persists (`/persist`, Volume v2)
+
+| Path (in container) | Volume path | Contents |
+| --- | --- | --- |
+| `~/.cache` | `cache` | cargo, uv, pip caches |
+| `~/repos` | `repos` | work checkouts |
+| `~/vault` | `vault` | obsidian.nvim vault (empty at first boot; populate it to use Obsidian tooling) |
+| `~/.zsh_history` | `zsh_history` | shell history |
+
+Everything else is baked into the image and reset per sandbox. Volume v2
+commits run in the background every few seconds plus on shutdown; run
+`sync /persist` inside a session to flush on demand.
+
+**Nvim stays off the volume on purpose.** The plugin tree, Mason tools, the
+Neovim install and nvim's own state used to be symlinked onto `/persist`. That
+volume is FUSE with a per-container page cache, so every fresh sandbox paid
+seconds re-reading them: the first `nvim` start measured **4.3 s**, and 190 ms
+even once warm. They now come from the image's local disk, and the entrypoint
+prewarms one headless start at boot — first open **~120 ms**, warm ~120 ms
+(verified). The trade-off is that a plugin or Mason install made inside a
+session, and nvim history/undo, do not survive the sandbox; the image is the
+deploy path (or `devbox snapshot`). Repos, vault and shell history still
+persist. Old volumes may still hold `nvim-share`, `nvim-bob` and `nvim-state`
+directories — unused, safe to delete.
+
+Mason tooling: the central list from `nvim/.config/nvim/lua/plugins/mason.lua`
+(plus clangd/codelldb) is pre-installed at build time — first opens are clean,
+no install prompts. Treesitter grammars compile on first use per filetype
+(same confirmation prompt as the Mac). Anything outside the list installs on
+demand.
+
+## pi agent and your dotfiles checkout
+
+The image installs the **pi coding agent** at the same pinned version as your
+Mac (`PI_VERSION`, currently 1.4.0) on Node 22 — Ubuntu 24.04's Node 18 is too
+old and made the first build crash. Config comes from the stowed `pi` package,
+and provider auth from the `devbox-pi-auth` secret (`~/.pi/agent/auth.json`,
+0600). The entrypoint also exports `FIREWORKS_API_KEY` from that file into
+`~/.config/devbox-env.sh`, so any tool or SDK in the box sees it:
+
+```sh
+devbox ssh -- 'pi -p "Reply with exactly: DEVBOX_OK"'   # verified in-box
+```
+
+**A writable dotfiles checkout** is seeded on first boot at `~/repos/dotfiles`
+(copied from the image's pinned clone, so it carries `.git` and needs no
+network). It lives on the volume, so edits, branches and commits survive — and
+it is the **live stow source**: the entrypoint unstows the image clone and
+links everything from the checkout, so an edit there is in effect on the next
+session (verified: `settings.json`, `agents/.agents/skills`, `nvim`, `tmux`,
+`zsh` all resolve into `~/repos/dotfiles`). pi's extension dependencies are
+carried over (`npm ci` when a package lacks `node_modules`), so all extensions
+load — verified with a real call:
+
+```sh
+devbox ssh -- 'pi -p "Reply with exactly: STOWED_OK"'   # STOWED_OK
+```
+
+`~/.pi/agent/auth.json` is deliberately **not** stowed
+(`--ignore=auth.json`): it is runtime state written from the
+`devbox-pi-auth` secret, and linking a stray copy over it once cost pi its
+provider auth. To deploy an edit properly: push it, bump `DOTFILES_REF`, rebuild
+— the seeded checkout is per-volume and does not track the image pin.
+
+## Secrets
+
+The devbox gets the same credentials as the Mac via Modal Secrets — one per
+source env file, plus gh and a couple of files. `scripts/modal-secrets-sync`
+is the only writer:
+
+```sh
+scripts/modal-secrets-sync --dry-run   # print the plan (names only, no values)
+scripts/modal-secrets-sync             # upload/overwrite every entry
+scripts/modal-secrets-sync --aws       # ... including the opt-in devbox-aws
+scripts/modal-secrets-sync --only devbox-gh   # a single entry
+```
+
+- The committed manifest (`ops/modal-devbox/secrets-manifest.json`) carries
+  secret **names**, source paths, and variable **names** — never values.
+  `scripts/test-modal-devbox.py` lints it (M11).
+- MODE `dotenv` normalizes `export KEY=...` lines; MODE `file` ships the file
+  base64-encoded in one variable; MODE `command` stores a command's stdout
+  (e.g. `gh auth token` → `GH_TOKEN`).
+- Missing sources are skipped with a warning (e.g. no `~/.aws/credentials`
+  on a machine without AWS); SSH needs no synced secret — the launcher
+  injects the public key per-launch as an ephemeral Secret. A missing or
+  unauthenticated `modal` CLI fails loudly.
+- At boot, `entrypoint.sh` materializes the values back onto disk for
+  config parity: `~/.env` and `~/.config/pi-*.env` (0600 — exactly what
+  `mcp.json` shell refs like `!. ~/.env; echo "Bearer $OREILLY_TOKEN"`
+  expect), `~/.pi/agent/auth.json` and `~/.aws/credentials` decoded at their
+  manifest targets, and `GH_TOKEN`/`GITHUB_TOKEN` exported into every shell
+  via a guarded include on the stowed `~/.zshenv`. All materialized files
+  are container-local: secret values never touch `/persist`.
+- The launcher mounts only manifest secrets that actually exist in the
+  workspace (probed at launch), so a fresh workspace still boots; the
+  per-launch ephemeral SSH-key secret is applied **last**, so it always
+  wins key clashes.
+
+**Rotation**: secret values are frozen into a container at its start — a
+warm devbox keeps serving old values after a re-sync. Rotate = re-run
+`scripts/modal-secrets-sync`, then `devbox stop` and start again.
+
+**Security model**: Modal secret values are write-only (no read-back via
+CLI, API, or dashboard), but any container running in the workspace can
+read every secret from its environment. This is a **personal workspace
+only** — never sync into a shared one.
+
+## Rebuilds
+
+The image is code: change a layer in `devbox.py`, then the next
+`modal run` rebuilds only that layer and everything after it (stable layers
+first, dotfiles last — so config churn is cheap).
+
+- Force a full rebuild: `MODAL_FORCE_BUILD=1 modal run ...`
+- Debug rebuild without poisoning the cache: `MODAL_IGNORE_CACHE=1`
+- After an image rebuild, nvim plugins on the volume may lag the new config:
+  run `:Lazy! sync` once inside nvim.
+
+## Region (running close to you)
+
+By default Modal places the box wherever it schedules best, usually the US, so
+an SSH session from India pays a long relay round trip. Pass `--region` to pin
+the container:
+
+```sh
+devbox ssh --region ap-south --new    # Mumbai, India — lowest latency
+```
+
+| `--region` | Where | Multiplier |
+| --- | --- | --- |
+| `ap-south` | Mumbai, India | 1.75x |
+| `ap` | broad Asia-Pacific pool (best availability) | 1.15x |
+| `eu-west` / `eu` | Dublin / broad EU | 1.75x / 1.15x |
+| `us-east` / `us-west` / `us` | Virginia / Oregon / broad US | 1.75x / 1.15x |
+
+Measured from this Mac (2026-10): a bare SSH handshake through the tunnel took
+**0.63 s with `--region ap-south`** versus **2.26 s** with the default
+placement, and the container's egress resolved to New Delhi, India. Interactive
+latency is the whole point of the flag, so prefer it for daily use.
+
+Notes:
+
+- `ap-south` guarantees Mumbai. `ap` is cheaper and schedules better, but the
+  box can land anywhere in the Asia-Pacific pool — use it when any nearby
+  region will do and the box must start quickly.
+- A multi-region list is also accepted by Modal; this wrapper keeps one value
+  so the CLI stays simple. Edit `__main__`'s `region=` call or pass your own
+  through `modal run ops/modal-devbox/devbox.py` if you need that.
+- `routing_region=` (the other Modal knob) does not apply to Sandboxes, so
+  `--region` is the whole story for SSH latency.
+- The multiplier applies to compute and GPU time, not the `/persist` volume.
+
+## GPU and CUDA
+
+`--gpu T4` and friends select the GPU variant. There are two images, both
+built from the same phase layers so the environment is identical:
+
+| `--gpu` | Image | CUDA toolkit |
+| --- | --- | --- |
+| empty | `ubuntu:24.04` | none (driver API only, via the host) |
+| any GPU | `nvidia/cuda:13.0.0-devel-ubuntu24.04` | `nvcc`, headers, libdevice |
+
+`nvidia-smi` works on both with zero setup (host driver). On the GPU variant
+`nvcc`, `cuda-compile-db`, `CUDA_HOME` and `LD_LIBRARY_PATH` are already set
+for every shell, including non-interactive `ssh host 'cmd'`.
+
+```sh
+devbox ssh --gpu T4 --new        # GPU variant, then connect
+devbox ssh --gpu T4 -- 'nvcc --version; nvidia-smi'
+```
+
+### Full CUDA LSP (compile database)
+
+clangd needs `--cuda-path` and a compile database; `scripts/cuda-compile-db`
+is baked into the image and writes `compile_commands.json` for every
+`.cu`/`.cuh` under a directory:
+
+```sh
+cd ~/repos/cuda-project
+cuda-compile-db . --arch sm_75            # or --arch sm_90 for H100
+git checkout -- . 2>/dev/null || true     # compile_commands.json is generated
+clangd --check=matmul.cu                  # expect "All checks completed, 0 errors"
+```
+
+Open the `.cu` file in nvim and CUDA-API hover/go-to-def/completion work —
+this is the bar `docs/neovim-cuda-lsp.md` sets and the Mac cannot meet. The
+regenerate step is needed when you add files or change arch.
+
+| GPU | ≈ $/hr | Notes |
+| --- | --- | --- |
+| T4 | $0.59 | cheapest interactive; sm_75 |
+| L4 | $0.80 | good LSP-dev default |
+| A10 / L40S | $1.10 / $1.95 | |
+| A100-40 / -80 | $2.10 / $2.50 | |
+| H100 / H200 | $3.95 / $4.54 | real compute only; sm_90 |
+
+CPU default (4 cores / 8 GiB) ≈ $0.25/hr. Volume storage: $0.09/GiB-month,
+first 1 TiB free. Preemption: GPU functions/Sandboxes are preemptible by
+default and **cannot** be made nonpreemptible — a preempted sandbox loses
+only the running tmux session; `/persist` keeps everything else.
+
+**Run `devbox stop` when you finish with a GPU box.** Idle teardown does
+reap GPU sandboxes (measured 128 s after disconnect); the explicit stop is a
+habit that protects scarce GPU capacity, not a workaround.
+The first GPU start after an image change can take several minutes while
+the large image hydrates on a fresh worker.
+
+## Capture (install once, keep forever)
+
+Modal has no docker-commit for containers, but a **Filesystem Snapshot** is the
+sanctioned equivalent: it freezes the running sandbox's root filesystem into a
+reusable Image. Use it after installing something interactively that you want
+to keep without an image rebuild.
+
+```sh
+devbox ssh -- 'apt-get install -y htop'   # install interactively
+devbox snapshot devbox-snap               # freeze + publish a named image
+devbox stop
+```
+
+Boot it again with `modal.Image.from_name("devbox-snap")` in a small app, or
+reuse it in `devbox.py` by swapping the base image. Verified end to end: a file
+written at `/opt/probe/tool.txt` inside a sandbox appeared in a brand-new
+sandbox created from the published snapshot.
+
+Limits that matter:
+
+- **Mounted Volumes are not captured.** `/persist` already keeps its own state,
+  so nothing there needs freezing — that is why the two mechanisms complement
+  each other.
+- **Materialized secret files are scrubbed before the freeze** (`~/.env`,
+  `~/.config/pi-*.env`, `devbox-env.sh`, `~/.aws/credentials`, pi's
+  `auth.json`), so the published image carries no secret values; a sandbox
+  booted from it through the devbox app re-materializes them at start.
+- Snapshots default to a 30-day TTL. Publish a name to keep it around, and
+  delete stale ones (there is no list-snapshots API — track names yourself).
+- The freeze is a filesystem copy, not a process copy: running programs and
+tmux sessions do not survive into the restored sandbox.
+
+## Troubleshooting
+
+- **No tunnel line after a while** — `modal container list`, then
+  `modal container logs <id>`; the entrypoint logs sshd there.
+- **A build layer times out** — split the offending `run_commands` layer, or
+  port it to `Image.run_function(..., timeout=...)` (1 h default, raised).
+- **`test-modal-devbox` apt parity fails** — the Packer apt list changed;
+  update `PACKER_APT` in `devbox.py` to match, extras stay allowlisted.
+- **`gh extension install` warning in build logs** — harmless; install it
+  after `gh auth login` in-session.
+
+## Parity and tests
+
+`scripts/test-modal-devbox.py` (offline, no Modal account): apt parity against
+`ops/packer/scripts/install_system_packages.sh` (superset + exact extras
+`openssh-server`, `ca-certificates`), stow set vs repo packages, GPU
+allowlist, secret hygiene, entrypoint structure and behavior, wrapper
+behavior against stubbed CLIs, dotfiles pin shape, runbook accuracy, manifest
+lint, sync-script structure, materialization wiring, and the snapshot secret
+scrub (M1–M22, with a mutation selftest). `docs/ci-tests/modal-devbox.md`
+documents the suite.
