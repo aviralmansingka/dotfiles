@@ -130,6 +130,12 @@ export default function stdinReattach(pi: ExtensionAPI) {
 			try {
 				Object.defineProperty(stream, dim, {
 					get: () => (target as unknown as Record<string, number>)[dim],
+					// Node's own SIGWINCH handler writes the fresh size back onto stdout:
+					// `this.columns = newCols` in WriteStream._refreshSize. A getter with no
+					// setter throws there, uncaught, and kills pi on the next resize after a
+					// rescue. The getter already reads the live stream, so the write is a
+					// no-op we must accept rather than reject.
+					set: () => {},
 					configurable: true,
 				});
 			} catch {
