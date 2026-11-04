@@ -9,7 +9,8 @@
         "zsh",
         "tmux",
         "neovim",
-        "stow"
+        "stow",
+        "just"
       ]
     },
     "development": {
@@ -78,7 +79,8 @@
       "awscli": "awscli",
       "bun": null,
       "rust": "cargo",
-      "tuicr": null
+      "tuicr": null,
+      "just": "just"
     },
     "alpine": {
       "fd": "fd",
@@ -87,7 +89,8 @@
       "golang": "go",
       "awscli": "aws-cli",
       "bun": null,
-      "tuicr": null
+      "tuicr": null,
+      "just": "just"
     },
     "macos": {
       "fd": "fd",
@@ -96,7 +99,8 @@
       "golang": "go",
       "awscli": "awscli",
       "bun": "bun",
-      "neovim": null
+      "neovim": null,
+      "just": "just"
     }
   },
   "os_specific": {
