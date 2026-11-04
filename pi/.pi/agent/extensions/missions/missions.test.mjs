@@ -43,7 +43,7 @@ test("workspace lookup keeps every workspace of one repository lineage", () => {
 
 test("mission tool gate follows status and never blocks inspection", () => {
   const at = (status, attempt) => ({ record: { state: { status } }, attempt });
-  for (const status of ["waiting", "review", "done", "failed"])
+  for (const status of ["waiting", "review", "done", "failed", "closed"])
     for (const toolName of ["bash", "write", "edit"])
       assert.equal(missionToolBlock({ toolName, current: at(status) }), undefined, `${status} allows ${toolName}`);
   assert.equal(missionToolBlock({ toolName: "bash", current: at("running", { id: "attempt-1" }) }), undefined);
@@ -693,6 +693,42 @@ test("a broken tracking record blocks edits and warns on reads",needsCLI,async t
   // A recovered record restores every tool again.
   f.hookFailures=0;
   assert.equal(await events.tool_call({toolName:"write"},ctx),undefined);
+  await events.session_shutdown({},ctx);
+});
+
+test("a closed mission still passes the session bash and edit tools",needsCLI,async t=>{
+  const f=await fixture(t);
+  const factory=await loadFactory();
+  const events={},tools={},messages=[];
+  const pi={on:(name,fn)=>{events[name]=fn},registerTool:tool=>{tools[tool.name]=tool},registerCommand:()=>{},sendMessage:(message,options)=>messages.push({message,options})};
+  const ctx={...f.ctx,hasUI:true,ui:{notify:()=>{},setStatus:()=>{},select:async()=>undefined}};
+  factory(pi,{env:f.env,run:f.run});
+  await events.session_start({},ctx);
+  // The attempt ends and settles, so the record holds no active attempt.
+  const claim=await tools.mission.execute("attach-call",{action:"attach",handle:f.handle},null,null,ctx);
+  writeFileSync(claim.details.artifact,"Closeout evidence");
+  const finish=await tools.mission.execute("finish",{action:"finish",summary:"Ready for closeout"},null,null,ctx);
+  assert.equal(finish.isError,undefined,finish.content?.[0]?.text);
+  await events.agent_before_settle({outcome:"completed"},ctx);
+  await events.agent_settled({aborted:false},ctx);
+  const settled=await f.bridge.call(["show",f.handle]);
+  assert.equal(settled.state.status,"ready");
+  // The ship path closes the record before the worker reports its closeout.
+  const closed=await f.bridge.call(["close",f.handle,"--force","--note","worktree retired by /cleanup"]);
+  assert.equal(closed.status,"closed");
+  // Lifecycle hooks still record on a retired mission, so tracking never turns
+  // into a second block after the close.
+  await events.tool_execution_start({toolName:"bash",toolCallId:"bash-after-close"},ctx);
+  await events.tool_execution_end({toolName:"bash",toolCallId:"bash-after-close",isError:false},ctx);
+  // Status alone decides: with no attempt left, every worker tool still passes.
+  // A gate that reads "closed" as an open mission blocks bash here, and the
+  // worker cannot clean up or report the mission it just shipped.
+  for(const toolName of ["bash","edit","write","read","mission"])
+    assert.equal(await events.tool_call({toolName},ctx),undefined,`${toolName} passes after close`);
+  // The gate never guards the vault record; the CLI does. A closed record takes
+  // no new work, so the mission stays retired after the worker cleans up.
+  await assert.rejects(f.bridge.call(["claim",f.handle,"--agent","scout"]),/closed: mission/);
+  assert.equal((await f.bridge.call(["show",f.handle])).state.status,"closed");
   await events.session_shutdown({},ctx);
 });
 

@@ -86,11 +86,13 @@ export function trackingFailureBlock(toolName, error) {
 }
 
 /** Mission statuses that hold no agent write authority: "waiting" and "review"
- *  wait on a human checkpoint decision, while "done" and "failed" already
- *  ended the mission. Status alone decides, never the active attempt — a closed
- *  mission has no attempt left, and blocking its tools would leave the session
- *  unable to report, clean up, or answer the human. */
-export const CLOSED_MISSION_STATUSES = new Set(["waiting", "review", "done", "failed"]);
+ *  wait on a human checkpoint decision, while "done", "failed", and "closed"
+ *  already ended the mission. Status alone decides, never the active attempt — a
+ *  closed mission has no attempt left, and blocking its tools would leave the
+ *  session unable to report, clean up, or answer the human. The gate reads work
+ *  authority only; the CLI keeps the vault record, because a closed handle takes
+ *  no new attempt or progress and answers code "closed". */
+export const CLOSED_MISSION_STATUSES = new Set(["waiting", "review", "done", "failed", "closed"]);
 
 /** Step statuses the CLI still advances to (nextStep in go/mission). */
 const CONTINUABLE_STEP_STATUSES = new Set(["pending", "needs_changes"]);
