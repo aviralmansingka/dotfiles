@@ -237,10 +237,13 @@ export default function missions(pi: ExtensionAPI, options = {}) {
     },
   });
   pi.registerCommand("missions", {
-    description: "Select a mission and open its panel",
+    description: "Open the mission desk in a Herdr pane",
     handler: async (_args, ctx) => {
-      const handle = await pickHandle(ctx);
-      if (handle) await openPanel(ctx, handle);
+      // The Go desk owns its terminal, so it runs in a pane of its own and the
+      // command draws no picker here. Outside Herdr there is no pane to host
+      // it, so the command reports that instead of falling back to a picker.
+      try { ctx.ui.notify("Mission desk opened in " + (await bridge.openDesk()) + ".", "info"); }
+      catch (e: any) { ctx.ui.notify("The mission desk needs a Herdr pane: " + e.message, "warning"); }
     },
   });
 }

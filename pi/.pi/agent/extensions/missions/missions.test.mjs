@@ -202,6 +202,10 @@ async function fixture(t, checkpoint=false) {
       else if(args[0]==="pane" && args[1]==="get") {
         result={pane:{pane_id:args[2],agent:f.paneAgents[args[2]]??null}};
       }
+      else if(args[0]==="pane" && args[1]==="split") {
+        // The mission desk opens here: /missions splits a pane and runs the Go UI in it.
+        result={pane:{pane_id:env.HERDR_PANE_ID+"-desk"}};
+      }
       else {
         const workspace=flag("--workspace"), here=workspace===(f.paneWorkspace||"repo"), cwd=f.paneCwd||f.cwd;
         result={panes:here?[{pane_id:env.HERDR_PANE_ID,cwd,foreground_cwd:cwd}]:[]};
@@ -617,9 +621,9 @@ test("Pi factory callbacks use final settlement and block only finish at a revie
   const f=await fixture(t,true);
   f.env.PI_SUBAGENT_AGENT="mission-worker";
   const factory=await loadFactory();
-  const events={},tools={},commands={},notifications=[],statuses=new Map();
+  const events={},tools={},commands={},notifications=[],statuses=new Map(),picks=[];
   const pi={on:(name,fn)=>{events[name]=fn},registerTool:t=>{tools[t.name]=t},registerCommand:(name,c)=>{commands[name]=c},sendMessage:()=>{throw Error("A review must not continue automatically")}};
-  const ctx={...f.ctx,hasUI:true,ui:{notify:(s)=>notifications.push(s),setStatus:(k,v)=>statuses.set(k,v),select:async(_title,options)=>options[0]}};
+  const ctx={...f.ctx,hasUI:true,ui:{notify:(s)=>notifications.push(s),setStatus:(k,v)=>statuses.set(k,v),select:async(_title,options)=>{picks.push(options);return options[0]}}};
   factory(pi,{env:f.env,run:f.run});
   assert.equal(tools.mission.exposure,"deferred");assert.ok(commands.missions);assert.ok(commands.mission);
   await events.session_start({},ctx);
@@ -649,7 +653,13 @@ test("Pi factory callbacks use final settlement and block only finish at a revie
   assert.match(finishBlock.reason,/Review C01 is waiting/);
   assert.match(finishBlock.reason,/mission checkpoint accept /);
   assert.equal(await events.tool_call({toolName:"mission",input:{action:"status"}},ctx),undefined);
-  await commands.missions.handler("",ctx);assert.ok(notifications.some(n=>n.includes("pending_checkpoint")));
+  // /missions opens the Go desk in a Herdr pane and draws no picker of its own,
+  // even while a review is waiting: the desk, not this pop-up, selects missions.
+  await commands.missions.handler("",ctx);
+  assert.ok(notifications.some(n=>n.includes("Mission desk opened in ")));
+  assert.ok(f.calls.some(c=>c.binary==="herdr"&&c.args[0]==="pane"&&c.args[1]==="split"));
+  assert.ok(f.calls.some(c=>c.binary==="herdr"&&c.args[1]==="run"&&c.args[3]===bin&&c.args.includes("ui")));
+  assert.equal(picks.length,0);
   await events.session_shutdown({},ctx);
   assert.ok(statuses.get("mission").includes("waiting"));
   // A corrupted local cache must not silently turn an owned session into an
