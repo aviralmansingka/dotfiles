@@ -233,27 +233,24 @@ export default function missions(pi: ExtensionAPI, options = {}) {
   };
 
   pi.registerCommand("mission", {
-    description: "Mission: /mission attach|start|status|steps|next REPO/SLUG",
+    description: "Mission panel: /mission [HANDLE]; /mission attach|start|steps|next REPO/SLUG",
     handler: async (args, ctx) => {
-      const [action = "status", handle] = args.trim().split(/\s+/).filter(Boolean);
-      if (!["attach", "start", "status", "steps", "next"].includes(action)) { ctx.ui.notify("Use /mission attach|start|status|steps|next REPO/SLUG", "warning"); return; }
+      const [action = "panel", handle] = args.trim().split(/\s+/).filter(Boolean);
+      // A bare handle opens its panel too, so `/mission dotfiles/x` works.
+      if (action === "panel" || action === "status" || action.includes("/")) {
+        await openPanel(ctx, action.includes("/") ? action : handle);
+        return;
+      }
+      if (!["attach", "start", "steps", "next"].includes(action)) { ctx.ui.notify("Use /mission [HANDLE] or /mission attach|start|status|steps|next REPO/SLUG", "warning"); return; }
       try { const result = await bridge.action(ctx, { action, handle }); await badge(ctx); ctx.ui.notify(JSON.stringify(result, null, 2), "info"); }
       catch (e: any) { ctx.ui.notify(e.message, "error"); }
     },
   });
   pi.registerCommand("missions", {
-    description: "Select a mission to inspect, start, or attach to this session",
+    description: "Select a mission and open its panel",
     handler: async (_args, ctx) => {
-      try {
-        const records = await bridge.call(["list"]);
-        if (!ctx.hasUI) { ctx.ui.notify(JSON.stringify(records), "info"); return; }
-        const labels = records.map((r: any) => `${r.handle} · ${r.state.status} · ${r.mission.title}`);
-        const selected = await ctx.ui.select("Missions", labels);
-        if (!selected) return;
-        const handle = records[labels.indexOf(selected)].handle;
-        const action = await ctx.ui.select(handle, ["status", "steps", "start", "attach", "next"]);
-        if (action) { const result = await bridge.action(ctx, { action, handle }); await badge(ctx); ctx.ui.notify(JSON.stringify(result, null, 2), "info"); }
-      } catch (e: any) { ctx.ui.notify(e.message, "error"); }
+      const handle = await pickHandle(ctx);
+      if (handle) await openPanel(ctx, handle);
     },
   });
 }
