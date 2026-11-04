@@ -9,9 +9,18 @@ import (
 	"mission.local/prototype/internal/domain/mission"
 )
 
-func (s *Store) progress(h, id, token string, p mission.Progress, paths []string) (mission.Record, error) {
+// progress appends one structured report to the attempt. A nonempty actor is
+// the trooper that reported: the call also appends a Report beside the
+// progress entry, so the sitrep reads who finished what without a vault token
+// in the trooper's hands. Existing calls that carry no actor keep the exact
+// earlier shape and fingerprint.
+func (s *Store) progress(h, id, token, actor string, p mission.Progress, paths []string) (mission.Record, error) {
+	actor = strings.TrimSpace(actor)
 	if p.ID == "" || p.Summary == "" || len(p.Summary)+len(p.Next)+len(p.Blocker) > 8000 || len(paths) > 16 {
 		return mission.Record{}, mission.Problem("usage", "progress needs a stable event-id, summary, and at most 16 evidence paths (8000 characters total)")
+	}
+	if len(actor) > 64 {
+		return mission.Record{}, mission.Problem("usage", "--actor names one trooper in at most 64 characters")
 	}
 	if p.Status != "working" && p.Status != "blocked" && p.Status != "needs-input" && p.Status != "ready" {
 		return mission.Record{}, mission.Problem("usage", "progress status must be working, blocked, needs-input, or ready")
@@ -19,10 +28,13 @@ func (s *Store) progress(h, id, token string, p mission.Progress, paths []string
 	if (p.Status == "blocked" || p.Status == "needs-input") && p.Blocker == "" {
 		return mission.Record{}, mission.Problem("usage", "blocked progress needs --blocker")
 	}
+	// The actor joins the fingerprint only when it is present, so a replay of a
+	// pre-report call keeps its original digest.
 	request, _ := json.Marshal(struct {
 		P     mission.Progress
 		Paths []string
-	}{p, paths})
+		Actor string `json:",omitempty"`
+	}{p, paths, actor})
 	finger := mission.Digest(request)
 	return s.mutate(h, func(r *mission.Record) error {
 		a, e := mission.FindAttempt(&r.State, id)
@@ -37,6 +49,9 @@ func (s *Store) progress(h, id, token string, p mission.Progress, paths []string
 				if old.Fingerprint != finger {
 					return mission.Problem("event_conflict", "progress id reused with different content")
 				}
+				// A repeated call is idempotent. The report it named was recorded
+				// with the entry, so a replay adds nothing back — a resumed
+				// trooper's later report must not be undone by a stale retry.
 				return nil
 			}
 		}
@@ -63,6 +78,7 @@ func (s *Store) progress(h, id, token string, p mission.Progress, paths []string
 		}
 		p.At, p.Fingerprint = mission.Now(), finger
 		a.Progress = append(a.Progress, p)
+		appendReport(a, p, actor)
 		a.Updated = p.At
 		r.State.Status = "running"
 		if p.Status == "blocked" || p.Status == "needs-input" {
@@ -70,6 +86,26 @@ func (s *Store) progress(h, id, token string, p mission.Progress, paths []string
 		}
 		return nil
 	})
+}
+
+// appendReport records one trooper report for a new progress entry, keeping one
+// row per trooper: the same subagent that finishes blocked, is resumed, and
+// then finishes ready reports twice under its own name, and the attempt must
+// read the state it finished in rather than the one it left behind. The ID is
+// the progress event ID that carried the report, so an already recorded report
+// is never duplicated (repeats return from progress before this runs).
+func appendReport(a *mission.Attempt, p mission.Progress, actor string) {
+	if actor == "" {
+		return
+	}
+	report := mission.Report{ID: p.ID, Trooper: actor, Status: p.Status, Summary: p.Summary, Next: p.Next, At: p.At}
+	for i, old := range a.Reports {
+		if old.Trooper == actor {
+			a.Reports[i] = report
+			return
+		}
+	}
+	a.Reports = append(a.Reports, report)
 }
 
 // Only the adapter calls settle, after an explicit finish/fail report AND an

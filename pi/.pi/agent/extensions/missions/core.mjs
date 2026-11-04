@@ -140,6 +140,95 @@ export function missionContinues(state) {
   return Object.values(state.steps ?? {}).some(step => CONTINUABLE_STEP_STATUSES.has(step.status));
 }
 
+/** The mission status a finished subagent reached, in the progress vocabulary.
+ *  Only a clean completion is "ready": a stall parks for a human decision
+ *  ("needs-input"), and every death — provider error, kill, timeout, a launch
+ *  that never ran, an agent that vanished — is "blocked". */
+export function trooperStatus(status) {
+  const value = String(status ?? "").trim().toLowerCase();
+  if (["done", "completed", "succeeded", "sentinel", "agent-gone"].includes(value)) return "ready";
+  if (value === "stalled") return "needs-input";
+  return "blocked";
+}
+
+/** The name a trooper report carries: `details.name`, the finished subagent's
+ *  own name, so a judge step records the judge and never the mission worker
+ *  that spawned it. That is the only name a `subagent_result` message carries;
+ *  an unnamed completion reports nothing rather than borrowing another
+ *  vocabulary (an agent profile is not the subagent's name). */
+export function trooperName(completion) {
+  const name = completion?.details?.name;
+  return typeof name === "string" ? name.trim().replace(/\s+/g, " ").slice(0, 64) : "";
+}
+
+/** The paragraphs a `subagent_result` presentation wraps around the trooper's
+ *  own words: the headline, the narration, and the follow-up hint. Shapes come
+ *  from resolveResultPresentation in
+ *  pi/.pi/agent/extensions/interactive-subagents/pi-extension/subagents/index.ts
+ *  (spawn, resume, and orphan finalize, including the `Recovered at parent
+ *  restart` prefix). None of them is a report: the trooper wrote its own line. */
+const PRESENTATION_NOISE = [
+  /^Sub-agent ".*" (completed|failed|timed out|never started|stalled|pane was closed)/,
+  /^Adopted sub-agent ".*" error:/,
+  /^Recovered at parent restart/,
+  /^Do not wait further:/,
+  /^Nothing ran, so there is nothing to resume/,
+  /^Do not treat this as an error/,
+  /^It is still alive and still owns its tab/,
+  /^Ask the user what to do next:/,
+  /^The subagent did not produce a result\./,
+  /^Follow up with subagent_message/,
+];
+/** Labels a death path puts in front of a harvested line, or beside it. */
+const PRESENTATION_LABELS = [/Partial results attached:$/, /Last harvest:$/];
+
+/** The one line a trooper wrote: the first paragraph of its completion that is
+ *  not presentation, flattened and clipped so a sitrep row shows it whole. An
+ *  empty line means the trooper wrote nothing the presentation kept. */
+export function trooperLine(content, limit = 160) {
+  const text = Array.isArray(content)
+    ? content.map(part => (typeof part === "string" ? part : part?.text ?? "")).join("\n\n")
+    : String(content ?? "");
+  const paragraphs = text.replace(/\r\n/g, "\n").split(/\n\s*\n/)
+    .map(part => PRESENTATION_LABELS.reduce((line, label) => line.replace(label, ""), part.replace(/\s+/g, " ").trim()).trim())
+    .filter(Boolean);
+  const body = paragraphs.find(part => !PRESENTATION_NOISE.some(noise => noise.test(part))) ?? "";
+  return body.length > limit ? body.slice(0, limit - 1).trimEnd() + "…" : body;
+}
+
+/** The report one finished subagent leaves on the attempt: who reported, the
+ *  state it reached, the one line it wrote, and what comes next. The ID names
+ *  one completion of one subagent session, so a reload that replays the same
+ *  steer reuses it instead of appending a second copy, while a resumed run that
+ *  ends differently reports under a new ID — the CLI keeps the final state as
+ *  the trooper's row instead of refusing the second report. */
+export function trooperReport(message) {
+  if (message?.customType !== "subagent_result") return null;
+  const details = message.details ?? {};
+  const trooper = trooperName(message);
+  if (!trooper) return null;
+  const status = trooperStatus(details.status);
+  const summary = trooperLine(message.content) || `${trooper} finished`;
+  const follow = `subagent_message({ name: "${trooper}" })`;
+  const next = status === "ready" ? "Read the result in this session"
+    : status === "needs-input" ? `Steer it with ${follow}` : `Resume or replace it with ${follow}`;
+  const session = String(details.sessionFile || details.sessionId || trooper);
+  const report = { id: "trooper-" + hash([session, status, summary].join("\u0000")).slice(0, 24), trooper, status, summary, next };
+  if (status !== "ready") report.blocker = trooperLine(details.errorMessage ?? details.error ?? "", 160) || summary;
+  return report;
+}
+
+/** CLI refusals that make a queued trooper report permanently undeliverable: the
+ *  record already holds a different aspect of that ID, the attempt the trooper
+ *  finished under is gone or no longer active, or its handle vanished. Matched
+ *  on the CLI's own error codes (see the `Problem("code"` calls under
+ *  go/mission), never on a substring: a transient failure — the CLI is busy or
+ *  gone — is not on this list, so that report retries. */
+export const DROPPABLE_REPORT_CODES = new Set(["event_conflict", "stale_attempt", "attempt_terminal", "closed", "not_found", "invalid_handle"]);
+export function droppableReportError(message) {
+  return DROPPABLE_REPORT_CODES.has(/^([a-z_]+): /.exec(String(message ?? ""))?.[1] ?? "");
+}
+
 /** Credentials and an unacknowledged hook outbox are local transport state.
  * Canonical mission facts, transcripts, and attempts live only in the CLI vault.
  * No credentials are put in a prompt, tool result, or a child's environment.
@@ -320,17 +409,48 @@ export class MissionBridge {
     if (!this.hint?.attempt) return;
     while (this.hint.outbox.length) {
       const item = this.hint.outbox[0];
-      // Hook argv contains bounded metadata only; credentials travel in env.
-      const e = item.event;
-      const args = ["hook", e.type, "--handle", this.hint.handle, "--attempt", item.attempt, "--event-id", e.id,
-        "--session-id", e.session_id, "--session-file", e.session_file, "--pane", e.pane_id || "", "--workspace", e.workspace_id || "", "--message", e.summary || ""];
-      if (e.tool) args.push("--tool", e.tool);
-      if (e.model) args.push("--model", e.model);
-      if (e.quiescent) args.push("--quiescent");
-      await this.call(args, this.hint.token);
+      try { await this.deliver(item); }
+      catch (e) {
+        // A report the record can never take is not re-sent: the CLI refuses a
+        // reused ID, and a trooper that finished after its attempt settled has
+        // no attempt left to report on. Dropping it keeps the outbox from
+        // wedging behind one undeliverable line; a transient failure retries.
+        if (!(item.report && droppableReportError(e.message))) throw e;
+      }
       this.hint.outbox.shift(); this.save(ctx);
     }
     this.error = null;
+  }
+  /** Send one outbox item: a lifecycle hook, or one trooper report. Hook argv
+   *  contains bounded metadata only; credentials travel in env. */
+  async deliver(item) {
+    if (item.report) {
+      const r = item.report;
+      const args = ["progress", this.hint.handle, "--attempt", item.attempt, "--event-id", r.id,
+        "--actor", r.trooper, "--status", r.status, "--summary", r.summary];
+      if (r.next) args.push("--next", r.next);
+      if (r.blocker) args.push("--blocker", r.blocker);
+      return this.call(args, this.hint.token);
+    }
+    const e = item.event;
+    const args = ["hook", e.type, "--handle", this.hint.handle, "--attempt", item.attempt, "--event-id", e.id,
+      "--session-id", e.session_id, "--session-file", e.session_file, "--pane", e.pane_id || "", "--workspace", e.workspace_id || "", "--message", e.summary || ""];
+    if (e.tool) args.push("--tool", e.tool);
+    if (e.model) args.push("--model", e.model);
+    if (e.quiescent) args.push("--quiescent");
+    return this.call(args, this.hint.token);
+  }
+  /** Record one finished trooper. The report queues in the same outbox as the
+   *  lifecycle hooks and flushes at once, so a reload replays an unacknowledged
+   *  report under the same ID instead of appending a second one. */
+  async report(ctx, message) {
+    if (!this.hint?.attempt) return;
+    const report = trooperReport(message);
+    if (!report) return;
+    if (this.hint.outbox.some(item => item.report?.id === report.id)) return;
+    if (this.hint.outbox.length >= 128) throw new Error("Mission hook outbox full; restore CLI recording before continuing.");
+    this.hint.outbox.push({ attempt: this.hint.attempt, report });
+    this.save(ctx); await this.flush(ctx);
   }
   async record(ctx, event) {
     if (!this.hint?.attempt) return;
@@ -532,6 +652,7 @@ export class MissionBridge {
     const args = [p.action, handle, "--attempt", this.hint.attempt];
     if (p.action === "progress") {
       args.push("--status", p.status || "working", "--summary", p.summary || "", "--event-id", p.event_id || eventID);
+      if (p.actor) args.push("--actor", p.actor);
       if (p.next) args.push("--next", p.next);
       if (p.blocker) args.push("--blocker", p.blocker);
       for (const evidence of p.evidence || []) args.push("--evidence", evidence);

@@ -9,8 +9,11 @@ import (
 	"mission.local/prototype/internal/platform"
 )
 
+// cmdProgress carries an optional --actor: the trooper that reported. One call
+// then appends both the structured progress and the trooper report, so the
+// sitrep can name who finished what.
 func cmdProgress(a platform.Args, s *Store) (any, error) {
-	return s.progress(platform.Fallback(a.At(1), os.Getenv("MISSION_HANDLE")), platform.Fallback(a.Get("attempt"), os.Getenv("MISSION_ATTEMPT")), platform.Fallback(a.Get("token"), os.Getenv("MISSION_TOKEN")), mission.Progress{ID: a.Get("event-id"), Status: a.Get("status"), Summary: a.Get("summary"), Next: a.Get("next"), Blocker: a.Get("blocker")}, a.Flags["evidence"])
+	return s.progress(platform.Fallback(a.At(1), os.Getenv("MISSION_HANDLE")), platform.Fallback(a.Get("attempt"), os.Getenv("MISSION_ATTEMPT")), platform.Fallback(a.Get("token"), os.Getenv("MISSION_TOKEN")), a.Get("actor"), mission.Progress{ID: a.Get("event-id"), Status: a.Get("status"), Summary: a.Get("summary"), Next: a.Get("next"), Blocker: a.Get("blocker")}, a.Flags["evidence"])
 }
 
 func cmdSettle(a platform.Args, s *Store) (any, error) {
