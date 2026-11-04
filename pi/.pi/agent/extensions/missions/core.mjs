@@ -223,43 +223,15 @@ export class MissionBridge {
       return this.call(["settle", this.hint.handle, "--attempt", this.hint.attempt, "--session-id", ctx.sessionManager.getSessionId()], this.hint.token);
     }
   }
+  /** Launch one mission through the CLI's launch port. The CLI reserves the
+   *  launch, prepares the worktree, and asks a host adapter to open the surface
+   *  and start one agent, so this extension owns no spawn path of its own. */
   async start(ctx, handle) {
     if (this.env.PI_SUBAGENT_NAME) throw new Error("Launch missions from the captain; workers own only their assigned mission.");
-    const spawn = globalThis.__pi_interactive_subagents?.executeSubagent;
-    if (typeof spawn !== "function") throw new Error("The interactive-subagents extension must be loaded to launch missions.");
-    const initial = await this.call(["show", handle]);
-    const repos = await this.call(["repo", "list"]);
-    const repo = repos.find(r => r.slug === initial.mission.repo);
-    const checkout = repo?.checkouts?.[(await import("node:os")).hostname()];
-    if (!checkout) throw new Error("Register a local repository checkout first.");
-    const r = await this.call(["workspace", handle]);
-    const cwd = r.state.runtime.cwd;
-    const reservation = await this.call(["launch", handle]);
-    if (!reservation.acquired) return { launched: false, reason: "Owner or launch intent already recorded; resume/attach it instead of spawning again.", runtime: reservation.runtime };
-    const launchID = reservation.runtime.launch_id;
-    // The CLI created the mission/<slug> checkout; Herdr registers it as the
-    // repository's linked worktree workspace (idempotent: a relaunch reuses the
-    // same workspace). Anchored on the primary checkout, because Herdr refuses
-    // create/open from inside a linked worktree.
-    const worktree = await this.herdr(["worktree", "open", "--cwd", checkout, "--path", cwd, "--no-focus"]);
-    const workspace = worktree.workspace?.workspace_id;
-    if (!workspace) throw new Error("Herdr did not return the mission worktree workspace; launch intent retained for inspection.");
-    // A fresh workspace's first tab hosts the worker. A workspace that was
-    // already open may be parked on the mission's previous session, so a
-    // relaunch gets its own tab there instead of taking over that pane.
-    const holder = worktree.already_open
-      ? await this.herdr(["tab", "create", "--workspace", workspace, "--cwd", cwd, "--label", initial.mission.slug, "--no-focus"])
-      : worktree;
-    const pane = holder.root_pane?.pane_id;
-    if (!pane || holder.root_pane.workspace_id !== workspace) throw new Error("Herdr returned a different workspace; launch intent retained for inspection.");
-    const result = await spawn({ agent: "mission-worker", name: "mission-" + hash(handle).slice(0, 20), cwd, pane,
-      missionContext: { vault: this.vault, binary: this.binary, stateDir: this.cacheDir },
-      task: `Work on mission ${handle}. Before reading or editing repository files, call mission with action=attach, handle=${handle}, launch_id=${launchID}. Then follow the returned step brief and the missions skill. Report structured progress. Write the required artifact and call finish when the step is ready. Stop at checkpoints; keep this session and worktree for later steps.` }, ctx);
-    const details = result?.details;
-    if (details?.status !== "started" || !details.sessionFile || details.error)
-      throw new Error("Mission launch was not acknowledged; intent and tab retained. Inspect the existing session before retrying.");
-    await this.call(["launch", handle, "--launch-id", launchID, "--session-file", details.sessionFile]);
-    return { launched: true, runtime: (await this.call(["show", handle])).state.runtime, session_file: details.sessionFile, pane, workspace };
+    const r = await this.call(["launch", handle, "--target", "herdr"]);
+    if (!r.acquired) return { launched: false, reason: "Owner or launch intent already recorded; resume/attach it instead of spawning again.", runtime: r.runtime };
+    const launch = r.launch || {};
+    return { launched: true, runtime: r.runtime, session_file: launch.session_file, pane: launch.pane, workspace: launch.workspace };
   }
   /** Launch requests the desk left behind. The desk cannot start a mission: it
    *  writes one file per handle, this session claims it, and start() stays the

@@ -198,55 +198,52 @@ test("failed checks retain ownership and successful correction settles it",needs
   const r=await f.bridge.call(["show",f.handle]);assert.equal(r.state.attempts[0].status,"succeeded");assert.equal(r.state.status,"ready");
 });
 
-test("mission launch registers a Herdr worktree and adopts its workspace",needsCLI,async t=>{
-  const f=await fixture(t);const requests=[];
-  globalThis.__pi_interactive_subagents={executeSubagent:async(p)=>{requests.push(p);return {details:{status:"started",sessionFile:f.file}}}};
-  try {
-    const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
-    assert.equal(requests[0].cwd,f.cwd);assert.equal(requests[0].agent,"mission-worker");
-    assert.equal(requests[0].missionContext.vault,f.vault);assert.equal(requests[0].missionContext.binary,bin);
-    assert.equal(JSON.stringify(requests[0]).includes("unrelated-parent-token"),false);
-    // The mission branch is mission/<slug>, and Herdr owns that checkout as its
-    // own linked worktree workspace, anchored on the primary checkout.
-    const runtime=(await f.bridge.call(["show",f.handle])).state.runtime;
-    assert.equal(runtime.branch,"mission/session-progress");
-    assert.deepEqual(f.worktrees[0].slice(0,3),["worktree","open","--cwd"]);
-    assert.equal(f.worktrees[0][3],f.repo);assert.equal(f.worktrees[0][f.worktrees[0].indexOf("--path")+1],f.cwd);
-    assert.ok(f.worktrees[0].includes("--no-focus"));
-    // A fresh worktree workspace hosts the worker in its first tab — no extra tab.
-    assert.equal(f.tabs.length,0);assert.equal(requests[0].pane,"w-mission:p1");assert.equal(r.workspace,"w-mission");
-    // The mission session is accepted as a pane of that worktree workspace, and
-    // still refused when its cwd is not the mission checkout.
-    f.paneWorkspace="w-mission";
-    assert.deepEqual(await f.bridge.assertSurface(f.ctx),{workspace:"w-mission",pane:f.env.HERDR_PANE_ID});
-    await assert.rejects(f.bridge.assertSurface({...f.ctx,cwd:f.repo}),/mission worktree/);
-    f.paneWorkspace="repo";
-    const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,false);assert.equal(requests.length,1);
-  } finally {delete globalThis.__pi_interactive_subagents}
+/** Stand in for the CLI launch port, so a test can watch delegation and its
+ *  result without a Herdr server. Only the reservation call is intercepted;
+ *  receipts and every other command still reach the real CLI. */
+function stubLaunchPort(bridge, reply) {
+  const call = bridge.call.bind(bridge);
+  const calls = [];
+  bridge.call = async (args, token) => {
+    if (args[0] === "launch" && !args.includes("--session-file")) {
+      calls.push(args);
+      return reply(calls.length);
+    }
+    return call(args, token);
+  };
+  return calls;
+}
+
+test("a launch delegates every host action to the CLI launch port", needsCLI, async t => {
+  const f=await fixture(t);
+  const port=[
+    {acquired:true,target:"herdr",runtime:{launch_id:"launch-cli",cwd:f.cwd},
+      launch:{target:"herdr",workspace:"w-mission",pane:"w-mission:p1",session_file:f.file}},
+    {acquired:false,target:"herdr",runtime:{launch_id:"launch-cli",cwd:f.cwd,session_file:f.file}},
+  ];
+  const calls=stubLaunchPort(f.bridge,n=>port[Math.min(n-1,port.length-1)]);
+  const r=await f.bridge.start(context(f.repo,f.file),f.handle);
+  // One reservation call, with the adapter named: no worktree, tab, or spawn
+  // code runs in the extension any more.
+  assert.deepEqual(calls,[["launch",f.handle,"--target","herdr"]]);
+  assert.equal(r.launched,true);assert.equal(r.workspace,"w-mission");
+  assert.equal(r.pane,"w-mission:p1");assert.equal(r.session_file,f.file);
+  assert.equal(r.runtime.launch_id,"launch-cli");
+  // The port keeps the worktree and branch; the extension only reads them back.
+  const runtime=(await f.bridge.call(["show",f.handle])).state.runtime;
+  assert.equal(runtime.branch,"mission/session-progress");
+  // A second press asks the port again, which acquires nothing.
+  const again=await f.bridge.start(context(f.repo,f.file),f.handle);
+  assert.equal(again.launched,false);assert.equal(calls.length,2);
 });
 
-test("an already open mission workspace gets its own launch tab",needsCLI,async t=>{
-  const f=await fixture(t);const requests=[];
-  // The human already opened the mission worktree as a workspace: relanding on
-  // its parked first tab could take over that pane, so a launch takes a new tab.
-  f.workspaces.push({workspace_id:"w-open",worktree:{repo_key:await f.bridge.common(f.repo),is_linked_worktree:true,checkout_path:f.cwd}});
-  globalThis.__pi_interactive_subagents={executeSubagent:async(p)=>{requests.push(p);return {details:{status:"started",sessionFile:f.file}}}};
-  try {
-    const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
-    assert.equal(f.worktrees.length,1);assert.equal(requests[0].pane,"w-open:p2");
-    assert.deepEqual(f.tabs[0].slice(0,4),["tab","create","--workspace","w-open"]);
-    assert.equal(f.tabs[0][f.tabs[0].indexOf("--cwd")+1],f.cwd);
-    assert.ok(f.tabs[0].includes("--no-focus"));
-  } finally {delete globalThis.__pi_interactive_subagents}
-});
-
-test("ambiguous launch failure is durable and never retried as a new worker",needsCLI,async t=>{
-  const f=await fixture(t);let launches=0;
-  globalThis.__pi_interactive_subagents={executeSubagent:async()=>{launches++;throw Error("Acknowledgement lost")}};
-  try {
-    await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/Acknowledgement lost/);
-    const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,false);assert.equal(launches,1);
-  } finally {delete globalThis.__pi_interactive_subagents}
+test("an unacknowledged launch failure is durable and never retried as a new worker",needsCLI,async t=>{
+  const f=await fixture(t);
+  const calls=stubLaunchPort(f.bridge,n=>{if(n===1)throw Error("Acknowledgement lost");return {acquired:false,target:"herdr",runtime:{}};});
+  await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/Acknowledgement lost/);
+  // The failed reservation is retained, so the retry finds it and starts nothing.
+  const again=await f.bridge.start(context(f.repo,f.file),f.handle);
+  assert.equal(again.launched,false);assert.equal(calls.length,2);
 });
 
 /** The desk writes this file: one pending request per mission handle. */
@@ -385,22 +382,21 @@ test("a worker never launches another mission", async t => {
   assert.equal(f.bridge.pendingLaunches().length,1);
 });
 
-test("the desk's request starts the mission through the start path", needsCLI, async t => {
-  const f=await fixture(t);const requests=[];
-  globalThis.__pi_interactive_subagents={executeSubagent:async(p)=>{requests.push(p);return {details:{status:"started",sessionFile:f.file}}}};
-  try {
-    const file=launchRequest(f.cache,f.handle,"dotfiles");
-    assert.deepEqual(await f.bridge.sessionRepo(context(f.repo,f.file)),"dotfiles");
-    await f.bridge.sweepLaunches(context(f.repo,f.file));
-    assert.equal(requests.length,1);assert.equal(requests[0].agent,"mission-worker");
-    const receipt=JSON.parse(readFileSync(file,"utf8"));
-    assert.equal(receipt.state,"started");
-    const runtime=(await f.bridge.call(["show",f.handle])).state.runtime;
-    assert.equal(receipt.launch_id,runtime.launch_id);
-    // The same press, twice: the claim is gone, so no second worker appears.
-    await f.bridge.sweepLaunches(context(f.repo,f.file));
-    assert.equal(requests.length,1);
-  } finally {delete globalThis.__pi_interactive_subagents}
+test("the desk's request starts the mission through the launch port", needsCLI, async t => {
+  const f=await fixture(t);
+  const calls=stubLaunchPort(f.bridge,()=>({acquired:true,target:"herdr",runtime:{launch_id:"launch-cli"},
+    launch:{target:"herdr",workspace:"w-mission",pane:"w-mission:p1",session_file:f.file}}));
+  const file=launchRequest(f.cache,f.handle,"dotfiles");
+  assert.deepEqual(await f.bridge.sessionRepo(context(f.repo,f.file)),"dotfiles");
+  await f.bridge.sweepLaunches(context(f.repo,f.file));
+  // One press asks the one launch port once.
+  assert.deepEqual(calls,[["launch",f.handle,"--target","herdr"]]);
+  const receipt=JSON.parse(readFileSync(file,"utf8"));
+  assert.equal(receipt.state,"started");assert.equal(receipt.launch_id,"launch-cli");
+  assert.equal(receipt.workspace,"w-mission");assert.equal(receipt.session_file,f.file);
+  // The same press, twice: the claim is gone, so no second worker appears.
+  await f.bridge.sweepLaunches(context(f.repo,f.file));
+  assert.equal(calls.length,1);
 });
 
 /** Load the missions extension factory through jiti, exactly as pi does. */

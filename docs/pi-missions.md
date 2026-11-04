@@ -89,10 +89,12 @@ Attachment to main, a second mission in the same worktree, or a different owning
 session is refused. Herdr remains responsible for preventing duplicate live
 attachments to the same Pi session file.
 
-`start` persists a launch intent before registering the Herdr worktree and
-opening the worker tab. The mission-worker first
-attaches through the tool using that intent. A launch receipt stores its session
-file. Repeating start returns the recorded runtime instead of spawning again.
+`start` calls one launch port: `mission launch REPO/SLUG --target herdr|local`.
+The command persists a launch intent, prepares the mission worktree, and calls one
+adapter that opens the host surface and starts exactly one agent. The
+mission-worker first attaches through the tool using that intent. A launch receipt
+stores the session file the adapter reports. Repeating start returns the recorded
+runtime instead of spawning again.
 An uncertain launch remains reserved for inspection; it is never timed out into a
 second writer automatically. Runtime session identity remains bound after an
 attempt completes. Use `next` explicitly to claim the next eligible step.
@@ -111,9 +113,20 @@ with `state: pending`, `handle`, `repo`, and its owner seat.
 
 The desk has no launch path of its own. A Pi session in that repository claims the
 request and calls the same `start` action the `mission` tool uses, so the worktree,
-the launch reservation, and the worker tab come from one code path. That action
-opens the mission worktree as the repository's Herdr workspace, creates its tab,
-and spawns the `mission-worker` agent there.
+the launch reservation, and the worker tab come from one code path.
+
+Both callers end in the same Go port. `mission launch REPO/SLUG` keeps its
+reservation meaning: it returns `acquired` once and a second call acquires
+nothing. Behind it sit two adapters, selected by `--target`:
+
+- `herdr` (the default inside a Herdr pane) opens the mission worktree as the
+  repository's Herdr workspace, creates a labelled tab when that workspace is
+  already open, starts one pi agent in the pane, and prompts it to attach.
+- `local` (the default outside Herdr) starts one pi process in the pane the
+  command runs in.
+
+The port records the agent session file as the receipt, and a runtime bound to
+another machine is refused with `wrong_machine` before any host action runs.
 
 Each request carries the seat that asked: `owner_workspace` (`HERDR_WORKSPACE_ID`),
 `owner_label` (`HERDR_PANE_ID`), and `owner_common` (the absolute git common dir).

@@ -33,7 +33,8 @@ const help = `mission — work that survives the agent
       --workspace ID --pane ID             Private token in MISSION_TOKEN
   mission progress REPO/SLUG --status working --summary TEXT --event-id ID
       [--next TEXT] [--blocker TEXT] [--evidence artifacts/001/result.md]
-  mission launch REPO/SLUG                 Reserve one launch; adapters only
+  mission launch REPO/SLUG [--target herdr|local]
+                                           Reserve one launch and start one agent
   mission settle REPO/SLUG --session-id ID  Settle a reported Pi attempt after idle
   mission hook agent-start --session-id ID --event-id ID
   mission finish [REPO/SLUG] | fail [REPO/SLUG] --note TEXT
@@ -67,7 +68,7 @@ func parseArgs(argv []string) (args, error) {
 	for _, k := range []string{"instructions", "acceptance", "checks", "output"} {
 		values[k] = true
 	}
-	for _, k := range []string{"base", "root", "status", "summary", "next", "blocker", "evidence", "launch-id"} {
+	for _, k := range []string{"base", "root", "status", "summary", "next", "blocker", "evidence", "launch-id", "target"} {
 		values[k] = true
 	}
 	for i := 0; i < len(argv); i++ {
