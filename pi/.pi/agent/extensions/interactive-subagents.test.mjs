@@ -2835,6 +2835,7 @@ case "$1" in
 	new) printf '%s\\n' '{"session_id":"session:new","initial_windows":[{"block_ids":["block:new"]}]}' ;;
 	session) printf '%s\\n' '{"windows":[{"layers":[{"blocks":[{"block_id":"block:root"}]}]}]}' ;;
 	block) printf '%s\\n' "$REX_TEST_PROCESS" ;;
+	window) printf '%s\\n' "$REX_TEST_WINDOW" ;;
 	*) printf '%s\\n' '{}' ;;
 esac
 `,
@@ -2893,6 +2894,14 @@ esac
 			"cross-session block calls carry -s",
 		);
 
+		// A subagent tab keeps pi's glyph, because a named window shows its
+		// label instead of the terminal title.
+		process.env.REX_TEST_WINDOW = '{"block_ids":["block:newtab"]}';
+		assert.equal(rex2.createSurface("probe"), "block:newtab");
+		const windowCall = rexCallsFor().find((call) => call.startsWith("window new"));
+		assert.ok(windowCall, "`rex window new` is called for the tab");
+		assert.ok(windowCall.includes("π probe"), `the tab label keeps the π glyph: ${windowCall}`);
+
 		// The parent's own block is never adoptable.
 		assert.throws(
 			() => rex2.assertAdoptablePane("block:caller", "/tmp/other"),
@@ -2909,7 +2918,7 @@ esac
 			if (value === undefined) delete process.env[key];
 			else process.env[key] = value;
 		}
-		for (const key of ["REX_TEST_CAPTURE", "REX_TEST_LIST", "REX_TEST_PROCESS"]) {
+		for (const key of ["REX_TEST_CAPTURE", "REX_TEST_LIST", "REX_TEST_PROCESS", "REX_TEST_WINDOW"]) {
 			delete process.env[key];
 		}
 		rmSync(rexRoot, { recursive: true, force: true });

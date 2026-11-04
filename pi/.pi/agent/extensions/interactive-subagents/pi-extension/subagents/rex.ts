@@ -217,12 +217,14 @@ export function createSession(
  * Create a new tab for a subagent, anchored to nothing: Rex tabs are
  * session-scoped, so a new tab follows the agent the way a Herdr tab does.
  * The tab is created unfocused so the captain keeps their current view.
+ * The π prefix keeps pi's glyph in the Rex tab header, because a named
+ * window shows its label instead of the terminal title.
  *
  * Returns the new tab's root block id (e.g. `block:01a1...`).
  */
 export function createSurface(name: string): string {
   requireRex();
-  const label = sanitizeLabel(name);
+  const label = `π ${sanitizeLabel(name)}`;
   const out = rexSync([
     "window",
     "new",
