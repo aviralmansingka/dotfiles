@@ -1708,6 +1708,9 @@ async function launchSubagentOnSurface(
   const effectiveSkills = agentDefs?.skills;
   const effectiveThinking = agentDefs?.thinking;
   const effectiveInteractive = resolveEffectiveInteractive(params, agentDefs);
+  // A durable run (agent frontmatter `auto-exit: false`) owns its tab, its
+  // pane, and the CLI attempt it picks up: it gets no wall-clock deadline.
+  const durable = (agentDefs?.autoExit ?? false) === false;
 
   const sessionFile = ctx.sessionManager.getSessionFile();
   if (!sessionFile) throw new Error("No session file");
@@ -1883,9 +1886,6 @@ async function launchSubagentOnSurface(
   // Snapshot the fully-resolved sandbox beside the session file so a later
   // `subagent_message({ name })` resume can replay the exact same model,
   // identity, cwd, spawn allowlist, and callable-tool restriction.
-  // A durable run (agent frontmatter `auto-exit: false`) owns its tab, its
-  // pane, and the CLI attempt it picks up: it gets no wall-clock deadline.
-  const durable = (agentDefs?.autoExit ?? false) === false;
   const loadout: SubagentLoadout = {
     agent: params.agent ?? null,
     toolAllowlist,
@@ -2392,7 +2392,12 @@ async function watchSubagent(
         sessionFile,
         transcriptBaseline: running.transcriptBaseline,
         sentinelFile: running.sentinelFile,
-        ...(running.durable ? { stallMs: getSubagentStallMs() } : {}),
+        // A durable run's only bound is inactivity: disarm the wall clock by
+        // passing Infinity (pollForExit re-evaluates its deadline every tick,
+        // so a finite bound left in place WOULD still fire mid-run).
+        ...(running.durable
+          ? { maxWaitMs: Number.POSITIVE_INFINITY, stallMs: getSubagentStallMs() }
+          : {}),
         onTick() {
           observeRunningSubagent(running);
           deliverPendingQuestion(running);

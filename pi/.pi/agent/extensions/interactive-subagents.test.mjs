@@ -1259,6 +1259,40 @@ assert.equal(
 		assert.equal(hooks.shouldCloseSubagentTab(false, { exitCode: 0, killed: true }), false);
 		assert.equal(hooks.shouldCloseSubagentTab(false, { exitCode: 0, errorMessage: "overload" }), false);
 
+		// ── Durable runs: a stall keeps the tab AND is never rendered as an ──
+		// ── error or a timeout (nothing is settled; the CLI attempt the ────
+		// ── pane owns survives). ──────────────────────────────────────────
+		assert.equal(
+			hooks.shouldCloseSubagentTab(false, { exitCode: 0, reason: "stalled" }),
+			false,
+			"a stalled durable run keeps its tab even at a clean exit code",
+		);
+		assert.equal(
+			hooks.shouldCloseSubagentTab(true, { exitCode: 0, reason: "stalled" }),
+			false,
+			"a stalled interactive run keeps its tab too",
+		);
+		assert.equal(
+			hooks.shouldCloseSubagentTab(false, { exitCode: null, reason: "timeout" }),
+			true,
+			"an auto-exit timeout still closes the whole tab",
+		);
+		{
+			const stalledPresentation = hooks.resolveResultPresentation(
+				{ exitCode: 1, elapsed: 1200, summary: "Halfway: 2 of 5 files done.", reason: "stalled" },
+				"mission-worker",
+			);
+			assert.match(stalledPresentation, /stalled/i, "the renderer says stalled");
+			assert.match(stalledPresentation, /Halfway: 2 of 5 files done\./, "the last harvest rides along");
+			assert.match(stalledPresentation, /mission reclaim/, "the release path stays the human's call");
+			assert.doesNotMatch(stalledPresentation, /timed out/i, "a stall is not a timeout");
+			assert.doesNotMatch(
+				stalledPresentation,
+				/failed \(exit code|exited with code/i,
+				"a stall is not an error result",
+			);
+		}
+
 		// ── C30: an agent profile naming a nonexistent tool fails LOUDLY at ──
 		// ── spawn, before any surface exists — never a silent --tools ───────
 		// ── pass-through. A fixture profile in the configured agent dir ────

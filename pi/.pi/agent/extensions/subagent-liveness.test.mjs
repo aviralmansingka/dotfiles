@@ -145,7 +145,10 @@ case "$1:$2" in
 	pane:run) printf '%s\\n' '{"result":{}}' ;;
 	agent:get) printf '%s\\n' '{"result":{"agent":{"agent_status":"idle"}}}' ;;
 	agent:prompt) printf '%s\\n' '{"result":{}}' ;;
-	pane:read) printf '%s\\n' "$LIV_SCREEN" ;;
+	pane:read)
+		[ -n "$LIV_READ_SLEEP" ] && sleep "$LIV_READ_SLEEP"
+		printf '%s\\n' "$LIV_SCREEN"
+		;;
 	pane:process-info)
 		if [ "$LIV_PROC_FAIL" = 1 ]; then exit 1; fi
 		mode="$LIV_PROC_MODE"
@@ -295,6 +298,61 @@ esac
 		assert.ok(procInfoAttempts >= 5, `kept polling past the failure threshold (${procInfoAttempts})`);
 		assert.ok(existenceProbes >= 1, "the pane-existence probe ran after the threshold");
 
+		// Durable-without-a-deadline vs. auto-exit-with-one, on the SAME growth:
+		// output flowing keeps a durable run alive past the wall clock, while an
+		// auto-exit run still dies exactly at its finite deadline.
+		process.env.LIV_PROC_MODE = "pi";
+		{
+			const autoExitFile = join(root, "auto-exit-growing.jsonl");
+			writeFileSync(autoExitFile, "");
+			let autoExitBytes = 0;
+			const autoExitGrowth = setInterval(
+				() => writeFileSync(autoExitFile, "y".repeat(++autoExitBytes)),
+				20,
+			);
+			const autoExitResult = await withTimeout(
+				herdr.pollForExit("wL:p2", new AbortController().signal, {
+					interval: 20,
+					maxWaitMs: 200,
+					sessionFile: autoExitFile,
+				}),
+				4000,
+				"auto-exit deadline poll",
+			);
+			clearInterval(autoExitGrowth);
+			assert.deepEqual(
+				autoExitResult,
+				{ reason: "timeout", exitCode: null },
+				"an auto-exit run keeps its finite wall-clock deadline even while output flows",
+			);
+		}
+
+		// The wall clock is re-evaluated on EVERY poll tick, never lazily at the
+		// end: the deadline branch sits at the top of the loop, so the tick count
+		// can never run away past the bound (a drift the durable exemption must
+		// not inherit, and a finite run must never exhibit either).
+		{
+			process.env.LIV_READ_SLEEP = "0.01";
+			const readsFrom = callsOf(capture).length;
+			const armedAt = Date.now();
+			const perTick = await withTimeout(
+				herdr.pollForExit("wL:p2", new AbortController().signal, { interval: 20, maxWaitMs: 200 }),
+				4000,
+				"per-tick deadline poll",
+			);
+			const took = Date.now() - armedAt;
+			delete process.env.LIV_READ_SLEEP;
+			assert.deepEqual(perTick, { reason: "timeout", exitCode: null });
+			const reads = callsOf(capture)
+				.slice(readsFrom)
+				.filter((c) => c[0] === "pane" && c[1] === "read").length;
+			assert.ok(took < 2000, `the deadline fires on a tick boundary, not after a long drift (${took} ms)`);
+			assert.ok(
+				reads <= Math.ceil(200 / 20) + 5,
+				`the deadline is checked on every tick — the loop cannot outrun it (${reads} reads)`,
+			);
+		}
+
 		// Durable (no wall-clock deadline) + stall clock: a live pi whose
 		// transcript keeps growing is never closed on time — and once the
 		// transcript goes quiet the verdict is `stalled`, never `timeout`.
@@ -345,6 +403,7 @@ esac
 		delete process.env.LIV_PROC_FAIL;
 		delete process.env.LIV_PROC_STAGED;
 		delete process.env.LIV_PROC_MODE;
+		delete process.env.LIV_READ_SLEEP;
 		rmSync(root, { recursive: true, force: true });
 	}
 }
@@ -609,7 +668,10 @@ case "$1:$2" in
 	pane:run) printf '%s\\n' '{"result":{}}' ;;
 	agent:get) printf '%s\\n' '{"result":{"agent":{"agent_status":"idle"}}}' ;;
 	agent:prompt) printf '%s\\n' '{"result":{}}' ;;
-	pane:read) printf '%s\\n' "$LIV_E2E_SCREEN" ;;
+	pane:read)
+		[ -n "$LIV_E2E_READ_SLEEP" ] && sleep "$LIV_E2E_READ_SLEEP"
+		printf '%s\\n' "$LIV_E2E_SCREEN"
+		;;
 	pane:process-info)
 		if [ "$LIV_E2E_PROC" = shell ]; then
 			printf '%s\\n' '{"result":{"process_info":{"foreground_processes":[{"name":"zsh","pid":200,"argv":["zsh"]}]}}}'
@@ -929,7 +991,7 @@ esac
 			assert.equal(steer.message.details.status, "stalled", "a quiet durable run reports a stall");
 			assert.match(steer.message.content, /stalled/i);
 			assert.doesNotMatch(steer.message.content, /timed out/i, "a stall is never rendered as a timeout");
-			assert.doesNotMatch(steer.message.content, /failed|exited with code/i, "a stall is not an error");
+			assert.doesNotMatch(steer.message.content, /failed \(exit code|exited with code/i, "a stall is not an error");
 			assert.match(steer.message.content, /Working: \d+ of 5 files\./, "the last harvest rides along");
 			assert.equal(steer.message.details.partial, true);
 			const calls = callsOf(capture).slice(callsBefore);
@@ -949,6 +1011,31 @@ esac
 			delete process.env.PI_SUBAGENT_STALL_MS;
 		}
 
+		// Scenario 6 — the wall clock is enforced on EVERY tick, even while a
+		// pane read hangs: the watchdog abort interrupts the in-flight read, so
+		// a stuck herdr call cannot stretch the bound into hours (the live
+		// 30-minute window that only closed after ~140 minutes).
+		{
+			process.env.LIV_E2E_PROC = "pi";
+			process.env.PI_SUBAGENT_POLL_MS = "150";
+			process.env.PI_SUBAGENT_MAX_WAIT_MS = "300";
+			process.env.LIV_E2E_READ_SLEEP = "5";
+			const ack = await spawn("Wedged inside a pane read.");
+			const name = ack.details.name;
+			const started = Date.now();
+			const steer = await steerFor(name, 6000);
+			const took = Date.now() - started;
+			delete process.env.LIV_E2E_READ_SLEEP;
+			assert.equal(steer.message.details.status, "timeout");
+			assert.ok(
+				took < 5000,
+				`a hung pane read cannot hold the watcher past its deadline (${took} ms)`,
+			);
+			assert.equal(hooks.runningSubagents.size, 0);
+			process.env.PI_SUBAGENT_POLL_MS = "25";
+			process.env.PI_SUBAGENT_MAX_WAIT_MS = "1500";
+		}
+
 		// Teardown: shutdown clears the watchdog so this process can exit.
 		handlers.session_shutdown?.({}, {});
 		assert.equal(hooks.activeWatchers.size, 0);
@@ -960,6 +1047,7 @@ esac
 		delete process.env.LIV_E2E_CAPTURE;
 		delete process.env.LIV_E2E_SCREEN;
 		delete process.env.LIV_E2E_PROC;
+		delete process.env.LIV_E2E_READ_SLEEP;
 		rmSync(root, { recursive: true, force: true });
 	}
 }

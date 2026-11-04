@@ -785,10 +785,13 @@ export async function pollForExit(
         } catch {}
       }
       try {
-        const screen = await readScreenAsync(surface, 5);
+        const screen = await readScreenAsync(surface, 5, signal);
         const match = screen.match(/__SUBAGENT_DONE_(\d+)__/);
         if (match) return { reason: "sentinel", exitCode: parseInt(match[1], 10) };
       } catch {
+        // An abort mid-read is the deadline firing (the watchdog sweep), not a
+        // dead pane: a stuck read must never stretch the bound past its tick.
+        if (signal.aborted) return timeoutResult();
         return paneKilledResult();
       }
       return timeoutResult();
@@ -816,12 +819,14 @@ export async function pollForExit(
 
     // Slow path: read terminal screen for sentinel (crash detection)
     try {
-      const screen = await readScreenAsync(surface, 5);
+      const screen = await readScreenAsync(surface, 5, signal);
       const match = screen.match(/__SUBAGENT_DONE_(\d+)__/);
       if (match) {
         return { reason: "sentinel", exitCode: parseInt(match[1], 10) };
       }
     } catch {
+      // An abort during the read is the end of the wait, never a verdict.
+      if (signal.aborted) throw new Error("Aborted while waiting for subagent to finish");
       // Surface was destroyed (manual pane close/kill) unless a late .exit
       // file explains it. Under pane churn a live headless session also
       // lands here — the transcript decides, not the lost surface.
@@ -839,6 +844,8 @@ export async function pollForExit(
     // automatic.
     const processes = await paneForegroundProcessesAsync(surface, signal);
     if (processes === null) {
+      // An aborted read (deadline sweep) is not a read failure.
+      if (signal.aborted) throw new Error("Aborted while waiting for subagent to finish");
       // Read failure (transient server error, or a pane that no longer
       // answers). After the threshold, probe pane existence: gone → the
       // killed path; alive → keep waiting, the deadline still bounds it.
