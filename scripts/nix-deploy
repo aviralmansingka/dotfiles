@@ -121,7 +121,7 @@ if [ -z "$HOST" ]; then
 fi
 
 case "$PROFILE:$HOST" in
-  remote:homelab | remote:devbox | macbook:mac) ;;
+  remote:homelab | remote:devbox | remote:probe | macbook:mac) ;;
   *)
     echo "nix-deploy: profile '$PROFILE' does not apply to target '$HOST'" >&2
     exit 3
