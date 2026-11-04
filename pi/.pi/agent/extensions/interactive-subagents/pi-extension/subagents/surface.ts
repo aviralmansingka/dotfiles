@@ -15,6 +15,7 @@
  * symbols match ./tmux.ts; readiness and prompt submission are Herdr-only.
  */
 import * as tmux from "./tmux.ts";
+import type { SurfaceOptions } from "./tmux.ts";
 import * as herdr from "./herdr.ts";
 import * as rex from "./rex.ts";
 
@@ -84,8 +85,9 @@ export function createWorktreeSession(
 export async function withNewSurface<T>(
   name: string,
   use: (surface: string) => Promise<T>,
+  options?: SurfaceOptions,
 ): Promise<T> {
-  const created = createSurface(name);
+  const created = createSurface(name, options);
   try {
     return await use(created);
   } catch (error) {

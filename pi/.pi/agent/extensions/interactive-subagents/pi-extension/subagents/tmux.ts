@@ -116,14 +116,26 @@ function rebalanceSurfaces(hintPane?: string): void {
 // ── Surface primitives ──
 
 /**
+ * Where a new child surface should live. Rex resolves both per call; tmux and
+ * Herdr have no session concept, so they accept the same shape and ignore it.
+ * Absent fields fall back to the environment (PI_SUBAGENT_SESSION /
+ * PI_SUBAGENT_CWD), which is how a captain fans work out without arguments.
+ */
+export interface SurfaceOptions {
+  session?: string;
+  cwd?: string;
+}
+
+/**
  * Create a new pane for a subagent: a right split off the parent pi's pane,
  * so new panes follow the agent rather than the user's focus.
  * See https://github.com/HazAT/pi-interactive-subagents/issues/12
  *
  * Returns the new pane id (e.g. `%12`).
  */
-export function createSurface(name: string): string {
+export function createSurface(name: string, options?: SurfaceOptions): string {
   void name; // tmux panes are not named; the pi process inside shows its own title.
+  void options; // A tmux pane inherits the pane's cwd and has no session to join.
   return createSurfaceSplit(name, "right", process.env.TMUX_PANE);
 }
 
@@ -135,8 +147,10 @@ export function createSurfaceSplit(
   name: string,
   direction: "left" | "right" | "up" | "down",
   fromSurface?: string,
+  options?: SurfaceOptions,
 ): string {
   void name;
+  void options; // Same as createSurface: a split stays in the anchor's pane group.
   requireTmux();
 
   const args = ["split-window", "-d"];

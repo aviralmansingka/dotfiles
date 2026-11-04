@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync, renameSync, existsSync, realpathSync, readdirSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync, renameSync, existsSync, realpathSync, readdirSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -30,6 +30,11 @@ export function workerAgentName(handle, tag = "") {
 /** How long a launch waits for its new agent to reach the prompt. */
 export const AGENT_READY_TIMEOUT_MS = 60000;
 
+/** A tab Herdr just created may still be starting its shell. The launch retries
+ *  the `agent_pane_busy` refusal this long before it gives up. */
+export const AGENT_PANE_READY_RETRIES = 20;
+export const AGENT_PANE_READY_DELAY_MS = 250;
+
 /** The code and message of a failed Herdr call, or the raw text. */
 export function herdrError(message) {
   const text = String(message ?? "");
@@ -48,6 +53,60 @@ export function agentCollisionReport(name, holder, action) {
   const cwd = holder?.foreground_cwd || holder?.cwd || "unknown";
   return `Herdr agent name "${name}" is held by pane ${pane} (status ${status}, cwd ${cwd}). ${action}`;
 }
+/** The launcher configuration a driver pane must inherit: where Pi finds the
+ *  extension, which vault and CLI it serves, and its private state directory.
+ *  A checkout that is not installed (a preview or a mission worktree) sends its
+ *  own agent dir this way. The attempt token never travels this way. */
+export function driverEnv(env = process.env) {
+  return ["PI_CODING_AGENT_DIR", "MISSION_VAULT", "MISSION_BIN", "MISSION_STATE_DIR"]
+    .filter(key => typeof env[key] === "string" && env[key] !== "" && !env[key].includes("\0"))
+    .map(key => [key, env[key]]);
+}
+
+/** The launch prompt of a mission driver. The launched agent holds the claim on
+ *  one work request and steers it; it performs no step work itself. One work
+ *  subagent executes each step, one judge subagent decides it, and the driver
+ *  stays the single place the human visits for status and admin prompts. */
+export function driverTask(handle, launchID) {
+  return [
+    `You are the driver for mission ${handle}, not its worker. You hold the claim on this work request.`,
+    `Attach first: call mission with action=attach, handle=${handle}, launch_id=${launchID}. Its returned step brief and the missions skill describe the work, but you send that work out.`,
+    "Duty 1 — hold the claim: this session owns the attempt and keeps the mission tool. Report structured progress, and call mission action=verify and mission action=finish only after a judge records a pass.",
+    "Duty 2 — subagents do all step work: you never edit repository code and you never write a step artifact. For each step, spawn one work subagent (agent=worker) with the step brief, its artifact path, and the acceptance criteria, then wait for its result.",
+    "Duty 3 — subagents judge: after the work subagent reports, call mission action=judge and spawn one judge subagent (agent=worker, name=judge-<step>) with the returned task verbatim. Never judge your own work and never reuse the work subagent's session. The judge reads the artifact, runs the CLI checks itself through mission verify, and records its verdict with reasons as progress.",
+    "Touchpoint — you answer the human's status and admin prompts in this session. Status: call mission action=status and report what is running, what passed, and what is next, plus any review or blocker, in plain words. Admin: run the change through an existing command — mission action=edit (with the revision you reported), mission action=retry, mission action=fail, or a checkpoint decision the human explicitly gives — then confirm the result. A stale edit is refused, never forced. Stop at human checkpoints and never approve one yourself.",
+    "Keep the mission worktree as this session's cwd and keep the mission tool available for later steps. Do not launch another mission owner.",
+  ].join("\n");
+}
+
+/** One judge subagent's task. The judge works on the artifact, not on code: it
+ *  reads the result, runs the CLI check run itself, and records the verdict with
+ *  reasons in the attempt's existing progress fields. The attempt token reaches
+ *  the judge only as the private capability file path `capability`, never as a
+ *  credential in this prompt. */
+export function judgeTask({ handle, attempt, step, artifact, evidence, acceptance, checks, capability, vault, binary = "mission", cwd }) {
+  const cli = `"${binary}" --json --vault "${vault}"`;
+  const token = `--token "$(cat '${capability}')"`;
+  return [
+    `You are the judge for step ${step} of mission ${handle}. You are independent of the work subagent that produced the artifact. You edit no file and you write no step artifact.`,
+    "",
+    `Artifact: ${artifact}`,
+    `Acceptance criteria: ${acceptance}`,
+    `Check list: ${checks.join(", ")}`,
+    "",
+    "1. Read the artifact in full. Judge it against the acceptance criteria, not against the subagent's summary.",
+    "2. Run the CLI checks yourself:",
+    `   ${cli} verify ${handle} --attempt ${attempt} ${token}`,
+    "3. Read the verification it returns: every check verdict, its summary, and the evidence paths under the attempt's artifacts directory.",
+    "4. Record your verdict with reasons as the attempt's progress, citing the artifact and the check logs you read:",
+    `   ${cli} progress ${handle} --attempt ${attempt} ${token} --event-id judge-${attempt} --status ready --summary "verdict: pass — <reasons>" --evidence ${evidence}`,
+    "   A failed verdict records --status blocked --blocker \"<what must change>\" instead of --status ready. A passing verdict must still name what you checked.",
+    "5. Return the same verdict as your final message: the decision, the reasons, and the check evidence you relied on. Report no progress on the step's behalf otherwise, do not call finish, and change no repository file.",
+    "",
+    `Work in ${cwd}.`,
+  ].join("\n");
+}
+
 /** Every Herdr workspace that belongs to this repository lineage: the primary
  * checkout's workspace plus one linked-worktree workspace per worktree Herdr
  * has open (missions register their own mission/<slug> checkout). */
@@ -96,6 +155,38 @@ export const CLOSED_MISSION_STATUSES = new Set(["waiting", "review", "done", "fa
 
 /** Step statuses the CLI still advances to (nextStep in go/mission). */
 const CONTINUABLE_STEP_STATUSES = new Set(["pending", "needs_changes"]);
+
+/** The plain-language status a driver speaks to the human. It reads only the
+ *  ledger's existing fields, so the answer cannot drift from `mission show`:
+ *  what is running, what passed, what is next, and the review or blocker that
+ *  needs the human. */
+export function driverStatus(record) {
+  const state = record?.state;
+  if (!state) return ["No mission record to report."];
+  const steps = record.mission?.steps || [];
+  const title = id => steps.find(s => s.id === id)?.title || id;
+  const status = id => state.steps?.[id]?.status || "pending";
+  const lines = [`Mission ${record.handle} is ${state.status}.`];
+  const attempts = state.attempts || [];
+  const running = attempts.find(a => a.id === state.active_attempt);
+  const report = running?.progress?.at(-1);
+  if (running) {
+    lines.push(`Running step ${running.step} (${title(running.step)}) under attempt ${running.id}${report ? `; last report: ${report.summary}` : ""}.`);
+  } else if (state.current_step && status(state.current_step) !== "passed") {
+    lines.push(`Current step ${state.current_step} (${title(state.current_step)}) is ${status(state.current_step)}.`);
+  }
+  const passed = steps.filter(s => status(s.id) === "passed").map(s => `${s.id} (${s.title})`);
+  lines.push(passed.length ? `Passed: ${passed.join(", ")}.` : "Nothing has passed yet.");
+  if (state.pending_checkpoint) {
+    const def = (record.mission?.checkpoints || []).find(c => c.id === state.pending_checkpoint);
+    lines.push(`Review ${state.pending_checkpoint} waits${def?.after ? ` after ${def.after}` : ""}: ${def?.question || "decide the checkpoint"}`);
+  }
+  const next = steps.find(s => CONTINUABLE_STEP_STATUSES.has(status(s.id)));
+  lines.push(next ? `Next: ${next.id} (${next.title}).` : "Next: no step is left to run.");
+  const stalled = [...attempts].reverse().map(a => a.progress?.at(-1)).find(p => p?.blocker);
+  if (stalled) lines.push(`Blocker: ${stalled.blocker}`);
+  return lines;
+}
 
 /** The pending review of a record: the derived field when the CLI emits it,
  *  else the stored pending checkpoint. Null when no review waits. */
@@ -255,6 +346,28 @@ export class MissionBridge {
     const file = this.key(ctx), temp = file + "." + randomUUID();
     writeFileSync(temp, JSON.stringify(this.hint), { mode: 0o600 }); renameSync(temp, file);
   }
+  /** One judge subagent's one-shot capability: the directory holds this attempt's
+   *  token in a 0600 file, so the judge can run the CLI checks and record its
+   *  verdict while the credential never enters a prompt, a tool result, or a
+   *  child's environment. The driver hands over the path only. */
+  judgeDir(ctx) { return join(this.cacheDir, "judges", hash(this.vault + "\0" + ctx.sessionManager.getSessionId())); }
+  judgeCapability(ctx, attempt) {
+    const dir = this.judgeDir(ctx);
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    const file = join(dir, attempt + ".token");
+    writeFileSync(file, this.hint.token, { mode: 0o600 });
+    return file;
+  }
+  /** Drop the judge capabilities of one attempt, or every stale one at a session
+   *  start. A leftover file only outlives a crash; the next session clears it. */
+  releaseJudgeCapabilities(ctx, attempt) {
+    const dir = this.judgeDir(ctx);
+    if (!existsSync(dir)) return;
+    for (const name of readdirSync(dir)) {
+      if (attempt && name !== attempt + ".token") continue;
+      try { rmSync(join(dir, name), { force: true }); } catch { /* the next session start retries */ }
+    }
+  }
   /** One file, one write, one rename: a reader never sees a half-written
    *  request, and the desk and this extension can both read at any moment. */
   writeJSON(file, value) {
@@ -302,7 +415,20 @@ export class MissionBridge {
   /** Start the mission worker as a full Pi agent in the mission pane. The name
    *  comes from the mission. A name that another session holds takes a short
    *  handle hash once; the launch never renames another session's agent. */
+  /** Start the mission worker once its pane is a free shell. A tab that Herdr
+   *  just created can still be bringing its shell up, and `agent start` refuses
+   *  a pane that is not an available shell yet; that refusal is retried, not
+   *  fatal. Every other failure keeps its own handling. */
   async startWorker(handle, pane) {
+    for (let attempt = 0; ; attempt++) {
+      try { return await this.startWorkerOnce(handle, pane); }
+      catch (e) {
+        if (!String(e.message).includes("agent_pane_busy") || attempt >= AGENT_PANE_READY_RETRIES) throw e;
+        await new Promise(r => setTimeout(r, AGENT_PANE_READY_DELAY_MS));
+      }
+    }
+  }
+  async startWorkerOnce(handle, pane) {
     const name = workerAgentName(handle);
     try { await this.herdr(["agent", "start", name, "--kind", "pi", "--pane", pane]); return name; }
     catch (e) { if (!takenAgentName(e.message)) throw e; }
@@ -355,6 +481,9 @@ export class MissionBridge {
     this.hint = JSON.parse(readFileSync(file, "utf8"));
     if (this.hint.session !== ctx.sessionManager.getSessionId() || this.hint.vault !== this.vault)
       throw new Error("Mission credential cache identity mismatch");
+    // A judge capability belongs to one turn: at a session start every one of
+    // them is stale, and the token stays in this session's cache alone.
+    this.releaseJudgeCapabilities(ctx);
     await this.assertSurface(ctx);
     await this.flush(ctx);
     return this.current(ctx);
@@ -493,22 +622,30 @@ export class MissionBridge {
       const worktree = await this.herdr(["worktree", "open", "--cwd", checkout, "--path", cwd, "--no-focus"]);
       const workspace = worktree.workspace?.workspace_id;
       if (!workspace) throw new Error("Herdr did not return the mission worktree workspace; launch intent retained for inspection.");
-      // A fresh workspace's first tab hosts the worker. A workspace that was
-      // already open may be parked on the mission's previous session, so a
-      // relaunch gets its own tab there instead of taking over that pane.
-      const holder = worktree.already_open
-        ? await this.herdr(["tab", "create", "--workspace", workspace, "--cwd", cwd, "--label", initial.mission.slug, "--no-focus"])
-        : worktree;
-      pane = holder.root_pane?.pane_id;
-      if (!pane || holder.root_pane.workspace_id !== workspace) throw new Error("Herdr returned a different workspace; launch intent retained for inspection.");
+      // The driver pane must inherit the launcher's configuration: Herdr sets a
+      // tab's environment at creation and `worktree open` has no env flag, so the
+      // launch always creates its own tab with that environment and then closes a
+      // fresh workspace's empty root tab. The workspace keeps exactly one tab.
+      const env = driverEnv(this.env).flatMap(([key, value]) => ["--env", `${key}=${value}`]);
+      const tab = await this.herdr(["tab", "create", "--workspace", workspace, "--cwd", cwd, "--label", initial.mission.slug, "--no-focus", ...env]);
+      pane = tab.root_pane?.pane_id;
+      if (!pane || tab.root_pane.workspace_id !== workspace) throw new Error("Herdr returned a different workspace; launch intent retained for inspection.");
+      // A workspace that was already open may be parked on the mission's previous
+      // session; its other tabs stay. Only a fresh workspace's empty root tab goes.
+      const empty = worktree.already_open ? null : worktree.root_pane?.pane_id;
+      if (empty && empty !== pane) {
+        try { await this.herdr(["pane", "close", empty]); }
+        catch { /* a leftover empty tab stays visible; it is never silent */ }
+      }
       // The worker is a full Pi agent in this pane, not a subagent: it carries
       // no subagent env, loadout file, timer, or watchdog. Pi loads the
       // repository configuration and the missions skill in that worktree.
       const agent = await this.startWorker(handle, pane);
       try { await this.herdr(["agent", "wait", pane, "--until", "idle", "--timeout", String(AGENT_READY_TIMEOUT_MS)]); }
       catch (e) { throw new Error(`Herdr agent ${agent} did not become ready: ${herdrError(e.message)}`); }
-      const task = `Work on mission ${handle}. Before reading or editing repository files, call mission with action=attach, handle=${handle}, launch_id=${launchID}. Then follow the returned step brief and the missions skill. Report structured progress. Write the required artifact and call finish when the step is ready. Stop at checkpoints; keep this session and worktree for later steps.`;
-      await this.herdr(["agent", "prompt", pane, task]);
+      // The launched agent is the driver: it holds the claim and sends every
+      // step to a work subagent and every verification to a judge subagent.
+      await this.herdr(["agent", "prompt", pane, driverTask(handle, launchID)]);
       const sessionFile = (await this.herdr(["agent", "get", pane])).agent?.agent_session?.value;
       if (!sessionFile) throw new Error("Herdr reported no session for the mission agent; launch intent retained for inspection.");
       await this.call(["launch", handle, "--launch-id", launchID, "--session-file", sessionFile]);
@@ -635,13 +772,25 @@ export class MissionBridge {
     if (!handle) throw new Error("Choose a mission handle first.");
     if (p.action === "start") return this.start(ctx, handle);
     if (p.action === "attach" || p.action === "next") return this.attach(ctx, handle, p.launch_id || this.hint?.launchID, p.agent);
-    if (p.action === "status") return this.call(["show", handle]);
+    if (p.action === "status") {
+      const record = await this.call(["show", handle]);
+      return { ...record, summary: driverStatus(record) };
+    }
     if (p.action === "steps") return this.call(["steps", handle]);
+    // Retry is the existing CLI command, exposed so the driver can steer a failed
+    // step back to pending without leaving this session.
+    if (p.action === "retry") return this.call(["retry", handle]);
     if (p.action === "edit") {
       if (!p.step) throw new Error("Edit needs a step id.");
       const args = ["step", "edit", handle, p.step];
       for (const key of ["instructions", "acceptance", "output"]) if (p[key] !== undefined) args.push("--"+key, p[key]);
       if (p.checks) args.push("--checks", p.checks.join(","));
+      // The revision guard from #426 stays load-bearing: the edit names the
+      // revision the driver's answer was built from, so a write that landed in
+      // between is refused instead of overwritten. A fresh read is the default,
+      // never a blind write.
+      const revision = Number.isInteger(p.revision) && p.revision > 0 ? p.revision : (await this.call(["show", handle])).state.revision;
+      args.push("--revision", String(revision));
       // Reset is deliberately CLI-only: inspect history and obtain a user decision first.
       return this.call(args);
     }
@@ -649,6 +798,19 @@ export class MissionBridge {
     await this.flush(ctx);
     const current = await this.current(ctx);
     if (!active(current?.attempt)) throw new Error("No active step; inspect checkpoints or explicitly pick up next.");
+    // The judge reads the artifact, runs the check run itself, and records its
+    // verdict. Its capability is a file path; the token stays in this cache.
+    if (p.action === "judge") {
+      const a = current.attempt;
+      const st = a.Definition || (current.record.mission.steps || []).find(s => s.id === a.step) || {};
+      const checks = [...new Set(["nonempty-artifact", ...(st.checks || [])])];
+      const artifact = join(this.vault, "6_missions", handle, a.artifact);
+      const capability = this.judgeCapability(ctx, a.id);
+      const task = judgeTask({ handle, attempt: a.id, step: a.step, artifact, evidence: a.artifact,
+        acceptance: st.acceptance || "", checks, capability, vault: this.vault, binary: this.binary, cwd: a.cwd });
+      return { handle, attempt: a.id, step: a.step, artifact, acceptance: st.acceptance || "", checks,
+        capability, agent: "worker", name: "judge-" + a.step, task };
+    }
     const args = [p.action, handle, "--attempt", this.hint.attempt];
     if (p.action === "progress") {
       args.push("--status", p.status || "working", "--summary", p.summary || "", "--event-id", p.event_id || eventID);
@@ -659,6 +821,9 @@ export class MissionBridge {
     } else if (p.action === "finish" || p.action === "fail") { if (p.summary) args.push("--note", p.summary); }
     else if (p.action !== "verify") throw new Error("Unknown mission action");
     const r = await this.call(args, this.hint.token);
+    // The judge has finished once the driver verifies or reports: its one-shot
+    // capability must not outlive that, and a failed call keeps it for a retry.
+    if (["verify", "finish", "fail"].includes(p.action)) this.releaseJudgeCapabilities(ctx, this.hint.attempt);
     if (!r.state) return r;
     const a = r.state.attempts.find(a => a.id === this.hint.attempt);
     return { handle, status:r.state.status, attempt:a.id, attempt_status:a.status, step:a.step, checkpoint:r.state.pending_checkpoint,

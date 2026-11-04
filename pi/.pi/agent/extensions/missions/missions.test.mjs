@@ -4,11 +4,11 @@ import { test } from "node:test";
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statSync, realpathSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statSync, realpathSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { MissionBridge, agentCollisionReport, droppableReportError, herdrError, missionContinues, missionToolBlock, quiescent, repositoryWorkspaces, takenAgentName, trackingFailureBlock, trooperLine, trooperName, trooperReport, trooperStatus, workerAgentName } from "./core.mjs";
+import { MissionBridge, agentCollisionReport, driverEnv, driverStatus, driverTask, droppableReportError, herdrError, judgeTask, missionContinues, missionToolBlock, quiescent, repositoryWorkspaces, takenAgentName, trackingFailureBlock, trooperLine, trooperName, trooperReport, trooperStatus, workerAgentName } from "./core.mjs";
 import { actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
 import { missionLaunchConfig } from "../interactive-subagents/pi-extension/subagents/mission-launch.mjs";
 
@@ -276,7 +276,7 @@ async function fixture(t, checkpoint=false) {
   delete env.PI_SUBAGENT_NAME;
   // Parent credentials must not leak into requests or any spawned child.
   env.MISSION_TOKEN="unrelated-parent-token";env.MISSION_ATTEMPT="unrelated-parent-attempt";
-  const f={ env, hookFailures:0, hookIDs:[], reportFailures:0, reportCalls:[], tabs:[], worktrees:[], workspaces:[], calls:[], agents:[], agentCalls:[], started:[], taken:new Set(), startErrors:[], prompts:[], waitError:null, promptError:null, sessionFile:null, paneAgents:{} };
+  const f={ env, hookFailures:0, hookIDs:[], reportFailures:0, reportCalls:[], tabs:[], closes:[], worktrees:[], workspaces:[], calls:[], agents:[], agentCalls:[], started:[], taken:new Set(), startErrors:[], paneBusy:0, prompts:[], waitError:null, promptError:null, sessionFile:null, paneAgents:{} };
   /** The Herdr failure envelope herdr prints on stderr when a call fails. */
   const herdrFails=(code,message)=>Error(`Command failed: herdr agent\n${JSON.stringify({error:{code,message},id:"cli:agent:start"})}`);
   const takenErr=name=>herdrFails("agent_name_taken",`agent name ${name} is already used; candidates: pane_id=w-other:p1 workspace_id=w-other status=working`);
@@ -300,6 +300,7 @@ async function fixture(t, checkpoint=false) {
         f.agentCalls.push(args);
         const target=args[2];
         if(args[1]==="start") {
+          if(f.paneBusy-->0) throw herdrFails("agent_pane_busy",`agent target pane ${target} is not an available shell`);
           if(f.startErrors.length) throw f.startErrors.shift();
           if(f.taken.has(target)) throw takenErr(target);
           f.started.push(target); result={agent:{name:target,pane_id:target}};
@@ -312,6 +313,9 @@ async function fixture(t, checkpoint=false) {
       }
       else if(args[0]==="pane" && args[1]==="get") {
         result={pane:{pane_id:args[2],agent:f.paneAgents[args[2]]??null}};
+      }
+      else if(args[0]==="pane" && args[1]==="close") {
+        f.closes.push(args[2]); result={type:"pane_closed",pane_id:args[2]};
       }
       else if(args[0]==="pane" && args[1]==="split") {
         // The mission desk opens here: /missions splits a pane and runs the Go UI in it.
@@ -528,6 +532,180 @@ test("failed checks retain ownership and successful correction settles it",needs
   const r=await f.bridge.call(["show",f.handle]);assert.equal(r.state.attempts[0].status,"succeeded");assert.equal(r.state.status,"ready");
 });
 
+test("a launched driver receives the driver contract, not autonomous worker duties", () => {
+  const task = driverTask("dotfiles/session-progress", "launch-abc");
+  // The claim: the launched session owns one work request and attaches with it.
+  assert.match(task, /You hold the claim on this work request/);
+  assert.match(task, /action=attach, handle=dotfiles\/session-progress, launch_id=launch-abc/);
+  // Duty one: the driver keeps the attempt and the mission tool.
+  assert.match(task, /Duty 1 — hold the claim/);
+  assert.match(task, /owns the attempt and keeps the mission tool/);
+  // Duty two: one work subagent per step, and the driver writes no artifact.
+  assert.match(task, /Duty 2 — subagents do all step work/);
+  assert.match(task, /you never edit repository code and you never write a step artifact/);
+  assert.match(task, /one work subagent \(agent=worker\)/);
+  assert.match(task, /step brief, its artifact path, and the acceptance criteria/);
+  // Duty three: one judge subagent per step, which runs the CLI checks itself.
+  assert.match(task, /Duty 3 — subagents judge/);
+  assert.match(task, /call mission action=judge/);
+  assert.match(task, /one judge subagent \(agent=worker, name=judge-<step>\)/);
+  assert.match(task, /Never judge your own work and never reuse the work subagent's session/);
+  assert.match(task, /runs the CLI checks itself through mission verify/);
+  assert.match(task, /records its verdict with reasons as progress/);
+  // The human touchpoint: status and admin prompts land in this session.
+  assert.match(task, /Touchpoint — you answer the human's status and admin prompts in this session/);
+  assert.match(task, /never approve one yourself/);
+  // The driver keeps the worktree and the tool for later steps.
+  assert.match(task, /mission worktree as this session's cwd/);
+  // No autonomous "do the step yourself" instruction survives the launch.
+  assert.doesNotMatch(task, /Write the required artifact and call finish/);
+  assert.doesNotMatch(task, /work alone/i);
+});
+
+test("the judge task hands the judge the artifact, the checks, and one capability path", () => {
+  const task = judgeTask({ handle: "dotfiles/session-progress", attempt: "attempt-9", step: "S02",
+    artifact: "/vault/6_missions/dotfiles/session-progress/artifacts/002/step-02.md", evidence: "artifacts/002/step-02.md",
+    acceptance: "The verdict carries reasons.", checks: ["nonempty-artifact", "go-test"],
+    capability: "/state/judges/h/attempt-9.token", vault: "/vault", binary: "/bin/mission", cwd: "/work" });
+  // The judge is independent, and it is told what the step asks for.
+  assert.match(task, /independent of the work subagent/);
+  assert.match(task, /Artifact: \/vault\/6_missions\/dotfiles\/session-progress\/artifacts\/002\/step-02\.md/);
+  assert.match(task, /Acceptance criteria: The verdict carries reasons\./);
+  assert.match(task, /Check list: nonempty-artifact, go-test/);
+  // The judge runs the CLI check run itself, through mission verify.
+  assert.match(task, /"\/bin\/mission" --json --vault "\/vault" verify dotfiles\/session-progress --attempt attempt-9/);
+  // The verdict lands in the existing progress fields with the artifact as evidence,
+  // and a failed verdict takes the blocker branch.
+  assert.match(task, /--event-id judge-attempt-9 --status ready --summary "verdict: pass/);
+  assert.match(task, /--evidence artifacts\/002\/step-02\.md/);
+  assert.match(task, /--status blocked --blocker/);
+  assert.match(task, /do not call finish/);
+  // The credential reaches the judge as a file path only.
+  assert.match(task, /--token "\$\(cat '\/state\/judges\/h\/attempt-9\.token'\)"/);
+  assert.doesNotMatch(task, /sha256/);
+});
+
+test("a judge subagent runs the checks itself and records its verdict in existing fields",needsCLI,async t=>{
+  const f=await fixture(t),b=f.bridge;
+  const claim=await b.action(f.ctx,{action:"attach",handle:f.handle});
+  writeFileSync(claim.artifact,"Lifecycle hooks are attached.\n");
+  // No active step, no judge: the task belongs to an attached attempt.
+  const empty=new MissionBridge({env:f.env,run:f.run});
+  await assert.rejects(empty.action(f.ctx,{action:"judge",handle:f.handle}),/Attach this session/);
+  // The driver mints one judge task: the artifact, the criteria, the checks, and
+  // a capability path. The attempt token is not in the result.
+  const j=await b.action(f.ctx,{action:"judge",handle:f.handle});
+  assert.equal(j.attempt,claim.attempt);assert.equal(j.step,"S01");
+  assert.ok(j.artifact.endsWith("artifacts/001/step-01.md"));assert.equal(j.evidence,undefined);
+  assert.deepEqual(j.checks,["nonempty-artifact"]);assert.equal(typeof j.acceptance,"string");
+  assert.match(j.task,/Acceptance criteria: /);assert.match(j.task,/Check list: nonempty-artifact/);
+  assert.equal(statSync(j.capability).mode & 0o777,0o600);
+  assert.ok(!JSON.stringify(j).includes(b.hint.token));assert.ok(!j.task.includes(b.hint.token));
+  assert.ok(j.task.includes(j.capability));assert.equal(j.name,"judge-S01");
+  // The judge runs the CLI itself with that capability: the check run, then the
+  // verdict with reasons, citing the artifact it read.
+  const token=readFileSync(j.capability,"utf8").trim();
+  assert.equal(token,b.hint.token);
+  const cli=async(...args)=>(await exec(bin,["--json","--vault",f.vault,...args],{cwd:f.cwd,encoding:"utf8"})).stdout;
+  const verify=JSON.parse(await cli("verify",f.handle,"--attempt",j.attempt,"--token",token));
+  assert.equal(verify.data.passed,true);
+  await cli("progress",f.handle,"--attempt",j.attempt,"--token",token,"--event-id","judge-"+j.attempt,
+    "--status","ready","--summary","verdict: pass — the artifact states the hooks and it is not empty",
+    "--evidence","artifacts/001/step-01.md");
+  const a=(await b.call(["show",f.handle])).state.attempts[0];
+  const verification=a.verifications.at(-1),verdict=a.progress.at(-1);
+  // The finished step's record carries the verdict text with reasons plus the
+  // check evidence the judge read.
+  assert.match(verdict.summary,/verdict: pass — the artifact states the hooks/);
+  assert.equal(verdict.evidence[0].path,"artifacts/001/step-01.md");
+  assert.equal(verification.results[0].verdict,"passed");
+  assert.ok(verification.results[0].evidence.length>=2);
+  assert.match(verification.runner,/^mission\/checks@/);
+  // The record keeps its shape: the judge fills existing fields only.
+  assert.deepEqual(Object.keys(verification).sort(),["definition_hash","ended_at","id","results","runner","started_at","subject_hash"]);
+  for(const c of verification.results) for(const key of Object.keys(c)) assert.ok(["at","check","evidence","summary","verdict","version"].includes(key),key);
+  for(const key of Object.keys(verdict)) assert.ok(["at","evidence","id","next","status","summary","blocker"].includes(key),key);
+  // state.md still carries that record and parses through the unchanged schema.
+  const state=readFileSync(join(f.vault,"6_missions",f.handle,"state.md"),"utf8");
+  assert.match(state,/^\s+verifications:/m);assert.match(state,/subject_hash:/);
+  assert.deepEqual(Object.keys((await b.call(["show",f.handle])).state.attempts[0].verifications.at(-1)),Object.keys(verification));
+  // The driver's own verify confirms that run and releases the one-shot capability.
+  const confirmed=await b.action(f.ctx,{action:"verify",handle:f.handle});
+  assert.equal(confirmed.verification.results[0].verdict,"passed");assert.equal(existsSync(j.capability),false);
+  await b.action(f.ctx,{action:"finish",summary:"Judge recorded a pass with reasons"});
+  await b.settled(f.ctx,{aborted:false,outcome:"completed"});
+  const done=(await b.call(["show",f.handle])).state.attempts[0];
+  assert.equal(done.status,"succeeded");assert.equal(done.progress.at(-1).id,"judge-"+done.id);
+});
+
+test("the driver's status answer is built from the ledger alone", () => {
+  const record = { handle: "dotfiles/session-progress",
+    mission: { title: "Session progress", steps: [{ id: "S01", title: "Inspect hooks" }, { id: "S02", title: "Implement recovery" }],
+      checkpoints: [{ id: "C01", after: "S04", question: "Take over the touchpoint" }] },
+    state: { status: "running", current_step: "S01", active_attempt: "attempt-1",
+      steps: { S01: { status: "running" }, S02: { status: "pending" } },
+      attempts: [{ id: "attempt-1", step: "S01", progress: [{ status: "working", summary: "Mapped hooks" }] }] } };
+  const lines = driverStatus(record);
+  assert.equal(lines[0], "Mission dotfiles/session-progress is running.");
+  assert.equal(lines[1], "Running step S01 (Inspect hooks) under attempt attempt-1; last report: Mapped hooks.");
+  assert.equal(lines[2], "Nothing has passed yet.");
+  assert.equal(lines[3], "Next: S02 (Implement recovery).");
+  // A held mission reads its review, its passed steps, and its blocker.
+  const held = driverStatus({ ...record, state: { ...record.state, status: "waiting", active_attempt: "", pending_checkpoint: "C01",
+    steps: { S01: { status: "passed" }, S02: { status: "passed" } },
+    attempts: [{ id: "attempt-1", step: "S01", progress: [{ status: "blocked", summary: "Stopped", blocker: "The Herdr pane closed" }] }] } }).join("\n");
+  assert.match(held, /Passed: S01 \(Inspect hooks\), S02 \(Implement recovery\)\./);
+  assert.match(held, /Review C01 waits after S04: Take over the touchpoint/);
+  assert.match(held, /Next: no step is left to run\./);
+  assert.match(held, /Blocker: The Herdr pane closed/);
+  assert.deepEqual(driverStatus(null), ["No mission record to report."]);
+});
+
+test("the driver answers a status prompt from the ledger and steers a step edit mid-flight",needsCLI,async t=>{
+  const f=await fixture(t),b=f.bridge;
+  const claim=await b.action(f.ctx,{action:"attach",handle:f.handle});
+  writeFileSync(claim.artifact,"Lifecycle hooks are attached.\n");
+  await b.action(f.ctx,{action:"progress",status:"working",summary:"Mapped lifecycle hooks",next:"Write the artifact"},"driver-status-report");
+  // A scripted status prompt: every line is read from the ledger.
+  const running=await b.action(f.ctx,{action:"status",handle:f.handle});
+  const said=running.summary.join("\n");
+  assert.equal(running.summary[0],`Mission ${f.handle} is ${running.state.status}.`);
+  assert.equal(running.state.active_attempt,claim.attempt);
+  assert.match(said,new RegExp(`Running step S01 \\(Inspect hooks\\) under attempt ${claim.attempt}; last report: Mapped lifecycle hooks\\.`));
+  assert.match(said,/Next: S02 \(Implement recovery\)\./);
+  // An edit while the attempt runs is refused, never forced: the driver must end
+  // the attempt before the human's change can land.
+  await assert.rejects(b.action(f.ctx,{action:"edit",handle:f.handle,step:"S02",acceptance:"Reviewed mid-flight"},"edit-busy"),/busy/);
+  assert.equal((await b.call(["steps",f.handle])).find(v=>v.step.id==="S02").step.acceptance??"","");
+  // The driver passes the running step, then reads the mission as ready.
+  await b.action(f.ctx,{action:"finish",summary:"Hooks attached"});
+  await b.settled(f.ctx,{aborted:false,outcome:"completed"});
+  const ready=await b.action(f.ctx,{action:"status",handle:f.handle});
+  assert.equal(ready.state.status,"ready");
+  assert.match(ready.summary.join("\n"),/Passed: S01 \(Inspect hooks\)\./);
+  assert.match(ready.summary.join("\n"),/Next: S02 \(Implement recovery\)\./);
+  // The passed step is not reported as the current one.
+  assert.doesNotMatch(ready.summary.join("\n"),/Current step/);
+  // The human's mid-flight change lands through the existing edit command, and it
+  // appears in the step list the driver reports back.
+  const revision=ready.state.revision;
+  const edited=await b.action(f.ctx,{action:"edit",handle:f.handle,step:"S02",acceptance:"Reviewed mid-flight",revision});
+  assert.equal(edited.state.revision,revision+1);
+  assert.equal((await b.action(f.ctx,{action:"steps",handle:f.handle})).find(v=>v.step.id==="S02").step.acceptance,"Reviewed mid-flight");
+  // A stale revision is refused instead of overwriting the newer write.
+  await assert.rejects(b.action(f.ctx,{action:"edit",handle:f.handle,step:"S02",acceptance:"Overwritten by a stale write",revision},"edit-stale"),/revision_conflict/);
+  assert.equal((await b.action(f.ctx,{action:"steps",handle:f.handle})).find(v=>v.step.id==="S02").step.acceptance,"Reviewed mid-flight");
+  // Admin: a failed step goes back to pending through the existing retry command.
+  assert.equal((await b.action(f.ctx,{action:"next"})).step.id,"S02");
+  await b.action(f.ctx,{action:"fail",summary:"Recovery needs a different approach"});
+  await b.settled(f.ctx,{aborted:false,outcome:"completed"});
+  const failed=await b.action(f.ctx,{action:"status",handle:f.handle});
+  assert.equal(failed.state.status,"failed");
+  assert.match(failed.summary.join("\n"),/Current step S02 \(Implement recovery\) is failed\./);
+  assert.equal((await b.action(f.ctx,{action:"retry",handle:f.handle})).state.status,"ready");
+  assert.equal((await b.call(["steps",f.handle])).find(v=>v.step.id==="S02").status,"pending");
+});
+
 test("a launch starts one full agent in the mission pane",needsCLI,async t=>{
   const f=await fixture(t);
   // The launch needs no subagent extension: the worker is a full Pi agent.
@@ -537,10 +715,10 @@ test("a launch starts one full agent in the mission pane",needsCLI,async t=>{
   // The whole worker launch: a mission-derived name, one readiness wait, one
   // task prompt, and one session read.
   assert.deepEqual(f.agentCalls,[
-    ["agent","start","mission-session-progress","--kind","pi","--pane","w-mission:p1"],
-    ["agent","wait","w-mission:p1","--until","idle","--timeout","60000"],
-    ["agent","prompt","w-mission:p1",`Work on mission ${f.handle}. Before reading or editing repository files, call mission with action=attach, handle=${f.handle}, launch_id=${launch}. Then follow the returned step brief and the missions skill. Report structured progress. Write the required artifact and call finish when the step is ready. Stop at checkpoints; keep this session and worktree for later steps.`],
-    ["agent","get","w-mission:p1"],
+    ["agent","start","mission-session-progress","--kind","pi","--pane","w-mission:p2"],
+    ["agent","wait","w-mission:p2","--until","idle","--timeout","60000"],
+    ["agent","prompt","w-mission:p2",driverTask(f.handle,launch)],
+    ["agent","get","w-mission:p2"],
   ]);
   // The agent session file is recorded on the launch.
   assert.equal(r.session_file,f.file);
@@ -575,8 +753,14 @@ test("mission launch registers a Herdr worktree and adopts its workspace",needsC
   assert.deepEqual(f.worktrees[0].slice(0,3),["worktree","open","--cwd"]);
   assert.equal(f.worktrees[0][3],f.repo);assert.equal(f.worktrees[0][f.worktrees[0].indexOf("--path")+1],f.cwd);
   assert.ok(f.worktrees[0].includes("--no-focus"));
-  // A fresh worktree workspace hosts the worker in its first tab — no extra tab.
-  assert.equal(f.tabs.length,0);assert.equal(f.agentCalls[0][6],"w-mission:p1");assert.equal(r.workspace,"w-mission");
+  // A fresh worktree workspace gets one launch tab that carries the launcher
+  // environment; the empty root tab Herdr opened goes away, so one tab stays.
+  assert.equal(f.tabs.length,1);assert.deepEqual(f.tabs[0].slice(0,4),["tab","create","--workspace","w-mission"]);
+  assert.deepEqual(f.closes,["w-mission:p1"]);assert.equal(f.agentCalls[0][6],"w-mission:p2");assert.equal(r.workspace,"w-mission");
+  // The tab carries the launcher configuration, never a credential.
+  const tab=f.tabs[0];
+  assert.ok(tab.includes(`MISSION_VAULT=${f.vault}`));assert.ok(tab.includes(`MISSION_STATE_DIR=${f.env.MISSION_STATE_DIR}`));
+  assert.ok(tab.includes(`MISSION_BIN=${bin}`));assert.equal(JSON.stringify(tab).includes("unrelated-parent-token"),false);
   // The mission session is accepted as a pane of that worktree workspace, and
   // still refused when its cwd is not the mission checkout.
   f.paneWorkspace="w-mission";
@@ -584,6 +768,12 @@ test("mission launch registers a Herdr worktree and adopts its workspace",needsC
   await assert.rejects(f.bridge.assertSurface({...f.ctx,cwd:f.repo}),/mission worktree/);
   f.paneWorkspace="repo";
   const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,false);assert.equal(f.started.length,1);
+});
+
+test("a driver pane inherits the launcher configuration and no credential", () => {
+  assert.deepEqual(driverEnv({ PI_CODING_AGENT_DIR: "/cfg", MISSION_VAULT: "/vault", MISSION_BIN: "/bin/mission", MISSION_STATE_DIR: "/state", MISSION_TOKEN: "secret", MISSION_ATTEMPT: "attempt-1", EMPTY: "" }),
+    [["PI_CODING_AGENT_DIR", "/cfg"], ["MISSION_VAULT", "/vault"], ["MISSION_BIN", "/bin/mission"], ["MISSION_STATE_DIR", "/state"]]);
+  assert.deepEqual(driverEnv({}), []);
 });
 
 test("an already open mission workspace gets its own launch tab",needsCLI,async t=>{
@@ -596,6 +786,17 @@ test("an already open mission workspace gets its own launch tab",needsCLI,async 
   assert.deepEqual(f.tabs[0].slice(0,4),["tab","create","--workspace","w-open"]);
   assert.equal(f.tabs[0][f.tabs[0].indexOf("--cwd")+1],f.cwd);
   assert.ok(f.tabs[0].includes("--no-focus"));
+  // An open workspace keeps its other tabs: the launch closes nothing.
+  assert.deepEqual(f.closes,[]);
+});
+
+test("a pane that is still starting its shell is retried, not fatal",needsCLI,async t=>{
+  const f=await fixture(t);
+  f.paneBusy=2;
+  const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
+  // Two refusals, then the same name starts: the retry never renames or releases.
+  assert.equal(f.agentCalls.filter(c=>c[1]==="start").length,3);assert.deepEqual(f.started,["mission-session-progress"]);
+  assert.equal((await f.bridge.call(["show",f.handle])).state.runtime.session_file,realpathSync(f.file));
 });
 
 test("a taken name takes a hashed name once and never renames the holder",needsCLI,async t=>{
@@ -609,8 +810,8 @@ test("a taken name takes a hashed name once and never renames the holder",needsC
   assert.equal(retry,workerAgentName(f.handle,hashOf(f.handle)));
   assert.match(retry,/^mission-session-progress-[0-9a-f]{6}$/);
   assert.deepEqual(f.agentCalls.slice(0,2),[
-    ["agent","start","mission-session-progress","--kind","pi","--pane","w-mission:p1"],
-    ["agent","start",retry,"--kind","pi","--pane","w-mission:p1"],
+    ["agent","start","mission-session-progress","--kind","pi","--pane","w-mission:p2"],
+    ["agent","start",retry,"--kind","pi","--pane","w-mission:p2"],
   ]);
   // The holder keeps its name and the launch continues on the same pane.
   assert.equal(f.agentCalls.some(a=>a[1]==="rename"),false);
@@ -673,7 +874,7 @@ test("a failed launch stays retryable when no worker can own it",needsCLI,async 
 
 test("a launch keeps its intent while the launch pane hosts an agent",needsCLI,async t=>{
   const f=await fixture(t);
-  f.paneAgents["w-mission:p1"]="pi";
+  f.paneAgents["w-mission:p2"]="pi";
   f.startErrors.push(Error("Acknowledgement lost"),Error("Acknowledgement lost"));
   await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/Acknowledgement lost/);
   // A worker may own the pane, so the intent stays and no second worker starts.
@@ -833,7 +1034,7 @@ test("the desk's request starts the mission through the start path", needsCLI, a
   assert.equal(receipt.state,"started");
   const runtime=(await f.bridge.call(["show",f.handle])).state.runtime;
   assert.equal(receipt.launch_id,runtime.launch_id);
-  assert.equal(receipt.pane,"w-mission:p1");assert.equal(receipt.workspace,"w-mission");
+  assert.equal(receipt.pane,"w-mission:p2");assert.equal(receipt.workspace,"w-mission");
   assert.equal(receipt.session_file,realpathSync(f.file));
   // The same press, twice: the claim is gone, so no second worker appears.
   await f.bridge.sweepLaunches(context(f.repo,f.file));
