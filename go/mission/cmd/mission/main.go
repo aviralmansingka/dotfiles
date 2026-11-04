@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
+
+	"mission.local/prototype/internal/platform"
 )
 
 const help = `mission — work that survives the agent
@@ -53,69 +54,6 @@ The run wrapper supplies these plus MISSION_ARTIFACT, MISSION_BRIEF, MISSION_STE
 Use --kind implementation for writers; run requires an existing linked worktree.
 `
 
-type args struct {
-	pos, command []string
-	flags        map[string][]string
-}
-
-func parseArgs(argv []string) (args, error) {
-	a := args{flags: map[string][]string{}}
-	booleans := map[string]bool{"json": true, "human": true, "stdin": true, "color": true, "no-color": true, "help": true, "reset": true}
-	booleans["quiescent"] = true
-	values := map[string]bool{"vault": true, "checkout": true, "remote": true, "title": true, "goal": true, "step": true, "checkpoint": true, "kind": true, "from": true, "repo": true, "agent": true, "session-id": true, "session-file": true, "cwd": true, "attempt": true, "token": true, "event-id": true, "tool": true, "message": true, "note": true, "id": true, "decision": true, "actor": true, "revision": true, "view": true, "width": true, "height": true, "model": true, "pane": true, "workspace": true}
-	values["handle"] = true
-	for _, k := range []string{"instructions", "acceptance", "checks", "output"} {
-		values[k] = true
-	}
-	for _, k := range []string{"base", "root", "status", "summary", "next", "blocker", "evidence", "launch-id"} {
-		values[k] = true
-	}
-	for i := 0; i < len(argv); i++ {
-		v := argv[i]
-		if v == "--" {
-			a.command = argv[i+1:]
-			break
-		}
-		if !strings.HasPrefix(v, "--") {
-			a.pos = append(a.pos, v)
-			continue
-		}
-		k, val, eq := strings.Cut(strings.TrimPrefix(v, "--"), "=")
-		if booleans[k] {
-			if eq && val != "true" {
-				return a, problem("usage", "--%s is a switch", k)
-			}
-			a.flags[k] = []string{"true"}
-			continue
-		}
-		if !values[k] {
-			return a, problem("usage", "unknown option --%s", k)
-		}
-		if !eq {
-			if i+1 >= len(argv) {
-				return a, problem("usage", "--%s needs a value", k)
-			}
-			i++
-			val = argv[i]
-		}
-		a.flags[k] = append(a.flags[k], val)
-	}
-	return a, nil
-}
-func (a args) get(k string) string {
-	v := a.flags[k]
-	if len(v) == 0 {
-		return ""
-	}
-	return v[len(v)-1]
-}
-func (a args) has(k string) bool { return a.get(k) != "" }
-func (a args) at(i int) string {
-	if i >= len(a.pos) {
-		return ""
-	}
-	return a.pos[i]
-}
 func emit(v any, e error) int {
 	out := map[string]any{"ok": e == nil}
 	code := 0
@@ -149,13 +87,13 @@ func emit(v any, e error) int {
 func main() { os.Exit(execute(os.Args[1:])) }
 
 func execute(argv []string) int {
-	a, e := parseArgs(argv)
+	a, e := platform.ParseArgs(argv)
 	if e != nil {
 		return emit(nil, e)
 	}
-	cmd := a.at(0)
-	if cmd == "help" || a.has("help") {
-		if a.has("json") {
+	cmd := a.At(0)
+	if cmd == "help" || a.Has("help") {
+		if a.Has("json") {
 			return emit(map[string]string{"usage": help, "output": "json", "default_command": "list"}, nil)
 		}
 		fmt.Print(help)
@@ -165,16 +103,16 @@ func execute(argv []string) int {
 	if cmd == "" {
 		cmd = "list"
 	}
-	if a.has("json") && (cmd == "ui" || cmd == "render") {
-		if a.has("handle") {
-			a.pos = []string{"show", a.get("handle")}
+	if a.Has("json") && (cmd == "ui" || cmd == "render") {
+		if a.Has("handle") {
+			a.Pos = []string{"show", a.Get("handle")}
 			cmd = "show"
 		} else {
 			cmd = "list"
 		}
 	}
-	vault := fallback(a.get("vault"), fallback(os.Getenv("MISSION_VAULT"), "~/vault"))
-	if cmd == "demo" && !a.has("vault") {
+	vault := fallback(a.Get("vault"), fallback(os.Getenv("MISSION_VAULT"), "~/vault"))
+	if cmd == "demo" && !a.Has("vault") {
 		return emit(nil, problem("usage", "demo requires an explicit --vault pointing to an isolated directory"))
 	}
 	s, e := openStore(vault)
@@ -193,7 +131,7 @@ func execute(argv []string) int {
 }
 
 // dispatch maps one CLI command to its handler. Groups live in cmd_*.go.
-func dispatch(cmd string, a args, s *Store) (any, error) {
+func dispatch(cmd string, a platform.Args, s *Store) (any, error) {
 	switch cmd {
 	case "repo":
 		return cmdRepo(a, s)

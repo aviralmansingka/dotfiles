@@ -15,8 +15,6 @@ type Store struct{ Vault string }
 
 var slugRE = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
-func hostName() string { h, _ := os.Hostname(); return h }
-
 func validSlug(s string) bool { return len(s) >= 3 && len(s) <= 64 && slugRE.MatchString(s) }
 func openStore(v string) (*Store, error) {
 	if strings.HasPrefix(v, "~/") {
