@@ -1,0 +1,16 @@
+{
+ "binary": "/tmp/visualize-eval/round-14/bin/rataflow-view",
+ "binary_sha256_ondisk": "14b16afc811340a37534400f879e5bc3e0d17a1c7b7a5cc2c11fd17201c543c1",
+ "binary_sha256_requested": "5bd8ba9f (not found on this host: the round-14 file here is 14b16afc)",
+ "binary_note": "the on-disk round-14 build was SIGKILLed on launch (signature); a copy at /tmp/c4full/r14 re-signed ad hoc (codesign --force --sign -) runs it. Code is unchanged; only the signature bytes differ.",
+ "spec": "spec.json (prioritised set: 27 drawn + 44 folded + 26 omitted of 97 ledger rows)",
+ "viewport_natural": "156x145 (whole canvas, drawn whole at 100%)",
+ "frames": {
+  "canvas-text.txt": "COLUMNS=156 LINES=145 --frames 1, plain",
+  "canvas-ansi.ansi": "COLUMNS=156 LINES=145 --frames 1 --frames-ansi",
+  "canvas-selected.ansi": "COLUMNS=156 LINES=145 --select-all --frames 1 --frames-ansi",
+  "canvas-frames.txt": "COLUMNS=156 LINES=145 --frames 3",
+  "pane-77x47.txt": "herdr pane at 77x47 (canvas pans; recorded)"
+ },
+ "check": "check.txt"
+}

@@ -1,0 +1,147 @@
+viewport: 156x145 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 156x145 @100% · canvas 156x145 · spec.json · 43 nodes · 33 edges · q quit
+      System context: the machine manager is one box. The control plane and ops call it, it drives
+      Gcore and Latitude, it boots and audits the fleet, which pulls boot artefacts from S3, and it
+      exchanges diagnostic events and proposed actions with the janitor service.
+
+         ╭─────────────╮
+         │machine-agent│────────────────────────────╮
+         │             │    register + heartbeat    │
+         ╰─────────────╯                            │                                       ╭───────────────────╮boot image
+                                                    │                 provider API      ╭──▶│bare-metal machines│───────────╮
+      ╭───────────────────╮      provisioning       │ ╭───────────────╮                 │   │                   │           │
+      │Modal control plane│────────────────────────╮╰▶│               │                 │   ╰───────────────────╯           │
+      │                   │                        │  │               │  boot + audit   │                                   │
+      ╰───────────────────╯                        ╰─▶│               │─────────────────╯  ╭────────────────────╮           │ ╭──────────╮
+                                 diagnostic events    │               │                  ╭▶│bare-metal providers│           ╰▶│S3 buckets│
+        ╭───────────────╮    ╭────────────────────────│Machine manager│──────────────────╯ │                    │             │          │
+        │               │◀───╯                        │               │                    ╰────────────────────╯             ╰──────────╯
+        │machine-janitor│                           ╭▶│               │─────────────────╮
+        │               │───────────────────────────╯ │               │confirm + alerts │        ╭─────────╮
+        ╰───────────────╯ proposed actions + reads  ╭▶│               │                 ╰───────▶│Slack API│
+                                                    │ ╰───────────────╯                          │         │
+          ╭───────────╮            http             │                                            ╰─────────╯
+          │ops + mmctl│─────────────────────────────╯
+          │           │
+          ╰───────────╯
+
+
+      ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+      L1 · Boundary — requests and machines
+      L0's box opened once: private and public gRPC, webapi, the boot server, SSH and BMC ops sit
+      inside. The control plane, ops, the fleet, the agent and the BMC endpoints stay outside. One
+      arrow carries each RPC family; the queue and store are opened at L2.
+
+                                                         ╔═════════════════════Machine manager═════════════════════╗
+          ╭─────────────╮                                ║ ╭───────────╮                                           ║
+          │machine-agent│─────────────────────────────────▶│public gRPC│                                           ║
+          │             │   register + heartbeat, 1 min  ║ │           │                                           ║               ╭─────────────╮
+          ╰─────────────╯                                ║ ╰───────────╯    ╭───────────╮          redfish power + ║oot          ╭▶│BMC endpoints│
+                                                         ║                  │BMC service│────────────────────────────────────────╯ │             │
+       ╭───────────────────╮ create / terminate / repair ║╭────────────╮    │           │                          ║               ╰─────────────╯
+       │Modal control plane│─────────────────────────────▶│private gRPC│    ╰───────────╯                    agent ║ownload + callback
+       │                   │                             ║│            │                              ╭───────────╮║            ╭───────────────────╮
+       ╰───────────────────╯                             ║╰────────────╯   ╭────────────╮             │boot server│◀────────────│                   │
+                                                         ║                 │SSH executor│──────────╮  │           │║            │bare-metal machines│
+           ╭───────────╮             http + spa          ║   ╭──────╮      │            │          │  ╰───────────╯║          ╭▶│                   │
+           │ops + mmctl│────────────────────────────────────▶│webapi│      ╰────────────╯          │               ║          │ ╰───────────────────╯
+           │           │                                 ║   │      │ launch, audit, reimage (ssh) │               ║          │
+           ╰───────────╯                                 ║   ╰──────╯                              ╰──────────────────────────╯
+                                                         ╚═════════════════════════════════════════════════════════╝
+
+
+      ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+      L1b · Boundary — providers and egress
+      The outward side of the box: webapi calls Latitude to reinstall servers and confirms in Slack,
+      the secrets cache reads the SSH key and Slack token from Secrets Manager, the provider adapter
+      drives Gcore, and telemetry exports traces and metrics to the collector.
+
+
+                                                    ╭──────────────╮
+      ╔══════════════════╗                        ╭▶│OTel collector│
+      ║    ╭─────────╮   ║  traces + metrics      │ │              │
+      ║    │telemetry│────────────────────────────╯ ╰──────────────╯
+      ║    │         │   ║
+      ║    ╰─────────╯   ║                            ╭─────────╮
+      ║                  ║                    ╭──────▶│Gcore API│
+      ║╭────────────────╮║luster + machine api│       │         │
+      ║│provider adapter│─────────────────────╯       ╰─────────╯
+      ║│                │║
+      ║╰────────────────╯║                       ╭───────────────────╮
+      ║                  ║                     ╭▶│AWS Secrets Manager│
+      ║  ╭─────────────╮ ║sh key + slack token │ │                   │
+      ║  │secrets cache│───────────────────────╯ ╰───────────────────╯
+      ║  │             │ ║
+      ║  ╰─────────────╯ ║                           ╭────────────╮
+      ║                  ║                         ╭▶│Latitude API│
+      ║     ╭──────╮     ║ reinstall server        │ │            │
+      ║     │      │───────────────────────────────╯ ╰────────────╯
+      ║     │webapi│     ║
+      ║     │      │──────────────────────────────╮   ╭─────────╮
+      ║     ╰──────╯     ║ confirm + alerts       ╰──▶│Slack API│
+      ╚══════════════════╝                            │         │
+                                                      ╰─────────╯
+
+
+
+      ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+      L2 · Inside — the request path
+      Inside the box, the request path: listeners enqueue into the River queue, the worker chains
+      follow-up jobs back into it, and the queue's work reaches the provider adapter and the reconcile
+      loop, which creates and resizes clusters every minute.
+
+      ╔═══════════════════════════════════════════════════════════Machine manager═══════════════════════════════════════════════════════════╗
+      ║ ╭───────────╮                                                                                                                       ║
+      ║ │           │───────────────────────────────────────────────────────────────────────────────────────────────────╮                   ║
+      ║ │public gRPC│                                         verify claimed ip                                         │                   ║
+      ║ │           │──────────────────────────────╮                                                                    │                   ║
+      ║ ╰───────────╯     enqueue audit / retry    │ ╭───────────╮       ╭──────────────╮cluster create / resize, 1 min │ ╭────────────────╮║
+      ║                                            │ │           │       │reconcile loop│──────────────────────────────╮╰▶│                │║
+      ║╭────────────╮  enqueue launch / terminate  ╰▶│           │       │              │                              │  │                │║
+      ║│private gRPC│──────────────────────────────╮ │           │       ╰──────────────╯                              ╰─▶│provider adapter│║
+      ║│            │                              ╰▶│River queue│◀╮ chain follow-up jobs                                 │                │║
+      ║╰────────────╯                                │           │ │      ╭─────────────╮                               ╭▶│                │║
+      ║                                            ╭▶│           │ │      │             │      poll + patch gcore       │ ╰────────────────╯║
+      ║   ╭──────╮     reinstall / reprovision     │ │           │ ╰──────│River workers│───────────────────────────────╯                   ║
+      ║   │webapi│─────────────────────────────────╯ ╰───────────╯        │             │                                                   ║
+      ║   │      │                                                        ╰─────────────╯                                                   ║
+      ║   ╰──────╯                                                                                                                          ║
+      ╚═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+
+      ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+      L2b · Inside — the state writes
+      Inside the box, the state writes: each listener persists its own rows - machine rows, machine
+      state, reads and proposed actions, download validation - the worker writes job rows and
+      transitions, and the store issues all SQL to Postgres.
+
+      ╔══════════════════════════════════Machine manager═══════════════════════════════════╗
+      ║ ╭───────────╮                                                                      ║
+      ║ │boot server│──────────────────────────╮                                           ║
+      ║ │           │     validate download    │                                           ║
+      ║ ╰───────────╯                          │                                           ║
+      ║                                        │                                           ║
+      ║ ╭────────────╮      machine rows       │                                           ║
+      ║ │private gRPC│────────────────────────╮│                                           ║
+      ║ │            │                        ││ ╭───────────╮                             ║
+      ║ ╰────────────╯                        │╰▶│           │                             ║
+      ║                                       │  │           │                             ║
+      ║ ╭───────────╮      machine state      ╰─▶│           │                   ╭────────╮║
+      ║ │public gRPC│────────────────────────╮   │           │all sql over pgx ╭▶│Postgres│║
+      ║ │           │                        ╰──▶│store (SQL)│─────────────────╯ │        │║
+      ║ ╰───────────╯                            │           │                   ╰────────╯║
+      ║                                       ╭─▶│           │                             ║
+      ║╭─────────────╮ job rows + transitions │  │           │                             ║
+      ║│River workers│────────────────────────╯╭▶│           │                             ║
+      ║│             │                         │ ╰───────────╯                             ║
+      ║╰─────────────╯                         │                                           ║                                              ▐▌ ▄ █ ▖
+      ║                                        │                                           ║                                              ▐▖ ▖   ▄
+      ║    ╭──────╮  reads + proposed actions  │                                           ║                                              ▝▘ ▀▀▝ ▀
+ ┌───────┐ │webapi│────────────────────────────╯                                           ║                                              ▐▖▗▛
+ │ + [║] │ │      │                                                                        ║                                              ▝  ▀
+ │ − [║] │ ╰──────╯                                                                        ║                                              ▐▘ ▘█ ▝▘
+ │ ⊡ [╚══│═════════════════════════════════════════════════════════════════════════════════╝                                              ▐▖▗
+ │ □ [i] │                                                                                                                                ▐▘  ▝
+ └───────┘
+

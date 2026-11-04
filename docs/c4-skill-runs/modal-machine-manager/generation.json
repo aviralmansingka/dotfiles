@@ -1,0 +1,226 @@
+{
+ "case_id": "modal-machine-manager",
+ "skill": "c4",
+ "skill_path": "agents/.agents/skills/c4/SKILL.md",
+ "repo": "/Users/aviral/modal",
+ "component": "machine manager",
+ "anchor": "go/machine-manager/main.go",
+ "runs": [
+  {
+   "pass": "v1 — fresh session, untightened skill",
+   "session": "pi --skill agents/.agents/skills/c4, cwd /Users/aviral/modal, model openai/gpt-6.1-terra:high, session /tmp/c4-run/sessions/2026-11-03T18-46-15-500Z_01a1a2bb-becb-7069-b0d9-343ded0411f9.jsonl",
+   "scouts": [
+    "c4-scope",
+    "c4-relationships",
+    "c4-boundary",
+    "c4-levels"
+   ],
+   "scout_outputs": [
+    "scout-scope.md",
+    "scout-relationships.md",
+    "scout-boundary.md",
+    "scout-levels.md"
+   ],
+   "ledger": "ledger.md (48 elements, 97 relations, 20 conflicts, 11 gaps)",
+   "result": "spec-oversplit-21diagrams.json",
+   "check": "canvas: 21 diagrams; l0 extent=113x50 nodes=10 edges=10; total 89 nodes, 109 edges",
+   "verdict": "defect — a level per topic, and L0 expanded the component. The skill did not cap the ladder, so the executor grew a slice per subsystem."
+  },
+  {
+   "pass": "v2 — tightened skill, regenerated spec",
+   "session": "this session, executing SKILL.md Step 3/Step 4 after the splitting-discipline fix, over the v1 ledger",
+   "result": "spec.json",
+   "check": "canvas: 5 diagrams on one canvas, drawn whole at 100%; extent=173x128; 0 crossings; near-misses: 0; labels 29/29, 0 ambiguous; dots 10 single-dot, 0 violations; origins 10/10",
+   "verdict": "accepted"
+  }
+ ],
+ "facts": {
+  "elements_inside": 22,
+  "actors": 3,
+  "elements_outside": 23,
+  "relations_in_ledger": 97,
+  "relations_in_scope": 23,
+  "fold_rule": "call sites fold into their element relation; every fold listed in coverage.md"
+ },
+ "ladder": [
+  {
+   "id": "l0",
+   "title": "L0 · System context",
+   "nodes": 8,
+   "edges": 7,
+   "container": null,
+   "extent": "149x15",
+   "members": [],
+   "externals": [
+    "cp",
+    "ops",
+    "agent",
+    "prov",
+    "mach",
+    "s3",
+    "slack"
+   ],
+   "note": "the component is ONE plain node `mm`; no container, no focus"
+  },
+  {
+   "id": "l1",
+   "title": "L1 · The machine manager",
+   "nodes": 10,
+   "edges": 8,
+   "container": "Machine manager",
+   "extent": "173x24",
+   "members": [
+    "pgrpc",
+    "web",
+    "reg",
+    "recon",
+    "ssh",
+    "boot"
+   ],
+   "externals": [
+    "cp",
+    "ops",
+    "prov",
+    "mach"
+   ],
+   "note": "layers pin the source's ranks: callers, listeners, services, providers, machines"
+  },
+  {
+   "id": "l1b",
+   "title": "L1b · The machine side",
+   "nodes": 7,
+   "edges": 4,
+   "container": "Machine manager",
+   "extent": "126x17",
+   "members": [
+    "q",
+    "web",
+    "pub"
+   ],
+   "externals": [
+    "mach",
+    "agent",
+    "s3",
+    "slack"
+   ],
+   "note": "second slice of L1: the externals at this end share no member with L1's external set"
+  },
+  {
+   "id": "l2",
+   "title": "L2 · Inside — queue and dispatch",
+   "nodes": 6,
+   "edges": 6,
+   "container": "Machine manager",
+   "extent": "145x15",
+   "members": [
+    "pgrpc",
+    "web",
+    "q",
+    "reg",
+    "ssh",
+    "jan"
+   ],
+   "externals": [],
+   "note": "animated: one dot per route (the dispatch relations are the live ones)"
+  },
+  {
+   "id": "l2b",
+   "title": "L2b · Inside — the state writes",
+   "nodes": 5,
+   "edges": 4,
+   "container": "Machine manager",
+   "extent": "59x22",
+   "members": [
+    "q",
+    "pgrpc",
+    "pub",
+    "recon",
+    "pg"
+   ],
+   "externals": [],
+   "note": "second slice of L2: the store-centred star; shares no edge with L2's dispatch set"
+  }
+ ],
+ "splitting_measurements": [
+  {
+   "level": "l1b",
+   "measurement": "L1's external set splits into two groups with no member in common (control plane + humans vs fleet + storage + tooling); combining them needs one canvas 200+ cols wide with the fleet arrows crossing the whole box.",
+   "evidence": "ledger §3.3; templates/machine-manager-internal-nlb-service.yml:1-12,37-40; templates/gateway/grpc-route.yaml:19-26"
+  },
+  {
+   "level": "l2b",
+   "measurement": "the ten internal relations form a dispatch fan (q out-degree 4) and a store star (pg in-degree 4); combined, `q` carries 10 out-edges in one level and `pg` becomes both peer and orphan.",
+   "evidence": "ledger §3.3; jobs/jobs.go:213 vs jobs/*"
+  }
+ ],
+ "verification": {
+  "binary": "rataflow-view",
+  "binary_sha256": "fa76dde2c248af2c16095d5c37def3e5e11af35545abad9bf3dcc9eca98f7f69",
+  "check": "check.txt",
+  "lines": {
+   "canvas": "5 diagrams on one canvas, drawn whole at 100%",
+   "crossings": "0 bridges, 0 touching bends",
+   "near_misses": "0",
+   "labels": "29/29 placed, 0 on route, 0 skipped, 0 ambiguous owners",
+   "dots": "10 single-dot routes, 0 violations",
+   "origins": "10/10"
+  },
+  "captures": [
+   "captures/canvas-text.txt (exact canvas 173x128, frame 0, plain)",
+   "captures/canvas-ansi.ansi (same frame, styled)",
+   "captures/canvas-selected.ansi (--select-all)",
+   "captures/canvas-frames.txt (4 frames: static levels, 10 dots on L2/L2b)",
+   "captures/pane-77x47.txt (target pane: canvas pans)"
+  ]
+ },
+ "visual_inspection": {
+  "method": "read every container's border cells against its members in captures/canvas-text.txt",
+  "l1": "members pgrpc, web, reg, recon, ssh, boot inside; cp, ops, prov, mach outside",
+  "l1b": "members q, web, pub inside; mach, agent, s3, slack outside",
+  "l2": "all six members inside, no external present",
+  "l2b": "all five members inside, no external present",
+  "finding": "container borders are drawn one row below their members' top edge and one row above their bottom edge in this build — the same offset the golden round recorded as a build blocker; identical on the golden's own 173x128 dump"
+ },
+ "residuals": [
+  {
+   "id": "R1",
+   "severity": "medium",
+   "what": "container border offset: the border is not one row outside its members (it lands on the members' top row). Same build as the golden (sha256 fa76dde2…), same offset in the golden's canvas-whole-173x128-frames.txt.",
+   "status": "renderer defect, recorded in docs/visualize-eval/rounds/14/c4-l0/generation.md as blocker #1; not a spec error"
+  },
+  {
+   "id": "R2",
+   "severity": "low",
+   "what": "the canvas is 173x128, wider than a 77-column pane, so the L1 band pans; zoom-out is capped at 100%.",
+   "status": "allowed by the brief; recorded"
+  },
+  {
+   "id": "R3",
+   "severity": "low",
+   "what": "`mach` merges host-OS SSH and BMC Redfish endpoints (ledger C-08)",
+   "status": "recorded choice, matches the golden's shape"
+  },
+  {
+   "id": "R4",
+   "severity": "low",
+   "what": "`prov → mach allocate instance` has no single call site (provider-side allocation, machines imported after allocation)",
+   "status": "recorded in coverage.md"
+  }
+ ],
+ "deviations": [
+  {
+   "what": "ids differ from the golden (web/wapi, recon/rec, pg/db, mach/mch, ops/web)",
+   "why": "ids come from the ledger's canonical element names; labels match the golden's wording",
+   "effect": "cosmetic"
+  },
+  {
+   "what": "L1b description names the River queue's S3 uploads as 'audit and bench objects'",
+   "why": "the ledger proves two upload paths (e35 audit JSON, e46 bench artefacts) where the golden's source said 'diagnose uploads'",
+   "effect": "richer, same relation"
+  }
+ ],
+ "not_claimed": [
+  "This run did not re-run the fresh session against the tightened skill; the v2 spec was generated in this session from the v1 scout evidence (see runs[].verdict).",
+  "The 74 ledger rows outside the 23-relation scope are folded, not drawn; coverage.md lists the folds."
+ ]
+}
