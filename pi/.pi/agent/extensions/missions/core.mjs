@@ -39,7 +39,7 @@ export const INSPECTION_TOOLS = new Set(["read", "grep", "find", "ls", "tool_sea
  *  unable to report, clean up, or answer the human. */
 export const CLOSED_MISSION_STATUSES = new Set(["waiting", "review", "done", "failed"]);
 
-/** Step statuses the CLI still advances to (nextStep in scripts/mission-cli). */
+/** Step statuses the CLI still advances to (nextStep in go/mission). */
 const CONTINUABLE_STEP_STATUSES = new Set(["pending", "needs_changes"]);
 
 /** Gate one tool call by mission status. Returns a block reason, or undefined
@@ -306,27 +306,62 @@ export class MissionBridge {
     }
     return null;
   }
-  /** Claim and start one pending request for this repository. Workers never
-   *  launch, a busy turn waits, and a second sweep finds the claim gone. */
+  /** The Herdr seat this session occupies. The desk writes the same two values
+   *  into its request, so a request addressed to this workspace belongs here. */
+  seat() { return { workspace: this.env.HERDR_WORKSPACE_ID || "", label: this.env.HERDR_PANE_ID || "" }; }
+  /** Whether an addressed Herdr workspace still exists. A request whose seat is
+   *  gone (the session quit, the pane closed) may be adopted; a live seat keeps
+   *  its own request. Outside Herdr nothing is live, so a repository session
+   *  adopts the request after the checkout-family check. */
+  async workspaceLive(workspace) {
+    if (!workspace || this.env.HERDR_ENV !== "1") return false;
+    try {
+      const list = (await this.herdr(["workspace", "list"])).workspaces || [];
+      return list.some(w => w.workspace_id === workspace);
+    } catch { return false; }
+  }
+  /** Which pending request this session may claim. One request belongs to one
+   *  repository and one checkout family; the addressed workspace goes first, an
+   *  unaddressed request next, and a dead address inside the same family last. */
+  async mayClaim(request, repo, seat, common) {
+    if (request.repo !== repo) return false;
+    if (request.owner_common && common && request.owner_common !== common) return false;
+    if (!request.owner_workspace || request.owner_workspace === seat.workspace) return true;
+    return !(await this.workspaceLive(request.owner_workspace));
+  }
+  claimRank(request, seat) {
+    if (request.owner_workspace && request.owner_workspace === seat.workspace) return 0;
+    return request.owner_workspace ? 2 : 1;
+  }
+  /** Claim and start one pending request this session may serve. Workers never
+   *  launch; a busy turn waits; a second sweep finds the claim gone. A captain
+   *  that already owns a mission still serves this workspace's request, because
+   *  start() puts the worker in the mission's own worktree workspace. */
   async sweepLaunches(ctx) {
     if (this.sweeping) return this.sweeping;
     this.sweeping = (async () => {
+      if (this.env.PI_SUBAGENT_NAME) return;
       const pending = this.pendingLaunches();
-      if (!pending.length || this.hint) return;
+      if (!pending.length) return;
       if (!ctx.isIdle() || ctx.hasPendingMessages()) return;
       const repo = await this.sessionRepo(ctx);
       if (!repo) return;
-      for (const request of pending.filter(r => r.repo === repo)) {
-        if (!this.claimLaunch(request, ctx.sessionManager.getSessionId())) continue;
-        try {
-          const result = await this.start(ctx, request.handle);
-          const launched = result?.launched === true;
-          this.settleLaunch(request, { state: launched ? "started" : "failed", launch_id: result?.runtime?.launch_id,
-            ...(launched ? {} : { error: result?.reason || "the launch was not acknowledged" }) });
-        } catch (e) {
-          this.settleLaunch(request, { state: "failed", error: e.message });
-        }
-        return; // one launch per sweep: the next tick picks up the next request
+      const seat = this.seat();
+      let common = null;
+      try { common = await this.common(ctx.cwd); } catch { /* cwd is not a checkout */ }
+      const candidates = [];
+      for (const request of pending) if (await this.mayClaim(request, repo, seat, common)) candidates.push(request);
+      candidates.sort((a, b) => this.claimRank(a, seat) - this.claimRank(b, seat));
+      const request = candidates[0];
+      if (!request || !this.claimLaunch(request, ctx.sessionManager.getSessionId())) return;
+      try {
+        const result = await this.start(ctx, request.handle);
+        const launched = result?.launched === true;
+        this.settleLaunch(request, { state: launched ? "started" : "failed", launch_id: result?.runtime?.launch_id,
+          ...(launched ? { workspace: result?.workspace, pane: result?.pane, session_file: result?.session_file }
+            : { error: result?.reason || "the launch was not acknowledged" }) });
+      } catch (e) {
+        this.settleLaunch(request, { state: "failed", error: e.message });
       }
     })();
     try { await this.sweeping; } finally { this.sweeping = null; }

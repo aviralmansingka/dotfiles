@@ -25,15 +25,43 @@ const (
 
 // Launch is one launch request. The JSON field names are the wire format the Pi
 // extension reads and writes; keep them stable.
+//
+// The owner fields address the request to the seat that asked for it. A session
+// in that Herdr workspace claims first; a session elsewhere waits until the
+// addressed workspace is gone, and then adopts the request only inside the same
+// checkout family. Without an address (the desk ran outside Herdr) any idle
+// session of the repository may claim.
 type Launch struct {
-	Handle    string `json:"handle"`
-	Repo      string `json:"repo"`
-	Requested string `json:"requested_at"`
-	State     string `json:"state"`
-	ClaimedBy string `json:"claimed_by,omitempty"`
-	LaunchID  string `json:"launch_id,omitempty"`
-	Error     string `json:"error,omitempty"`
-	Updated   string `json:"updated_at,omitempty"`
+	Handle         string `json:"handle"`
+	Repo           string `json:"repo"`
+	Requested      string `json:"requested_at"`
+	State          string `json:"state"`
+	OwnerWorkspace string `json:"owner_workspace,omitempty"`
+	OwnerLabel     string `json:"owner_label,omitempty"`
+	OwnerCommon    string `json:"owner_common,omitempty"`
+	ClaimedBy      string `json:"claimed_by,omitempty"`
+	LaunchID       string `json:"launch_id,omitempty"`
+	Workspace      string `json:"workspace,omitempty"`
+	Pane           string `json:"pane,omitempty"`
+	SessionFile    string `json:"session_file,omitempty"`
+	Error          string `json:"error,omitempty"`
+	Updated        string `json:"updated_at,omitempty"`
+}
+
+// launchOwner is the seat that writes a request. It comes from the desk's own
+// environment: the pane it runs in is the address the extension matches.
+type launchOwner struct {
+	Workspace string // HERDR_WORKSPACE_ID
+	Label     string // HERDR_PANE_ID, the seat that asked
+	Common    string // absolute git common dir, the checkout family
+}
+
+// deskOwner reads the seat from the desk's environment. A desk outside Herdr
+// still records its checkout family, so the request cannot be adopted by a
+// session of another repository.
+func deskOwner(cwd string) launchOwner {
+	common, _ := gitCommon(cwd)
+	return launchOwner{Workspace: os.Getenv("HERDR_WORKSPACE_ID"), Label: os.Getenv("HERDR_PANE_ID"), Common: common}
 }
 
 // live reports whether the request still owns the launch: the desk ignores a
@@ -98,12 +126,13 @@ func launches(dir string) map[string]Launch {
 // requestLaunch writes a pending request unless one is already live. It reports
 // whether it wrote, so the desk can tell the difference between "requested" and
 // "already pending" without a second read.
-func requestLaunch(dir, handle, repo string, now time.Time) (Launch, bool, error) {
+func requestLaunch(dir string, owner launchOwner, handle, repo string, now time.Time) (Launch, bool, error) {
 	if l, ok := readLaunch(dir, handle); ok && l.live() {
 		return l, false, nil
 	}
 	stamp := now.UTC().Format(time.RFC3339Nano)
-	l := Launch{Handle: handle, Repo: repo, Requested: stamp, State: launchPending, Updated: stamp}
+	l := Launch{Handle: handle, Repo: repo, Requested: stamp, State: launchPending, Updated: stamp,
+		OwnerWorkspace: owner.Workspace, OwnerLabel: owner.Label, OwnerCommon: owner.Common}
 	b, e := json.MarshalIndent(l, "", "  ")
 	if e != nil {
 		return Launch{}, false, e
@@ -119,15 +148,30 @@ func requestLaunch(dir, handle, repo string, now time.Time) (Launch, bool, error
 func launchSummary(l Launch) (string, string) {
 	switch l.State {
 	case launchPending:
-		return "launch pending", "waiting for its Pi session"
+		return "launch pending", ownerLine(l)
 	case launchClaimed:
 		return "launch claimed", "the Pi session is starting it"
 	case launchStarted:
+		if l.Workspace != "" {
+			return "launch started", "Herdr agent in " + l.Workspace
+		}
 		return "launch started", "the mission worktree has a session"
 	case launchFailed:
 		return "launch failed", clean(fallback(l.Error, "inspect the Pi session"))
 	}
 	return "", ""
+}
+
+// ownerLine is the one line the desk prints for a pending request: it names the
+// seat the request is addressed to, so a human knows which Pi session starts it.
+func ownerLine(l Launch) string {
+	if l.OwnerWorkspace == "" {
+		return "waiting for a Pi session in this repository"
+	}
+	if l.OwnerLabel != "" {
+		return "waiting for the Pi session in " + l.OwnerWorkspace + " (" + l.OwnerLabel + ")"
+	}
+	return "waiting for a Pi session in " + l.OwnerWorkspace
 }
 
 // sortedLaunches is a stable order for tests and logs.

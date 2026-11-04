@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,12 +31,12 @@ func TestLaunchRequestIsWrittenOnce(t *testing.T) {
 	handle := m.records[m.selected].Handle
 	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	l, created, e := requestLaunch(dir, handle, "dotfiles", at)
+	l, created, e := requestLaunch(dir, launchOwner{}, handle, "dotfiles", at)
 	must(t, e)
 	if !created || l.State != launchPending {
 		t.Fatalf("first request: created=%v state=%s", created, l.State)
 	}
-	again, created, e := requestLaunch(dir, handle, "dotfiles", at.Add(time.Minute))
+	again, created, e := requestLaunch(dir, launchOwner{}, handle, "dotfiles", at.Add(time.Minute))
 	must(t, e)
 	if created {
 		t.Fatal("a live request was rewritten")
@@ -46,7 +47,7 @@ func TestLaunchRequestIsWrittenOnce(t *testing.T) {
 	// A claimed request still owns the launch: the press that follows it is a
 	// duplicate, not a second launch.
 	must(t, atomicWrite(launchFile(dir, handle), []byte(`{"handle":"`+handle+`","repo":"dotfiles","requested_at":"2026-01-01T00:00:00Z","state":"claimed"}`)))
-	if _, created, e = requestLaunch(dir, handle, "dotfiles", at); e != nil || created {
+	if _, created, e = requestLaunch(dir, launchOwner{}, handle, "dotfiles", at); e != nil || created {
 		t.Fatalf("claimed request: created=%v err=%v", created, e)
 	}
 }
@@ -55,10 +56,10 @@ func TestFailedLaunchCanBeRequestedAgain(t *testing.T) {
 	_, dir := launchDesk(t)
 	handle := "dotfiles/test-mission"
 	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	_, _, e := requestLaunch(dir, handle, "dotfiles", at)
+	_, _, e := requestLaunch(dir, launchOwner{}, handle, "dotfiles", at)
 	must(t, e)
 	must(t, atomicWrite(launchFile(dir, handle), []byte(`{"handle":"`+handle+`","repo":"dotfiles","state":"failed","error":"Herdr is not running"}`)))
-	if _, created, e := requestLaunch(dir, handle, "dotfiles", at.Add(time.Minute)); e != nil || !created {
+	if _, created, e := requestLaunch(dir, launchOwner{}, handle, "dotfiles", at.Add(time.Minute)); e != nil || !created {
 		t.Fatalf("a failed request must be retryable: created=%v err=%v", created, e)
 	}
 }
@@ -145,5 +146,62 @@ func TestLaunchFilesAreNamedPerHandle(t *testing.T) {
 	dir := t.TempDir()
 	if got := filepath.Base(launchFile(dir, "dotfiles/missions-desk-ui")); got != "dotfiles--missions-desk-ui.json" {
 		t.Fatalf("file = %s", got)
+	}
+}
+
+// A request is addressed to the seat that asked for it, so one Pi session in
+// that Herdr workspace picks it up and no other repository can adopt it.
+func TestLaunchRequestRecordsTheSeatThatAsked(t *testing.T) {
+	t.Setenv("HERDR_WORKSPACE_ID", "w67")
+	t.Setenv("HERDR_PANE_ID", "w67:p9")
+	m, dir := launchDesk(t)
+	press(m, "L")
+	l, ok := readLaunch(dir, m.records[m.selected].Handle)
+	if !ok {
+		t.Fatal("the press wrote no request")
+	}
+	if l.OwnerWorkspace != "w67" || l.OwnerLabel != "w67:p9" {
+		t.Fatalf("owner = %q/%q, want w67/w67:p9", l.OwnerWorkspace, l.OwnerLabel)
+	}
+	if l.OwnerCommon == "" {
+		t.Fatal("the request does not record its checkout family")
+	}
+	if !strings.Contains(m.notice, "w67") {
+		t.Fatalf("the notice does not name the seat: %q", m.notice)
+	}
+}
+
+// Outside Herdr the desk has no seat. The request stays inside the repository
+// and any idle session there may claim it.
+func TestLaunchOutsideHerdrWaitsForTheRepository(t *testing.T) {
+	t.Setenv("HERDR_WORKSPACE_ID", "")
+	t.Setenv("HERDR_PANE_ID", "")
+	m, dir := launchDesk(t)
+	press(m, "L")
+	l, _ := readLaunch(dir, m.records[m.selected].Handle)
+	if l.OwnerWorkspace != "" || l.OwnerLabel != "" {
+		t.Fatalf("owner = %q/%q, want an unaddressed request", l.OwnerWorkspace, l.OwnerLabel)
+	}
+	if line := ownerLine(l); !strings.Contains(line, "this repository") {
+		t.Fatalf("owner line = %q", line)
+	}
+}
+
+// The receipt names the Herdr agent the launch created, so the human can find
+// the new tab instead of guessing whether anything happened.
+func TestStartedLaunchShowsItsHerdrAgent(t *testing.T) {
+	m, dir := launchDesk(t)
+	handle := m.records[m.selected].Handle
+	m.width, m.height = 128, 42
+	press(m, "L")
+	l, _ := readLaunch(dir, handle)
+	l.State, l.Workspace, l.Pane = launchStarted, "w42", "w42:p1"
+	b, e := json.Marshal(l)
+	must(t, e)
+	must(t, atomicWrite(launchFile(dir, handle), b))
+	m.refresh()
+	frame := stripANSI(m.render())
+	if !strings.Contains(frame, "Herdr agent in w42") {
+		t.Fatalf("the receipt does not name the created agent:\n%s", frame)
 	}
 }

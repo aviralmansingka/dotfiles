@@ -324,6 +324,67 @@ test("a sweep leaves another repository's request alone", async t => {
   assert.equal(bridge.pendingLaunches().length,1);
 });
 
+/** A Herdr seat and a checkout family, the two values the desk records. */
+function launchFixture(t, env) {
+  const cache=realpathSync(mkdtempSync(join(tmpdir(),"mission-launch-")));
+  t.after(()=>rmSync(cache,{recursive:true,force:true}));
+  const bridge=new MissionBridge({env:{MISSION_STATE_DIR:cache,...env},run:async()=>"[]"});
+  bridge.sessionRepo=async()=>"dotfiles";
+  bridge.common=async()=>"/git/dotfiles";
+  const starts=[];
+  bridge.start=async(_ctx,handle)=>{starts.push(handle);
+    return {launched:true,runtime:{launch_id:"launch-1"},workspace:"w42",pane:"w42:p1",session_file:"/tmp/worker.jsonl"}};
+  return {bridge,cache,starts};
+}
+const seat=w=>({HERDR_ENV:"1",HERDR_WORKSPACE_ID:w,HERDR_PANE_ID:w+":p1"});
+
+test("a request addressed to this workspace is claimed here", async t => {
+  const f=launchFixture(t,seat("w67"));
+  const file=launchRequest(f.cache,"dotfiles/desk-launch","dotfiles",
+    {owner_workspace:"w67",owner_label:"w67:p1",owner_common:"/git/dotfiles"});
+  await f.bridge.sweepLaunches(context("/tmp","/tmp/pi"));
+  assert.deepEqual(f.starts,["dotfiles/desk-launch"]);
+  const receipt=JSON.parse(readFileSync(file,"utf8"));
+  assert.equal(receipt.state,"started");
+  // The receipt names the Herdr agent the launch created, so the desk can show it.
+  assert.equal(receipt.workspace,"w42");assert.equal(receipt.pane,"w42:p1");
+});
+
+test("a request addressed to a live workspace elsewhere waits for it", async t => {
+  const f=launchFixture(t,seat("w67"));
+  f.bridge.workspaceLive=async id=>id==="w9";
+  launchRequest(f.cache,"dotfiles/desk-launch","dotfiles",{owner_workspace:"w9",owner_common:"/git/dotfiles"});
+  await f.bridge.sweepLaunches(context("/tmp","/tmp/pi"));
+  assert.deepEqual(f.starts,[]);
+  assert.equal(f.bridge.pendingLaunches().length,1);
+});
+
+test("a dead address is adopted only inside the same checkout family", async t => {
+  const f=launchFixture(t,seat("w67"));
+  f.bridge.workspaceLive=async()=>false;
+  launchRequest(f.cache,"dotfiles/foreign-family","dotfiles",{owner_workspace:"w9",owner_common:"/git/other"});
+  launchRequest(f.cache,"dotfiles/own-family","dotfiles",{owner_workspace:"w9",owner_common:"/git/dotfiles"});
+  await f.bridge.sweepLaunches(context("/tmp","/tmp/pi"));
+  assert.deepEqual(f.starts,["dotfiles/own-family"]);
+  assert.deepEqual(f.bridge.pendingLaunches().map(r=>r.handle),["dotfiles/foreign-family"]);
+});
+
+test("a captain that owns a mission still serves its workspace's request", async t => {
+  const f=launchFixture(t,seat("w67"));
+  f.bridge.hint={handle:"dotfiles/missions-desk-ui",attempt:"attempt-1",token:"token",outbox:[]};
+  launchRequest(f.cache,"dotfiles/start-a-timer","dotfiles",{owner_workspace:"w67",owner_common:"/git/dotfiles"});
+  await f.bridge.sweepLaunches(context("/tmp","/tmp/pi"));
+  assert.deepEqual(f.starts,["dotfiles/start-a-timer"]);
+});
+
+test("a worker never launches another mission", async t => {
+  const f=launchFixture(t,{...seat("w67"),PI_SUBAGENT_NAME:"mission-worker"});
+  launchRequest(f.cache,"dotfiles/desk-launch","dotfiles",{owner_workspace:"w67",owner_common:"/git/dotfiles"});
+  await f.bridge.sweepLaunches(context("/tmp","/tmp/pi"));
+  assert.deepEqual(f.starts,[]);
+  assert.equal(f.bridge.pendingLaunches().length,1);
+});
+
 test("the desk's request starts the mission through the start path", needsCLI, async t => {
   const f=await fixture(t);const requests=[];
   globalThis.__pi_interactive_subagents={executeSubagent:async(p)=>{requests.push(p);return {details:{status:"started",sessionFile:f.file}}}};
