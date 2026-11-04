@@ -7,7 +7,10 @@
 --   * the auto rule (a window too narrow for a 40-cell column stays alone,
 --     every other window gets the column);
 --   * a resize re-cuts the fillers, a window close and a buffer switch drop
---     them, and :write keeps the column open.
+--     them, and :write keeps the column open;
+--   * a wide table row or mermaid line spills: the column grows to hold it, the
+--     4-cell spill cap holds, prose keeps the 72-cell default, and a deleted
+--     table shrinks the column back.
 --
 -- Headless nvim sizes 'columns'/'lines' itself, so every case pins them first.
 -- Nothing here touches $HOME or the network.
@@ -236,4 +239,101 @@ H.run("markdown_reader_spec", function()
     return win_count() == 1
   end, 10)
   H.eq(win_count(), 1, "closing the editing window drops the fillers")
+
+  -- ── spill: a wide table or mermaid line widens the column ───────────────
+  -- Prose keeps the 8-cell margin; a spill line may take the column up to
+  -- 4 cells short of the window (one filler cell and one separator each side).
+  H.eq(reader.read_width(120, 0), 100, "a prose-only buffer keeps the 100-cell column")
+  H.eq(reader.read_width(80, 0), 72, "an 80-cell window keeps the 72-cell prose column")
+  H.eq(reader.read_width(80, 76), 76, "a 76-cell spill line grows the column to 76")
+  H.eq(reader.read_width(80, 200), 76, "a spill line past the cap stops at 80 - 4 cells")
+  H.eq(reader.read_width(120, 110), 110, "a 110-cell spill line grows a 100-cell column")
+
+  -- A lone pipe in prose is not a table, and a plain fence is not mermaid.
+  local pipes = prose_buf({ "# Title", "a | b in prose", "", "more | pipes | here" })
+  H.eq(reader.spill_width(pipes), 0, "a lone pipe in prose never counts as a table row")
+  local lua_fence = prose_buf({ "```lua", string.rep("x", 120), "```" })
+  H.eq(reader.spill_width(lua_fence), 0, "a non-mermaid fence never counts as spill")
+
+  -- a two-cell GFM row that is exactly `width` cells wide
+  local function table_row(width)
+    return { "| a | b |", "| --- | --- |", "| " .. string.rep("x", width - 8) .. " | b |" }
+  end
+
+  vim.fn.delete(vim.fn.tempname())
+  reader.close()
+  vim.o.columns, vim.o.lines = 80, 40
+  local spill_win = vim.api.nvim_get_current_win()
+  -- prose only: the default column does not move
+  vim.api.nvim_win_set_buf(spill_win, prose_buf({ "# Prose", "", "Some prose in a column." }))
+  H.eq(reader.enable(spill_win), true, "the reader opens on a prose buffer in an 80-cell window")
+  local prose_info = target_info(spill_win)
+  H.eq(prose_info.width - prose_info.textoff, 72, "prose only keeps the 72-cell column")
+  reader.close()
+
+  -- a 76-cell table row in an 80-cell window: the column grows to hold it
+  local lines = table_row(76)
+  H.eq(#lines[3], 76, "the fixture row is 76 cells wide")
+  local table_buf = prose_buf(lines)
+  H.eq(reader.spill_width(table_buf), 76, "the table row measures 76 cells")
+  vim.api.nvim_win_set_buf(spill_win, table_buf)
+  H.eq(reader.enable(spill_win), true, "the reader opens on a wide table")
+  local grown = target_info(spill_win)
+  H.eq(grown.width - grown.textoff, 76, "the column grows to the 76-cell row")
+  local grown_left = (grown.wincol - 1) + grown.textoff
+  local grown_right = vim.o.columns - (grown_left + (grown.width - grown.textoff))
+  H.eq(math.abs(grown_left - grown_right) <= 1, true,
+    string.format("the grown column stays centered (left %d, right %d)", grown_left, grown_right))
+  H.eq(vim.api.nvim_win_text_height(spill_win, { start_row = 2, end_row = 2 }).all, 1,
+    "the grown column shows the table row on one screen line")
+  H.eq(vim.wo[spill_win].wrap, true, "the grown column still wraps prose")
+  reader.close()
+
+  -- a wide mermaid line grows the column the same way
+  local mermaid_line = "graph LR; " .. string.rep("A", 66)
+  H.eq(#mermaid_line, 76, "the fixture mermaid line is 76 cells wide")
+  local mermaid_buf = prose_buf({ "```mermaid", mermaid_line, "```" })
+  H.eq(reader.spill_width(mermaid_buf), 76, "the mermaid line measures 76 cells")
+  vim.api.nvim_win_set_buf(spill_win, mermaid_buf)
+  H.eq(reader.enable(spill_win), true, "the reader opens on a wide mermaid block")
+  local mer = target_info(spill_win)
+  H.eq(mer.width - mer.textoff, 76, "a mermaid line grows the column to 76 cells")
+  H.eq(vim.api.nvim_win_text_height(spill_win, { start_row = 1, end_row = 1 }).all, 1,
+    "the grown column shows the mermaid line on one screen line")
+  reader.close()
+
+  -- a row wider than the 4-cell cap wraps: the documented fallback
+  local over = table_row(77)
+  H.eq(#over[3], 77, "the over-cap fixture row is 77 cells wide")
+  local over_buf = prose_buf(over)
+  vim.api.nvim_win_set_buf(spill_win, over_buf)
+  H.eq(reader.enable(spill_win), true, "the reader opens on an over-cap table")
+  local capped = target_info(spill_win)
+  H.eq(capped.width - capped.textoff, 76, "an over-cap row stops the column at 76 cells")
+  H.eq(vim.api.nvim_win_text_height(spill_win, { start_row = 2, end_row = 2 }).all, 2,
+    "the over-cap row wraps onto two screen lines")
+
+  -- deleting the wide table shrinks the column back to the prose default
+  vim.wait(50, function()
+    return false -- let any scheduled sync land before the edit
+  end, 10)
+  vim.api.nvim_buf_set_lines(over_buf, 0, -1, false, { "# Prose again", "", "short lines" })
+  vim.api.nvim_exec_autocmds("TextChanged", { buffer = over_buf })
+  local function shrunk()
+    local info_now = target_info(spill_win)
+    return info_now ~= nil and info_now.width - info_now.textoff == 72
+  end
+  vim.wait(1000, shrunk, 10)
+  H.eq(shrunk(), true, "deleting the wide table shrinks the column back to 72 cells")
+
+  -- an edit that widens the table widens the column again
+  vim.api.nvim_buf_set_lines(over_buf, 0, -1, false, table_row(74))
+  vim.api.nvim_exec_autocmds("TextChanged", { buffer = over_buf })
+  local function regrown()
+    local info_now = target_info(spill_win)
+    return info_now ~= nil and info_now.width - info_now.textoff == 74
+  end
+  vim.wait(1000, regrown, 10)
+  H.eq(regrown(), true, "a table edited wider grows the column again")
+  reader.close()
 end)

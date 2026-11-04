@@ -9,7 +9,7 @@
 # machine), markdown_ansi_autocmds (reload idempotency + byte preservation),
 # markdown_plugin (plugins/markdown.lua wiring, #159 PencilSoft wrap, todo
 # scan filters), markdown_reader (centered reading column: eligibility,
-# layout, auto rule, resize, close). No plugin bootstrap, no network, no mmdflux/grok-mermaid
+# layout, auto rule, resize, close, table/mermaid spill). No plugin bootstrap, no network, no mmdflux/grok-mermaid
 # binaries (all stubbed), no $HOME mutation: fixture trees are mktemp'd and
 # XDG_CONFIG_HOME is pinned to a temp copy so the treesitter query shadow
 # reads this worktree's file, never a stowed config.

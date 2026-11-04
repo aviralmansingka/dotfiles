@@ -52,6 +52,13 @@ It runs headless, offline, and with no plugin manager.
   `:write` keeps the fillers. A resize re-cuts them, a too-narrow resize, a
   buffer switch to an octo buffer, and a closed editing window drop them.
 
+The reader column wraps prose at `min(100, width - 8)`. A GFM table row or a
+mermaid line that is wider grows the column, up to `width - 4`. The two
+margins differ: 8 cells keep the prose column off the window edge, and 4
+cells are the smallest margin the layout holds. A line past the 4-cell cap
+wraps, and that is the fallback. An edit in the column re-cuts it after a
+120 ms pause.
+
 ## How to run
 
 Run `scripts/test-nvim-markdown.sh` from the repository root. The script

@@ -8,14 +8,21 @@
 --
 -- wrap and linebreak are on for prose while the reader is open. Both values
 -- come back on exit, so the markdown FileType keeps its own wrap=false.
+--
+-- Table rows and mermaid lines spill: the column grows to hold the widest of
+-- them. Prose keeps wrapping in the column.
 
 local M = {}
 
 local COLUMN = 100 -- wanted text columns
 local MIN_COLUMN = 40 -- a column below this width gains nothing
 local MARGIN = 8 -- cells kept free for the two filler windows
+local SPILL_MARGIN = 4 -- cells kept free when a spill line widens the column
+local RELAYOUT_MS = 120 -- debounce for a re-cut after a text change
 
 local session -- { win, buf, left, right, wrap, linebreak }
+local spill_cache = {} -- bufnr -> { tick, lines, width }
+local relayout_timer
 
 local function notify(message)
   vim.notify("Reader: " .. message, vim.log.levels.INFO)
@@ -24,6 +31,16 @@ end
 --- Wanted text width for a window that offers `width` cells.
 function M.column_width(width)
   return math.min(COLUMN, width - MARGIN)
+end
+
+--- Text width for a window that offers `avail` cells. The prose column grows
+--- to the widest spill line, but never past the spill cap.
+function M.read_width(avail, widest)
+  local column = M.column_width(avail)
+  if widest and widest > column then
+    return math.min(widest, avail - SPILL_MARGIN)
+  end
+  return column
 end
 
 --- Auto-enable rule. The column is the default for reading markdown. Auto-enable
@@ -61,6 +78,137 @@ local function text_offset(win)
   return info and info.textoff or 0
 end
 
+local function trim(line)
+  return (line:match("^%s*(.-)%s*$"))
+end
+
+-- Split a table row into cells. A leading or trailing pipe is optional.
+local function cells(line)
+  local body = trim(line):gsub("^|", ""):gsub("|$", "")
+  local out = {}
+  for cell in (body .. "|"):gmatch("([^|]*)|") do
+    out[#out + 1] = trim(cell)
+  end
+  return out
+end
+
+-- A GFM delimiter row: dash cells with optional colons, and one pipe or more.
+local function delimiter(line)
+  if not line:find("|", 1, true) then
+    return nil
+  end
+  local count = 0
+  for _, cell in ipairs(cells(line)) do
+    if not cell:match("^:?%-+:?$") then
+      return nil
+    end
+    count = count + 1
+  end
+  if count == 0 then
+    return nil
+  end
+  return count
+end
+
+local function is_blank(line)
+  return line:match("^%s*$") ~= nil
+end
+
+-- An opening code fence. Returns its marks and its lowercased info string.
+local function fence_open(line)
+  local marks, info = line:match("^%s*(```+)%s*(.-)%s*$")
+  if not marks then
+    marks, info = line:match("^%s*(~~~+)%s*(.-)%s*$")
+  end
+  if not marks then
+    return nil
+  end
+  return marks, (info or ""):lower()
+end
+
+local function fence_close(line, marks)
+  local pattern = marks:sub(1, 1) == "`" and "^%s*```+%s*$" or "^%s*~~~+%s*$"
+  return line:match(pattern) ~= nil
+end
+
+-- The spill-eligible lines: the rows of a table block (header, delimiter, and
+-- the pipe rows below it) and the lines of a mermaid fence. A lone pipe in
+-- prose counts only when a delimiter row and a header row support it.
+local function spill_lines(lines)
+  local marked = {}
+  local i = 1
+  while i <= #lines do
+    local marks, info = fence_open(lines[i])
+    if marks then
+      local first, last = i, i
+      i = i + 1
+      while i <= #lines do
+        local closed = fence_close(lines[i], marks)
+        last = i
+        i = i + 1
+        if closed then
+          break
+        end
+      end
+      if info == "mermaid" or info:match("^mermaid%s") then
+        for n = first, last do
+          marked[n] = true
+        end
+      end
+    elseif delimiter(lines[i]) and i > 1 and not is_blank(lines[i - 1]) and lines[i - 1]:find("|", 1, true) then
+      local first = i - 1
+      local last = i
+      local j = i + 1
+      while j <= #lines and not is_blank(lines[j]) and lines[j]:find("|", 1, true) do
+        last = j
+        j = j + 1
+      end
+      for n = first, last do
+        marked[n] = true
+      end
+      i = j
+    else
+      i = i + 1
+    end
+  end
+  return marked
+end
+
+-- Display cells in `line`. strdisplaywidth() reads the wrap state of the
+-- current window and over-reports a long line there, so take the pure string
+-- width when nvim offers it.
+local function line_width(line)
+  if vim.api.nvim_strwidth then
+    return vim.api.nvim_strwidth(line)
+  end
+  return vim.fn.strdisplaywidth(line)
+end
+
+--- Widest spill-eligible line in `buf`, in display cells. The cache key is
+--- the change tick, so a text change pays for one scan of the eligible lines.
+function M.spill_width(buf)
+  buf = (buf == nil or buf == 0) and vim.api.nvim_get_current_buf() or buf
+  if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
+    return 0
+  end
+  local tick = vim.api.nvim_buf_get_changedtick(buf)
+  local count = vim.api.nvim_buf_line_count(buf)
+  local hit = spill_cache[buf]
+  if hit and hit.tick == tick and hit.lines == count then
+    return hit.width
+  end
+  local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  local widest = 0
+  for index in pairs(spill_lines(content)) do
+    local width = line_width(content[index])
+    if width > widest then
+      widest = width
+    end
+  end
+  spill_cache[buf] = { tick = tick, lines = count, width = widest }
+  return widest
+end
+
 local function blank_vert(value)
   local parts = {}
   for part in tostring(value):gmatch("[^,]+") do
@@ -86,17 +234,13 @@ local function filler(win, side, width)
   return pad
 end
 
-local function set_pad_width(pad, width)
-  vim.wo[pad].winfixwidth = false
-  vim.api.nvim_win_set_width(pad, width)
-  vim.wo[pad].winfixwidth = true
-end
-
 -- Cut the column out of `avail` cells. The text area is centered, not the
 -- window: 'statuscolumn' and the sign column stay in the left margin.
-local function metrics(win, avail)
+local function metrics(win, avail, buf)
   local off = text_offset(win)
-  local column = M.column_width(avail)
+  -- The text offset moves the text right, so it spends the left margin twice.
+  -- Cap by what it leaves, else the guard below drops a grown column.
+  local column = math.min(M.read_width(avail, M.spill_width(buf)), avail - SPILL_MARGIN - 2 * off)
   if column < MIN_COLUMN then
     return nil
   end
@@ -108,24 +252,45 @@ local function metrics(win, avail)
   return { column = column, target = target, left = left }
 end
 
--- Size the two fillers and the editing window. The right filler takes what is
--- left over, so only the left filler and the editing window need a width.
+-- Size the two fillers and the editing window. Every width is set, so the
+-- total stays the same. A fixed filler would keep its cells and leave the
+-- editing window no room to grow, so all three widths are free while they
+-- change and fixed again after.
 local function layout()
   local win = session.win
   local left = session.left
   local right = session.right
   local avail = vim.api.nvim_win_get_width(left) + 1 + vim.api.nvim_win_get_width(win) + 1
     + vim.api.nvim_win_get_width(right)
-  local cut = metrics(win, avail)
+  local cut = metrics(win, avail, session.buf)
   if not cut then
     return false
   end
-  set_pad_width(left, cut.left)
-  local fix = vim.wo[win].winfixwidth
-  vim.wo[win].winfixwidth = false
+  local fixed = { vim.wo[left].winfixwidth, vim.wo[win].winfixwidth, vim.wo[right].winfixwidth }
+  vim.wo[left].winfixwidth, vim.wo[win].winfixwidth, vim.wo[right].winfixwidth = false, false, false
+  vim.api.nvim_win_set_width(left, cut.left)
   vim.api.nvim_win_set_width(win, cut.target)
-  vim.wo[win].winfixwidth = fix
+  vim.api.nvim_win_set_width(right, avail - cut.left - 1 - cut.target - 1)
+  vim.wo[left].winfixwidth = fixed[1]
+  vim.wo[win].winfixwidth = fixed[2]
+  vim.wo[right].winfixwidth = fixed[3]
   return true
+end
+
+-- Content changed in the column: the widest spill line may have moved. Cut
+-- again after a short pause, so one keystroke never cuts twice.
+local function debounce_relayout()
+  if not relayout_timer then
+    relayout_timer = (vim.uv or vim.loop).new_timer()
+  end
+  relayout_timer:stop()
+  relayout_timer:start(RELAYOUT_MS, 0, function()
+    vim.schedule(function()
+      if M.is_open() then
+        layout()
+      end
+    end)
+  end)
 end
 
 -- The reader window options. A later FileType callback (the markdown wrap
@@ -149,7 +314,9 @@ local function sync(win, buf)
     M.close() -- review threads, scrollback, quickfix: no column
     return
   end
+  session.buf = buf -- the new buffer may spill by a different amount
   dress(win)
+  layout()
 end
 
 --- Open the reader column on `win`. Returns false when the window cannot hold it.
@@ -162,7 +329,7 @@ function M.enable(win)
     return false
   end
   local buf = vim.api.nvim_win_get_buf(win)
-  local cut = vim.api.nvim_win_is_valid(win) and metrics(win, vim.api.nvim_win_get_width(win)) or nil
+  local cut = vim.api.nvim_win_is_valid(win) and metrics(win, vim.api.nvim_win_get_width(win), buf) or nil
   if not M.eligible(buf) or not cut then
     return false
   end
@@ -203,6 +370,9 @@ function M.close()
   end
   local closed = session
   session = nil
+  if relayout_timer then
+    relayout_timer:stop()
+  end
   for _, pad in ipairs({ closed.left, closed.right }) do
     if pad and vim.api.nvim_win_is_valid(pad) then
       pcall(vim.api.nvim_win_close, pad, true)
@@ -284,6 +454,18 @@ function M.setup()
           sync(win, event.buf)
         end
       end)
+    end,
+  })
+
+  -- A wider table or mermaid line grows the column and a deleted one shrinks
+  -- it back. Debounced, and only while the column is open.
+  vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
+    group = group,
+    callback = function(event)
+      if not M.is_open() or event.buf ~= session.buf then
+        return
+      end
+      debounce_relayout()
     end,
   })
 
