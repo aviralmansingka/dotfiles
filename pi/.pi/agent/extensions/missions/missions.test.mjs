@@ -650,3 +650,21 @@ test("a checkpoint decision carries the attestation the CLI requires", () => {
   assert.throws(() => checkpointArgs("", record, { decision: "accept" }), /handle/);
   assert.throws(() => checkpointArgs("dotfiles/mission-panel", record, { decision: "reject" }), /accept or revise/);
 });
+
+test("the panel opens the mission desk in a Herdr pane", async () => {
+  const calls = [];
+  const bridge = new MissionBridge({ env: { ...process.env, HERDR_ENV: "1", MISSION_VAULT: "/tmp/panel-vault" },
+    run: async (bin, args) => {
+      calls.push({ bin, args });
+      if (args[0] === "pane" && args[1] === "split") return JSON.stringify({ result: { pane: { pane_id: "w1:p9" } } });
+      // `pane run` answers with no JSON, so the desk launch must not parse it.
+      if (args[0] === "pane" && args[1] === "run") return "";
+      throw Error("unexpected " + args.join(" "));
+    } });
+  assert.equal(await bridge.openDesk(), "w1:p9");
+  assert.deepEqual(calls[0].args, ["pane", "split", "--current", "--direction", "right"]);
+  assert.deepEqual(calls[1].args, ["pane", "run", "w1:p9", bridge.binary, "--vault", bridge.vault, "ui"]);
+  // Outside Herdr the desk has no pane, so the caller notifies instead.
+  const outside = new MissionBridge({ env: { ...process.env, HERDR_ENV: "0" } });
+  await assert.rejects(outside.openDesk(), /Herdr pane/);
+});
