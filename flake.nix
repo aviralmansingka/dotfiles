@@ -45,6 +45,8 @@
       homeConfigurations = {
         remote = fleet.mkRemote "homelab";
         remote-devbox = fleet.mkRemote "devbox";
+        # A vanilla Ubuntu 24.04 EC2 box: the reproduction proof off the lab.
+        remote-probe = fleet.mkRemote "probe";
       };
 
       # The macbook profile: nix-darwin for the system layer (fonts, defaults,

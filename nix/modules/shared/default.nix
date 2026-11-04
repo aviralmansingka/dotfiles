@@ -61,10 +61,6 @@ in
       ]
     );
 
-  # google-chrome is unfree; the pin is the flake's nixpkgs, so allow it here
-  # and nowhere else.
-  nixpkgs.config.allowUnfree = true;
-
   programs.home-manager.enable = true;
 
   # Ghostty's terminfo entry is a compiled file, not a stowed one. It used to be

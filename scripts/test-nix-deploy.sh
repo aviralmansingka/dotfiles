@@ -99,6 +99,10 @@ chmod +x "$BIN"/*
 export CALLS
 export BIN
 export PATH="$BIN:$PATH"
+# The deploy prefers the user profile's Nix over PATH. On a Mac that now has Nix
+# installed, that would reach the real store, so the stub directory is handed
+# over explicitly and the script puts it first.
+export FLEET_STUB_BIN="$BIN"
 
 run() { # $1 case name, rest: argv
   local name="$1"

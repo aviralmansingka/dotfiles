@@ -14,6 +14,10 @@ let
   systems = {
     homelab = "x86_64-linux";
     devbox = "x86_64-linux";
+    # A vanilla Ubuntu 24.04 EC2 box, kept cheap and disposable. Its login user
+    # is the image default (`ubuntu`), so the profile manages that user and no
+    # `su` is needed the way the devbox needs it.
+    probe = "x86_64-linux";
     mac = "aarch64-darwin";
   };
 
@@ -35,7 +39,13 @@ rec {
   mkRemote =
     host:
     home-manager.lib.homeManagerConfiguration {
-      pkgs = nixpkgs.legacyPackages.${systems.${host}};
+      # google-chrome is unfree. The flag belongs where pkgs is instantiated,
+      # not in a module: under nix-darwin Home Manager uses the global pkgs, so
+      # `nixpkgs.config` in a module is an assertion failure.
+      pkgs = import nixpkgs {
+        system = systems.${host};
+        config.allowUnfree = true;
+      };
       extraSpecialArgs = crateArgs;
       modules = [
         # Shared user environment: shell, editor defaults, common CLI tools.
@@ -51,6 +61,9 @@ rec {
     system = systems.mac;
     specialArgs = crateArgs;
     modules = [
+      # google-chrome is unfree; the Mac gets the same allowance the Linux
+      # profile gets, declared where nix-darwin instantiates pkgs.
+      { nixpkgs.config.allowUnfree = true; }
       # System layer: fonts, captured defaults, launchd, macOS settings.
       (modules + "/macbook")
       home-manager.darwinModules.home-manager

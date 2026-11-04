@@ -73,12 +73,17 @@ STAGE_ROOT="${FLEET_STAGE_ROOT:-.cache/nix-fleet-deploy}"
 PATH="$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:$PATH"
 export PATH
 
-# The stub directory goes on top last, so the offline test still sees its own
-# `nix` and `home-manager` on a machine that has Nix installed.
+# The stub directory goes on top last — after the profile paths above — so the
+# offline test keeps its own `nix` and `home-manager` on a machine that has a
+# real Nix installed.
 if [ -n "${FLEET_STUB_BIN:-}" ]; then
   PATH="$FLEET_STUB_BIN:$PATH"
   export PATH
 fi
+
+# Flake evaluation needs the features enabled on a stock Nix install; a host may
+# not have them in nix.conf yet.
+nix_flake() { nix --extra-experimental-features "nix-command flakes" "$@"; }
 
 # ------------------------------------------------------------------ mapping ---
 # The profile decides which targets exist. A typo must stop here, not at a
@@ -87,6 +92,7 @@ host_for_target() { # $1 target -> canonical host, or empty
   case "$1" in
     homelab) echo homelab ;;
     devbox) echo devbox ;;
+    probe) echo probe ;;
     mac | macbook) echo mac ;;
     local)
       # `local` means "the machine I am on", whatever the profile target is.
@@ -128,6 +134,7 @@ esac
 case "$PROFILE:$HOST" in
   remote:homelab) ATTR="remote" ;;
   remote:devbox) ATTR="remote-devbox" ;;
+  remote:probe) ATTR="remote-probe" ;;
   macbook:mac) ATTR="macbook" ;;
 esac
 
@@ -140,6 +147,7 @@ THIS_HOST="$(hostname -s 2>/dev/null || echo unknown)"
 case "$THIS_HOST" in
   homelab) LOCAL_HOST="homelab" ;;
   devbox | srv*) LOCAL_HOST="devbox" ;;
+  probe) LOCAL_HOST="probe" ;;
   *) LOCAL_HOST="mac" ;;
 esac
 
@@ -222,6 +230,34 @@ generate_defaults() {
 
 if [ "$IS_LOCAL" = 1 ]; then
   generate_defaults
+  if [ "$PROFILE" = "macbook" ]; then
+    # Two macOS facts force a staged copy here:
+    #   1. nix/darwin/system-defaults.nix is machine-private and gitignored, and
+    #      Nix's git filter refuses to see ignored files in a git tree;
+    #   2. a first switch has no /run/current-system, so there is no
+    #      `darwin-rebuild` on PATH yet.
+    # Staging into a plain directory (no .git) fixes (1); building the system
+    # and running the darwin-rebuild it contains fixes (2) with the pinned
+    # nix-darwin rather than a moving master.
+    stage="$HOME/$STAGE_ROOT/$PROFILE-$ATTR"
+    echo "==> staging the deploy tree at $stage"
+    rm -rf "$stage"
+    mkdir -p "$stage"
+    # shellcheck disable=SC2046 # deploy_tree is a newline-separated list
+    tar -C "$ROOT" -cf - $(deploy_tree) | tar -C "$stage" -xf -
+    echo "==> building the system"
+    if ! nix_flake build "$stage#darwinConfigurations.$ATTR.system" -o "$stage/result"; then
+      echo "nix-deploy: build failed; nothing was switched" >&2
+      exit 5
+    fi
+    echo "==> switching with the freshly built darwin-rebuild"
+    if ! sudo "$stage/result/sw/bin/darwin-rebuild" switch --flake "$stage#$ATTR"; then
+      echo "nix-deploy: switch failed; the previous generation is still active" >&2
+      exit 5
+    fi
+    echo "==> switch complete"
+    exit 0
+  fi
   echo "==> $PROFILE on $HOST: local switch"
   # shellcheck disable=SC2086 # switch_command builds an argv string on purpose
   if ! run_switch "$ROOT" "$ATTR"; then
