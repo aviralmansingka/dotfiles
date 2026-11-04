@@ -105,27 +105,6 @@ Status legend:
     `PORTABILITY_GAPS` entries removed; C9/C14 selftests pin the
     recurrences (dom-config-lint).
 
-25. **no-mistakes binary drifted far past the repo pin** — DONE by
-    rel-nm-pin. Mechanism: the setup wizard's self-managed symlink install
-    (the pinned installer never ran on this host) plus two explicit
-    `no-mistakes update` events (one agent-driven, 2026-10-08). Pin moved
-    to v1.84.0 with official checksums; a pin-drift tripwire now fails on
-    pin-vs-installed mismatch; axi argv verified unchanged via full help
-    diff (the earlier `--step` note overstated the delta — it was already
-    required in v1.41.2). OPERATIONAL: adopting the owned installer on
-    this host requires deleting the wizard symlink first, then running
-    `scripts/install-no-mistakes`.
-    ~~The installed binary is v1.84.0 while `scripts/install-no-mistakes`
-    pins v1.41.2, and the axi CLI contract has drifted with it (e.g.
-    `axi logs` now requires `--step`). Observed live: a launch from the
-    captain's tab never registered a run (daemon log untouched for hours)
-    and fell back to direct driving, splitting delegate panes into the
-    captain's tab. Decide: move the pin forward to the current version and
-    re-verify the extension's axi argv against it, and determine why the
-    update-check disable did not prevent the drift (manual update vs
-    `NO_MISTAKES_NO_UPDATE_CHECK=1` failing). Related: C34's liveness
-    hardening covers the wedged-watcher half of the incident.
-
 ## C. Code enhancements ready to file as issues
 
 25. **Consolidate heredoc/bash-command classification** — `python.ts` guard
@@ -168,8 +147,8 @@ Status legend:
     no-sighting grace (`PI_SUBAGENT_STARTUP_GRACE_MS`), read-failure
     threshold with pane-existence probe, one shared death-completion helper
     (harvest → notify → clean close), a module watchdog enforcing deadlines,
-    reason-carrying `subagent_result` steers, orchestrate.ts/no-mistakes
-    alignment, and a dedicated `subagent-liveness.test.mjs` suite. The
+    reason-carrying `subagent_result` steers, and a dedicated
+    `subagent-liveness.test.mjs` suite. The
     captain flags this as a deal breaker for autonomous work — both failure
     classes were observed live this session (bare-zsh delegate panes; the
     wedged step pi polling a deleted repo).
@@ -218,13 +197,12 @@ All landed green with `/simple` docs in `docs/ci-tests/` (29 docs):
 
 - dom-python 2.35 s · dom-ops 0.65 s · dom-mermaid 0.44 s · dom-telegram
   1.1 s · dom-repo-config 0.20 s · dom-tuicr 1.7 s · dom-run-command 1.22 s ·
-  dom-journal 3.1 s · dom-user-input 0.48 s · dom-nm 9.4 s · dom-subagents
+  dom-journal 3.1 s · dom-user-input 0.48 s · dom-subagents
   1.1 s · dom-nvim 0.26 s (12 specs) · meta-ci (CI architecture + loader
   smoke + self-check; serial ~33 s, parallel ~2–3 min).
 - Wave 3: dom-zsh 0.42 s · dom-terminal 0.36 s (also restored a gutted
   ghostty config caught by its own suite, killed ~140 leaked tmux servers) ·
-  dom-config-lint 0.06 s · dom-install 48 checks · dom-nm-install 1.1 s ·
-  dom-repo-parity 0.37 s.
+  dom-config-lint 0.06 s · dom-install 48 checks · dom-repo-parity 0.37 s.
 - Neovim wave (9/9): nvim-octo 0.06 s · nvim-dap 0.02 s · nvim-markdown
   0.08 s · nvim-plugin-configs 0.03 s · nvim-ui-shape 0.02 s · nvim-picker
   0.02 s · nvim-ask 0.08 s · nvim-workspaces 0.07 s · nvim-send 0.09 s.
@@ -247,7 +225,7 @@ holding for the final integration ping.
   cleanup.)
 - Host-side (runbook): LaunchAgent plist pointed into a deleted worktree for
   ~2 months; reminders service PATH targeted an old nvm `pi`; stale `gh`
-  2.63.2 broke no-mistakes push steps. Repo-side shape checks live in
+  2.63.2 broke push steps. Repo-side shape checks live in
   dom-ops/dom-repo-parity.
 - Incident record: a temp-dir collision in the install-smoke harness once
   seeded a conflict file through a stowed symlink and truncated

@@ -231,7 +231,6 @@ const synthetic = [
   { changed: ["ghostty/ghostty.config", "terminfo/xterm-ghostty.terminfo"], entry: "scripts/test-ghostty.sh", entryGlobs: ["ghostty/**", "terminfo/xterm-ghostty.terminfo"], job: "scripts" },
   { changed: ["starship/starship.toml"], entry: "scripts/test-config-lint.py", entryGlobs: ["starship/**"], job: "scripts" },
   { changed: ["install.sh", "Brewfile"], entry: "scripts/test-install-smoke.sh", entryGlobs: ["install.sh", "Brewfile"], job: "scripts" },
-  { changed: ["scripts/install-no-mistakes"], entry: "scripts/test-nm-install.sh", entryGlobs: ["scripts/install-no-mistakes"], job: "scripts" },
   { changed: ["nvim/.config/nvim/init.lua"], expect: { nvim: true, scripts: true } }, // install-smoke declares nvim/** (install.sh stows nvim)
   { changed: ["scripts/test-nvim-octo.sh"], expect: { nvim: true, scripts: true } }, // scripts/* fixed glob also hits; the scripts job just skips routed entries
   { changed: ["ops/terraform/main.tf"], expect: { ops: true } },

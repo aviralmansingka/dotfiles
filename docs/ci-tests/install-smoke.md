@@ -60,10 +60,8 @@ One run takes about 1 s on Linux. The SLA is 60 s; a longer run fails.
 - Smoked: the `rm -f` pre-clean; the stow lines; `pi-settings-sync`;
   `tic` terminfo; `stow systemd` when `systemctl` exists; the hook link.
 - Guard smoked, step not run: `herdr integration install pi`;
-  `gh extension install`; `herdr integration install codex`;
-  `install-nm-herdr-bridge`.
-- Skipped with reason: `stow launchd`, `install-no-mistakes`
-  (macOS-only); `stow -R zsh`.
+  `gh extension install`; `herdr integration install codex`.
+- Skipped with reason: `stow launchd` (macOS-only); `stow -R zsh`.
 - Not smoked, network: Homebrew and `brew bundle`; the installer
   curls; rustup, cargo, bob, `npm ci`; Oh My Zsh, zsh plugins, TPM.
 - Not smoked, live service: the guarded `herdr integration install pi`
@@ -73,8 +71,8 @@ One run takes about 1 s on Linux. The SLA is 60 s; a longer run fails.
 
 ## Known gaps
 
-- **macOS-only phases.** `stow launchd` and `install-no-mistakes` run
-  only on Darwin; the smoke skips them with a reason. The `aerospace`
+- **macOS-only phases.** `stow launchd` runs only on Darwin; the smoke
+  skips it with a reason. The `aerospace`
   and `ghostty` configs stow on Linux, but the apps do not start.
 - **Silent guards.** `install.sh` skips a guarded step without a
   message; the smoke prints the skip reason for each gated step.

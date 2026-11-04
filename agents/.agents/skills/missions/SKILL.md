@@ -160,5 +160,5 @@ the ledger to clear a stuck verifier, launch, or owner. Surface these for recove
 
 The local credential/outbox directory must survive a restart. Its loss requires
 operator recovery; this version deliberately has no automatic owner takeover.
-Follow the repository's normal No Mistakes validation and shipping workflow.
+Follow the repository's normal CI validation and shipping workflow.
 Mission checks do not replace it, and agents must not start nested pipelines.

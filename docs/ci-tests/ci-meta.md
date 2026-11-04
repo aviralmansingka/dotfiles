@@ -37,8 +37,7 @@ CI discovers test files with `git ls-files` globs, never a written list
   `*.test.mjs`, plus `pi/bin` `test_*.py` via unittest; installs `uv`,
   `lua5.4`, and jiti+typebox on step env.
 - `scripts-tests`: `scripts/test-*`, minus routed files; the suffix
-  picks the runner — `.mjs` node, `.sh` bash, `.py` python3. The
-  nm-install entry runs with `STRICT=1`.
+  picks the runner — `.mjs` node, `.sh` bash, `.py` python3.
 - `nvim-tests`: every `scripts/test-nvim-*.sh`, plus a headless `-u`
   `NONE` spec loop over the top-level specs in
   `nvim/.config/nvim/tests/`. The job builds a pinned treesitter go

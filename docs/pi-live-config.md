@@ -124,7 +124,7 @@ Example from the current host (both directories presently have linked children):
 Pi extension/config drift (/home/avirus/dotfiles -> /home/avirus/.pi/agent):
   MISSING: extensions/lesson.test.mjs
   MISSING: extensions/md-log.test.mjs
-  REAL directory: extensions/no-mistakes-pane
+  REAL directory: extensions/web-fetch
   MISSING: extensions/nvim-open.test.mjs
   MISSING: extensions/quiz-result.test.mjs
   REAL directory: extensions/user-input

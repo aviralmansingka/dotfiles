@@ -434,7 +434,7 @@ export function closeTabForPane(paneId: string): void {
 
 // ── Exit polling ──
 
-/** TESTABILITY knobs (the same pattern as bridge.ts's NM_BRIDGE_POLL_MS):
+/** TESTABILITY knobs:
  *  PI_SUBAGENT_POLL_MS (poll cadence), PI_SUBAGENT_MAX_WAIT_MS (hard
  *  deadline), PI_SUBAGENT_STALL_MS (durable-run inactivity bound),
  *  PI_SUBAGENT_STARTUP_GRACE_MS (no-sighting grace), and

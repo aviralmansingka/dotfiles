@@ -34,14 +34,13 @@ They open reviews, steer user comments into the session, and post replies.
   window each send one final steer and stop the watcher.
 - Reply anchors. `postTuicrReply` accepts `file:line`, `replyTo`, and the
   `Re: review comments` fallback; it refuses empty messages and bad anchors.
-- Keep-open slot contract (#286/C28). `tuicr.ts` and `no-mistakes-pane.ts`
-  both publish their open-session counts through the shared
-  `keep-open-slot.mjs` module under
+- Keep-open slot contract (#286/C28). `tuicr.ts` publishes its open-session
+  count through the shared `keep-open-slot.mjs` module under
   `Symbol.for("pi-subagents/keep-open-count")`: keyed per-owner entries in
   one null-prototype holder, summed by a single reader. The suite asserts
-  the add, the release, and repeated-load idempotence; a broken or
+  the add, the release, and repeated-publish idempotence; a broken or
   non-function previous owner counts as zero; and cross-load-order tests
-  drive a real watcher plus the real pane count in one process, both orders.
+  drive a real watcher plus a second owner in one process, both orders.
 
 ## How to run
 

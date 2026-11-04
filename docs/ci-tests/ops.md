@@ -66,8 +66,8 @@ parse, keys, and repo-paths.
   path, SKIP). The pr-digest and flight-checkin-reminders units were
   removed together with their feature (the retired-units list in
   README.md records them).
-- `launchd/Library/LaunchAgents` (3): com.aviral.dotfiles-auto-sync.plist,
-  com.aviral.no-mistakes.plist, com.aviral.vault-auto-sync.plist.
+- `launchd/Library/LaunchAgents` (2): com.aviral.dotfiles-auto-sync.plist,
+  com.aviral.vault-auto-sync.plist.
 
 ## Known gaps
 

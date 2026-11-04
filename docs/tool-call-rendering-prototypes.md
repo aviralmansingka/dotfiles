@@ -140,8 +140,8 @@ simpler and more honest. Host tagging is orthogonal: add `⟠ <host>` wherever
 the title is composed once `tool-call-renderer.ts` knows the execution
 context (local vs orb vs devbox); the symbol never changes, only the value.
 Pi's global `Ctrl+O` expansion applies to every tool row: plain tools reveal
-the native tool output, while connected subagent and No Mistakes rows keep
-their specialized toggle behavior. Assistant text emitted with a tool call
+the native tool output, while connected subagent rows keep their specialized
+toggle behavior. Assistant text emitted with a tool call
 uses its first non-empty line as the step title and renders up to 12 remaining
 lines beneath it. If a finished message has no response text while thinking is
 hidden, the renderer labels and shows up to 30 lines of that thinking instead

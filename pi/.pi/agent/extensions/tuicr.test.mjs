@@ -633,7 +633,7 @@ assert.equal(
 );
 
 // ── extension behavior: jiti + fake tuicr/git binaries + stubbed peers ──
-// House pattern (mermaid/no-mistakes style): the tuicr/gh/git CLIs never run
+// House pattern (mermaid style): the tuicr/gh/git CLIs never run
 // for real — fake binaries land on PATH before the extension imports, the
 // wrapper script is a stub under TUICR_SKILL_DIR, and every scenario stages
 // the comment/session fixtures the fake CLI serves. No network, no panes.
@@ -641,8 +641,8 @@ assert.equal(
 const require = createRequire(import.meta.url);
 // Same contract as the sibling suites (test-lib/jiti.mjs): re-derive
 // NODE_PATH from the resolved jiti root so typebox resolves when jiti comes
-// from pi's managed install — this file loads no-mistakes-pane.ts for the
-// keep-open composition, and that import needs typebox.
+// from pi's managed install — the tuicr extension and the shared keep-open
+// module both need typebox on NODE_PATH.
 const { jitiPath, nodePath } = resolveJiti();
 process.env.NODE_PATH = nodePath;
 require("node:module").Module._initPaths();
@@ -1224,45 +1224,26 @@ try {
 
 	// ── cross-load-order composition (C28): the shared keep-open-slot module ──
 	// Both writers publish through one module (keep-open-slot.mjs), so either
-	// load order must sum both counts, repeated loads must REPLACE (never
+	// load order must sum both counts, repeated publishes must REPLACE (never
 	// stack) their own entry, and each side releases exactly its own slot.
-	// This drives the REAL tuicr watcher and the REAL pane module's
-	// run-tracking count in one process — both load orders.
+	// This drives the REAL tuicr watcher against a second owner that publishes
+	// through a second jiti instance of the shared module — both load orders.
 	{
 		const HOLDER_KEY = Symbol.for("pi-subagents/keep-open-slot-holder");
-		const WATCH_STATE_KEY = Symbol.for("pi-no-mistakes/watch-state");
 		const savedHolder = globalThis[HOLDER_KEY];
 		const savedSlot = globalThis[KEEP_OPEN];
-		const savedWatchState = globalThis[WATCH_STATE_KEY];
-		// The pane module needs only a pi-tui stub (visibleWidth +
-		// wrapTextWithAnsi); typebox resolves from NODE_PATH like everywhere
-		// else in this suite.
-		const paneTui = join(extRoot, "pane-tui.cjs");
-		writeFileSync(paneTui, [
-			"exports.visibleWidth = (text) => [...String(text)].length;",
-			"exports.wrapTextWithAnsi = (text) => String(text).split('\\n');",
-		].join("\n"));
-		const loadPane = () =>
-			createJiti(import.meta.url, {
-				moduleCache: false,
-				alias: { "@earendil-works/pi-tui": paneTui },
-			})("./no-mistakes-pane.ts");
-		const paneTrackingOn = () => {
-			globalThis[WATCH_STATE_KEY] = { trackedRunId: "01XX", calls: new Map() };
-		};
-		const paneTrackingOff = () => {
-			globalThis[WATCH_STATE_KEY] = undefined;
-		};
+		const loadSlot = () =>
+			createJiti(import.meta.url, { moduleCache: false })("./keep-open-slot.mjs");
 		const restoreKey = (key, value) => {
 			if (value === undefined) delete globalThis[key];
 			else globalThis[key] = value;
 		};
 		try {
-			// Order A: the pane module loads FIRST, tuicr second.
+			// Order A: the pane owner publishes FIRST, tuicr loads second.
 			restoreKey(KEEP_OPEN, undefined);
-			paneTrackingOff();
-			loadPane();
-			paneTrackingOn();
+			restoreKey(HOLDER_KEY, undefined);
+			const slotA = loadSlot();
+			slotA.publishKeepOpenCount("pane", () => 1);
 			assert.equal(globalThis[KEEP_OPEN](), 1, "pane-first: the pane side counts alone");
 			const modA = loadExtension();
 			assert.equal(globalThis[KEEP_OPEN](), 1, "pane-first: tuicr's load composes, never clobbers");
@@ -1275,20 +1256,16 @@ try {
 			assert.equal(globalThis[KEEP_OPEN](), 2, "pane-first: a running watcher sums with the pane's count");
 			harnessA.commands.get("tuicr").handler("stop", harnessA.ctx);
 			assert.equal(globalThis[KEEP_OPEN](), 1, "pane-first: stopping releases exactly the watcher's slot");
-			// Repeated pane loads replace their own entry — the old
+			// Repeated publishes of one owner key replace — the old
 			// capture-and-wrap design stacked a layer per reload; the shared
-			// module cannot. (The pane module's own reload semantics tear the
-			// previous watch state down first, so drive the count off/on around
-			// the reloads exactly like a real extension reload does.)
-			paneTrackingOff();
-			loadPane();
-			loadPane();
-			paneTrackingOn();
-			assert.equal(globalThis[KEEP_OPEN](), 1, "repeated pane loads never stack their own count");
-			paneTrackingOff();
-			assert.equal(globalThis[KEEP_OPEN](), 0, "the pane side releases with its watch state");
+			// module cannot.
+			slotA.publishKeepOpenCount("pane", () => 1);
+			slotA.publishKeepOpenCount("pane", () => 1);
+			assert.equal(globalThis[KEEP_OPEN](), 1, "repeated pane publishes never stack their own count");
+			slotA.releaseKeepOpenCount("pane");
+			assert.equal(globalThis[KEEP_OPEN](), 0, "the pane side releases with its own slot");
 
-			// Order B: tuicr loads FIRST, the pane module second.
+			// Order B: tuicr loads FIRST, the pane owner second.
 			restoreKey(KEEP_OPEN, undefined);
 			restoreKey(HOLDER_KEY, undefined); // fresh holder for the fresh composition
 			const modB2 = loadExtension();
@@ -1299,18 +1276,16 @@ try {
 			const attachB2 = await toolB2.execute("c28-b", { repo: repoDir, sessionSlug: "watched-s1" }, undefined, undefined, harnessB2.ctx);
 			assert.equal(attachB2.isError, undefined);
 			assert.equal(globalThis[KEEP_OPEN](), 1, "tuicr-first: the watcher counts alone");
-			paneTrackingOff();
-			loadPane();
-			paneTrackingOn();
-			assert.equal(globalThis[KEEP_OPEN](), 2, "tuicr-first: the pane's load composes, never clobbers");
-			paneTrackingOff();
+			const slotB = loadSlot();
+			slotB.publishKeepOpenCount("pane", () => 1);
+			assert.equal(globalThis[KEEP_OPEN](), 2, "tuicr-first: the pane's publish composes, never clobbers");
+			slotB.releaseKeepOpenCount("pane");
 			assert.equal(globalThis[KEEP_OPEN](), 1, "tuicr-first: the pane side releases exactly its own count");
 			harnessB2.commands.get("tuicr").handler("stop", harnessB2.ctx);
 			assert.equal(globalThis[KEEP_OPEN](), 0, "tuicr-first: both sides released");
 		} finally {
 			restoreKey(HOLDER_KEY, savedHolder);
 			restoreKey(KEEP_OPEN, savedSlot);
-			restoreKey(WATCH_STATE_KEY, savedWatchState);
 		}
 	}
 } finally {

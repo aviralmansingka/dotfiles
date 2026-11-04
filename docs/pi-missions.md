@@ -164,7 +164,7 @@ Human reviews pause progression after their step. The user reviews the result
 and check evidence before an explicit accept or revise decision. A waiting review
 never blocks worker tools: it blocks the next step, `step edit`, and `finish`.
 Neither the extension nor skill approves reviews. Mission checks complement the
-existing No Mistakes pipeline and do not start nested validation runs.
+existing CI workflows and do not start nested validation runs.
 
 ## Reload and recovery
 

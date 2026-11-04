@@ -22,16 +22,15 @@ These are meta-guards. Each one is proven by a real failure.
 - **A1. Glob discovery — never hand-list test files.** `python.test.mjs` has never
   been wired since #256 (audit: `git log -S` on ci.yml is empty); #227's test was
   claimed wired but never landed; #279 merged CI-red; `edit-relative-paths.test.mjs`
-  exists unlisted; `no-mistakes-pane.test.mjs` rotted (fails locally, absent from CI).
+  exists unlisted.
   Enumerate `pi/.pi/agent/extensions/**/*.test.mjs` + `scripts/test-*` via
   `git ls-files`, with an explicit exclusion list for Tier 2.
 - **A2. Inventory parity meta-test.** Every test file ↔ a CI step, and every CI step
-  ↔ an existing file. Same parity check between `ci.yml` and `scripts/nm-test.sh` /
-  `nm-lint.sh` (#293 mirror-don't-fork rule).
+  ↔ an existing file (#293 mirror-don't-fork rule).
 - **A3. Extension-loader smoke.** Every `.ts` under `pi/.pi/agent/extensions/` must
   import via jiti and export a valid default factory. Non-factory library files
   (`focus-buffer.ts`, `question-overlay.ts`) killed *every* pi session machine-wide,
-  twice; #230 broke main and the no-mistakes review agent. Per-extension unit tests
+  twice; #230 broke main. Per-extension unit tests
   cannot see this class.
 - **A4. Close the syntax-gate gaps.** No parse check exists for 85 `.mjs`/`.ts` files
   (`image-drop.ts`, `mobile-mode.ts`, `rounded-bar-footer.ts` are live in
@@ -43,14 +42,14 @@ These are meta-guards. Each one is proven by a real failure.
   `/opt/homebrew/...` and nvm-version paths — 10–13 of 24 suites failed instantly
   off-Mac (ses-C, ses-E, ses-D).
 - **A6. Per-suite timeouts.** Hangs masquerade as slowness: a shared-UI-lock hang
-  (no-mistakes-gate era) and an inherited `HERDR_ENV=1` test that started a real
+  and an inherited `HERDR_ENV=1` test that started a real
   listening bridge server both hung suites silently. Timeouts convert hangs to red.
 - **A7. Behavior over source-grep; hermetic fakes.** No assertions on source text
-  (#208 review ban; #286 restated). Install fake `herdr`/`tmux`/`axi` binaries on
+  (#208 review ban; #286 restated). Install fake `herdr`/`tmux` binaries on
   PATH *before* importing dispatchers; pin `HERDR_ENV`/`HERDR_PANE_ID`; save/restore
   env in `finally`. A test run under real tmux once split a real pane.
 - **A8. Skip-not-hang locally, fail-on-missing-tool in CI.** Different contexts,
-  different policy (#293 `run_test` pattern).
+  different policy (#293 STRICT=1 pattern).
 - **A9. Quarantine known-failing tests.** "Fails identically on baseline" was
   normalized across sessions (typebox resolution red on pristine main) and masks
   regressions in the most-edited files. Fails-on-baseline ⇒ quarantine list, not
@@ -87,21 +86,6 @@ renderer PR):
 | R6 | Details-contract degradation fixtures | error-without-`isError` renders as error; partial updates; unknown IDs omitted; `launched:false` = success; zero-results ≠ failure | #251, #247, minimized-leaves, p5 invented findings |
 | R7 | Shortcut orthogonality + muted states | Ctrl+Q never reveals hidden command via Ctrl+O; hidden default; muted title, dimmed counts, failure rows stay error-colored | #260–#264 |
 | R8 | Narrow-viewport width sweep | render every custom component at width 20–80; no line exceeds width | `usage.ts` hard-exited pi twice (65>50; pad shadow) |
-
-### no-mistakes line: `no-mistakes-gate`, `no-mistakes-pane`, bridge, orchestrate
-
-| # | Surface | Key assertions | Evidence |
-|---|---------|----------------|----------|
-| N1 | Gate paging + decision panel | options actually rendered (parse-only passed the invisible-options bug); auto-advance, wrap-home, revisit focus, Ctrl-A guard, Fix-enabled guard; decision payloads drive exact `axi respond` | #270, #276, #269 |
-| N2 | `parseNoMistakesGate` | tolerant of every findings-table column variant | #269 |
-| N3 | keep-open slot composition | `Symbol.for("pi-subagents/keep-open-count")` symmetrical across `no-mistakes-pane.ts` + `tuicr.ts` under any load order | #286 (one-sided fix still clobbered) |
-| N4 | `herdrJsonSync` stdio + every `execFileSync` site | stdio `["pipe","pipe","pipe"]`, null-on-failure; child stderr never reaches TTY | #291 agent_not_found splatter |
-| N5 | Spawn-success detection | resolved-but-error never acked "delegated"; registry written only on success | #286 phantom owner, infinite wait |
-| N6 | Attach/run targeting | resolves the run for THIS branch/cwd, never any-active-session; empty-diff fails fast | #289 pr:287→PR-288 session; 3 session-era bugs |
-| N7 | Capture helpers | `buildBackgroundScript`/`buildAttachScript`/`extractMarkedOutput`: END markers, exit codes, echo-corruption, timeout | #177, #186 — the house pattern |
-| N8 | Clean tab close | `closeTabPaneCleanly` ordering; never surfaces agent-killed notifications | #285, #294 |
-| N9 | `STEP_AGENT_EXTENSIONS` curation | exact closed set; forbidden extensions excluded; missing-file skip; `builtin:` passthrough | #281 (covered — keep) |
-| N10 | nm runner parity | `nm-test.sh`/`nm-lint.sh` enumerate the same targets as ci.yml | #293 (this branch) |
 
 ### interactive-subagents + nvim-open lifecycle
 
@@ -189,11 +173,8 @@ renderer PR):
   v1: passing units, 8.5 min/call, 67% failure).
 - `verify-nvim` live routes, `test-osc52.sh`, `test-pi-hidden-thinking-render.py`
   (PTY/pyte), `test-sidekick-view-focus.lua` if it needs live tmux.
-- Live verifiers: `verify-no-mistakes-installation/live`, `verify-pi-image-drop`,
-  `verify-pi-no-mistakes-activity` (pins installed pi).
+- Live verifiers: `verify-pi-image-drop` (pins installed pi).
 - Terraform `plan` (creds + network), path-gated as today.
-- Pinned-version freshness (no-mistakes VERSION/SHA vs upstream) — scheduled,
-  non-blocking.
 - Real pane-split races, nvim RPC socket behavior, real `herdr tab close` with
   sibling panes, macOS flock-missing fallback — provenance-log observation only.
 - Optional pty boot smoke (one tool-call progress render) — the #277/#280

@@ -381,9 +381,6 @@ phase_guards() {
   guard_line 'stow .* launchd$' 'uname -s.*Darwin'
   guard_line 'stow .* systemd$' 'command -v systemctl'
   guard_line 'tic -x -w' 'command -v tic' 4
-  grep -E 'install-nm-herdr-bridge' "$INSTALL" | grep -q '||' \
-    && pass "guards/nm-bridge-fallback" "nm bridge install keeps its || fallback" \
-    || fail "guards/nm-bridge-fallback" "nm bridge install lost its || fallback"
   # Dynamic: with brew/gh/herdr/codex absent from a controlled PATH,
   # the guarded snippets must skip and never abort under set -e.
   local t absent=()

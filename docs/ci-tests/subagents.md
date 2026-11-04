@@ -77,8 +77,8 @@ Add no new wall-clock wait.
 ## Coverage result
 
 c8 reports: nvim-open.ts 99%, herdr.ts 96%, session.ts 94%, index.ts 62%,
-tmux.ts 88%, status.ts 64%, agent-definitions.mjs, initial-prompt.ts, and
-no-mistakes.ts 100% statements. The activity.ts widget stays near 28%. Some
+tmux.ts 88%, status.ts 64%, agent-definitions.mjs 100%, and
+initial-prompt.ts. The activity.ts widget stays near 28%. Some
 modules load twice (native and jiti); c8 merges the copies.
 
 ## Known gaps

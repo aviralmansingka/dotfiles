@@ -129,10 +129,9 @@ function reviewerRunning(name: string): boolean {
 // tuicr-review agent) parks in "waiting" instead of exiting after its
 // first turn — the same suppression ask_question and running children use.
 //
-// COMPOSITION: this is a SHARED slot — no-mistakes-pane.ts publishes its
-// run-tracking count under the same well-known symbol, and a session can
-// load both writers (the nm-orchestrator discovers them via agent-dir:
-// parent). Both sides publish through the one shared module
+// COMPOSITION: this is a SHARED slot — another extension can publish its own
+// work count under the same well-known symbol, and a session can load both
+// writers. Both sides publish through the one shared module
 // (keep-open-slot.mjs), which owns the composition: keyed per-owner entries
 // in a null-prototype holder on globalThis, summed by one reader. That makes
 // the composition symmetric and idempotent BY CONSTRUCTION — either load

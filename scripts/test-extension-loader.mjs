@@ -35,7 +35,7 @@ import { fileURLToPath } from "node:url";
 // value never falls through silently), then NODE_PATH entries, then pi's
 // managed install. When nothing resolves and no explicit JITI_PATH was
 // given, the smoke bootstraps jiti@2 + typebox@1.3.27 into a temp prefix
-// (the same recipe as scripts/nm-test.sh), so it never depends on the
+// (the same recipe as the ci.yml pi-tests job), so it never depends on the
 // caller's env (rel-classifier hit 11 `Cannot find module 'typebox'`
 // failures running the smoke without the env).
 import { resolveJiti } from "../pi/.pi/agent/extensions/test-lib/jiti.mjs";

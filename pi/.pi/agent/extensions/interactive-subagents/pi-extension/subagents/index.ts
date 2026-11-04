@@ -75,12 +75,6 @@ import {
   type SubagentActivityState,
 } from "./activity.ts";
 import {
-  noMistakesFindingLines,
-  noMistakesIsWaiting,
-  noMistakesWidgetStatus,
-  type NoMistakesActivity,
-} from "./no-mistakes.ts";
-import {
   agentIsolationArgs,
   loadAgentDefaultsFromPaths,
   parseAgentDefinition,
@@ -533,7 +527,6 @@ function formatUsageSegments(stats: SessionStats): string[] {
  *   { toolCallId, result:{ progress:{ status, startedAt?, completedAt?,
  *   recentTools?, error? }, output, exitCode?, stats? }, done } */
 const SUBAGENT_BACKGROUND_UPDATE_EVENT = "subagent:background-update";
-const NO_MISTAKES_ACTIVITY_UPDATE_EVENT = "no-mistakes:activity-update";
 
 /** A single subagent tool call, for the expanded `◆ ◇` nested tree. */
 interface SubagentRecentTool {
@@ -1018,8 +1011,6 @@ const RUNNING_CHILDREN_COUNT_KEY = Symbol.for("pi-subagents/running-children-cou
 let latestCtx: ExtensionContext | null = null;
 /** Latest ExtensionAPI, used to deliver ask_question notifications from the watcher. */
 let latestPi: ExtensionAPI | null = null;
-/** Read-only pipeline activity published by no-mistakes-pane.ts. */
-let noMistakesActivity: NoMistakesActivity | null = null;
 
 /** Interval timer for widget re-renders. */
 let widgetInterval: ReturnType<typeof setInterval> | null = null;
@@ -1108,7 +1099,6 @@ function borderBottom(width: number): string {
  *  kind with its count, most interesting first; zero counts are omitted. */
 function minimizedWidgetInfo(
   agents: RunningSubagent[],
-  pipeline: NoMistakesActivity | null,
   count: number,
 ): string {
   const counts = new Map<StatusSnapshot["kind"], number>();
@@ -1116,32 +1106,29 @@ function minimizedWidgetInfo(
   for (const agent of agents) {
     bump(classifyStatus(agent.statusState, Date.now()).kind);
   }
-  if (pipeline) bump(noMistakesIsWaiting(pipeline) ? "waiting" : "active");
 
   const order: StatusSnapshot["kind"][] = ["active", "running", "waiting", "stalled", "starting"];
   const parts = order
     .filter((kind) => counts.get(kind))
     .map((kind) => `${counts.get(kind)} ${kind}`);
-  const total = pipeline ? "active" : "running";
-  return parts.length > 0 ? `${count} ${total}: ${parts.join(" · ")}` : `${count} ${total}`;
+  return parts.length > 0 ? `${count} running: ${parts.join(" · ")}` : `${count} running`;
 }
 
 function renderSubagentWidgetLines(
   agents: RunningSubagent[],
   width: number,
-  pipeline: NoMistakesActivity | null = null,
   minimized = false,
 ): string[] {
-  const count = agents.length + (pipeline ? 1 : 0);
-  const title = pipeline ? "Activities" : "Subagents";
+  const count = agents.length;
+  const title = "Subagents";
 
   // Minimized: the whole box collapses to its top border carrying the
   // per-state counts — one line, no per-agent rows.
   if (minimized) {
-    return [borderTop(title, minimizedWidgetInfo(agents, pipeline, count), width)];
+    return [borderTop(title, minimizedWidgetInfo(agents, count), width)];
   }
 
-  const info = `${count} ${pipeline ? "active" : "running"}`;
+  const info = `${count} running`;
   const lines: string[] = [borderTop(title, info, width)];
 
   for (const agent of agents) {
@@ -1159,15 +1146,6 @@ function renderSubagentWidgetLines(
     lines.push(borderLine(left, right, width));
   }
 
-  if (pipeline) {
-    const waiting = noMistakesIsWaiting(pipeline);
-    const icon = waiting ? `${ICON_DIM}○${RST}` : `${ICON_YELLOW}⟳${RST}`;
-    lines.push(borderLine(` ${icon} no-mistakes `, noMistakesWidgetStatus(pipeline), width));
-    for (const finding of noMistakesFindingLines(pipeline)) {
-      lines.push(borderLine(`   ${finding} `, "", width));
-    }
-  }
-
   lines.push(borderBottom(width));
   return lines;
 }
@@ -1175,7 +1153,7 @@ function renderSubagentWidgetLines(
 function updateWidget() {
   if (!latestCtx?.hasUI) return;
 
-  if (runningSubagents.size === 0 && !noMistakesActivity) {
+  if (runningSubagents.size === 0) {
     latestCtx.ui.setWidget("subagent-status", undefined);
     if (widgetInterval) {
       clearInterval(widgetInterval);
@@ -1194,7 +1172,6 @@ function updateWidget() {
           return renderSubagentWidgetLines(
             Array.from(runningSubagents.values()),
             width,
-            noMistakesActivity,
             widgetMinimized,
           );
         },
@@ -1635,8 +1612,6 @@ export const __test__ = {
   unregisterActiveWatcher,
   sweepExpiredSubagents,
   activeWatchers,
-  noMistakesWidgetStatus,
-  noMistakesFindingLines,
   formatElapsed,
   formatTokens,
   formatContextUsage,
@@ -2557,14 +2532,6 @@ export default function subagentsExtension(pi: ExtensionAPI) {
   // diagnostic for any extension shortcut that claims a built-in key
   // (ctrl+s is built-in for app.thinking.save / app.session.toggleSort).
   // The minimized-widget render path stays; only the keybinding is gone.
-  pi.events.on(NO_MISTAKES_ACTIVITY_UPDATE_EVENT, (data: unknown) => {
-    const payload = data && typeof data === "object" ? data as { snapshot?: unknown } : {};
-    const snapshot = payload.snapshot;
-    noMistakesActivity = snapshot && typeof snapshot === "object"
-      ? snapshot as NoMistakesActivity
-      : null;
-    updateWidget();
-  });
   // Capture the UI context for widget updates
   pi.on("session_start", (_event, ctx) => {
     latestCtx = ctx;
@@ -2612,7 +2579,6 @@ export default function subagentsExtension(pi: ExtensionAPI) {
       watchdogInterval = null;
       (globalThis as any)[WATCHDOG_INTERVAL_KEY] = null;
     }
-    noMistakesActivity = null;
     widgetMinimized = false;
   });
 

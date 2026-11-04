@@ -261,10 +261,9 @@ mkdir -p ~/.pi/agent/npm
 (cd ~/.pi/agent/extensions/web-fetch && npm ci --ignore-scripts)
 ```
 
-Pi surfaces No Mistakes runs in the shared activity widget without replacing the attached TUI. See the
+See the
 [interactive-subagents status documentation](pi/.pi/agent/extensions/interactive-subagents/README.md#status-widget--configuration)
-for display, scoping, and fallback behavior. In Pi, agents drive the pipeline with the
-`no_mistakes_axi` tool; see the [no-mistakes skill](agents/.agents/skills/no-mistakes/SKILL.md).
+for subagent widget display and fallback behavior.
 
 In Herdr-backed TUI sessions, an active Pi UI prompt reports the agent as blocked until the prompt closes, so
 Sidekick shows that Pi is waiting for user input.
