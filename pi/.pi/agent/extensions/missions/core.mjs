@@ -10,13 +10,6 @@ const hash = text => createHash("sha256").update(text).digest("hex");
 export const slug = title => title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 64).replace(/-$/, "");
 const active = a => a && ["running", "reported"].includes(a.status);
 
-/** Herdr agent names are unique for the whole server. The launch path does not
- *  choose the name: the client that starts the agent takes the agent kind
- *  ("pi"). Only these statuses prove that a session ended, so only these
- *  release a name. Every other status keeps the name, and the launch reports
- *  its pane. */
-export const STALE_AGENT_STATUSES = new Set(["idle", "done"]);
-
 /** The agent name that an `agent_name_taken` failure names, or null. */
 export function takenAgentName(message) {
   const text = String(message ?? "");
@@ -24,13 +17,27 @@ export function takenAgentName(message) {
   return /agent name ([\w-]+) is already used/.exec(text)?.[1] ?? null;
 }
 
-/** A parked name records which mission reclaimed the name. It stays inside the
- *  Herdr name limits: 32 characters of [a-z0-9_-], starting with a letter. */
-export function parkedAgentName(name, handle, holder) {
-  const bare = String(name || "pi").replace(/[^a-z0-9_-]+/g, "-").replace(/^[^a-z]+/, "") || "pi";
-  const tail = slug(String(handle || "").split("/").pop() || "mission").slice(0, 16) || "mission";
-  const mark = hash(String(holder?.pane_id || "")).slice(0, 4);
-  return `${bare}-${tail}-${mark}`.slice(0, 32).replace(/-+$/, "");
+/** The Herdr agent name of one mission launch. Herdr keeps names unique per
+ *  server and accepts 32 characters of [a-z0-9_-] that start with a letter. The
+ *  name comes from the mission handle, so a launch reads back as the mission it
+ *  serves. `tag` appends a short hash when the plain name is taken. */
+export function workerAgentName(handle, tag = "") {
+  const tail = slug(String(handle || "").split("/").pop() || "mission").slice(0, 24) || "mission";
+  const mark = String(tag || "").replace(/[^a-z0-9]+/gi, "").toLowerCase().slice(0, 6);
+  return `mission-${tail}${mark ? "-" + mark : ""}`.slice(0, 32).replace(/-+$/, "");
+}
+
+/** How long a launch waits for its new agent to reach the prompt. */
+export const AGENT_READY_TIMEOUT_MS = 60000;
+
+/** The code and message of a failed Herdr call, or the raw text. */
+export function herdrError(message) {
+  const text = String(message ?? "");
+  try {
+    const error = JSON.parse(text.slice(text.indexOf("{"))).error;
+    if (error?.code) return `${error.code}: ${error.message}`;
+  } catch { /* the call failed without a Herdr envelope */ }
+  return text;
 }
 
 /** One message a human can act on: the name, the pane that holds it, and the
@@ -188,17 +195,21 @@ export class MissionBridge {
     const agents = (await this.herdr(["agent", "list"])).agents || [];
     return agents.find(a => a.name === name) || null;
   }
-  /** Free a name that no live agent holds, so the launch can start again. A
-   *  working agent keeps its name: the message names its pane instead. */
-  async reclaimAgentName(name, handle) {
-    const holder = await this.agentNamed(name);
-    if (!holder) return null;
-    if (!STALE_AGENT_STATUSES.has(String(holder.agent_status)))
-      throw new Error(agentCollisionReport(name, holder,
-        `That session may still run, so the launch leaves it alone (agent_name_taken). Finish it, or run \`herdr agent rename ${holder.pane_id} <new name>\`, then launch again.`));
-    const parked = parkedAgentName(name, handle, holder);
-    await this.herdr(["agent", "rename", holder.pane_id, parked]);
-    return parked;
+  /** Start the mission worker as a full Pi agent in the mission pane. The name
+   *  comes from the mission. A name that another session holds takes a short
+   *  handle hash once; the launch never renames another session's agent. */
+  async startWorker(handle, pane) {
+    const name = workerAgentName(handle);
+    try { await this.herdr(["agent", "start", name, "--kind", "pi", "--pane", pane]); return name; }
+    catch (e) { if (!takenAgentName(e.message)) throw e; }
+    const retry = workerAgentName(handle, hash(handle));
+    try { await this.herdr(["agent", "start", retry, "--kind", "pi", "--pane", pane]); return retry; }
+    catch (e) {
+      const taken = takenAgentName(e.message);
+      if (!taken) throw e;
+      throw new Error(agentCollisionReport(taken, await this.agentNamed(taken),
+        `That session holds the name. End it, or run \`herdr agent rename <pane> <new name>\`, then launch again (agent_name_taken).`));
+    }
   }
   /** The agent a pane hosts, "unknown" when Herdr cannot answer, or null when
    *  the pane holds no agent. */
@@ -263,7 +274,10 @@ export class MissionBridge {
     if (binding && binding.cwd !== realpathSync(ctx.cwd)) throw new Error("This mission is bound to another worktree: " + binding.cwd);
     if (binding?.session_id && binding.session_id !== ctx.sessionManager.getSessionId()) throw new Error("Resume the existing Pi owner: " + binding.session_id);
     const previous = this.hint;
-    this.hint ||= { handle, token: randomUUID() + randomUUID(), session: ctx.sessionManager.getSessionId(), vault: this.vault, outbox: [], autoContinue: this.env.PI_SUBAGENT_AGENT === "mission-worker" };
+    // A launched worker continues eligible steps; a manual attach stays explicit.
+    // PI_SUBAGENT_AGENT keeps the answer for a worker the old spawn path started.
+    this.hint ||= { handle, token: randomUUID() + randomUUID(), session: ctx.sessionManager.getSessionId(), vault: this.vault, outbox: [],
+      autoContinue: Boolean(launchID) || this.env.PI_SUBAGENT_AGENT === "mission-worker" };
     // Persist the capability BEFORE claiming, so a crash can replay attach.
     this.save(ctx);
     try {
@@ -323,8 +337,6 @@ export class MissionBridge {
   }
   async start(ctx, handle) {
     if (this.env.PI_SUBAGENT_NAME) throw new Error("Launch missions from the captain; workers own only their assigned mission.");
-    const spawn = globalThis.__pi_interactive_subagents?.executeSubagent;
-    if (typeof spawn !== "function") throw new Error("The interactive-subagents extension must be loaded to launch missions.");
     const initial = await this.call(["show", handle]);
     const repos = await this.call(["repo", "list"]);
     const repo = repos.find(r => r.slug === initial.mission.repo);
@@ -333,7 +345,7 @@ export class MissionBridge {
     const r = await this.call(["workspace", handle]);
     const cwd = r.state.runtime.cwd;
     const reservation = await this.call(["launch", handle]);
-    if (!reservation.acquired) return { launched: false, reason: "Owner or launch intent already recorded; resume/attach it instead of spawning again.", runtime: reservation.runtime };
+    if (!reservation.acquired) return { launched: false, reason: "Owner or launch intent already recorded; resume/attach it instead of launching again.", runtime: reservation.runtime };
     const launchID = reservation.runtime.launch_id;
     // A failed launch must stay retryable: the reservation is released unless a
     // worker can own it. A launch that half-succeeded keeps it for inspection.
@@ -354,24 +366,18 @@ export class MissionBridge {
         : worktree;
       pane = holder.root_pane?.pane_id;
       if (!pane || holder.root_pane.workspace_id !== workspace) throw new Error("Herdr returned a different workspace; launch intent retained for inspection.");
-      const spawnWorker = () => spawn({ agent: "mission-worker", name: "mission-" + hash(handle).slice(0, 20), cwd, pane,
-        missionContext: { vault: this.vault, binary: this.binary, stateDir: this.cacheDir },
-        task: `Work on mission ${handle}. Before reading or editing repository files, call mission with action=attach, handle=${handle}, launch_id=${launchID}. Then follow the returned step brief and the missions skill. Report structured progress. Write the required artifact and call finish when the step is ready. Stop at checkpoints; keep this session and worktree for later steps.` }, ctx);
-      let result;
-      try { result = await spawnWorker(); }
-      catch (e) {
-        // Herdr agent names are global. A finished session of this worktree can
-        // still hold the name, so free it once and retry the same spawn.
-        const taken = takenAgentName(e.message);
-        if (!taken) throw e;
-        await this.reclaimAgentName(taken, handle);
-        result = await spawnWorker();
-      }
-      const details = result?.details;
-      if (details?.status !== "started" || !details.sessionFile || details.error)
-        throw new Error("Mission launch was not acknowledged; the launch tab is retained for inspection.");
-      await this.call(["launch", handle, "--launch-id", launchID, "--session-file", details.sessionFile]);
-      return { launched: true, runtime: (await this.call(["show", handle])).state.runtime, session_file: details.sessionFile, pane, workspace };
+      // The worker is a full Pi agent in this pane, not a subagent: it carries
+      // no subagent env, loadout file, timer, or watchdog. Pi loads the
+      // repository configuration and the missions skill in that worktree.
+      const agent = await this.startWorker(handle, pane);
+      try { await this.herdr(["agent", "wait", pane, "--until", "idle", "--timeout", String(AGENT_READY_TIMEOUT_MS)]); }
+      catch (e) { throw new Error(`Herdr agent ${agent} did not become ready: ${herdrError(e.message)}`); }
+      const task = `Work on mission ${handle}. Before reading or editing repository files, call mission with action=attach, handle=${handle}, launch_id=${launchID}. Then follow the returned step brief and the missions skill. Report structured progress. Write the required artifact and call finish when the step is ready. Stop at checkpoints; keep this session and worktree for later steps.`;
+      await this.herdr(["agent", "prompt", pane, task]);
+      const sessionFile = (await this.herdr(["agent", "get", pane])).agent?.agent_session?.value;
+      if (!sessionFile) throw new Error("Herdr reported no session for the mission agent; launch intent retained for inspection.");
+      await this.call(["launch", handle, "--launch-id", launchID, "--session-file", sessionFile]);
+      return { launched: true, runtime: (await this.call(["show", handle])).state.runtime, session_file: sessionFile, pane, workspace };
     } catch (e) {
       if (!(await this.releaseLaunch(handle, launchID, pane))) throw e;
       throw new Error(`${e.message} The launch intent is released; launch again when the cause is clear.`);

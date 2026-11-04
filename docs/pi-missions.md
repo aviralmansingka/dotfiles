@@ -18,8 +18,8 @@ Build and preview without changing the main checkout or global Pi configuration:
 ./scripts/pi-missions
 ```
 
-Run the preview in a Herdr pane. It uses this checkout's Pi configuration, bundled
-mission-worker profile, extension, and skill. Keep this checkout while its sessions
+Run the preview in a Herdr pane. It uses this checkout's Pi configuration, extension,
+and skill. Keep this checkout while its sessions
 are in use. Set `MISSION_VAULT` to a scratch vault for a pilot.
 
 The launcher keeps mutable Pi files in a private directory under
@@ -52,7 +52,7 @@ A repository keeps its existing primary Herdr workspace. `start` registers the
 mission checkout as a Herdr **worktree workspace** with
 `herdr worktree open --cwd <primary checkout> --path <mission worktree> --no-focus`.
 That call is idempotent: it returns the workspace Herdr already links to the
-repository, and creates one on first launch. The mission-worker runs in that
+repository, and creates one on first launch. The worker runs in that
 workspace's first tab, or in a new tab there when the workspace is already open
 (the previous session may still be parked on that pane). Herdr groups per-worktree
 workspaces under the repository, so one repository still owns one repository
@@ -89,16 +89,30 @@ Attachment to main, a second mission in the same worktree, or a different owning
 session is refused. Herdr remains responsible for preventing duplicate live
 attachments to the same Pi session file.
 
-`start` persists a launch intent before registering the Herdr worktree and
-opening the worker tab. The mission-worker first
-attaches through the tool using that intent. A launch receipt stores its session
-file. Repeating start returns the recorded runtime instead of spawning again.
+`start` persists a launch intent, registers the Herdr worktree, opens the worker
+tab, and starts the worker as a full Pi agent in that pane
+(`herdr agent start <name> --kind pi --pane <pane>`). The worker is not a
+subagent: it carries no subagent identity, loadout file, wall-clock timer, or
+watchdog. Its environment is the pane's own, and Pi loads the repository
+configuration and the missions skill in that worktree. `start` then
+waits up to 60 s for the agent to reach its prompt (`herdr agent wait`), submits
+the first task (`herdr agent prompt`), and reads the session file from
+`herdr agent get` before it records the launch receipt. The task names that
+launch id, and the worker attaches with it through the tool.
+
+Herdr agent names are unique for the server. A launch names the worker
+`mission-<slug>`. A name that another session holds takes a short handle hash
+once; if that name is taken too, the launch fails and names the pane that holds
+it. The launch never renames another session's agent.
+
+A launch receipt stores its session
+file. Repeating start returns the recorded runtime instead of launching again.
 An uncertain launch remains reserved for inspection; it is never timed out into a
 second writer automatically. Runtime session identity remains bound after an
 attempt completes. Use `next` explicitly to claim the next eligible step.
 
-Newly started mission-workers receive a continuation prompt after a successful
-step when the mission is ready for more work. They keep the same session and
+A launched worker receives a continuation prompt after a successful
+step when the mission is ready for more work. It keeps the same session and
 worktree. Existing sessions attached for progress tracking use explicit `next`.
 Both modes pause at checkpoints; accepting one does not silently start another run.
 A waiting review blocks the next step and `finish` only. The worker keeps every tool.
@@ -114,7 +128,7 @@ The desk has no launch path of its own. A Pi session in that repository claims t
 request and calls the same `start` action the `mission` tool uses, so the worktree,
 the launch reservation, and the worker tab come from one code path. That action
 opens the mission worktree as the repository's Herdr workspace, creates its tab,
-and spawns the `mission-worker` agent there.
+and starts the worker agent there.
 
 Each request carries the seat that asked: `owner_workspace` (`HERDR_WORKSPACE_ID`),
 `owner_label` (`HERDR_PANE_ID`), and `owner_common` (the absolute git common dir).
@@ -172,18 +186,21 @@ Credentials and unacknowledged lifecycle events live in
 `$MISSION_STATE_DIR` or `$XDG_STATE_HOME/pi-missions` (default
 `~/.local/state/pi-missions`). Files are mode 0600, keyed by vault and session ID.
 Credentials are persisted before claiming, never placed in a prompt, tool result,
-or child environment. Only non-secret CLI/vault/cache paths travel in a launch's
-loadout snapshot. Hooks queue locally before delivery and retry with the same IDs.
+or child environment. Hooks queue locally before delivery and retry with the same IDs.
 Repeated deliveries cannot create duplicate events. CLI failures block further
 tracked tool work until recording recovers. Inactive steps block editing tools.
 
 Shutdown snapshots the transcript and parks the attempt without releasing its
 owner. Resume the same Pi session file in the mission worktree and primary Herdr
 workspace with the original MISSION_VAULT, MISSION_BIN, and MISSION_STATE_DIR.
-The preview launcher supplies its CLI and config automatically. `/mission attach`
-recovers a claim whose acknowledgement was lost. `subagent_message` still steers
-live owners through the existing registry, but refuses its disposable automatic
-resume path for a stopped durable mission. Use Herdr/Sidekick to resume it instead.
+A launched worker reads those paths from its own pane environment, so they must
+be exported there when the layout is not the default: `MISSION_VAULT` defaults
+to `~/vault`, `MISSION_BIN` to `mission` on PATH, and `MISSION_STATE_DIR` to
+`~/.local/state/pi-missions`. The preview launcher supplies its CLI and config
+automatically. `/mission attach`
+recovers a claim whose acknowledgement was lost. A worker is not a subagent
+registry entry: steer it with `herdr agent prompt <pane> <text>`, or resume its
+session file in that pane with Herdr/Sidekick.
 An operator must resolve a missing credential, abandoned launch, or crashed
 verifier; this version has no takeover or lease expiry command.
 
