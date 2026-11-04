@@ -2,8 +2,7 @@
 name: scout
 description: Fast codebase recon — explores files, finds patterns, maps architecture
 tools: read, grep, find, ls, mermaid, tuicr, tuicr_reply
-model: opengateway/deepseek/deepseek-v4.1-flash-ultrafast
-thinking: medium
+thinking: low
 system-prompt: append
 auto-exit: true
 ---
