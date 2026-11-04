@@ -221,6 +221,15 @@ the zoom chain instead of repeating one box everywhere.
   the node the next section expands. That is a plain extra ring around
   that one node and nothing more; it is optional, so set it when the
   reader also needs to know which box opens next.
+- **A double border is a claim of containment.** It encloses its node and
+  nothing else, with at least one blank cell of padding on every side.
+- **No route may pierce the ring.** An arrow attaches to the outer ring,
+  or the ring breaks at that cell the way a container border does — never
+  a line through an intact ring.
+- **If the renderer cannot honour this, do not set `focus: true` on a node
+  that has edges.** Name the zoom parent in the section title, or repeat
+  it as the container in the next section, and report the defect instead
+  of shipping a pierced ring.
 - **The level ladder.** L0: the component as one plain node among its
   neighbours. L1: its internals, sitting inside a container, with the
   external actors outside. L2: the internals' own relationships, drawn
@@ -417,6 +426,8 @@ the views. State any deliberate abstraction.
 - A container box is off its members — size the pane to the drawing and
   press `f`, then re-capture. If it still drifts, report the drift instead
   of claiming containment.
+- A ring with a route through it — the `focus` node's double border is
+  pierced. That is a defect, not a style choice; drop `focus` and report it.
 - `--check` warns a section has no description — write the one line that
   says what that section shows.
 - `--check` warns about a shared corridor — the router could not separate
