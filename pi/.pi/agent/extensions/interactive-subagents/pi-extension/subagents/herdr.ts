@@ -142,7 +142,8 @@ function tabIdFromCreateOutput(stdout: string): string | undefined {
 }
 
 /** Create a labeled, unfocused tab and return its root pane id. */
-export function createSurface(name: string): string {
+export function createSurface(name: string, options?: SurfaceOptions): string {
+  void options; // A Herdr pane cannot leave its workspace, so the field is unused.
   requireHerdr();
   const workspaceId = workspaceForPane(process.env.HERDR_PANE_ID!);
   const stdout = execFileSync(
@@ -187,7 +188,9 @@ export function createSurfaceSplit(
   name: string,
   direction: "left" | "right" | "up" | "down",
   fromSurface?: string,
+  options?: SurfaceOptions,
 ): string {
+  void options; // Same as createSurface: a split stays in its workspace.
   void name;
   requireHerdr();
 

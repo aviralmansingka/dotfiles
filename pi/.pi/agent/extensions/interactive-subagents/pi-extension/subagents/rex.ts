@@ -126,7 +126,24 @@ function sessionArgs(): string[] {
  * own. Without it, a child follows the caller, as before.
  */
 let childSession: string | null = null;
-function childSessionId(): string | null {
+
+/** Every session label the server has, for an error a caller can act on. */
+function sessionLabels(): string {
+  const listed = rexJsonOrNull<{ sessions?: Array<{ label?: string }> }>(["ls", "--json"]);
+  const labels = (listed?.sessions ?? []).map((s) => s.label).filter(Boolean);
+  return labels.length ? labels.join(", ") : "none";
+}
+
+/** A label or a full id, or a throw that names the live sessions. */
+function requireSession(want: string): string {
+  if (want.startsWith("session:")) return want;
+  const found = findSessionByLabel(want);
+  if (found) return found;
+  throw new Error(`unknown session "${want}"; live sessions: ${sessionLabels()}`);
+}
+
+function childSessionId(explicit?: string): string | null {
+  if (explicit) return requireSession(explicit.trim());
   const want = process.env.PI_SUBAGENT_SESSION?.trim();
   if (!want) return process.env.REX_SESSION || null;
   if (childSession !== null) return childSession;
@@ -135,8 +152,8 @@ function childSessionId(): string | null {
 }
 
 /** `-s` scope for a child tab, or none when no session is known. */
-function childSessionArgs(): string[] {
-  const session = childSessionId();
+function childSessionArgs(explicit?: string): string[] {
+  const session = childSessionId(explicit);
   return session ? ["-s", session] : [];
 }
 
@@ -144,8 +161,8 @@ function childSessionArgs(): string[] {
  * The cwd a child starts in. A rank tab belongs to the mission worktree, so a
  * captain sets `PI_SUBAGENT_CWD`; otherwise the child inherits the caller.
  */
-function childCwd(): string | null {
-  return process.env.PI_SUBAGENT_CWD?.trim() || process.cwd() || null;
+function childCwd(explicit?: string): string | null {
+  return explicit?.trim() || process.env.PI_SUBAGENT_CWD?.trim() || process.cwd() || null;
 }
 
 /**
@@ -250,11 +267,11 @@ export function createSession(
  *
  * Returns the new tab's root block id (e.g. `block:01a1...`).
  */
-export function createSurface(name: string): string {
+export function createSurface(name: string, options?: SurfaceOptions): string {
   requireRex();
   const label = `π ${sanitizeLabel(name)}`;
-  const session = childSessionId();
-  const cwd = childCwd();
+  const session = childSessionId(options?.session);
+  const cwd = childCwd(options?.cwd);
   const args = ["window", "new"];
   if (session) args.push("-s", session);
   args.push(label, "--focus=false", "--json");
@@ -280,13 +297,14 @@ export function createSurfaceSplit(
   name: string,
   direction: "left" | "right" | "up" | "down",
   fromSurface?: string,
+  options?: SurfaceOptions,
 ): string {
   void name; // Rex block labels are not settable at split time.
   requireRex();
   const anchor = fromSurface ?? process.env.REX_BLOCK;
   // A split lives beside its anchor, so the anchor's session wins. Without one,
   // the child target decides.
-  const scope = anchor ? scopeArgs(anchor) : childSessionArgs();
+  const scope = anchor ? scopeArgs(anchor) : childSessionArgs(options?.session);
   const args = ["split", ...scope];
   if (anchor) args.push("-b", anchor);
   args.push(`--split=${direction}`, "--focus=false", "--json");

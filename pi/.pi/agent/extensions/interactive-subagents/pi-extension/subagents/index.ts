@@ -144,6 +144,12 @@ const SubagentParams = Type.Object({
         "Working directory for the sub-agent. The agent starts in this folder and picks up its local .pi/ config, CLAUDE.md, skills, and extensions. Use for role-specific subfolders.",
     }),
   ),
+  session: Type.Optional(
+    Type.String({
+      description:
+        "Rex session label or id for the child tab, such as mission-fix-login. Defaults to this session. Use it to keep workers in their mission's session instead of your own.",
+    }),
+  ),
 });
 
 type SubagentSessionMode = "standalone" | "lineage-only" | "fork";
@@ -1665,7 +1671,11 @@ async function launchSubagent(
     assertAdoptablePane(adoptPane, effectiveCwd ?? ctx.cwd);
     return launchSubagentOnSurface(params, ctx, adoptPane, signal);
   }
-  return withNewSurface(params.name, (surface) => launchSubagentOnSurface(params, ctx, surface, signal));
+  return withNewSurface(
+    params.name,
+    (surface) => launchSubagentOnSurface(params, ctx, surface, signal),
+    { session: params.session, cwd: params.cwd },
+  );
 }
 
 async function launchSubagentOnSurface(
@@ -2595,6 +2605,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
       label: "Subagent",
       description:
         "Spawn a sub-agent in a dedicated Herdr or Rex tab, or a tmux pane. " +
+        "Pass `session` to put its tab in another Rex session, such as mission-<slug>. " +
         "This is a fire-and-forget async tool: Herdr and Rex return after the child is ready and its task is submitted; tmux returns after dispatch. The result is only an acknowledgement. " +
         "When the sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +
         "DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT call subagents_list or any other tool to 'check' status. All of that is wasted work — the harness handles delivery for you. " +
@@ -2602,6 +2613,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         "After spawning, either end your turn immediately, or work on other independent tasks (including spawning more subagents in parallel). The harness will wake you with the result when it is ready.",
       promptSnippet:
         "Spawn a sub-agent in a dedicated Herdr or Rex tab, or a tmux pane. " +
+        "Pass `session` to put its tab in another Rex session, such as mission-<slug>. " +
         "This is a fire-and-forget async tool: Herdr and Rex return after the child is ready and its task is submitted; tmux returns after dispatch. The result is only an acknowledgement. " +
         "When the sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +
         "DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT call subagents_list or any other tool to 'check' status. All of that is wasted work — the harness handles delivery for you. " +
