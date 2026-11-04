@@ -218,6 +218,10 @@ cmd_up() {
   ip="$(instance_ip "$region" "$id")"
   alias="probe"
   printf 'address: %s\n' "$ip"
+  # AWS recycles public addresses, so a previous sandbox's host key can sit at
+  # this IP and make ssh refuse with "Host key verification failed". Drop the
+  # stale entry and let the next connection trust the fresh host.
+  ssh-keygen -R "$ip" >/dev/null 2>&1 || true
   if [ -n "$key_path" ]; then
     write_ssh_alias "$alias" "$ip" "$key_path"
   else

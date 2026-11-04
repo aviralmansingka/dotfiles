@@ -184,6 +184,10 @@ Three properties worth knowing:
 - **The box is the fleet's `probe` host.** Its hostname is `probe` and the ssh
   alias is `probe`, so `ssh probe` and `just deploy remote probe` work with no
   extra setup.
+- **It clears a stale host key.** AWS recycles public addresses, so a previous
+  sandbox can leave a `known_hosts` entry at the new box's IP and ssh then
+  refuses with "Host key verification failed". The script removes that entry
+  before it writes the alias.
 - **It picks a key it can actually use.** It prefers a regional key pair whose
   private key sits at `~/.ssh/<name>`, `~/.ssh/<name>.pem` or
   `~/.aws/keypairs/<name>.pem`. `SANDBOX_KEY` overrides the choice.
