@@ -29,8 +29,9 @@ export function quiescent(event, ctx) {
  *  mission gate always passes them. `mission` stays available in every state so
  *  a held session can inspect its record, report progress, or pick up a step;
  *  `run-command` only prints a repair command, so a worker that owns no active
- *  step can still hand the human the exact command to run. */
-export const INSPECTION_TOOLS = new Set(["read", "grep", "find", "ls", "tool_search", "mission", "run-command"]);
+ *  step can still hand the human the exact command to run; `mermaid` writes no
+ *  repository file and holds no authority either. */
+export const INSPECTION_TOOLS = new Set(["read", "grep", "find", "ls", "tool_search", "mission", "run-command", "mermaid"]);
 
 /** Mission statuses that hold no agent write authority: "waiting" and "review"
  *  wait on a human checkpoint decision, while "done" and "failed" already
