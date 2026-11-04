@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { MissionBridge, missionContinues, missionToolBlock } from "./core.mjs";
+import { LABEL_COLUMN, actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
 
 export default function missions(pi: ExtensionAPI, options = {}) {
   const bridge = new MissionBridge(options);
@@ -12,10 +13,15 @@ export default function missions(pi: ExtensionAPI, options = {}) {
     try { await fn(event, ctx); }
     catch (e: any) { bridge.error = e.message; ctx.ui.notify("Mission tracking: " + e.message, "warning"); }
   };
-  const badge = async (ctx: any) => {
-    if (!bridge.hint) { ctx.ui.setStatus("mission", undefined); return; }
+  // The one-line badge names the attached mission. An untracked session shows
+  // the mission its panel last opened, so every action refreshes a real line.
+  const badge = async (ctx: any, record?: any) => {
+    if (!bridge.hint) {
+      ctx.ui.setStatus?.("mission", record ? `${record.handle} · ${record.state?.status || "unknown"}` : undefined);
+      return;
+    }
     const c = await bridge.current(ctx);
-    ctx.ui.setStatus("mission", `${bridge.hint.handle} · ${c?.attempt?.step || c?.record.state.status}`);
+    ctx.ui.setStatus?.("mission", `${bridge.hint.handle} · ${c?.attempt?.step || c?.record.state.status}`);
   };
   pi.on("session_start", guarded(async (_e: any, ctx: any) => {
     live = ctx;
@@ -99,28 +105,135 @@ export default function missions(pi: ExtensionAPI, options = {}) {
       } catch (e: any) { return { content: [{ type: "text", text: e.message }], isError: true }; }
     },
   });
+  // The panel: one pop-up shows the record as rows and takes one key. The view
+  // model and the key map live in panel.mjs, so the suite tests them without a
+  // terminal. A missing vault, handle, or field shows what exists plus a reason.
+  const readRecord = async (handle?: string) => {
+    if (!handle) return { error: "A mission handle is required." };
+    try { return { record: await bridge.call(["show", handle]) }; }
+    catch (e: any) { return { error: e.message }; }
+  };
+  const pickHandle = async (ctx: any): Promise<string | undefined> => {
+    try {
+      const records = await bridge.call(["list"]);
+      if (!records?.length) { ctx.ui?.notify?.("No missions in this vault.", "info"); return undefined; }
+      if (records.length === 1) return records[0].handle;
+      if (typeof ctx.ui?.select !== "function") return records[0].handle;
+      const labels = records.map((r: any) => `${r.handle} · ${r.state?.status || "unknown"} · ${r.mission?.title || ""}`);
+      const selected = await ctx.ui.select("Missions", labels);
+      return selected ? records[labels.indexOf(selected)]?.handle : undefined;
+    } catch (e: any) { ctx.ui?.notify?.(e.message, "error"); return undefined; }
+  };
+  // One key, one CLI call. A checkpoint decision is a human attestation, so the
+  // panel signs it with this user's name and a fixed note.
+  const actInPanel = async (ctx: any, action: string, handle: string, record: any) => {
+    if (action === "open") return "Mission desk opened in " + (await bridge.openDesk()) + ".";
+    if (action === "start") await bridge.action(ctx, { action: "start", handle });
+    else if (action === "retry") await bridge.call(["retry", handle]);
+    else await bridge.call(checkpointArgs(handle, record, { decision: action, actor: process.env.USER || "pi-user" }));
+    return action + " done.";
+  };
+  const openPanel = async (ctx: any, request?: string) => {
+    let handle = request || bridge.hint?.handle;
+    if (!handle) handle = await pickHandle(ctx);
+    if (!handle) return;
+    const target = handle;
+    let loaded: any = await readRecord(target);
+    try { await badge(ctx, loaded.record); } catch { /* the badge is display only */ }
+    if (!ctx.hasUI || typeof ctx.ui?.custom !== "function") {
+      // A host without custom components still gets the whole record.
+      ctx.ui?.notify?.(JSON.stringify(loaded.record ?? { handle: target, error: loaded.error }, null, 2), loaded.error ? "warning" : "info");
+      return;
+    }
+    // The extension factory must load where pi's own modules are absent (the
+    // CI suite resolves jiti and typebox only), so pi-tui loads only when a
+    // panel opens.
+    const { Key, matchesKey, truncateToWidth, visibleWidth } = await import("@earendil-works/pi-tui");
+    await ctx.ui.custom<void>((tui: any, theme: any, _kb: any, done: () => void) => {
+      let busy: string | undefined;
+      let notice: string | undefined;
+      let cachedLines: string[] | undefined;
+      let cachedWidth = -1;
+      const invalidate = () => { cachedLines = undefined; cachedWidth = -1; };
+      const model = () => buildPanelModel({ record: loaded.record, handle: target, error: loaded.error });
+
+      const runAction = async (action: string) => {
+        busy = action; notice = undefined;
+        invalidate(); tui.requestRender();
+        try { notice = await actInPanel(ctx, action, target, loaded.record); }
+        catch (e: any) { notice = e.message; }
+        busy = undefined;
+        loaded = await readRecord(target);
+        try { await badge(ctx, loaded.record); } catch { /* the badge is display only */ }
+        invalidate(); tui.requestRender();
+      };
+
+      return {
+        render(width: number): string[] {
+          if (cachedLines && cachedWidth === width) return cachedLines;
+          const m = model();
+          const name = m.handle || target;
+          const lines: string[] = [];
+          const push = (line: string) => { lines.push(truncateToWidth(line, width, "…")); };
+          const gap = Math.max(1, width - visibleWidth(name) - visibleWidth(m.statusLine));
+          push(theme.fg("accent", theme.bold(name)) + " ".repeat(gap) + theme.fg(m.tone, m.statusLine));
+          if (m.error) push(theme.fg("error", m.error));
+          for (const row of m.rows) {
+            const status = row.status ? theme.fg(row.tone, row.status) : "";
+            const column = LABEL_COLUMN + 1;
+            const budget = Math.max(8, width - column - (row.status ? visibleWidth(row.status) + 1 : 0));
+            const value = truncateToWidth(row.value, budget, "…");
+            const used = column + visibleWidth(value) + (row.status ? visibleWidth(row.status) + 1 : 0);
+            push(theme.fg("dim", row.label.padEnd(LABEL_COLUMN)) + " " + theme.fg(row.tone, value) + " ".repeat(Math.max(1, width - used)) + status);
+          }
+          lines.push("");
+          // A disabled key keeps its place and dims, so the layout never jumps.
+          push(m.keys.map(k => k.enabled
+            ? theme.fg("accent", k.key) + " " + theme.fg("text", k.label)
+            : theme.fg("dim", k.key + " " + k.label)).join("   "));
+          const blocked = m.keys.filter(k => !k.enabled && k.action !== "close").map(k => `${k.key} ${k.action}: ${k.reason}`);
+          if (blocked.length) push(theme.fg("dim", blocked.join(" · ")));
+          if (busy) push(theme.fg("warning", "running " + busy + "…"));
+          else if (notice) push(theme.fg("dim", notice));
+          cachedLines = lines; cachedWidth = width;
+          return lines;
+        },
+        handleInput(data: string): void {
+          if (matchesKey(data, Key.escape) || data === "q") { done(); return; }
+          const action = actionForKey(data);
+          if (!action) return;
+          const entry = model().keys.find(k => k.action === action);
+          if (!entry?.enabled) {
+            notice = `${entry?.key || data} ${action}: ${entry?.reason || "cannot run now"}`;
+            invalidate(); tui.requestRender();
+            return;
+          }
+          void runAction(action);
+        },
+        invalidate,
+      };
+    }, { blocked: { kind: "question", message: "Mission panel: " + target } });
+  };
+
   pi.registerCommand("mission", {
-    description: "Mission: /mission attach|start|status|steps|next REPO/SLUG",
+    description: "Mission panel: /mission [HANDLE]; /mission attach|start|steps|next REPO/SLUG",
     handler: async (args, ctx) => {
-      const [action = "status", handle] = args.trim().split(/\s+/).filter(Boolean);
-      if (!["attach", "start", "status", "steps", "next"].includes(action)) { ctx.ui.notify("Use /mission attach|start|status|steps|next REPO/SLUG", "warning"); return; }
+      const [action = "panel", handle] = args.trim().split(/\s+/).filter(Boolean);
+      // A bare handle opens its panel too, so `/mission dotfiles/x` works.
+      if (action === "panel" || action === "status" || action.includes("/")) {
+        await openPanel(ctx, action.includes("/") ? action : handle);
+        return;
+      }
+      if (!["attach", "start", "steps", "next"].includes(action)) { ctx.ui.notify("Use /mission [HANDLE] or /mission attach|start|status|steps|next REPO/SLUG", "warning"); return; }
       try { const result = await bridge.action(ctx, { action, handle }); await badge(ctx); ctx.ui.notify(JSON.stringify(result, null, 2), "info"); }
       catch (e: any) { ctx.ui.notify(e.message, "error"); }
     },
   });
   pi.registerCommand("missions", {
-    description: "Select a mission to inspect, start, or attach to this session",
+    description: "Select a mission and open its panel",
     handler: async (_args, ctx) => {
-      try {
-        const records = await bridge.call(["list"]);
-        if (!ctx.hasUI) { ctx.ui.notify(JSON.stringify(records), "info"); return; }
-        const labels = records.map((r: any) => `${r.handle} · ${r.state.status} · ${r.mission.title}`);
-        const selected = await ctx.ui.select("Missions", labels);
-        if (!selected) return;
-        const handle = records[labels.indexOf(selected)].handle;
-        const action = await ctx.ui.select(handle, ["status", "steps", "start", "attach", "next"]);
-        if (action) { const result = await bridge.action(ctx, { action, handle }); await badge(ctx); ctx.ui.notify(JSON.stringify(result, null, 2), "info"); }
-      } catch (e: any) { ctx.ui.notify(e.message, "error"); }
+      const handle = await pickHandle(ctx);
+      if (handle) await openPanel(ctx, handle);
     },
   });
 }
