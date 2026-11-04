@@ -600,3 +600,71 @@ func TestNarrowDeskSwapsPaneWithTab(t *testing.T) {
 		t.Fatal("tab back did not restore the narrow mission list")
 	}
 }
+
+// TestBracketsWalkEachPaneTabsAndWrap pins S03: one bracket press moves exactly
+// one tab of the pane that owns the keys, both cycles wrap at both ends, and
+// neither key moves the focus or the other pane's tab.
+func TestBracketsWalkEachPaneTabsAndWrap(t *testing.T) {
+	s, _ := stateVault(t)
+	m := newDesk(s)
+	m.refresh()
+	press := func(key string) {
+		m.Update(tea.KeyPressMsg{Code: []rune(key)[0], Text: key})
+	}
+	// The list walks its state tabs forward, then wraps back to ALL.
+	m.focus, m.filter, m.tab = 0, filterAll, 2
+	for _, want := range []string{"READY", "ACTIVE", "YOURS", "DONE", "FAILED", "ALL"} {
+		press("]")
+		if got := deskFilters[m.filter].Label; got != want {
+			t.Fatalf("] walked to %s, want %s", got, want)
+		}
+		if m.focus != 0 || m.tab != 2 {
+			t.Fatalf("] moved the focus or the detail tab: focus %d tab %d", m.focus, m.tab)
+		}
+	}
+	// And backwards, wrapping from ALL to FAILED.
+	for _, want := range []string{"FAILED", "DONE", "YOURS", "ACTIVE", "READY", "ALL"} {
+		press("[")
+		if got := deskFilters[m.filter].Label; got != want {
+			t.Fatalf("[ walked to %s, want %s", got, want)
+		}
+		if m.focus != 0 || m.tab != 2 {
+			t.Fatalf("[ moved the focus or the detail tab: focus %d tab %d", m.focus, m.tab)
+		}
+	}
+	// The details walk their four views the same way, leaving the filter alone.
+	m.focus, m.tab, m.filter = 1, 0, 3
+	for step, want := range []int{1, 2, 3, 0, 1, 2, 3, 0} {
+		press("]")
+		if m.tab != want {
+			t.Fatalf("] step %d reached view %d, want %d", step+1, m.tab, want)
+		}
+		if m.focus != 1 || m.filter != 3 {
+			t.Fatalf("] moved the focus or the filter: focus %d filter %d", m.focus, m.filter)
+		}
+	}
+	for step, want := range []int{3, 2, 1, 0, 3, 2, 1, 0} {
+		press("[")
+		if m.tab != want {
+			t.Fatalf("[ step %d reached view %d, want %d", step+1, m.tab, want)
+		}
+		if m.focus != 1 || m.filter != 3 {
+			t.Fatalf("[ moved the focus or the filter: focus %d filter %d", m.focus, m.filter)
+		}
+	}
+	// The arrow keys are the same two moves: they cannot disagree with [ and ].
+	m.focus, m.filter, m.tab = 0, filterAll, 0
+	m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
+	if deskFilters[m.filter].Label != "READY" {
+		t.Fatalf("right did not walk the list tabs: %s", deskFilters[m.filter].Label)
+	}
+	m.focus = 1
+	m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
+	if m.tab != 1 {
+		t.Fatalf("right did not walk the detail views: %d", m.tab)
+	}
+	m.Update(tea.KeyPressMsg{Code: tea.KeyLeft})
+	if m.tab != 0 {
+		t.Fatalf("left did not step the detail views back: %d", m.tab)
+	}
+}
