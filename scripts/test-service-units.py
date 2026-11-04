@@ -272,7 +272,22 @@ def check_verify(units, parsed):
                  "verify on the target host",
                  ms)
         else:
-            reason = lines[0] if lines else f"exit code {proc.returncode}"
+            # `systemd-analyze verify` exits non-zero for pure deprecation
+            # notices, and it pulls in the HOST's own units: a runner whose
+            # /usr/lib/systemd/system uses a since-removed option fails OUR
+            # unit through no fault of the repo (ubuntu-24.04 systemd 255 does
+            # exactly this with xfs_scrub_all.service's CPUAccounting=).
+            # Those lines are informational; only real problems fail.
+            informational = ("has been removed and it is ignored",
+                             "is ignored")
+            real = [ln for ln in lines if not any(m in ln for m in informational)]
+            if lines and not real:
+                emit("SKIP", "sysd-verify", rel,
+                     "host systemd deprecation notice only "
+                     "(not this unit): " + lines[0].split("|")[-1].strip(),
+                     ms)
+                continue
+            reason = (real or lines or [f"exit code {proc.returncode}"])[0]
             emit("FAIL", "sysd-verify", rel, reason, ms)
 
 
