@@ -1,17 +1,20 @@
 // Paths: go/mission/**, pi/.pi/agent/extensions/missions/**, pi/.pi/agent/extensions/interactive-subagents/**, agents/.agents/skills/missions/**
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { MissionBridge, agentCollisionReport, missionContinues, missionToolBlock, parkedAgentName, quiescent, repositoryWorkspaces, takenAgentName } from "./core.mjs";
+import { MissionBridge, agentCollisionReport, herdrError, missionContinues, missionToolBlock, quiescent, repositoryWorkspaces, takenAgentName, workerAgentName } from "./core.mjs";
 import { actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
 import { missionLaunchConfig } from "../interactive-subagents/pi-extension/subagents/mission-launch.mjs";
 
 const exec = promisify(execFile);
+/** The handle hash the launch appends to a taken agent name. */
+const hashOf = text => createHash("sha256").update(text).digest("hex");
 const bin = process.env.MISSION_TEST_BIN;
 const needsCLI = { skip: !bin && "Run scripts/test-missions.sh for real CLI integration coverage" };
 const context = (cwd, file, id="existing-pi") => ({ cwd, sessionManager: { getSessionId:()=>id, getSessionFile:()=>file }, hasPendingMessages:()=>false, isIdle:()=>true });
@@ -112,20 +115,20 @@ test("agent-name helpers read the Herdr collision and stay inside the name limit
   assert.equal(takenAgentName("Acknowledgement lost"),null);
   assert.equal(takenAgentName(undefined),null);
   assert.equal(takenAgentName('herdr failed: {"code":"agent_pane_busy"}'),null);
-  // A parked name records the mission that reclaimed the name, and Herdr accepts
-  // only 32 characters of [a-z0-9_-] that start with a letter.
-  const holder={pane_id:"w8N:p1"};
-  const parked=parkedAgentName("pi","dotfiles/fix-review-ergonomics-stable-decisions-no-tool-lockout",holder);
-  assert.match(parked,/^pi-fix-review-ergon-[0-9a-f]{4}$/);assert.equal(parked.length<=32,true);
-  assert.equal(parked,parsedName(parked),"a parked name is stable for one holder");
+  // A worker name comes from the mission handle, and Herdr accepts only 32
+  // characters of [a-z0-9_-] that start with a letter.
+  const name=workerAgentName("dotfiles/fix-review-ergonomics-stable-decisions-no-tool-lockout");
+  assert.equal(name,"mission-fix-review-ergonomics-st");assert.equal(name.length,32);
+  assert.equal(workerAgentName("dotfiles/"+ "x".repeat(80)),"mission-"+"x".repeat(24));
+  assert.equal(workerAgentName(""),"mission-mission");
+  const hashed=workerAgentName("dotfiles/fix-review","a1b2c3d4e5f6");
+  assert.equal(hashed,"mission-fix-review-a1b2c3");assert.match(hashed,/^[a-z][a-z0-9_-]*$/);
   assert.match(agentCollisionReport("pi",{pane_id:"w8N:p1",agent_status:"working",cwd:"/w/mission-a"},"Act."),/name "pi" is held by pane w8N:p1 \(status working, cwd \/w\/mission-a\)\. Act\./);
   assert.match(agentCollisionReport("pi",null,"Act."),/unknown pane/);
+  // A failed Herdr call keeps its code and message without the process noise.
+  assert.equal(herdrError('Command failed: herdr agent wait\n{"error":{"code":"timeout","message":"agent did not match"}}'),"timeout: agent did not match");
+  assert.equal(herdrError("Herdr is not running"),"Herdr is not running");
 });
-
-/** The name Herdr stores for one agent, checked against its own rules. */
-function parsedName(name) {
-  assert.match(name,/^[a-z][a-z0-9_-]*$/);return name;
-}
 
 test("internal mission launch config forwards only non-secret paths", () => {
   const config=missionLaunchConfig({agent:"mission-worker",missionContext:{vault:"/vault",binary:"/bin/mission",stateDir:"/state",MISSION_TOKEN:"secret"}});
@@ -148,7 +151,10 @@ async function fixture(t, checkpoint=false) {
   delete env.PI_SUBAGENT_NAME;
   // Parent credentials must not leak into requests or any spawned child.
   env.MISSION_TOKEN="unrelated-parent-token";env.MISSION_ATTEMPT="unrelated-parent-attempt";
-  const f={ env, hookFailures:0, hookIDs:[], tabs:[], worktrees:[], workspaces:[], calls:[], agents:[], agentCalls:[], paneAgents:{} };
+  const f={ env, hookFailures:0, hookIDs:[], tabs:[], worktrees:[], workspaces:[], calls:[], agents:[], agentCalls:[], started:[], taken:new Set(), startErrors:[], prompts:[], waitError:null, promptError:null, sessionFile:null, paneAgents:{} };
+  /** The Herdr failure envelope herdr prints on stderr when a call fails. */
+  const herdrFails=(code,message)=>Error(`Command failed: herdr agent\n${JSON.stringify({error:{code,message},id:"cli:agent:start"})}`);
+  const takenErr=name=>herdrFails("agent_name_taken",`agent name ${name} is already used; candidates: pane_id=w-other:p1 workspace_id=w-other status=working`);
   const run=async(binary,args,options={})=>{
     f.calls.push({binary,args,env:options.env});
     if(binary==="herdr") {
@@ -167,7 +173,17 @@ async function fixture(t, checkpoint=false) {
       else if(args[0]==="tab") { f.tabs.push(args); const workspace=flag("--workspace"); result={root_pane:{pane_id:workspace+":p2",workspace_id:workspace}}; }
       else if(args[0]==="agent") {
         f.agentCalls.push(args);
-        result=args[1]==="list" ? {agents:f.agents} : {agent:{name:args[2]}};
+        const target=args[2];
+        if(args[1]==="start") {
+          if(f.startErrors.length) throw f.startErrors.shift();
+          if(f.taken.has(target)) throw takenErr(target);
+          f.started.push(target); result={agent:{name:target,pane_id:target}};
+        }
+        else if(args[1]==="wait") { if(f.waitError) throw f.waitError; result={agent:{agent_status:"idle",pane_id:target}}; }
+        else if(args[1]==="prompt") { if(f.promptError) throw f.promptError; f.prompts.push({pane:target,text:args[3]}); result={agent:{agent_status:"working",pane_id:target}}; }
+        else if(args[1]==="get") result={agent:{name:f.started.at(-1),agent_status:"working",pane_id:target,agent_session:{value:f.sessionFile}} };
+        else if(args[1]==="list") result={agents:f.agents};
+        else result={agent:{name:target}};
       }
       else if(args[0]==="pane" && args[1]==="get") {
         result={pane:{pane_id:args[2],agent:f.paneAgents[args[2]]??null}};
@@ -193,6 +209,9 @@ async function fixture(t, checkpoint=false) {
   const r=await f.bridge.call(["workspace",handle,"--root",worktrees]);
   f.cwd=r.state.runtime.cwd;f.file=join(root,"existing.jsonl");
   writeFileSync(f.file,JSON.stringify({type:"session",id:"existing-pi",cwd:f.cwd})+"\n");
+  // The launched worker writes its own session file; the fixture reports this
+  // one from `agent get`.
+  f.sessionFile=f.file;
   f.ctx=context(f.cwd,f.file);f.handle=handle;f.repo=repo;f.run=run;f.vault=vault;f.cache=cache;
   return f;
 }
@@ -258,121 +277,162 @@ test("failed checks retain ownership and successful correction settles it",needs
   const r=await f.bridge.call(["show",f.handle]);assert.equal(r.state.attempts[0].status,"succeeded");assert.equal(r.state.status,"ready");
 });
 
-test("mission launch registers a Herdr worktree and adopts its workspace",needsCLI,async t=>{
-  const f=await fixture(t);const requests=[];
-  globalThis.__pi_interactive_subagents={executeSubagent:async(p)=>{requests.push(p);return {details:{status:"started",sessionFile:f.file}}}};
+test("a launch starts one full agent in the mission pane",needsCLI,async t=>{
+  const f=await fixture(t);
+  // The launch needs no subagent extension: the worker is a full Pi agent.
+  assert.equal(globalThis.__pi_interactive_subagents,undefined);
+  const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
+  const launch=(await f.bridge.call(["show",f.handle])).state.runtime.launch_id;
+  // The whole worker launch: a mission-derived name, one readiness wait, one
+  // task prompt, and one session read.
+  assert.deepEqual(f.agentCalls,[
+    ["agent","start","mission-session-progress","--kind","pi","--pane","w-mission:p1"],
+    ["agent","wait","w-mission:p1","--until","idle","--timeout","60000"],
+    ["agent","prompt","w-mission:p1",`Work on mission ${f.handle}. Before reading or editing repository files, call mission with action=attach, handle=${f.handle}, launch_id=${launch}. Then follow the returned step brief and the missions skill. Report structured progress. Write the required artifact and call finish when the step is ready. Stop at checkpoints; keep this session and worktree for later steps.`],
+    ["agent","get","w-mission:p1"],
+  ]);
+  // The agent session file is recorded on the launch.
+  assert.equal(r.session_file,f.file);
+  assert.equal((await f.bridge.call(["show",f.handle])).state.runtime.session_file,realpathSync(f.file));
+  // No subagent environment and no loadout travels to the worker.
+  const sent=JSON.stringify(f.calls.filter(c=>c.binary==="herdr").map(c=>c.args));
+  assert.equal(sent.includes("PI_SUBAGENT"),false);assert.equal(sent.includes("loadout"),false);
+});
+
+test("no subagent extension is needed to start a mission",needsCLI,async t=>{
+  const f=await fixture(t);
+  const saved=globalThis.__pi_interactive_subagents;delete globalThis.__pi_interactive_subagents;
   try {
-    const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
-    assert.equal(requests[0].cwd,f.cwd);assert.equal(requests[0].agent,"mission-worker");
-    assert.equal(requests[0].missionContext.vault,f.vault);assert.equal(requests[0].missionContext.binary,bin);
-    assert.equal(JSON.stringify(requests[0]).includes("unrelated-parent-token"),false);
-    // One launch keeps one reservation, one worktree open, and one spawn.
-    assert.equal(f.calls.filter(c=>c.binary===bin&&c.args.includes("launch")&&!c.args.includes("--session-file")).length,1);
-    assert.equal(f.worktrees.length,1);assert.equal(requests.length,1);
-    // The mission branch is mission/<slug>, and Herdr owns that checkout as its
-    // own linked worktree workspace, anchored on the primary checkout.
-    const runtime=(await f.bridge.call(["show",f.handle])).state.runtime;
-    assert.equal(runtime.branch,"mission/session-progress");
-    assert.deepEqual(f.worktrees[0].slice(0,3),["worktree","open","--cwd"]);
-    assert.equal(f.worktrees[0][3],f.repo);assert.equal(f.worktrees[0][f.worktrees[0].indexOf("--path")+1],f.cwd);
-    assert.ok(f.worktrees[0].includes("--no-focus"));
-    // A fresh worktree workspace hosts the worker in its first tab — no extra tab.
-    assert.equal(f.tabs.length,0);assert.equal(requests[0].pane,"w-mission:p1");assert.equal(r.workspace,"w-mission");
-    // The mission session is accepted as a pane of that worktree workspace, and
-    // still refused when its cwd is not the mission checkout.
-    f.paneWorkspace="w-mission";
-    assert.deepEqual(await f.bridge.assertSurface(f.ctx),{workspace:"w-mission",pane:f.env.HERDR_PANE_ID});
-    await assert.rejects(f.bridge.assertSurface({...f.ctx,cwd:f.repo}),/mission worktree/);
-    f.paneWorkspace="repo";
-    const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,false);assert.equal(requests.length,1);
-  } finally {delete globalThis.__pi_interactive_subagents}
+    const r=await f.bridge.start(context(f.repo,f.file),f.handle);
+    assert.equal(r.launched,true);assert.deepEqual(f.started,["mission-session-progress"]);
+  } finally {if(saved!==undefined)globalThis.__pi_interactive_subagents=saved}
+});
+
+test("mission launch registers a Herdr worktree and adopts its workspace",needsCLI,async t=>{
+  const f=await fixture(t);
+  const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
+  // The worker inherits the pane environment, so no parent credential travels
+  // in any Herdr argument.
+  assert.equal(JSON.stringify(f.calls.filter(c=>c.binary==="herdr").map(c=>c.args)).includes("unrelated-parent-token"),false);
+  // One launch keeps one reservation, one worktree open, and one agent.
+  assert.equal(f.calls.filter(c=>c.binary===bin&&c.args.includes("launch")&&!c.args.includes("--session-file")).length,1);
+  assert.equal(f.worktrees.length,1);assert.equal(f.started.length,1);
+  // The mission branch is mission/<slug>, and Herdr owns that checkout as its
+  // own linked worktree workspace, anchored on the primary checkout.
+  const runtime=(await f.bridge.call(["show",f.handle])).state.runtime;
+  assert.equal(runtime.branch,"mission/session-progress");
+  assert.deepEqual(f.worktrees[0].slice(0,3),["worktree","open","--cwd"]);
+  assert.equal(f.worktrees[0][3],f.repo);assert.equal(f.worktrees[0][f.worktrees[0].indexOf("--path")+1],f.cwd);
+  assert.ok(f.worktrees[0].includes("--no-focus"));
+  // A fresh worktree workspace hosts the worker in its first tab — no extra tab.
+  assert.equal(f.tabs.length,0);assert.equal(f.agentCalls[0][6],"w-mission:p1");assert.equal(r.workspace,"w-mission");
+  // The mission session is accepted as a pane of that worktree workspace, and
+  // still refused when its cwd is not the mission checkout.
+  f.paneWorkspace="w-mission";
+  assert.deepEqual(await f.bridge.assertSurface(f.ctx),{workspace:"w-mission",pane:f.env.HERDR_PANE_ID});
+  await assert.rejects(f.bridge.assertSurface({...f.ctx,cwd:f.repo}),/mission worktree/);
+  f.paneWorkspace="repo";
+  const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,false);assert.equal(f.started.length,1);
 });
 
 test("an already open mission workspace gets its own launch tab",needsCLI,async t=>{
-  const f=await fixture(t);const requests=[];
+  const f=await fixture(t);
   // The human already opened the mission worktree as a workspace: relanding on
   // its parked first tab could take over that pane, so a launch takes a new tab.
   f.workspaces.push({workspace_id:"w-open",worktree:{repo_key:await f.bridge.common(f.repo),is_linked_worktree:true,checkout_path:f.cwd}});
-  globalThis.__pi_interactive_subagents={executeSubagent:async(p)=>{requests.push(p);return {details:{status:"started",sessionFile:f.file}}}};
-  try {
-    const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
-    assert.equal(f.worktrees.length,1);assert.equal(requests[0].pane,"w-open:p2");
-    assert.deepEqual(f.tabs[0].slice(0,4),["tab","create","--workspace","w-open"]);
-    assert.equal(f.tabs[0][f.tabs[0].indexOf("--cwd")+1],f.cwd);
-    assert.ok(f.tabs[0].includes("--no-focus"));
-  } finally {delete globalThis.__pi_interactive_subagents}
+  const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
+  assert.equal(f.worktrees.length,1);assert.equal(f.agentCalls[0][6],"w-open:p2");
+  assert.deepEqual(f.tabs[0].slice(0,4),["tab","create","--workspace","w-open"]);
+  assert.equal(f.tabs[0][f.tabs[0].indexOf("--cwd")+1],f.cwd);
+  assert.ok(f.tabs[0].includes("--no-focus"));
 });
 
-test("a taken agent name frees a stale session and retries the spawn once",needsCLI,async t=>{
-  const f=await fixture(t);const requests=[];
-  // Herdr agent names are unique for the whole server. The launch does not
-  // choose the name, so a finished session of another mission worktree can
-  // hold it. That holder is idle: the launch renames it and retries once.
-  const holder={name:"pi",pane_id:"w-other:p1",workspace_id:"w-other",agent_status:"done",cwd:"/worktrees/dotfiles/mission-nix-fleet"};
-  f.agents.push(holder);
-  const taken=()=>new Error('launch_failed: herdr agent: '+JSON.stringify({error:{code:"agent_name_taken",message:"agent name pi is already used; candidates: pane_id=w-other:p1 workspace_id=w-other cwd=/worktrees/dotfiles/mission-nix-fleet status=done"},id:"cli:agent:start"}));
-  globalThis.__pi_interactive_subagents={executeSubagent:async(p)=>{requests.push(p);if(requests.length===1)throw taken();return {details:{status:"started",sessionFile:f.file}}}};
-  try {
-    const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
-    assert.equal(requests.length,2);
-    // The exact Herdr argv that frees the name, and the parked name it chooses.
-    const parked=parkedAgentName("pi",f.handle,holder);
-    assert.deepEqual(f.agentCalls[0],["agent","list"]);
-    assert.deepEqual(f.agentCalls[1],["agent","rename","w-other:p1",parked]);
-    assert.match(parked,/^pi-session-progress-[0-9a-f]{4}$/);
-    assert.equal(parked.length<=32,true);
-    assert.equal((await f.bridge.call(["show",f.handle])).state.runtime.session_file,realpathSync(f.file));
-  } finally {delete globalThis.__pi_interactive_subagents}
+test("a taken name takes a hashed name once and never renames the holder",needsCLI,async t=>{
+  const f=await fixture(t);
+  // Herdr keeps one name per server. Another mission's session can hold the
+  // plain name, so the launch takes a hashed name instead of renaming it.
+  const holder={name:"mission-session-progress",pane_id:"w-other:p1",workspace_id:"w-other",agent_status:"working"};
+  f.agents.push(holder);f.taken.add(holder.name);
+  const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
+  const retry=f.started[0];
+  assert.equal(retry,workerAgentName(f.handle,hashOf(f.handle)));
+  assert.match(retry,/^mission-session-progress-[0-9a-f]{6}$/);
+  assert.deepEqual(f.agentCalls.slice(0,2),[
+    ["agent","start","mission-session-progress","--kind","pi","--pane","w-mission:p1"],
+    ["agent","start",retry,"--kind","pi","--pane","w-mission:p1"],
+  ]);
+  // The holder keeps its name and the launch continues on the same pane.
+  assert.equal(f.agentCalls.some(a=>a[1]==="rename"),false);
+  assert.equal(f.agentCalls[2][1],"wait");assert.equal(f.prompts.length,1);
+  assert.equal((await f.bridge.call(["show",f.handle])).state.runtime.session_file,realpathSync(f.file));
 });
 
-test("a name held by a working agent fails with that pane and stays launchable",needsCLI,async t=>{
-  const f=await fixture(t);const requests=[];
-  const holder={name:"pi",pane_id:"w-other:p1",workspace_id:"w-other",agent_status:"working",cwd:"/worktrees/dotfiles/mission-fix-review"};
-  f.agents.push(holder);
-  const taken=()=>new Error('launch_failed: herdr agent: '+JSON.stringify({error:{code:"agent_name_taken",message:"agent name pi is already used; candidates: pane_id=w-other:p1 status=Working"},id:"cli:agent:start"}));
-  globalThis.__pi_interactive_subagents={executeSubagent:async(p)=>{requests.push(p);throw taken()}};
-  try {
-    // A working agent keeps its name: the failure names the pane and the status.
-    await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),e=>{
-      assert.match(e.message,/agent_name_taken/);
-      assert.match(e.message,/w-other:p1/);assert.match(e.message,/status working/);
-      assert.match(e.message,/released/);
-      return true;
-    });
-    assert.equal(requests.length,1);
-    assert.equal(f.agentCalls.some(a=>a[1]==="rename"),false);
-    // The failed launch settled as failed, so its reservation is gone and the
-    // next press reserves again instead of answering acquired:false.
-    assert.ok(!(await f.bridge.call(["show",f.handle])).state.runtime.launch_id);
-    await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/agent_name_taken/);
-    assert.equal(requests.length,2);
-  } finally {delete globalThis.__pi_interactive_subagents}
+test("a name taken twice reports the holder and stays launchable",needsCLI,async t=>{
+  const f=await fixture(t);
+  const plain="mission-session-progress",retry=workerAgentName(f.handle,hashOf(f.handle));
+  f.agents.push({name:plain,pane_id:"w-other:p1",workspace_id:"w-other",agent_status:"working"});
+  f.agents.push({name:retry,pane_id:"w-other:p2",workspace_id:"w-other",agent_status:"done"});
+  f.taken.add(plain);f.taken.add(retry);
+  await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),e=>{
+    // The report names the holder pane, its status, and the next step.
+    assert.match(e.message,/agent_name_taken/);
+    assert.match(e.message,/held by pane w-other:p2 \(status done/);
+    assert.match(e.message,/herdr agent rename <pane> <new name>/);
+    assert.match(e.message,/The launch intent is released/);
+    return true;
+  });
+  // Exactly one start per name, no third attempt and no rename.
+  assert.deepEqual(f.started,[]);assert.equal(f.prompts.length,0);
+  assert.equal(f.agentCalls.filter(a=>a[1]==="start").length,2);
+  assert.equal(f.agentCalls.some(a=>a[1]==="rename"),false);
+  // The failed launch released its intent, so the next press reserves again and
+  // starts the worker under the plain name.
+  assert.ok(!(await f.bridge.call(["show",f.handle])).state.runtime.launch_id);
+  f.taken.clear();
+  const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,true);
+  assert.deepEqual(f.started,[plain]);
+  assert.equal(f.agentCalls.filter(a=>a[1]==="start").length,3);
+});
+
+test("a launch that never reaches its prompt fails cleanly and releases its intent",needsCLI,async t=>{
+  const f=await fixture(t);
+  f.waitError=Error('Command failed: herdr agent wait\n'+JSON.stringify({error:{code:"timeout",message:"agent wait timed out after 60000ms"},id:"cli:agent:wait"}));
+  await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),e=>{
+    assert.match(e.message,/Herdr agent mission-session-progress did not become ready: timeout: agent wait timed out/);
+    assert.match(e.message,/The launch intent is released/);
+    return true;
+  });
+  // A worker that never reached its prompt is never prompted, and its intent
+  // returns to the vault so the next press can launch.
+  assert.equal(f.started.length,1);assert.equal(f.prompts.length,0);
+  assert.ok(!(await f.bridge.call(["show",f.handle])).state.runtime.launch_id);
 });
 
 test("a failed launch stays retryable when no worker can own it",needsCLI,async t=>{
-  const f=await fixture(t);let launches=0;
-  globalThis.__pi_interactive_subagents={executeSubagent:async()=>{launches++;throw Error("Acknowledgement lost")}};
-  try {
-    await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/Acknowledgement lost/);
-    assert.equal(launches,1);
-    // The launch pane hosts no agent, so the intent was released: the same
-    // press works again without a hand edit of the record.
-    assert.ok(!(await f.bridge.call(["show",f.handle])).state.runtime.launch_id);
-    await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/Acknowledgement lost/);
-    assert.equal(launches,2);
-  } finally {delete globalThis.__pi_interactive_subagents}
+  const f=await fixture(t);
+  f.startErrors.push(Error("Acknowledgement lost"),Error("Acknowledgement lost"));
+  await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/Acknowledgement lost/);
+  assert.equal(f.started.length,0);assert.equal(f.prompts.length,0);
+  // The launch pane hosts no agent, so the intent was released: the same
+  // press works again without a hand edit of the record.
+  assert.ok(!(await f.bridge.call(["show",f.handle])).state.runtime.launch_id);
+  await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/Acknowledgement lost/);
+  assert.equal(f.startErrors.length,0);
 });
 
 test("a launch keeps its intent while the launch pane hosts an agent",needsCLI,async t=>{
-  const f=await fixture(t);let launches=0;
+  const f=await fixture(t);
   f.paneAgents["w-mission:p1"]="pi";
-  globalThis.__pi_interactive_subagents={executeSubagent:async()=>{launches++;throw Error("Acknowledgement lost")}};
-  try {
-    await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/Acknowledgement lost/);
-    // A worker may own the pane, so the intent stays and no second worker starts.
-    const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,false);assert.equal(launches,1);
-  } finally {delete globalThis.__pi_interactive_subagents}
+  f.startErrors.push(Error("Acknowledgement lost"),Error("Acknowledgement lost"));
+  await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/Acknowledgement lost/);
+  // A worker may own the pane, so the intent stays and no second worker starts.
+  const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,false);
+  assert.equal(f.started.length,0);assert.equal(f.startErrors.length,1);
 });
+
+/** A captain environment: an ambient subagent identity (this suite can run
+ *  inside a pi step agent) must not turn a launch into a refusal. */
+const captainEnv = extra => { const env={...process.env,...extra}; delete env.PI_SUBAGENT_NAME; return env; };
 
 /** The desk writes this file: one pending request per mission handle. */
 function launchRequest(cache, handle, repo, extra={}) {
@@ -385,7 +445,7 @@ function launchRequest(cache, handle, repo, extra={}) {
 test("a launch request is claimed once and started once", async t => {
   const cache=realpathSync(mkdtempSync(join(tmpdir(),"mission-launch-")));
   t.after(()=>rmSync(cache,{recursive:true,force:true}));
-  const bridge=new MissionBridge({env:{...process.env,MISSION_STATE_DIR:cache},run:async()=>"[]"});
+  const bridge=new MissionBridge({env:captainEnv({MISSION_STATE_DIR:cache}),run:async()=>"[]"});
   bridge.sessionRepo=async()=>"dotfiles";
   const starts=[];
   bridge.start=async(_ctx,handle)=>{starts.push(handle);return {launched:true,runtime:{launch_id:"launch-1"}}};
@@ -405,7 +465,7 @@ test("a launch request is claimed once and started once", async t => {
 test("one sweep starts one worker and leaves a started receipt", async t => {
   const cache=realpathSync(mkdtempSync(join(tmpdir(),"mission-launch-")));
   t.after(()=>rmSync(cache,{recursive:true,force:true}));
-  const bridge=new MissionBridge({env:{...process.env,MISSION_STATE_DIR:cache},run:async()=>"[]"});
+  const bridge=new MissionBridge({env:captainEnv({MISSION_STATE_DIR:cache}),run:async()=>"[]"});
   bridge.sessionRepo=async()=>"dotfiles";
   const starts=[];
   bridge.start=async(_ctx,handle)=>{starts.push(handle);return {launched:true,runtime:{launch_id:"launch-1"}}};
@@ -424,7 +484,7 @@ test("one sweep starts one worker and leaves a started receipt", async t => {
 test("a failing launch leaves a durable failed receipt and no retry", async t => {
   const cache=realpathSync(mkdtempSync(join(tmpdir(),"mission-launch-")));
   t.after(()=>rmSync(cache,{recursive:true,force:true}));
-  const bridge=new MissionBridge({env:{...process.env,MISSION_STATE_DIR:cache},run:async()=>"[]"});
+  const bridge=new MissionBridge({env:captainEnv({MISSION_STATE_DIR:cache}),run:async()=>"[]"});
   bridge.sessionRepo=async()=>"dotfiles";
   let calls=0;
   bridge.start=async()=>{calls++;throw Error("Herdr is not running")};
@@ -439,7 +499,7 @@ test("a failing launch leaves a durable failed receipt and no retry", async t =>
 test("a sweep leaves another repository's request alone", async t => {
   const cache=realpathSync(mkdtempSync(join(tmpdir(),"mission-launch-")));
   t.after(()=>rmSync(cache,{recursive:true,force:true}));
-  const bridge=new MissionBridge({env:{...process.env,MISSION_STATE_DIR:cache},run:async()=>"[]"});
+  const bridge=new MissionBridge({env:captainEnv({MISSION_STATE_DIR:cache}),run:async()=>"[]"});
   bridge.sessionRepo=async()=>"dotfiles";
   const starts=[];
   bridge.start=async(_ctx,handle)=>{starts.push(handle);return {launched:true,runtime:{}}};
@@ -511,21 +571,22 @@ test("a worker never launches another mission", async t => {
 });
 
 test("the desk's request starts the mission through the start path", needsCLI, async t => {
-  const f=await fixture(t);const requests=[];
-  globalThis.__pi_interactive_subagents={executeSubagent:async(p)=>{requests.push(p);return {details:{status:"started",sessionFile:f.file}}}};
-  try {
-    const file=launchRequest(f.cache,f.handle,"dotfiles");
-    assert.deepEqual(await f.bridge.sessionRepo(context(f.repo,f.file)),"dotfiles");
-    await f.bridge.sweepLaunches(context(f.repo,f.file));
-    assert.equal(requests.length,1);assert.equal(requests[0].agent,"mission-worker");
-    const receipt=JSON.parse(readFileSync(file,"utf8"));
-    assert.equal(receipt.state,"started");
-    const runtime=(await f.bridge.call(["show",f.handle])).state.runtime;
-    assert.equal(receipt.launch_id,runtime.launch_id);
-    // The same press, twice: the claim is gone, so no second worker appears.
-    await f.bridge.sweepLaunches(context(f.repo,f.file));
-    assert.equal(requests.length,1);
-  } finally {delete globalThis.__pi_interactive_subagents}
+  const f=await fixture(t);
+  const file=launchRequest(f.cache,f.handle,"dotfiles");
+  assert.deepEqual(await f.bridge.sessionRepo(context(f.repo,f.file)),"dotfiles");
+  await f.bridge.sweepLaunches(context(f.repo,f.file));
+  // The request and the panel key share one launch path: one full agent, one
+  // prompt, and one session file recorded.
+  assert.deepEqual(f.started,["mission-session-progress"]);assert.equal(f.prompts.length,1);
+  const receipt=JSON.parse(readFileSync(file,"utf8"));
+  assert.equal(receipt.state,"started");
+  const runtime=(await f.bridge.call(["show",f.handle])).state.runtime;
+  assert.equal(receipt.launch_id,runtime.launch_id);
+  assert.equal(receipt.pane,"w-mission:p1");assert.equal(receipt.workspace,"w-mission");
+  assert.equal(receipt.session_file,realpathSync(f.file));
+  // The same press, twice: the claim is gone, so no second worker appears.
+  await f.bridge.sweepLaunches(context(f.repo,f.file));
+  assert.equal(f.started.length,1);assert.equal(f.prompts.length,1);
 });
 
 /** Load the missions extension factory through jiti, exactly as pi does. */
@@ -598,18 +659,22 @@ test("preview launcher preserves this checkout's config and skill without global
 
 test("started mission owners continue eligible steps; attached sessions remain explicit",needsCLI,async t=>{
   const factory=await loadFactory();
-  for(const started of [false,true]) {
-    const f=await fixture(t);delete f.env.PI_SUBAGENT_AGENT;if(started)f.env.PI_SUBAGENT_AGENT="mission-worker";
+  // A launched worker carries its launch id, a manual attach carries none, and
+  // a worker from the old spawn path reports itself through PI_SUBAGENT_AGENT.
+  for(const mode of ["attached","launched","legacy"]) {
+    const f=await fixture(t);delete f.env.PI_SUBAGENT_AGENT;if(mode==="legacy")f.env.PI_SUBAGENT_AGENT="mission-worker";
     const events={},tools={},messages=[];
     factory({on:(k,v)=>events[k]=v,registerTool:v=>tools[v.name]=v,registerCommand:()=>{},sendMessage:(message,options)=>messages.push({message,options})},{env:f.env,run:f.run});
     const ctx={...f.ctx,ui:{notify:()=>{},setStatus:()=>{}}};
-    const claim=await tools.mission.execute("attach",{action:"attach",handle:f.handle},null,null,ctx);
+    const params={action:"attach",handle:f.handle,...(mode==="launched"?{launch_id:"launch-1"}:{})};
+    const claim=await tools.mission.execute("attach",params,null,null,ctx);
     writeFileSync(claim.details.artifact,"Step evidence");
     await tools.mission.execute("finish",{action:"finish"},null,null,ctx);
     await events.agent_before_settle({outcome:"completed"},ctx);
     await events.agent_settled({aborted:false},ctx);
-    assert.equal(messages.length,started?1:0);
-    if(started){assert.equal(messages[0].message.customType,"mission-next");assert.equal(messages[0].options.triggerTurn,true);}
+    const continues=mode!=="attached";
+    assert.equal(messages.length,continues?1:0,`${mode} continues: ${continues}`);
+    if(continues){assert.equal(messages[0].message.customType,"mission-next");assert.equal(messages[0].options.triggerTurn,true);}
     assert.equal((await f.bridge.call(["show",f.handle])).state.status,"ready");
   }
 });

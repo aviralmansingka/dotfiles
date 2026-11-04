@@ -17,11 +17,14 @@ One Go case pins the mission identity: branch `mission/<slug>`, a linked checkou
 under the worktree root, the `branch.<name>.missionOwner` marker, reuse on reland,
 and refusal of an unmarked `mission/<slug>` branch. The extension cases stub
 `herdr` and pin the `herdr worktree open` registration plus the workspace the
-mission-worker tab lands in; no Herdr call is made. Two more extension cases pin
-the agent-name collision: a stale holder is renamed with the exact `herdr agent
-rename` argv and the launch retries once, while a working holder keeps its name
-and the failure names its pane. They also pin that a failed launch releases its
-launch intent, and that a launch pane which hosts an agent keeps it.
+worker pane lands in; no Herdr call is made. They pin the full worker launch
+(`herdr agent start`, `herdr agent wait`, one `herdr agent prompt`, then
+`herdr agent get` for the session file), that a launch needs no subagent
+extension, and that a worker which never reaches its prompt releases its launch
+intent. Three more extension cases pin the agent name: the mission-derived name,
+a taken name that takes a hashed name once without a rename, and a second
+collision that fails with the holding pane. They also pin that a failed launch
+releases its launch intent, and that a launch pane which hosts an agent keeps it.
 
 The extension test file also runs in the Pi test job. Without MISSION_TEST_BIN,
 it runs only the pure adapter tests and marks CLI integration cases as skipped.
