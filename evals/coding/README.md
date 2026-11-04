@@ -288,6 +288,11 @@ Prompts are verbatim first user messages with three mechanical changes:
    removed. Per-task `notes` record every edit, including the branch-base sentences that were rewritten so the
    base commit is self-contained.
 
+One inherited mention stays in the prompts on purpose: several dotfiles briefs point at `scripts/nm-test.sh` and
+`.no-mistakes.yaml`, which this repository retired with the no-mistakes pipeline. The prompts are verbatim session
+inputs, so they are not rewritten. Run `bash scripts/test-*.sh` instead; the harness grades only the task's own
+`verify` command, so the mention changes no score.
+
 ## Provenance
 
 Sessions live at `~/.pi/agent/sessions/--Users-aviral-<cwd>--/<timestamp>_<uuid>.jsonl`; the exact file for each
