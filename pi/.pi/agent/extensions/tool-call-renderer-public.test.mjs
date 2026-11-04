@@ -306,6 +306,47 @@ try {
   assert.equal(invalidations, afterDone, "settled results disarm their clocks");
   assert.match(render(call), /◆/);
   assert.doesNotMatch(render(call), /\d+ms/, "sub-second elapsed is suppressed");
+  // Live progress: one dim line on a running output-tool row, updated in place.
+  const progressTheme = { ...theme, fg: (color, text) => color === "dim" ? `<dim>${text}</dim>`
+    : color === "borderMuted" && text === "│" ? `<bm>│</bm>` : text };
+  const progressCtx = context("live-progress", { command: "npm test" }, { executionStarted: true });
+  handlers.get("tool_execution_start")({ toolCallId: "live-progress" });
+  const streamed = result("PASS a\nPASS b\n3 failed, 12 passed", { exitCode: 0 });
+  const stream = (text) => result(text, { exitCode: 0 });
+  const live = (text, ctx = progressCtx) => render(bash.renderResult(
+    stream(text), { ...options, isPartial: true }, progressTheme, ctx));
+  const runningOut = live("PASS a\nPASS b\n3 failed, 12 passed");
+  const runningLines = runningOut.split("\n");
+  assert.equal(runningLines.length, 2, "a running row keeps its summary plus exactly one progress line");
+  assert.match(runningLines[0], /└─ running/, "the collapsed running summary is untouched");
+  assert.match(runningLines[1], /^ <bm>│<\/bm> <dim>…/, "the progress line rides a muted rail and stays dim");
+  assert.match(runningLines[1], /3 new lines · last: 3 failed, 12 passed<\/dim>$/,
+    "it counts new lines and shows the newest one");
+  const repeat = live("PASS a\nPASS b\n3 failed, 12 passed");
+  assert.equal(repeat.split("\n").length, 2, "unchanged output never adds a second progress line");
+  assert.match(repeat, /· 3 new lines · last: 3 failed, 12 passed/,
+    "the cached delta survives a redraw instead of resetting to zero");
+  const grown = live("PASS a\nPASS b\n3 failed, 12 passed\nPASS c");
+  assert.match(grown, /· 1 new line · last: PASS c<\/dim>$/,
+    "only the lines that arrived since the last draw are counted");
+  const longTailCtx = context("live-tail", {}, { executionStarted: true });
+  const longTail = render(bash.renderResult(stream(`x\n${"word ".repeat(30).trim()}`),
+    { ...options, isPartial: true }, theme, longTailCtx));
+  const tail = /last: (.*)$/.exec(longTail.split("\n")[1])?.[1] ?? "";
+  assert.ok(tail.endsWith("…") && [...tail].length <= 60, "an overlong tail clips to one short line");
+  const waiting = live("", context("live-empty", { command: "sleep 5" }, { executionStarted: true }));
+  assert.match(waiting, /<bm>│<\/bm> <dim>….*· waiting for output<\/dim>/,
+    "a silent running call says it is waiting");
+  const pyLiveCtx = context("py-live", pyCode, { executionStarted: true });
+  const pyLive = render(python.renderResult(result("import os\nprint(os.getcwd())"),
+    { ...options, isPartial: true }, progressTheme, pyLiveCtx));
+  assert.match(pyLive, /· 2 new lines · last: print\(os\.getcwd\(\)\)<\/dim>$/, "python rows carry the same line");
+  // Settle every live row so no row clock outlives this block.
+  render(python.renderResult(result("import os\nprint(os.getcwd())"), options, progressTheme, pyLiveCtx));
+  const settledOut = render(bash.renderResult(streamed, options, progressTheme, progressCtx));
+  assert.doesNotMatch(settledOut, /new line|waiting for output/, "a settled row drops the progress line");
+  assert.equal(settledOut.split("\n").length, 1, "only the exit summary remains");
+  assert.match(settledOut, /└─ exit 0 · 3 lines/, "the settled exit summary is untouched");
   const errorTheme = { ...theme, fg: (color, text) => color === "error" ? `<error>${text}</error>` : text };
   const error = bash.renderResult(result("bad command"), options, errorTheme, context("error", {}, { isError: true }));
   assert.match(render(error), /<error>bad command/);
