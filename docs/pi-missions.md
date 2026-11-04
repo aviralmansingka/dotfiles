@@ -41,7 +41,7 @@ mission --json new dotfiles/session-progress --kind implementation \
   --checkpoint "S02:Review attachment behavior"
 ```
 
-In Pi, `/missions` selects a mission and action. `/mission start REPO/SLUG` launches
+In Pi, `/missions` opens the mission desk in a Herdr pane. `/mission start REPO/SLUG` launches
 its owner. Agents use the deferred `mission` tool via `tool_search`. Its actions
 are `list`, `create`, `steps`, `edit`, `status`, `start`, `attach`, `next`, `progress`,
 `verify`, `finish`, and `fail`. Tool results never include claim credentials.

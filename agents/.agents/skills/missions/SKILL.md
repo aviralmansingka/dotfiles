@@ -67,7 +67,8 @@ human accepts the steps: a brief the agent wrote alone is not groomed. Reread
 ## Launch or attach in Pi
 
 Discover the deferred `mission` tool through `tool_search`. Humans can use
-`/missions` to select a mission, or `/mission start REPO/SLUG`.
+`/missions` to open the mission desk in a Herdr pane, or
+`/mission start REPO/SLUG`.
 
 - `mission {action:"start", handle:"REPO/SLUG"}` reserves a launch, creates or
   reuses the mission's `mission/<slug>` worktree, registers it as a Herdr worktree
