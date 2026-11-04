@@ -47,6 +47,7 @@ Scripts, configs, infra (job `scripts-tests` + `ops-tests`):
 | systemd + launchd units | test-service-units.py | 47 | ~0.5 s |
 | CI meta (structure, routing, gate matching, discovery) | test-ci-self.mjs | 20 synthetic gate cases | — |
 | Merge queue submit helper | test-gh-dash-enqueue-pr.sh | 8, fake gh boundary | 0.1 s |
+| Worktree pi runner | test-pi-dev.sh | 19, fake pi on PATH, no live session | 0.9 s |
 | rataflow-view + visualize/artifact skills | test-rataflow.py | 9 offline + 16 cargo (opt-in) | 0.05 s |
 
 Existing wired suites (pre-wave): auto-git-sync, gh-dash-open-pr,
@@ -56,7 +57,7 @@ flow is `docs/merge-queue.md`.
 
 ## Totals
 
-80 discovered tests. Local serial run ≈ 43 s; CI critical path ≈ 2–3 min
+81 discovered tests. Local serial run ≈ 44 s; CI critical path ≈ 2–3 min
 (setup dominates) — inside the 5-minute SLA. Two consecutive full rounds
 showed zero flakes.
 
@@ -103,5 +104,5 @@ export JITI_PATH=/tmp/ci-jiti/node_modules/jiti/lib/jiti.cjs \
 ci-meta · config-lint · install-smoke · journal · mermaid · nvim ·
 nvim-ask · nvim-dap · nvim-markdown · nvim-octo · nvim-picker ·
 nvim-plugin-configs · nvim-send · nvim-ui-shape · nvim-workspaces · ops ·
-practice · python-tool · rataflow · renderer · repo-config · repo-parity ·
+pi-dev · practice · python-tool · rataflow · renderer · repo-config · repo-parity ·
 run-command · subagents · telegram · terminal · tuicr · user-input · zsh

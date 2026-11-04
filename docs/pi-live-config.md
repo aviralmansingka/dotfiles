@@ -239,6 +239,16 @@ not machine config. Its snapshot is preserved in [professor-feedback.md](profess
 The old scratch filename is ignored; promoting feedback into product behavior is
 separate work. Migration does not modify or delete another checkout's notes.
 
+## Test a worktree
+
+A live Pi session loads the deployed checkout, so an unmerged worktree change to
+`pi/.pi/agent/**` does nothing there. `scripts/pi-dev <worktree>` starts Pi on
+that worktree's own `pi/.pi/agent` directory instead: its extensions, settings,
+and theme load. Add `-p "<prompt>"` for a one-shot probe, or `--print` to see
+the exact command. The script sets `PI_CODING_AGENT_DIR`, links
+`~/.pi/agent/auth.json` in, and keeps that link out of `git status`. The main
+checkout and every other session stay unchanged.
+
 ## Checks
 
 ```sh

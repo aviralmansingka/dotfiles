@@ -143,6 +143,22 @@ completion through observed process exit. Do not use it to wrap an already
 running Pi session. For those agents, `mission progress` accepts status, summary,
 next, blocker, evidence, and event-id with the wrapper's MISSION_* context.
 
+## Test pi changes from a worktree
+
+A live Pi session loads the main checkout, not the worktree. Unmerged edits to
+`pi/.pi/agent/**` do nothing there. A worker that changes those paths must run
+Pi on the worktree's own config directory instead:
+
+- Interactive: `scripts/pi-dev <worktree>` starts Pi with that worktree's
+  extensions, settings, and theme. Type `/reload` in it after a further edit.
+- Scripted evidence: `scripts/pi-dev <worktree> -p "<prompt>"` is a one-shot
+  probe with those extensions loaded. `scripts/pi-dev <worktree> --print` gives
+  the exact command, for your own probe wrappers.
+
+The script sets `PI_CODING_AGENT_DIR` and links `~/.pi/agent/auth.json` into
+the worktree config. It keeps that link out of `git status`. No other session
+changes its config, and the main checkout stays untouched.
+
 ## Reviews, interruption, and recovery
 
 Stop at human reviews. Show the user the result and check evidence. Only an
