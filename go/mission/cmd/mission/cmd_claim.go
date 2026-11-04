@@ -24,5 +24,8 @@ func cmdAttach(a platform.Args, s *Store) (any, error) {
 }
 
 func cmdLaunch(a platform.Args, s *Store) (any, error) {
+	if a.Has("release") {
+		return s.release(a.At(1), a.Get("launch-id"))
+	}
 	return s.launch(a.At(1), a.Get("session-file"), a.Get("launch-id"))
 }

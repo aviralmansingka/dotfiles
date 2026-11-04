@@ -36,6 +36,8 @@ const help = `mission — work that survives the agent
   mission progress REPO/SLUG --status working --summary TEXT --event-id ID
       [--next TEXT] [--blocker TEXT] [--evidence artifacts/001/result.md]
   mission launch REPO/SLUG                 Reserve one launch; adapters only
+  mission launch REPO/SLUG --release --launch-id ID
+                                           Drop a failed launch intent
   mission settle REPO/SLUG --session-id ID  Settle a reported Pi attempt after idle
   mission hook agent-start --session-id ID --event-id ID
   mission finish [REPO/SLUG] | fail [REPO/SLUG] --note TEXT

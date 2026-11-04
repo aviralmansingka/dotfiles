@@ -7,7 +7,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statS
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { MissionBridge, missionContinues, missionToolBlock, repositoryWorkspaces, quiescent } from "./core.mjs";
+import { MissionBridge, agentCollisionReport, missionContinues, missionToolBlock, parkedAgentName, quiescent, repositoryWorkspaces, takenAgentName } from "./core.mjs";
 import { actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
 import { missionLaunchConfig } from "../interactive-subagents/pi-extension/subagents/mission-launch.mjs";
 
@@ -81,6 +81,27 @@ test("next-step continuation follows status and pending steps", () => {
   assert.equal(missionContinues(undefined), false);
 });
 
+test("agent-name helpers read the Herdr collision and stay inside the name limits", () => {
+  const message='launch_failed: herdr agent: {"error":{"code":"agent_name_taken","message":"agent name pi is already used; candidates: pane_id=w8N:p1"},"id":"cli:agent:start"}';
+  assert.equal(takenAgentName(message),"pi");
+  assert.equal(takenAgentName("Acknowledgement lost"),null);
+  assert.equal(takenAgentName(undefined),null);
+  assert.equal(takenAgentName('herdr failed: {"code":"agent_pane_busy"}'),null);
+  // A parked name records the mission that reclaimed the name, and Herdr accepts
+  // only 32 characters of [a-z0-9_-] that start with a letter.
+  const holder={pane_id:"w8N:p1"};
+  const parked=parkedAgentName("pi","dotfiles/fix-review-ergonomics-stable-decisions-no-tool-lockout",holder);
+  assert.match(parked,/^pi-fix-review-ergon-[0-9a-f]{4}$/);assert.equal(parked.length<=32,true);
+  assert.equal(parked,parsedName(parked),"a parked name is stable for one holder");
+  assert.match(agentCollisionReport("pi",{pane_id:"w8N:p1",agent_status:"working",cwd:"/w/mission-a"},"Act."),/name "pi" is held by pane w8N:p1 \(status working, cwd \/w\/mission-a\)\. Act\./);
+  assert.match(agentCollisionReport("pi",null,"Act."),/unknown pane/);
+});
+
+/** The name Herdr stores for one agent, checked against its own rules. */
+function parsedName(name) {
+  assert.match(name,/^[a-z][a-z0-9_-]*$/);return name;
+}
+
 test("internal mission launch config forwards only non-secret paths", () => {
   const config=missionLaunchConfig({agent:"mission-worker",missionContext:{vault:"/vault",binary:"/bin/mission",stateDir:"/state",MISSION_TOKEN:"secret"}});
   assert.deepEqual(config,{MISSION_VAULT:"/vault",MISSION_BIN:"/bin/mission",MISSION_STATE_DIR:"/state"});
@@ -102,7 +123,7 @@ async function fixture(t, checkpoint=false) {
   delete env.PI_SUBAGENT_NAME;
   // Parent credentials must not leak into requests or any spawned child.
   env.MISSION_TOKEN="unrelated-parent-token";env.MISSION_ATTEMPT="unrelated-parent-attempt";
-  const f={ env, hookFailures:0, hookIDs:[], tabs:[], worktrees:[], workspaces:[], calls:[] };
+  const f={ env, hookFailures:0, hookIDs:[], tabs:[], worktrees:[], workspaces:[], calls:[], agents:[], agentCalls:[], paneAgents:{} };
   const run=async(binary,args,options={})=>{
     f.calls.push({binary,args,env:options.env});
     if(binary==="herdr") {
@@ -119,6 +140,13 @@ async function fixture(t, checkpoint=false) {
         result={type:"worktree_opened",already_open,workspace:ws,worktree:{path},root_pane:{pane_id:ws.workspace_id+":p1",workspace_id:ws.workspace_id}};
       }
       else if(args[0]==="tab") { f.tabs.push(args); const workspace=flag("--workspace"); result={root_pane:{pane_id:workspace+":p2",workspace_id:workspace}}; }
+      else if(args[0]==="agent") {
+        f.agentCalls.push(args);
+        result=args[1]==="list" ? {agents:f.agents} : {agent:{name:args[2]}};
+      }
+      else if(args[0]==="pane" && args[1]==="get") {
+        result={pane:{pane_id:args[2],agent:f.paneAgents[args[2]]??null}};
+      }
       else {
         const workspace=flag("--workspace"), here=workspace===(f.paneWorkspace||"repo"), cwd=f.paneCwd||f.cwd;
         result={panes:here?[{pane_id:env.HERDR_PANE_ID,cwd,foreground_cwd:cwd}]:[]};
@@ -213,6 +241,9 @@ test("mission launch registers a Herdr worktree and adopts its workspace",needsC
     assert.equal(requests[0].cwd,f.cwd);assert.equal(requests[0].agent,"mission-worker");
     assert.equal(requests[0].missionContext.vault,f.vault);assert.equal(requests[0].missionContext.binary,bin);
     assert.equal(JSON.stringify(requests[0]).includes("unrelated-parent-token"),false);
+    // One launch keeps one reservation, one worktree open, and one spawn.
+    assert.equal(f.calls.filter(c=>c.binary===bin&&c.args.includes("launch")&&!c.args.includes("--session-file")).length,1);
+    assert.equal(f.worktrees.length,1);assert.equal(requests.length,1);
     // The mission branch is mission/<slug>, and Herdr owns that checkout as its
     // own linked worktree workspace, anchored on the primary checkout.
     const runtime=(await f.bridge.call(["show",f.handle])).state.runtime;
@@ -247,11 +278,73 @@ test("an already open mission workspace gets its own launch tab",needsCLI,async 
   } finally {delete globalThis.__pi_interactive_subagents}
 });
 
-test("ambiguous launch failure is durable and never retried as a new worker",needsCLI,async t=>{
+test("a taken agent name frees a stale session and retries the spawn once",needsCLI,async t=>{
+  const f=await fixture(t);const requests=[];
+  // Herdr agent names are unique for the whole server. The launch does not
+  // choose the name, so a finished session of another mission worktree can
+  // hold it. That holder is idle: the launch renames it and retries once.
+  const holder={name:"pi",pane_id:"w-other:p1",workspace_id:"w-other",agent_status:"done",cwd:"/worktrees/dotfiles/mission-nix-fleet"};
+  f.agents.push(holder);
+  const taken=()=>new Error('launch_failed: herdr agent: '+JSON.stringify({error:{code:"agent_name_taken",message:"agent name pi is already used; candidates: pane_id=w-other:p1 workspace_id=w-other cwd=/worktrees/dotfiles/mission-nix-fleet status=done"},id:"cli:agent:start"}));
+  globalThis.__pi_interactive_subagents={executeSubagent:async(p)=>{requests.push(p);if(requests.length===1)throw taken();return {details:{status:"started",sessionFile:f.file}}}};
+  try {
+    const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
+    assert.equal(requests.length,2);
+    // The exact Herdr argv that frees the name, and the parked name it chooses.
+    const parked=parkedAgentName("pi",f.handle,holder);
+    assert.deepEqual(f.agentCalls[0],["agent","list"]);
+    assert.deepEqual(f.agentCalls[1],["agent","rename","w-other:p1",parked]);
+    assert.match(parked,/^pi-session-progress-[0-9a-f]{4}$/);
+    assert.equal(parked.length<=32,true);
+    assert.equal((await f.bridge.call(["show",f.handle])).state.runtime.session_file,realpathSync(f.file));
+  } finally {delete globalThis.__pi_interactive_subagents}
+});
+
+test("a name held by a working agent fails with that pane and stays launchable",needsCLI,async t=>{
+  const f=await fixture(t);const requests=[];
+  const holder={name:"pi",pane_id:"w-other:p1",workspace_id:"w-other",agent_status:"working",cwd:"/worktrees/dotfiles/mission-fix-review"};
+  f.agents.push(holder);
+  const taken=()=>new Error('launch_failed: herdr agent: '+JSON.stringify({error:{code:"agent_name_taken",message:"agent name pi is already used; candidates: pane_id=w-other:p1 status=Working"},id:"cli:agent:start"}));
+  globalThis.__pi_interactive_subagents={executeSubagent:async(p)=>{requests.push(p);throw taken()}};
+  try {
+    // A working agent keeps its name: the failure names the pane and the status.
+    await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),e=>{
+      assert.match(e.message,/agent_name_taken/);
+      assert.match(e.message,/w-other:p1/);assert.match(e.message,/status working/);
+      assert.match(e.message,/released/);
+      return true;
+    });
+    assert.equal(requests.length,1);
+    assert.equal(f.agentCalls.some(a=>a[1]==="rename"),false);
+    // The failed launch settled as failed, so its reservation is gone and the
+    // next press reserves again instead of answering acquired:false.
+    assert.ok(!(await f.bridge.call(["show",f.handle])).state.runtime.launch_id);
+    await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/agent_name_taken/);
+    assert.equal(requests.length,2);
+  } finally {delete globalThis.__pi_interactive_subagents}
+});
+
+test("a failed launch stays retryable when no worker can own it",needsCLI,async t=>{
   const f=await fixture(t);let launches=0;
   globalThis.__pi_interactive_subagents={executeSubagent:async()=>{launches++;throw Error("Acknowledgement lost")}};
   try {
     await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/Acknowledgement lost/);
+    assert.equal(launches,1);
+    // The launch pane hosts no agent, so the intent was released: the same
+    // press works again without a hand edit of the record.
+    assert.ok(!(await f.bridge.call(["show",f.handle])).state.runtime.launch_id);
+    await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/Acknowledgement lost/);
+    assert.equal(launches,2);
+  } finally {delete globalThis.__pi_interactive_subagents}
+});
+
+test("a launch keeps its intent while the launch pane hosts an agent",needsCLI,async t=>{
+  const f=await fixture(t);let launches=0;
+  f.paneAgents["w-mission:p1"]="pi";
+  globalThis.__pi_interactive_subagents={executeSubagent:async()=>{launches++;throw Error("Acknowledgement lost")}};
+  try {
+    await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/Acknowledgement lost/);
+    // A worker may own the pane, so the intent stays and no second worker starts.
     const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,false);assert.equal(launches,1);
   } finally {delete globalThis.__pi_interactive_subagents}
 });
