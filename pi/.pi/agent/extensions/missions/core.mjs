@@ -117,6 +117,16 @@ export class MissionBridge {
     if (this.env.HERDR_ENV !== "1") throw new Error("Mission session control requires a Herdr pane.");
     return JSON.parse(await this.run("herdr", args, { env: this.env })).result;
   }
+  /** The mission desk owns its terminal, so it runs in a pane of its own. A
+   *  session outside Herdr cannot host it; the caller notifies instead. */
+  async openDesk() {
+    const split = await this.herdr(["pane", "split", "--current", "--direction", "right"]);
+    const pane = split?.pane?.pane_id || split?.root_pane?.pane_id;
+    if (!pane) throw new Error("Herdr returned no pane for the mission desk.");
+    // `pane run` answers with no JSON, so the desk launch sends only the command.
+    await this.run("herdr", ["pane", "run", pane, this.binary, "--vault", this.vault, "ui"], { env: this.env });
+    return pane;
+  }
   async common(cwd) { return realpathSync((await this.run("git", ["-C", cwd, "rev-parse", "--path-format=absolute", "--git-common-dir"])).trim()); }
   async assertSurface(ctx) {
     const common = await this.common(ctx.cwd), cwd = realpathSync(ctx.cwd);
