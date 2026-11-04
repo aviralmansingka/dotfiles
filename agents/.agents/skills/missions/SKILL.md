@@ -130,13 +130,39 @@ them. Reuse an event_id when retrying the same report; change it for a new repor
 The extension records lifecycle metadata and snapshots the transcript separately.
 It does not interpret tool counts, elapsed time, or assistant prose as completion.
 
-Write the required artifact to the exact path returned by attach. Call
-`mission {action:"verify"}` to inspect check verdicts and evidence. Call
-`mission {action:"finish",summary:"Implemented and verified attachment"}` when
+The step's work subagent writes the required artifact to the exact path returned by
+attach; the session that holds the claim sends that write out and never makes it
+itself. Call `mission {action:"verify"}` to inspect check verdicts and evidence.
+Call `mission {action:"finish",summary:"Implemented and verified attachment"}` when
 ready. This reports completion. The extension settles the attempt only after a
 normal Pi 1.5+ run settles without pending messages, child agents, or external waits, and
 the CLI's required checks pass. A failed check keeps the attempt owned; fix it
 and report again. `action:"fail"` reports an unsuccessful attempt.
+
+### Judge the step before finishing
+
+A step's verification belongs to one judge subagent, never to the session that
+holds the claim. After the work reports, call `mission {action:"judge"}`. It
+returns the judge task plus the artifact path, the acceptance criteria, the check
+list, and a one-shot capability path. Spawn one judge subagent with that task
+verbatim, in its own session and never the work subagent's session. The judge
+reads the artifact, runs the CLI check run itself through `mission verify` with the
+capability, and records its verdict with reasons as progress citing the artifact.
+`verify` and `finish` follow a recorded pass only; a failed verdict leaves the step
+with its owner and names what must change.
+
+### Answer the human
+
+You are the human's one touchpoint while the mission runs. A status prompt is
+answered with `mission {action:"status"}`, whose `summary` lines come from the
+ledger: what runs, what passed, what is next, and any review or blocker. An admin
+prompt is run through an existing command and confirmed from
+`mission {action:"steps"}`: `edit` for a step's words, `retry` after a failed step,
+`fail` to end an attempt. `edit` always names the revision your answer was built
+from, so a concurrent write refuses with `revision_conflict` instead of being
+overwritten; re-read and re-apply the human's words. An active attempt or a pending
+review blocks `step edit`, so end or retry the attempt first and say that you did.
+A checkpoint decision happens only when the human gives it.
 
 `mission run` remains available for foreground process-managed agents. It owns
 completion through observed process exit. Do not use it to wrap an already

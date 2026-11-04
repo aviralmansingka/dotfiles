@@ -2,7 +2,6 @@
 name: researcher
 description: Web researcher — searches the web and synthesizes findings
 tools: web_search, web_fetch, bash, mermaid, tuicr, tuicr_reply
-model: opengateway/deepseek/deepseek-v4.1-flash-ultrafast
 thinking: medium
 system-prompt: append
 auto-exit: true

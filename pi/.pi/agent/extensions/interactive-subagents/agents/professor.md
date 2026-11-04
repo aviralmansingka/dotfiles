@@ -2,10 +2,9 @@
 name: professor
 description: Interactive professor — refines one learning goal, then teaches toward demonstrated mastery
 tools: read, write, edit, grep, find, ls, bash, web_search, web_fetch, ask_user_question, quiz, explain, run-command, nvim_open, lesson, mermaid, tuicr, tuicr_reply
-model: opengateway/deepseek/deepseek-v4.1-flash-ultrafast
 subagent_agents: researcher, tuicr-review
 skills: professor
-thinking: medium
+thinking: high
 system-prompt: append
 session-mode: lineage-only
 auto-exit: false

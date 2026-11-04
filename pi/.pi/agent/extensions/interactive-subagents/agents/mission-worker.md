@@ -1,8 +1,7 @@
 ---
 name: mission-worker
 description: Durable owner of one vault mission in its persistent linked worktree
-thinking: medium
-model: opengateway/deepseek/deepseek-v4.1-flash-ultrafast
+thinking: high
 system-prompt: append
 skills: missions
 session-mode: lineage-only

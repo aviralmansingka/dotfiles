@@ -44,7 +44,8 @@ mission --json new dotfiles/session-progress --kind implementation \
 In Pi, `/missions` opens the mission desk in a Herdr pane. `/mission start REPO/SLUG` launches
 its owner. Agents use the deferred `mission` tool via `tool_search`. Its actions
 are `list`, `create`, `steps`, `edit`, `status`, `start`, `attach`, `next`, `progress`,
-`verify`, `finish`, and `fail`. Tool results never include claim credentials.
+`verify`, `judge`, `finish`, `fail`, and `retry`. Tool results never include claim
+credentials.
 
 ## Workspace and ownership
 
@@ -52,9 +53,9 @@ A repository keeps its existing primary Herdr workspace. `start` registers the
 mission checkout as a Herdr **worktree workspace** with
 `herdr worktree open --cwd <primary checkout> --path <mission worktree> --no-focus`.
 That call is idempotent: it returns the workspace Herdr already links to the
-repository, and creates one on first launch. The worker runs in that
-workspace's first tab, or in a new tab there when the workspace is already open
-(the previous session may still be parked on that pane). Herdr groups per-worktree
+repository, and creates one on first launch. The launch then opens its own tab
+there and closes a fresh workspace's empty root tab, so the workspace holds one
+tab with the driver. Herdr groups per-worktree
 workspaces under the repository, so one repository still owns one repository
 workspace plus its linked worktree workspaces.
 
@@ -92,18 +93,28 @@ Attachment to main, a second mission in the same worktree, or a different owning
 session is refused. Herdr remains responsible for preventing duplicate live
 attachments to the same Pi session file.
 
-`start` persists a launch intent, registers the Herdr worktree, opens the worker
-tab, and starts the worker as a full Pi agent in that pane
-(`herdr agent start <name> --kind pi --pane <pane>`). The worker is not a
+`start` persists a launch intent, registers the Herdr worktree, opens the driver
+tab, and starts the driver as a full Pi agent in that pane
+(`herdr agent start <name> --kind pi --pane <pane>`). The driver is not a
 subagent: it carries no subagent identity, loadout file, wall-clock timer, or
-watchdog. Its environment is the pane's own, and Pi loads the repository
-configuration and the missions skill in that worktree. `start` then
+watchdog. `start` then
 waits up to 60 s for the agent to reach its prompt (`herdr agent wait`), submits
 the first task (`herdr agent prompt`), and reads the session file from
-`herdr agent get` before it records the launch receipt. The task names that
-launch id, and the worker attaches with it through the tool.
+`herdr agent get` before it records the launch receipt. The task carries the
+driver contract and names that launch id, and the driver attaches with it
+through the tool.
 
-Herdr agent names are unique for the server. A launch names the worker
+The driver pane inherits the launcher's configuration. Herdr sets a tab's
+environment only at creation and `worktree open` has no environment flag, so a
+launch always creates its own tab with `--env` and then closes a fresh
+workspace's empty root tab: the workspace keeps exactly one tab. The forwarded
+keys are `PI_CODING_AGENT_DIR`, `MISSION_VAULT`, `MISSION_BIN`, and
+`MISSION_STATE_DIR`. The attempt token never travels this way. This is what lets
+a checkout that is not installed (a preview or a mission worktree) hand its own
+extension to the driver. A tab Herdr just created can still be starting its
+shell, so a launch retries the `agent_pane_busy` refusal for 5 s before it fails.
+
+Herdr agent names are unique for the server. A launch names the driver
 `mission-<slug>`. A name that another session holds takes a short handle hash
 once; if that name is taken too, the launch fails and names the pane that holds
 it. The launch never renames another session's agent.
@@ -114,11 +125,77 @@ An uncertain launch remains reserved for inspection; it is never timed out into 
 second writer automatically. Runtime session identity remains bound after an
 attempt completes. Use `next` explicitly to claim the next eligible step.
 
-A launched worker receives a continuation prompt after a successful
+A launched driver receives a continuation prompt after a successful
 step when the mission is ready for more work. It keeps the same session and
 worktree. Existing sessions attached for progress tracking use explicit `next`.
 Both modes pause at checkpoints; accepting one does not silently start another run.
-A waiting review blocks the next step and `finish` only. The worker keeps every tool.
+A waiting review blocks the next step and `finish` only. The driver keeps every tool.
+
+## Driver role
+
+The launched agent is the **driver**. It holds the claim on one work request and
+performs no step work itself. Its launch prompt names three duties and one
+touchpoint, and `driverTask` in `missions/core.mjs` is the single source of that
+text:
+
+1. **Hold the claim.** The driver session owns the attempt and keeps the `mission`
+   tool. It reports structured progress and calls `verify` and `finish` only after
+   a judge records a pass.
+2. **Send the step work out.** The driver never edits repository code and never
+   writes a step artifact. For each step it spawns one work subagent
+   (`agent=worker`) with the step brief, the artifact path, and the acceptance
+   criteria, then waits for the result.
+3. **Send the verification out.** After the work subagent reports, the driver
+   spawns one judge subagent, independent of that work subagent. The judge
+   receives the artifact path, the acceptance criteria, and the check list; it
+   reads the artifact, runs the checks itself through `mission verify`, and records
+   its verdict with reasons as progress. The flow is below.
+
+The touchpoint is the driver session itself. The human asks it for status and for
+admin changes there, in plain prompts; both kinds are described next. No new CLI
+command exists for either. The driver keeps the mission worktree as its cwd, stops
+at human checkpoints, and never approves one itself.
+
+## Status and admin prompts
+
+The human steers a mission by talking to its driver. Two prompt kinds cover the
+work, and both use commands that already exist.
+
+**Status.** The driver calls `mission action="status"`. The extension reads the
+record with the CLI's `show` and derives a plain-language answer from the same
+ledger (`driverStatus` in `missions/core.mjs`):
+
+```
+Mission dotfiles/driver-holds-the-claim is running.
+Running step S02 (Route every verification through a judge subagent) under attempt attempt-98…; last report: Judge flow landed.
+Passed: S01 (Write the driver contract and launch instructions).
+Next: S03 (Make the driver the status and admin touchpoint).
+```
+
+A pending review adds `Review C01 waits after S04: …`, and the last blocked report
+adds `Blocker: …`. Every line comes from `execution`, `status`, `current_step`,
+`active_attempt`, `steps`, `pending_checkpoint`, and `progress` fields, so the
+spoken answer cannot drift from the ledger. `mission progress` adds detail when the
+human wants the history rather than the state.
+
+**Admin.** When the human asks for a change, the driver runs it through an existing
+command and confirms the outcome from `mission action="steps"`:
+
+- `mission action="edit"` (`step edit`) for instructions, acceptance criteria,
+  output name, agent, or checks,
+- `mission action="retry"` (`retry`) to put a failed step back to pending,
+- `mission action="fail"` to end the active attempt as failed,
+- a checkpoint decision only when the human gives it.
+
+Steering never overwrites a concurrent write. `action="edit"` always names the
+revision the answer was built from (`--revision`, taken from the `status` read). If
+the ledger moved in between, the CLI refuses with `revision_conflict` and the step
+keeps its text; the driver re-reads, re-applies the human's words, and says so. The
+`#426` guard therefore stays load-bearing for mid-flight changes. Two CLI rules also
+shape the answer: `step edit` needs no active attempt (`busy`) and no pending review
+(`review_pending`), so the driver ends or retries the running attempt first and
+tells the human that it did. `reset` stays CLI-only, because it invalidates later
+progress and needs an explicit human decision.
 
 ## Launch from the desk
 
@@ -129,30 +206,30 @@ with `state: pending`, `handle`, `repo`, and its owner seat.
 
 The desk has no launch path of its own. A Pi session in that repository claims the
 request and calls the same `start` action the `mission` tool uses, so the worktree,
-the launch reservation, and the worker tab come from one code path. That action
+the launch reservation, and the driver tab come from one code path. That action
 opens the mission worktree as the repository's Herdr workspace, creates its tab,
-and starts the worker agent there.
+and starts the driver agent there.
 
 Each request carries the seat that asked: `owner_workspace` (`HERDR_WORKSPACE_ID`),
 `owner_label` (`HERDR_PANE_ID`), and `owner_common` (the absolute git common dir).
 The sweep picks one request per tick, in this order:
 
 1. A request addressed to this session's workspace. A captain that already owns a
-   mission still serves it, because the worker runs in its own worktree workspace.
+   mission still serves it, because the driver runs in its own worktree workspace.
 2. An unaddressed request, from a desk that ran outside Herdr. Any idle session of
    the repository may claim it.
 3. A request whose addressed workspace is gone. Only a session in the same checkout
    family adopts it, so a sibling clone never starts another checkout's mission.
 
 A request addressed to a live workspace elsewhere waits for that workspace. A
-request from another repository is left for that repository's session, and a worker
+request from another repository is left for that repository's session, and a driver
 never launches.
 
 The session sweeps every two seconds while it is idle, and again after each turn
 settles.
 
 The claim is the file: a second reader finds `claimed` and stops, so one press
-cannot start two workers. A second press on the desk finds a live request and
+cannot start two drivers. A second press on the desk finds a live request and
 rewrites nothing; the desk shows "Launch already pending" instead. The session
 writes `state: started` with the launch id and the Herdr agent it created
 (`workspace`, `pane`, `session_file`), or `state: failed` with the error, and the
@@ -179,9 +256,49 @@ Unregistered detached jobs are outside this contract and must not be used as wri
 
 Human reviews pause progression after their step. The user reviews the result
 and check evidence before an explicit accept or revise decision. A waiting review
-never blocks worker tools: it blocks the next step, `step edit`, and `finish`.
+never blocks driver tools: it blocks the next step, `step edit`, and `finish`.
 Neither the extension nor skill approves reviews. Mission checks complement the
 existing CI workflows and do not start nested validation runs.
+
+## Judge flow
+
+Every verification runs through a judge subagent, never through the driver. After
+the work subagent reports, the driver calls `mission action="judge"`. That call
+returns the judge task plus the artifact path, the step's acceptance criteria, the
+check list, and one capability path. The driver spawns one judge subagent with the
+returned task verbatim, in its own session and never the work subagent's session.
+
+The capability is how the judge reaches the CLI without borrowing the driver's
+session. `action="judge"` writes the attempt token to
+`$MISSION_STATE_DIR/judges/<session-key>/<attempt>.token` (mode 0600, directory
+0700) and returns only that path. The task carries the path, so the token itself
+enters no prompt, no tool result, and no child environment; the judge's own shell
+expands the file into `--token`. Same-user processes are already inside this trust
+boundary. The file is one-shot: the driver's `verify`, `finish`, or `fail` deletes
+it, and a session start clears any leftover from a crash.
+
+The judge then:
+
+1. reads the artifact in full and judges it against the acceptance criteria,
+2. runs the CLI check run itself with `mission verify`, using the capability,
+3. reads that run's check verdicts, summaries, and evidence paths, and
+4. records its verdict with reasons as one progress entry, citing the artifact:
+
+```sh
+mission --json --vault "$VAULT" progress REPO/SLUG --attempt ATTEMPT \
+  --token "$(cat CAPABILITY)" --event-id judge-ATTEMPT \
+  --status ready --summary "verdict: pass — <reasons>" \
+  --evidence artifacts/NNN/step-NN.md
+```
+
+A failed verdict records `--status blocked --blocker "<what must change>"`
+instead. The judge edits no file, writes no step artifact, and never calls
+`finish`. The driver calls `verify` and `finish` only after a judge records a pass.
+
+The record keeps its shape. The check run fills `verifications[]` with its
+`results`, verdicts, and evidence; the verdict with reasons is one `progress`
+entry of the same attempt. No `state.md` field, vault directory, or CLI command
+changes for this flow.
 
 ## Reload and recovery
 
@@ -192,17 +309,17 @@ Credentials are persisted before claiming, never placed in a prompt, tool result
 or child environment. Hooks queue locally before delivery and retry with the same IDs.
 Repeated deliveries cannot create duplicate events. A record that cannot be read
 blocks editing tools and degrades read and bash-class tools to a warning, so a
-worker can investigate its own tracking. Inactive steps block editing tools.
+driver can investigate its own tracking. Inactive steps block editing tools.
 
 Shutdown snapshots the transcript and parks the attempt without releasing its
 owner. Resume the same Pi session file in the mission worktree and primary Herdr
 workspace with the original MISSION_VAULT, MISSION_BIN, and MISSION_STATE_DIR.
-A launched worker reads those paths from its own pane environment, so they must
+A launched driver reads those paths from its own pane environment, so they must
 be exported there when the layout is not the default: `MISSION_VAULT` defaults
 to `~/vault`, `MISSION_BIN` to `mission` on PATH, and `MISSION_STATE_DIR` to
 `~/.local/state/pi-missions`. The preview launcher supplies its CLI and config
 automatically. `/mission attach`
-recovers a claim whose acknowledgement was lost. A worker is not a subagent
+recovers a claim whose acknowledgement was lost. The driver is not a subagent
 registry entry: steer it with `herdr agent prompt <pane> <text>`, or resume its
 session file in that pane with Herdr/Sidekick.
 An operator must resolve a missing credential, abandoned launch, or crashed

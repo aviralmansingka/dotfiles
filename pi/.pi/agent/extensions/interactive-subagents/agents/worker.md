@@ -2,9 +2,8 @@
 name: worker
 description: General-purpose worker — reads, writes, and edits code
 tools: read, write, edit, bash, web_search, web_fetch, mermaid, tuicr, tuicr_reply
-model: opengateway/deepseek/deepseek-v4.1-flash-ultrafast
 subagent_agents: scout, researcher
-thinking: medium
+thinking: high
 system-prompt: append
 auto-exit: true
 ---

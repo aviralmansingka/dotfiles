@@ -2,9 +2,8 @@
 name: reviser
 description: Practice and revision — retrieval demands over earned propositions, with hints and retests
 tools: read, grep, find, ls, write, edit, ask_user_question, problem, conclude
-model: opengateway/deepseek/deepseek-v4.1-flash-ultrafast
 skills: revise
-thinking: medium
+thinking: high
 system-prompt: append
 session-mode: lineage-only
 auto-exit: false
