@@ -140,8 +140,17 @@ return {
       require("helpers.markdown_ansi").setup()
       require("helpers.mermaid_render").setup_inline()
       require("helpers.herdr_scrollback").setup()
+      -- Centered reading column for prose buffers (auto on wide windows).
+      require("helpers.reader").setup()
     end,
     keys = {
+      {
+        "<leader>mr",
+        function()
+          require("helpers.reader").toggle()
+        end,
+        desc = "Reader column (toggle)",
+      },
       {
         "<leader>ft",
         function()
