@@ -28,29 +28,57 @@ esac
 queue_label=queue
 dequeued_label=dequeued
 
-# One token from one read: closed | queued | dropped | open.
-queue_state() {
-  gh pr view "$pr" --repo "$repo_name" --json state,labels --jq '
+# One read fills every field the submit decision and the report need:
+# pr_state, pr_mergeable, pr_base, pr_queue, pr_dequeued. The label fields are
+# yes/no tokens, so no field is empty and the label name is never parsed.
+read_pr() {
+  {
+    IFS= read -r pr_state
+    IFS= read -r pr_mergeable
+    IFS= read -r pr_base
+    IFS= read -r pr_queue
+    IFS= read -r pr_dequeued
+  } <<EOF
+$(gh pr view "$pr" --repo "$repo_name" \
+  --json state,labels,mergeable,baseRefName --jq '
     [(.labels // [])[].name] as $labels
-    | if .state != "OPEN" then "closed"
-      elif ($labels | index("queue")) == null then "open"
-      elif ($labels | index("dequeued")) != null then "dropped"
-      else "queued" end'
+    | .state,
+      (.mergeable // "UNKNOWN"),
+      (.baseRefName // "unknown base branch"),
+      (if ($labels | index("queue")) != null then "yes" else "no" end),
+      (if ($labels | index("dequeued")) != null then "yes" else "no" end)')
+EOF
 }
 
-state=$(queue_state)
-case "$state" in
-  closed)
-    printf '%s#%s is not open\n' "$repo_name" "$pr" >&2
-    exit 1
-    ;;
-  queued)
-    printf '%s#%s is already in the merge queue\n' "$repo_name" "$pr"
-    exit 0
-    ;;
-esac
+read_pr
 
-if [ "$state" = dropped ]; then
+if [ "$pr_state" != OPEN ]; then
+  printf '%s#%s is not open\n' "$repo_name" "$pr" >&2
+  exit 1
+fi
+
+# Mergify drops an entry that conflicts, so a submit would only look like it
+# worked. Say so and change nothing.
+if [ "$pr_mergeable" = CONFLICTING ]; then
+  printf '%s#%s conflicts with base branch %s, so the merge queue cannot take it\n' \
+    "$repo_name" "$pr" "$pr_base" >&2
+  printf 'Rebase onto %s, push, then submit again: git fetch origin %s && git rebase origin/%s\n' \
+    "$pr_base" "$pr_base" "$pr_base" >&2
+  exit 1
+fi
+
+# The label is already on. That is not proof of a working submit: Mergify
+# leaves `queue` in place on a dropped entry and marks it `dequeued` (see
+# .mergify.yml), so only the queue itself can say what happened.
+if [ "$pr_queue" = yes ] && [ "$pr_dequeued" = no ]; then
+  printf '%s#%s already carries the %s label, so this submit changes nothing\n' \
+    "$repo_name" "$pr" "$queue_label"
+  printf 'Read the real outcome for this pull request in its Mergify activity log: gh pr view %s --repo %s --comments\n' \
+    "$pr" "$repo_name"
+  exit 0
+fi
+
+if [ "$pr_dequeued" = yes ]; then
   # Mergify dropped an earlier attempt and marked it. Clear the mark in the
   # same edit, or the rule's `label != dequeued` guard keeps the pull request
   # out of the queue for good.
@@ -60,9 +88,17 @@ else
   gh pr edit "$pr" --repo "$repo_name" --add-label "$queue_label" >/dev/null
 fi
 
-after=$(queue_state)
-if [ "$after" = queued ]; then
+# Report what the read shows now, not what the edit was meant to do.
+read_pr
+
+if [ "$pr_dequeued" = yes ]; then
+  printf '%s#%s was dropped from the merge queue: Mergify marked the entry %s\n' \
+    "$repo_name" "$pr" "$dequeued_label"
+elif [ "$pr_queue" = yes ]; then
   printf '%s#%s entered the merge queue\n' "$repo_name" "$pr"
+elif [ "$pr_state" != OPEN ]; then
+  printf '%s#%s is now %s, so the submit did not land\n' "$repo_name" "$pr" "$pr_state"
 else
-  printf '%s#%s merge queue state: %s\n' "$repo_name" "$pr" "$after"
+  printf '%s#%s merge queue state: %s is not on the pull request\n' \
+    "$repo_name" "$pr" "$queue_label"
 fi
