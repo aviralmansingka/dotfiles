@@ -122,7 +122,10 @@ launch_tuicr_pane() {
   local use_stdout=false
   if tuicr_stdout_supported; then
     output_file=$(mktemp /tmp/tuicr-output.XXXXXX)
-    quoted_tuicr="$quoted_tuicr --stdout > '$output_file'"
+    # %q rather than literal quotes: mktemp paths need no quoting, and an
+    # apostrophe-free payload keeps this line out of the escaping below.
+    printf -v stdout_redirect ' --stdout > %q' "$output_file"
+    quoted_tuicr="$quoted_tuicr$stdout_redirect"
     use_stdout=true
     log_info "Using --stdout mode (output will be captured)"
   else
@@ -142,12 +145,17 @@ launch_tuicr_pane() {
   local inner_script
   inner_script="$quoted_tuicr; printf \"\\n__TUICR%s:%s\\n\" $completion_suffix \$?"
 
-  # $quoted_tuicr may itself contain a `'` (e.g. a -r revset with an
-  # apostrophe, %q-escaped as \' for bash's own parsing). Embedding that raw
-  # into the outer single-quoted argument below would close it early. Escape
-  # every `'` as '\'' (close, escaped literal quote, reopen) so the pane's
-  # shell reproduces $inner_script byte-for-byte as bash -c's one argument.
-  local escaped_inner_script="${inner_script//\'/\'\\\'\'}"
+  # $quoted_tuicr may itself contain a `'` (e.g. a -r revset that printf %q
+  # had to quote). Embedding that raw into the outer single-quoted argument
+  # below would close it early. Escape every `'` as '\'' (close, escaped
+  # literal quote, reopen) so the pane's shell reproduces $inner_script
+  # byte-for-byte as bash -c's one argument. The replacement lives in a
+  # variable on purpose: inside a double-quoted "${var//pat/rep}" bash does
+  # not collapse `\'` to `'` (POSIX keeps the backslash), so spelling the
+  # replacement out inline yields \'\\'\' and leaves the injected command with
+  # a dangling quote -- the pane then sits at its continuation prompt forever.
+  local sq="'\\''"
+  local escaped_inner_script="${inner_script//\'/$sq}"
 
   local pane_command
   pane_command="bash -c '$escaped_inner_script'"
