@@ -72,6 +72,19 @@ export function quiescent(event, ctx) {
  *  repository file and holds no authority either. */
 export const INSPECTION_TOOLS = new Set(["read", "grep", "find", "ls", "tool_search", "mission", "run-command", "mermaid"]);
 
+/** Tools that cannot change the repository: the inspection tools plus bash,
+ *  which a worker needs to read its own ledger. A tracking record that fails
+ *  must not stop a worker from investigating that failure. */
+export const TRACKING_SAFE_TOOLS = new Set([...INSPECTION_TOOLS, "bash"]);
+
+/** The block reason for a tool call whose tracking record failed, or undefined
+ *  when the call may run with a warning. Repository edits stay blocked until
+ *  tracking recovers. */
+export function trackingFailureBlock(toolName, error) {
+  if (TRACKING_SAFE_TOOLS.has(toolName)) return undefined;
+  return "Mission tracking must recover before work continues: " + error;
+}
+
 /** Mission statuses that hold no agent write authority: "waiting" and "review"
  *  wait on a human checkpoint decision, while "done" and "failed" already
  *  ended the mission. Status alone decides, never the active attempt — a closed

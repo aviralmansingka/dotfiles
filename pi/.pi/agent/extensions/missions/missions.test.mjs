@@ -8,7 +8,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statS
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { MissionBridge, agentCollisionReport, herdrError, missionContinues, missionToolBlock, quiescent, repositoryWorkspaces, takenAgentName, workerAgentName } from "./core.mjs";
+import { MissionBridge, agentCollisionReport, herdrError, missionContinues, missionToolBlock, quiescent, repositoryWorkspaces, takenAgentName, trackingFailureBlock, workerAgentName } from "./core.mjs";
 import { actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
 import { missionLaunchConfig } from "../interactive-subagents/pi-extension/subagents/mission-launch.mjs";
 
@@ -95,6 +95,20 @@ test("a waiting review never blocks a worker tool and only stops finish", () => 
   const fallback = missionToolBlock({ toolName: "mission", action: "finish", current: { record: stored } });
   assert.match(fallback, /Review C01 is waiting/);
   assert.match(fallback, /mission checkpoint accept dotfiles\/reviewed C01/);
+});
+
+test("a failed tracking record never stops reads and bash", () => {
+  // The incident: a delayed hook for an attempt the ledger lost. Every call
+  // reports not_found, and bash was blocked with it.
+  const lost = "not_found: attempt attempt-3a8986d1ee0156069724aef0 not found";
+  for (const toolName of ["bash", "read", "grep", "find", "ls", "mission", "run-command"]) {
+    assert.equal(trackingFailureBlock(toolName, lost), undefined, `${toolName} degrades to a warning`);
+  }
+  for (const toolName of ["write", "edit", "multiedit"]) {
+    const reason = trackingFailureBlock(toolName, lost);
+    assert.match(reason, /must recover before work continues/, `${toolName} stays blocked`);
+    assert.match(reason, /not_found: attempt attempt-3a8986/, `${toolName} names the cause`);
+  }
 });
 
 test("next-step continuation follows status and pending steps", () => {
@@ -643,6 +657,33 @@ test("Pi factory callbacks use final settlement and block only finish at a revie
   writeFileSync(join(f.cache,readdirSync(f.cache)[0]),"invalid JSON");
   await events.session_start({},ctx);
   assert.equal((await events.tool_call({toolName:"write"},ctx)).block,true);
+});
+
+test("a broken tracking record blocks edits and warns on reads",needsCLI,async t=>{
+  const f=await fixture(t);
+  const factory=await loadFactory();
+  const events={},tools={},notifications=[];
+  const pi={on:(name,fn)=>{events[name]=fn},registerTool:t=>{tools[t.name]=t},registerCommand:()=>{},sendMessage:()=>{}};
+  const ctx={...f.ctx,hasUI:true,ui:{notify:(text,tone)=>notifications.push({text,tone}),setStatus:()=>{}}};
+  factory(pi,{env:f.env,run:f.run});
+  await events.session_start({},ctx);
+  await tools.mission.execute("attach-call",{action:"attach",handle:f.handle},null,null,ctx);
+  // One lost hook leaves its retry in the outbox; every later flush fails, so
+  // the record this session reads never recovers.
+  f.hookFailures=1;
+  await events.tool_execution_start({toolName:"read",toolCallId:"lost"},ctx);
+  assert.ok(notifications.some(n=>/Mission tracking: /.test(n.text)),"the lost hook is reported");
+  f.hookFailures=99;
+  for(const toolName of ["bash","read","grep"]) assert.equal(await events.tool_call({toolName},ctx),undefined,`${toolName} runs while tracking is broken`);
+  assert.ok(notifications.some(n=>n.tone==="warning"&&/Mission tracking: /.test(n.text)));
+  for(const toolName of ["write","edit"]) {
+    const blocked=await events.tool_call({toolName},ctx);
+    assert.equal(blocked.block,true,`${toolName} stays blocked`);assert.match(blocked.reason,/Mission tracking must recover before work continues/);
+  }
+  // A recovered record restores every tool again.
+  f.hookFailures=0;
+  assert.equal(await events.tool_call({toolName:"write"},ctx),undefined);
+  await events.session_shutdown({},ctx);
 });
 
 test("preview launcher preserves this checkout's config and skill without global installation",needsCLI,async t=>{
