@@ -145,6 +145,37 @@ The boundary, stated plainly:
 somewhere else. The default stays outside every repository, and a repository
 path is refused unless `--allow-repo` is passed.
 
+## Targets
+
+The flake owns the target table (`fleet.targets`) and `scripts/nix-deploy` reads
+it, so a new host is one entry and nothing else. `just targets` prints it.
+
+| Target | Platform | Constructor | Attribute |
+| --- | --- | --- | --- |
+| `homelab` | x86_64-linux | Home Manager | `homeConfigurations.remote` |
+| `devbox` | x86_64-linux | Home Manager | `homeConfigurations.remote-devbox` |
+| `probe` | x86_64-linux | Home Manager | `homeConfigurations.remote-probe` |
+| `mac` | aarch64-darwin | nix-darwin | `darwinConfigurations.macbook` |
+
+An entry may name `managedUser` when the ssh login user is not the user the
+profile manages: the devbox is dialled as `root` while its profile manages
+`aviral`, so the deploy stages into that user's cache and switches through its
+login shell.
+
+### The target defaults to local
+
+```sh
+just deploy remote            # this machine
+just deploy macbook           # this machine, the Mac profile
+just deploy remote homelab    # another host, over ssh
+just deploy remote devbox
+just targets                  # what exists
+```
+
+`local` resolves by hostname against each entry's `localNames` (so `srv717581`
+means the devbox), and falls back to the platform when no entry claims the
+hostname. A typo stops before any work and prints the known targets.
+
 ## The deploy command
 
 ```sh

@@ -86,71 +86,96 @@ fi
 nix_flake() { nix --extra-experimental-features "nix-command flakes" "$@"; }
 
 # ------------------------------------------------------------------ mapping ---
-# The profile decides which targets exist. A typo must stop here, not at a
-# switch on the wrong machine.
-host_for_target() { # $1 target -> canonical host, or empty
-  case "$1" in
-    homelab) echo homelab ;;
-    devbox) echo devbox ;;
-    probe) echo probe ;;
-    mac | macbook) echo mac ;;
-    local)
-      # `local` means "the machine I am on", whatever the profile target is.
-      case "$(hostname -s 2>/dev/null)" in
-        homelab) echo homelab ;;
-        devbox | srv*) echo devbox ;;
-        *) echo mac ;;
-      esac
-      ;;
-    *)
-      case "$(hostname -s 2>/dev/null)" in
-        # The devbox's cloud-init hostname is srv717581 (S01); both spellings
-        # mean the devbox, so a deploy from the devbox itself matches.
-        homelab | devbox | srv*) echo devbox ;;
-        "$1") echo "$1" ;;
-        *) echo "" ;;
-      esac
-      ;;
-  esac
+# The flake owns the target table (`fleet.targets`); this script reads it. One
+# entry per host means a new host is data, not four case statements that drift
+# apart.
+targets_json() {
+  nix_flake eval --json "$ROOT#fleet.targets"
 }
 
-HOST="$(host_for_target "$TARGET")"
+# Print one field for a target, or nothing.
+target_field() { # $1 json, $2 target, $3 field
+  printf '%s' "$1" | python3 -c '
+import json, sys
+data = json.load(sys.stdin)
+name, field = sys.argv[1], sys.argv[2]
+value = data.get(name, {}).get(field, "")
+print(" ".join(value) if isinstance(value, list) else value)
+' "$2" "$3"
+}
+
+# The hostname this machine answers to, so `local` and a bare target can both
+# resolve without a hardcoded list.
+this_hostname() { hostname -s 2>/dev/null || echo unknown; }
+
+# Resolve a target name (or `local`) to a canonical target in the table.
+resolve_target() { # $1 requested, $2 targets json, $3 this hostname -> name or empty
+  local want="$1" json="$2" here="$3" name
+  if [ "$want" = "local" ]; then
+    for name in $(printf '%s' "$json" | python3 -c 'import json,sys; print(" ".join(json.load(sys.stdin)))'); do
+      if target_field "$json" "$name" localNames | tr ' ' '\n' | grep -qx -- "$here"; then
+        echo "$name"
+        return 0
+      fi
+    done
+    # A hostname no entry claims: fall back to the platform, so a deploy on a
+    # fresh machine still means "this machine" rather than "unknown target".
+    case "$(uname -s)" in
+    Darwin) echo mac ;;
+    *) : ;;
+    esac
+    return 0
+  fi
+  printf '%s' "$json" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+name = sys.argv[1]
+print(name if name in data else '')
+" "$want"
+}
+
+TARGETS_JSON="$(targets_json 2>/dev/null || true)"
+if [ -z "$TARGETS_JSON" ]; then
+  echo "nix-deploy: cannot read fleet.targets from $ROOT (is this a flake checkout with nix?)" >&2
+  exit 2
+fi
+
+HOST="$(resolve_target "$TARGET" "$TARGETS_JSON" "$(this_hostname)")"
 if [ -z "$HOST" ]; then
-  echo "nix-deploy: unknown target '$TARGET'" >&2
+  echo "nix-deploy: unknown target '$TARGET'; known: $(printf '%s' "$TARGETS_JSON" | python3 -c 'import json,sys; print(" ".join(sorted(json.load(sys.stdin))))')" >&2
   exit 3
 fi
 
-case "$PROFILE:$HOST" in
-  remote:homelab | remote:devbox | remote:probe | macbook:mac) ;;
-  *)
-    echo "nix-deploy: profile '$PROFILE' does not apply to target '$HOST'" >&2
-    exit 3
-    ;;
-esac
+KIND="$(target_field "$TARGETS_JSON" "$HOST" kind)"
+TARGET_ATTR="$(target_field "$TARGETS_JSON" "$HOST" attr)"
+REMOTE_USER="$(target_field "$TARGETS_JSON" "$HOST" managedUser)"
 
-# Attribute name inside the flake. `remote` is the reference build (homelab);
-# the devbox has its own attribute because its per-host module differs.
-# The name is bare: home-manager prepends `homeConfigurations.` itself.
-case "$PROFILE:$HOST" in
-  remote:homelab) ATTR="remote" ;;
-  remote:devbox) ATTR="remote-devbox" ;;
-  remote:probe) ATTR="remote-probe" ;;
-  macbook:mac) ATTR="macbook" ;;
-esac
-
+# The profile decides the constructor; the target table decides the host.
 case "$PROFILE" in
-  remote) ATTR_PATH="homeConfigurations.$ATTR" ;;
-  macbook) ATTR_PATH="darwinConfigurations.$ATTR" ;;
+remote)
+  [ "$KIND" = "home-manager" ] || {
+    echo "nix-deploy: profile 'remote' does not apply to target '$HOST' (it is $KIND)" >&2
+    exit 3
+  }
+  ATTR="$TARGET_ATTR"
+  ATTR_PATH="homeConfigurations.$ATTR"
+  ;;
+macbook)
+  [ "$KIND" = "darwin" ] || {
+    echo "nix-deploy: profile 'macbook' does not apply to target '$HOST' (it is $KIND)" >&2
+    exit 3
+  }
+  ATTR="macbook"
+  ATTR_PATH="darwinConfigurations.$ATTR"
+  ;;
+*)
+  echo "nix-deploy: unknown profile '$PROFILE'" >&2
+  exit 2
+  ;;
 esac
 
-THIS_HOST="$(hostname -s 2>/dev/null || echo unknown)"
-case "$THIS_HOST" in
-  homelab) LOCAL_HOST="homelab" ;;
-  devbox | srv*) LOCAL_HOST="devbox" ;;
-  probe) LOCAL_HOST="probe" ;;
-  *) LOCAL_HOST="mac" ;;
-esac
-
+THIS_HOST="$(this_hostname)"
+LOCAL_HOST="$(resolve_target local "$TARGETS_JSON" "$THIS_HOST")"
 IS_LOCAL=0
 [ "$LOCAL_HOST" = "$HOST" ] && IS_LOCAL=1
 
@@ -273,7 +298,7 @@ STAGE_DIR="$STAGE_ROOT/$PROFILE-$ATTR"
 # The devbox is ssh'd as root but its switch runs as aviral, so the tree must
 # land in aviral's cache rather than root's.
 STAGE_BASE='$(eval echo ~)'
-[ "$HOST" = "devbox" ] && STAGE_BASE=/home/aviral
+[ -n "$REMOTE_USER" ] && STAGE_BASE="/home/$REMOTE_USER"
 # tar over ssh copies exactly the deploy tree; --no-same-owner keeps the stage
 # owned by the target user. The checkout is excluded by construction.
 # shellcheck disable=SC2046 # deploy_tree is a newline-separated list
@@ -284,12 +309,11 @@ if ! tar -C "$ROOT" -cf - $(deploy_tree) |
 fi
 
 echo "==> switching on $HOST"
-# The devbox is ssh'd as root but the profile manages aviral (the managed user
-# and the store user differ). Root stages the tree into aviral's cache, hands
-# it over, and the switch runs in aviral's login shell, which the multi-user
-# Nix install puts on every user's PATH via /etc/profile.d/nix.sh.
-REMOTE_USER=""
-[ "$HOST" = "devbox" ] && REMOTE_USER=aviral
+# A target's ssh login user can differ from the user its profile manages (the
+# devbox is dialled as root while the profile manages aviral). The table says
+# so with `managedUser`; the tree lands in that user's cache, and the switch
+# runs in that user's login shell, where the multi-user Nix install has already
+# put /nix/var/nix/profiles/default/bin on PATH via /etc/profile.d/nix.sh.
 if [ -n "$REMOTE_USER" ]; then
   REMOTE_ROOT="/home/$REMOTE_USER/$STAGE_DIR"
   REMOTE_CMD="chown -R $REMOTE_USER:$REMOTE_USER \"$REMOTE_ROOT\" && su - $REMOTE_USER -s /bin/bash -c 'cd \"$REMOTE_ROOT\" && PATH=\"\$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:\$PATH\" NIX_CONFIG=\"experimental-features = nix-command flakes\" nix run \"$REMOTE_ROOT#home-manager\" -- switch --flake \"$REMOTE_ROOT#$ATTR\"'"

@@ -74,6 +74,17 @@ echo "nix $*" >> "$CALLS"
 if [ "${1:-}" = "--extra-experimental-features" ]; then
   shift 2
 fi
+# The target table lives in the flake; hand back a fixed one so the test can
+# assert resolution without evaluating nixpkgs.
+if [ "${1:-}" = "eval" ]; then
+  cat <<JSON
+{"devbox":{"attr":"remote-devbox","kind":"home-manager","localNames":["devbox","srv717581"],"managedUser":"aviral","ssh":"devbox","system":"x86_64-linux"},
+ "homelab":{"attr":"remote","kind":"home-manager","localNames":["homelab"],"ssh":"homelab","system":"x86_64-linux"},
+ "mac":{"attr":"macbook","kind":"darwin","localNames":["mac","macbook"],"ssh":"mac","system":"aarch64-darwin"},
+ "probe":{"attr":"remote-probe","kind":"home-manager","localNames":["probe"],"ssh":"probe","system":"x86_64-linux"}}
+JSON
+  exit 0
+fi
 if [ "${1:-}" = "run" ]; then
   shift 2
   [ "${1:-}" = "--" ] && shift
@@ -166,6 +177,23 @@ expect_rc "local remote" 0 "exit 0"
 expect_call "local remote" \
   'nix --extra-experimental-features nix-command flakes run' "switches in place"
 expect_no_call "local remote" "ssh " "no ssh for a local target"
+
+echo "== the target table decides, and local is the default shape"
+STUB_HOSTNAME=homelab run "local by name" remote local --dry-run
+expect_rc "local by name" 0 "exit 0"
+expect_contains "local by name" "attribute homeConfigurations.remote" "local resolves to homelab on the homelab"
+
+STUB_HOSTNAME=srv717581 run "local by cloud hostname" remote local --dry-run
+expect_rc "local by cloud hostname" 0 "exit 0"
+expect_contains "local by cloud hostname" "attribute homeConfigurations.remote-devbox" "the cloud-init hostname resolves to devbox"
+
+STUB_HOSTNAME=unknownbox run "local by platform" macbook local --dry-run
+expect_rc "local by platform" 0 "exit 0"
+expect_contains "local by platform" "attribute darwinConfigurations.macbook" "an unclaimed hostname falls back to the platform"
+
+STUB_HOSTNAME=testmac run "managed user" remote devbox
+expect_rc "managed user" 0 "exit 0"
+expect_call "managed user" "su - aviral" "the managed user comes from the table, not a host literal"
 
 echo "== refusals happen before any work"
 run "unknown profile" nixos mac

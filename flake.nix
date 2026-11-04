@@ -64,6 +64,47 @@
       # Cheap introspection for scripts and for a human at the terminal.
       fleet.hosts = fleet.hostNames;
 
+      # The target table. `scripts/nix-deploy` reads this instead of keeping its
+      # own case statements, so a new host is one entry here and nothing else.
+      #   kind        which constructor the target belongs to
+      #   attr        bare attribute name inside that constructor
+      #   system      the platform the profile builds for
+      #   ssh         the ssh alias the deploy dials, when it is not local
+      #   localNames  hostnames that mean this target when deploying `local`
+      #   managedUser the user the profile manages, when it differs from the
+      #               ssh login user (the devbox is dialled as root)
+      fleet.targets = {
+        homelab = {
+          kind = "home-manager";
+          attr = "remote";
+          system = "x86_64-linux";
+          ssh = "homelab";
+          localNames = [ "homelab" ];
+        };
+        devbox = {
+          kind = "home-manager";
+          attr = "remote-devbox";
+          system = "x86_64-linux";
+          ssh = "devbox";
+          localNames = [ "devbox" "srv717581" ];
+          managedUser = "aviral";
+        };
+        probe = {
+          kind = "home-manager";
+          attr = "remote-probe";
+          system = "x86_64-linux";
+          ssh = "probe";
+          localNames = [ "probe" ];
+        };
+        mac = {
+          kind = "darwin";
+          attr = "macbook";
+          system = "aarch64-darwin";
+          ssh = "mac";
+          localNames = [ "mac" "macbook" ];
+        };
+      };
+
       # The 23 apt names the remote profile owns, with the store path that owns
       # each one. A deploy check compares these with `command -v` on the host.
       fleet.ownedTools = builtins.mapAttrs (
