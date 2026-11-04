@@ -313,3 +313,55 @@ func TestListIndentSurvivesSelection(t *testing.T) {
 		t.Fatal("the selected title needs its own style")
 	}
 }
+
+// TestPanelKeepsItsBorderAtEveryHeight pins the box contract for short boxes:
+// the panel is always exactly its requested size, and the bottom border is the
+// last row whenever the box is tall enough to hold one.
+func TestPanelKeepsItsBorderAtEveryHeight(t *testing.T) {
+	for h := 2; h <= 12; h++ {
+		out := panel(40, h, "TITLE", "one\ntwo\nthree\nfour\nfive\nsix\nseven\neight")
+		lines := strings.Split(out, "\n")
+		if len(lines) != h {
+			t.Fatalf("height %d: box has %d rows", h, len(lines))
+		}
+		for _, line := range lines {
+			if got := lg.Width(line); got != 40 {
+				t.Fatalf("height %d: row is %d columns, want 40", h, got)
+			}
+		}
+		if h >= 4 && !strings.Contains(lines[h-1], "╰") {
+			t.Fatalf("height %d: the bottom border is missing: %q", h, lines[h-1])
+		}
+	}
+}
+
+// TestFloorFrameKeepsTheLegendLast covers the smallest terminal the desk draws,
+// with a status line and an error competing for the footer rows.
+func TestFloorFrameKeepsTheLegendLast(t *testing.T) {
+	s, _ := fixture(t)
+	for _, size := range [][2]int{{48, 12}, {52, 13}, {60, 14}} {
+		m := newDesk(s)
+		m.refresh()
+		m.Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
+		m.notice = "Checkpoint recorded; evidence and decision preserved."
+		m.err = problem("demo", "A failed action keeps its error visible")
+		out := m.render()
+		lines := strings.Split(out, "\n")
+		if len(lines) != size[1] {
+			t.Fatalf("%dx%d: frame has %d rows", size[0], size[1], len(lines))
+		}
+		for i, line := range lines {
+			if got := lg.Width(line); got != size[0] {
+				t.Fatalf("%dx%d: row %d is %d columns", size[0], size[1], i+1, got)
+			}
+		}
+		plain := strings.Split(stripANSI(out), "\n")
+		if !strings.Contains(plain[size[1]-1], "q quit") {
+			t.Fatalf("%dx%d: the legend is not the last row: %q", size[0], size[1], strings.TrimSpace(lines[size[1]-1]))
+		}
+		// three footer rows: error, notice, legend; the separator sits above them
+		if strings.TrimSpace(plain[size[1]-4]) != "" {
+			t.Fatalf("%dx%d: no blank separator above the footer", size[0], size[1])
+		}
+	}
+}

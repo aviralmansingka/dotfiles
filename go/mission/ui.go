@@ -77,20 +77,48 @@ func fitLines(s string, n int) string {
 }
 
 // panel draws a bordered box of an exact size. Callers pass the box size, not
-// the text size: the border and the padding are inside w and h, the title and
-// its blank line take two content rows, and a body that runs long is clipped so
-// the bottom border always survives.
+// the text size: the border and the padding are inside w and h. Rows are spent
+// bottom-up, so a short box drops its blank line before its title and its title
+// before the bottom border. A tall box keeps the title, one blank, then as much
+// body as fits. The box is exactly w by h in every case.
 func panel(w, h int, title, body string) string {
 	if w < 8 || h < 4 {
-		return fitLines(body, max(1, w))
+		// Too short for a border and padding: keep the exact height anyway, so the
+		// caller's row budget still holds.
+		lines := strings.Split(fitLines(body, max(1, w)), "\n")
+		if len(lines) > h {
+			lines = lines[:max(0, h)]
+		}
+		for len(lines) < max(0, h) {
+			lines = append(lines, "")
+		}
+		pad := lg.NewStyle().Width(w).MaxWidth(w)
+		for i := range lines {
+			lines[i] = pad.Render(lines[i])
+		}
+		return strings.Join(lines, "\n")
 	}
-	lines := strings.Split(fitLines(body, w-4), "\n")
-	if len(lines) > max(1, h-6) {
-		lines = lines[:max(1, h-6)]
+	// A six-row box is the smallest that holds a border, the padding, and a line
+	// of body. Below that, drop the padding before the border.
+	pad := 1
+	if h < 6 {
+		pad = 0
 	}
-	return lg.NewStyle().Width(w).Height(h).MaxWidth(w).MaxHeight(h).
-		Padding(1).Border(lg.RoundedBorder()).BorderForeground(edge).Foreground(ink).
-		Render(paint(aqua, title) + "\n\n" + strings.Join(lines, "\n"))
+	content := max(0, h-2-2*pad) // rows inside the border and padding
+	lines := strings.Split(fitLines(body, max(1, w-4)), "\n")
+	var head []string
+	switch {
+	case content >= 3:
+		head = []string{paint(aqua, title), ""}
+	case content == 2:
+		head = []string{paint(aqua, title)}
+	}
+	if keep := content - len(head); len(lines) > keep {
+		lines = lines[:max(0, keep)]
+	}
+	return lg.NewStyle().Width(w).Height(h).MaxWidth(w).MaxHeight(h).Padding(pad).
+		Border(lg.RoundedBorder()).BorderForeground(edge).Foreground(ink).
+		Render(strings.Join(append(head, lines...), "\n"))
 }
 func heading(s string) string { return lg.NewStyle().Bold(true).Foreground(ink).Render(s) }
 
@@ -148,7 +176,10 @@ func (m *desk) formWidth() int {
 // therefore reach the separator above the footer, and the legend is the last row.
 func (m *desk) bodyHeight() int {
 	w, h := m.innerSize()
-	return max(3, h-len(m.headerLines(w))-len(m.footerLines(w))-2)
+	// One row is the least the frame can give the panels without pushing the
+	// footer past the last row; the header, both separators, and the footer rows
+	// are already spent above.
+	return max(1, h-len(m.headerLines(w))-len(m.footerLines(w))-2)
 }
 
 // formHeight is the rows the Huh form may use inside its panel: the border, the
