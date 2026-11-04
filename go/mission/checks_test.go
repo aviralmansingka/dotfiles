@@ -287,3 +287,49 @@ func TestFutureStepEditKeepsPendingCheckpointAndAttemptToken(t *testing.T) {
 		t.Fatal("future customization not applied")
 	}
 }
+
+// TestGoTestScopesToTheModuleRoot pins the fingerprint scope: the module is found
+// under the checkout, its files are hashed, and a symlink elsewhere in the
+// checkout no longer refuses the run.
+func TestGoTestScopesToTheModuleRoot(t *testing.T) {
+	raw := t.TempDir()
+	root, e := filepath.EvalSymlinks(raw)
+	must(t, e)
+	module := filepath.Join(root, "go", "mission")
+	must(t, os.MkdirAll(module, 0o755))
+	must(t, os.WriteFile(filepath.Join(module, "go.mod"), []byte("module example.test/x\n\ngo 1.26.0\n"), 0o644))
+	must(t, os.WriteFile(filepath.Join(module, "main.go"), []byte("package main\n\nfunc main() {}\n"), 0o644))
+	// a stow-style symlink outside the module, which used to block every run
+	must(t, os.Symlink(module, filepath.Join(root, "linked-skill")))
+	_, e = gitText(root, "init", "-b", "main")
+	must(t, e)
+	_, e = gitText(root, "add", "-A")
+	must(t, e)
+
+	got, e := moduleRoot(root)
+	must(t, e)
+	if got != module {
+		t.Fatalf("moduleRoot = %q, want %q", got, module)
+	}
+	first, e := repositoryHash(root)
+	must(t, e)
+	if first == "" {
+		t.Fatal("empty module fingerprint")
+	}
+	must(t, os.WriteFile(filepath.Join(module, "extra.go"), []byte("package main\n"), 0o644))
+	_, e = gitText(root, "add", "-A")
+	must(t, e)
+	second, e := repositoryHash(root)
+	must(t, e)
+	if second == first {
+		t.Fatal("a new module file must change the fingerprint")
+	}
+	must(t, os.WriteFile(filepath.Join(root, "README.md"), []byte("outside the module\n"), 0o644))
+	_, e = gitText(root, "add", "-A")
+	must(t, e)
+	third, e := repositoryHash(root)
+	must(t, e)
+	if third != second {
+		t.Fatal("a file outside the module must not change the fingerprint")
+	}
+}

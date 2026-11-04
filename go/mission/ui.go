@@ -61,10 +61,110 @@ func status(s string) string {
 	}
 	return paint(c, strings.ToUpper(s))
 }
-func panel(w int, title, body string) string {
-	return lg.NewStyle().Width(w).Padding(1).Border(lg.RoundedBorder()).BorderForeground(edge).Foreground(ink).Render(paint(aqua, title) + "\n\n" + body)
+
+// fitLines clips every rendered line to a column budget, so a panel body never
+// wraps into a second row and never pushes the frame past the terminal.
+func fitLines(s string, n int) string {
+	if n < 1 {
+		return s
+	}
+	cut := lg.NewStyle().MaxWidth(n)
+	lines := strings.Split(s, "\n")
+	for i, line := range lines {
+		lines[i] = cut.Render(line)
+	}
+	return strings.Join(lines, "\n")
+}
+
+// panel draws a bordered box of an exact size. Callers pass the box size, not
+// the text size: the border and the padding are inside w and h, the title and
+// its blank line take two content rows, and a body that runs long is clipped so
+// the bottom border always survives.
+func panel(w, h int, title, body string) string {
+	if w < 8 || h < 4 {
+		return fitLines(body, max(1, w))
+	}
+	lines := strings.Split(fitLines(body, w-4), "\n")
+	if len(lines) > max(1, h-6) {
+		lines = lines[:max(1, h-6)]
+	}
+	return lg.NewStyle().Width(w).Height(h).MaxWidth(w).MaxHeight(h).
+		Padding(1).Border(lg.RoundedBorder()).BorderForeground(edge).Foreground(ink).
+		Render(paint(aqua, title) + "\n\n" + strings.Join(lines, "\n"))
 }
 func heading(s string) string { return lg.NewStyle().Bold(true).Foreground(ink).Render(s) }
+
+// marker is the two-column selection bar. The block glyph measures two columns,
+// and the list keeps its column by joining rows, never trimming them.
+func marker() string { return paint(aqua, "▌ ") }
+
+// selectedTitle paints the focused row's title: same weight, aqua instead of ink,
+// so the eye lands on the bar and the title together.
+func selectedTitle(s string) string {
+	return lg.NewStyle().Bold(true).Foreground(aqua).Render(s)
+}
+
+const (
+	// minCols is the width floor. Below it the desk stops being readable.
+	minCols   = 48
+	minRows   = 12
+	wideDesk  = 110 // a second column fits beside the form
+	splitDesk = 94  // the mission list fits beside the detail panel
+)
+
+// frameSize is the footprint the desk paints: the whole terminal, held to the
+// 48-column floor and a 12-row floor.
+func (m *desk) frameSize() (int, int) { return max(minCols, m.width), max(minRows, m.height) }
+
+// innerSize is the content box inside the outer frame padding: two columns on
+// each side. The frame claims every terminal row, so the height is unchanged.
+func (m *desk) innerSize() (int, int) {
+	w, h := m.frameSize()
+	return w - 4, h
+}
+
+// pageStep scrolls half the visible body at a time.
+func (m *desk) pageStep() int {
+	_, h := m.innerSize()
+	return max(4, h/2)
+}
+
+// formLeftWidth is the form panel width for a content box that wide.
+func (m *desk) formLeftWidth(w int) int {
+	if w < wideDesk {
+		return w
+	}
+	return min(76, max(40, w*56/100))
+}
+
+// formWidth sizes the Huh form to the panel it is drawn in.
+func (m *desk) formWidth() int {
+	w, _ := m.innerSize()
+	return max(24, m.formLeftWidth(w)-6)
+}
+
+// bodyHeight is the rows the body panels get. The frame is header rows, one
+// blank, the panels, one deliberate blank, then the footer rows. The panels
+// therefore reach the separator above the footer, and the legend is the last row.
+func (m *desk) bodyHeight() int {
+	w, h := m.innerSize()
+	return max(3, h-len(m.headerLines(w))-len(m.footerLines(w))-2)
+}
+
+// formHeight is the rows the Huh form may use inside its panel: the border, the
+// padding, the hint line, and the form help line are already spent.
+func (m *desk) formHeight() int { return max(4, m.bodyHeight()-9) }
+
+// sizeForm gives the form the current panel width and height. Huh keeps its
+// first window size, so every resize reapplies both.
+func (m *desk) sizeForm() {
+	if m.form == nil {
+		return
+	}
+	m.form.WithWidth(m.formWidth())
+	m.form.WithHeight(m.formHeight())
+	_, _ = m.form.Update(tea.WindowSizeMsg{Width: m.formWidth(), Height: m.formHeight()})
+}
 
 type pulse time.Time
 
@@ -118,8 +218,8 @@ func (m *desk) Init() tea.Cmd {
 func (m *desk) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch v := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = v.Width
-		m.height = v.Height
+		m.width, m.height = v.Width, v.Height
+		m.sizeForm()
 	case pulse:
 		m.refresh()
 		return m, tick()
@@ -162,9 +262,9 @@ func (m *desk) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.tab = (m.tab + 3) % 4
 				m.scroll = 0
 			case "pgdown":
-				m.scroll += max(4, m.height-20)
+				m.scroll += m.pageStep()
 			case "pgup":
-				m.scroll = max(0, m.scroll-max(4, m.height-20))
+				m.scroll = max(0, m.scroll-m.pageStep())
 			case "n":
 				m.startBuilder()
 				if m.form != nil {
@@ -211,93 +311,164 @@ func (m *desk) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 func (m *desk) View() tea.View { v := tea.NewView(m.render()); v.AltScreen = true; return v }
+
+// render fills the whole terminal: the frame is exactly the clamped terminal
+// size, the panels take every row between header and footer, and the status line
+// and legend sit on the last rows.
 func (m *desk) render() string {
-	w := max(48, m.width-4)
-	title := lg.NewStyle().Background(aqua).Foreground(bg).Bold(true).Padding(0, 1).Render(" m ") + "  " + heading("MISSION") + paint(muted, "  /  work that survives the agent")
+	fw, fh := m.frameSize()
+	w, _ := m.innerSize()
+	head := m.headerLines(w)
+	foot := m.footerLines(w)
+	bodyH := m.bodyHeight()
+	frame := strings.Join(head, "\n") + "\n\n" + m.body(w, bodyH) + "\n\n" + strings.Join(foot, "\n")
+	return lg.NewStyle().Background(bg).Foreground(ink).Padding(0, 2).
+		Width(fw).Height(fh).MaxWidth(fw).MaxHeight(fh).Render(frame)
+}
+
+func (m *desk) headerLines(w int) []string {
+	title := lg.NewStyle().Background(aqua).Foreground(bg).Bold(true).Padding(0, 1).Render(" m ") + "  " + heading("MISSION")
+	sub := "  /  work that survives the agent"
+	if w-lg.Width(title) >= lg.Width(sub) {
+		title += paint(muted, sub)
+	}
 	counts := map[string]int{}
 	for _, r := range m.records {
 		counts[r.State.Status]++
 	}
 	bar := paint(aqua, fmt.Sprintf("%02d active", counts["running"])) + paint(muted, "   ·   ") + paint(yellow, fmt.Sprintf("%02d need you", counts["waiting"]+counts["review"])) + paint(muted, "   ·   ") + paint(green, fmt.Sprintf("%02d ready", counts["ready"]))
-	top := title + "\n" + paint(muted, "VAULT  ") + clip(m.store.Vault, w-8) + "\n\n" + bar
-	var body string
-	if m.form != nil {
-		label := "CREATE A MISSION"
-		hint := "A short brief becomes a durable, claimable unit of work."
-		if m.formKind == "review" {
-			label = "HUMAN CHECKPOINT"
-			hint = m.review.Handle + " · " + m.review.State.Pending + " · revision " + fmt.Sprint(m.review.State.Revision)
-		}
-		if m.formKind == "step" {
-			label = "CUSTOMIZE STEP " + m.stepDraft.ID
-			hint = m.editing.Handle + " · defaults first, details when needed"
-		}
-		form := m.form.View()
-		if form == "" {
-			form = paint(muted, "Preparing form…")
-		}
-		left := panel(min(70, w), label, hint+"\n\n"+form)
-		right := panel(max(34, w-min(70, w)-2), "SAVED AS MARKDOWN", paint(muted, "6_missions/")+"\n  "+fallback(m.draft.Repo, "repository")+"/\n    "+fallback(m.draft.Slug, fallback(slugify(m.draft.Title), "mission-slug"))+"/\n      mission.md\n      state.md\n      attempts/\n      artifacts/\n\n"+heading("One mission · one repository")+"\n\nAgents claim the next step.\nEach attempt keeps its evidence.\nCheckpoints pause progression.\n\n"+paint(yellow, "No agent is launched by this form."))
-		if m.formKind == "review" {
-			cp := m.review.State.Checkpoints[m.review.State.Pending]
-			right = panel(max(34, w-min(70, w)-2), "PRESERVED EVIDENCE", heading(m.review.Handle)+"\n\n"+cp.Evidence+"\n\n"+paint(muted, "Bound to attempt")+"\n"+cp.Attempt+"\n\n"+paint(muted, "Evidence fingerprint")+"\n"+clip(cp.Hash, 40)+"\n\n"+paint(yellow, "This records your review decision.")+"\nA revision creates a new attempt.\nEarlier evidence remains in the vault.")
-		}
-		if m.formKind == "step" {
-			right = panel(max(34, w-min(70, w)-2), "CHECKS FOLLOW THE ATTEMPT", heading("Always required")+"\nnonempty-artifact\n\n"+heading("Optional checks")+"\njson-valid · parse the result\ngo-test · test the checkout\n\n"+paint(muted, "Each run preserves")+"\nverdict + source fingerprint\nchecker version + evidence log\n\n"+paint(yellow, "Past evidence stays in the vault.")+"\nReset explicitly to revise a used step.")
-		}
-		if w >= 110 {
-			body = lg.JoinHorizontal(lg.Top, left, "  ", right)
-		} else {
-			body = left
-		}
-	} else {
-		side := ""
-		if len(m.records) == 0 {
-			side = paint(muted, "No missions yet.\n\nPress n to create one.")
-		}
-		visible := max(1, (m.height-17)/4)
-		start := max(0, m.selected-visible+1)
-		for i := start; i < min(len(m.records), start+visible); i++ {
-			r := m.records[i]
-			prefix := "  "
-			if i == m.selected {
-				prefix = paint(aqua, "▌ ")
-			}
-			side += prefix + heading(clip(r.Mission.Title, 26)) + "\n  " + paint(muted, clip(r.Handle, 28)) + "\n  " + status(r.State.Status) + paint(muted, "  ·  "+fmt.Sprint(len(r.State.Attempts))+" attempts") + "\n\n"
-		}
-		leftW := 34
-		detailW := w - leftW - 2
-		detail := paint(muted, "Create a mission to begin.")
-		if len(m.records) > 0 {
-			detail = m.detail(m.records[m.selected], max(38, detailW-4))
-		}
-		lines := strings.Split(detail, "\n")
-		limit := max(4, m.height-17)
-		m.scroll = min(m.scroll, max(0, len(lines)-limit))
-		if len(lines) > limit {
-			end := min(len(lines), m.scroll+limit-1)
-			detail = strings.Join(lines[m.scroll:end], "\n") + "\n" + paint(muted, "pgup / pgdown · more details")
-		}
-		if w >= 94 {
-			body = lg.JoinHorizontal(lg.Top, panel(leftW, "MISSIONS", strings.TrimSpace(side)), "  ", panel(detailW, "MISSION DESK", detail))
-		} else {
-			body = panel(w, "MISSION DESK", detail)
-		}
+	return []string{fitLines(title, w), paint(muted, "VAULT  ") + clip(m.store.Vault, max(8, w-8)), "", fitLines(bar, w)}
+}
+
+// footerKeys joins as many key hints as the footer row holds, most useful
+// first, so a narrow terminal loses a hint instead of clipping one.
+func (m *desk) footerKeys(w int) string {
+	hints := []string{"j/k select", "q quit", "tab view", "s steps", "n new", "a checkpoint", "pgdn scroll"}
+	switch {
+	case m.form != nil:
+		hints = []string{"tab next field", "enter continue", "esc cancel"}
+	case m.tab == 3:
+		hints = []string{"j/k step", "q quit", "e customize", "esc missions", "tab view", "pgdn scroll"}
 	}
-	footer := paint(muted, "j/k select   tab view   s steps   n new   a checkpoint   pgdn scroll   q quit")
-	if m.tab == 3 && m.form == nil {
-		footer = paint(muted, "j/k step   e customize   esc missions   tab view   pgdn scroll   q quit")
+	out := ""
+	for _, hint := range hints {
+		next := hint
+		if out != "" {
+			next = "   " + hint
+		}
+		if lg.Width(out)+lg.Width(next) > w {
+			break
+		}
+		out += next
 	}
-	if m.form != nil {
-		footer = paint(muted, "tab next field   enter continue   esc cancel")
+	return out
+}
+
+func (m *desk) footerLines(w int) []string {
+	var out []string
+	if m.err != nil {
+		out = append(out, fitLines(paint(orange, clean(m.err.Error())), w))
 	}
 	if m.notice != "" {
-		footer = paint(green, clean(m.notice)) + "\n" + footer
+		out = append(out, fitLines(paint(green, clean(m.notice)), w))
 	}
-	if m.err != nil {
-		footer = paint(orange, clean(m.err.Error())) + "\n" + footer
+	return append(out, fitLines(paint(muted, m.footerKeys(w)), w))
+}
+
+func (m *desk) body(w, h int) string {
+	if m.form != nil {
+		return m.formBody(w, h)
 	}
-	return lg.NewStyle().Background(bg).Foreground(ink).Padding(1, 2).Width(max(48, m.width)).Render(top + "\n\n" + body + "\n\n" + footer)
+	return m.deskBody(w, h)
+}
+
+func (m *desk) deskBody(w, h int) string {
+	sideW := min(56, max(24, w/3))
+	detailW := w - sideW - 2
+	// panel() spends two content rows on the title and its blank line.
+	textH := max(1, h-6)
+	if w < splitDesk || detailW < 30 {
+		return panel(w, h, "MISSION DESK", m.detailText(w-4, textH))
+	}
+	return lg.JoinHorizontal(lg.Top, panel(sideW, h, "MISSIONS", m.listBody(sideW-4, textH)), "  ", panel(detailW, h, "MISSION DESK", m.detailText(detailW-4, textH)))
+}
+
+// listBody renders as many mission rows as the panel height holds, keeping the
+// selection inside that window. Rows are joined, never trimmed: a trim would eat
+// the leading indent of the first row when that row is not selected, and the
+// title would jump a column left of its neighbours.
+func (m *desk) listBody(w, h int) string {
+	if len(m.records) == 0 {
+		return paint(muted, "No missions yet.\n\nPress n to create one.")
+	}
+	visible := max(1, h/4)
+	start := min(max(0, m.selected-visible+1), max(0, len(m.records)-visible))
+	rows := make([]string, 0, visible)
+	for i := start; i < min(len(m.records), start+visible); i++ {
+		r := m.records[i]
+		title := heading(clip(r.Mission.Title, w-2))
+		prefix := "  "
+		if i == m.selected {
+			prefix = marker()
+			title = selectedTitle(clip(r.Mission.Title, w-2))
+		}
+		rows = append(rows, prefix+title+"\n  "+paint(muted, clip(r.Handle, w-2))+"\n  "+status(r.State.Status)+paint(muted, "  ·  "+fmt.Sprint(len(r.State.Attempts))+" attempts"))
+	}
+	return strings.Join(rows, "\n\n")
+}
+
+// detailText scrolls the detail panel to its own height, not to the terminal.
+func (m *desk) detailText(w, h int) string {
+	if len(m.records) == 0 {
+		return paint(muted, "Create a mission to begin.")
+	}
+	detail := m.detail(m.records[m.selected], max(16, w))
+	lines := strings.Split(detail, "\n")
+	limit := max(1, h)
+	m.scroll = min(m.scroll, max(0, len(lines)-limit))
+	if len(lines) > limit {
+		end := min(len(lines), m.scroll+limit-1)
+		detail = strings.Join(lines[m.scroll:end], "\n") + "\n" + paint(muted, "pgup / pgdown · more details")
+	}
+	return detail
+}
+
+func (m *desk) formHeading() (string, string) {
+	switch m.formKind {
+	case "review":
+		return "HUMAN CHECKPOINT", m.review.Handle + " · " + m.review.State.Pending + " · revision " + fmt.Sprint(m.review.State.Revision)
+	case "step":
+		return "CUSTOMIZE STEP " + m.stepDraft.ID, m.editing.Handle + " · defaults first, details when needed"
+	}
+	return "CREATE A MISSION", "A short brief becomes a durable, claimable unit of work."
+}
+
+// formBody gives the form every row the body has, beside a reference column on
+// wide terminals.
+func (m *desk) formBody(w, h int) string {
+	label, hint := m.formHeading()
+	form := m.form.View()
+	if form == "" {
+		form = paint(muted, "Preparing form…")
+	}
+	leftW := m.formLeftWidth(w)
+	left := panel(leftW, h, label, hint+"\n\n"+form)
+	if leftW >= w-2 {
+		return left
+	}
+	title, side := m.formSide()
+	return lg.JoinHorizontal(lg.Top, left, "  ", panel(w-leftW-2, h, title, side))
+}
+
+func (m *desk) formSide() (string, string) {
+	switch m.formKind {
+	case "review":
+		cp := m.review.State.Checkpoints[m.review.State.Pending]
+		return "PRESERVED EVIDENCE", heading(m.review.Handle) + "\n\n" + cp.Evidence + "\n\n" + paint(muted, "Bound to attempt") + "\n" + cp.Attempt + "\n\n" + paint(muted, "Evidence fingerprint") + "\n" + clip(cp.Hash, 40) + "\n\n" + paint(yellow, "This records your review decision.") + "\nA revision creates a new attempt.\nEarlier evidence remains in the vault."
+	case "step":
+		return "CHECKS FOLLOW THE ATTEMPT", heading("Always required") + "\nnonempty-artifact\n\n" + heading("Optional checks") + "\njson-valid · parse the result\ngo-test · test the Go module\n\n" + paint(muted, "Each run preserves") + "\nverdict + source fingerprint\nchecker version + evidence log\n\n" + paint(yellow, "Past evidence stays in the vault.") + "\nReset explicitly to revise a used step."
+	}
+	return "SAVED AS MARKDOWN", paint(muted, "6_missions/") + "\n  " + fallback(m.draft.Repo, "repository") + "/\n    " + fallback(m.draft.Slug, fallback(slugify(m.draft.Title), "mission-slug")) + "/\n      mission.md\n      state.md\n      attempts/\n      artifacts/\n\n" + heading("One mission · one repository") + "\n\nAgents claim the next step.\nEach attempt keeps its evidence.\nCheckpoints pause progression.\n\n" + paint(yellow, "No agent is launched by this form.")
 }
 func (m *desk) detail(r Record, w int) string {
 	tabs := []string{"Overview", "Attempts", "Activity", "Steps"}
@@ -413,10 +584,11 @@ func formTheme() huh.Theme {
 // Init prepares field views; WindowSize gives Huh's internal viewport a height.
 // The snapshot path does not run Bubble Tea's terminal event loop.
 func (m *desk) prepareFormRender() {
-	if m.form != nil {
-		_ = m.form.Init()
-		_, _ = m.form.Update(tea.WindowSizeMsg{Width: 60, Height: 24})
+	if m.form == nil {
+		return
 	}
+	_ = m.form.Init()
+	m.sizeForm()
 }
 func (m *desk) startBuilder() {
 	repos, e := m.store.repos()
@@ -447,7 +619,7 @@ func (m *desk) startBuilder() {
 		huh.NewSelect[string]().Title("Work type").Options(huh.NewOption("Research · manual claim or managed run", "research"), huh.NewOption("Implementation · managed worktree only", "implementation")).Value(&m.draft.Kind),
 		huh.NewConfirm().Title("Review the first step before continuing?").Value(&m.draft.First),
 		huh.NewConfirm().Title("Review the final result?").Value(&m.draft.Final),
-	)).WithWidth(min(60, max(36, m.width-12))).WithTheme(formTheme())
+	)).WithWidth(m.formWidth()).WithTheme(formTheme())
 }
 func (m *desk) startReview() {
 	if len(m.records) == 0 {
@@ -475,7 +647,7 @@ func (m *desk) startReview() {
 		}
 		return nil
 	}
-	m.form = huh.NewForm(huh.NewGroup(huh.NewNote().Title(question).Description("Review the preserved artifact before deciding. "+r.State.Checkpoints[r.State.Pending].Evidence), huh.NewSelect[string]().Title("Decision").Options(huh.NewOption("Accept and continue", "accept"), huh.NewOption("Request a new attempt", "revise")).Value(&m.decision), huh.NewInput().Title("Reviewed by").Value(&m.actor).Validate(required), huh.NewInput().Title("Decision note").Value(&m.note).Validate(required))).WithWidth(60).WithTheme(formTheme())
+	m.form = huh.NewForm(huh.NewGroup(huh.NewNote().Title(question).Description("Review the preserved artifact before deciding. "+r.State.Checkpoints[r.State.Pending].Evidence), huh.NewSelect[string]().Title("Decision").Options(huh.NewOption("Accept and continue", "accept"), huh.NewOption("Request a new attempt", "revise")).Value(&m.decision), huh.NewInput().Title("Reviewed by").Value(&m.actor).Validate(required), huh.NewInput().Title("Decision note").Value(&m.note).Validate(required))).WithWidth(m.formWidth()).WithTheme(formTheme())
 }
 func (m *desk) commitForm() {
 	if m.formKind == "step" {

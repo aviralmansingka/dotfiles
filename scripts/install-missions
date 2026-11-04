@@ -6,7 +6,7 @@ destination=${MISSION_BIN_DIR:-"$HOME/.local/bin"}
 mkdir -p "$destination"
 build_dir=$(mktemp -d "$destination/.mission-build.XXXXXX")
 trap 'rm -rf "$build_dir"' EXIT
-cd "$repo_root/scripts/mission-cli"
+cd "$repo_root/go/mission"
 go build -trimpath -o "$build_dir/mission" .
 chmod 755 "$build_dir/mission"
 mv -f "$build_dir/mission" "$destination/mission"

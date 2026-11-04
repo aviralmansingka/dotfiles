@@ -41,7 +41,7 @@ const help = `mission — work that survives the agent
       --actor aviral --note "Reviewed the evidence" --revision 5
   mission retry REPO/SLUG | repair REPO/SLUG
   mission demo --vault ./demo-vault         Seed isolated, simulated records
-  mission render --view dashboard --width 128 --color
+  mission render --view dashboard --width 128 --height 42 --color
 
 Global: --vault PATH (default $MISSION_VAULT or ~/vault), --json
 All data commands return one JSON envelope. No command specified: list missions.
@@ -62,7 +62,7 @@ func parseArgs(argv []string) (args, error) {
 	a := args{flags: map[string][]string{}}
 	booleans := map[string]bool{"json": true, "human": true, "stdin": true, "color": true, "no-color": true, "help": true, "reset": true}
 	booleans["quiescent"] = true
-	values := map[string]bool{"vault": true, "checkout": true, "remote": true, "title": true, "goal": true, "step": true, "checkpoint": true, "kind": true, "from": true, "repo": true, "agent": true, "session-id": true, "session-file": true, "cwd": true, "attempt": true, "token": true, "event-id": true, "tool": true, "message": true, "note": true, "id": true, "decision": true, "actor": true, "revision": true, "view": true, "width": true, "model": true, "pane": true, "workspace": true}
+	values := map[string]bool{"vault": true, "checkout": true, "remote": true, "title": true, "goal": true, "step": true, "checkpoint": true, "kind": true, "from": true, "repo": true, "agent": true, "session-id": true, "session-file": true, "cwd": true, "attempt": true, "token": true, "event-id": true, "tool": true, "message": true, "note": true, "id": true, "decision": true, "actor": true, "revision": true, "view": true, "width": true, "height": true, "model": true, "pane": true, "workspace": true}
 	values["handle"] = true
 	for _, k := range []string{"instructions", "acceptance", "checks", "output"} {
 		values[k] = true

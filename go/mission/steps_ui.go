@@ -12,7 +12,7 @@ func (m *desk) stepsDetail(r Record, w int) string {
 	for i, st := range r.Mission.Steps {
 		prefix := "  "
 		if i == m.selectedStep {
-			prefix = paint(aqua, "▌ ")
+			prefix = marker()
 		}
 		out += prefix + paint(aqua, st.ID) + "  " + heading(clip(st.Title, w-20)) + "  " + status(r.State.Steps[st.ID].Status) + "\n" + paint(muted, "     "+strings.Join(stepChecks(st), " + ")) + "\n"
 	}
@@ -51,10 +51,10 @@ func (m *desk) startStepEdit() {
 		huh.NewInput().Title("Step title").Value(&m.stepDraft.Title).Validate(required),
 		huh.NewInput().Title("Agent").Description("any lets an agent pick up the work.").Value(&m.stepDraft.Agent).Validate(required),
 		huh.NewInput().Title("Result filename").Value(&m.stepDraft.Output).Validate(required),
-		huh.NewMultiSelect[string]().Title("Additional checks").Description("A nonempty result is always required.").Height(6).Options(huh.NewOption("Valid JSON result", "json-valid"), huh.NewOption("Go tests pass in the checkout", "go-test")).Value(&m.optionalChecks),
+		huh.NewMultiSelect[string]().Title("Additional checks").Description("A nonempty result is always required.").Height(6).Options(huh.NewOption("Valid JSON result", "json-valid"), huh.NewOption("Go tests pass in the Go module", "go-test")).Value(&m.optionalChecks),
 	), huh.NewGroup(
 		huh.NewText().Title("Instructions").Description("Optional. The title and mission goal are enough to start.").Value(&m.stepDraft.Instructions).CharLimit(8000),
 		huh.NewText().Title("Acceptance criteria").Value(&m.stepDraft.Acceptance).CharLimit(8000),
 		huh.NewConfirm().Title("Reset this step and later progress?").Description("Required to change a step that already has attempts. Old evidence stays.").Value(&m.resetStep),
-	)).WithWidth(min(60, max(36, m.width-12))).WithTheme(formTheme())
+	)).WithWidth(m.formWidth()).WithTheme(formTheme())
 }

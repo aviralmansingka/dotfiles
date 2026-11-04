@@ -291,7 +291,7 @@ type CheckPreset struct {
 }
 
 func checkCatalog() []CheckPreset {
-	return []CheckPreset{{"nonempty-artifact", "1", "Required: a nonempty UTF-8 result, limited to 16 MiB"}, {"json-valid", "1", "Parse the result as exactly one JSON value"}, {"go-test", "1", "Run go test ./... in the attempt checkout, with a two-minute deadline"}}
+	return []CheckPreset{{"nonempty-artifact", "1", "Required: a nonempty UTF-8 result, limited to 16 MiB"}, {"json-valid", "1", "Parse the result as exactly one JSON value"}, {"go-test", "1", "Run go test ./... in the Go module under the attempt checkout, with a two-minute deadline"}}
 }
 func knownCheck(name string) bool {
 	for _, c := range checkCatalog() {

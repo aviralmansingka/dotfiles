@@ -2,9 +2,9 @@
 # Preview this checkout's complete Pi integration without restowing or merging it.
 set -euo pipefail
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-binary=${MISSION_BIN:-"$repo_root/scripts/mission-cli/bin/mission"}
+binary=${MISSION_BIN:-"$repo_root/go/mission/bin/mission"}
 if [ ! -x "$binary" ]; then
-  echo 'Build the preview CLI: (cd scripts/mission-cli && go build -o bin/mission .)' >&2
+  echo 'Build the preview CLI: (cd go/mission && go build -o bin/mission .)' >&2
   exit 1
 fi
 export MISSION_BIN="$binary"

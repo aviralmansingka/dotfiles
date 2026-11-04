@@ -21,7 +21,7 @@ ops/terraform/terraform.tfstate*
 .td-root
 .nvimlog
 test-results/
-/scripts/mission-cli/bin/
+/go/mission/bin/
 
 # Historical scratch feedback is archived in docs/professor-feedback.md.
 /professor_feedback.md
