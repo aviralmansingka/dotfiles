@@ -41,33 +41,39 @@ func cmdRender(a platform.Args, s *Store) int {
 	if m.err != nil {
 		return emit(nil, m.err)
 	}
+	if a.Has("filter") {
+		idx, ok := filterIndex(a.Get("filter"))
+		if !ok {
+			return emit(nil, mission.Problem("usage", "unknown filter %s; use one of %s", a.Get("filter"), filterLabels()))
+		}
+		m.setFilter(idx)
+	}
 	if a.Has("handle") {
 		found := false
-		for i, r := range m.records {
+		for i, r := range m.view {
 			if r.Handle == a.Get("handle") {
 				m.selected = i
 				found = true
 			}
 		}
 		if !found {
-			return emit(nil, mission.Problem("not_found", "mission %s not found", a.Get("handle")))
+			return emit(nil, mission.Problem("not_found", "mission %s is not in the %s filter", a.Get("handle"), deskFilters[m.filter].Label))
 		}
 	}
-	if a.Has("id") && len(m.records) > 0 {
-		idx, err := stepIndex(m.records[m.selected].Mission, a.Get("id"))
+	if a.Has("id") {
+		r, ok := m.current()
+		if !ok {
+			return emit(nil, mission.Problem("not_found", "no mission selected"))
+		}
+		idx, err := stepIndex(r.Mission, a.Get("id"))
 		if err != nil {
 			return emit(nil, err)
 		}
 		m.selectedStep = idx
 	}
-	if a.Get("view") == "attempts" {
-		m.tab = 1
-	}
-	if a.Get("view") == "activity" {
-		m.tab = 2
-	}
-	if a.Get("view") == "steps" {
-		m.tab = 3
+	views := map[string]int{"overview": 0, "attempts": 1, "activity": 2, "steps": 3}
+	if view, ok := views[a.Get("view")]; ok {
+		m.tab, m.focus = view, 1
 	}
 	if a.Get("view") == "edit" {
 		m.startStepEdit()

@@ -184,6 +184,10 @@ func TestRenderFitsAndNavigationChangesViews(t *testing.T) {
 	m.width = 128
 	m.height = 42
 	m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	if m.focus != 1 {
+		t.Fatal("tab does not move the focus to the details")
+	}
+	m.Update(tea.KeyPressMsg{Code: ']', Text: "]"})
 	if m.tab != 1 || !strings.Contains(stripANSI(m.render()), "session-test") {
 		t.Fatal("attempt view missing session identity")
 	}
@@ -366,4 +370,206 @@ func TestFloorFrameKeepsTheLegendLast(t *testing.T) {
 			t.Fatalf("%dx%d: no blank separator above the footer", size[0], size[1])
 		}
 	}
+}
+
+// stateVault seeds one mission per status the desk filters, so every filter tab
+// has a row to show and the ALL tab has both open and finished work.
+func stateVault(t *testing.T) (*Store, map[string]string) {
+	t.Helper()
+	s, e := openStore(t.TempDir())
+	must(t, e)
+	_, e = s.addRepo("dotfiles", t.TempDir(), "")
+	must(t, e)
+	create := func(slug string, steps int, checkpoints []mission.Checkpoint) string {
+		def := mission.Mission{Repo: "dotfiles", Slug: slug, Title: "Mission " + slug, Goal: "Filter by state", Kind: "research", Checkpoints: checkpoints}
+		for i := 1; i <= steps; i++ {
+			def.Steps = append(def.Steps, mission.Step{Title: "Step", Output: "result.md"})
+		}
+		r, e := s.create(def)
+		must(t, e)
+		return r.Handle
+	}
+	firstAttempt := func(h string) mission.Claim {
+		c := claimTest(t, s, h)
+		result(t, s, c, "evidence")
+		return c
+	}
+	finish := func(h string, c mission.Claim, failed bool) {
+		_, e := s.finish(h, c.Attempt.ID, c.Token, failed, "", false, 0)
+		must(t, e)
+	}
+	handles := map[string]string{}
+	handles["ready"] = create("ready-one", 1, nil)
+	handles["running"] = create("running-one", 1, nil)
+	claimTest(t, s, handles["running"])
+	handles["waiting"] = create("waiting-one", 2, []mission.Checkpoint{{ID: "C01", After: "S01", Kind: "human", Question: "Proceed?"}})
+	finish(handles["waiting"], firstAttempt(handles["waiting"]), false)
+	handles["review"] = create("review-one", 1, []mission.Checkpoint{{ID: "C01", After: "S01", Kind: "human", Question: "Ship it?"}})
+	finish(handles["review"], firstAttempt(handles["review"]), false)
+	handles["done"] = create("done-one", 1, nil)
+	finish(handles["done"], firstAttempt(handles["done"]), false)
+	handles["closed"] = create("closed-one", 1, nil)
+	finish(handles["closed"], firstAttempt(handles["closed"]), false)
+	_, e = s.close(handles["closed"], "shipped", false)
+	must(t, e)
+	handles["failed"] = create("failed-one", 1, nil)
+	finish(handles["failed"], firstAttempt(handles["failed"]), true)
+	for status, handle := range handles {
+		r, e := s.load(handle)
+		must(t, e)
+		if r.State.Status != status {
+			t.Fatalf("%s is %s, want %s", handle, r.State.Status, status)
+		}
+	}
+	return s, handles
+}
+
+func handlesOf(records []mission.Record) []string {
+	out := make([]string, 0, len(records))
+	for _, r := range records {
+		out = append(out, r.Handle)
+	}
+	return out
+}
+
+// TestFilterTabsNarrowTheMissionList pins the list pane's tabs: ALL keeps every
+// mission ever created, each later tab holds exactly the states it names, and
+// the lane leads with the tab that owns the list.
+func TestFilterTabsNarrowTheMissionList(t *testing.T) {
+	s, handles := stateVault(t)
+	m := newDesk(s)
+	m.refresh()
+	if len(m.records) != 7 || len(m.view) != 7 {
+		t.Fatalf("ALL holds %d of %d missions", len(m.view), len(m.records))
+	}
+	want := map[string][]string{
+		"READY":  {handles["ready"]},
+		"ACTIVE": {handles["running"]},
+		"YOURS":  {handles["waiting"], handles["review"]},
+		"DONE":   {handles["done"], handles["closed"]},
+		"FAILED": {handles["failed"]},
+	}
+	for index, filter := range deskFilters {
+		m.setFilter(index)
+		got := handlesOf(m.view)
+		if filter.Label == "ALL" {
+			if len(got) != len(m.records) {
+				t.Fatalf("ALL hides missions: %v", got)
+			}
+			continue
+		}
+		if len(got) != len(want[filter.Label]) {
+			t.Fatalf("%s holds %v, want %v", filter.Label, got, want[filter.Label])
+		}
+		for _, handle := range want[filter.Label] {
+			if !strings.Contains(strings.Join(got, " "), handle) {
+				t.Fatalf("%s lost %s: %v", filter.Label, handle, got)
+			}
+		}
+	}
+	m.setFilter(3)
+	lane := stripANSI(m.filterLane(60))
+	if !strings.HasPrefix(lane, "YOURS 2") {
+		t.Fatalf("lane %q does not lead with the active tab", lane)
+	}
+	if !strings.Contains(lane, "ALL 7") {
+		t.Fatalf("lane %q hides the ALL count", lane)
+	}
+	// One key walks the list tabs while the details keep their own tab.
+	m.setFilter(0)
+	m.tab = 2
+	m.Update(tea.KeyPressMsg{Code: ']', Text: "]"})
+	if m.filter != 1 || m.tab != 2 {
+		t.Fatalf("] left filter %d tab %d, want filter 1 tab 2", m.filter, m.tab)
+	}
+	m.Update(tea.KeyPressMsg{Code: '[', Text: "["})
+	if m.filter != 0 {
+		t.Fatalf("[ did not step back: filter %d", m.filter)
+	}
+	m.Update(tea.KeyPressMsg{Code: '[', Text: "["})
+	if m.filter != len(deskFilters)-1 {
+		t.Fatalf("the filter cycle does not wrap: %d", m.filter)
+	}
+	// A filter never leaves the marker on a hidden mission, and j/k stays
+	// inside the rows the filter shows.
+	m.selected = 4
+	m.setFilter(3)
+	if m.selected != 0 {
+		t.Fatalf("filter kept the marker on row %d", m.selected)
+	}
+	m.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
+	m.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
+	m.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
+	if m.selected != 1 {
+		t.Fatalf("j walked past the YOURS rows: %d", m.selected)
+	}
+}
+
+// TestTabMovesFocusAndEachPaneKeepsItsTab pins the focus key: tab swaps the
+// panes, each pane keeps its tab across the swap, and the footer names where
+// the keys land.
+func TestTabMovesFocusAndEachPaneKeepsItsTab(t *testing.T) {
+	s, _ := stateVault(t)
+	m := newDesk(s)
+	m.refresh()
+	if m.focus != 0 {
+		t.Fatal("the mission list must own the keys first")
+	}
+	m.setFilter(2)
+	m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	if m.focus != 1 {
+		t.Fatal("tab did not move the focus to the details")
+	}
+	m.Update(tea.KeyPressMsg{Code: ']', Text: "]"})
+	if m.tab != 1 || m.filter != 2 {
+		t.Fatalf("] left tab %d filter %d, want tab 1 filter 2", m.tab, m.filter)
+	}
+	m.Update(tea.KeyPressMsg{Code: '[', Text: "["})
+	if m.tab != 0 {
+		t.Fatalf("[ did not step the detail view back: %d", m.tab)
+	}
+	m.Update(tea.KeyPressMsg{Code: '[', Text: "["})
+	if m.tab != detailTabs-1 {
+		t.Fatalf("the detail views do not wrap: %d", m.tab)
+	}
+	m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	if m.focus != 0 || m.filter != 2 || m.tab != detailTabs-1 {
+		t.Fatalf("tab back lost a pane's tab: focus %d filter %d tab %d", m.focus, m.filter, m.tab)
+	}
+	if plain := stripANSI(m.render()); !strings.Contains(plain, "tab details") {
+		t.Fatal("the list footer does not name the focus key")
+	}
+	m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	if plain := stripANSI(m.render()); !strings.Contains(plain, "tab missions") {
+		t.Fatal("the detail footer does not name the focus key")
+	}
+	// The focused pane is the only one painted with the active chrome.
+	if panelFocus(20, 6, "TITLE", "body", true) == panelFocus(20, 6, "TITLE", "body", false) {
+		t.Fatal("a focused pane and an idle pane must not look the same")
+	}
+}
+
+// TestEmptyFilterSaysSo covers a tab with no rows: the list names the state,
+// the details say the filter is why, and the frame keeps its shape.
+func TestEmptyFilterSaysSo(t *testing.T) {
+	s, _ := fixture(t)
+	m := newDesk(s)
+	m.refresh()
+	for index, filter := range deskFilters {
+		if filter.Label != "FAILED" {
+			continue
+		}
+		m.setFilter(index)
+	}
+	if len(m.view) != 0 {
+		t.Fatalf("FAILED holds %v", handlesOf(m.view))
+	}
+	if plain := stripANSI(m.listBody(48, 20)); !strings.Contains(plain, "No mission in FAILED") {
+		t.Fatalf("the list does not name the empty state: %q", plain)
+	}
+	if plain := stripANSI(m.detailText(60, 20)); !strings.Contains(plain, "No mission passes the FAILED filter") {
+		t.Fatalf("the details do not explain the empty list: %q", plain)
+	}
+	m.Update(tea.WindowSizeMsg{Width: 128, Height: 42})
+	assertFilled(t, m, 128, 42, "q quit")
 }
