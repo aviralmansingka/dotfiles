@@ -1,4 +1,4 @@
-package main
+package mission
 
 import (
 	"crypto/rand"
@@ -37,7 +37,7 @@ type Step struct {
 func (s *Step) UnmarshalYAML(n *yaml.Node) error {
 	if n.Kind == yaml.ScalarNode {
 		if n.Tag != "!!str" {
-			return problem("invalid_step", "step titles must be strings")
+			return Problem("invalid_step", "step titles must be strings")
 		}
 		s.Title = n.Value
 		return nil
@@ -45,7 +45,7 @@ func (s *Step) UnmarshalYAML(n *yaml.Node) error {
 	type plain Step
 	return n.Decode((*plain)(s))
 }
-func normalizeMission(m *Mission) {
+func NormalizeMission(m *Mission) {
 	for i := range m.Steps {
 		s := &m.Steps[i]
 		s.Title = strings.TrimSpace(s.Title)
@@ -58,11 +58,11 @@ func normalizeMission(m *Mission) {
 		if s.Output == "" {
 			s.Output = fmt.Sprintf("step-%02d.md", i+1)
 		}
-		s.Checks = stepChecks(*s)
+		s.Checks = StepChecks(*s)
 		s.Check = ""
 	}
 }
-func stepChecks(s Step) []string {
+func StepChecks(s Step) []string {
 	checks := s.Checks
 	if len(checks) == 0 && s.Check != "" {
 		checks = []string{s.Check}
@@ -225,21 +225,20 @@ type Work struct {
 type DomainError struct{ Code, Message string }
 
 func (e *DomainError) Error() string { return e.Message }
-func problem(code, format string, args ...any) error {
+func Problem(code, format string, args ...any) error {
 	return &DomainError{code, fmt.Sprintf(format, args...)}
 }
-func now() string { return time.Now().UTC().Format(time.RFC3339Nano) }
-func uid(prefix string) string {
+func Now() string { return time.Now().UTC().Format(time.RFC3339Nano) }
+func UID(prefix string) string {
 	b := make([]byte, 12)
 	if _, err := rand.Read(b); err != nil {
 		panic(err)
 	}
 	return prefix + hex.EncodeToString(b)
 }
-func digest(b []byte) string { d := sha256.Sum256(b); return "sha256:" + hex.EncodeToString(d[:]) }
-func machine() string        { return hostName() }
-func active(a Attempt) bool  { return a.Status == "running" || a.Status == "reported" }
-func stateFor(m Mission, hash string) State {
+func Digest(b []byte) string { d := sha256.Sum256(b); return "sha256:" + hex.EncodeToString(d[:]) }
+func Active(a Attempt) bool  { return a.Status == "running" || a.Status == "reported" }
+func StateFor(m Mission, hash string) State {
 	s := State{Schema: 1, Mission: m.ID, Revision: 1, SpecHash: hash, Status: "ready", Steps: map[string]StepState{}, Checkpoints: map[string]CheckState{}, Attempts: []Attempt{}}
 	for _, v := range m.Steps {
 		s.Steps[v.ID] = StepState{Status: "pending"}
@@ -249,38 +248,38 @@ func stateFor(m Mission, hash string) State {
 	}
 	return s
 }
-func nextStep(m Mission, s State) (Step, error) {
+func NextStep(m Mission, s State) (Step, error) {
 	if s.Active != "" {
-		return Step{}, problem("busy", "%s already has active attempt %s", m.Slug, s.Active)
+		return Step{}, Problem("busy", "%s already has Active attempt %s", m.Slug, s.Active)
 	}
 	for _, step := range m.Steps {
 		ss, ok := s.Steps[step.ID]
 		if !ok {
-			return Step{}, problem("invalid_state", "state does not contain step %s", step.ID)
+			return Step{}, Problem("invalid_state", "state does not contain step %s", step.ID)
 		}
 		if ss.Status != "passed" {
 			if ss.Status != "pending" && ss.Status != "needs_changes" {
-				return Step{}, problem("step_blocked", "%s is %s; inspect it before retrying", step.ID, ss.Status)
+				return Step{}, Problem("step_blocked", "%s is %s; inspect it before retrying", step.ID, ss.Status)
 			}
 			return step, nil
 		}
 		for _, cp := range m.Checkpoints {
 			if cp.After == step.ID && s.Checkpoints[cp.ID].Status != "accepted" {
-				return Step{}, problem("checkpoint_pending", "%s requires human checkpoint %s", step.ID, cp.ID)
+				return Step{}, Problem("checkpoint_pending", "%s requires human checkpoint %s", step.ID, cp.ID)
 			}
 		}
 	}
-	return Step{}, problem("complete", "all mission steps and checkpoints are complete")
+	return Step{}, Problem("complete", "all mission steps and checkpoints are complete")
 }
-func findAttempt(s *State, id string) (*Attempt, error) {
+func FindAttempt(s *State, id string) (*Attempt, error) {
 	for i := range s.Attempts {
 		if s.Attempts[i].ID == id {
 			return &s.Attempts[i], nil
 		}
 	}
-	return nil, problem("not_found", "attempt %s not found", id)
+	return nil, Problem("not_found", "attempt %s not found", id)
 }
-func slugify(s string) string {
+func Slugify(s string) string {
 	var b strings.Builder
 	sep := false
 	for _, c := range strings.ToLower(s) {
