@@ -110,7 +110,51 @@ boundary:   id | inside/outside | justifying boundary | evidence
 - Keep one id per element and reuse it across levels, so a reader tracing
   `q → reg` sees the same two boxes at L1 and L2.
 
-## Step 3 — The level ladder
+## Step 3 — What to draw (prioritisation)
+
+A C4 view is a judgement about importance, not a dump of the call graph. The
+ledger holds every relation a scout found; the diagram holds the ones a reader
+needs, and says out loud what it left out.
+
+**A relation earns a place when it meets at least one of these:**
+
+| id | test | example |
+|---|---|---|
+| **I1** | it crosses the component boundary (member ↔ external, external ↔ external) | `webapi → Latitude API`, `machines → sshx.io` |
+| **I2** | it is a primary request, control or data path the source calls out (provision, heartbeat, audit, reconcile, boot) | `control plane → private gRPC`, `River queue → workers` |
+| **I3** | it carries a protocol or qualifier the reader needs: RPC verb, transport, port, bucket, interval, timeout | `register + heartbeat every 1 min`, `gcore sync every 1 min` |
+| **I4** | it explains a data store or an actor the reader cannot infer from the boxes | `store → Postgres`, `ops + mmctl → webapi` |
+| **I5** | it is one leg of a redundant or parallel path that must stay countable | `machines → boot` **and** `boot → machines`; two independent pulls |
+
+**Drop classes — a relation leaves the diagram only as one of these:**
+
+| id | class | what it is |
+|---|---|---|
+| **C1** | internal detail | wholly inside one container, adds no boundary, protocol or actor information (`worker → store` per-query row when the store's writers are already drawn) |
+| **C2** | duplicate call site | the same hop as a drawn relation, differing only in job type or argument, which the drawn label already carries |
+| **C3** | helper | an element whose only job is to re-enter the same container (a client wrapper between two drawn boxes) |
+| **C4** | redundant leg | a further parallel leg of a path whose countability the reader does not need (a second artefact from the same bucket, same transport) |
+
+Rules that keep the judgement honest:
+
+- **One arrow may carry several call sites** when the label carries their
+  verbs (`create / terminate / repair`). That is a C2 fold, not a deletion.
+- **Boundary crossing wins a tie** (I1 before I3 before I2). A diagram that
+  drops an external hop to make room for an internal one has inverted its own
+  priorities.
+- **When in doubt, draw it**, and let the level's description say why it is
+  there. Doubt is not a drop reason; `C1`–`C4` are.
+- **Never drop silently.** Every ledger row ends as one of: *drawn*,
+  `folded into <drawn relation>` (with the fold justified as C2), or
+  `omitted — C1|C2|C3|C4` with one line of why. The coverage map (Step 7)
+  states the four counts: drawn, folded, omitted by class, unaccounted.
+- **Scope reduction is a different thing and needs the caller's words.**
+  "Only the control plane view" or "20 relations max" is a scope ask: record
+  it as the basis (`basis: caller scope, N relations`) alongside the counted
+  ledger. Prioritisation is the default; a *subset* is a decision the caller
+  makes, not one the generator infers.
+
+## Step 4 — The level ladder
 
 **The target shape is five sections, top to bottom:**
 
@@ -184,7 +228,7 @@ mention is a topic list wearing level titles.
   decision, written down** (Step 6), not a silent deletion and not a new
   section.
 
-## Step 4 — Spec mechanics
+## Step 5 — Spec mechanics
 
 One canvas, one reading direction, one section per level:
 
@@ -247,7 +291,7 @@ two slices each.
   centred viewport — that is a known residual of the renderer, not a spec
   error. Do not "fix" it by moving nodes.
 
-## Step 5 — Check
+## Step 6 — Check
 
 ```sh
 BIN=$(command -v rataflow-view)      # absolute path; record its sha256
@@ -280,34 +324,40 @@ Capture the text and the styled frame at the target viewport (77×47 pane
 or the exact canvas size), exactly as `visualize` Step 8 requires. A
 `--check` line alone is not proof that the boxes are right.
 
-## Step 6 — Completeness, then the coverage map
+## Step 7 — Coverage map, counted
 
-**Every relation in the view's scope appears in exactly one level.** Never
-delete a scoped relation, never merge two relations into one arrow, never
-soften a verb to make it fit: add a same-depth slice (L1b/L2b), or — when
-depth is exhausted — say plainly that the ladder draws the system model and
-that the code-level inventory stays in the ledger.
+Every ledger row is accounted for, and the map says how many of each:
 
-Scope is decided once, in writing, before the spec:
+```
+ledger rows: 97
+  drawn:            29
+  folded:           47   (C2 duplicate call sites, into named relations)
+  omitted:          21   (C1 .. C4, one line each)
+  unaccounted:       0   ← this number must be 0
+```
 
-- **The ask defines the scope.** "A C4 view of the machine manager" means
-the system model: each element once, each relation between them once,
-carrying the verb and transport the evidence gives. A code-level inventory
-(a queue hop per worker, an internal function call, a dead-code path) is
-*granularity*, not extra levels: record it, draw the relation it
-instantiates.
-- **A scout's 90 rows are not 90 arrows.** Scouts report at call-site
-resolution; the ladder draws the relations between elements. Fold call
-sites into their relation (`e1`–`e4` = one `cp → api` arrow) and keep the
-row ids in the coverage map, so the fold is auditable.
-- **Every scoped relation is drawn once.** The coverage map proves it.
+- **Drawn** rows name the level and the label carrying them.
+- **Folded** rows name the drawn relation they fold into, and the fold must
+  read as C2: same hop, same meaning, only the job type or argument differs.
+  A fold that changes the meaning (a different writer, a different store) is
+  an omission, not a fold.
+- **Omitted** rows carry a class id (`C1`–`C4`, Step 3) and one line of why.
+  `C1` is the common case inside a container; `C4` covers a second artefact of
+  the same pull.
+- **Unaccounted must be 0.** If the four numbers do not add up to the ledger,
+  a row vanished; find it before reporting.
+- **Basis line.** State which basis the relation set used: `basis: prioritised
+  (I1–I5)` by default, or `basis: caller scope — <the ask>` when the caller
+  limited the view. A diagram must not claim the default basis when it drew a
+  subset for another reason.
 
-Write the map into the generation record, relation ids against levels:
+Write the map next to the spec, one row per ledger row:
 
-| relation | level | drawn as | ledger rows folded in |
+| row | disposition | level | drawn as / fold target / class |
 |---|---|---|---|
-| `cp → api` | L1 | `create / terminate / repair` | e1, e2, e3, e4 |
-| `mach → s3` | L0 | `pull boot image` | e24, e25 |
+| e1 | drawn | L1 | `cp → api` create / terminate / repair |
+| e2 | folded | L1 | into e1 — C2, same hop |
+| e10 | omitted | — | C1 — internal store write, no boundary info |
 
 - **External → external relations** (machines pulling from object storage)
   have no container to live in. L0 is their level; draw them there and
@@ -319,10 +369,6 @@ Write the map into the generation record, relation ids against levels:
 - **A split level keeps both halves honest.** When L2 splits into L2/L2b,
   the box, the labels and the ids stay identical; only the edge set and
   the ranks differ, and each description says which slice it is.
-- **Ledger rows with no arrow are listed, with a reason.** Dead code, a
-  transport row, a duplicate direction: each is named in the coverage map
-  under `not drawn`, with the ledger id. A folded or excluded row that is
-  not listed is an invisible hole.
 
 ## Step 7 — Record
 
@@ -332,7 +378,10 @@ anything:
 ```
 <prompt outputs>.md        the four scout returns, verbatim
 ledger.md                  elements, relations, boundary tables (Step 2)
-coverage.md                relations → level map, plus L0's coarse arrows
+priorities.md              top relations in, with the I-criterion for each;
+                           the drop classes out, with counts
+coverage.md                every ledger row: drawn / folded / omitted, plus
+                           L0's coarse arrows and the basis line
 generation.json            triage, ladder, deviations, known residuals
 check.txt                  full --check output, binary sha256
 captures/                  text + ANSI frame per level, one --select-all frame
@@ -346,8 +395,10 @@ choice, and an unrecorded one is a defect.
 ## When something goes wrong
 
 - `unknown field` — the installed binary predates the spec form. Rebuild:
-  `cargo install --path rataflow --locked` from the dotfiles checkout. Record
-  the new `sha256`; the round-14 build is `fa76dde2…`.
+  `cargo install --path rataflow --locked` from the dotfiles checkout, record
+  the new `sha256`, and say which build drew the captures. Two round-14
+  behaviours exist: the earlier one offsets container borders by a row, the
+  later one draws them exactly and gaps the border only where a route crosses.
 - A member sits outside its box, or the box eats an external — the members
   are not contiguous. Split into two `containers` entries; do not nudge.
 - A level overflows its pane — that is allowed (it pans), but first try
