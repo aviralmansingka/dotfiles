@@ -1,5 +1,4 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { Key, matchesKey, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { MissionBridge, missionContinues, missionToolBlock } from "./core.mjs";
 import { LABEL_COLUMN, actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
@@ -146,6 +145,10 @@ export default function missions(pi: ExtensionAPI, options = {}) {
       ctx.ui?.notify?.(JSON.stringify(loaded.record ?? { handle: target, error: loaded.error }, null, 2), loaded.error ? "warning" : "info");
       return;
     }
+    // The extension factory must load where pi's own modules are absent (the
+    // CI suite resolves jiti and typebox only), so pi-tui loads only when a
+    // panel opens.
+    const { Key, matchesKey, truncateToWidth, visibleWidth } = await import("@earendil-works/pi-tui");
     await ctx.ui.custom<void>((tui: any, theme: any, _kb: any, done: () => void) => {
       let busy: string | undefined;
       let notice: string | undefined;
