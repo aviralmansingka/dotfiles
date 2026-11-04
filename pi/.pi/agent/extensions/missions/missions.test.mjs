@@ -47,7 +47,7 @@ test("mission tool gate follows status and never blocks inspection", () => {
   assert.match(missionToolBlock({ toolName: "write", current: null }), /No active mission step/);
   assert.match(missionToolBlock({ toolName: "write", tracked: false, expectedAttachment: true }), /Restore/);
   assert.equal(missionToolBlock({ toolName: "write", tracked: false }), undefined);
-  for (const toolName of ["read", "grep", "find", "ls", "tool_search", "mission", "run-command"]) {
+  for (const toolName of ["read", "grep", "find", "ls", "tool_search", "mission", "run-command", "mermaid"]) {
     assert.equal(missionToolBlock({ toolName, current: at("ready") }), undefined, `${toolName} inspects a ready mission`);
     assert.equal(missionToolBlock({ toolName, current: null }), undefined, `${toolName} inspects without a step`);
     assert.equal(missionToolBlock({ toolName, current: at("waiting") }), undefined, `${toolName} passes on a held mission`);
@@ -59,6 +59,12 @@ test("mission tool gate follows status and never blocks inspection", () => {
     missionToolBlock({ toolName: "run-command", current: null }),
     undefined,
     "run-command passes the mission gate with no active step",
+  );
+  // A mission between steps has no attempt, so a diagram tool must still pass.
+  assert.equal(
+    missionToolBlock({ toolName: "mermaid", current: null }),
+    undefined,
+    "mermaid passes the mission gate with no active step",
   );
 });
 
