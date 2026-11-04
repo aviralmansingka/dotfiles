@@ -29,9 +29,3 @@
 # store on Linux) - this file is stowed to every host.
 [url "git@github.com:"]
 	insteadOf = https://github.com/
-[credential "https://github.com"]
-	helper = 
-	helper = !/opt/homebrew/bin/gh auth git-credential
-[credential "https://gist.github.com"]
-	helper = 
-	helper = !/opt/homebrew/bin/gh auth git-credential
