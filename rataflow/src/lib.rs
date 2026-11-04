@@ -3187,6 +3187,16 @@ fn draw_frame(
     } else {
         sections_extent(sections)
     };
+    // Containers paint LAST: a crossing arrowhead lands on the border row, so
+    // drawing the box before the flow lets the arrow split its label.
+    if !sections.is_empty() {
+        let palette = flow.theme.palette();
+        for section in sections {
+            for (label, members) in &section.containers {
+                draw_container(frame, flow, canvas, label, members, palette.text);
+            }
+        }
+    }
     let overflows = span_x > canvas.width as i32 || span_y > canvas.height as i32;
     if overflows {
         frame.render_widget(MiniMap::new(flow), canvas);
@@ -3264,9 +3274,7 @@ fn draw_enclosures(frame: &mut Frame, flow: &Graph, canvas: Rect, sections: &[Se
         // The boundary is painted only on request: its mapping does not yet
         // track the library's node transform, so the default is to report the
         // membership without drawing a box that could drift.
-        for (label, members) in &section.containers {
-            draw_container(frame, flow, canvas, label, members, palette.text);
-        }
+
     }
 }
 
@@ -3331,10 +3339,10 @@ fn put_world_text_if_blank(
 /// Draws one container box: a double-bordered rectangle around the named
 /// members, with its label set into the top edge.
 ///
-/// The box is computed in world coordinates from the members' own rects. It is
-/// exact at the natural fit (the graded viewport); a pane that pans or fits to
-/// a different size can shift it, because the library applies its own viewport
-/// transform when it draws the nodes.
+/// Two rules keep the box readable. The border is CONTINUOUS: where a route
+/// crosses it the cell becomes a crossing glyph, so neither the border nor the
+/// route reads as broken. The label goes on the longest stretch of the top edge
+/// that no route crosses, so an arrow can never split the word.
 fn draw_container(
     frame: &mut Frame,
     flow: &Graph,
@@ -3364,31 +3372,101 @@ fn draw_container(
         return;
     }
     let style = Style::default().bg(flow.theme.palette().canvas_bg).fg(color);
-    for cx in bx0..=bx1 {
-        let top = if cx == bx0 {
-            '\u{2554}'
+
+    let is_route = |ch: char| {
+        matches!(
+            ch,
+            '\u{2500}' | '\u{2502}' | '\u{250c}' | '\u{2510}' | '\u{2514}' | '\u{2518}'
+                | '\u{251c}' | '\u{2524}' | '\u{252c}' | '\u{2534}' | '\u{253c}'
+                | '\u{25b6}' | '\u{25c0}' | '\u{25b2}' | '\u{25bc}'
+        )
+    };
+    // Read a cell without writing it.
+    let peek = |frame: &mut Frame, x: i32, y: i32| -> Option<char> {
+        let (tx, ty) = flow.world_to_terminal(Position::new(x as f64, y as f64));
+        if tx < canvas.x as i32
+            || ty < canvas.y as i32
+            || tx >= (canvas.x + canvas.width) as i32
+            || ty >= (canvas.y + canvas.height) as i32
+        {
+            return None;
+        }
+        Some(
+            frame.buffer_mut()[(tx as u16, ty as u16)]
+                .symbol()
+                .chars()
+                .next()
+                .unwrap_or(' '),
+        )
+    };
+    let put = |frame: &mut Frame, x: i32, y: i32, ch: char| {
+        let (tx, ty) = flow.world_to_terminal(Position::new(x as f64, y as f64));
+        if tx < canvas.x as i32
+            || ty < canvas.y as i32
+            || tx >= (canvas.x + canvas.width) as i32
+            || ty >= (canvas.y + canvas.height) as i32
+        {
+            return;
+        }
+        frame.buffer_mut()[(tx as u16, ty as u16)]
+            .set_char(ch)
+            .set_style(style);
+    };
+
+    // Which top-edge cells carry a route? Recorded BEFORE the border is painted.
+    let crossed_top: Vec<bool> = (bx0..=bx1)
+        .map(|cx| peek(frame, cx, by0).map(is_route).unwrap_or(false))
+        .collect();
+
+    for (i, cx) in (bx0..=bx1).enumerate() {
+        let crossed = crossed_top[i];
+        let (top, bottom) = if cx == bx0 {
+            ('\u{2554}', '\u{255a}')
         } else if cx == bx1 {
-            '\u{2557}'
+            ('\u{2557}', '\u{255d}')
+        } else if crossed {
+            ('\u{256a}', '\u{256a}') // double horizontal, single vertical
         } else {
-            '\u{2550}'
+            ('\u{2550}', '\u{2550}')
         };
-        let bottom = if cx == bx0 {
-            '\u{255a}'
-        } else if cx == bx1 {
-            '\u{255d}'
-        } else {
-            '\u{2550}'
-        };
-        put_world_text_if_blank(frame, flow, canvas, cx, by0, top, style);
-        put_world_text_if_blank(frame, flow, canvas, cx, by1, bottom, style);
+        put(frame, cx, by0, top);
+        put(frame, cx, by1, bottom);
     }
     for cy in (by0 + 1)..by1 {
-        put_world_text_if_blank(frame, flow, canvas, bx0, cy, '\u{2551}', style);
-        put_world_text_if_blank(frame, flow, canvas, bx1, cy, '\u{2551}', style);
+        let crossed = peek(frame, bx0, cy).map(is_route).unwrap_or(false);
+        let crossed_r = peek(frame, bx1, cy).map(is_route).unwrap_or(false);
+        put(frame, bx0, cy, if crossed { '\u{256b}' } else { '\u{2551}' });
+        put(frame, bx1, cy, if crossed_r { '\u{256b}' } else { '\u{2551}' });
     }
-    if (label.chars().count() as i32) + 4 < (bx1 - bx0) {
+
+    // Longest run of the top edge no route crosses -> the label fits there.
+    let width = label.chars().count() as i32;
+    if width + 4 < (bx1 - bx0) {
+        let mut best = (bx0 + 1, 0i32);
+        let mut run_start = bx0 + 1;
+        let mut run_len = 0i32;
+        for cx in (bx0 + 1)..bx1 {
+            let idx = (cx - bx0) as usize;
+            if !crossed_top[idx] {
+                if run_len == 0 {
+                    run_start = cx;
+                }
+                run_len += 1;
+                if run_len > best.1 {
+                    best = (run_start, run_len);
+                }
+            } else {
+                run_len = 0;
+            }
+        }
+        let (s, len) = best;
+        let anchor = if len >= width {
+            s + (len - width) / 2
+        } else {
+            bx0 + 2
+        };
         for (offset, ch) in label.chars().enumerate() {
-            put_world_text(frame, flow, canvas, bx0 + 2 + offset as i32, by0, &ch.to_string(), style);
+            put(frame, anchor + offset as i32, by0, ch);
         }
     }
 }
