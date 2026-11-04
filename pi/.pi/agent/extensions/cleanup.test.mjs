@@ -84,12 +84,15 @@ try {
 			remoteBranch: "release",
 			dirtyCount: 3,
 			aheadCount: 2,
+			upstreamGone: false,
 		});
 		assert.match(message, /Worktree:  \/wt\/fix-x/);
 		assert.match(message, /Remote:    team\/origin branch release/);
 		assert.match(message, /3 uncommitted file/);
 		assert.match(message, /2 commit\(s\) not on team\/origin\/release/);
 		assert.match(message, /session closes/);
+		assert.doesNotMatch(message, /already gone/);
+		assert.doesNotMatch(message, /remote branch is still deleted/);
 	}
 
 	{
@@ -101,38 +104,64 @@ try {
 			remoteBranch: null,
 			dirtyCount: 0,
 			aheadCount: null,
+			upstreamGone: false,
 		});
 		assert.match(message, /local only, never pushed/);
 		assert.doesNotMatch(message, /Warning/);
 	}
 
+	{
+		// The remote branch was deleted upstream: say so instead of refusing.
+		const message = ext.buildConfirmMessage({
+			worktreePath: "/wt/fix-x",
+			mainPath: "/repo",
+			branch: "fix-x",
+			remote: "team/origin",
+			remoteBranch: "release",
+			dirtyCount: 0,
+			aheadCount: null,
+			upstreamGone: true,
+		});
+		assert.match(message, /Remote branch is already gone; local teardown only\./);
+		assert.doesNotMatch(message, /still deleted/);
+	}
+
 	// --- executeCleanup step order ---------------------------------------------
+
+	const stepOrderFacts = {
+		worktreePath: "/wt/fix-x",
+		mainPath: "/repo",
+		branch: "fix-x",
+		remote: "team/origin",
+		remoteBranch: "release",
+		dirtyCount: 0,
+		aheadCount: 0,
+		upstreamGone: false,
+	};
 
 	{
 		const calls = [];
-		const report = ext.executeCleanup(
-			{
-				worktreePath: "/wt/fix-x",
-				mainPath: "/repo",
-				branch: "fix-x",
-				remote: "team/origin",
-				remoteBranch: "release",
-				dirtyCount: 0,
-				aheadCount: 0,
-			},
-			(cwd, args) => calls.push([cwd, args.join(" ")]),
+		const report = ext.executeCleanup(stepOrderFacts, (cwd, args) =>
+			calls.push([cwd, args.join(" ")]),
 		);
 		assert.deepEqual(
 			calls.map(([, cmd]) => cmd),
 			["push team/origin --delete release", "worktree remove /wt/fix-x", "branch -D fix-x"],
 		);
-		assert.deepEqual(report, { remoteDeleted: true, worktreeRemoved: true, localBranchDeleted: true });
+		assert.equal(report.remoteDeleted, true);
+		assert.equal(report.worktreeRemoved, true);
+		assert.equal(report.localBranchDeleted, true);
+		assert.deepEqual(report.steps, {
+			remote: { ok: true, already: false },
+			worktree: { ok: true, already: false },
+			branch: { ok: true, already: false },
+		});
 	}
 
 	{
 		// No upstream: remote step skipped. Dirty worktree: remove gets --force.
 		const calls = [];
-		ext.executeCleanup(
+		const report = ext.executeCleanup(
 			{
 				worktreePath: "/wt/fix-x",
 				mainPath: "/repo",
@@ -141,6 +170,7 @@ try {
 				remoteBranch: null,
 				dirtyCount: 2,
 				aheadCount: null,
+				upstreamGone: false,
 			},
 			(cwd, args) => calls.push([cwd, args.join(" ")]),
 		);
@@ -148,30 +178,77 @@ try {
 			calls.map(([, cmd]) => cmd),
 			["worktree remove --force /wt/fix-x", "branch -D fix-x"],
 		);
+		assert.equal(report.remoteDeleted, false);
+		assert.equal(report.worktreeRemoved, true);
+		assert.equal(report.localBranchDeleted, true);
 	}
 
 	{
-		// A failing step throws before later steps run.
+		// An already-deleted remote branch must not stop the local teardown.
 		const calls = [];
-		assert.throws(() =>
-			ext.executeCleanup(
-				{
-					worktreePath: "/wt/fix-x",
-					mainPath: "/repo",
-					branch: "fix-x",
-					remote: "team/origin",
-					remoteBranch: "release",
-					dirtyCount: 0,
-					aheadCount: 0,
-				},
-				(cwd, args) => {
-					calls.push(args.join(" "));
-					if (args[0] === "push") throw new Error("remote refused");
-				},
-			),
-			/remote refused/,
+		const report = ext.executeCleanup(stepOrderFacts, (cwd, args) => {
+			calls.push(args.join(" "));
+			if (args[0] === "push") {
+				throw new Error(
+					"error: unable to delete 'release': remote ref does not exist",
+				);
+			}
+		});
+		assert.deepEqual(calls, [
+			"push team/origin --delete release",
+			"worktree remove /wt/fix-x",
+			"branch -D fix-x",
+		]);
+		assert.equal(report.remoteDeleted, true);
+		assert.equal(report.steps.remote.already, true);
+		assert.equal(report.steps.remote.ok, true);
+		assert.equal(report.steps.remote.error, undefined);
+		assert.equal(report.worktreeRemoved, true);
+		assert.equal(report.localBranchDeleted, true);
+		assert.match(ext.describeCleanupReport(report), /remote branch was already gone/);
+	}
+
+	{
+		// An already-removed worktree must not stop the branch deletion.
+		const calls = [];
+		const report = ext.executeCleanup(stepOrderFacts, (cwd, args) => {
+			calls.push(args.join(" "));
+			if (args[0] === "worktree") {
+				throw new Error(`fatal: '${args[2]}' is not a working tree`);
+			}
+		});
+		assert.deepEqual(calls, [
+			"push team/origin --delete release",
+			"worktree remove /wt/fix-x",
+			"branch -D fix-x",
+		]);
+		assert.equal(report.steps.worktree.already, true);
+		assert.equal(report.worktreeRemoved, true);
+		assert.equal(report.localBranchDeleted, true);
+	}
+
+	{
+		// A real remote error is recorded, and the later steps still run.
+		const calls = [];
+		const report = ext.executeCleanup(stepOrderFacts, (cwd, args) => {
+			calls.push(args.join(" "));
+			if (args[0] === "push") throw new Error("fatal: permission denied");
+		});
+		assert.deepEqual(calls, [
+			"push team/origin --delete release",
+			"worktree remove /wt/fix-x",
+			"branch -D fix-x",
+		]);
+		assert.equal(report.steps.remote.ok, false);
+		assert.equal(report.steps.remote.already, false);
+		assert.match(report.steps.remote.error, /permission denied/);
+		assert.equal(report.remoteDeleted, false);
+		assert.equal(report.worktreeRemoved, true);
+		assert.equal(report.localBranchDeleted, true);
+		assert.match(
+			ext.describeCleanupReport(report),
+			/remote branch failed: fatal: permission denied/,
 		);
-		assert.equal(calls.length, 1);
 	}
 
 	// --- collectCleanupFacts against a real temp repository --------------------
@@ -236,12 +313,32 @@ try {
 			assert.equal(upstreamResult.facts.remote, "team/origin");
 			assert.equal(upstreamResult.facts.remoteBranch, "release");
 			assert.equal(upstreamResult.facts.aheadCount, 0);
+			assert.equal(upstreamResult.facts.upstreamGone, false);
 
+			// A pruned upstream ref (deleted on the remote) is not a refusal: it just
+			// means there is nothing to compare against.
 			const revListFailure = ext.collectCleanupFacts(wt, (cwd, args) => {
-				if (args[0] === "rev-list") throw new Error("lookup failed");
+				if (args[0] === "rev-list") {
+					throw new Error("fatal: bad revision 'refs/remotes/team/origin/release..HEAD'");
+				}
 				return run(cwd, args);
 			});
-			assert.equal(revListFailure.ok, false);
+			assert.equal(revListFailure.ok, true);
+			assert.equal(revListFailure.facts.aheadCount, null);
+			assert.equal(revListFailure.facts.upstreamGone, true);
+			assert.match(
+				ext.buildConfirmMessage(revListFailure.facts),
+				/already gone; local teardown only/,
+			);
+			assert.equal(revListFailure.facts.dirtyCount, upstreamResult.facts.dirtyCount);
+
+			// Non-throwing garbage output still fails closed.
+			const revListGarbage = ext.collectCleanupFacts(wt, (cwd, args) => {
+				if (args[0] === "rev-list") return "not-a-number";
+				return run(cwd, args);
+			});
+			assert.equal(revListGarbage.ok, false);
+			assert.match(revListGarbage.reason, /upstream comparison is invalid/);
 
 			run(wt, ["branch", "--set-upstream-to", "team/origin/main", "feature-x"]);
 			const protectedRemoteResult = ext.collectCleanupFacts(wt);

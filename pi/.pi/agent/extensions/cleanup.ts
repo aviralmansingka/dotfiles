@@ -9,8 +9,11 @@
  *
  * Refuses to run on the main checkout, on `main`/`master`, or outside a listed
  * linked worktree or a sub-agent session. A confirm dialog lists the exact
- * targets plus local-file and upstream-ahead warnings. Any failed git step
- * aborts the remaining steps and keeps the session open.
+ * targets plus local-file and upstream-ahead warnings. The destructive steps
+ * are best-effort and idempotent: an already-deleted remote branch, an already
+ * removed worktree, or an already deleted local branch counts as done, and any
+ * other git failure is reported without stopping the remaining steps. The
+ * session always closes once the pre-flight checks pass.
  */
 import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
@@ -80,6 +83,8 @@ export interface CleanupFacts {
 	dirtyCount: number;
 	/** Commits on HEAD not on the upstream, or null without an upstream. */
 	aheadCount: number | null;
+	/** The configured upstream ref no longer exists (deleted and pruned remotely). */
+	upstreamGone: boolean;
 }
 
 export type CleanupFactsResult =
@@ -197,17 +202,23 @@ export function collectCleanupFacts(
 	const dirtyCount = status.split("\n").filter((line) => line.trim() !== "").length;
 
 	let aheadCount: number | null = null;
+	let upstreamGone = false;
 	if (upstreamRef) {
-		let aheadRaw: string;
+		let aheadRaw: string | null = null;
 		try {
 			aheadRaw = runGit(worktreePath, ["rev-list", "--count", `${upstreamRef}..HEAD`]);
 		} catch {
-			return { ok: false, reason: "Could not compare the upstream branch; refusing to clean up." };
+			// The upstream ref is configured but no longer exists locally, which is
+			// what a remotely deleted (and pruned) branch looks like. Nothing to
+			// compare against, and nothing fatal: continue with local teardown.
+			upstreamGone = true;
 		}
-		if (!/^\d+$/.test(aheadRaw)) {
-			return { ok: false, reason: "The upstream comparison is invalid; refusing to clean up." };
+		if (aheadRaw !== null) {
+			if (!/^\d+$/.test(aheadRaw)) {
+				return { ok: false, reason: "The upstream comparison is invalid; refusing to clean up." };
+			}
+			aheadCount = Number(aheadRaw);
 		}
-		aheadCount = Number(aheadRaw);
 	}
 
 	return {
@@ -220,6 +231,7 @@ export function collectCleanupFacts(
 			remoteBranch,
 			dirtyCount,
 			aheadCount,
+			upstreamGone,
 		},
 	};
 }
@@ -234,11 +246,14 @@ export function buildConfirmMessage(facts: CleanupFacts): string {
 			? `Remote:    ${facts.remote} branch ${facts.remoteBranch}`
 			: "Remote:    none (local only, never pushed)",
 	];
+	if (facts.upstreamGone) {
+		lines.push("Note:      Remote branch is already gone; local teardown only.");
+	}
 	if (facts.dirtyCount > 0) {
 		lines.push(`Warning:   ${facts.dirtyCount} uncommitted file(s) — discarded with the worktree.`);
 	}
 	if (facts.aheadCount !== null && facts.aheadCount > 0) {
-		lines.push(`Warning:   ${facts.aheadCount} commit(s) not on ${facts.remote}/${facts.remoteBranch} — the remote branch is still deleted.`);
+		lines.push(`Warning:   ${facts.aheadCount} commit(s) not on ${facts.remote}/${facts.remoteBranch}.`);
 	}
 	lines.push("", "The pi session closes after cleanup.");
 	return lines.join("\n");
@@ -246,10 +261,50 @@ export function buildConfirmMessage(facts: CleanupFacts): string {
 
 // --- execution ---------------------------------------------------------------
 
+export interface StepResult {
+	/** The step completed, or there was nothing left for it to do. */
+	ok: boolean;
+	/** Git reported the target as already absent (deleted/pruned/not registered). */
+	already: boolean;
+	/** Real failure message, when `ok` is false. */
+	error?: string;
+}
+
 export interface CleanupStepReport {
 	remoteDeleted: boolean;
 	worktreeRemoved: boolean;
 	localBranchDeleted: boolean;
+	steps: { remote: StepResult; worktree: StepResult; branch: StepResult };
+}
+
+/** Git error messages that mean "the thing you asked to delete is not there". */
+const ALREADY_GONE: Record<keyof CleanupStepReport["steps"], RegExp[]> = {
+	remote: [/remote ref does not exist/i, /unable to delete/i, /does not match any/i],
+	worktree: [/is not a working tree/i, /not registered/i],
+	branch: [/branch .* not found/i, /no branch named/i, /branch .* does not exist/i],
+};
+
+function errorMessage(error: unknown): string {
+	if (error instanceof Error) return error.message;
+	return String(error);
+}
+
+function attemptStep(
+	run: (cwd: string, args: string[]) => void,
+	cwd: string,
+	args: string[],
+	gonePatterns: RegExp[],
+): StepResult {
+	try {
+		run(cwd, args);
+		return { ok: true, already: false };
+	} catch (error) {
+		const message = errorMessage(error);
+		if (gonePatterns.some((pattern) => pattern.test(message))) {
+			return { ok: true, already: true };
+		}
+		return { ok: false, already: false, error: message };
+	}
 }
 
 /** Run the destructive steps. Exposed for tests with injected git runners. */
@@ -257,32 +312,70 @@ export function executeCleanup(
 	facts: CleanupFacts,
 	run: (cwd: string, args: string[]) => void,
 ): CleanupStepReport {
+	const hasRemote = Boolean(facts.remote && facts.remoteBranch);
 	const report: CleanupStepReport = {
 		remoteDeleted: false,
 		worktreeRemoved: false,
 		localBranchDeleted: false,
+		steps: {
+			remote: { ok: true, already: false },
+			worktree: { ok: true, already: false },
+			branch: { ok: true, already: false },
+		},
 	};
 
 	// 1. Remote branch — from the still-existing worktree.
-	if (facts.remote && facts.remoteBranch) {
-		run(facts.worktreePath, ["push", facts.remote, "--delete", facts.remoteBranch]);
-		report.remoteDeleted = true;
+	if (hasRemote) {
+		report.steps.remote = attemptStep(
+			run,
+			facts.worktreePath,
+			["push", facts.remote as string, "--delete", facts.remoteBranch as string],
+			ALREADY_GONE.remote,
+		);
+		report.remoteDeleted = report.steps.remote.ok;
 	}
 
 	// 2. Worktree — driven from the main checkout so it survives its own removal.
-	run(facts.mainPath, [
-		"worktree",
-		"remove",
-		...(facts.dirtyCount > 0 ? ["--force"] : []),
-		facts.worktreePath,
-	]);
-	report.worktreeRemoved = true;
+	report.steps.worktree = attemptStep(
+		run,
+		facts.mainPath,
+		["worktree", "remove", ...(facts.dirtyCount > 0 ? ["--force"] : []), facts.worktreePath],
+		ALREADY_GONE.worktree,
+	);
+	report.worktreeRemoved = report.steps.worktree.ok;
 
 	// 3. Local branch — only deletable once no worktree has it checked out.
-	run(facts.mainPath, ["branch", "-D", facts.branch]);
-	report.localBranchDeleted = true;
+	report.steps.branch = attemptStep(
+		run,
+		facts.mainPath,
+		["branch", "-D", facts.branch],
+		ALREADY_GONE.branch,
+	);
+	report.localBranchDeleted = report.steps.branch.ok;
 
 	return report;
+}
+
+/** One notification line summarising what happened, including notes and errors. */
+export function describeCleanupReport(report: CleanupStepReport): string {
+	const done = [
+		report.remoteDeleted ? "remote branch" : null,
+		report.worktreeRemoved ? "worktree" : null,
+		report.localBranchDeleted ? "local branch" : null,
+	]
+		.filter(Boolean)
+		.join(", ");
+	const notes: string[] = [];
+	for (const [label, step] of [
+		["remote branch", report.steps.remote],
+		["worktree", report.steps.worktree],
+		["local branch", report.steps.branch],
+	] as const) {
+		if (step.already) notes.push(`${label} was already gone`);
+		else if (!step.ok) notes.push(`${label} failed: ${step.error}`);
+	}
+	const base = done ? `Cleanup done: ${done}.` : "Cleanup: nothing left to delete.";
+	return notes.length > 0 ? `${base} ${notes.join("; ")}.` : base;
 }
 
 // --- extension ----------------------------------------------------------------
@@ -314,24 +407,20 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 
-			let report: CleanupStepReport;
 			try {
-				report = executeCleanup(facts, (cwd, args) => {
+				const report = executeCleanup(facts, (cwd, args) => {
 					git(cwd, args);
 				});
-			} catch (error: any) {
-				ctx.ui.notify(`Cleanup failed: ${error?.message ?? String(error)}`, "error");
-				return;
+				const failed =
+					!report.steps.remote.ok || !report.steps.worktree.ok || !report.steps.branch.ok;
+				ctx.ui.notify(describeCleanupReport(report), failed ? "warning" : "info");
+			} catch (error) {
+				// The steps are individually guarded, so this is unexpected — but the
+				// owner wants the session dead either way.
+				ctx.ui.notify(`Cleanup failed: ${errorMessage(error)}`, "error");
 			}
 
-			const done = [
-				report.remoteDeleted ? "remote branch" : null,
-				report.worktreeRemoved ? "worktree" : null,
-				report.localBranchDeleted ? "local branch" : null,
-			]
-				.filter(Boolean)
-				.join(", ");
-			ctx.ui.notify(`Cleanup done: ${done}. Closing session.`, "info");
+			ctx.ui.notify("Closing session.", "info");
 
 			// Give the notification a moment on screen before the TUI exits.
 			setTimeout(() => ctx.shutdown(), SHUTDOWN_DELAY_MS);

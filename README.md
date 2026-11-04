@@ -239,8 +239,9 @@ ships. The command confirms its worktree, local branch, and configured upstream
 branch, when one exists. It warns about local files, including ignored files, and
 commits absent from upstream. It then deletes those targets and closes Pi. It
 refuses sub-agent sessions, the main checkout, detached HEAD, and protected local
-or upstream branches. A failed deletion stops the remaining steps and keeps Pi
-open.
+or upstream branches. The deletions are best-effort: a remote branch, worktree, or
+local branch that is already gone counts as done, a real failure is reported and
+skipped over, and Pi closes either way.
 
 The checked-in Pi config intentionally excludes `auth.json`, sessions, caches, and runtime state. MCP credentials should be provided out of band.
 
