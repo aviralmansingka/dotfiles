@@ -85,4 +85,27 @@ test("a split stays beside its anchor and keeps the anchor's session", () => {
 	});
 });
 
+test("an explicit session argument wins over the environment", () => {
+	const fake = fakeRex();
+	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");
+	withEnv({ ...base, PATH: `${fake.dir}:${process.env.PATH}`, PI_SUBAGENT_SESSION: "mission-from-env" }, () => {
+		rex.createSurface("trooper-S06", { session: "mission-rex-army", cwd: "/explicit" });
+		const created = fake.calls().find(line => line.includes("window new"));
+		assert.ok(created, "no window new call was made");
+		assert.match(created, /-s session:mission/);
+		assert.match(created, /-c \/explicit/);
+	});
+});
+
+test("an unknown session name fails and names the live sessions", () => {
+	const fake = fakeRex();
+	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");
+	withEnv({ ...base, PATH: `${fake.dir}:${process.env.PATH}`, REX_SESSION: "session:army", REX_BLOCK: "block:army", PI_SUBAGENT_CWD: "/worktree" }, () => {
+		assert.throws(
+			() => rex.createSurface("trooper-S07", { session: "mission-missing" }),
+			/unknown session "mission-missing"; live sessions: mission-rex-army/,
+		);
+	});
+});
+
 console.log("subagent session target tests passed");
