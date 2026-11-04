@@ -121,6 +121,34 @@ function sessionArgs(): string[] {
 }
 
 /**
+ * The session a child runs in. `PI_SUBAGENT_SESSION` names a label or an id,
+ * so a mission captain fans work out into the mission session instead of its
+ * own. Without it, a child follows the caller, as before.
+ */
+let childSession: string | null = null;
+function childSessionId(): string | null {
+  const want = process.env.PI_SUBAGENT_SESSION?.trim();
+  if (!want) return process.env.REX_SESSION || null;
+  if (childSession !== null) return childSession;
+  childSession = want.startsWith("session:") ? want : findSessionByLabel(want) ?? "";
+  return childSession || null;
+}
+
+/** `-s` scope for a child tab, or none when no session is known. */
+function childSessionArgs(): string[] {
+  const session = childSessionId();
+  return session ? ["-s", session] : [];
+}
+
+/**
+ * The cwd a child starts in. A rank tab belongs to the mission worktree, so a
+ * captain sets `PI_SUBAGENT_CWD`; otherwise the child inherits the caller.
+ */
+function childCwd(): string | null {
+  return process.env.PI_SUBAGENT_CWD?.trim() || process.cwd() || null;
+}
+
+/**
  * Block ids are unique, but Rex resolves a block target inside ONE session:
  * `rex capture -b <id>` fails with "block target not found" when the block
  * belongs to another session. A block this module created on another session
@@ -225,18 +253,19 @@ export function createSession(
 export function createSurface(name: string): string {
   requireRex();
   const label = `π ${sanitizeLabel(name)}`;
-  const out = rexSync([
-    "window",
-    "new",
-    ...sessionArgs(),
-    label,
-    "--focus=false",
-    "--json",
-  ]);
+  const session = childSessionId();
+  const cwd = childCwd();
+  const args = ["window", "new"];
+  if (session) args.push("-s", session);
+  args.push(label, "--focus=false", "--json");
+  if (cwd) args.push("-c", cwd);
+  const out = rexSync(args);
   const created = parseCreated(out);
   if (!created) {
     throw new Error(`Unexpected rex window new output: ${out.slice(0, 200)}`);
   }
+  // Later reads and sends resolve a block inside one session.
+  if (session) rememberBlock(created, session);
   return created;
 }
 
@@ -255,7 +284,10 @@ export function createSurfaceSplit(
   void name; // Rex block labels are not settable at split time.
   requireRex();
   const anchor = fromSurface ?? process.env.REX_BLOCK;
-  const args = ["split", ...sessionArgs()];
+  // A split lives beside its anchor, so the anchor's session wins. Without one,
+  // the child target decides.
+  const scope = anchor ? scopeArgs(anchor) : childSessionArgs();
+  const args = ["split", ...scope];
   if (anchor) args.push("-b", anchor);
   args.push(`--split=${direction}`, "--focus=false", "--json");
   const out = rexSync(args);
@@ -263,6 +295,8 @@ export function createSurfaceSplit(
   if (!created) {
     throw new Error(`Unexpected rex split output: ${out.slice(0, 200)}`);
   }
+  const session = scope[1];
+  if (session) rememberBlock(created, session);
   return created;
 }
 
