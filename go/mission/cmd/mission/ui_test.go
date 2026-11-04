@@ -573,3 +573,30 @@ func TestEmptyFilterSaysSo(t *testing.T) {
 	m.Update(tea.WindowSizeMsg{Width: 128, Height: 42})
 	assertFilled(t, m, 128, 42, "q quit")
 }
+
+// TestNarrowDeskSwapsPaneWithTab covers the one-pane layout: below the split
+// width the desk draws the focused pane full width, and tab swaps which pane
+// that is without losing either pane's tab.
+func TestNarrowDeskSwapsPaneWithTab(t *testing.T) {
+	s, _ := fixture(t)
+	m := newDesk(s)
+	m.refresh()
+	m.setFilter(1)
+	m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	plain := stripANSI(m.render())
+	if !strings.Contains(plain, "MISSIONS") || strings.Contains(plain, "MISSION DESK") {
+		t.Fatalf("80x24 does not show the mission list alone:\n%s", plain)
+	}
+	m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	plain = stripANSI(m.render())
+	if !strings.Contains(plain, "MISSION DESK") || strings.Contains(plain, "MISSIONS") {
+		t.Fatalf("tab did not swap the narrow pane:\n%s", plain)
+	}
+	if m.focus != 1 || m.filter != 1 {
+		t.Fatalf("tab changed more than the focus: focus %d filter %d", m.focus, m.filter)
+	}
+	m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	if !strings.Contains(stripANSI(m.render()), "MISSIONS") {
+		t.Fatal("tab back did not restore the narrow mission list")
+	}
+}
