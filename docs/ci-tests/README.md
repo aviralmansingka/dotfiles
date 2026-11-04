@@ -14,7 +14,6 @@ pi agent extensions (job `pi-tests`, gated on `pi/**` + `agents/**`):
 |---|---|---|---|
 | Renderer core | tool-call-renderer-public.test.mjs (+ usage, thinking-title, web-fetch, web-search) | see docs/ci-tests/renderer.md | 2.5 s |
 | Python tool | python.test.mjs | see docs/ci-tests/python-tool.md | 2.35 s |
-| No-mistakes | gate / pane / bridge tests | see docs/ci-tests/no-mistakes.md | 9.4 s |
 | Subagents + editor | interactive-subagents.test.mjs, nvim-open.test.mjs | see docs/ci-tests/subagents.md | 1.1 s |
 | User input | user-input/** (10 files) + quiz/explain/ask | see docs/ci-tests/user-input.md | 0.48 s |
 | Run-command | run-command.test.mjs | see docs/ci-tests/run-command.md | 1.22 s |
@@ -41,8 +40,7 @@ Scripts, configs, infra (job `scripts-tests` + `ops-tests`):
 | zsh layer | test-zsh.sh | 19 | 0.42 s |
 | tmux + ghostty + terminfo | test-tmux.sh, test-ghostty.sh | 17 + 11 | 0.36 s |
 | Config lint (starship, aerospace, git) | test-config-lint.py | 8, 5 files | 0.06 s |
-| install.sh | test-install-smoke.sh | 49 | 0.95 s |
-| No-mistakes installer/rollback/daemon | test-nm-install.sh | 21 | 1.1 s |
+| install.sh | test-install-smoke.sh | 46 | 2.9 s |
 | Repo config (skills frontmatter, stow parity, gh-dash, settings, Brewfile, herdr TOML) | test-repo-config.py | 10 | 0.20 s |
 | Repo parity (skills store, docs accuracy) | test-repo-parity.py | 3 suites | 0.37 s |
 | Terraform invariants | test-terraform.sh | 17 (19 w/ TF_VALIDATE=1) | 0.1–12.7 s |
@@ -76,10 +74,6 @@ export JITI_PATH=/tmp/ci-jiti/node_modules/jiti/lib/jiti.cjs \
   (the lint job also runs `node scripts/test-ci-self.mjs`).
 - One extension suite: `node pi/.pi/agent/extensions/<name>.test.mjs`.
 - One scripts entry: `bash|python3|node scripts/test-<name>.*`.
-- No-mistakes pinned runners (same suites, offline): `scripts/nm-lint.sh`,
-  `scripts/nm-test.sh`. Both run on Linux and on stock macOS bash 3.2: without
-  GNU `timeout` the test runner falls back to perl's exec+alarm guard, and
-  python suites SKIP their tomllib checks below Python 3.11.
 - Terraform validate (network-gated, opt-in): `TF_VALIDATE=1
   STRICT=1 scripts/test-terraform.sh`.
 
@@ -106,8 +100,7 @@ export JITI_PATH=/tmp/ci-jiti/node_modules/jiti/lib/jiti.cjs \
 
 ## Index of domain docs
 
-ci-meta · config-lint · install-smoke · journal · mermaid · nm-install ·
-no-mistakes (domain suite) · no-mistakes-ci (no-mistakes runbook) · nvim ·
+ci-meta · config-lint · install-smoke · journal · mermaid · nvim ·
 nvim-ask · nvim-dap · nvim-markdown · nvim-octo · nvim-picker ·
 nvim-plugin-configs · nvim-send · nvim-ui-shape · nvim-workspaces · ops ·
 practice · python-tool · rataflow · renderer · repo-config · repo-parity ·

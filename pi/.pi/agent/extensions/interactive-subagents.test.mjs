@@ -623,13 +623,6 @@ try {
 	assert.equal(parseAgentDefinition("---\nname: x\nagent-dir: parent\n---\nBody").agentDir, "parent");
 	assert.equal(parseAgentDefinition("---\nname: x\n---\nBody").agentDir, undefined, "omission parses to undefined");
 	assert.equal(parseAgentDefinition("---\nname: x\nagent-dir: repo\n---\nBody").agentDir, undefined, "unsupported value parses to undefined");
-	const orchestrator = loadAgentDefaultsFromPaths("nm-orchestrator", {
-		cwd: profileRoot,
-		configDir: join(profileRoot, "global-agent-config"),
-		bundledDir: bundledAgentsDir,
-	});
-	assert.equal(orchestrator.agentDir, "parent");
-	assert.equal(orchestrator.tools, "no_mistakes_axi, read");
 
 	const researcher = loadAgentDefaultsFromPaths("researcher", {
 		cwd: profileRoot,
@@ -675,7 +668,6 @@ try {
 		"tuicr-review": "high",
 		professor: "high",
 		"research-orchestrator": "high",
-		"nm-orchestrator": undefined,
 	};
 	for (const [name, thinking] of Object.entries(expectedThinking)) {
 		const defs = loadAgentDefaultsFromPaths(name, {
@@ -690,35 +682,6 @@ try {
 	// real through the whole-load __test__ hooks in the applySandboxToParts
 	// section of the index.ts whole-load block below.
 }
-
-// --- No Mistakes compact status follows the shared activity-widget contract ---
-const { noMistakesFindingLines, noMistakesIsWaiting, noMistakesWidgetStatus } = jiti(
-	"./interactive-subagents/pi-extension/subagents/no-mistakes.ts",
-);
-const pipelineActivity = {
-	id: "01TEST",
-	status: "running",
-	gate: "review",
-	summary: "review · 12s · 17s total",
-	phases: [{ name: "review", status: "awaiting_approval", findings: 3 }],
-	reviewFindings: [
-		{ severity: "error", file: "src/a.ts", description: "Null value reaches renderer" },
-		{ severity: "warning", file: "src/b.ts", description: "Missing cleanup" },
-		{ severity: "info", description: "Context only" },
-		{ severity: "error", file: "src/c.ts", description: "Fourth explicit finding" },
-		{ severity: "unknown", description: "Count-only finding" },
-	],
-};
-assert.equal(noMistakesWidgetStatus(pipelineActivity), " review · 12s · 17s total ");
-assert.equal(noMistakesIsWaiting(pipelineActivity), true);
-assert.equal(noMistakesIsWaiting({ ...pipelineActivity, gate: undefined, outcome: "checks-passed" }), true);
-assert.equal(noMistakesIsWaiting({ ...pipelineActivity, gate: undefined, outcome: undefined }), false);
-assert.deepEqual(noMistakesFindingLines(pipelineActivity), [
-	"❌ src/a.ts: Null value reaches renderer",
-	"⚠️ src/b.ts: Missing cleanup",
-	"ℹ️ Context only",
-	"❌ src/c.ts: Fourth explicit finding",
-]);
 
 // --- List rendering, baseline renderer, and applySandboxToParts behavior ---
 // These were the last source-string-split eval blocks (C29): index.ts is
@@ -1049,16 +1012,10 @@ assert.equal(
 			assert.equal(expanded.length, 5, "expanded box: top + one row per agent + bottom");
 			assert.ok(expanded.some((line) => line.includes("planner")), "expanded rows name each agent");
 
-			const minimized = hooks.renderSubagentWidgetLines(agents, 80, null, true);
+			const minimized = hooks.renderSubagentWidgetLines(agents, 80, true);
 			assert.equal(minimized.length, 1, "minimized widget is exactly one line");
 			assert.match(minimized[0], /3 running: 1 active · 1 waiting · 1 stalled/);
 			assert.ok(!minimized[0].includes("planner"), "minimized line drops agent names");
-
-			// Pipeline mode: the no-mistakes row joins the counts under the
-			// Activities title and the active word.
-			const pipelined = hooks.renderSubagentWidgetLines([agents[0]], 80, pipelineActivity, true);
-			assert.match(pipelined[0], /Activities/);
-			assert.match(pipelined[0], /2 active: 1 active · 1 waiting/);
 
 			// The toggle hook flips module state; the next render picks it up.
 			assert.equal(hooks.toggleWidgetMinimized(), true);

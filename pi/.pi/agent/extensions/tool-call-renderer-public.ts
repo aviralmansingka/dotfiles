@@ -9,7 +9,6 @@
  * their query/results too; pedagogy tools own question leaves and verdicts.
  * Message, review, and tuicr receipts own leaves, never agent chips.
  * MCP tools own neutral server badges and read/send/default result bodies.
- * No-mistakes expands its chip into TOON pipeline framing.
  * Other tools delegate to
  * downstream renderResult when present.
  * Ctrl+Q toggles command visibility for bash/powershell/python: hidden
@@ -63,7 +62,7 @@ const pendingTitles = new Set<string>();
 // Ctrl+Q state: every pi launch starts with command bodies minimized. The
 // toggle is process state, not row state, so session switches keep it.
 let commandsHidden = true;
-const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
+const CONNECTED = new Set(["subagent"]);
 // Launch/message/review receipts are not agent runs: never route them through chips.
 const RECEIPT_TOOLS = new Set(["subagent_message", "tuicr"]);
 const FILE_TOOLS = new Set(["read", "write"]);
@@ -149,7 +148,6 @@ function preview(tool: string, args: RecordValue, cwd = ""): string {
     case "grep": case "find": return `${JSON.stringify(clean(args.pattern))} in ${path || "."}${args.glob ? ` · ${clean(args.glob)}` : ""}`;
     case "ls": return path || ".";
     case "subagent": return clean(args.name || args.agent);
-    case "no_mistakes_axi": return clean(args.args) || clean(args.phase) || clean(args.task);
     case "mcp": return clean(args.server || args.connect || args.tool);
     default: return firstLine(args.query || args.url || args.path || args.name || args.command || args.task);
   }
@@ -391,202 +389,13 @@ function renderRecentToolTree(theme: Theme, rail: string, progress: RecordValue)
   });
 }
 
-// Only decode the scalar/record/table subset emitted by axi, not arbitrary YAML.
-// Unknown sections remain unused; malformed rows never become guessed findings.
-function toonScalar(value: string): string | undefined {
-  const text = value.trim();
-  if (text.startsWith('"')) {
-    try { return asString(JSON.parse(text)); } catch { return undefined; }
-  }
-  if (text.includes('"')) return undefined;
-  return text === "null" ? "" : text;
-}
-
-function toonCells(line: string): string[] | undefined {
-  const cells: string[] = [];
-  let start = 0;
-  let quoted = false;
-  for (let i = 0; i < line.length; i++) {
-    if (quoted && line[i] === "\\") { i++; continue; }
-    if (line[i] === '"') quoted = !quoted;
-    else if (!quoted && line[i] === ",") {
-      const cell = toonScalar(line.slice(start, i));
-      if (cell === undefined) return undefined;
-      cells.push(cell);
-      start = i + 1;
-    }
-  }
-  if (quoted) return undefined;
-  const last = toonScalar(line.slice(start));
-  return last === undefined ? undefined : [...cells, last];
-}
-
-const pipelineData = new Map<string, { source: string; data?: RecordValue }>();
-
-// Live no-mistakes review state from the pane extension's activity events:
-// the tracked run plus the finding ids still unresolved at its review gate.
-// A finding a later fix round resolved no longer appears in the current
-// gate listing; chips of that same run drop it so resolved findings do not
-// linger in the transcript. Findings without an id cannot be tracked and
-// always render; chips of other runs are history and render unfiltered.
-const noMistakesLive: { runId?: string; unresolved?: Set<string> } = {};
-function parsePipeline(id: string, source: string): RecordValue | undefined {
-  const cached = pipelineData.get(id);
-  if (cached?.source === source) return cached.data;
-  const data: RecordValue = {};
-  const stack = [{ indent: -2, data }];
-  const lines = source.split("\n");
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line.trim()) continue;
-    const indent = line.length - line.trimStart().length;
-    while (stack.length > 1 && indent <= stack[stack.length - 1].indent) stack.pop();
-    // Axi emits two-space nesting. Do not let children of an unsupported
-    // header (e.g. help[6]:) leak status fields into the enclosing record.
-    if (indent !== stack[stack.length - 1].indent + 2) continue;
-    const parent = stack[stack.length - 1].data;
-    const table = /^\s*(steps|findings)\[\d+\]\{([^}]+)\}:\s*$/.exec(line);
-    if (table) {
-      const keys = table[2].split(",").map((key) => key.trim());
-      const records: RecordValue[] = [];
-      while (i + 1 < lines.length && lines[i + 1].trim() && lines[i + 1].search(/\S/) > indent) {
-        const cells = toonCells(lines[++i].trim());
-        if (cells?.length === keys.length) records.push(Object.fromEntries(keys.map((key, index) => [key, cells[index]])));
-      }
-      parent[table[1]] = records;
-      continue;
-    }
-    const field = /^\s*([a-z_]+):(?:\s+(.*))?\s*$/.exec(line);
-    if (!field) continue;
-    if (field[2]?.trim()) {
-      const value = toonScalar(field[2]);
-      if (value !== undefined) parent[field[1]] = value;
-    } else {
-      const child: RecordValue = {};
-      parent[field[1]] = child;
-      stack.push({ indent, data: child });
-    }
-  }
-  const shaped = ["run", "gate", "branch_sync"].some((key) => Object.keys(asRecord(data[key])).length > 0);
-  const parsed = shaped ? data : undefined;
-  pipelineData.set(id, { source, data: parsed });
-  return parsed;
-}
-
-function pipelineFindingCount(data: RecordValue | undefined): number | undefined {
-  const value = clean(asRecord(data?.run).findings);
-  if (value === "none") return 0;
-  // Compound categories may overlap (awaiting vs auto-fix); do not guess a total.
-  const count = /^(\d+)(?:\s+[\w-]+)?$/.exec(value);
-  const total = count ? Number(count[1]) : undefined;
-  return finiteNumber(total) ? total : undefined;
-}
-
-/** Live unresolved-finding ids for the run this parsed pipeline belongs to,
- *  when the pane extension is tracking that run. Undefined means no live
- *  state applies and history renders unfiltered. */
-function liveUnresolvedFor(data: RecordValue | undefined): Set<string> | undefined {
-  const runId = clean(asRecord(data?.run).id);
-  return runId && noMistakesLive.runId === runId ? noMistakesLive.unresolved : undefined;
-}
-
-/** Count findings still unresolved at the live review gate: rows without an
- *  id cannot be tracked and always count; rows whose id the current gate no
- *  longer lists were resolved by a fix round and do not count. */
-function countLiveFindings(data: RecordValue | undefined, unresolved: Set<string>): number | undefined {
-  const rows = [
-    ...(Array.isArray(asRecord(data?.gate).findings) ? asRecord(data?.gate).findings : []),
-    ...(Array.isArray(asRecord(data).findings) ? asRecord(data).findings : []),
-  ].map(asRecord);
-  if (rows.length === 0) return pipelineFindingCount(data);
-  let visible = 0;
-  for (const row of rows) {
-    const id = clean(row.id);
-    if (!id || unresolved.has(id)) visible++;
-  }
-  return visible;
-}
-
-function renderPipeline(result: Result, row: Row, theme: Theme, context: RenderContext, width: number): string[] {
-  const details = asRecord(result.details);
-  const output = asString(details.output) || textContent(result);
-  const data = parsePipeline(context.toolCallId, output);
-  if (!data) return [
-    ` ${theme.fg("borderMuted", "└─")} ${theme.fg(row.failed ? "error" : "dim", row.failed ? `✗ ${firstLine(asRecord(details.progress).error || output) || "failed"}` : row.settled ? "✓ completed" : "● running")}`,
-    ...expandedOutput("bash", { ...result, content: [{ type: "text", text: output }] }, theme, context, width),
-  ];
-  const run = asRecord(data.run);
-  const gate = asRecord(data.gate);
-  const sync = asRecord(data.branch_sync);
-  const steps = Array.isArray(run.steps) ? run.steps.map(asRecord) : [];
-  const branch = clean(run.branch);
-  const pr = clean(run.pr);
-  const prNumber = /\/pull\/(\d+)(?:\D|$)/.exec(pr)?.[1];
-  const scope = prNumber ? `pr #${prNumber}` : pr;
-  const lines: string[] = [];
-  if (branch || scope) lines.push(` ${theme.fg("borderMuted", "├─")} ${theme.fg("dim", "▣ ")} ${theme.fg("text", branch)}${scope ? theme.fg("dim", `${branch ? " · " : ""}${scope}`) : ""}`);
-  const outcome = clean(data.outcome);
-  const statuses = [clean(run.status), clean(gate.status), outcome];
-  const blocked = row.failed || statuses.some((status) => ["failed", "blocked", "cancelled"].includes(status));
-  const awaiting = statuses.includes("awaiting_approval") || steps.some((step) => step.status === "awaiting_approval");
-  const passed = statuses.some((status) => ["passed", "merged", "completed"].includes(status));
-  const findings: RecordValue[] = [...(Array.isArray(gate.findings) ? gate.findings.map((item) => ({ ...asRecord(item), step: asRecord(item).step || gate.step })) : []),
-    ...(Array.isArray(data.findings) ? data.findings.map(asRecord) : [])];
-  // Live resolution state: when this chip belongs to the run the pane
-  // extension tracks, drop findings the current review gate no longer
-  // lists — a fix round resolved them and they must not linger here.
-  const unresolved = liveUnresolvedFor(data);
-  let resolvedHidden = 0;
-  const visibleFindings = unresolved
-    ? findings.filter((finding) => {
-      const id = clean(finding.id);
-      if (!id || unresolved.has(id)) return true;
-      resolvedHidden++;
-      return false;
-    })
-    : findings;
-  const count = unresolved ? visibleFindings.length : pipelineFindingCount(data);
-  const label = blocked ? "✗ gate blocked" : awaiting ? "● gate awaiting approval" : passed ? "✓ gate passed"
-    : run.status === "running" ? "● gate running" : "";
-  if (label) lines.push(` ${theme.fg("borderMuted", "└─")} ${theme.fg(blocked ? "error" : awaiting || !passed ? "mdLink" : "success", label + (count === undefined ? "" : ` · ${plural(count, "finding")}`) + (passed && !blocked && !awaiting && outcome ? ` · outcome ${outcome}` : ""))}${awaiting && gate.step ? theme.fg("dim", ` · ${clean(gate.step)}`) : ""}`);
-  for (const finding of visibleFindings) {
-    const id = clean(finding.id).replace(/^R(\d+)$/, "r$1");
-    const identity = [id, clean(finding.step)].filter(Boolean).join(" · ");
-    const summary = clean(finding.summary || finding.description);
-    const body = [identity, summary].filter(Boolean).join(" — ");
-    if (!body) continue;
-    const wrapped = wrapLine(theme.fg("dim", body), width - 7, "start").chunks;
-    lines.push(...wrapped.map((chunk, index) => index === 0
-      ? ` ${theme.fg("borderMuted", "├─")} ${theme.fg("dim", "✎ ")} ${chunk}`
-      : ` ${theme.fg("borderMuted", "│")}     ${chunk}`));
-  }
-  if (resolvedHidden > 0) lines.push(...spineText(theme, `${plural(resolvedHidden, "resolved finding")} hidden`, width));
-  if (count === undefined && clean(run.findings)) lines.push(...spineText(theme, `findings: ${clean(run.findings)}`, width));
-  if (gate.summary) lines.push(...spineText(theme, gate.summary, width));
-  const stepLine = steps.filter((step) => clean(step.step) && clean(step.status)).map((step) => {
-    const status = clean(step.status);
-    const mark = ["completed", "passed", "merged"].includes(status) ? theme.fg("success", "✓")
-      : ["failed", "blocked", "cancelled"].includes(status) ? theme.fg("error", "✗")
-      : status !== "pending" && RUNNING.has(status) ? theme.fg("mdLink", "●") : theme.fg("dim", status);
-    const duration = /^\d+$/.test(asString(step.duration_ms)) ? formatElapsed(Number(step.duration_ms)) : "";
-    return theme.fg("dim", `${clean(step.step)} `) + mark + (duration ? theme.fg("dim", ` ${duration}`) : "");
-  }).join(theme.fg("dim", " · "));
-  if (stepLine) lines.push(...wrapLine(stepLine, width - 4, "start").chunks.map((chunk) => `    ${chunk}`));
-  const syncLine = [clean(sync.state), clean(sync.note)].filter(Boolean).join(" · ");
-  const next = clean(asRecord(sync.next_action).command || asRecord(data.next_action).command);
-  for (const detail of [...(syncLine ? [`branch_sync: ${syncLine}`] : []), ...(next ? [`next: ${next}`] : [])]) {
-    lines.push(...wrapLine(theme.fg("dim", detail), width - 4, "start").chunks.map((chunk) => `    ${chunk}`));
-  }
-  return lines;
-}
-
-function renderConnectedChips(tool: string, args: RecordValue, result: Result, expanded: boolean, partial: boolean, row: Row, theme: Theme, outerFailed: boolean, id: string): string[] {
+function renderConnectedChips(args: RecordValue, result: Result, expanded: boolean, partial: boolean, row: Row, theme: Theme, outerFailed: boolean): string[] {
   const entries = roots(result);
   return entries.flatMap((root, index) => {
     const progress = asRecord(root.progress);
     const stats = asRecord(root.stats);
     const last = index === entries.length - 1;
-    const name = tool === "no_mistakes_axi" ? "no-mistakes" : clean(root.name || root.agent || args.name || args.agent) || "(subagent)";
+    const name = clean(root.name || root.agent || args.name || args.agent) || "(subagent)";
     const isError = outerFailed || rootFailed(root);
     const running = !isError && (RUNNING.has(asString(progress.status)) || partial);
     const start = finiteNumber(progress.startedAt) ? progress.startedAt : row.startedAt;
@@ -594,12 +403,7 @@ function renderConnectedChips(tool: string, args: RecordValue, result: Result, e
     const elapsedValue = !row.restored && finiteNumber(start) && finiteNumber(end) ? formatElapsed(Math.max(0, end - start)) : "";
     const elapsed = elapsedValue ? ` ${elapsedValue}` : "";
     const head = ` ${theme.fg("borderMuted", last ? "└─" : "├─")} `;
-    const pipeline = tool === "no_mistakes_axi" ? parsePipeline(id, asString(root.output)) : undefined;
-    const chipUnresolved = pipeline ? liveUnresolvedFor(pipeline) : undefined;
-    const findings = chipUnresolved ? countLiveFindings(pipeline, chipUnresolved) : pipelineFindingCount(pipeline);
-    const subcommand = tool === "no_mistakes_axi" && ["run", "respond", "status", "sync"].includes(asString(root.subcommand)) ? clean(root.subcommand) : "";
-    const label = theme.fg("text", theme.bold(name)) + (subcommand ? theme.fg("dim", ` · ${subcommand}`) : "")
-      + (findings !== undefined && findings > 0 ? theme.fg("mdLink", ` · findings ${findings}`) : "");
+    const label = theme.fg("text", theme.bold(name));
     let line: string;
     if (isError) {
       line = `${head}${theme.fg("error", "×")} ${label}${theme.fg("error", ` · ${clean(progress.error) || "failed"}`)}${theme.fg("dim", elapsed)}`;
@@ -608,7 +412,7 @@ function renderConnectedChips(tool: string, args: RecordValue, result: Result, e
       line = `${head}${theme.fg("accent", "▹")} ${label}${theme.fg("dim", `${elapsed} · `)}${theme.fg(status.toLowerCase().startsWith("stalled") ? "warning" : "muted", status)}`;
     } else {
       const count = finiteNumber(stats.toolCount) ? stats.toolCount : Array.isArray(progress.recentTools) ? progress.recentTools.length : 0;
-      line = `${head}${theme.fg("muted", "▸")} ${label} ${theme.fg("success", "◆")} ${theme.fg("dim", plural(count, progress.kind === "pipeline" ? "phase" : "tool") + elapsed)}`;
+      line = `${head}${theme.fg("muted", "▸")} ${label} ${theme.fg("success", "◆")} ${theme.fg("dim", plural(count, "tool") + elapsed)}`;
     }
     if (expanded) {
       const segments = formatStatsSegments(stats);
@@ -1456,10 +1260,7 @@ function disposeState(): void {
   inspectionTrees.clear();
   pedagogyRows.clear();
   receiptRows.clear();
-  pipelineData.clear();
   quizDisplayOptions.clear();
-  noMistakesLive.runId = undefined;
-  noMistakesLive.unresolved = undefined;
 }
 
 function component(draw: (width?: number) => string[]): Component {
@@ -1709,47 +1510,20 @@ export default function (pi: ExtensionAPI) {
     }
     row.invalidate?.();
   });
-  const unsubscribeNoMistakes = pi.events.on("no-mistakes:activity-update", (payload: unknown) => {
-    const snapshot = asRecord(asRecord(payload).snapshot);
-    const runId = clean(snapshot.id);
-    // A missing run id means the run ended or none is tracked: keep the last
-    // known resolution state so completed runs still render filtered.
-    if (!runId) return;
-    if (noMistakesLive.runId !== runId) {
-      noMistakesLive.runId = runId;
-      noMistakesLive.unresolved = undefined;
-    }
-    const reviewFindings = snapshot.reviewFindings;
-    if (Array.isArray(reviewFindings)) {
-      const ids = new Set<string>();
-      for (const item of reviewFindings) {
-        const id = clean(asRecord(item).id);
-        if (id) ids.add(id);
-      }
-      noMistakesLive.unresolved = ids;
-    }
-    // Redraw mounted rows so resolution applies to already-rendered chips.
-    for (const row of rows.values()) row.invalidate?.();
-  });
   pi.on("session_shutdown", () => {
     resetTelegramRun();
     disposeState();
     unsubscribe();
-    unsubscribeNoMistakes();
   });
 
   pi.registerShortcut("ctrl+q", { // frees ctrl+e for move-to-line-end
-    description: "Toggle command and no-mistakes row visibility",
+    description: "Toggle command row visibility",
     handler(ctx) {
       commandsHidden = !commandsHidden;
       // Redraw every mounted call row so the transcript flips in place.
       for (const row of rows.values()) row.invalidate?.();
-      // The no-mistakes result rows set their visibility class from the
-      // absolute state this event carries; their cache-free render refreshes
-      // on this notify's render pass.
-      pi.events.emit("no-mistakes:toggle-rows", commandsHidden);
       ctx.ui?.notify(
-        commandsHidden ? "Commands and no-mistakes rows hidden" : "Commands and no-mistakes rows shown",
+        commandsHidden ? "Commands hidden" : "Commands shown",
         "info",
       );
     },
@@ -1905,7 +1679,6 @@ export default function (pi: ExtensionAPI) {
             ...(!row.failed ? (toolName === "find" ? findTree : lsListing)(theme, context.toolCallId,
               inspectionPaths(effective, toolName === "find" ? "No files found matching pattern" : "(empty directory)")) : []),
           ];
-          if (toolName === "no_mistakes_axi" && expanded) return renderPipeline(effective, row, theme, context, width);
           // Minimized rows keep the exit status in its status color but dim
           // the line-count tail, so the muted intent title stays the row's
           // focus instead of competing with a full-brightness summary.
@@ -1918,7 +1691,7 @@ export default function (pi: ExtensionAPI) {
             return theme.fg("success", status) + (rest.length ? theme.fg("dim", ` · ${rest.join(" · ")}`) : "");
           };
           const lines = CONNECTED.has(toolName)
-            ? renderConnectedChips(toolName, asRecord(context.args), effective, expanded, partial, row, theme, context.isError || asRecord(effective).isError === true, context.toolCallId)
+            ? renderConnectedChips(asRecord(context.args), effective, expanded, partial, row, theme, context.isError || asRecord(effective).isError === true)
             : [expanded && row.settled && OUTPUT_TOOLS.has(toolName)
               ? statusBanner(theme, effective, row)
               : ` ${theme.fg("borderMuted", "└─")} ${collapsedSummary()}`];

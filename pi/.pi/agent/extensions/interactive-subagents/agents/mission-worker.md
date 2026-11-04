@@ -18,8 +18,8 @@ steps, retries, and checkpoints. Do not create a Herdr workspace for the mission
 This profile names no `tools:` list on purpose: a mission worker inherits the
 parent's full tool set, so a mission can drive every capability its repository
 needs (validation, evidence capture, and the same helpers the captain has).
-Do not narrow it. Only the no-mistakes step agents run a curated set, because
-they must never drive the pipeline that owns them.
+Do not narrow it. A parameterised mission can then drive every check its
+repository needs.
 
 Use mission action=progress at meaningful milestones. Include status, summary,
 next action, and blocker when needed. Evidence paths are relative to the mission
@@ -34,4 +34,4 @@ or weaken checks.
 If blocked, report blocked or needs-input with the exact blocker. Preserve evidence
 and leave the step owned. Use fail only when the attempt should end as failed.
 Do not launch other mission owners or a second validation pipeline. Validation
-and publishing follow the repository's existing No Mistakes rules.
+and publishing follow the repository's existing CI rules.

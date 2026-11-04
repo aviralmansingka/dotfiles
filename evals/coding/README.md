@@ -71,7 +71,6 @@ are one-line complaints, need a live PTY, or never landed a commit. See REPORT.m
 | `kimi-trace-profiler` | kimi-endpoint | 516 / large | feature | Debug-and-extend a buggy draft analyzer so it reads three trace formats into workload parameters. Graded hermetically: a private HOME with one synthetic trace and known token totals. |
 | `dotfiles-quiz-tab-modes` | dotfiles | 306 / medium | feature | Treehouse crewmate brief with a real UI contract: Tab cycles steering/note/follow-up and steering keeps the question alive. Gold user-input mode test. |
 | `dotfiles-run-command-r-shortcut` | dotfiles | 424 / medium | feature | Second treehouse brief: an `R` shortcut that runs the command in a Neovim terminal pane and auto-captures output. Gold run-command test. |
-| `dotfiles-nm-visible-pane` | dotfiles | 998 / large | feature | Largest treehouse task: surface no-mistakes in a visible Herdr pane instead of hiding it in tool output. Gold no-mistakes-pane test. |
 
 `size` in the table is changed lines (added + removed); `manifest.jsonl` also carries `files_changed`,
 `lines_added` and `lines_removed`.
@@ -267,15 +266,13 @@ grep/JSON/loader gates. `manifest.jsonl` records which kind each task uses.
   luminance), but they still define what "done" means; read the task's `notes` before scoring a diff that fails.
 - **Two repo tests are excluded on purpose.** `scripts/test-pi-hidden-thinking.mjs` asserts against the live
   `~/.pi/agent` settings file, which no worktree controls, and its pyte sibling needs a PTY fixture; the
-  thinking-row task therefore grades on the extension unit suite only. The same rule removed
-  `scripts/nm-test.sh` from dotfiles grading (pre-existing reds plus a ~4-minute runtime).
+  thinking-row task therefore grades on the extension unit suite only.
 - **Network and PR steps are not graded.** Some briefs end with "open a PR with `gh`" (rack-bench) or ask the
   agent to verify facts on the web (`rack-bench-gcs-provider`). Run the tasks offline; those steps are out of
   scope and do not affect the score.
 - **`dotfiles-remove-fix-code-remote` greps the tree.** Run it from the task worktree, not from a checkout that
   contains this `evals/` directory (the prompts mention `fix-code`), or add `--exclude-dir=evals`.
-- **No repo tests added.** This is data plus docs, so no `scripts/test-*` entry was added and `nm-test.sh` picks
-  up nothing new.
+- **No repo tests added.** This is data plus docs, so no `scripts/test-*` entry was added.
 
 ### Prompt edits
 

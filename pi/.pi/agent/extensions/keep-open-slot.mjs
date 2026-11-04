@@ -2,8 +2,8 @@
 // Symbol.for("pi-subagents/keep-open-count") composition (#286 / finding C28).
 //
 // Multiple extensions publish their "keep this session open" count under the
-// same slot (tuicr.ts's watcher, no-mistakes-pane.ts's run tracking; the
-// nm-orchestrator loads both in one session). The historical fix had each
+// same slot (tuicr.ts's watcher, and any other extension that tracks live
+// work in the same session). The historical fix had each
 // writer capture the previous owner's function and publish an additive
 // wrapper. That is symmetric only while both sides keep doing it, and it is
 // idempotent only by accident: a module re-load (extension reload, a second

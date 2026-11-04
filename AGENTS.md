@@ -38,11 +38,10 @@ does not own is refused. Teardown after ship stays with `/cleanup`.
 ## Captain prompt budget: deferred tools
 
 Extension tools captains rarely call register with `exposure: "deferred"`: `quiz`, `explain`,
-`problem`, `conclude`, `lesson`, `run-command`, `nvim_open`, `tuicr`, `tuicr_review`, `tuicr_reply`,
-`no_mistakes_axi`.
+`problem`, `conclude`, `lesson`, `run-command`, `nvim_open`, `tuicr`, `tuicr_review`, `tuicr_reply`.
 Deferred tools stay out of the captain's system prompt, tool list, and rules. Subagent profiles
-activate what they need through their `tools:` allowlist — professor, tuicr-review, and
-nm-orchestrator already name these. Captains reach the rest through `tool_search`, enabled via
+activate what they need through their `tools:` allowlist — professor and tuicr-review already
+name these. Captains reach the rest through `tool_search`, enabled via
 `defaultTools` in `settings.json` (which also pins `+worktree`). Register new rarely-used tools
 deferred and name them in the profiles that need them. The MCP namespace proxies
 (`mcp__browserbase`, `mcp__oreilly`, `mcp__mcp`) stay direct: the adapter re-activates them and
@@ -157,16 +156,10 @@ install.sh builds the binary (`cargo install --path rataflow --locked`);
 `scripts/test-rataflow.py` is the offline CI suite, with `RATAFLOW_BUILD=1` adding the
 cargo tests as a local pre-merge gate.
 
-## no-mistakes Herdr bridge invariants
+## Subagent tabs and pane state
 
-The no-mistakes daemon's step agents run as visible Herdr subagent tabs when the triggering
-session is inside Herdr (`scripts/install-nm-herdr-bridge`, upstream `agent_path_override.pi`).
-These rules are load-bearing:
+These Herdr rules are load-bearing:
 
-- Every step invocation owns a fresh tab and closes it after delivery; fixer rounds resume
-  the durable session file in a fresh tab. Teardown (run terminal, session shutdown, extension
-  reload) also closes panes so a later headless `--session` resume never meets a second writer;
-  the shim then passthroughs to real pi with unchanged argv and stdin.
 - Auto-exit subagents that finish cleanly close their whole Herdr tab (interactive subagents
   keep parking for the user), so an orphaned sibling pane can never hold the tab open after
   its session is done; the nvim-open extension likewise closes editor panes it created when
@@ -179,53 +172,30 @@ These rules are load-bearing:
   `subagent_message` probes the same mark before resuming, so a live orphan is steered, never
   duplicated onto one session file.
 - Pane state surfaces are Herdr's sanctioned ones only: `pane report-metadata --state-label`
-  for display and the `herdr:blocked` event for the CI red state. Never report pane state
+  for display and the `herdr:blocked` event for a blocked agent. Never report pane state
   from another source or impersonate a `herdr:` source - a second source cannot override the
   holder, and a seq-locked `herdr:` source mutes the managed reporter for the whole session.
-- Step-agent tabs run `pi --no-extensions` with one closed set loaded explicitly
-  (`STEP_AGENT_EXTENSIONS` in `pi/.pi/agent/extensions/no-mistakes-pane/bridge.ts`):
-  pane-state reporters, capability tools (python, web-fetch, web-search, mermaid), and tab
-  chrome. The parent's pipeline machinery (no-mistakes-gate, no-mistakes-pane,
-  interactive-subagents, tuicr) and human-blocking tools never load inside a step agent -
-  keep it that way when adding extensions. Every pi subagent spawned by interactive-subagents
-  gets the parent's tool-call renderer as a baseline explicit `-e` (deduped by pi; skipped when
-  absent) - the curated step-agent set above stays curated and unchanged.
-- A run started from a Herdr captain session is owned by the `nm-orchestrator` subagent tab
-  (tuicr-review architecture, `no-mistakes-pane/orchestrate.ts` + the bundled agent). It drives
-  axi run/respond and owns the attach pane, gate panels, pane labels, and the step-agent
-  bridge; the captain keeps read-only status/logs, abort as the escape hatch, and the
-  orchestrator's final summary steer. Delegation never nests (subagent sessions execute
-  directly) and falls back to direct driving without a TUI or spawn API - headless behavior
-  is unchanged. The bundled nm-orchestrator declares `agent-dir: parent`, keeping the
-  captain's configured agent dir instead of a repo-local `.pi/agent` redirect.
-- Step-agent tab closes are clean exits: the tab's pi is asked to quit (Ctrl+D, Ctrl+C
+- Subagent tab closes are clean exits: the tab's pi is asked to quit (Ctrl+D, Ctrl+C
   fallback); after confirmed exit, `pane release-agent --source herdr:pi --agent pi` clears
-  its identity before `pane close`. A terminated step agent must never surface as an
+  its identity before `pane close`. A terminated subagent must never surface as an
   agent-killed notification in the hosting session.
 
-## no-mistakes gate test and lint runners
+## Test suites and lint runners
 
-The gate's Test and Lint steps run the pinned offline runners from `.no-mistakes.yaml`
-(`scripts/nm-test.sh`, `scripts/nm-lint.sh`) — the same offline suite as
-`.github/workflows/ci.yml`. Gate/step agents must never improvise tests that launch live
-sessions: no real pi sessions, no nvim, no tmux/multiplexer servers. The 2026-10-11
-professor-test incident (run 01M4NRT2XKCHANREB6YFBPX6Q9) improvised a live harness,
-timed out, and leaked nvim processes on the host.
-
-Both runners discover targets with `git ls-files` — every `scripts/test-*` entry and
+`.github/workflows/ci.yml` owns every offline check. Both CI discovery and the local run
+use `git ls-files` — every `scripts/test-*` entry and
 `pi/.pi/agent/extensions/**/*.test.mjs` joins automatically; never hand-list tests.
-Per-component coverage, runtime SLA, and the full rules live in `docs/ci-tests/README.md`;
-the no-mistakes runbook (commands, skip-vs-fail semantics, how to add coverage) is
-`docs/ci-tests/no-mistakes-ci.md`. A new suite is a `scripts/test-<name>.*` entry with a
-`# Paths:` header (`// Paths:` for .mjs) plus a `/simple` doc in `docs/ci-tests/`.
+Per-component coverage, runtime SLA, and the full rules live in `docs/ci-tests/README.md`.
+A new suite is a `scripts/test-<name>.*` entry with a `# Paths:` header (`// Paths:` for
+.mjs) plus a `/simple` doc in `docs/ci-tests/`. Test agents must never improvise tests that
+launch live sessions: no real pi sessions, no nvim, no tmux/multiplexer servers.
 
 ## Merge queue
 
 `main` lands through a Mergify merge queue. Submit by adding the `queue` label: `M`
 in gh-dash, or `gh-dash-enqueue-pr <owner>/<repo> <pr>` from a shell; both end in a
-squash merge with no further watching. When a no-mistakes run reaches
-`outcome: checks-passed`, the PR is green already, so add the label before you report
-the outcome — that is the closeout step.
+squash merge with no further watching. When the PR's `CI result` check is green, add the
+label before you report the outcome — that is the closeout step.
 
 `merge_group` in `.github/workflows/ci.yml` stays even though Mergify does not use it:
 the native queue is the fallback, and it needs an organization-owned repository. Do not

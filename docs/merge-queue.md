@@ -101,9 +101,9 @@ dropped, and the trigger must not gain a `paths:` filter.
 
 ## Closeout
 
-A no-mistakes run that ends in `outcome: checks-passed` leaves a green pull
-request, so the closeout adds the label (`M` in gh-dash, or
-`gh-dash-enqueue-pr`). The rule lives in `AGENTS.md`.
+A pull request whose required `CI result` check is green is ready, so the
+closeout adds the label (`M` in gh-dash, or `gh-dash-enqueue-pr`). The rule
+lives in `AGENTS.md`.
 
 ## Failure modes
 

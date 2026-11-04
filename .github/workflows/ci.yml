@@ -242,8 +242,8 @@ jobs:
         run: |
           set +e
           fail=0
-          # Extensionless scripts (e.g. scripts/pi-settings-sync,
-          # pi/bin/no-mistakes-daemon) fall through the *.sh/*.py loops above.
+          # Extensionless scripts (e.g. scripts/pi-settings-sync) fall through
+          # the *.sh/*.py loops above.
           while IFS= read -r f; do
             sb=$(head -1 "$f" 2>/dev/null)
             case "$sb" in
@@ -480,13 +480,7 @@ jobs:
                 continue
                 ;;
             esac
-            # Per-entry env: the nm-install suite is offline; STRICT=1
-            # only turns missing-tool skips into failures (dom-nm-install).
-            entry_env=()
-            case "$f" in
-              scripts/test-nm-install.sh) entry_env=(STRICT=1) ;;
-            esac
-            if timeout 120 env "${entry_env[@]}" "${runner[@]}"; then
+            if timeout 120 "${runner[@]}"; then
               echo "ok   $f"
             else
               echo "FAIL $f"

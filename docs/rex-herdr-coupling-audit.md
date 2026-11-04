@@ -27,7 +27,7 @@ Two claims were tested live and changed:
 
 Three themes account for most `partial` verdicts:
 
-- **Agent registry.** Herdr is agent-aware (`agent list/prompt/get/report-agent`); Rex is terminal-aware only. Sidekick's durable agent model, the nvim pickers, `remote.ts`, `no-mistakes-pane/bridge.ts`, and `herdr-agent-state.ts` all depend on it. This must be rebuilt as an nvim/pi-side registry keyed on block id.
+- **Agent registry.** Herdr is agent-aware (`agent list/prompt/get/report-agent`); Rex is terminal-aware only. Sidekick's durable agent model, the nvim pickers, `remote.ts`, and `herdr-agent-state.ts` all depend on it. This must be rebuilt as an nvim/pi-side registry keyed on block id.
 - **Workspace and worktree.** Herdr owns workspace identity and worktree rows. Rex has sessions only. The worktree tool already covers the worktree half; the "one workspace per repo" invariant does not carry over.
 - **Remote hosts.** `herdr --machine` has no equivalent. `remote.ts` needs a redesign around ssh plus cross-session `rex -s SESSION` addressing.
 
@@ -37,7 +37,7 @@ Three themes account for most `partial` verdicts:
 
 | Path | Herdr coupling | Possible? | Change needed |
 | --- | --- | --- | --- |
-| `install.sh` (stow + plugin block) | Stows `herdr`; installs integrations, Flash, annotate, nm-herdr bridge | yes | Replace the guarded Herdr block with `rex server start`, and drop the `stow herdr` line. |
+| `install.sh` (stow + plugin block) | Stows `herdr`; installs integrations, Flash, annotate | yes | Replace the guarded Herdr block with `rex server start`, and drop the `stow herdr` line. |
 | `install.sh` (lines 51-56) | Curl-installs the Herdr binary | yes | Delete; Rex installs as a macOS app. |
 | `herdr/.config/herdr/config.toml` | Entire file: keybindings, theme, workspace picker | no | Delete; Rex config is the stowed `rex/.config/rex/init.lua`. |
 | `herdr/.config/herdr/plugins/config/youguanxinqing.herdr-flash/config.toml` | Flash plugin colours | no | Delete with the rest of `herdr/`. |
@@ -63,7 +63,6 @@ Fresh Rex-only install would miss: the nvim sidebar and annotate-review workflow
 | `agents/.agents/skills/tuicr/SKILL.md` | prose + dispatch | Routes on `$HERDR_ENV=1` to the Herdr wrapper | yes | Add a Rex row keyed on `REX_SESSION` pointing at a new wrapper. |
 | `agents/.agents/skills/nvim/SKILL.md` | prose | Documents Herdr verbs and sidebar daemon | yes | Reword to Rex; the sidebar story needs a Rex answer or removal. |
 | `agents/.agents/skills/nvimr/SKILL.md` | prose | Discovery order, `HERDR_TIMEOUT` | yes | Rewrite discovery order to Rex blocks. |
-| `agents/.agents/skills/no-mistakes/SKILL.md` | prose | Herdr-bridge subagent-tab delegation, red blocked state | partial | Reword is cheap; the install script behind it is the real port and assumes agent-aware tabs. |
 | `vault/SKILL.md` | prose | One line about workspace renames | yes | One-line reword. |
 | `professor`, `research` | prose | None | n/a | No change. |
 
@@ -72,7 +71,7 @@ Fresh Rex-only install would miss: the nvim sidebar and annotate-review workflow
 | Path | Kind | Herdr coupling | Possible? | Change needed |
 | --- | --- | --- | --- | --- |
 | `scripts/test-gh-dash-open-pr.sh` | CI | Fake `herdr` records `create/open/pane-run` argv | partial | Fake `rex` covering `window new/split/send` instead. |
-| `scripts/test-install-smoke.sh` | CI | Guards for integration install and nm bridge | partial | Drop Herdr guards, add Rex guards; keep the dynamic PATH-fake pattern. |
+| `scripts/test-install-smoke.sh` | CI | Guards for integration install | partial | Drop Herdr guards, add Rex guards; keep the dynamic PATH-fake pattern. |
 | `scripts/verify-nvim.lua` | CI | Asserts backend == `herdr` and its methods | partial | Assert a rex-backed backend; needs the backend module first. |
 | `scripts/verify-nvim` | runner | `sidekick-herdr-live` needs a running Herdr server | partial | Add `sidekick-rex-live` using `rex events`/`rex block ls`. |
 | `scripts/test-nvim-headless.sh` | CI | Runs `herdr_agent_send_spec.lua` | partial | Add a Rex adapter spec. |
@@ -87,7 +86,7 @@ Fresh Rex-only install would miss: the nvim sidebar and annotate-review workflow
 | `scripts/test-herdr-clean-handoff.sh` | CI | Exercises the handoff helper | no | Retire with Herdr; no Rex equivalent. |
 | `scripts/test-herdr-flash-copy.sh` | CI | Tests the Flash OSC52 bridge | no | Retire, or re-home `wl-copy` without herdr paths. |
 | `scripts/test-herdr-annotate-install.py` | CI | Fake herdr plugin link/install | no | Retire with the pilot. |
-| `scripts/install-herdr-annotate`, `install-nm-herdr-bridge` | runtime | Install Herdr plugins/bridges | no | Remove with the migration. |
+| `scripts/install-herdr-annotate` | runtime | Installs Herdr plugins | no | Remove with the migration. |
 | `scripts/verify-herdr-attachment-leases-*` | CI | Execute frozen lease scenarios | no | Retire with the contract family. |
 | `scripts/fixtures/herdr-attachment-leases-{v1,v2,v3}` | fixture | Herdr session-source ids | no | Archive with the contracts. |
 | `docs/contracts/herdr-attachment-leases-v{0..3}.json` | contract | Herdr as session authority | no | Archive; the authority model is unimplemented under Rex. |
@@ -139,21 +138,14 @@ Blast radius: keymaps degrade gracefully, but `sidekick.lua` backend startup err
 | Path | Herdr coupling | Possible? | Change needed |
 | --- | --- | --- | --- |
 | `run-command.ts` | `pane current/list/split/run/close` | yes | `rex block ls/inspect`, `rex split -b $REX_BLOCK`, `rex send -b`. |
-| `no-mistakes-pane.ts` | `HERDR_ENV`, `pane current/get/split/rename/run/close/neighbor/focus/zoom`, `tab focus` | yes | `rex split/send/block close/focus/window focus`; it already degrades headless, so the failure mode is soft. |
 | `tuicr-core.mjs` | `WRAPPER_MARKERS` maps `HERDR_ENV` → wrapper | yes | Add a `{kind:"rex", marker:"REX_SESSION"}` entry. |
 | `stdin-reattach.ts` | None; works around a Herdr pty-swap bug | yes | Keep as-is; possibly obsolete under Rex. |
 | `herdr-prompt-state.ts` | Emits `herdr:blocked` only | yes | Rename the event. |
-| `no-mistakes-pane/orchestrate.ts` | None functionally | yes | Update user-facing labels. |
 | `nvim-open.ts` | `pane current/list/process-info/split/run/send-text/neighbor/focus`, sidebar sockets | partial | Map panes to blocks; `neighbor` focus needs redesign; tmux fallback stays. |
-| `no-mistakes-pane/bridge.ts` | `agent prompt/get`, `tab create`, `pane run/release-agent` | partial | Tabs via `rex window new` + `rex split`; `agent prompt/get` becomes session-file tail + `rex capture`. |
 | `focus-buffer.ts` | Imports nvim-open's pane scan | partial | Works once nvim-open learns Rex blocks. |
 | `tuicr.ts` | Spawns the Herdr wrapper | partial | Spawn `tuicr-wrapper-rex.sh` instead. |
-| `no-mistakes-pane/herdr-report.ts` | `pane report-agent` labels, `herdr:blocked` | partial | Needs a Rex label channel; the event just needs renaming. |
-| `pi/bin/nm-herdr-pi.mjs` | `$NM_HOME/herdr-bridge/<run-id>/sock` | partial | Rename the bridge dir; passthrough is already mux-free. |
 | `remote.ts` | `herdr --machine devbox agent list/start/prompt`, `tab create/close` | no | Redesign around ssh plus cross-session `rex -s SESSION`; no remote forwarding or agent registry in Rex. |
 | `herdr-agent-state.ts` | `HERDR_SOCKET_PATH`, JSON-RPC `pane.report_agent` | no | Drop, or add a Rex-side reporting mechanism; it is a no-op today. |
-| `no-mistakes-pane/capture.ts` | None | n/a | No change. |
-| `no-mistakes-pane/status.ts` | None | n/a | No change. |
 | `tool-call-renderer-public.ts` | None | n/a | No change. |
 | `cleanup.ts` | None; git-only | n/a | No change. |
 
@@ -164,7 +156,7 @@ Note: `herdr-agent-state.ts` is overwritten by Herdr's own installer, so a Rex r
 ## Recommended order
 
 1. **Relocate `wl-copy`**, then delete the `herdr/` stow package and its install steps. Cheap, and stops a silent clipboard break.
-2. **Port the small pi tools** (`run-command`, `no-mistakes-pane`, `tuicr-core`) — mechanical, high confidence, `yes` verdicts.
+2. **Port the small pi tools** (`run-command`, `tuicr-core`) — mechanical, high confidence, `yes` verdicts.
 3. **Write the nvim `rex.lua` adapter plus an agent registry**, then rewrite `herdr_backend` on top. This unblocks the largest cluster of `partial`s.
 4. **Retire the lease-contract family** (ADRs 0003/0004, contracts v0–v3, fixtures, verifiers) as superseded, and rewrite `AGENTS.md`/`CONTEXT.md` invariants.
 5. **Decide `remote.ts` and `herdr-agent-state.ts` explicitly**: rebuild on ssh plus capture, or drop the features.
