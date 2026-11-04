@@ -127,6 +127,10 @@ func execute(argv []string) int {
 	case "render":
 		return cmdRender(a, s)
 	}
+	// A terminal gets the short labelled block; --json keeps the envelope.
+	if cmd == "status" && !a.Has("json") && platform.Terminal() {
+		return cmdStatusText(a, s)
+	}
 	v, e := dispatch(cmd, a, s)
 	return emit(v, e)
 }
@@ -142,6 +146,8 @@ func dispatch(cmd string, a platform.Args, s *Store) (any, error) {
 		return s.list()
 	case "show":
 		return cmdShow(a, s)
+	case "status":
+		return cmdStatus(a, s)
 	case "checks":
 		return cmdChecks(a, s)
 	case "steps":
