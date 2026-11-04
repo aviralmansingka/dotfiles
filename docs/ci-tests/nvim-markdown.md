@@ -45,7 +45,8 @@ It runs headless, offline, and with no plugin manager.
 - `markdown_reader_spec`: the reader column helper, against a real window
   layout. It asserts the eligibility rules (markdown only, never octo, never
   a herdr scrollback capture, never a non-prose buftype), the 100-cell
-  column and the 8-cell margin, and the auto rule at 110 columns. Open and
+  column and the 8-cell margin, and the auto rule (the column opens
+  wherever it fits, and a narrow window stays alone). Open and
   close must leave two fillers, a centered text area, wrap and linebreak
   on while open and back on exit, and `q`/`<Esc>` mapped only while open.
   `:write` keeps the fillers. A resize re-cuts them, a too-narrow resize, a
