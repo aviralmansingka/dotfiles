@@ -2902,6 +2902,22 @@ esac
 		assert.ok(windowCall, "`rex window new` is called for the tab");
 		assert.ok(windowCall.includes("π probe"), `the tab label keeps the π glyph: ${windowCall}`);
 
+		// A long command runs under an interactive bash so the foreground job owns
+		// the terminal, and the script is sourced to keep its done sentinel.
+		rex2.sendLongCommand("block:new", "echo hi", { scriptPath: join(rexRoot, "long-cmd.sh") });
+		const longSend = rexCallsFor().find(
+			(call) => call.startsWith("send ") && call.includes("long-cmd.sh"),
+		);
+		assert.ok(longSend, "`rex send` carries the staged long-command script");
+		assert.ok(
+			longSend.includes("--norc --noprofile -i -c"),
+			`the script runs under an interactive bash: ${longSend}`,
+		);
+		assert.ok(
+			longSend.includes(`'. ${join(rexRoot, "long-cmd.sh")}'`),
+			`the script is sourced, not executed: ${longSend}`,
+		);
+
 		// The parent's own block is never adoptable.
 		assert.throws(
 			() => rex2.assertAdoptablePane("block:caller", "/tmp/other"),
