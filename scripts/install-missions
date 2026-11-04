@@ -7,7 +7,7 @@ mkdir -p "$destination"
 build_dir=$(mktemp -d "$destination/.mission-build.XXXXXX")
 trap 'rm -rf "$build_dir"' EXIT
 cd "$repo_root/go/mission"
-go build -trimpath -o "$build_dir/mission" .
+go build -trimpath -o "$build_dir/mission" ./cmd/mission
 chmod 755 "$build_dir/mission"
 mv -f "$build_dir/mission" "$destination/mission"
 echo "Installed $destination/mission"
