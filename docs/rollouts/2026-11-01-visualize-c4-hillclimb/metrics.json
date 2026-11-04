@@ -1,0 +1,129 @@
+{
+ "source_session": "/Users/aviral/.pi/agent/sessions/--Users-aviral-.herdr-worktrees-dotfiles-fix-visualize-skill--/2026-11-01T11-19-06-440Z_01a196d5-a5c7-768f-90ee-142b1f334f9a.jsonl",
+ "source_sha256": "56eb198642c2034c0fbea5456ff11743c5bad2211026ffc988ce0d3c32abb110",
+ "source_bytes": 15110773,
+ "window": {
+  "first": "2026-11-01T11:20:18.448Z",
+  "last": "2026-11-04T10:23:42.897Z"
+ },
+ "turns": 4292,
+ "owner_turns": 150,
+ "assistant_text_turns": 761,
+ "tool_calls": {
+  "bash": 1240,
+  "subagent": 169,
+  "subagent_message": 146,
+  "edit": 105,
+  "python": 96,
+  "read": 77,
+  "write": 58,
+  "codemode": 21,
+  "worktree": 12,
+  "mermaid": 8,
+  "ask_user_question": 6,
+  "subagents_list": 1,
+  "tool_search": 1,
+  "web_search": 1,
+  "web_fetch": 1
+ },
+ "models": [
+  {
+   "ts": "2026-11-01T11:19:06.865Z",
+   "model": "accounts/fireworks/routers/deepseek-flash-latest",
+   "provider": "fireworks"
+  },
+  {
+   "ts": "2026-11-02T07:51:32.043Z",
+   "model": "gpt-6-astra",
+   "provider": "openai"
+  },
+  {
+   "ts": "2026-11-02T09:28:11.462Z",
+   "model": "accounts/fireworks/routers/deepseek-flash-latest",
+   "provider": "fireworks"
+  },
+  {
+   "ts": "2026-11-02T09:28:28.125Z",
+   "model": "accounts/fireworks/routers/deepseek-v4p1-flash-1017-spot",
+   "provider": "fireworks"
+  },
+  {
+   "ts": "2026-11-02T09:29:04.830Z",
+   "model": "deepseek/deepseek-v4.1-flash-ultrafast",
+   "provider": "opengateway"
+  },
+  {
+   "ts": "2026-11-02T11:00:26.651Z",
+   "model": "accounts/fireworks/routers/deepseek-flash-latest",
+   "provider": "fireworks"
+  },
+  {
+   "ts": "2026-11-02T11:12:03.847Z",
+   "model": "accounts/fireworks/routers/glm-fast-latest",
+   "provider": "fireworks"
+  },
+  {
+   "ts": "2026-11-02T11:12:04.592Z",
+   "model": "accounts/fireworks/routers/kimi-fast-latest",
+   "provider": "fireworks"
+  },
+  {
+   "ts": "2026-11-02T11:12:17.993Z",
+   "model": "deepseek/deepseek-v4.1-flash-ultrafast",
+   "provider": "opengateway"
+  },
+  {
+   "ts": "2026-11-02T11:12:21.704Z",
+   "model": "gpt-6-astra",
+   "provider": "openai"
+  },
+  {
+   "ts": "2026-11-02T11:12:22.588Z",
+   "model": "gpt-6-luna",
+   "provider": "openai"
+  },
+  {
+   "ts": "2026-11-02T11:12:22.776Z",
+   "model": "gpt-6-sol",
+   "provider": "openai"
+  },
+  {
+   "ts": "2026-11-02T11:12:24.500Z",
+   "model": "gpt-6.1-sol",
+   "provider": "openai"
+  },
+  {
+   "ts": "2026-11-02T11:12:25.145Z",
+   "model": "gpt-6.1-terra",
+   "provider": "openai"
+  },
+  {
+   "ts": "2026-11-02T11:12:26.528Z",
+   "model": "accounts/fireworks/routers/deepseek-flash-latest",
+   "provider": "fireworks"
+  },
+  {
+   "ts": "2026-11-02T11:12:42.413Z",
+   "model": "accounts/fireworks/routers/glm-fast-latest",
+   "provider": "fireworks"
+  },
+  {
+   "ts": "2026-11-03T15:06:10.200Z",
+   "model": "accounts/fireworks/routers/deepseek-flash-latest",
+   "provider": "fireworks"
+  },
+  {
+   "ts": "2026-11-03T15:08:36.898Z",
+   "model": "deepseek/deepseek-v4.1-flash-ultrafast",
+   "provider": "opengateway"
+  }
+ ],
+ "compactions": 6,
+ "files": [
+  "transcript.jsonl",
+  "owner-turns.md",
+  "assistant-turns.md",
+  "README.md",
+  "metrics.json"
+ ]
+}
