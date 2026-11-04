@@ -8,5 +8,5 @@ trap 'rm -rf "$build_dir"' EXIT
 cd "$repo_root/go/mission"
 go test ./...
 go vet ./...
-go build -o "$build_dir/mission" .
+go build -o "$build_dir/mission" ./cmd/mission
 MISSION_TEST_BIN="$build_dir/mission" node --test "$repo_root/pi/.pi/agent/extensions/missions/missions.test.mjs"

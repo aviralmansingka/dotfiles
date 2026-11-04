@@ -14,7 +14,7 @@ still follow it.
 Build and preview without changing the main checkout or global Pi configuration:
 
 ```sh
-(cd go/mission && go build -o bin/mission .)
+(cd go/mission && go build -o bin/mission ./cmd/mission)
 ./scripts/pi-missions
 ```
 
