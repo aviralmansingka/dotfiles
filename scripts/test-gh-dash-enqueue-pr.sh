@@ -52,7 +52,9 @@ stderr_file="$test_dir/stderr"
 
 # Fake `gh`: the external boundary. `pr view` serves the pull request state and
 # applies the helper's own --jq filter to it; `pr edit` records and applies the
-# label edit, so a second run reads what the first one wrote.
+# label edit, so a second run reads what the first one wrote. STATE_AFTER_EDIT,
+# when set, replaces the served state right after an edit: that is Mergify
+# dropping the entry between the helper's submit and its report.
 cat > "$bin/gh" <<'FAKE'
 #!/bin/sh
 printf '%s\n' "$*" >> "$GH_LOG"
@@ -83,6 +85,7 @@ case "$1 $2" in
       | (if $remove == "" then . else .labels |= map(select(.name != $remove)) end)
       | .labels |= unique_by(.name)' "$STATE_FILE" > "$STATE_FILE.next"
     mv "$STATE_FILE.next" "$STATE_FILE"
+    if [ -n "${STATE_AFTER_EDIT:-}" ]; then cp "$STATE_AFTER_EDIT" "$STATE_FILE"; fi
     ;;
   *)
     printf 'unexpected gh call: %s\n' "$*" >&2
@@ -96,11 +99,12 @@ fail=0
 status=0
 out=""
 err=""
+after_edit=""
 
 run() { # run the helper with the fake gh on PATH; capture status, stdout, stderr
   status=0
   out=$(PATH="$bin:$PATH" GH_LOG="$log" STATE_FILE="$state_file" \
-    "$helper" "$@" 2>"$stderr_file") || status=$?
+    STATE_AFTER_EDIT="$after_edit" "$helper" "$@" 2>"$stderr_file") || status=$?
   err=$(cat "$stderr_file")
 }
 
@@ -123,6 +127,21 @@ expect_err() {
     *"$1"*) ;;
     *) printf 'FAIL %s: stderr %s does not contain %s\n' "$case_name" "$err" "$1"; fail=1 ;;
   esac
+}
+
+expect_no_out() { # assert the helper claims nothing it did not observe
+  case "$out" in
+    *"$1"*) printf 'FAIL %s: stdout claims %s: %s\n' "$case_name" "$1" "$out"; fail=1 ;;
+  esac
+}
+
+expect_views() { # assert the helper read the pull request exactly N times
+  n=$(grep -c '^pr view' "$log" || :)
+  if [ "${n:-0}" -ne "$1" ]; then
+    printf 'FAIL %s: expected %s "pr view" reads, got %s\n' "$case_name" "$1" "${n:-0}"
+    printf 'calls:\n%s\n' "$(cat "$log")"
+    fail=1
+  fi
 }
 
 expect_no_edit() {
@@ -160,10 +179,16 @@ done_case() {
   if [ "$fail" -eq 0 ]; then printf 'PASS %s\n' "$case_name"; fi
 }
 
-reset() { : > "$log"; printf '%s\n' "$1" > "$state_file"; }
+reset() { : > "$log"; printf '%s\n' "$1" > "$state_file"; after_edit=""; }
 
-labels_json() { # a PR state with the given labels
-  jq -n --args '{state: "OPEN", labels: [$ARGS.positional[] | {name: .}]}' "$@"
+labels_json() { pr_json OPEN MERGEABLE "$@"; }
+
+pr_json() { # pr_json STATE MERGEABLE [label...]
+  local state=$1 mergeable=$2
+  shift 2
+  jq -n --arg state "$state" --arg mergeable "$mergeable" --args \
+    '{state: $state, mergeable: $mergeable, baseRefName: "main",
+      labels: [$ARGS.positional[] | {name: .}]}' "$@"
 }
 
 # 1. Argument validation never reaches gh.
@@ -188,16 +213,37 @@ expect_err "Invalid repository name: dotfiles"
 done_case
 
 # 2. States that need no submit stay no-ops.
-case_name="labelled pr is a no-op"
+#
+# A `queue` label is not proof of a working submit: a dropped entry keeps it.
+# The helper reports the label and points at the queue, and claims no success.
+case_name="stale queue label is reported, not claimed"
 reset "$(labels_json queue)"
 run aviralmansingka/dotfiles 42
 expect_status 0
-expect_out "aviralmansingka/dotfiles#42 is already in the merge queue"
+expect_out "already carries the queue label"
+expect_out "gh pr view 42 --repo aviralmansingka/dotfiles --comments"
+expect_no_out "entered the merge queue"
+expect_no_out "is already in the merge queue"
 expect_no_edit
+expect_views 1
+done_case
+
+# An unmergeable pull request is refused before any label changes, because
+# Mergify would only drop the entry and the human would see nothing happen.
+case_name="conflicting pr is refused"
+reset "$(pr_json OPEN CONFLICTING)"
+run aviralmansingka/dotfiles 42
+expect_status 1
+expect_err "aviralmansingka/dotfiles#42 conflicts with base branch main"
+expect_err "git rebase origin/main"
+expect_no_out "entered the merge queue"
+expect_no_edit
+expect_no_label queue
+expect_views 1
 done_case
 
 case_name="closed pr errors"
-reset '{"state":"CLOSED","labels":[]}'
+reset '{"state":"CLOSED","mergeable":"MERGEABLE","baseRefName":"main","labels":[]}'
 run aviralmansingka/dotfiles 42
 expect_status 1
 expect_err "is not open"
@@ -206,20 +252,34 @@ done_case
 
 # 3. An unlabelled open PR gets the label, and a second submit is a no-op.
 case_name="unlabelled pr gets the label"
-reset '{"state":"OPEN","labels":[]}'
+reset '{"state":"OPEN","mergeable":"MERGEABLE","baseRefName":"main","labels":[]}'
 run aviralmansingka/dotfiles 42
 expect_status 0
 expect_out "entered the merge queue"
 expect_edit "pr edit 42 --repo aviralmansingka/dotfiles --add-label queue"
 expect_label queue
+expect_views 2
 done_case
 
 case_name="second submit is a no-op"
 : > "$log"
 run aviralmansingka/dotfiles 42
 expect_status 0
-expect_out "is already in the merge queue"
+expect_out "already carries the queue label"
 expect_no_edit
+done_case
+
+# Mergify drops an entry it cannot keep. The report follows the read, so the
+# drop is named instead of reported as a success.
+case_name="dropped entry after submit is reported"
+reset '{"state":"OPEN","mergeable":"MERGEABLE","baseRefName":"main","labels":[]}'
+printf '%s\n' "$(labels_json queue dequeued)" > "$test_dir/after"
+after_edit="$test_dir/after"
+run aviralmansingka/dotfiles 42
+expect_status 0
+expect_out "was dropped from the merge queue"
+expect_no_out "entered the merge queue"
+expect_edit "pr edit 42 --repo aviralmansingka/dotfiles --add-label queue"
 done_case
 
 # Mergify's own `queued` label is not the submit, so it must not short-circuit one.
@@ -246,4 +306,4 @@ done_case
 if [ "$fail" -ne 0 ]; then
   exit 1
 fi
-printf 'PASS gh-dash-enqueue-pr: argument guards, labelled and closed no-ops, label submit, second run no-op, dropped resubmit, and the M binding\n'
+printf 'PASS gh-dash-enqueue-pr: argument guards, stale-label and closed reports, conflicting refusal, label submit, second run no-op, dropped resubmit, dropped-after-submit report, and the M binding\n'
