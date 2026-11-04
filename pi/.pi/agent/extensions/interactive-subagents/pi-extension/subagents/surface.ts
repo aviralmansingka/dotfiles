@@ -105,6 +105,8 @@ export const __pollForExitTest__ = surface.__pollForExitTest__;
  *  re-exported directly — every surface carries the identical contract. */
 export const getSubagentPollBounds = herdr.getSubagentPollBounds;
 export type SubagentPollBounds = herdr.SubagentPollBounds;
+/** Durable-run inactivity bound (PI_SUBAGENT_STALL_MS, default 20 min). */
+export const getSubagentStallMs = herdr.getSubagentStallMs;
 
 /** Which surface is active — exposed for diagnostics/tests. */
 export const activeSurface: "herdr" | "rex" | "tmux" | "none" =

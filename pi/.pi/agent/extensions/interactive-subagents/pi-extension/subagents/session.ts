@@ -173,6 +173,10 @@ export interface NameRegistryEntry {
   resultDeliveredAt?: number | null;
   /** Interactive (parking) subagents are steered by the human, not reaped. */
   interactive?: boolean | null;
+  /** Agent frontmatter `auto-exit`. `false` marks a DURABLE run: a restarted
+   *  parent re-adopts it with no wall-clock deadline (adoption defaults a
+   *  missing value to an auto-exit, deadline-bounded run). */
+  autoExit?: boolean | null;
   /** Agent could spawn its own children (orchestrator-class). */
   canSpawnChildren?: boolean | null;
   /** Non-pi CLI runner (e.g. "claude"). Adoption skips these: the liveness

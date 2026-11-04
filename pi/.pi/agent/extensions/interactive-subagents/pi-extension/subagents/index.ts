@@ -27,6 +27,7 @@ import {
   sendAgentPrompt,
   pollForExit,
   getSubagentPollBounds,
+  getSubagentStallMs,
   closeSurface,
   closeTabForPane,
   assertAdoptablePane,
@@ -783,6 +784,23 @@ function resolveResultPresentation(
     );
   }
 
+  if (result.reason === "stalled") {
+    // Durable inactivity. NOT a failure and NOT an exit: the run still owns
+    // its tab, its pane, and its CLI attempt, so nothing was settled.
+    return (
+      `Sub-agent "${name}" stalled after ${formatElapsed(result.elapsed)} — no transcript growth at all ` +
+      `within the PI_SUBAGENT_STALL_MS window.` +
+      `\n\nIt is still alive and still owns its tab, pane, and CLI attempt: nothing failed` +
+      ` and nothing was released.` +
+      (result.summary && !result.summary.startsWith("Sub-agent stalled")
+        ? ` Last harvest:\n\n${result.summary}`
+        : `\n\n${result.summary}`) +
+      `\n\nDo not treat this as an error, a timeout, or a completion. Steer it with` +
+      ` subagent_message({ name: "${name}" }); if the attempt must be released, that is the` +
+      ` human's decision (\`mission reclaim\`), never a settle.`
+    );
+  }
+
   if (result.killed) {
     return (
       `Sub-agent "${name}" pane was closed/killed after ${formatElapsed(result.elapsed)} ` +
@@ -882,6 +900,10 @@ interface RunningSubagent {
   /** Spawner session artifact dir hosting this subagent's registry entry —
    *  the durable running mark is written there on completion. */
   parentArtifactDir?: string;
+  /** A durable run (agent frontmatter `auto-exit: false`) owns its tab, its
+   *  pane, and the CLI attempt its session picked up, so it must never expire
+   *  on wall clock: no watchdog deadline, only a transcript-stall bound. */
+  durable?: boolean;
 }
 
 /** All currently running subagents, keyed by id. */
@@ -905,6 +927,10 @@ const activeWatchers = new Map<string, ActiveWatcher>();
 let watchdogInterval: ReturnType<typeof setInterval> | null = null;
 
 function registerActiveWatcher(running: RunningSubagent, deadline: number): void {
+  // A durable run is never swept: the watchdog exists to bound a wall-clock
+  // wait, and a durable run has none. Skipping registration (never storing
+  // Infinity as a deadline) is what keeps the sweep from aborting it.
+  if (running.durable) return;
   activeWatchers.set(running.id, {
     surface: running.surface,
     deadline,
@@ -954,14 +980,20 @@ function emitFinishedSubagentBackgroundUpdate(
   running: RunningSubagent,
   result: SubagentResult,
 ): void {
-  const failed = result.killed || result.exitCode !== 0 || !!result.errorMessage || !!result.error;
+  // A stall is not a failure: report it as its own state so the chip renders
+  // a stall instead of an error, and never carries an invented exit code.
+  const stalled = result.reason === "stalled";
+  const failed =
+    !stalled && (result.killed || result.exitCode !== 0 || !!result.errorMessage || !!result.error);
   const sessionFile = result.sessionFile ?? running.sessionFile;
-  const error = result.killed
-    ? "pane killed"
-    : result.errorMessage ?? result.error ?? (result.exitCode !== 0 ? `exit code ${result.exitCode}` : undefined);
+  const error = stalled
+    ? undefined
+    : result.killed
+      ? "pane killed"
+      : result.errorMessage ?? result.error ?? (result.exitCode !== 0 ? `exit code ${result.exitCode}` : undefined);
   emitSubagentBackgroundUpdate(pi, running, {
     done: true,
-    status: failed ? "failed" : "completed",
+    status: stalled ? "stalled" : failed ? "failed" : "completed",
     completedAt: Date.now(),
     output: result.summary,
     exitCode: result.exitCode,
@@ -1811,6 +1843,7 @@ async function launchSubagentOnSurface(
       cli: "claude",
       sentinelFile,
       interactive: effectiveInteractive,
+      durable,
       canSpawnChildren: false,
       statusState: createStatusState({
         source: "claude",
@@ -1850,6 +1883,9 @@ async function launchSubagentOnSurface(
   // Snapshot the fully-resolved sandbox beside the session file so a later
   // `subagent_message({ name })` resume can replay the exact same model,
   // identity, cwd, spawn allowlist, and callable-tool restriction.
+  // A durable run (agent frontmatter `auto-exit: false`) owns its tab, its
+  // pane, and the CLI attempt it picks up: it gets no wall-clock deadline.
+  const durable = (agentDefs?.autoExit ?? false) === false;
   const loadout: SubagentLoadout = {
     agent: params.agent ?? null,
     toolAllowlist,
@@ -1972,6 +2008,7 @@ async function launchSubagentOnSurface(
     launchScriptFile,
     activityFile,
     interactive: effectiveInteractive,
+    durable,
     canSpawnChildren: grantSpawning,
     statusState: createStatusState({
       source: "pi",
@@ -2004,6 +2041,9 @@ export function shouldCloseSubagentTab(
   if (!interactive && (result.reason === "timeout" || result.reason === "no-agent")) {
     return true;
   }
+  // A stalled durable run keeps its tab: the CLI attempt it owns must stay
+  // claimable by the live pane, and the human needs the pane to inspect it.
+  if (result.reason === "stalled") return false;
   return !interactive && !result.killed && result.exitCode === 0 && !result.errorMessage;
 }
 
@@ -2015,6 +2055,9 @@ function closeFinishedSubagentSurface(
   running: RunningSubagent,
   result: { killed?: boolean; exitCode: number | null; errorMessage?: string; reason?: string },
 ): void {
+  // A stalled durable run owns its tab, its pane, and its CLI attempt: close
+  // neither the tab nor the root pane, or the attempt outlives its writer.
+  if (result.reason === "stalled") return;
   try {
     if (shouldCloseSubagentTab(running.interactive, result)) {
       closeTabForPane(running.surface);
@@ -2056,7 +2099,7 @@ function registryEntryOwned(sessionFile: string, name: string): boolean {
  *  fresh maxWaitMs window); details.adopted marks the late watch. */
 function adoptSubagentIntoWatchers(
   pi: ExtensionAPI,
-  opts: { artifactDir: string; name: string; entry: { sessionFile: string; interactive?: boolean | null; canSpawnChildren?: boolean | null } },
+  opts: { artifactDir: string; name: string; entry: { sessionFile: string; interactive?: boolean | null; canSpawnChildren?: boolean | null; autoExit?: boolean | null } },
   paneId: string,
 ): RunningSubagent {
   const id = Math.random().toString(16).slice(2, 10);
@@ -2071,6 +2114,9 @@ function adoptSubagentIntoWatchers(
     sessionFile: opts.entry.sessionFile,
     transcriptBaseline: existsSync(opts.entry.sessionFile) ? statSync(opts.entry.sessionFile).size : 0,
     interactive: opts.entry.interactive ?? false,
+    // A registry entry with no autoExit is an auto-exit run; only an explicit
+    // `auto-exit: false` is durable (never store Infinity here — a boolean).
+    durable: opts.entry.autoExit === false,
     canSpawnChildren: opts.entry.canSpawnChildren ?? false,
     parentArtifactDir: opts.artifactDir,
     statusState: createStatusState({ source: "pi", startTimeMs: now }),
@@ -2108,10 +2154,15 @@ function adoptSubagentIntoWatchers(
         },
         { triggerTurn: true, deliverAs: "steer" },
       );
-      updateNameRegistryEntry(opts.artifactDir, running.name, {
-        running: false,
-        resultDeliveredAt: Date.now(),
-      });
+      // A stalled durable run keeps its durable running mark: it stays
+      // adoptable and steerable (never resumed onto a second writer), and
+      // its tab, pane, and CLI attempt stay owned. Nothing is settled.
+      if (result.reason !== "stalled") {
+        updateNameRegistryEntry(opts.artifactDir, running.name, {
+          running: false,
+          resultDeliveredAt: Date.now(),
+        });
+      }
     })
     .catch((err) => {
       // Rejection paths leave the pane closed (the watcher's own catch
@@ -2325,8 +2376,12 @@ async function watchSubagent(
   // The watcher is deadline-bounded twice: pollForExit enforces the deadline
   // itself every tick, and the module watchdog sweeps this registration as
   // belt-and-braces (aborting a watcher wedged inside a pane read).
+  // A durable run gets neither bound — inactivity bounds it instead.
   const bounds = getSubagentPollBounds();
-  const deadline = startTime + bounds.maxWaitMs;
+  // A durable run never expires on wall clock: only its transcript going
+  // quiet (PI_SUBAGENT_STALL_MS) ends the watch, and that verdict keeps the
+  // tab, the pane, and the CLI attempt its session owns.
+  const deadline = running.durable ? Number.POSITIVE_INFINITY : startTime + bounds.maxWaitMs;
   registerActiveWatcher(running, deadline);
 
   try {
@@ -2337,6 +2392,7 @@ async function watchSubagent(
         sessionFile,
         transcriptBaseline: running.transcriptBaseline,
         sentinelFile: running.sentinelFile,
+        ...(running.durable ? { stallMs: getSubagentStallMs() } : {}),
         onTick() {
           observeRunningSubagent(running);
           deliverPendingQuestion(running);
@@ -2354,6 +2410,8 @@ async function watchSubagent(
 
     const elapsed = Math.floor((Date.now() - startTime) / 1000);
     const killed = result.reason === "killed";
+    // A stall is neither a death nor an exit: nothing may be settled.
+    const stalled = result.reason === "stalled";
     // timeout/no-agent carry a null exit code (nothing exited); the result
     // records a failing code for the chip/presentation while `reason` keeps
     // the truthful why.
@@ -2409,11 +2467,15 @@ async function watchSubagent(
         partial = null;
       }
     }
-    const partialAttached = deathReason && partial != null;
+    const partialAttached = (deathReason || stalled) && partial != null;
 
     let summary: string;
     if (killed) {
       summary = "Pane was closed before the subagent reported completion. No result was saved.";
+    } else if (stalled) {
+      summary = partial ??
+        `Sub-agent stalled: no transcript growth within the PI_SUBAGENT_STALL_MS window ` +
+        `after ${formatElapsed(elapsed)}. Its tab and pane stay open.`;
     } else if (deathReason) {
       summary = partial ??
         (result.reason === "timeout"
@@ -2726,6 +2788,9 @@ export default function subagentsExtension(pi: ExtensionAPI) {
           running: true,
           spawnedAt: running.startTime,
           interactive: running.interactive,
+          // A durable run (auto-exit: false) is adopted back with no
+          // wall-clock deadline, so adoption needs the flag on disk.
+          autoExit: !running.durable,
           canSpawnChildren: running.canSpawnChildren ?? false,
           ...(running.cli ? { cli: running.cli } : {}),
         });
@@ -2779,11 +2844,14 @@ export default function subagentsExtension(pi: ExtensionAPI) {
             );
             // Durable completion mark: the registry entry stops being
             // adoptable, so a later restarted parent neither re-delivers
-            // this result nor re-closes an already-closed tab.
-            updateNameRegistryEntry(parentArtifactDir, running.name, {
-              running: false,
-              resultDeliveredAt: Date.now(),
-            });
+            // this result nor re-closes an already-closed tab. A stalled
+            // durable run keeps its mark — nothing was settled.
+            if (result.reason !== "stalled") {
+              updateNameRegistryEntry(parentArtifactDir, running.name, {
+                running: false,
+                resultDeliveredAt: Date.now(),
+              });
+            }
           })
           .catch((err) => {
             updateWidget();
@@ -3266,6 +3334,10 @@ export default function subagentsExtension(pi: ExtensionAPI) {
           running: true,
           spawnedAt: startTime,
           interactive,
+          // Resumed runs are auto-exit runs (resolveResumeLaunchBehavior):
+          // the woken session stops when its turn is done, so its wait is
+          // bounded by the ordinary deadline, never by a stall clock.
+          autoExit: true,
           canSpawnChildren: !!(loadout.spawnable && loadout.spawnable.length > 0),
           resultDeliveredAt: null,
         });
@@ -3291,6 +3363,8 @@ export default function subagentsExtension(pi: ExtensionAPI) {
               summary = newOutput ??
                 (result.reason === "timeout"
                   ? `Resumed session timed out after ${formatElapsed(result.elapsed)}; no new output was harvested.`
+                  : result.reason === "stalled"
+                    ? `Resumed session stalled: no transcript growth within the PI_SUBAGENT_STALL_MS window after ${formatElapsed(result.elapsed)}. Its tab and pane stay open.`
                   : result.reason === "no-agent"
                     ? "Resumed session never started — no pi process ever appeared in its pane. No result was saved."
                     : result.errorMessage
