@@ -2,9 +2,10 @@
 name: research-orchestrator
 description: Map research nodes, send one node to each researcher, and write short sourced lessons
 tools: read, write, edit, grep, find, ls, bash, web_fetch
+model: opengateway/deepseek/deepseek-v4.1-flash-ultrafast
 subagent_agents: researcher
 skills: research, simple
-thinking: high
+thinking: medium
 system-prompt: append
 session-mode: lineage-only
 auto-exit: true

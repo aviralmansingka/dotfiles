@@ -1,7 +1,8 @@
 ---
 name: tuicr-review
 description: Answer the user's tuicr review comments inside the TUI, apply fixes, and return a summary when the review ends
-thinking: high
+thinking: medium
+model: opengateway/deepseek/deepseek-v4.1-flash-ultrafast
 tools: read, write, edit, bash, grep, find, ls, tuicr, tuicr_reply
 system-prompt: append
 auto-exit: true
