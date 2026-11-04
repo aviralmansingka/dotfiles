@@ -132,6 +132,13 @@ them. Reuse an event_id when retrying the same report; change it for a new repor
 The extension records lifecycle metadata and snapshots the transcript separately.
 It does not interpret tool counts, elapsed time, or assistant prose as completion.
 
+Add `"actor": "<name>"` to record a trooper report: the attempt then also lists
+who reported, so the sitrep can name the agent that finished the work. One
+report per trooper stands: a later report from the same name replaces the row,
+so a resumed run leaves its final state. The extension already does this for
+every subagent it sees finish, so an agent only names itself when it reports for
+another.
+
 The step's work subagent writes the required artifact to the exact path returned by
 attach; the session that holds the claim sends that write out and never makes it
 itself. Call `mission {action:"verify"}` to inspect check verdicts and evidence.

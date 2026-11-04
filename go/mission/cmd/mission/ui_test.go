@@ -5,6 +5,7 @@ import (
 	lg "charm.land/lipgloss/v2"
 	"strings"
 	"testing"
+	"time"
 
 	"mission.local/prototype/internal/domain/mission"
 )
@@ -94,7 +95,7 @@ func TestDeskFillsTerminalAtThreeSizes(t *testing.T) {
 		if m.width != size[0] || m.height != size[1] {
 			t.Fatalf("window size ignored: %dx%d", m.width, m.height)
 		}
-		for tab := 0; tab < 4; tab++ {
+		for tab := 0; tab < detailTabs; tab++ {
 			m.tab = tab
 			assertFilled(t, m, size[0], size[1], "q quit")
 		}
@@ -132,7 +133,7 @@ func TestEveryFormFillsTerminalAtThreeSizes(t *testing.T) {
 	}
 	m.form = nil
 	m.width, m.height = 128, 42
-	m.tab = 3
+	m.tab = detailTabs - 1
 	m.startStepEdit()
 	for _, size := range layoutSizes {
 		m.Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
@@ -188,7 +189,11 @@ func TestRenderFitsAndNavigationChangesViews(t *testing.T) {
 		t.Fatal("tab does not move the focus to the details")
 	}
 	m.Update(tea.KeyPressMsg{Code: ']', Text: "]"})
-	if m.tab != 1 || !strings.Contains(stripANSI(m.render()), "session-test") {
+	if m.tab != 1 || !strings.Contains(stripANSI(m.render()), "No trooper reports") {
+		t.Fatal("trooper view missing from the second tab")
+	}
+	m.Update(tea.KeyPressMsg{Code: ']', Text: "]"})
+	if m.tab != 2 || !strings.Contains(stripANSI(m.render()), "session-test") {
 		t.Fatal("attempt view missing session identity")
 	}
 	m.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
@@ -241,7 +246,7 @@ func TestStepsViewAndEditorSaveCustomization(t *testing.T) {
 	m := newDesk(s)
 	m.refresh()
 	m.Update(tea.KeyPressMsg{Code: 's', Text: "s"})
-	if m.tab != 3 || !strings.Contains(stripANSI(m.render()), "nonempty-artifact") {
+	if m.tab != detailTabs-1 || !strings.Contains(stripANSI(m.render()), "nonempty-artifact") {
 		t.Fatal("step list missing defaults")
 	}
 	m.Update(tea.KeyPressMsg{Code: 'e', Text: "e"})
@@ -632,9 +637,9 @@ func TestBracketsWalkEachPaneTabsAndWrap(t *testing.T) {
 			t.Fatalf("[ moved the focus or the detail tab: focus %d tab %d", m.focus, m.tab)
 		}
 	}
-	// The details walk their four views the same way, leaving the filter alone.
+	// The details walk their five views the same way, leaving the filter alone.
 	m.focus, m.tab, m.filter = 1, 0, 3
-	for step, want := range []int{1, 2, 3, 0, 1, 2, 3, 0} {
+	for step, want := range []int{1, 2, 3, 4, 0, 1, 2, 3, 4, 0} {
 		press("]")
 		if m.tab != want {
 			t.Fatalf("] step %d reached view %d, want %d", step+1, m.tab, want)
@@ -643,7 +648,7 @@ func TestBracketsWalkEachPaneTabsAndWrap(t *testing.T) {
 			t.Fatalf("] moved the focus or the filter: focus %d filter %d", m.focus, m.filter)
 		}
 	}
-	for step, want := range []int{3, 2, 1, 0, 3, 2, 1, 0} {
+	for step, want := range []int{4, 3, 2, 1, 0, 4, 3, 2, 1, 0} {
 		press("[")
 		if m.tab != want {
 			t.Fatalf("[ step %d reached view %d, want %d", step+1, m.tab, want)
@@ -666,5 +671,342 @@ func TestBracketsWalkEachPaneTabsAndWrap(t *testing.T) {
 	m.Update(tea.KeyPressMsg{Code: tea.KeyLeft})
 	if m.tab != 0 {
 		t.Fatalf("left did not step the detail views back: %d", m.tab)
+	}
+}
+
+// TestDetailTabStripOrderPinsTheFiveViews pins S02: the strip reads Overview,
+// Troopers, Attempts, Activity, Steps, Troopers sits second, and the strip
+// holds exactly detailTabs names, so a later tab cannot silently drop a view.
+func TestDetailTabStripOrderPinsTheFiveViews(t *testing.T) {
+	if detailTabs != 5 {
+		t.Fatalf("detailTabs is %d, want 5", detailTabs)
+	}
+	s, _ := fixture(t)
+	m := newDesk(s)
+	m.refresh()
+	for tab := 0; tab < detailTabs; tab++ {
+		m.tab = tab
+		plain := stripANSI(m.render())
+		lines := strings.Split(plain, "\n")
+		strip := ""
+		for _, line := range lines {
+			if strings.Contains(line, "Overview") {
+				strip = line
+				break
+			}
+		}
+		if strip == "" {
+			t.Fatalf("tab %d lost the tab strip", tab)
+		}
+		want := []string{"Overview", "Troopers", "Attempts", "Activity", "Steps"}
+		at := -1
+		for _, name := range want {
+			pos := strings.Index(strip[at+1:], name)
+			if pos < 0 {
+				t.Fatalf("tab strip %q lost %q", strip, name)
+			}
+			at += pos + 1
+		}
+		if !strings.Contains(strip, "● "+want[tab]) {
+			t.Fatalf("tab %d is not marked active in %q", tab, strip)
+		}
+	}
+}
+
+// TestTroopersViewRendersReports pins the report rows: a progress call with an
+// actor leaves one row on the second tab with its state glyph, its name, its
+// age, and its summary; the row comes from the active attempt while it runs and
+// from the newest attempt with reports after a fresh attempt takes over.
+func TestTroopersViewRendersReports(t *testing.T) {
+	s, h := fixture(t)
+	c := claimTest(t, s, h)
+	result(t, s, c, "Review this")
+	_, e := s.progress(h, c.Attempt.ID, c.Token, "scout-1", mission.Progress{ID: "e1", Status: "ready", Summary: "Wrote the sitrep report"}, nil)
+	must(t, e)
+	_, e = s.progress(h, c.Attempt.ID, c.Token, "scout-2", mission.Progress{ID: "e2", Status: "blocked", Summary: "Waiting on review", Blocker: "human gate"}, nil)
+	must(t, e)
+	m := newDesk(s)
+	m.refresh()
+	m.width, m.height = 128, 42
+	m.focus, m.tab = 1, 1
+	plain := stripANSI(m.render())
+	for _, want := range []string{"✓", "scout-1", "Wrote the sitrep report", "◆", "scout-2", "Waiting on review"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("trooper view lost %q:\n%s", want, plain)
+		}
+	}
+	if !strings.Contains(plain, "ago") {
+		t.Fatal("trooper rows carry no age")
+	}
+}
+
+// TestReportAttemptFallsBackToNewestReported pins the row source rule in code:
+// the active attempt wins when it holds reports, otherwise the tab falls back
+// to the newest attempt that does — a finished attempt's reports outlive its
+// active slot.
+func TestReportAttemptFallsBackToNewestReported(t *testing.T) {
+	r := mission.Record{State: mission.State{Attempts: []mission.Attempt{
+		{ID: "a1", Sequence: 1, Reports: []mission.Report{{ID: "e1", Trooper: "scout-1", Status: "ready", Summary: "done", At: mission.Now()}}},
+		{ID: "a2", Sequence: 2},
+	}, Active: "a2"}}
+	if a := reportAttempt(r); a == nil || a.ID != "a1" {
+		t.Fatalf("reportAttempt picked %v, want the newest attempt with reports", a)
+	}
+	r.State.Attempts[1].Reports = []mission.Report{{ID: "e2", Trooper: "scout-2", Status: "working", Summary: "resuming", At: mission.Now()}}
+	if a := reportAttempt(r); a == nil || a.ID != "a2" {
+		t.Fatalf("reportAttempt picked %v, want the active attempt's own reports", a)
+	}
+	r.State.Attempts[1].Reports = nil
+	r.State.Active = ""
+	if a := reportAttempt(r); a == nil || a.ID != "a1" {
+		t.Fatalf("reportAttempt picked %v, want reports without an active attempt", a)
+	}
+	r.State.Attempts[0].Reports = nil
+	if a := reportAttempt(r); a != nil {
+		t.Fatalf("reportAttempt picked %v, want nil with no reports anywhere", a)
+	}
+}
+
+// TestTroopersViewEmptyAndNarrow covers the quiet cases: a mission without
+// reports says so instead of drawing nothing, a vault without missions never
+// reaches the view, and a narrow pane clips the summary without overflowing.
+func TestTroopersViewEmptyAndNarrow(t *testing.T) {
+	s, h := fixture(t)
+	m := newDesk(s)
+	m.refresh()
+	m.width, m.height = 128, 42
+	m.focus, m.tab = 1, 1
+	if plain := stripANSI(m.render()); !strings.Contains(plain, "No trooper reports yet") {
+		t.Fatalf("trooper view has no empty state:\n%s", plain)
+	}
+	c := claimTest(t, s, h)
+	result(t, s, c, "Review this")
+	_, e := s.progress(h, c.Attempt.ID, c.Token, "trooper-with-a-long-name", mission.Progress{ID: "e1", Status: "ready", Summary: "A summary long enough to need clipping in any narrow detail pane"}, nil)
+	must(t, e)
+	m.refresh()
+	// Narrow desk: one pane at a time, detailW under the split floor. The
+	// frame stops shrinking at minCols, so the smallest case sits on the floor.
+	for _, size := range [][2]int{{60, 24}, {48, 20}} {
+		m.width, m.height = size[0], size[1]
+		out := m.render()
+		for _, line := range strings.Split(out, "\n") {
+			if lg.Width(line) > m.width {
+				t.Fatalf("trooper view overflows %d columns (%d): %q", m.width, lg.Width(line), line)
+			}
+		}
+		if lg.Height(out) > m.height {
+			t.Fatalf("trooper view overflows %d rows", m.height)
+		}
+	}
+	// The narrow pane keeps the glyph and the name and clips only the summary.
+	m.width, m.height = 60, 24
+	plain := stripANSI(m.render())
+	if !strings.Contains(plain, "✓") || !strings.Contains(plain, "trooper-with-a-long-name") {
+		t.Fatalf("narrow trooper view dropped the row head:\n%s", plain)
+	}
+	if strings.Contains(plain, "need clipping in any narrow detail pane") {
+		t.Fatalf("narrow trooper view did not clip the summary:\n%s", plain)
+	}
+}
+
+// headerPlain renders the desk and returns the stripped header rows: everything
+// above the first blank separator line. The trooper line, when it exists, is
+// the last of them.
+func headerPlain(t *testing.T, m *desk) []string {
+	t.Helper()
+	w, _ := m.innerSize()
+	head := m.headerLines(w)
+	out := make([]string, len(head))
+	for i, line := range head {
+		out[i] = stripANSI(line)
+	}
+	return out
+}
+
+// TestHeaderQuietWithoutReports pins the quiet half of the header contract: a
+// mission whose attempts carry no reports adds no header row at all — no
+// placeholder, no empty brackets — and the desk still fills its frame exactly.
+func TestHeaderQuietWithoutReports(t *testing.T) {
+	s, h := fixture(t)
+	m := newDesk(s)
+	m.refresh()
+	m.width, m.height = 128, 42
+	if lines := headerPlain(t, m); len(lines) != 4 {
+		t.Fatalf("quiet header has %d rows, want 4:\n%v", len(lines), lines)
+	} else {
+		joined := strings.Join(lines, "\n")
+		if strings.Contains(joined, "TROOPER") {
+			t.Fatalf("quiet header grew a trooper row:\n%s", joined)
+		}
+	}
+	// A claim without any progress call leaves the attempt report-free, so
+	// the header stays at its four rows.
+	claimTest(t, s, h)
+	m.refresh()
+	if lines := headerPlain(t, m); len(lines) != 4 {
+		t.Fatalf("header grew to %d rows without a report:\n%v", len(lines), lines)
+	}
+}
+
+// TestHeaderShowsTheNewestTrooper pins the loud half: after two troopers
+// report, the header row names the newest stamp's trooper and its summary, and
+// the full frame still fits its terminal.
+func TestHeaderShowsTheNewestTrooper(t *testing.T) {
+	s, h := fixture(t)
+	c := claimTest(t, s, h)
+	result(t, s, c, "Review this")
+	_, e := s.progress(h, c.Attempt.ID, c.Token, "scout-1", mission.Progress{ID: "e1", Status: "ready", Summary: "First trooper finished"}, nil)
+	must(t, e)
+	_, e = s.progress(h, c.Attempt.ID, c.Token, "scout-2", mission.Progress{ID: "e2", Status: "ready", Summary: "Second trooper finished"}, nil)
+	must(t, e)
+	m := newDesk(s)
+	m.refresh()
+	m.width, m.height = 128, 42
+	lines := headerPlain(t, m)
+	if len(lines) != 5 {
+		t.Fatalf("header has %d rows, want 5 with a trooper line:\n%v", len(lines), lines)
+	}
+	last := lines[len(lines)-1]
+	for _, want := range []string{"TROOPER", "✓", "scout-2", "Second trooper finished"} {
+		if !strings.Contains(last, want) {
+			t.Fatalf("header line %q lost %q", last, want)
+		}
+	}
+	if strings.Contains(last, "scout-1") || strings.Contains(last, "First trooper") {
+		t.Fatalf("header line shows a stale report: %q", last)
+	}
+	plain := stripANSI(m.render())
+	if !strings.Contains(plain, "Second trooper finished") {
+		t.Fatalf("full frame lost the header trooper line:\n%s", plain)
+	}
+}
+
+// TestHeaderBlockedDiffersFromWorking walks one trooper through working,
+// blocked, and a resumed ready finish: the glyph in the header changes with
+// the state — aqua pulse, yellow diamond, green tick — and the resumed ready
+// report replaces the blocked one as the newest line.
+func TestHeaderBlockedDiffersFromWorking(t *testing.T) {
+	s, h := fixture(t)
+	c := claimTest(t, s, h)
+	result(t, s, c, "Review this")
+	m := newDesk(s)
+	m.refresh()
+	m.width, m.height = 128, 42
+	line := func() string {
+		m.refresh()
+		lines := headerPlain(t, m)
+		return lines[len(lines)-1]
+	}
+	_, e := s.progress(h, c.Attempt.ID, c.Token, "scout-1", mission.Progress{ID: "e1", Status: "working", Summary: "Digging into the hooks"}, nil)
+	must(t, e)
+	if l := line(); !strings.Contains(l, "◉") || strings.Contains(l, "◆") {
+		t.Fatalf("working header line %q lacks the aqua pulse", l)
+	}
+	_, e = s.progress(h, c.Attempt.ID, c.Token, "scout-1", mission.Progress{ID: "e2", Status: "blocked", Summary: "Waiting on the human gate", Blocker: "human gate"}, nil)
+	must(t, e)
+	if l := line(); !strings.Contains(l, "◆") || strings.Contains(l, "◉") {
+		t.Fatalf("blocked header line %q lacks the yellow diamond", l)
+	}
+	_, e = s.progress(h, c.Attempt.ID, c.Token, "scout-1", mission.Progress{ID: "e3", Status: "ready", Summary: "Resumed and finished"}, nil)
+	must(t, e)
+	if l := line(); !strings.Contains(l, "✓") || !strings.Contains(l, "Resumed and finished") {
+		t.Fatalf("resumed header line %q is not the finished report", l)
+	}
+}
+
+// TestNewestReportPrefersTheLatestStamp pins the ordering rule on the record
+// itself: reports are keyed by trooper name, so list order is insertion order;
+// newestReport must read the At stamps, let an unparseable stamp sort oldest,
+// and break an exact tie toward the later slot (the row a replace just wrote).
+func TestNewestReportPrefersTheLatestStamp(t *testing.T) {
+	r := mission.Record{State: mission.State{Active: "a1", Attempts: []mission.Attempt{{
+		ID: "a1", Sequence: 1,
+		Reports: []mission.Report{
+			{ID: "e1", Trooper: "scout-1", Status: "ready", At: "2026-11-04T22:00:00Z"},
+			{ID: "e2", Trooper: "scout-2", Status: "working", At: "2026-11-04T22:30:00Z"},
+		},
+	}}}}
+	if rep := newestReport(r); rep == nil || rep.ID != "e2" {
+		t.Fatalf("newestReport picked %v, want e2 (the later stamp)", rep)
+	}
+	// An unparseable stamp sorts oldest, however late it sits in the list.
+	r.State.Attempts[0].Reports = append(r.State.Attempts[0].Reports, mission.Report{ID: "e3", Trooper: "scout-3", Status: "blocked", At: "not-a-stamp"})
+	if rep := newestReport(r); rep == nil || rep.ID != "e2" {
+		t.Fatalf("newestReport picked %v, want e2 (a broken stamp must not win)", rep)
+	}
+	// An exact tie goes to the later slot: the row a replace-in-place wrote.
+	r.State.Attempts[0].Reports[0].At = r.State.Attempts[0].Reports[1].At
+	if rep := newestReport(r); rep == nil || rep.ID != "e2" {
+		t.Fatalf("newestReport picked %v, want e2 (the later slot wins a tie)", rep)
+	}
+}
+
+// TestHeaderUpdatesOnTheRefreshTick proves the no-key-press path end to end:
+// with the desk idle on an empty report, one pulse msg — the same message
+// tea.Tick delivers every two seconds, no key involved — re-reads the vault
+// and the header line appears with the trooper's name and summary.
+func TestHeaderUpdatesOnTheRefreshTick(t *testing.T) {
+	s, h := fixture(t)
+	c := claimTest(t, s, h)
+	result(t, s, c, "Review this")
+	m := newDesk(s)
+	m.refresh()
+	m.width, m.height = 128, 42
+	if lines := headerPlain(t, m); len(lines) != 4 {
+		t.Fatalf("header has %d rows before any report, want 4", len(lines))
+	}
+	_, e := s.progress(h, c.Attempt.ID, c.Token, "scout-1", mission.Progress{ID: "e1", Status: "ready", Summary: "Finished without a key press"}, nil)
+	must(t, e)
+	// Advance the refresh tick the way Bubble Tea would: deliver one pulse.
+	// The tick must come back scheduled, and the same desk must now carry the
+	// line — no key press happened between the two renders.
+	model, cmd := m.Update(pulse(time.Now()))
+	if cmd == nil {
+		t.Fatal("the pulse did not schedule the next tick")
+	}
+	m = model.(*desk)
+	lines := headerPlain(t, m)
+	if len(lines) != 5 {
+		t.Fatalf("header has %d rows after the tick, want 5:\n%v", len(lines), lines)
+	}
+	last := lines[len(lines)-1]
+	for _, want := range []string{"scout-1", "Finished without a key press"} {
+		if !strings.Contains(last, want) {
+			t.Fatalf("header line after the tick lost %q:\n%s", want, last)
+		}
+	}
+}
+
+// TestHeaderLineStaysInsideThePane clips the header line to the pane width:
+// at the 48-column floor and just above it, no rendered row of the frame
+// overflows, and the summary is the part that yields.
+func TestHeaderLineStaysInsideThePane(t *testing.T) {
+	s, h := fixture(t)
+	c := claimTest(t, s, h)
+	result(t, s, c, "Review this")
+	_, e := s.progress(h, c.Attempt.ID, c.Token, "long-trooper-name", mission.Progress{ID: "e1", Status: "ready", Summary: "A summary long enough that any narrow header must clip it somewhere"}, nil)
+	must(t, e)
+	m := newDesk(s)
+	m.refresh()
+	for _, size := range [][2]int{{48, 20}, {60, 24}, {80, 24}} {
+		m.width, m.height = size[0], size[1]
+		out := m.render()
+		for i, line := range strings.Split(out, "\n") {
+			if got := lg.Width(line); got > size[0] {
+				t.Fatalf("%dx%d: row %d is %d columns: %q", size[0], size[1], i+1, got, stripANSI(line))
+			}
+		}
+	}
+	// On the floor the summary yields, the age and the name do not.
+	m.width, m.height = 48, 20
+	plain := stripANSI(m.render())
+	if !strings.Contains(plain, "long-trooper-name") {
+		t.Fatalf("floor-width header dropped the trooper name:\n%s", plain)
+	}
+	if !strings.Contains(plain, "ago") {
+		t.Fatalf("floor-width header dropped the age:\n%s", plain)
+	}
+	if strings.Contains(plain, "any narrow header must clip") {
+		t.Fatalf("floor-width header did not clip the summary:\n%s", plain)
 	}
 }

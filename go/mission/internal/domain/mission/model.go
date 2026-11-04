@@ -141,6 +141,7 @@ type Event struct {
 type Attempt struct {
 	Execution       string         `yaml:"execution,omitempty" json:"execution,omitempty"`
 	Progress        []Progress     `yaml:"progress,omitempty" json:"progress,omitempty"`
+	Reports         []Report       `yaml:"reports,omitempty" json:"reports,omitempty"`
 	Settled         bool           `yaml:"settled,omitempty" json:"settled,omitempty"`
 	ID              string         `yaml:"id" json:"id"`
 	Sequence        int            `yaml:"sequence" json:"sequence"`
@@ -314,6 +315,22 @@ type RuntimeBinding struct {
 	Pane        string `yaml:"pane_id,omitempty" json:"pane_id,omitempty"`
 	Workspace   string `yaml:"workspace_id,omitempty" json:"workspace_id,omitempty"`
 	LaunchID    string `yaml:"launch_id,omitempty" json:"launch_id,omitempty"`
+}
+
+// A Report is one trooper's own line in the attempt: the subagent that did the
+// work, the state it reached, what it wrote, what comes next, and when it
+// finished. The operator records it, so a trooper never holds a vault token.
+// An attempt keeps one report per trooper, replaced by that trooper's later
+// report, so a resumed run leaves its final state and not the one it left
+// behind. `id` is the progress event ID that carried the report, so a repeated
+// or replayed call adds nothing.
+type Report struct {
+	ID      string `yaml:"id" json:"id"`
+	Trooper string `yaml:"trooper" json:"trooper"`
+	Status  string `yaml:"status" json:"status"`
+	Summary string `yaml:"summary" json:"summary"`
+	Next    string `yaml:"next,omitempty" json:"next,omitempty"`
+	At      string `yaml:"at" json:"at"`
 }
 
 type Progress struct {

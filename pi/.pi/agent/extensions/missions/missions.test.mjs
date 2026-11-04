@@ -8,7 +8,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statS
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { MissionBridge, agentCollisionReport, driverEnv, driverStatus, driverTask, herdrError, judgeTask, missionContinues, missionToolBlock, quiescent, repositoryWorkspaces, takenAgentName, trackingFailureBlock, workerAgentName } from "./core.mjs";
+import { MissionBridge, agentCollisionReport, driverEnv, driverStatus, driverTask, droppableReportError, herdrError, judgeTask, missionContinues, missionToolBlock, quiescent, repositoryWorkspaces, takenAgentName, trackingFailureBlock, trooperLine, trooperName, trooperReport, trooperStatus, workerAgentName } from "./core.mjs";
 import { actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
 import { missionLaunchConfig } from "../interactive-subagents/pi-extension/subagents/mission-launch.mjs";
 
@@ -144,6 +144,117 @@ test("agent-name helpers read the Herdr collision and stay inside the name limit
   assert.equal(herdrError("Herdr is not running"),"Herdr is not running");
 });
 
+/** One finished-subagent steer, exactly as the interactive subagents extension
+ *  delivers it: the completion event the missions extension reports. Names are
+ *  pinned in rank case, the way the sitrep records them. */
+const trooperDone = (name, status = "done", over = {}) => ({ customType: "subagent_result", display: true,
+  content: `Sub-agent "${name}" completed (2m).\n\nMapped the lifecycle hooks and listed 12 calls.\n\nFollow up with subagent_message({ name: "${name}", message: "…" })`,
+  details: { name, status, exitCode: 0, elapsed: 120, sessionFile: `/tmp/${name}.jsonl`, ...over } });
+
+/** The `content` resolveResultPresentation builds for every way a subagent can
+ *  end, copied from the templates in
+ *  interactive-subagents/pi-extension/subagents/index.ts. A sitrep row carries
+ *  the trooper's own words, never the presentation's headline or narration. */
+const PRESENTATIONS = {
+  done: [
+    `Sub-agent "trooper-S01" completed (2m).\n\nMapped the lifecycle hooks.\n\nFollow up with subagent_message({ name: "trooper-S01", message: "…" })`,
+    "Mapped the lifecycle hooks.",
+  ],
+  "failed exit": [
+    `Sub-agent "trooper-S01" failed (exit code 1).\n\nTwo fixtures are left.\n\nFollow up with subagent_message({ name: "trooper-S01", message: "…" })`,
+    "Two fixtures are left.",
+  ],
+  "provider error": [
+    `Sub-agent "trooper-S01" failed after 2m (provider/agent error — auto-retry exhausted).\n\nError: provider overload\n\nThe subagent did not produce a result. You can retry by spawning a new subagent or resume the session with subagent_message.\n\nFollow up with subagent_message({ name: "trooper-S01", message: "…" })`,
+    "Error: provider overload",
+  ],
+  killed: [
+    `Sub-agent "trooper-S01" pane was closed/killed after 2m before it reported completion.\n\nHalf the fixtures are written.\n\nAsk the user what to do next: resume it with subagent_message, launch a fresh subagent, or ignore it. Do not infer the missing result.\n\nFollow up with subagent_message({ name: "trooper-S01", message: "…" })`,
+    "Half the fixtures are written.",
+  ],
+  // The death paths put a label in the same paragraph as the headline, or ahead
+  // of the harvest, so the label is not a report either.
+  "timeout with partial": [
+    `Sub-agent "trooper-S01" timed out after 2m and its pane was closed at the PI_SUBAGENT_MAX_WAIT_MS deadline. Partial results attached:\n\nHalf the fixtures are written.\n\nDo not wait further: resume the session with subagent_message (it replays\nwhat was already written) or spawn a fresh subagent.\n\nFollow up with subagent_message({ name: "trooper-S01", message: "…" })`,
+    "Half the fixtures are written.",
+  ],
+  "timeout without harvest": [
+    `Sub-agent "trooper-S01" timed out after 2m and its pane was closed at the PI_SUBAGENT_MAX_WAIT_MS deadline.\n\nSub-agent timed out after 2m; no output was harvested from its session file.\n\nDo not wait further: resume the session with subagent_message (it replays what was already written) or spawn a fresh subagent.\n\nFollow up with subagent_message({ name: "trooper-S01", message: "…" })`,
+    "Sub-agent timed out after 2m; no output was harvested from its session file.",
+  ],
+  "no agent": [
+    `Sub-agent "trooper-S01" never started — no pi process appeared in its pane within the PI_SUBAGENT_STARTUP_GRACE_MS window (the launch itself died; the pane held only a shell).\n\nSub-agent never started — no pi process ever appeared in its pane. No result was saved.\n\nNothing ran, so there is nothing to resume: spawn a fresh subagent instead.\n\nFollow up with subagent_message({ name: "trooper-S01", message: "…" })`,
+    "Sub-agent never started — no pi process ever appeared in its pane. No result was saved.",
+  ],
+  stalled: [
+    `Sub-agent "trooper-S01" stalled after 12m — no transcript growth at all within the PI_SUBAGENT_STALL_MS window.\n\nIt is still alive and still owns its tab, pane, and CLI attempt: nothing failed and nothing was released. Last harvest:\n\nHalfway: 2 of 5 fixtures done.\n\nDo not treat this as an error, a timeout, or a completion. Steer it with subagent_message({ name: "trooper-S01" }); if the attempt must be released, that is the human's decision (\`mission reclaim\`), never a settle.`,
+    "Halfway: 2 of 5 fixtures done.",
+  ],
+  // An orphan finalized at parent restart prefixes its own narration.
+  "orphan finalize": [
+    `Recovered at parent restart — this sub-agent's original watcher died with its parent process; its tab has been closed.\n\nSub-agent "trooper-S01" completed (2m).\n\nRecovered the harvest from its session file.\n\nFollow up with subagent_message({ name: "trooper-S01", message: "…" })`,
+    "Recovered the harvest from its session file.",
+  ],
+};
+
+test("a sitrep line is the trooper's own words, never the presentation around them", () => {
+  for (const [shape, [content, line]] of Object.entries(PRESENTATIONS)) assert.equal(trooperLine(content), line, shape);
+  // Nothing the trooper wrote means no invented line.
+  assert.equal(trooperLine(`Sub-agent "trooper-S01" completed (2m).\n\nFollow up with subagent_message({ name: "trooper-S01", message: "…" })`), "");
+  assert.equal(trooperLine(`Adopted sub-agent "trooper-S01" error: pane vanished`), "");
+  // A trooper that wrote nothing still says something once it is a report.
+  assert.equal(trooperReport({ customType: "subagent_result", details: { name: "trooper-S01" } }).summary, "trooper-S01 finished");
+});
+
+test("a finished subagent becomes one trooper report named by itself", () => {
+  const report = trooperReport(trooperDone("trooper-S01"));
+  assert.equal(report.trooper, "trooper-S01");
+  assert.equal(report.status, "ready");
+  assert.equal(report.summary, "Mapped the lifecycle hooks and listed 12 calls.");
+  assert.equal(report.blocker, undefined);
+  assert.match(report.next, /Read the result/);
+  assert.match(report.id, /^trooper-[0-9a-f]{24}$/);
+  // One ID per completion of one subagent session: the same trooper reported
+  // again — adopted at parent restart, or replayed — takes no second ID, while
+  // a different trooper, or the same trooper after a resume that ended
+  // differently, does.
+  assert.equal(trooperReport(trooperDone("trooper-S01", "agent-gone")).id, report.id);
+  assert.notEqual(trooperReport(trooperDone("sergeant-S01")).id, report.id);
+  assert.notEqual(trooperReport(trooperDone("trooper-S01", "blocked", { errorMessage: "provider overload" })).id, report.id);
+  // The rank label is the subagent's own name, and a judge step records the
+  // judge that finished, not the worker that spawned it.
+  assert.equal(trooperReport(trooperDone("sergeant-S01")).trooper, "sergeant-S01");
+  // Only a completion message reports: hooks, prompts, and absent messages do not.
+  assert.equal(trooperReport({ customType: "mission-context", content: "x" }), null);
+  assert.equal(trooperReport(undefined), null);
+  // An agent profile is not the subagent's name: an unnamed completion reports
+  // nothing instead of borrowing a second vocabulary.
+  assert.equal(trooperReport({ customType: "subagent_result", content: "x", details: { agent: "scout" } }), null);
+  assert.equal(trooperName({}), "");
+  assert.equal(trooperName({ details: { name: "  trooper-S01  " } }), "trooper-S01");
+  // A death is blocked and names its reason, which the CLI requires.
+  const failed = trooperReport(trooperDone("trooper-S01", "error", { errorMessage: "provider overload\nretry exhausted" }));
+  assert.equal(failed.status, "blocked");
+  assert.equal(failed.blocker, "provider overload retry exhausted");
+  assert.match(failed.next, /subagent_message\(\{ name: "trooper-S01" \}\)/);
+  // A stall is not a death: it parks for a human decision.
+  assert.equal(trooperStatus("stalled"), "needs-input");
+  assert.equal(trooperReport(trooperDone("trooper-S01", "stalled")).status, "needs-input");
+  for (const status of ["killed", "timeout", "no-agent"]) assert.equal(trooperStatus(status), "blocked", status);
+  for (const status of ["done", "sentinel", "agent-gone", "completed"]) assert.equal(trooperStatus(status), "ready", status);
+  // A report never becomes a wall of text.
+  assert.equal(trooperLine("a".repeat(400)).length, 160);
+  // Content blocks are flattened the same way: the headline is still not a report.
+  assert.equal(trooperLine([{ type: "text", text: `Sub-agent "trooper-S01" completed (2m).` }, { type: "text", text: "Mapped the lifecycle hooks." }]), "Mapped the lifecycle hooks.");
+  // A report the record can never take is dropped, a transient failure retries.
+  // Only the CLI's own error codes count, never a substring of a message.
+  for (const refusal of ["event_conflict: progress id reused with different content", "stale_attempt: progress needs the active attempt", "attempt_terminal: attempt is settled", "closed: mission dotfiles/x is closed", "not_found: mission dotfiles/x not found", "invalid_handle: handle must be REPO/SLUG"])
+    assert.equal(droppableReportError(refusal), true, refusal);
+  for (const transient of ["io_error: no such file", "unavailable", "Mission CLI returned invalid JSON", "Mission CLI unavailable: spawn mission ENOENT", "usage: progress needs a stable event-id", "the closed attempt not_found event_conflict", "closed the pane"])
+    assert.equal(droppableReportError(transient), false, transient);
+});
+
+
 test("internal mission launch config forwards only non-secret paths", () => {
   const config=missionLaunchConfig({agent:"mission-worker",missionContext:{vault:"/vault",binary:"/bin/mission",stateDir:"/state",MISSION_TOKEN:"secret"}});
   assert.deepEqual(config,{MISSION_VAULT:"/vault",MISSION_BIN:"/bin/mission",MISSION_STATE_DIR:"/state"});
@@ -165,7 +276,7 @@ async function fixture(t, checkpoint=false) {
   delete env.PI_SUBAGENT_NAME;
   // Parent credentials must not leak into requests or any spawned child.
   env.MISSION_TOKEN="unrelated-parent-token";env.MISSION_ATTEMPT="unrelated-parent-attempt";
-  const f={ env, hookFailures:0, hookIDs:[], tabs:[], closes:[], worktrees:[], workspaces:[], calls:[], agents:[], agentCalls:[], started:[], taken:new Set(), startErrors:[], paneBusy:0, prompts:[], waitError:null, promptError:null, sessionFile:null, paneAgents:{} };
+  const f={ env, hookFailures:0, hookIDs:[], reportFailures:0, reportCalls:[], tabs:[], closes:[], worktrees:[], workspaces:[], calls:[], agents:[], agentCalls:[], started:[], taken:new Set(), startErrors:[], paneBusy:0, prompts:[], waitError:null, promptError:null, sessionFile:null, paneAgents:{} };
   /** The Herdr failure envelope herdr prints on stderr when a call fails. */
   const herdrFails=(code,message)=>Error(`Command failed: herdr agent\n${JSON.stringify({error:{code,message},id:"cli:agent:start"})}`);
   const takenErr=name=>herdrFails("agent_name_taken",`agent name ${name} is already used; candidates: pane_id=w-other:p1 workspace_id=w-other status=working`);
@@ -227,6 +338,12 @@ async function fixture(t, checkpoint=false) {
     if(binary===bin && args.includes("hook")) {
       f.hookIDs.push(args[args.indexOf("--event-id")+1]);
       if(f.hookFailures-->0) throw Error("Temporary CLI failure");
+    }
+    // A trooper report rides `progress --actor`; the fixture can lose one call
+    // so the outbox retry is exercised against the real CLI.
+    if(binary===bin && args.includes("progress")) {
+      f.reportCalls.push(args);
+      if(f.reportFailures-->0) throw Error("Temporary CLI failure");
     }
     return (await exec(binary,args,{encoding:"utf8",...options})).stdout;
   };
@@ -295,6 +412,122 @@ test("unacknowledged lifecycle outbox retries the original ID without duplicatio
   await Promise.all([restored.record(f.ctx,{type:"tool-start",tool:"read",summary:"Call A"}),restored.record(f.ctx,{type:"tool-end",tool:"read",summary:"Call B"})]);
   const events=(await restored.call(["show",f.handle])).state.attempts[0].events;
   assert.equal(events.filter(e=>["Call A","Call B"].includes(e.summary)).length,2);
+});
+
+test("a finished subagent leaves one report and a reload adds no duplicate",needsCLI,async t=>{
+  const f=await fixture(t);
+  const factory=await loadFactory();
+  const events={},tools={};
+  const pi={on:(name,fn)=>{events[name]=fn},registerTool:tool=>{tools[tool.name]=tool},registerCommand:()=>{},sendMessage:()=>{}};
+  const ctx={...f.ctx,hasUI:true,ui:{notify:()=>{},setStatus:()=>{}}};
+  factory(pi,{env:f.env,run:f.run});
+  await events.session_start({},ctx);
+  const claim=await tools.mission.execute("attach",{action:"attach",handle:f.handle},null,null,ctx);
+  assert.equal(claim.isError,undefined,claim.content?.[0]?.text);
+  await events.message_end({message:trooperDone("trooper-S01")},ctx);
+  let r=await f.bridge.call(["show",f.handle]);
+  let reports=r.state.attempts[0].reports;
+  assert.equal(reports.length,1);
+  // The recorded name is the subagent's own, in rank case.
+  assert.equal(reports[0].trooper,"trooper-S01");assert.equal(reports[0].status,"ready");
+  assert.equal(reports[0].summary,"Mapped the lifecycle hooks and listed 12 calls.");
+  assert.match(reports[0].at,/Z$/);
+  // The completion reached the CLI as one progress call carrying the trooper.
+  assert.equal(f.reportCalls[0][f.reportCalls[0].indexOf("--actor")+1],"trooper-S01");
+  // Every other message in the session reports nothing.
+  await events.message_end({message:{customType:"mission-context",content:"x"}},ctx);
+  // The same trooper reported again — adopted at parent restart, or re-steered
+  // into this session — is the same report, never a second row.
+  await events.message_end({message:trooperDone("trooper-S01")},ctx);
+  await events.message_end({message:trooperDone("trooper-S01","agent-gone")},ctx);
+  r=await f.bridge.call(["show",f.handle]);
+  assert.equal(r.state.attempts[0].reports.length,1);
+  // A reload replays the record and appends nothing, including for a completion
+  // the outbox already delivered.
+  const restored=new MissionBridge({env:f.env,run:f.run});
+  await restored.restore(ctx);
+  assert.equal(restored.hint.outbox.length,0);
+  await events.message_end({message:trooperDone("trooper-S01")},ctx);
+  r=await f.bridge.call(["show",f.handle]);
+  assert.equal(r.state.attempts[0].reports.length,1);
+  // A judge step records the judge that finished, not the worker that spawned it.
+  await events.message_end({message:trooperDone("sergeant-S01")},ctx);
+  // A dead trooper is blocked and names its reason.
+  await events.message_end({message:trooperDone("trooper-S02","error",{errorMessage:"provider overload"})},ctx);
+  r=await f.bridge.call(["show",f.handle]);
+  assert.deepEqual(r.state.attempts[0].reports.map(x=>[x.trooper,x.status]),[["trooper-S01","ready"],["sergeant-S01","ready"],["trooper-S02","blocked"]]);
+  // The mission tool carries the actor too, so one call reports the trooper.
+  const progress=await tools.mission.execute("progress-call",{action:"progress",status:"working",summary:"Reading the diff",actor:"trooper-S01"},null,null,ctx);
+  assert.equal(progress.isError,undefined,progress.content?.[0]?.text);
+  assert.equal(f.reportCalls.at(-1)[f.reportCalls.at(-1).indexOf("--actor")+1],"trooper-S01");
+  r=await f.bridge.call(["show",f.handle]);
+  // One row per trooper: the later call replaced trooper-S01's row in place.
+  assert.deepEqual(r.state.attempts[0].reports.map(x=>[x.trooper,x.status]),[["trooper-S01","working"],["sergeant-S01","ready"],["trooper-S02","blocked"]]);
+  await events.session_shutdown({},ctx);
+});
+
+test("a resumed trooper's report replaces the state it left behind",needsCLI,async t=>{
+  const f=await fixture(t);
+  const factory=await loadFactory();
+  const events={},tools={};
+  const pi={on:(name,fn)=>{events[name]=fn},registerTool:tool=>{tools[tool.name]=tool},registerCommand:()=>{},sendMessage:()=>{}};
+  const ctx={...f.ctx,hasUI:true,ui:{notify:()=>{},setStatus:()=>{}}};
+  factory(pi,{env:f.env,run:f.run});
+  await events.session_start({},ctx);
+  await tools.mission.execute("attach",{action:"attach",handle:f.handle},null,null,ctx);
+  // The trooper dies of a provider error, then the human resumes the same
+  // subagent session and it finishes the step.
+  const blocked=trooperDone("trooper-S01","error",{errorMessage:"provider overload"});
+  blocked.content=`Sub-agent "trooper-S01" failed after 2m (provider/agent error — auto-retry exhausted).\n\nError: provider overload\n\nThe subagent did not produce a result. You can retry by spawning a new subagent or resume the session with subagent_message.\n\nFollow up with subagent_message({ name: "trooper-S01", message: "…" })`;
+  await events.message_end({message:blocked},ctx);
+  let r=await f.bridge.call(["show",f.handle]);
+  assert.deepEqual(r.state.attempts[0].reports.map(x=>[x.trooper,x.status]),[["trooper-S01","blocked"]]);
+  const blockedID=f.reportCalls.at(-1)[f.reportCalls.at(-1).indexOf("--event-id")+1];
+  // The resume is a second completion of the same trooper: a new report ID, so
+  // the CLI records it instead of refusing it as a conflict, and the attempt
+  // keeps one row holding the final state.
+  await events.message_end({message:trooperDone("trooper-S01")},ctx);
+  r=await f.bridge.call(["show",f.handle]);
+  assert.deepEqual(r.state.attempts[0].reports.map(x=>[x.trooper,x.status,x.summary]),[["trooper-S01","ready","Mapped the lifecycle hooks and listed 12 calls."]]);
+  assert.notEqual(f.reportCalls.at(-1)[f.reportCalls.at(-1).indexOf("--event-id")+1],blockedID);
+  // The replaced row is not lost history: both completions stay in the
+  // append-only progress stream.
+  assert.deepEqual(r.state.attempts[0].progress.map(x=>x.status),["blocked","ready"]);
+  await events.session_shutdown({},ctx);
+});
+
+test("an unacknowledged trooper report retries its original ID once",needsCLI,async t=>{
+  const f=await fixture(t);
+  await f.bridge.action(f.ctx,{action:"attach",handle:f.handle});
+  f.reportFailures=1;
+  await assert.rejects(f.bridge.report(f.ctx,trooperDone("trooper-S01")),/unavailable/);
+  assert.equal(f.bridge.hint.outbox.length,1);
+  const id=f.bridge.hint.outbox[0].report.id;
+  const restored=new MissionBridge({env:f.env,run:f.run});
+  await restored.restore(f.ctx);
+  const r=await restored.call(["show",f.handle]);
+  assert.equal(r.state.attempts[0].reports.length,1);
+  assert.equal(r.state.attempts[0].reports[0].id,id);
+  assert.equal(restored.hint.outbox.length,0);
+  // Two delivery attempts, one report: the retry reused the original ID.
+  assert.equal(f.reportCalls.filter(args=>args.includes(id)).length,2);
+  assert.equal(f.reportCalls.at(-1)[f.reportCalls.at(-1).indexOf("--actor")+1],"trooper-S01");
+});
+
+test("a trooper that finishes after its attempt settled leaves no wedged outbox",needsCLI,async t=>{
+  const f=await fixture(t);
+  const c=await f.bridge.action(f.ctx,{action:"attach",handle:f.handle});
+  writeFileSync(c.artifact,"Step evidence");
+  await f.bridge.action(f.ctx,{action:"finish"});
+  await f.bridge.settled(f.ctx,{aborted:false,outcome:"completed"});
+  assert.equal((await f.bridge.call(["show",f.handle])).state.attempts[0].status,"succeeded");
+  // The subagent finishes after the attempt closed: there is no attempt left to
+  // report on, so the CLI refuses and the report leaves the outbox instead of
+  // retrying forever.
+  await f.bridge.report(f.ctx,trooperDone("trooper-S01-late"));
+  assert.equal(f.bridge.hint.outbox.length,0);assert.equal(f.bridge.error,null);
+  const r=await f.bridge.call(["show",f.handle]);
+  assert.equal(r.state.attempts[0].reports,undefined);
 });
 
 test("failed checks retain ownership and successful correction settles it",needsCLI,async t=>{
