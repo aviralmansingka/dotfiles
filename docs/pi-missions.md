@@ -187,8 +187,9 @@ Credentials and unacknowledged lifecycle events live in
 `~/.local/state/pi-missions`). Files are mode 0600, keyed by vault and session ID.
 Credentials are persisted before claiming, never placed in a prompt, tool result,
 or child environment. Hooks queue locally before delivery and retry with the same IDs.
-Repeated deliveries cannot create duplicate events. CLI failures block further
-tracked tool work until recording recovers. Inactive steps block editing tools.
+Repeated deliveries cannot create duplicate events. A record that cannot be read
+blocks editing tools and degrades read and bash-class tools to a warning, so a
+worker can investigate its own tracking. Inactive steps block editing tools.
 
 Shutdown snapshots the transcript and parks the attempt without releasing its
 owner. Resume the same Pi session file in the mission worktree and primary Herdr
@@ -203,6 +204,15 @@ registry entry: steer it with `herdr agent prompt <pane> <text>`, or resume its
 session file in that pane with Herdr/Sidekick.
 An operator must resolve a missing credential, abandoned launch, or crashed
 verifier; this version has no takeover or lease expiry command.
+
+Every save carries the revision it was loaded from and refuses to replace a
+ledger that already moved (`revision_conflict`), so a record held across a claim
+can never drop that claim. Each mission keeps `journal.jsonl`: one line per save
+with its timestamp, base revision, new revision, attempts, and the command that
+wrote it. A refused save writes a line too. `mission repair REPO/SLUG` replays an
+interrupted step edit and re-admits `attempts/NNN.md` projections that the ledger
+no longer lists. It restores the owning attempt and step, and restores a step
+whose re-admitted attempt passed its checks.
 
 Transcript snapshots are limited to 16 MiB. The vault ledger and cached hook outbox
 are local files, with atomic replacements. Vault synchronization is not a multi-host

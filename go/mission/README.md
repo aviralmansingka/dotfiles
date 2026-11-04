@@ -42,6 +42,13 @@ assume a trusted local adapter. This version does not automatically recover a
 lost credential, replace an owner, clear a crashed verifier, or retry an ambiguous
 launch. Preserve the ledger and inspect the existing owner first.
 
+Every save carries the revision it was loaded from and refuses to replace a
+ledger that already moved; the failure code is `revision_conflict`. The mission
+directory keeps `journal.jsonl`, one line per save with the command, base revision,
+new revision, and attempt count. `mission repair` replays an interrupted step edit
+and re-admits `attempts/NNN.md` projections that the ledger lost, with the owning
+attempt and step restored.
+
 Run `bash scripts/test-missions.sh` from the repository root for Go tests, vet,
 and the Pi adapter contract tests using a real CLI and isolated Git worktrees.
 No model request or live Herdr process is required.

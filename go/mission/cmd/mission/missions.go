@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"mission.local/prototype/internal/domain/mission"
+	"mission.local/prototype/internal/platform"
 )
 
 func validateMission(m mission.Mission) error {
@@ -177,9 +178,73 @@ func (s *Store) list() ([]mission.Record, error) {
 	}
 	return out, nil
 }
-func (s *Store) save(r *mission.Record) error {
+
+// journalEntry records one save attempt. The ledger stays authoritative; the
+// journal shows which command wrote which revision, so a lost revision can be
+// traced to the writer that produced it.
+type journalEntry struct {
+	At       string `json:"at"`
+	Base     int    `json:"base_revision"`
+	Revision int    `json:"revision"`
+	Writer   string `json:"writer"`
+	Attempts int    `json:"attempts"`
+	Result   string `json:"result"`
+}
+
+// writer names the CLI command that produced a save. The revision journal uses
+// it to show which command wrote a revision.
+var writer = "mission"
+
+// writeVerb names one command and, for a group command, its subcommand.
+func writeVerb(cmd string, a platform.Args) string {
+	for _, group := range []string{"step", "checkpoint", "review", "repo"} {
+		if cmd == group && a.At(1) != "" {
+			return "mission " + cmd + " " + a.At(1)
+		}
+	}
+	return "mission " + cmd
+}
+
+// journal appends one line per save. It never fails a save: the ledger is the
+// commit point and the journal is evidence.
+func (s *Store) journal(r *mission.Record, base int, result string) {
+	p, e := s.path(r.Mission.Repo, r.Mission.Slug, "journal.jsonl")
+	if e != nil {
+		return
+	}
+	b, e := json.Marshal(journalEntry{At: mission.Now(), Base: base, Revision: r.State.Revision, Writer: writer, Attempts: len(r.State.Attempts), Result: result})
+	if e != nil {
+		return
+	}
+	f, e := os.OpenFile(p, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
+	if e != nil {
+		return
+	}
+	defer f.Close()
+	_, _ = f.Write(append(b, '\n'))
+}
+
+func (s *Store) save(r *mission.Record) error { return s.saveFrom(r, r.State.Revision-1) }
+
+// saveFrom refuses to replace a ledger that moved after this record was read.
+// A record carries the revision it was loaded from, so a stale snapshot cannot
+// drop an attempt that a claim already saved.
+func (s *Store) saveFrom(r *mission.Record, base int) error {
 	d, e := s.dir(r.Handle)
 	if e != nil {
+		return e
+	}
+	sp := filepath.Join(d, "state.md")
+	if onDisk, e := os.ReadFile(sp); e == nil {
+		var disk mission.State
+		if _, pe := parseMarkdown(onDisk, &disk); pe != nil {
+			return mission.Problem("invalid_note", "state.md cannot be read for the revision check: %v", pe)
+		}
+		if disk.Revision != base {
+			s.journal(r, base, "refused")
+			return mission.Problem("revision_conflict", "the ledger moved to revision %d after this record was read at revision %d; reload and retry", disk.Revision, base)
+		}
+	} else if !os.IsNotExist(e) {
 		return e
 	}
 	b, e := markdown(r.State, stateBody(*r))
@@ -187,9 +252,10 @@ func (s *Store) save(r *mission.Record) error {
 		return e
 	}
 	// state.md is the single commit point; attempt notes and event streams are projections.
-	if e = atomicWrite(filepath.Join(d, "state.md"), b); e != nil {
+	if e = atomicWrite(sp, b); e != nil {
 		return e
 	}
+	s.journal(r, base, "saved")
 	for _, a := range r.State.Attempts {
 		p, e := s.path(r.Mission.Repo, r.Mission.Slug, "attempts", fmt.Sprintf("%03d.md", a.Sequence))
 		if e != nil {

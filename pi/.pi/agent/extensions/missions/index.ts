@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { MissionBridge, missionContinues, missionToolBlock } from "./core.mjs";
+import { MissionBridge, missionContinues, missionToolBlock, trackingFailureBlock } from "./core.mjs";
 import { LABEL_COLUMN, actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
 
 export default function missions(pi: ExtensionAPI, options = {}) {
@@ -53,7 +53,14 @@ export default function missions(pi: ExtensionAPI, options = {}) {
     }
     let current;
     try { await bridge.flush(ctx); current = await bridge.current(ctx); }
-    catch (e: any) { return { block: true, reason: "Mission tracking must recover before work continues: " + e.message }; }
+    catch (e: any) {
+      // A record that cannot be read must not stop the worker from reading it.
+      // Read and bash-class tools degrade to a warning; edits keep blocking.
+      const reason = trackingFailureBlock(event.toolName, e.message);
+      if (reason) return { block: true, reason };
+      ctx.ui.notify("Mission tracking: " + e.message, "warning");
+      return undefined;
+    }
     const reason = missionToolBlock({ toolName: event.toolName, action: event.input?.action, current });
     return reason ? { block: true, reason } : undefined;
   });
