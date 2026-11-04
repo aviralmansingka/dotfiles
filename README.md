@@ -237,11 +237,15 @@ later.
 Use `/cleanup` from a durable parent session in a linked worktree after its work
 ships. The command confirms its worktree, local branch, and configured upstream
 branch, when one exists. It warns about local files, including ignored files, and
-commits absent from upstream. It then deletes those targets and closes Pi. It
-refuses sub-agent sessions, the main checkout, detached HEAD, and protected local
-or upstream branches. The deletions are best-effort: a remote branch, worktree, or
-local branch that is already gone counts as done, a real failure is reported and
-skipped over, and Pi closes either way.
+commits absent from upstream. When a vault mission is bound to the worktree, it
+names the mission handle, warns about steps that did not pass, and closes the
+record with `mission close --force --note "worktree retired by /cleanup"`, so the
+mission stops offering work and never revives the deleted checkout. It then
+deletes those targets and closes Pi. It refuses sub-agent sessions, the main
+checkout, detached HEAD, and protected local or upstream branches. The deletions
+and the mission close are best-effort: a remote branch, worktree, or local branch
+that is already gone counts as done, a real failure is reported and skipped over,
+and Pi closes either way.
 
 The checked-in Pi config intentionally excludes `auth.json`, sessions, caches, and runtime state. MCP credentials should be provided out of band.
 

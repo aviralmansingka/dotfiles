@@ -22,6 +22,15 @@ refused saves included. `mission repair` re-admits an orphaned
 `attempts/NNN.md` projection, restores the owning attempt and step, and keeps a
 passed step passed. The extension tests pin the gate: a tracking record that
 fails degrades read and bash-class tools to a warning and keeps blocking edits.
+
+Close cases pin the retirement contract: close after every step passes, refusal
+of open work that names the unfinished step ids and the `--force` hint, a forced
+close that records its note and timestamp, an idempotent second close that
+returns `already: true`, and live-work commands refused with code `closed` and a
+pointer at a new mission. They also pin that a closed mission never appears as
+ready work, and that `repair` refuses a closed mission without losing its
+replay-or-adopt behavior: the ledger cases above still pass unchanged.
+
 One Go case pins the mission identity: branch `mission/<slug>`, a linked checkout
 under the worktree root, the `branch.<name>.missionOwner` marker, reuse on reland,
 and refusal of an unmarked `mission/<slug>` branch. The extension cases stub
