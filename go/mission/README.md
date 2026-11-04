@@ -30,6 +30,10 @@ Do not change the brief or edit generated state while an attempt is active.
 
 `workspace` prepares or adopts one linked worktree per mission. It accepts a local
 base branch, records the starting commit, and never creates a Herdr workspace.
+`close` retires a mission record: it sets `status: closed` with `closed_at` and a
+note, refuses open work unless you add `--force`, and reports `already: true` on a
+second close. A closed mission refuses every command that needs live work, so it
+never offers work or revives its deleted checkout. `/cleanup` calls it.
 `attach` binds an existing Pi session after checking its file header and worktree.
 `progress` stores status, summary, next action, blocker, and hashed evidence using
 stable event IDs. A `ready` report does not pass a step. `finish` reports completion;

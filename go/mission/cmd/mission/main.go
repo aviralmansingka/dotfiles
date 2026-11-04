@@ -50,6 +50,8 @@ const help = `mission — work that survives the agent
   mission review reopen REPO/SLUG [C01] --note TEXT
       Rebind a review after its evidence changed
   mission retry REPO/SLUG | repair REPO/SLUG
+  mission close REPO/SLUG [--note TEXT] [--force]
+                                           Retire the record; refuses open work
   mission demo --vault ./demo-vault         Seed isolated, simulated records
   mission render --view dashboard --width 128 --height 42 --color
 
@@ -183,6 +185,8 @@ func dispatch(cmd string, a platform.Args, s *Store) (any, error) {
 		return cmdCheckpoint(a, s)
 	case "review":
 		return cmdReview(a, s)
+	case "close":
+		return cmdClose(a, s)
 	case "retry":
 		return cmdRetry(a, s)
 	case "repair":

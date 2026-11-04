@@ -76,6 +76,9 @@ If the Herdr workspace or the checkout is deleted but the `mission/<slug>` branc
 remains, `start` recreates the checkout at the recorded path and re-registers it
 with `herdr worktree open`. It never creates a second branch or checkout. A
 branch checked out elsewhere is reported, not duplicated.
+A closed mission is refused instead: `/cleanup` closes the record when it removes
+the checkout, so a retired mission never revives it. Start a new mission for new
+work.
 Ownership is single-host and exclusive across missions in that vault. Unrelated
 vaults do not share a lock or ownership index.
 

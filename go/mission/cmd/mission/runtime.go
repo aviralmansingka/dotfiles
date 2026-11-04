@@ -241,6 +241,9 @@ func ensureWorktree(checkout, cwd, branch string) error {
 // Existing sessions can adopt their current linked worktree with --cwd.
 func (s *Store) workspace(h, cwd, base, root string) (mission.Record, error) {
 	return s.mutate(h, func(r *mission.Record) error {
+		if e := requireOpen(*r); e != nil {
+			return e
+		}
 		repo, e := s.repo(r.Mission.Repo)
 		if e != nil {
 			return e
@@ -456,6 +459,11 @@ func validatePiSession(p *mission.PiAttachment) error {
 }
 
 func (s *Store) attach(h string, p mission.PiAttachment) (mission.Claim, error) {
+	if r, e := s.load(h); e != nil {
+		return mission.Claim{}, e
+	} else if e = requireOpen(r); e != nil {
+		return mission.Claim{}, e
+	}
 	if e := validatePiSession(&p); e != nil {
 		return mission.Claim{}, e
 	}
@@ -465,6 +473,9 @@ func (s *Store) attach(h string, p mission.PiAttachment) (mission.Claim, error) 
 	e := s.locked(func() error {
 		r, e := s.load(h)
 		if e != nil {
+			return e
+		}
+		if e = requireOpen(r); e != nil {
 			return e
 		}
 		if r.State.Active == "" {
@@ -512,6 +523,9 @@ func (s *Store) piClaim(r mission.Record, a mission.Attempt, token string) missi
 func (s *Store) release(h, launchID string) (map[string]any, error) {
 	released := false
 	r, e := s.mutate(h, func(r *mission.Record) error {
+		if e := requireOpen(*r); e != nil {
+			return e
+		}
 		b := r.State.Runtime
 		if b == nil {
 			return mission.Problem("worktree_required", "prepare a mission workspace first")
@@ -546,6 +560,9 @@ func (s *Store) launch(h, file, launchID string) (map[string]any, error) {
 	}
 	acquired := false
 	r, e := s.mutate(h, func(r *mission.Record) error {
+		if e := requireOpen(*r); e != nil {
+			return e
+		}
 		b := r.State.Runtime
 		if b == nil {
 			return mission.Problem("worktree_required", "prepare a mission workspace first")

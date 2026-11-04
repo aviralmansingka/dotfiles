@@ -128,6 +128,13 @@ func (s *Store) snapshotTranscript(r *mission.Record, a *mission.Attempt) error 
 }
 func (s *Store) finish(h, id, token string, failed bool, note string, observedExit bool, code int, piSettlement ...bool) (mission.Record, error) {
 	settled := len(piSettlement) > 0 && piSettlement[0]
+	opening, e := s.load(h)
+	if e != nil {
+		return opening, e
+	}
+	if e = requireOpen(opening); e != nil {
+		return opening, e
+	}
 	if !failed {
 		r, e := s.load(h)
 		if e != nil {
@@ -161,6 +168,9 @@ func (s *Store) finish(h, id, token string, failed bool, note string, observedEx
 		}
 	}
 	return s.mutate(h, func(r *mission.Record) error {
+		if e := requireOpen(*r); e != nil {
+			return e
+		}
 		a, e := mission.FindAttempt(&r.State, id)
 		if e != nil {
 			return e
@@ -270,6 +280,9 @@ func (s *Store) finish(h, id, token string, failed bool, note string, observedEx
 }
 func (s *Store) retry(h string) (mission.Record, error) {
 	return s.mutate(h, func(r *mission.Record) error {
+		if e := requireOpen(*r); e != nil {
+			return e
+		}
 		if r.State.Active != "" {
 			return mission.Problem("busy", "cannot retry an active attempt")
 		}

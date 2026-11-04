@@ -249,12 +249,19 @@ func (s *Store) repair(h string) (mission.Record, error) {
 			if tx.Handle != h {
 				return mission.Problem("identity_mismatch", "edit journal belongs to another mission")
 			}
+			// A retired mission never replays an edit, even an interrupted one.
+			if e = requireOpen(mission.Record{Handle: h, Mission: tx.Mission, State: tx.State}); e != nil {
+				return e
+			}
 			if r, e = s.applyEdit(tx); e != nil {
 				return e
 			}
 			replayed = true
 		} else if os.IsNotExist(e) {
 			if r, e = s.load(h); e != nil {
+				return e
+			}
+			if e = requireOpen(r); e != nil {
 				return e
 			}
 		} else {

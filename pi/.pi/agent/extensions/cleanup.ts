@@ -2,6 +2,7 @@
  * `/cleanup` — tear down this worktree's session after its work ships.
  *
  * Deletes, in order:
+ *   0. the vault mission record bound to this worktree (`mission close --force`)
  *   1. the configured upstream branch, when one exists
  *   2. the current linked Git worktree
  *   3. the local branch (`git branch -D`, run from the main checkout)
@@ -9,6 +10,11 @@
  * then closes the pi session gracefully via `ctx.shutdown()`. The workspace
  * close runs last, from the shutdown callback, because this session's pane dies
  * with its workspace. Outside Herdr the step is skipped.
+ *
+ * The mission step closes the record first, so a retired mission stops offering
+ * work and cannot revive its deleted checkout on relaunch. The binding comes
+ * from `mission --json list`; without a mission binary, a vault, or a matching
+ * `runtime.cwd`, the step is skipped and says nothing.
  *
  * Refuses to run on the main checkout, on `main`/`master`, or outside a listed
  * linked worktree or a sub-agent session. A confirm dialog lists the exact
@@ -28,7 +34,11 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const GIT_TIMEOUT_MS = 30_000;
 const HERDR_TIMEOUT_MS = 30_000;
+const MISSION_TIMEOUT_MS = 30_000;
 const DEFAULT_HERDR_BIN = "herdr";
+const DEFAULT_MISSION_BIN = "mission";
+/** The note every `/cleanup` close records, so the vault says why. */
+export const MISSION_CLOSE_NOTE = "worktree retired by /cleanup";
 const PROTECTED_BRANCHES = new Set(["main", "master"]);
 
 // --- git helpers -------------------------------------------------------------
@@ -114,6 +124,130 @@ export function herdrContext(
 		bin: bin ? bin : DEFAULT_HERDR_BIN,
 		run,
 	};
+}
+
+// --- mission helpers -----------------------------------------------------------
+
+/** One vault mission bound to this worktree. */
+export interface MissionBinding {
+	/** `repo/slug` handle from `mission --json list`. */
+	handle: string;
+	/** Step ids the ledger has not passed yet; empty when the mission is done. */
+	unfinished: string[];
+}
+
+/** Run the mission CLI and return its stdout. Throw on a non-zero exit. */
+export type MissionRunner = (args: string[]) => string;
+
+export function missionBin(env: NodeJS.ProcessEnv = process.env): string {
+	const bin = env.MISSION_BIN?.trim();
+	return bin ? bin : DEFAULT_MISSION_BIN;
+}
+
+function runMission(args: string[]): string {
+	return execFileSync(missionBin(), args, {
+		encoding: "utf8",
+		timeout: MISSION_TIMEOUT_MS,
+		stdio: ["pipe", "pipe", "pipe"],
+	});
+}
+
+interface ListedRecord {
+	handle?: unknown;
+	mission?: { steps?: unknown };
+	state?: { status?: unknown; steps?: unknown; runtime?: { cwd?: unknown } };
+}
+
+/** Unfinished step ids of one listed record, in mission order. */
+function unfinishedSteps(record: ListedRecord): string[] {
+	const steps = Array.isArray(record.mission?.steps) ? record.mission.steps : [];
+	const states = record.state?.steps;
+	const byId = states && typeof states === "object" ? (states as Record<string, unknown>) : {};
+	return steps
+		.map((step) => (step && typeof step === "object" ? (step as { id?: unknown }).id : undefined))
+		.filter((id): id is string => typeof id === "string" && id !== "")
+		.filter((id) => {
+			const state = byId[id];
+			const status =
+				state && typeof state === "object" ? (state as { status?: unknown }).status : undefined;
+			return status !== "passed";
+		});
+}
+
+/**
+ * Find the mission whose `runtime.cwd` is this worktree.
+ *
+ * No mission binary, no readable vault, or no matching record means there is
+ * nothing to close: the caller skips the step and says nothing. The vault is
+ * never parsed here; the CLI owns its format.
+ */
+export function detectMissionBinding(
+	worktreePath: string,
+	run: MissionRunner = runMission,
+): MissionBinding | null {
+	let listed: string;
+	try {
+		listed = run(["--json", "list"]);
+	} catch {
+		return null;
+	}
+	let payload: { data?: unknown };
+	try {
+		payload = JSON.parse(listed) as { data?: unknown };
+	} catch {
+		return null;
+	}
+	const records = Array.isArray(payload?.data) ? (payload.data as ListedRecord[]) : [];
+	let path: string;
+	try {
+		path = realpathSync(worktreePath);
+	} catch {
+		return null;
+	}
+	for (const record of records) {
+		const handle = typeof record?.handle === "string" ? record.handle : "";
+		const bound = record?.state?.runtime?.cwd;
+		if (!handle || typeof bound !== "string" || bound === "") continue;
+		let boundPath: string;
+		try {
+			boundPath = realpathSync(bound);
+		} catch {
+			continue;
+		}
+		if (boundPath === path) return { handle, unfinished: unfinishedSteps(record) };
+	}
+	return null;
+}
+
+/**
+ * Close the mission record bound to this worktree.
+ *
+ * `--force` is deliberate: cleanup deletes the checkout either way, so the
+ * record must never keep `running` and revive it later. The confirm dialog has
+ * already shown the owner which steps are unfinished.
+ */
+export function closeMission(
+	binding: MissionBinding,
+	run: MissionRunner = runMission,
+): StepResult {
+	let out: string;
+	try {
+		out = run(["--json", "close", binding.handle, "--note", MISSION_CLOSE_NOTE, "--force"]);
+	} catch (error) {
+		const message = errorMessage(error);
+		return { ok: false, already: false, error: message };
+	}
+	let already = false;
+	try {
+		const payload = JSON.parse(out) as { data?: { already?: unknown }; ok?: unknown };
+		if (payload?.ok === false) {
+			return { ok: false, already: false, error: out.trim() || "mission close reported an error" };
+		}
+		already = payload?.data?.already === true;
+	} catch {
+		// A close that exits zero but prints no JSON still closed the record.
+	}
+	return { ok: true, already };
 }
 
 // --- cleanup facts -------------------------------------------------------------
@@ -288,6 +422,7 @@ export function collectCleanupFacts(
 export function buildConfirmMessage(
 	facts: CleanupFacts,
 	workspaceId: string | null = herdrContext().workspaceId,
+	mission: MissionBinding | null = null,
 ): string {
 	const lines = [
 		`Worktree:  ${facts.worktreePath}`,
@@ -297,6 +432,9 @@ export function buildConfirmMessage(
 			: "Remote:    none (local only, never pushed)",
 		`Herdr:     ${workspaceId ? `workspace ${workspaceId} closes too` : "no workspace id, the workspace stays"}`,
 	];
+	if (mission) {
+		lines.push(`Mission:   ${mission.handle} closes too`);
+	}
 	if (facts.upstreamGone) {
 		lines.push("Note:      Remote branch is already gone; local teardown only.");
 	}
@@ -305,6 +443,11 @@ export function buildConfirmMessage(
 	}
 	if (facts.aheadCount !== null && facts.aheadCount > 0) {
 		lines.push(`Warning:   ${facts.aheadCount} commit(s) not on ${facts.remote}/${facts.remoteBranch}.`);
+	}
+	if (mission && mission.unfinished.length > 0) {
+		lines.push(
+			`Warning:   mission steps not passed: ${mission.unfinished.join(", ")} — the record closes anyway.`,
+		);
 	}
 	lines.push("", "The pi session closes after cleanup.");
 	return lines.join("\n");
@@ -319,6 +462,8 @@ export interface StepResult {
 	already: boolean;
 	/** The caller runs this step later; nothing ran here. */
 	pending?: boolean;
+	/** There is nothing to do here, and the report says nothing about it. */
+	skipped?: boolean;
 	/** Why the step did not run. */
 	reason?: string;
 	/** Real failure message, when `ok` is false. */
@@ -330,7 +475,12 @@ export interface CleanupStepReport {
 	worktreeRemoved: boolean;
 	localBranchDeleted: boolean;
 	workspaceClosed: boolean;
+	/** The mission record bound to this worktree is now closed. */
+	missionClosed: boolean;
+	/** Handle of the closed mission, or null when no mission was bound. */
+	missionHandle: string | null;
 	steps: {
+		mission: StepResult;
 		remote: StepResult;
 		worktree: StepResult;
 		branch: StepResult;
@@ -338,8 +488,11 @@ export interface CleanupStepReport {
 	};
 }
 
+/** The git steps. The mission and workspace steps have their own semantics. */
+type GitStep = "remote" | "worktree" | "branch";
+
 /** Git error messages that mean "the thing you asked to delete is not there". */
-const ALREADY_GONE: Record<keyof CleanupStepReport["steps"], RegExp[]> = {
+const ALREADY_GONE: Record<GitStep, RegExp[]> = {
 	remote: [/remote ref does not exist/i, /unable to delete/i, /does not match any/i],
 	worktree: [/is not a working tree/i, /not registered/i],
 	branch: [/branch .* not found/i, /no branch named/i, /branch .* does not exist/i],
@@ -417,11 +570,18 @@ export function closeWorkspace(facts: CleanupFacts, herdr: HerdrContext): StepRe
 	}
 }
 
+/** The mission step needs a binding and a runner; a null binding skips it. */
+export interface MissionContext {
+	binding: MissionBinding | null;
+	run: MissionRunner;
+}
+
 /** Run the destructive steps. Exposed for tests with injected git and Herdr runners. */
 export function executeCleanup(
 	facts: CleanupFacts,
 	run: (cwd: string, args: string[]) => void,
 	herdr: HerdrContext,
+	mission: MissionContext | null = null,
 ): CleanupStepReport {
 	const hasRemote = Boolean(facts.remote && facts.remoteBranch);
 	const report: CleanupStepReport = {
@@ -429,13 +589,23 @@ export function executeCleanup(
 		worktreeRemoved: false,
 		localBranchDeleted: false,
 		workspaceClosed: false,
+		missionClosed: false,
+		missionHandle: mission?.binding?.handle ?? null,
 		steps: {
+			mission: { ok: true, already: false, skipped: true },
 			remote: { ok: true, already: false },
 			worktree: { ok: true, already: false },
 			branch: { ok: true, already: false },
 			workspace: { ok: true, already: false },
 		},
 	};
+
+	// 0. Mission record — first, so the vault never keeps a live record for a
+	// checkout that is about to disappear. No binding means nothing to say.
+	if (mission && mission.binding) {
+		report.steps.mission = closeMission(mission.binding, mission.run);
+		report.missionClosed = report.steps.mission.ok && !report.steps.mission.already;
+	}
 
 	// 1. Remote branch — from the still-existing worktree.
 	if (hasRemote) {
@@ -476,6 +646,19 @@ export function executeCleanup(
 	return report;
 }
 
+/** One phrase for the mission step. A skipped step says nothing at all. */
+export function describeMissionStep(
+	step: StepResult,
+	handle: string | null = null,
+): string {
+	if (step.skipped) return "";
+	const name = handle ? `Mission record ${handle}` : "Mission record";
+	if (step.reason !== undefined) return `${name} not closed: ${step.reason}`;
+	if (!step.ok) return `${name} not closed: ${step.error}`;
+	if (step.already) return `${name} was already closed`;
+	return `${name} closed`;
+}
+
 /** One phrase for the Herdr workspace step. */
 export function describeWorkspaceStep(step: StepResult): string {
 	if (step.reason !== undefined) return `Herdr workspace not closed: ${step.reason}`;
@@ -495,6 +678,8 @@ export function describeCleanupReport(report: CleanupStepReport): string {
 		.filter(Boolean)
 		.join(", ");
 	const notes: string[] = [];
+	const missionNote = describeMissionStep(report.steps.mission, report.missionHandle);
+	if (missionNote) notes.push(missionNote);
 	for (const [label, step] of [
 		["remote branch", report.steps.remote],
 		["worktree", report.steps.worktree],
@@ -527,17 +712,18 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 			const facts = result.facts;
+			const herdr = herdrContext();
+			const mission = detectMissionBinding(facts.worktreePath);
 
 			const confirmed = await ctx.ui.confirm(
 				"Delete worktree and branches?",
-				buildConfirmMessage(facts),
+				buildConfirmMessage(facts, herdr.workspaceId, mission),
 			);
 			if (!confirmed) {
 				ctx.ui.notify("Cleanup cancelled.", "info");
 				return;
 			}
 
-			const herdr = herdrContext();
 			try {
 				// The workspace close waits for the shutdown callback below: this session
 				// lives in that workspace, so the report must reach the screen first.
@@ -547,9 +733,13 @@ export default function (pi: ExtensionAPI) {
 						git(cwd, args);
 					},
 					{ ...herdr, deferClose: true },
+					{ binding: mission, run: runMission },
 				);
 				const failed =
-					!report.steps.remote.ok || !report.steps.worktree.ok || !report.steps.branch.ok;
+					!report.steps.mission.ok ||
+					!report.steps.remote.ok ||
+					!report.steps.worktree.ok ||
+					!report.steps.branch.ok;
 				ctx.ui.notify(describeCleanupReport(report), failed ? "warning" : "info");
 			} catch (error) {
 				// The steps are individually guarded, so this is unexpected — but the

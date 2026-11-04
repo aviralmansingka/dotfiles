@@ -178,6 +178,8 @@ type State struct {
 	Revision    int                   `yaml:"revision" json:"revision"`
 	SpecHash    string                `yaml:"spec_hash" json:"spec_hash"`
 	Status      string                `yaml:"status" json:"status"`
+	ClosedAt    string                `yaml:"closed_at,omitempty" json:"closed_at,omitempty"`
+	CloseNote   string                `yaml:"close_note,omitempty" json:"close_note,omitempty"`
 	Current     string                `yaml:"current_step,omitempty" json:"current_step,omitempty"`
 	Active      string                `yaml:"active_attempt,omitempty" json:"active_attempt,omitempty"`
 	Pending     string                `yaml:"pending_checkpoint,omitempty" json:"pending_checkpoint,omitempty"`
