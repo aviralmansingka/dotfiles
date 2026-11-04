@@ -1,6 +1,16 @@
+// Paths: pi/.pi/agent/extensions/cleanup.ts
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+	chmodSync,
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	realpathSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -90,24 +100,47 @@ try {
 		assert.match(message, /Remote:    team\/origin branch release/);
 		assert.match(message, /3 uncommitted file/);
 		assert.match(message, /2 commit\(s\) not on team\/origin\/release/);
+		assert.match(message, /Herdr:     workspace w8P closes too/);
 		assert.match(message, /session closes/);
 		assert.doesNotMatch(message, /already gone/);
 		assert.doesNotMatch(message, /remote branch is still deleted/);
 	}
 
 	{
-		const message = ext.buildConfirmMessage({
-			worktreePath: "/wt/fix-x",
-			mainPath: "/repo",
-			branch: "fix-x",
-			remote: null,
-			remoteBranch: null,
-			dirtyCount: 0,
-			aheadCount: null,
-			upstreamGone: false,
-		});
+		const message = ext.buildConfirmMessage(
+			{
+				worktreePath: "/wt/fix-x",
+				mainPath: "/repo",
+				branch: "fix-x",
+				remote: null,
+				remoteBranch: null,
+				dirtyCount: 0,
+				aheadCount: null,
+				upstreamGone: false,
+			},
+			"w8P",
+		);
 		assert.match(message, /local only, never pushed/);
+		assert.match(message, /Herdr:     workspace w8P closes too/);
 		assert.doesNotMatch(message, /Warning/);
+	}
+
+	{
+		// Outside Herdr the confirmation says the workspace stays.
+		const message = ext.buildConfirmMessage(
+			{
+				worktreePath: "/wt/fix-x",
+				mainPath: "/repo",
+				branch: "fix-x",
+				remote: null,
+				remoteBranch: null,
+				dirtyCount: 0,
+				aheadCount: null,
+				upstreamGone: false,
+			},
+			null,
+		);
+		assert.match(message, /Herdr:     no workspace id, the workspace stays/);
 	}
 
 	{
@@ -128,6 +161,14 @@ try {
 
 	// --- executeCleanup step order ---------------------------------------------
 
+	// Injected Herdr runner: records the call and never touches the real CLI.
+	const herdrStep = (workspaceId, calls, extra = {}) => ({
+		workspaceId,
+		bin: "herdr",
+		run: (bin, args) => calls.push([bin, args.join(" ")]),
+		...extra,
+	});
+
 	const stepOrderFacts = {
 		worktreePath: "/wt/fix-x",
 		mainPath: "/repo",
@@ -141,21 +182,35 @@ try {
 
 	{
 		const calls = [];
-		const report = ext.executeCleanup(stepOrderFacts, (cwd, args) =>
-			calls.push([cwd, args.join(" ")]),
+		const report = ext.executeCleanup(
+			stepOrderFacts,
+			(cwd, args) => calls.push([cwd, args.join(" ")]),
+			herdrStep("w8P", calls),
 		);
 		assert.deepEqual(
 			calls.map(([, cmd]) => cmd),
-			["push team/origin --delete release", "worktree remove /wt/fix-x", "branch -D fix-x"],
+			[
+				"push team/origin --delete release",
+				"worktree remove /wt/fix-x",
+				"branch -D fix-x",
+				// The workspace close runs last: the close kills this session's pane.
+				"workspace close w8P",
+			],
 		);
 		assert.equal(report.remoteDeleted, true);
 		assert.equal(report.worktreeRemoved, true);
 		assert.equal(report.localBranchDeleted, true);
+		assert.equal(report.workspaceClosed, true);
 		assert.deepEqual(report.steps, {
 			remote: { ok: true, already: false },
 			worktree: { ok: true, already: false },
 			branch: { ok: true, already: false },
+			workspace: { ok: true, already: false },
 		});
+		assert.match(
+			ext.describeCleanupReport(report),
+			/Cleanup done: remote branch, worktree, local branch\. Herdr workspace closed\.$/,
+		);
 	}
 
 	{
@@ -173,6 +228,7 @@ try {
 				upstreamGone: false,
 			},
 			(cwd, args) => calls.push([cwd, args.join(" ")]),
+			herdrStep(null, calls),
 		);
 		assert.deepEqual(
 			calls.map(([, cmd]) => cmd),
@@ -181,6 +237,7 @@ try {
 		assert.equal(report.remoteDeleted, false);
 		assert.equal(report.worktreeRemoved, true);
 		assert.equal(report.localBranchDeleted, true);
+		assert.equal(report.workspaceClosed, false);
 	}
 
 	{
@@ -193,7 +250,7 @@ try {
 					"error: unable to delete 'release': remote ref does not exist",
 				);
 			}
-		});
+		}, herdrStep(null, calls));
 		assert.deepEqual(calls, [
 			"push team/origin --delete release",
 			"worktree remove /wt/fix-x",
@@ -216,7 +273,7 @@ try {
 			if (args[0] === "worktree") {
 				throw new Error(`fatal: '${args[2]}' is not a working tree`);
 			}
-		});
+		}, herdrStep(null, calls));
 		assert.deepEqual(calls, [
 			"push team/origin --delete release",
 			"worktree remove /wt/fix-x",
@@ -233,7 +290,7 @@ try {
 		const report = ext.executeCleanup(stepOrderFacts, (cwd, args) => {
 			calls.push(args.join(" "));
 			if (args[0] === "push") throw new Error("fatal: permission denied");
-		});
+		}, herdrStep(null, calls));
 		assert.deepEqual(calls, [
 			"push team/origin --delete release",
 			"worktree remove /wt/fix-x",
@@ -249,6 +306,148 @@ try {
 			ext.describeCleanupReport(report),
 			/remote branch failed: fatal: permission denied/,
 		);
+	}
+
+	// --- executeCleanup Herdr workspace step -----------------------------------
+
+	{
+		// Outside Herdr there is no workspace id: the step is skipped, not failed.
+		const calls = [];
+		const report = ext.executeCleanup(
+			stepOrderFacts,
+			(cwd, args) => calls.push(args.join(" ")),
+			herdrStep(null, calls),
+		);
+		assert.deepEqual(calls, [
+			"push team/origin --delete release",
+			"worktree remove /wt/fix-x",
+			"branch -D fix-x",
+		]);
+		assert.deepEqual(report.steps.workspace, {
+			ok: true,
+			already: false,
+			reason: "HERDR_WORKSPACE_ID is not set",
+		});
+		assert.equal(report.workspaceClosed, false);
+		assert.equal(report.remoteDeleted, true);
+		assert.equal(report.worktreeRemoved, true);
+		assert.equal(report.localBranchDeleted, true);
+		assert.match(
+			ext.describeCleanupReport(report),
+			/\bHerdr workspace not closed: HERDR_WORKSPACE_ID is not set\.$/,
+		);
+	}
+
+	{
+		// A failing Herdr call is a soft failure: no throw, git results still there.
+		const report = ext.executeCleanup(stepOrderFacts, () => {}, {
+			workspaceId: "w8P",
+			bin: "herdr",
+			run: () => {
+				throw new Error("herdr: connection refused");
+			},
+		});
+		assert.equal(report.steps.workspace.ok, false);
+		assert.equal(report.steps.workspace.already, false);
+		assert.match(report.steps.workspace.error, /connection refused/);
+		assert.equal(report.workspaceClosed, false);
+		assert.equal(report.remoteDeleted, true);
+		assert.equal(report.worktreeRemoved, true);
+		assert.equal(report.localBranchDeleted, true);
+		const line = ext.describeCleanupReport(report);
+		assert.match(line, /Cleanup done: remote branch, worktree, local branch\./);
+		assert.match(line, /Herdr workspace not closed: herdr: connection refused\.$/);
+	}
+
+	{
+		// A missing binary is a soft failure with a readable reason.
+		const report = ext.executeCleanup(stepOrderFacts, () => {}, {
+			workspaceId: "w8P",
+			bin: "/opt/missing/herdr",
+			run: (bin) => {
+				const error = new Error(`spawnSync ${bin} ENOENT`);
+				error.code = "ENOENT";
+				throw error;
+			},
+		});
+		assert.equal(report.steps.workspace.ok, false);
+		assert.equal(report.steps.workspace.error, "/opt/missing/herdr not found");
+		assert.match(
+			ext.describeCleanupReport(report),
+			/Herdr workspace not closed: \/opt\/missing\/herdr not found/,
+		);
+	}
+
+	{
+		// An already-closed workspace is reported as gone, not as a failure.
+		const report = ext.executeCleanup(stepOrderFacts, () => {}, {
+			workspaceId: "w8P",
+			bin: "herdr",
+			run: () => {
+				throw new Error(
+					'herdr workspace close w8P: {"error":{"code":"workspace_not_found","message":"workspace w8P not found"}}',
+				);
+			},
+		});
+		assert.equal(report.steps.workspace.ok, true);
+		assert.equal(report.steps.workspace.already, true);
+		assert.equal(report.workspaceClosed, false);
+		assert.match(ext.describeCleanupReport(report), /Herdr workspace already gone\.$/);
+	}
+
+	{
+		// A workspace that hosts the main checkout is never closed.
+		const calls = [];
+		const mainFacts = { ...stepOrderFacts, worktreePath: "/repo", mainPath: "/repo" };
+		const report = ext.executeCleanup(
+			mainFacts,
+			(cwd, args) => calls.push(args.join(" ")),
+			herdrStep("w1", calls),
+		);
+		assert.equal(calls.some((cmd) => cmd.startsWith("workspace close")), false);
+		assert.deepEqual(report.steps.workspace, {
+			ok: true,
+			already: false,
+			reason: "the workspace hosts the main checkout",
+		});
+		assert.equal(report.workspaceClosed, false);
+		assert.match(
+			ext.describeCleanupReport(report),
+			/Herdr workspace not closed: the workspace hosts the main checkout\.$/,
+		);
+	}
+
+	{
+		// A deferred close runs nothing here: the /cleanup handler closes it later.
+		const calls = [];
+		const report = ext.executeCleanup(
+			stepOrderFacts,
+			(cwd, args) => calls.push(args.join(" ")),
+			herdrStep("w8P", calls, { deferClose: true }),
+		);
+		assert.deepEqual(calls, [
+			"push team/origin --delete release",
+			"worktree remove /wt/fix-x",
+			"branch -D fix-x",
+		]);
+		assert.equal(report.steps.workspace.pending, true);
+		assert.equal(report.workspaceClosed, false);
+		assert.match(ext.describeCleanupReport(report), /Herdr workspace closes next\.$/);
+
+		// Deferred or not, closeWorkspace runs the CLI from the context it gets.
+		const late = [];
+		ext.closeWorkspace(stepOrderFacts, herdrStep("w8P", late));
+		assert.deepEqual(late, [["herdr", "workspace close w8P"]]);
+	}
+
+	{
+		// The environment picks the workspace id and the binary.
+		const fromEnv = ext.herdrContext({ HERDR_WORKSPACE_ID: "w42", HERDR_BIN: "/opt/herdr" });
+		assert.equal(fromEnv.workspaceId, "w42");
+		assert.equal(fromEnv.bin, "/opt/herdr");
+		const empty = ext.herdrContext({});
+		assert.equal(empty.workspaceId, null);
+		assert.equal(empty.bin, "herdr");
 	}
 
 	// --- collectCleanupFacts against a real temp repository --------------------
@@ -369,6 +568,82 @@ try {
 			assert.equal(dirtyResult.facts.dirtyCount, 2);
 
 		} finally {
+			rmSync(repo, { recursive: true, force: true });
+		}
+	}
+
+	// --- /cleanup handler: notify first, then close, then shutdown -------------
+
+	{
+		const run = (cwd, args) =>
+			execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+		const repo = mkdtempSync(join(tmpdir(), "cleanup-handler-"));
+		const log = join(repo, "herdr-calls.log");
+		const stubHerdr = join(repo, "herdr-stub");
+		writeFileSync(stubHerdr, `#!/bin/sh\nprintf '%s\\n' "$*" >> "${log}"\n`);
+		chmodSync(stubHerdr, 0o755);
+		const saved = {
+			workspace: process.env.HERDR_WORKSPACE_ID,
+			bin: process.env.HERDR_BIN,
+			subagent: process.env.PI_SUBAGENT_SESSION,
+		};
+		try {
+			run(repo, ["init", "-q", "-b", "main"]);
+			run(repo, ["config", "user.email", "test@test"]);
+			run(repo, ["config", "user.name", "test"]);
+			writeFileSync(join(repo, "f.txt"), "x");
+			run(repo, ["add", "."]);
+			run(repo, ["commit", "-q", "-m", "init"]);
+			const wt = join(repo, "wt-workspace");
+			run(repo, ["worktree", "add", "-q", "-b", "feat-workspace", wt]);
+
+			// The stub binary stands in for Herdr, so no real workspace can close.
+			process.env.HERDR_WORKSPACE_ID = "wTEST";
+			process.env.HERDR_BIN = stubHerdr;
+			delete process.env.PI_SUBAGENT_SESSION;
+
+			const commands = new Map();
+			ext.default({ registerCommand: (name, command) => commands.set(name, command) });
+			const events = [];
+			const notifications = [];
+			await commands.get("cleanup").handler("", {
+				cwd: wt,
+				ui: {
+					notify: (message, level) => {
+						events.push("notify");
+						notifications.push([message, level]);
+					},
+					confirm: async () => true,
+				},
+				shutdown: () => events.push("shutdown"),
+			});
+
+			// The report and "Closing session." land before the timer fires, and
+			// nothing closes the workspace yet.
+			assert.deepEqual(events, ["notify", "notify"]);
+			assert.equal(existsSync(log), false);
+			assert.equal(notifications[0][1], "info");
+			assert.match(notifications[0][0], /Cleanup done: worktree, local branch\./);
+			assert.match(notifications[0][0], /Herdr workspace closes next\.$/);
+			assert.deepEqual(notifications[1], ["Closing session.", "info"]);
+
+			await new Promise((resolveDelay) => setTimeout(resolveDelay, 1500));
+
+			// The delayed callback closed the workspace, then shut the session down.
+			assert.equal(events.at(-1), "shutdown");
+			assert.equal(events.filter((event) => event === "shutdown").length, 1);
+			assert.deepEqual(readFileSync(log, "utf8").trim().split("\n"), ["workspace close wTEST"]);
+
+			// The git teardown really ran: no worktree, no branch.
+			assert.equal(existsSync(wt), false);
+			assert.equal(run(repo, ["branch", "--list", "feat-workspace"]), "");
+		} finally {
+			if (saved.workspace === undefined) delete process.env.HERDR_WORKSPACE_ID;
+			else process.env.HERDR_WORKSPACE_ID = saved.workspace;
+			if (saved.bin === undefined) delete process.env.HERDR_BIN;
+			else process.env.HERDR_BIN = saved.bin;
+			if (saved.subagent === undefined) delete process.env.PI_SUBAGENT_SESSION;
+			else process.env.PI_SUBAGENT_SESSION = saved.subagent;
 			rmSync(repo, { recursive: true, force: true });
 		}
 	}
