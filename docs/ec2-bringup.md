@@ -161,6 +161,45 @@ aws ec2 terminate-instances --region ap-south-1 --instance-ids <instance-id>
 | The switch fails on a missing flake input | The box has no network, or no `nix-command flakes` feature. Check `curl -sI https://cache.nixos.org` and the `experimental-features` line in `/etc/nix/nix.conf`. |
 | The six units show as `linked` and inactive | That is the intended state on a fresh box. `probe` sets `fleet.services.enableUnits = false`, so the units ship as files with no enablement. |
 
+## The sandbox recipe
+
+`just sandbox` does steps 1 to 4 for you: it measures TLS connect time against
+every enabled region's EC2 endpoint, picks the lowest, resolves the newest
+Ubuntu 24.04 image there, and launches a `t3.micro` with a 30 GiB disk.
+
+```sh
+just sandbox                # 30 minutes, no Nix
+just sandbox --nix          # the same, then install Nix in the background
+just sandbox --minutes 90   # a longer prototype
+just sandbox list           # running sandboxes
+just sandbox down --all     # terminate them now
+```
+
+Three properties worth knowing:
+
+- **It cannot leak.** The launch sets
+  `--instance-initiated-shutdown-behavior terminate`, and the instance's
+  user_data runs `shutdown -P +N`. The box kills itself even if the laptop
+  sleeps or the agent dies. `SANDBOX_MINUTES` changes the default of 30.
+- **The box is the fleet's `probe` host.** Its hostname is `probe` and the ssh
+  alias is `probe`, so `ssh probe` and `just deploy remote probe` work with no
+  extra setup.
+- **It picks a key it can actually use.** It prefers a regional key pair whose
+  private key sits at `~/.ssh/<name>`, `~/.ssh/<name>.pem` or
+  `~/.aws/keypairs/<name>.pem`. `SANDBOX_KEY` overrides the choice.
+  `SANDBOX_REGION` pins the region; `SANDBOX_TYPE` changes the instance type.
+
+`--nix` uses the upstream multi-user installer, not the Determinate one: with
+`--init none` the daemon is absent and a switch dies on
+`/nix/var/nix/db/big-lock`.
+
+The offline test covers the region choice, the key selection, the self-destruct
+minutes, the ssh alias and the terminate call:
+
+```sh
+scripts/test-sandbox.sh      # 29 pass, 0 fail, no network
+```
+
 ## Recorded run (2026-11-05, ap-south-1b)
 
 The steps above were executed once, from a bare instance. The values:

@@ -1,0 +1,293 @@
+#!/usr/bin/env bash
+# Short-lived EC2 sandboxes on vanilla Ubuntu, in the region with the best
+# latency from wherever you are.
+#
+#   scripts/sandbox up [--minutes N] [--nix] [--type t3.micro]
+#   scripts/sandbox list
+#   scripts/sandbox down <instance-id|--all>
+#   scripts/sandbox pricing
+#
+# The 30-minute self-destruct is enforced on the box itself, not by this script:
+# the instance IAM-less user_data runs `shutdown -P +N`, and the instance is
+# launched with `--instance-initiated-shutdown-behavior terminate`. A sleeping
+# laptop or a killed agent therefore cannot leak a running instance.
+set -euo pipefail
+
+AWS="${AWS_CLI:-aws}"
+REGION_PIN="${SANDBOX_REGION:-}"
+MINUTES="${SANDBOX_MINUTES:-30}"
+TYPE="${SANDBOX_TYPE:-t3.micro}"
+DISK_GB="${SANDBOX_DISK_GB:-30}"
+TAG_KEY="nix-fleet-sandbox"
+BOOTSTRAP_NIX=0
+
+die() {
+  printf 'sandbox: %s\n' "$*" >&2
+  exit 1
+}
+
+need_aws() {
+  command -v "$AWS" >/dev/null 2>&1 || die "aws CLI not found (looked for '$AWS')"
+  $AWS sts get-caller-identity >/dev/null 2>&1 || die "no usable AWS credentials"
+}
+
+# ---------------------------------------------------------------- regions ---
+# ICMP is often blocked and slow to time out; a TLS handshake to the regional
+# EC2 endpoint is a direct latency proxy and works everywhere. The /ping path
+# exists on the EC2 API endpoints and returns 200 without signing.
+time_region() { # $1 region -> seconds, or 9 on failure
+  local t
+  t="$(curl -s -o /dev/null -m 3 -w '%{time_connect}' "https://ec2.$1.amazonaws.com/ping" 2>/dev/null || true)"
+  case "$t" in
+  '' | 0 | 0.000*) echo 9 ;;
+  *) echo "$t" ;;
+  esac
+}
+
+best_region() { # -> "region seconds"
+  if [ -n "$REGION_PIN" ]; then
+    echo "$REGION_PIN $(time_region "$REGION_PIN")"
+    return 0
+  fi
+  local regions r t best_r="" best_t=""
+  regions="$($AWS ec2 describe-regions --query 'Regions[].RegionName' --output text | tr '\t' '\n' | sort)"
+  [ -n "$regions" ] || die "could not list regions"
+  while IFS= read -r r; do
+    [ -n "$r" ] || continue
+    t="$(time_region "$r")"
+    if [ -z "$best_t" ] || awk -v a="$t" -v b="$best_t" 'BEGIN{exit !(a<b)}'; then
+      best_r="$r"
+      best_t="$t"
+    fi
+  done <<<"$regions"
+  echo "$best_r $best_t"
+}
+
+newest_ubuntu_ami() { # $1 region -> ami id
+  $AWS ec2 describe-images --region "$1" --owners 099720109477 \
+    --filters 'Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*' \
+    'Name=state,Values=available' \
+    --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+}
+
+# A key pair is required, otherwise the box has no way in. Prefer a name whose
+# private key is already on disk; fall back to the first pair in the region and
+# say so.
+local_key_for() { # $1 key pair name -> path or empty
+  local n="$1" c
+  for c in "$HOME/.ssh/$n" "$HOME/.ssh/$n.pem" "$HOME/.aws/keypairs/$n.pem"; do
+    [ -f "$c" ] && { echo "$c"; return 0; }
+  done
+  return 1
+}
+
+resolve_key() { # $1 region -> "name path"
+  local region="$1" names n path
+  if [ -n "${SANDBOX_KEY:-}" ]; then
+    path="$(local_key_for "$SANDBOX_KEY" || true)"
+    echo "$SANDBOX_KEY ${path:-}"
+    return 0
+  fi
+  names="$($AWS ec2 describe-key-pairs --region "$region" --query 'KeyPairs[].KeyName' --output text | tr '\t' '\n')"
+  [ -n "$names" ] || die "no key pair in $region; create one or set SANDBOX_KEY"
+  while IFS= read -r n; do
+    [ -n "$n" ] || continue
+    if path="$(local_key_for "$n")"; then
+      echo "$n $path"
+      return 0
+    fi
+  done <<<"$names"
+  n="$(head -1 <<<"$names")"
+  printf 'sandbox: no local private key matches a %s key pair; using %s (ssh may fail)\n' \
+    "$region" "$n" >&2
+  echo "$n "
+}
+
+ensure_sg() { # $1 region, $2 vpc -> group id
+  local region="$1" vpc="$2" gid cidr
+  gid="$($AWS ec2 describe-security-groups --region "$region" \
+    --filters "Name=vpc-id,Values=$vpc" "Name=group-name,Values=sandbox-ssh" \
+    --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null || true)"
+  if [ -z "$gid" ] || [ "$gid" = "None" ]; then
+    gid="$($AWS ec2 create-security-group --region "$region" --group-name sandbox-ssh \
+      --description "sandbox: ssh from the owner only" --vpc-id "$vpc" \
+      --query 'GroupId' --output text)"
+  fi
+  cidr="$(curl -s -m 5 https://checkip.amazonaws.com | tr -d '\n')"
+  [ -n "$cidr" ] || die "could not determine your public address"
+  $AWS ec2 authorize-security-group-ingress --region "$region" --group-id "$gid" \
+    --protocol tcp --port 22 --cidr "$cidr/32" >/dev/null 2>&1 || true
+  echo "$gid"
+}
+
+user_data() { # $1 minutes, $2 bootstrap-nix (0|1), $3 disk swap always on
+  cat <<EOF
+#!/bin/bash
+hostnamectl set-hostname probe
+fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap -q /swapfile >/dev/null && swapon /swapfile
+echo "/swapfile none swap sw 0 0" >> /etc/fstab
+if [ "$2" = 1 ]; then
+  # Multi-user, so the daemon owns the store and an unprivileged user can build.
+  # The Determinate installer with --init none does not set the daemon up, and a
+  # switch then dies on /nix/var/nix/db/big-lock.
+  # cloud-init runs user_data with HOME unset and the installer needs it.
+  export HOME=/root
+  exec 3>&1
+  sh <(curl -sL https://nixos.org/nix/install) --daemon --yes \
+    >>/var/log/sandbox-nix.log 2>&1 || echo "nix install failed, see /var/log/sandbox-nix.log"
+  mkdir -p /etc/nix
+  grep -q "^experimental-features" /etc/nix/nix.conf 2>/dev/null || \
+    echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
+  systemctl restart nix-daemon 2>/dev/null || true
+fi
+# Hard stop: the instance terminates itself, whatever the client does.
+shutdown -P +$1
+EOF
+}
+
+wait_running() { # $1 region, $2 id
+  $AWS ec2 wait instance-running --region "$1" --instance-ids "$2"
+}
+
+instance_ip() { # $1 region, $2 id
+  $AWS ec2 describe-instances --region "$1" --instance-ids "$2" \
+    --query 'Reservations[0].Instances[0].PublicIpAddress' --output text
+}
+
+write_ssh_alias() { # $1 alias, $2 ip, $3 key
+  local cfg="$HOME/.ssh/config" alias="$1" ip="$2" key="$3"
+  touch "$cfg"
+  # Replace a previous block with the same alias, keep everything else.
+  if grep -q "^Host $alias\$" "$cfg"; then
+    awk -v a="$alias" '
+      $0 == "Host " a {skip=1; next}
+      skip && /^Host / {skip=0}
+      !skip {print}
+    ' "$cfg" >"$cfg.tmp" && mv "$cfg.tmp" "$cfg"
+  fi
+  cat >>"$cfg" <<EOF
+
+Host $alias
+  Hostname $ip
+  User ubuntu
+  IdentityFile $key
+EOF
+  printf 'ssh alias: %s (ssh %s)\n' "$alias" "$alias"
+}
+
+# ------------------------------------------------------------------- verbs ---
+cmd_up() {
+  need_aws
+  local chosen region seconds ami vpc subnet gid key id ip alias
+  chosen="$(best_region)"
+  region="${chosen% *}"
+  seconds="${chosen#* }"
+  [ "$seconds" != "9" ] || printf 'sandbox: region probing failed, using %s anyway\n' "$region" >&2
+  printf 'region: %s (TLS connect %ss)\n' "$region" "$seconds"
+
+  ami="$(newest_ubuntu_ami "$region")"
+  [ -n "$ami" ] && [ "$ami" != "None" ] || die "no Ubuntu 24.04 image found in $region"
+  printf 'image:  %s\n' "$ami"
+
+  vpc="$($AWS ec2 describe-vpcs --region "$region" --filters Name=is-default,Values=true \
+    --query 'Vpcs[0].VpcId' --output text 2>/dev/null || true)"
+  [ -n "$vpc" ] && [ "$vpc" != "None" ] || vpc="$($AWS ec2 describe-vpcs --region "$region" \
+    --query 'Vpcs[0].VpcId' --output text)"
+  subnet="$($AWS ec2 describe-subnets --region "$region" --filters "Name=vpc-id,Values=$vpc" \
+    --query 'Subnets[0].SubnetId' --output text)"
+  [ -n "$subnet" ] && [ "$subnet" != "None" ] || die "no subnet in $vpc ($region)"
+  gid="$(ensure_sg "$region" "$vpc")"
+  read -r key_name key_path <<<"$(resolve_key "$region")"
+  printf 'key:    %s\n' "$key_name"
+
+  if [ "${SANDBOX_DRY_RUN:-0}" = 1 ]; then
+    printf 'dry run: would launch %s in %s/%s for %s minutes (sg %s, subnet %s)\n' \
+      "$TYPE" "$region" "$subnet" "$MINUTES" "$gid" "$subnet"
+    return 0
+  fi
+
+  id="$($AWS ec2 run-instances --region "$region" --image-id "$ami" --instance-type "$TYPE" \
+    --subnet-id "$subnet" --security-group-ids "$gid" --key-name "$key_name" \
+    --block-device-mappings "DeviceName=/dev/sda1,Ebs={VolumeSize=$DISK_GB,VolumeType=gp3,DeleteOnTermination=true}" \
+    --instance-initiated-shutdown-behavior terminate \
+    --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$TAG_KEY},{Key=$TAG_KEY,Value=1}]" \
+    --user-data "$(user_data "$MINUTES" "$BOOTSTRAP_NIX")" \
+    --query 'Instances[0].InstanceId' --output text)"
+  printf 'instance: %s\n' "$id"
+  wait_running "$region" "$id"
+  ip="$(instance_ip "$region" "$id")"
+  alias="probe"
+  printf 'address: %s\n' "$ip"
+  if [ -n "$key_path" ]; then
+    write_ssh_alias "$alias" "$ip" "$key_path"
+  else
+    printf 'ssh: no local private key for %s; add one or set SANDBOX_KEY\n' "$key_name" >&2
+  fi
+  cat <<EOF
+
+sandbox is up. It is the fleet's probe host: ssh alias probe, hostname probe.
+  region    $region
+  instance  $id
+  address   $ip
+  lifetime  $MINUTES minutes, then the box terminates itself
+  terminate early: scripts/sandbox down $id
+EOF
+  if [ "$BOOTSTRAP_NIX" = 1 ]; then
+    printf '  nix       bootstrapping in the background (about 3 minutes)\n'
+    printf '  then      just deploy remote probe\n'
+  fi
+}
+
+cmd_list() {
+  need_aws
+  $AWS ec2 describe-instances --filters "Name=instance-state-name,Values=pending,running" \
+    "Name=tag-key,Values=$TAG_KEY" \
+    --query 'Reservations[].Instances[].[InstanceId,Placement.AvailabilityZone,InstanceType,LaunchTime,PublicIpAddress]' \
+    --output table
+}
+
+cmd_down() {
+  need_aws
+  local ids=() id
+  for id in "$@"; do
+    if [ "$id" = "--all" ]; then
+      while IFS= read -r id; do
+        [ -n "$id" ] && ids+=("$id")
+      done <<<"$($AWS ec2 describe-instances --filters "Name=instance-state-name,Values=pending,running" \
+        "Name=tag-key,Values=$TAG_KEY" --query 'Reservations[].Instances[].InstanceId' --output text | tr '\t' '\n')"
+    else
+      ids+=("$id")
+    fi
+  done
+  [ "${#ids[@]}" -gt 0 ] || die "nothing to terminate (give an instance id or --all)"
+  # Terminate per region: an id does not carry its region.
+  local region
+  for region in $($AWS ec2 describe-regions --query 'Regions[].RegionName' --output text | tr '\t' '\n'); do
+    $AWS ec2 terminate-instances --region "$region" --instance-ids "${ids[@]}" >/dev/null 2>&1 && \
+      printf 'terminated in %s: %s\n' "$region" "${ids[*]}"
+  done
+}
+
+case "${1:-}" in
+up)
+  shift
+  while [ $# -gt 0 ]; do
+    case "$1" in
+    --minutes) MINUTES="$2"; shift 2 ;;
+    --type) TYPE="$2"; shift 2 ;;
+    --nix) BOOTSTRAP_NIX=1; shift ;;
+    *) die "unknown flag: $1" ;;
+    esac
+  done
+  cmd_up
+  ;;
+list) cmd_list ;;
+down)
+  shift
+  cmd_down "$@"
+  ;;
+*)
+  sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+  exit 2
+  ;;
+esac
