@@ -166,3 +166,18 @@ The local credential/outbox directory must survive a restart. Its loss requires
 operator recovery; this version deliberately has no automatic owner takeover.
 Follow the repository's normal CI validation and shipping workflow.
 Mission checks do not replace it, and agents must not start nested pipelines.
+
+## Retire the mission
+
+A finished mission stays in the vault as a record. Close it when its work ships,
+so the record stops offering work.
+
+```sh
+mission --json close dotfiles/session-progress --note "Shipped in #430"
+```
+
+`close` sets `status: closed`, `closed_at`, and the note. It refuses open work:
+an active attempt, or a step that is not `passed`. Add `--force` to close anyway.
+A second close is safe and returns `already: true`. A closed mission refuses
+`claim`, `pickup`, `launch`, `workspace`, `attach`, `next`, `finish`, `retry`,
+and `repair`. Start a new mission instead.

@@ -22,6 +22,11 @@ func (s *Store) ready(repo string) ([]mission.Work, error) {
 		if repo != "" && r.Mission.Repo != repo {
 			continue
 		}
+		// A closed mission is retired work: `/cleanup` closed its record, so it
+		// never appears as ready work again.
+		if r.State.Status == closedStatus {
+			continue
+		}
 		st, e := mission.NextStep(r.Mission, r.State)
 		if e != nil {
 			continue
@@ -46,6 +51,9 @@ func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*missio
 		token = attachment.Token
 	}
 	r, e := s.mutate(h, func(r *mission.Record) error {
+		if e := requireOpen(*r); e != nil {
+			return e
+		}
 		st, e := mission.NextStep(r.Mission, r.State)
 		if e != nil {
 			return e

@@ -164,6 +164,46 @@ try {
 		assert.doesNotMatch(message, /still deleted/);
 	}
 
+	{
+		// A bound mission is named, and unfinished steps are a warning.
+		const message = ext.buildConfirmMessage(
+			{
+				worktreePath: "/wt/fix-x",
+				mainPath: "/repo",
+				branch: "fix-x",
+				remote: null,
+				remoteBranch: null,
+				dirtyCount: 0,
+				aheadCount: null,
+				upstreamGone: false,
+			},
+			"w8P",
+			{ handle: "dotfiles/nix-fleet", unfinished: ["S02", "S03"] },
+		);
+		assert.match(message, /Mission:   dotfiles\/nix-fleet closes too/);
+		assert.match(message, /mission steps not passed: S02, S03/);
+
+		// A finished mission says nothing about steps.
+		const finishedFacts = {
+			worktreePath: "/wt/fix-x",
+			mainPath: "/repo",
+			branch: "fix-x",
+			remote: null,
+			remoteBranch: null,
+			dirtyCount: 0,
+			aheadCount: null,
+			upstreamGone: false,
+		};
+		const done = ext.buildConfirmMessage(finishedFacts, "w8P", {
+			handle: "dotfiles/nix-fleet",
+			unfinished: [],
+		});
+		assert.match(done, /Mission:   dotfiles\/nix-fleet closes too/);
+		assert.doesNotMatch(done, /steps not passed/);
+		// No binding: the dialog says nothing about a mission.
+		assert.doesNotMatch(ext.buildConfirmMessage(finishedFacts, "w8P"), /Mission:/);
+	}
+
 	// --- executeCleanup step order ---------------------------------------------
 
 	// Injected Herdr runner: records the call and never touches the real CLI.
@@ -207,6 +247,7 @@ try {
 		assert.equal(report.localBranchDeleted, true);
 		assert.equal(report.workspaceClosed, true);
 		assert.deepEqual(report.steps, {
+			mission: { ok: true, already: false, skipped: true },
 			remote: { ok: true, already: false },
 			worktree: { ok: true, already: false },
 			branch: { ok: true, already: false },
@@ -455,6 +496,164 @@ try {
 		assert.equal(empty.bin, "herdr");
 	}
 
+	// --- mission record step ---------------------------------------------------
+
+	const missionDir = mkdtempSync(join(tempRoot, "mission-wt-"));
+	const otherDir = mkdtempSync(join(tempRoot, "mission-other-"));
+	const listedRecord = (cwd, handle = "dotfiles/nix-fleet", stepStatus = { S01: "passed", S02: "pending" }) => ({
+		handle,
+		mission: { steps: [{ id: "S01" }, { id: "S02" }] },
+		state: {
+			status: "running",
+			steps: Object.fromEntries(Object.entries(stepStatus).map(([id, status]) => [id, { status }])),
+			runtime: { cwd },
+		},
+	});
+	const listed = (records) => JSON.stringify({ ok: true, data: records });
+
+	{
+		// The binding is the record whose runtime.cwd is this worktree, by realpath.
+		const calls = [];
+		const binding = ext.detectMissionBinding(missionDir, (args) => {
+			calls.push(args.join(" "));
+			return listed([
+				listedRecord(otherDir),
+				listedRecord(missionDir),
+				// A record with no runtime binding never matches.
+				{ handle: "dotfiles/unbound", mission: { steps: [] }, state: { status: "ready" } },
+			]);
+		});
+		assert.deepEqual(calls, ["--json list"]);
+		assert.deepEqual(binding, { handle: "dotfiles/nix-fleet", unfinished: ["S02"] });
+	}
+
+	{
+		// No matching record, no binary, and unreadable output all skip the step.
+		assert.equal(ext.detectMissionBinding(missionDir, () => listed([listedRecord(otherDir)])), null);
+		assert.equal(
+			ext.detectMissionBinding(missionDir, () => {
+				throw new Error("spawnSync mission ENOENT");
+			}),
+			null,
+		);
+		assert.equal(ext.detectMissionBinding(missionDir, () => "not json"), null);
+		assert.equal(ext.detectMissionBinding(missionDir, () => listed("nope")), null);
+	}
+
+	{
+		// close runs the documented force contract with the cleanup note.
+		const calls = [];
+		const result = ext.closeMission({ handle: "dotfiles/nix-fleet", unfinished: ["S02"] }, (args) => {
+			calls.push(args.join(" "));
+			return JSON.stringify({ ok: true, data: { handle: "dotfiles/nix-fleet", status: "closed" } });
+		});
+		assert.deepEqual(calls, [
+			`--json close dotfiles/nix-fleet --note ${ext.MISSION_CLOSE_NOTE} --force`,
+		]);
+		assert.deepEqual(result, { ok: true, already: false });
+	}
+
+	{
+		// A second close is reported as already closed, never as a failure.
+		const result = ext.closeMission({ handle: "dotfiles/nix-fleet", unfinished: [] }, () =>
+			JSON.stringify({ ok: true, data: { handle: "dotfiles/nix-fleet", status: "closed", already: true } }),
+		);
+		assert.deepEqual(result, { ok: true, already: true });
+	}
+
+	{
+		// A real close failure is recorded with its message.
+		const thrown = ext.closeMission({ handle: "dotfiles/nix-fleet", unfinished: [] }, () => {
+			throw new Error("Error: mission close dotfiles/nix-fleet: vault is locked");
+		});
+		assert.equal(thrown.ok, false);
+		assert.match(thrown.error, /vault is locked/);
+		const refused = ext.closeMission({ handle: "dotfiles/nix-fleet", unfinished: [] }, () =>
+			JSON.stringify({ ok: false, error: { code: "unfinished", message: "still open" } }),
+		);
+		assert.equal(refused.ok, false);
+		assert.match(refused.error, /still open/);
+	}
+
+	{
+		// The mission step runs first, then the git steps, then the workspace.
+		const timeline = [];
+		const report = ext.executeCleanup(
+			stepOrderFacts,
+			(cwd, args) => timeline.push(args.join(" ")),
+			herdrStep("w8P", timeline),
+			{
+				binding: { handle: "dotfiles/nix-fleet", unfinished: [] },
+				run: (args) => {
+					timeline.push(args.join(" "));
+					return JSON.stringify({ ok: true, data: { status: "closed" } });
+				},
+			},
+		);
+		assert.deepEqual(timeline, [
+			`--json close dotfiles/nix-fleet --note ${ext.MISSION_CLOSE_NOTE} --force`,
+			"push team/origin --delete release",
+			"worktree remove /wt/fix-x",
+			"branch -D fix-x",
+			["herdr", "workspace close w8P"],
+		]);
+		assert.deepEqual(report.steps.mission, { ok: true, already: false });
+		assert.equal(report.missionClosed, true);
+		assert.equal(report.missionHandle, "dotfiles/nix-fleet");
+		assert.match(
+			ext.describeCleanupReport(report),
+			/Mission record dotfiles\/nix-fleet closed; Herdr workspace closed\.$/,
+		);
+	}
+
+	{
+		// No binding: the step is skipped and the report says nothing about it.
+		const timeline = [];
+		const report = ext.executeCleanup(
+			stepOrderFacts,
+			(cwd, args) => timeline.push(args.join(" ")),
+			herdrStep("w8P", timeline),
+			{ binding: null, run: () => assert.fail("skipped mission must not run") },
+		);
+		assert.deepEqual(report.steps.mission, { ok: true, already: false, skipped: true });
+		assert.equal(report.missionClosed, false);
+		assert.equal(report.missionHandle, null);
+		assert.doesNotMatch(ext.describeCleanupReport(report), /[Mm]ission/);
+		// Called without a mission context at all, the report is unchanged too.
+		const plain = ext.executeCleanup(stepOrderFacts, () => {}, herdrStep("w8P", []));
+		assert.deepEqual(plain.steps.mission, { ok: true, already: false, skipped: true });
+		assert.doesNotMatch(ext.describeCleanupReport(plain), /[Mm]ission/);
+	}
+
+	{
+		// A failed close is a best-effort step: everything else still runs.
+		const timeline = [];
+		const report = ext.executeCleanup(
+			stepOrderFacts,
+			(cwd, args) => timeline.push(args.join(" ")),
+			herdrStep("w8P", timeline),
+			{
+				binding: { handle: "dotfiles/nix-fleet", unfinished: ["S02"] },
+				run: () => {
+					throw new Error("mission close failed: vault is read-only");
+				},
+			},
+		);
+		assert.equal(report.steps.mission.ok, false);
+		assert.equal(report.missionClosed, false);
+		assert.equal(report.worktreeRemoved, true);
+		assert.deepEqual(timeline, [
+			"push team/origin --delete release",
+			"worktree remove /wt/fix-x",
+			"branch -D fix-x",
+			["herdr", "workspace close w8P"],
+		]);
+		assert.match(
+			ext.describeCleanupReport(report),
+			/Mission record dotfiles\/nix-fleet not closed: mission close failed: vault is read-only/,
+		);
+	}
+
 	// --- collectCleanupFacts against a real temp repository --------------------
 
 	{
@@ -650,6 +849,156 @@ try {
 			if (saved.subagent === undefined) delete process.env.PI_SUBAGENT_SESSION;
 			else process.env.PI_SUBAGENT_SESSION = saved.subagent;
 			rmSync(repo, { recursive: true, force: true });
+		}
+	}
+
+	// --- /cleanup handler: the mission record closes with the worktree --------
+
+	{
+		const gitRun = (cwd, args) =>
+			execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+		const handlerRepo = () => {
+			const repo = mkdtempSync(join(tmpdir(), "cleanup-mission-"));
+			gitRun(repo, ["init", "-q", "-b", "main"]);
+			gitRun(repo, ["config", "user.email", "test@test"]);
+			gitRun(repo, ["config", "user.name", "test"]);
+			writeFileSync(join(repo, "f.txt"), "x");
+			gitRun(repo, ["add", "."]);
+			gitRun(repo, ["commit", "-q", "-m", "init"]);
+			const wt = join(repo, "wt-mission");
+			gitRun(repo, ["worktree", "add", "-q", "-b", "feat-mission", wt]);
+			return { repo, wt };
+		};
+		// A stub `mission` on PATH stands in for the real CLI: it logs its
+		// arguments, answers `--json list`, and answers the close call.
+		const stubMission = (name, { records, closeFails = false }) => {
+			const dir = mkdtempSync(join(tempRoot, `mission-bin-${name}-`));
+			const log = join(dir, "mission-calls.log");
+			const list = join(dir, "mission-list.json");
+			writeFileSync(list, JSON.stringify({ ok: true, data: records }));
+			const body = JSON.stringify({ ok: true, data: { handle: "dotfiles/nix-fleet", status: "closed" } });
+			const tail = closeFails
+				? `printf '%s' '${body}' >&2\nexit 1\n`
+				: `printf '%s' '${body}'\n`;
+			writeFileSync(
+				join(dir, "mission"),
+				`#!/bin/sh\nprintf '%s\\n' "$*" >> "${log}"\nif [ "$2" = "list" ]; then cat "${list}"; exit 0; fi\n${tail}`,
+			);
+			chmodSync(join(dir, "mission"), 0o755);
+			return { dir, log };
+		};
+		const runHandler = async (wt) => {
+			const commands = new Map();
+			ext.default({ registerCommand: (name, command) => commands.set(name, command) });
+			const events = [];
+			const notifications = [];
+			const confirms = [];
+			await commands.get("cleanup").handler("", {
+				cwd: wt,
+				ui: {
+					notify: (message, level) => {
+						events.push("notify");
+						notifications.push([message, level]);
+					},
+					confirm: async (_title, message) => {
+						events.push("confirm");
+						confirms.push(message);
+						return true;
+					},
+				},
+				shutdown: () => events.push("shutdown"),
+			});
+			// Let the deferred workspace close and shutdown run before cleanup.
+			await new Promise((resolveDelay) => setTimeout(resolveDelay, 900));
+			return { events, notifications, confirms };
+		};
+		const saved = {
+			path: process.env.PATH,
+			workspace: process.env.HERDR_WORKSPACE_ID,
+			missionBin: process.env.MISSION_BIN,
+			subagent: process.env.PI_SUBAGENT_SESSION,
+		};
+		try {
+			delete process.env.HERDR_WORKSPACE_ID;
+			delete process.env.MISSION_BIN;
+			delete process.env.PI_SUBAGENT_SESSION;
+
+			// Case 1: a bound mission with an unfinished step is named, then closed.
+			{
+				const { repo, wt } = handlerRepo();
+				const stub = stubMission("bound", {
+					records: [listedRecord(realpathSync(wt), "dotfiles/nix-fleet")],
+				});
+				process.env.PATH = `${stub.dir}:${saved.path}`;
+				try {
+					const { notifications, confirms } = await runHandler(wt);
+					assert.match(confirms[0], /Mission:   dotfiles\/nix-fleet closes too/);
+					assert.match(confirms[0], /mission steps not passed: S02/);
+					assert.match(notifications[0][0], /Mission record dotfiles\/nix-fleet closed/);
+					assert.match(notifications[0][0], /Cleanup done: worktree, local branch\./);
+					assert.equal(notifications[0][1], "info");
+					const calls = readFileSync(stub.log, "utf8").trim().split("\n");
+					assert.deepEqual(calls, [
+						"--json list",
+						`--json close dotfiles/nix-fleet --note ${ext.MISSION_CLOSE_NOTE} --force`,
+					]);
+					assert.equal(existsSync(wt), false);
+					assert.equal(gitRun(repo, ["branch", "--list", "feat-mission"]), "");
+				} finally {
+					rmSync(repo, { recursive: true, force: true });
+				}
+			}
+
+			// Case 2: a failed close is reported, and the worktree still goes.
+			{
+				const { repo, wt } = handlerRepo();
+				const stub = stubMission("failing", {
+					records: [listedRecord(realpathSync(wt), "dotfiles/nix-fleet")],
+					closeFails: true,
+				});
+				process.env.PATH = `${stub.dir}:${saved.path}`;
+				try {
+					const { notifications } = await runHandler(wt);
+					assert.equal(notifications[0][1], "warning");
+					assert.match(
+						notifications[0][0],
+						/Mission record dotfiles\/nix-fleet not closed: .*dotfiles\/nix-fleet/,
+					);
+					assert.deepEqual(readFileSync(stub.log, "utf8").trim().split("\n"), [
+						"--json list",
+						`--json close dotfiles/nix-fleet --note ${ext.MISSION_CLOSE_NOTE} --force`,
+					]);
+					assert.equal(existsSync(wt), false);
+					assert.equal(gitRun(repo, ["branch", "--list", "feat-mission"]), "");
+				} finally {
+					rmSync(repo, { recursive: true, force: true });
+				}
+			}
+
+			// Case 3: no binding for this worktree means no close and no mention.
+			{
+				const { repo, wt } = handlerRepo();
+				const stub = stubMission("unbound", { records: [listedRecord(otherDir)] });
+				process.env.PATH = `${stub.dir}:${saved.path}`;
+				try {
+					const { notifications, confirms } = await runHandler(wt);
+					assert.doesNotMatch(confirms[0], /Mission:/);
+					assert.doesNotMatch(notifications[0][0], /[Mm]ission/);
+					assert.deepEqual(readFileSync(stub.log, "utf8").trim().split("\n"), ["--json list"]);
+					assert.equal(existsSync(wt), false);
+				} finally {
+					rmSync(repo, { recursive: true, force: true });
+				}
+			}
+		} finally {
+			if (saved.path === undefined) delete process.env.PATH;
+			else process.env.PATH = saved.path;
+			if (saved.workspace === undefined) delete process.env.HERDR_WORKSPACE_ID;
+			else process.env.HERDR_WORKSPACE_ID = saved.workspace;
+			if (saved.missionBin === undefined) delete process.env.MISSION_BIN;
+			else process.env.MISSION_BIN = saved.missionBin;
+			if (saved.subagent === undefined) delete process.env.PI_SUBAGENT_SESSION;
+			else process.env.PI_SUBAGENT_SESSION = saved.subagent;
 		}
 	}
 

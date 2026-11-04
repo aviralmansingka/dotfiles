@@ -18,6 +18,7 @@ func ParseArgs(argv []string) (Args, error) {
 	booleans := map[string]bool{"json": true, "human": true, "stdin": true, "color": true, "no-color": true, "help": true, "reset": true}
 	booleans["quiescent"] = true
 	booleans["release"] = true
+	booleans["force"] = true
 	values := map[string]bool{"vault": true, "checkout": true, "remote": true, "title": true, "goal": true, "step": true, "checkpoint": true, "kind": true, "from": true, "repo": true, "agent": true, "session-id": true, "session-file": true, "cwd": true, "attempt": true, "token": true, "event-id": true, "tool": true, "message": true, "note": true, "id": true, "decision": true, "actor": true, "revision": true, "view": true, "width": true, "height": true, "model": true, "pane": true, "workspace": true}
 	values["handle"] = true
 	for _, k := range []string{"instructions", "acceptance", "checks", "output"} {
