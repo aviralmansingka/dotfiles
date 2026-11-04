@@ -86,16 +86,21 @@ try {
 	// --- buildConfirmMessage ----------------------------------------------------
 
 	{
-		const message = ext.buildConfirmMessage({
-			worktreePath: "/wt/fix-x",
-			mainPath: "/repo",
-			branch: "fix-x",
-			remote: "team/origin",
-			remoteBranch: "release",
-			dirtyCount: 3,
-			aheadCount: 2,
-			upstreamGone: false,
-		});
+		// The id is explicit: the default reads HERDR_WORKSPACE_ID, so a test
+		// that runs inside Herdr and on CI would otherwise assert two answers.
+		const message = ext.buildConfirmMessage(
+			{
+				worktreePath: "/wt/fix-x",
+				mainPath: "/repo",
+				branch: "fix-x",
+				remote: "team/origin",
+				remoteBranch: "release",
+				dirtyCount: 3,
+				aheadCount: 2,
+				upstreamGone: false,
+			},
+			"w8P",
+		);
 		assert.match(message, /Worktree:  \/wt\/fix-x/);
 		assert.match(message, /Remote:    team\/origin branch release/);
 		assert.match(message, /3 uncommitted file/);
