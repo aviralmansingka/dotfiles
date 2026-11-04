@@ -96,9 +96,11 @@ If an owner session is recorded, resume it. If the step failed, run
 `mission retry`, then `next`.
 
 A started worker receives a continuation prompt after each verified step
-when no review is pending. An attached existing session uses explicit `next` and
-does not automatically start more work. At a review, wait for the user to decide
-and direct continuation.
+when no review is pending. A session that attaches and holds the claim runs
+autonomously the same way: after each verified step it picks up the next
+eligible step without a human message, and stops only at checkpoints, reviews,
+`waiting`, and `done`. An attached session that does not own the binding stays
+explicit. At a review, wait for the user to decide and direct continuation.
 
 One repository owns one Herdr workspace, plus one linked worktree workspace per
 registered worktree; a mission's checkout owns its own. One mission owns one
