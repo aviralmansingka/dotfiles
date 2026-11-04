@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"image/color"
 	"regexp"
 	"strings"
 	"time"
@@ -122,6 +123,18 @@ func panel(w, h int, title, body string) string {
 }
 func heading(s string) string { return lg.NewStyle().Bold(true).Foreground(ink).Render(s) }
 
+// launchColor paints a launch state: waiting is yellow, a started mission is
+// aqua, and a refusal is orange.
+func launchColor(state string) color.Color {
+	switch state {
+	case launchStarted:
+		return aqua
+	case launchFailed:
+		return orange
+	}
+	return yellow
+}
+
 // marker is the two-column selection bar. The block glyph measures two columns,
 // and the list keeps its column by joining rows, never trimming them.
 func marker() string { return paint(aqua, "▌ ") }
@@ -223,9 +236,13 @@ type desk struct {
 	stepDraft                    Step
 	optionalChecks               []string
 	resetStep                    bool
+	launchDir                    string
+	launches                     map[string]Launch
 }
 
-func newDesk(s *Store) *desk { return &desk{store: s, width: 128, height: 42} }
+func newDesk(s *Store) *desk {
+	return &desk{store: s, width: 128, height: 42, launchDir: launchStateDir(), launches: map[string]Launch{}}
+}
 func (m *desk) refresh() {
 	h := ""
 	if m.selected >= 0 && len(m.records) > m.selected {
@@ -238,7 +255,39 @@ func (m *desk) refresh() {
 		}
 	}
 	m.selected = max(0, min(m.selected, len(m.records)-1))
+	m.launches = launches(m.launchDir)
 }
+
+// launchSelected writes the launch request for the selected mission. The desk
+// has no launch path of its own: the owning Pi session claims the request and
+// runs the same start action the mission tool and the /mission command use. A
+// live request is never rewritten, so a second press cannot start a second
+// worker.
+func (m *desk) launchSelected() {
+	if len(m.records) == 0 {
+		return
+	}
+	r := m.records[m.selected]
+	if r.State.Runtime != nil && r.State.Runtime.SessionID != "" {
+		m.err = nil
+		m.notice = "Already owned by a Pi session · attach to it instead"
+		return
+	}
+	l, created, e := requestLaunch(m.launchDir, r.Handle, r.Mission.Repo, time.Now())
+	if e != nil {
+		m.notice = ""
+		m.err = problem("launch_failed", "cannot write the launch request: %v", e)
+		return
+	}
+	m.launches[r.Handle] = l
+	m.err = nil
+	if created {
+		m.notice = "Launch requested · its Pi session starts " + r.Handle
+		return
+	}
+	m.notice = "Launch already " + l.State + " · " + r.Handle
+}
+
 func (m *desk) Init() tea.Cmd {
 	m.refresh()
 	if m.form != nil {
@@ -321,6 +370,8 @@ func (m *desk) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case "r":
 				m.refresh()
+			case "L":
+				m.launchSelected()
 			}
 			return m, nil
 		}
@@ -374,7 +425,7 @@ func (m *desk) headerLines(w int) []string {
 // footerKeys joins as many key hints as the footer row holds, most useful
 // first, so a narrow terminal loses a hint instead of clipping one.
 func (m *desk) footerKeys(w int) string {
-	hints := []string{"j/k select", "q quit", "tab view", "s steps", "n new", "a checkpoint", "pgdn scroll"}
+	hints := []string{"j/k select", "L launch", "q quit", "tab view", "s steps", "n new", "a checkpoint", "pgdn scroll"}
 	switch {
 	case m.form != nil:
 		hints = []string{"tab next field", "enter continue", "esc cancel"}
@@ -443,7 +494,15 @@ func (m *desk) listBody(w, h int) string {
 			prefix = marker()
 			title = selectedTitle(clip(r.Mission.Title, w-2))
 		}
-		rows = append(rows, prefix+title+"\n  "+paint(muted, clip(r.Handle, w-2))+"\n  "+status(r.State.Status)+paint(muted, "  ·  "+fmt.Sprint(len(r.State.Attempts))+" attempts"))
+		// The launch badge leads the row: a narrow list drops the tail, and the
+		// one fact that changes while the human watches must survive that.
+		line := status(r.State.Status) + paint(muted, "  ·  "+fmt.Sprint(len(r.State.Attempts))+" attempts")
+		if l, ok := m.launches[r.Handle]; ok {
+			if label, _ := launchSummary(l); label != "" {
+				line = paint(launchColor(l.State), label) + "  " + line
+			}
+		}
+		rows = append(rows, prefix+title+"\n  "+paint(muted, clip(r.Handle, w-2))+"\n"+line)
 	}
 	return strings.Join(rows, "\n\n")
 }
@@ -509,7 +568,13 @@ func (m *desk) detail(r Record, w int) string {
 			tabs[i] = paint(aqua, "● "+t)
 		}
 	}
-	s := heading(r.Mission.Title) + "  " + status(r.State.Status) + "\n" + paint(muted, r.Handle+"  ·  "+r.Mission.Kind+"  ·  rev "+fmt.Sprint(r.State.Revision)) + "\n\n" + strings.Join(tabs, "     ") + "\n\n"
+	s := heading(r.Mission.Title) + "  " + status(r.State.Status) + "\n" + paint(muted, r.Handle+"  ·  "+r.Mission.Kind+"  ·  rev "+fmt.Sprint(r.State.Revision)) + "\n"
+	if l, ok := m.launches[r.Handle]; ok {
+		if label, why := launchSummary(l); label != "" {
+			s += paint(launchColor(l.State), strings.ToUpper(label)) + "  " + paint(muted, why) + "\n"
+		}
+	}
+	s += "\n" + strings.Join(tabs, "     ") + "\n\n"
 	if m.tab == 3 {
 		return s + m.stepsDetail(r, w)
 	}

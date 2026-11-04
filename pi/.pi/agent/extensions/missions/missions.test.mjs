@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { mkdtempSync, writeFileSync, readFileSync, readdirSync, statSync, realpathSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -246,6 +246,99 @@ test("ambiguous launch failure is durable and never retried as a new worker",nee
   try {
     await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/Acknowledgement lost/);
     const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,false);assert.equal(launches,1);
+  } finally {delete globalThis.__pi_interactive_subagents}
+});
+
+/** The desk writes this file: one pending request per mission handle. */
+function launchRequest(cache, handle, repo, extra={}) {
+  const dir=join(cache,"launches");
+  mkdirSync(dir,{recursive:true});
+  const file=join(dir,handle.replaceAll("/","--")+".json");
+  writeFileSync(file,JSON.stringify({handle,repo,requested_at:"2026-01-01T00:00:00Z",state:"pending",...extra},null,2)+"\n");
+  return file;
+}
+test("a launch request is claimed once and started once", async t => {
+  const cache=realpathSync(mkdtempSync(join(tmpdir(),"mission-launch-")));
+  t.after(()=>rmSync(cache,{recursive:true,force:true}));
+  const bridge=new MissionBridge({env:{...process.env,MISSION_STATE_DIR:cache},run:async()=>"[]"});
+  bridge.sessionRepo=async()=>"dotfiles";
+  const starts=[];
+  bridge.start=async(_ctx,handle)=>{starts.push(handle);return {launched:true,runtime:{launch_id:"launch-1"}}};
+  const file=launchRequest(cache,"dotfiles/desk-launch","dotfiles");
+  const pending=bridge.pendingLaunches();
+  assert.equal(pending.length,1);assert.equal(pending[0].handle,"dotfiles/desk-launch");
+  // Two sessions race the same request: the file moves out of "pending" once.
+  assert.equal(bridge.claimLaunch(pending[0],"session-a"),true);
+  assert.equal(bridge.claimLaunch(pending[0],"session-b"),false);
+  assert.equal(bridge.pendingLaunches().length,0);
+  // A claimed request is never swept, so the loser cannot start a worker.
+  await bridge.sweepLaunches(context("/tmp","/tmp/pi"));
+  assert.deepEqual(starts,[]);
+  assert.equal(JSON.parse(readFileSync(file,"utf8")).claimed_by,"session-a");
+});
+
+test("one sweep starts one worker and leaves a started receipt", async t => {
+  const cache=realpathSync(mkdtempSync(join(tmpdir(),"mission-launch-")));
+  t.after(()=>rmSync(cache,{recursive:true,force:true}));
+  const bridge=new MissionBridge({env:{...process.env,MISSION_STATE_DIR:cache},run:async()=>"[]"});
+  bridge.sessionRepo=async()=>"dotfiles";
+  const starts=[];
+  bridge.start=async(_ctx,handle)=>{starts.push(handle);return {launched:true,runtime:{launch_id:"launch-1"}}};
+  const file=launchRequest(cache,"dotfiles/desk-launch","dotfiles");
+  const ctx=context("/tmp","/tmp/pi");
+  await bridge.sweepLaunches(ctx);
+  await bridge.sweepLaunches(ctx);
+  assert.deepEqual(starts,["dotfiles/desk-launch"]);
+  const receipt=JSON.parse(readFileSync(file,"utf8"));
+  assert.equal(receipt.state,"started");assert.equal(receipt.launch_id,"launch-1");
+  // A second press after the receipt is a fresh request, and a fresh request
+  // starts a second worker only when the desk asks for one.
+  assert.equal(bridge.pendingLaunches().length,0);
+});
+
+test("a failing launch leaves a durable failed receipt and no retry", async t => {
+  const cache=realpathSync(mkdtempSync(join(tmpdir(),"mission-launch-")));
+  t.after(()=>rmSync(cache,{recursive:true,force:true}));
+  const bridge=new MissionBridge({env:{...process.env,MISSION_STATE_DIR:cache},run:async()=>"[]"});
+  bridge.sessionRepo=async()=>"dotfiles";
+  let calls=0;
+  bridge.start=async()=>{calls++;throw Error("Herdr is not running")};
+  const file=launchRequest(cache,"dotfiles/desk-launch","dotfiles");
+  await bridge.sweepLaunches(context("/tmp","/tmp/pi"));
+  await bridge.sweepLaunches(context("/tmp","/tmp/pi"));
+  assert.equal(calls,1);
+  const receipt=JSON.parse(readFileSync(file,"utf8"));
+  assert.equal(receipt.state,"failed");assert.match(receipt.error,/Herdr is not running/);
+});
+
+test("a sweep leaves another repository's request alone", async t => {
+  const cache=realpathSync(mkdtempSync(join(tmpdir(),"mission-launch-")));
+  t.after(()=>rmSync(cache,{recursive:true,force:true}));
+  const bridge=new MissionBridge({env:{...process.env,MISSION_STATE_DIR:cache},run:async()=>"[]"});
+  bridge.sessionRepo=async()=>"dotfiles";
+  const starts=[];
+  bridge.start=async(_ctx,handle)=>{starts.push(handle);return {launched:true,runtime:{}}};
+  launchRequest(cache,"vault/other-work","vault");
+  await bridge.sweepLaunches(context("/tmp","/tmp/pi"));
+  assert.deepEqual(starts,[]);
+  assert.equal(bridge.pendingLaunches().length,1);
+});
+
+test("the desk's request starts the mission through the start path", needsCLI, async t => {
+  const f=await fixture(t);const requests=[];
+  globalThis.__pi_interactive_subagents={executeSubagent:async(p)=>{requests.push(p);return {details:{status:"started",sessionFile:f.file}}}};
+  try {
+    const file=launchRequest(f.cache,f.handle,"dotfiles");
+    assert.deepEqual(await f.bridge.sessionRepo(context(f.repo,f.file)),"dotfiles");
+    await f.bridge.sweepLaunches(context(f.repo,f.file));
+    assert.equal(requests.length,1);assert.equal(requests[0].agent,"mission-worker");
+    const receipt=JSON.parse(readFileSync(file,"utf8"));
+    assert.equal(receipt.state,"started");
+    const runtime=(await f.bridge.call(["show",f.handle])).state.runtime;
+    assert.equal(receipt.launch_id,runtime.launch_id);
+    // The same press, twice: the claim is gone, so no second worker appears.
+    await f.bridge.sweepLaunches(context(f.repo,f.file));
+    assert.equal(requests.length,1);
   } finally {delete globalThis.__pi_interactive_subagents}
 });
 
