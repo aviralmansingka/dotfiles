@@ -21,6 +21,7 @@ const help = `mission — work that survives the agent
   mission new                             Guided mission builder (TTY)
   mission new dotfiles/audit-hooks --from brief.md
   mission list | show REPO/SLUG | next [--repo REPO]
+  mission status REPO/SLUG                 Where it stands and what is next
   mission steps REPO/SLUG                  List steps, defaults and latest checks
   mission step show REPO/SLUG S01
   mission step edit REPO/SLUG S01 --instructions TEXT --acceptance TEXT
