@@ -69,6 +69,31 @@ test("mission tool gate follows status and never blocks inspection", () => {
   );
 });
 
+test("a waiting review never blocks a worker tool and only stops finish", () => {
+  const record = {
+    handle: "dotfiles/reviewed",
+    mission: { checkpoints: [{ id: "C01", question: "Is the result right?" }] },
+    state: { status: "waiting", pending_checkpoint: "C01", checkpoints: { C01: { status: "pending", evidence: "artifacts/001/result.md" } } },
+    pending_review: { id: "C01", question: "Is the result right?", evidence: "artifacts/001/result.md" },
+    next_command: 'mission checkpoint accept dotfiles/reviewed C01 --note "Reviewed the evidence"',
+  };
+  const current = { record };
+  for (const toolName of ["bash", "edit", "write"])
+    assert.equal(missionToolBlock({ toolName, current }), undefined, `${toolName} passes during a review`);
+  const blocked = missionToolBlock({ toolName: "mission", action: "finish", current });
+  assert.match(blocked, /Review C01 is waiting/);
+  assert.match(blocked, /mission checkpoint accept dotfiles\/reviewed C01/);
+  assert.equal(missionToolBlock({ toolName: "mission", action: "status", current }), undefined);
+  assert.equal(missionToolBlock({ toolName: "mission", action: "finish", current: null }), undefined);
+  // A record without the derived field still resolves the stored review.
+  const stored = { ...record };
+  delete stored.pending_review;
+  delete stored.next_command;
+  const fallback = missionToolBlock({ toolName: "mission", action: "finish", current: { record: stored } });
+  assert.match(fallback, /Review C01 is waiting/);
+  assert.match(fallback, /mission checkpoint accept dotfiles\/reviewed C01/);
+});
+
 test("next-step continuation follows status and pending steps", () => {
   const steps = { S01: { status: "passed" }, S02: { status: "pending" } };
   assert.equal(missionContinues({ status: "ready", steps }), true);
@@ -165,7 +190,7 @@ test("existing session attaches, reports progress via CLI, and resumes across re
   let r=await b.call(["show",f.handle]);
   assert.equal(r.state.status,"waiting");assert.equal(r.state.pending_checkpoint,"C01");assert.equal(r.state.attempts[0].process_exited,false);
   assert.equal(readFileSync(join(f.vault,"6_missions",f.handle,r.state.attempts[0].transcript),"utf8"),readFileSync(f.file,"utf8"));
-  await assert.rejects(b.action(f.ctx,{action:"next"}),/checkpoint_pending/);
+  await assert.rejects(b.action(f.ctx,{action:"next"}),/review_pending/);
   await b.call(["checkpoint",f.handle,"--id","C01","--decision","accept","--human","--actor","fixture-user","--note","Reviewed","--revision",String(r.state.revision)]);
   const next=await b.action(f.ctx,{action:"next"});assert.equal(next.step.id,"S02");assert.equal(next.cwd,claim.cwd);
   await b.record(f.ctx,{type:"session-end",summary:"Reload fixture"});
@@ -420,12 +445,12 @@ async function loadFactory() {
   return imported.default || imported;
 }
 
-test("Pi factory callbacks use final settlement and block changes at a checkpoint",needsCLI,async t=>{
+test("Pi factory callbacks use final settlement and block only finish at a review",needsCLI,async t=>{
   const f=await fixture(t,true);
   f.env.PI_SUBAGENT_AGENT="mission-worker";
   const factory=await loadFactory();
   const events={},tools={},commands={},notifications=[],statuses=new Map();
-  const pi={on:(name,fn)=>{events[name]=fn},registerTool:t=>{tools[t.name]=t},registerCommand:(name,c)=>{commands[name]=c},sendMessage:()=>{throw Error("Checkpoint must not continue automatically")}};
+  const pi={on:(name,fn)=>{events[name]=fn},registerTool:t=>{tools[t.name]=t},registerCommand:(name,c)=>{commands[name]=c},sendMessage:()=>{throw Error("A review must not continue automatically")}};
   const ctx={...f.ctx,hasUI:true,ui:{notify:(s)=>notifications.push(s),setStatus:(k,v)=>statuses.set(k,v),select:async(_title,options)=>options[0]}};
   factory(pi,{env:f.env,run:f.run});
   assert.equal(tools.mission.exposure,"deferred");assert.ok(commands.missions);assert.ok(commands.mission);
@@ -444,12 +469,18 @@ test("Pi factory callbacks use final settlement and block changes at a checkpoin
   await events.agent_before_settle({outcome:"completed"},ctx);
   await events.agent_settled({aborted:false},ctx);
   const r=await f.bridge.call(["show",f.handle]);assert.equal(r.state.pending_checkpoint,"C01");assert.equal(r.state.attempts[0].settled,true);
-  // A pending checkpoint holds the mission for a human. Status decides, not the
-  // active attempt: no attempt is active, yet every tool still passes.
+  // A waiting review holds progression, not tools. Status decides, not the
+  // active attempt: no attempt is active, yet every worker tool still passes.
   assert.equal(await events.tool_call({toolName:"bash"},ctx),undefined);
   assert.equal(await events.tool_call({toolName:"write"},ctx),undefined);
   assert.equal(await events.tool_call({toolName:"mission"},ctx),undefined);
   assert.equal(await events.tool_call({toolName:"grep"},ctx),undefined);
+  // Only finish is refused, and the refusal names the review and the command.
+  const finishBlock=await events.tool_call({toolName:"mission",input:{action:"finish"}},ctx);
+  assert.equal(finishBlock.block,true);
+  assert.match(finishBlock.reason,/Review C01 is waiting/);
+  assert.match(finishBlock.reason,/mission checkpoint accept /);
+  assert.equal(await events.tool_call({toolName:"mission",input:{action:"status"}},ctx),undefined);
   await commands.missions.handler("",ctx);assert.ok(notifications.some(n=>n.includes("pending_checkpoint")));
   await events.session_shutdown({},ctx);
   assert.ok(statuses.get("mission").includes("waiting"));
@@ -565,19 +596,19 @@ const doneRecord = () => panelRecord("dotfiles/mission-panel", {
 const rowsOf = model => model.rows.map(row => [row.label, row.value, row.status]);
 const keysOf = model => Object.fromEntries(model.keys.map(key => [key.action, key.enabled]));
 
-test("the panel shows a pending checkpoint as a waiting row", () => {
+test("the panel shows a pending review as a waiting row", () => {
   const model = buildPanelModel({ record: waitingRecord(), now: Date.parse("2026-01-01T00:05:00Z") });
   assert.equal(model.statusLine, "waiting · rev 6");
   assert.deepEqual(rowsOf(model), [
     ["Goal", "Render a mission inside Pi", ""],
     ["Step", "S01 · Build the panel", "passed"],
     ["Attempt", "attempt-1352 · scout", "succeeded"],
-    ["Checkpoint", "C01 · Is the layout right?", "waiting"],
+    ["Review", "C01 · Is the layout right?", "waiting"],
     ["Blocker", "none", ""],
   ]);
   // A hold on a checkpoint leaves the human one decision and no launch.
   assert.deepEqual(keysOf(model), { accept: true, revise: true, start: false, retry: false, open: true, close: true });
-  assert.match(model.keys.find(key => key.action === "start").reason, /checkpoint is waiting/);
+  assert.match(model.keys.find(key => key.action === "start").reason, /review is waiting/);
 });
 
 test("the panel shows a running attempt with its run time", () => {
@@ -613,7 +644,7 @@ test("an invalid action key is disabled, never hidden", () => {
   const model = buildPanelModel({ record: doneRecord(), now: Date.parse("2026-01-01T10:03:00Z") });
   const accept = model.keys.find(key => key.action === "accept");
   assert.equal(accept.enabled, false);
-  assert.match(accept.reason, /no pending checkpoint/);
+  assert.match(accept.reason, /no pending review/);
   assert.deepEqual(model.keys.map(key => key.key), ["a", "v", "s", "t", "o", "esc"]);
   assert.equal(actionForKey("a"), "accept");
   assert.equal(actionForKey("esc"), "close");
@@ -638,15 +669,14 @@ test("a missing handle yields the error row instead of a throw", () => {
   assert.equal(bare.status, "unknown");
 });
 
-test("a checkpoint decision carries the attestation the CLI requires", () => {
+test("a review decision carries one stable command with no revision", () => {
   const record = waitingRecord();
-  assert.deepEqual(checkpointArgs("dotfiles/mission-panel", record, { decision: "accept", actor: "aviral", note: "Layout reviewed" }),
-    ["checkpoint", "dotfiles/mission-panel", "--id", "C01", "--decision", "accept", "--human", "--actor", "aviral",
-      "--note", "Layout reviewed", "--revision", "6"]);
+  assert.deepEqual(checkpointArgs("dotfiles/mission-panel", record, { decision: "accept", note: "Layout reviewed" }),
+    ["checkpoint", "accept", "dotfiles/mission-panel", "C01", "--note", "Layout reviewed"]);
   // The panel's own note names the surface that recorded the decision.
-  const revise = checkpointArgs("dotfiles/mission-panel", record, { decision: "revise", actor: "aviral" });
+  const revise = checkpointArgs("dotfiles/mission-panel", record, { decision: "revise" });
   assert.match(revise[revise.indexOf("--note") + 1], /Revision requested in the Pi mission panel/);
-  assert.throws(() => checkpointArgs("dotfiles/mission-panel", doneRecord(), { decision: "accept" }), /no pending checkpoint/);
+  assert.throws(() => checkpointArgs("dotfiles/mission-panel", doneRecord(), { decision: "accept" }), /no pending review/);
   assert.throws(() => checkpointArgs("", record, { decision: "accept" }), /handle/);
   assert.throws(() => checkpointArgs("dotfiles/mission-panel", record, { decision: "reject" }), /accept or revise/);
 });

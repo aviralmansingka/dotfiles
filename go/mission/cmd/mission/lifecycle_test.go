@@ -41,7 +41,7 @@ func TestCheckpointBlocksAndBindsEvidence(t *testing.T) {
 	r, e := s.finish(h, c.Attempt.ID, c.Token, false, "", false, 0)
 	must(t, e)
 	_, e = s.claim(h, "scout", "", "", false)
-	wantCode(t, e, "checkpoint_pending")
+	wantCode(t, e, "review_pending")
 	_, e = s.checkpoint(h, "C01", "accept", "ok", "aviral", false, r.State.Revision)
 	wantCode(t, e, "human_required")
 	_, e = s.checkpoint(h, "C01", "accept", "ok", "aviral", true, r.State.Revision-1)

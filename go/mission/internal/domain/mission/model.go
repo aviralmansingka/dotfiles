@@ -265,7 +265,7 @@ func NextStep(m Mission, s State) (Step, error) {
 		}
 		for _, cp := range m.Checkpoints {
 			if cp.After == step.ID && s.Checkpoints[cp.ID].Status != "accepted" {
-				return Step{}, Problem("checkpoint_pending", "%s requires human checkpoint %s", step.ID, cp.ID)
+				return Step{}, Problem("review_pending", "%s needs review %s. Decide with:\n  mission checkpoint accept %s/%s %s --note \"Reviewed the evidence\"", step.ID, cp.ID, m.Repo, m.Slug, cp.ID)
 			}
 		}
 	}

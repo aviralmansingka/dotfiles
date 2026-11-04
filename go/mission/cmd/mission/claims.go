@@ -214,7 +214,7 @@ func (s *Store) pickup(repo, agent, session, cwd string) (mission.Claim, error) 
 		if e == nil {
 			return c, nil
 		}
-		if d, ok := e.(*mission.DomainError); !ok || (d.Code != "busy" && d.Code != "checkpoint_pending" && d.Code != "complete") {
+		if d, ok := e.(*mission.DomainError); !ok || (d.Code != "busy" && d.Code != "checkpoint_pending" && d.Code != "review_pending" && d.Code != "complete") {
 			return c, e
 		}
 	}

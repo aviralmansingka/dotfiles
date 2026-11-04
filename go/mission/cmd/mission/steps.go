@@ -82,6 +82,9 @@ func (s *Store) editStep(h, id string, updated mission.Step, revision int, reset
 		if r.State.Active != "" {
 			return mission.Problem("busy", "finish the active attempt before customizing steps")
 		}
+		if r.State.Pending != "" {
+			return mission.Problem("review_pending", "review %s is waiting. Decide with:\n  mission checkpoint accept %s %s --note \"Reviewed the evidence\"", r.State.Pending, r.Handle, r.State.Pending)
+		}
 		idx, e := stepIndex(r.Mission, id)
 		if e != nil {
 			return e
