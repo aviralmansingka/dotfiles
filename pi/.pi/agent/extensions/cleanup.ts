@@ -5,7 +5,10 @@
  *   1. the configured upstream branch, when one exists
  *   2. the current linked Git worktree
  *   3. the local branch (`git branch -D`, run from the main checkout)
- * then closes the pi session gracefully via `ctx.shutdown()`.
+ *   4. the Herdr workspace that hosts the worktree (`herdr workspace close`)
+ * then closes the pi session gracefully via `ctx.shutdown()`. The workspace
+ * close runs last, from the shutdown callback, because this session's pane dies
+ * with its workspace. Outside Herdr the step is skipped.
  *
  * Refuses to run on the main checkout, on `main`/`master`, or outside a listed
  * linked worktree or a sub-agent session. A confirm dialog lists the exact
@@ -13,7 +16,9 @@
  * are best-effort and idempotent: an already-deleted remote branch, an already
  * removed worktree, or an already deleted local branch counts as done, and any
  * other git failure is reported without stopping the remaining steps. The
- * session always closes once the pre-flight checks pass.
+ * session always closes once the pre-flight checks pass. The Herdr close is a
+ * soft failure too: a missing binary or a non-zero exit is reported and nothing
+ * throws. The workspace of the main checkout is never closed.
  */
 import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
@@ -22,6 +27,8 @@ import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const GIT_TIMEOUT_MS = 30_000;
+const HERDR_TIMEOUT_MS = 30_000;
+const DEFAULT_HERDR_BIN = "herdr";
 const PROTECTED_BRANCHES = new Set(["main", "master"]);
 
 // --- git helpers -------------------------------------------------------------
@@ -67,6 +74,46 @@ export function parseWorktreeList(porcelain: string): WorktreeEntry[] {
 		}
 	}
 	return entries;
+}
+
+// --- herdr helpers -------------------------------------------------------------
+
+export type HerdrRunner = (bin: string, args: string[]) => void;
+
+export interface HerdrContext {
+	/** Workspace id from HERDR_WORKSPACE_ID, or null outside Herdr. */
+	workspaceId: string | null;
+	/** Binary from HERDR_BIN, else `herdr` on `PATH`. */
+	bin: string;
+	/** Run the Herdr CLI. Throw on a non-zero exit or a missing binary. */
+	run: HerdrRunner;
+	/**
+	 * Report the close as pending and let the caller run it. `/cleanup` sets this
+	 * so the report reaches the screen before the pane dies with its workspace.
+	 */
+	deferClose?: boolean;
+}
+
+function runHerdr(bin: string, args: string[]): void {
+	execFileSync(bin, args, {
+		encoding: "utf8",
+		timeout: HERDR_TIMEOUT_MS,
+		stdio: ["pipe", "pipe", "pipe"],
+	});
+}
+
+/** Read the Herdr identity from the environment. No id means no Herdr workspace. */
+export function herdrContext(
+	env: NodeJS.ProcessEnv = process.env,
+	run: HerdrRunner = runHerdr,
+): HerdrContext {
+	const workspaceId = env.HERDR_WORKSPACE_ID?.trim();
+	const bin = env.HERDR_BIN?.trim();
+	return {
+		workspaceId: workspaceId ? workspaceId : null,
+		bin: bin ? bin : DEFAULT_HERDR_BIN,
+		run,
+	};
 }
 
 // --- cleanup facts -------------------------------------------------------------
@@ -238,13 +285,17 @@ export function collectCleanupFacts(
 
 // --- confirm message -----------------------------------------------------------
 
-export function buildConfirmMessage(facts: CleanupFacts): string {
+export function buildConfirmMessage(
+	facts: CleanupFacts,
+	workspaceId: string | null = herdrContext().workspaceId,
+): string {
 	const lines = [
 		`Worktree:  ${facts.worktreePath}`,
 		`Branch:    ${facts.branch}`,
 		facts.remote && facts.remoteBranch
 			? `Remote:    ${facts.remote} branch ${facts.remoteBranch}`
 			: "Remote:    none (local only, never pushed)",
+		`Herdr:     ${workspaceId ? `workspace ${workspaceId} closes too` : "no workspace id, the workspace stays"}`,
 	];
 	if (facts.upstreamGone) {
 		lines.push("Note:      Remote branch is already gone; local teardown only.");
@@ -264,8 +315,12 @@ export function buildConfirmMessage(facts: CleanupFacts): string {
 export interface StepResult {
 	/** The step completed, or there was nothing left for it to do. */
 	ok: boolean;
-	/** Git reported the target as already absent (deleted/pruned/not registered). */
+	/** Git or Herdr reported the target as already absent. */
 	already: boolean;
+	/** The caller runs this step later; nothing ran here. */
+	pending?: boolean;
+	/** Why the step did not run. */
+	reason?: string;
 	/** Real failure message, when `ok` is false. */
 	error?: string;
 }
@@ -274,7 +329,13 @@ export interface CleanupStepReport {
 	remoteDeleted: boolean;
 	worktreeRemoved: boolean;
 	localBranchDeleted: boolean;
-	steps: { remote: StepResult; worktree: StepResult; branch: StepResult };
+	workspaceClosed: boolean;
+	steps: {
+		remote: StepResult;
+		worktree: StepResult;
+		branch: StepResult;
+		workspace: StepResult;
+	};
 }
 
 /** Git error messages that mean "the thing you asked to delete is not there". */
@@ -307,20 +368,72 @@ function attemptStep(
 	}
 }
 
-/** Run the destructive steps. Exposed for tests with injected git runners. */
+/** Herdr errors that mean "the workspace you asked to close is not there". */
+const WORKSPACE_GONE = /workspace[_ ]not[_ ]found|workspace .* not found/i;
+
+interface HerdrFailure {
+	message: string;
+	/** The workspace is already gone, so the step did its job. */
+	already: boolean;
+}
+
+function herdrFailure(error: unknown, bin: string): HerdrFailure {
+	const record = error as { code?: string; stderr?: unknown; message?: string } | null;
+	if (record?.code === "ENOENT") return { message: `${bin} not found`, already: false };
+	// The CLI prints a JSON error object on stderr. Prefer its message.
+	const stderr = typeof record?.stderr === "string" ? record.stderr.trim() : "";
+	let detail = stderr || record?.message || String(error);
+	try {
+		const parsed = JSON.parse(stderr);
+		if (parsed?.error?.message) detail = String(parsed.error.message);
+	} catch {
+		// Not JSON; keep the raw text.
+	}
+	return { message: detail, already: WORKSPACE_GONE.test(detail) };
+}
+
+/**
+ * Close the Herdr workspace that hosts this worktree.
+ *
+ * Rule: never close the workspace that hosts the repository's main checkout. A
+ * workspace is the main one when its checkout path equals the main checkout
+ * path, so a durable session on `main` keeps its workspace and its picker row.
+ */
+export function closeWorkspace(facts: CleanupFacts, herdr: HerdrContext): StepResult {
+	if (facts.worktreePath === facts.mainPath) {
+		return { ok: true, already: false, reason: "the workspace hosts the main checkout" };
+	}
+	if (!herdr.workspaceId) {
+		return { ok: true, already: false, reason: "HERDR_WORKSPACE_ID is not set" };
+	}
+	if (herdr.deferClose) return { ok: true, already: false, pending: true };
+	try {
+		herdr.run(herdr.bin, ["workspace", "close", herdr.workspaceId]);
+		return { ok: true, already: false };
+	} catch (error) {
+		const failure = herdrFailure(error, herdr.bin);
+		if (failure.already) return { ok: true, already: true };
+		return { ok: false, already: false, error: failure.message };
+	}
+}
+
+/** Run the destructive steps. Exposed for tests with injected git and Herdr runners. */
 export function executeCleanup(
 	facts: CleanupFacts,
 	run: (cwd: string, args: string[]) => void,
+	herdr: HerdrContext,
 ): CleanupStepReport {
 	const hasRemote = Boolean(facts.remote && facts.remoteBranch);
 	const report: CleanupStepReport = {
 		remoteDeleted: false,
 		worktreeRemoved: false,
 		localBranchDeleted: false,
+		workspaceClosed: false,
 		steps: {
 			remote: { ok: true, already: false },
 			worktree: { ok: true, already: false },
 			branch: { ok: true, already: false },
+			workspace: { ok: true, already: false },
 		},
 	};
 
@@ -353,7 +466,23 @@ export function executeCleanup(
 	);
 	report.localBranchDeleted = report.steps.branch.ok;
 
+	// 4. Herdr workspace — last, because this session lives inside it and its
+	// pane dies with the close.
+	report.steps.workspace = closeWorkspace(facts, herdr);
+	const workspace = report.steps.workspace;
+	report.workspaceClosed =
+		workspace.ok && !workspace.already && !workspace.pending && workspace.reason === undefined;
+
 	return report;
+}
+
+/** One phrase for the Herdr workspace step. */
+export function describeWorkspaceStep(step: StepResult): string {
+	if (step.reason !== undefined) return `Herdr workspace not closed: ${step.reason}`;
+	if (step.already) return "Herdr workspace already gone";
+	if (!step.ok) return `Herdr workspace not closed: ${step.error}`;
+	if (step.pending) return "Herdr workspace closes next";
+	return "Herdr workspace closed";
 }
 
 /** One notification line summarising what happened, including notes and errors. */
@@ -375,7 +504,8 @@ export function describeCleanupReport(report: CleanupStepReport): string {
 		else if (!step.ok) notes.push(`${label} failed: ${step.error}`);
 	}
 	const base = done ? `Cleanup done: ${done}.` : "Cleanup: nothing left to delete.";
-	return notes.length > 0 ? `${base} ${notes.join("; ")}.` : base;
+	const all = [...notes, describeWorkspaceStep(report.steps.workspace)];
+	return `${base} ${all.join("; ")}.`;
 }
 
 // --- extension ----------------------------------------------------------------
@@ -384,7 +514,7 @@ const SHUTDOWN_DELAY_MS = 750;
 
 export default function (pi: ExtensionAPI) {
 	pi.registerCommand("cleanup", {
-		description: "Delete this worktree, its local and remote branch, then close the session",
+		description: "Delete this worktree, its local and remote branch, and its Herdr workspace",
 		handler: async (_args, ctx) => {
 			if (process.env.PI_SUBAGENT_SESSION !== undefined) {
 				ctx.ui.notify("Cleanup is only available in the durable parent session.", "error");
@@ -407,10 +537,17 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 
+			const herdr = herdrContext();
 			try {
-				const report = executeCleanup(facts, (cwd, args) => {
-					git(cwd, args);
-				});
+				// The workspace close waits for the shutdown callback below: this session
+				// lives in that workspace, so the report must reach the screen first.
+				const report = executeCleanup(
+					facts,
+					(cwd, args) => {
+						git(cwd, args);
+					},
+					{ ...herdr, deferClose: true },
+				);
 				const failed =
 					!report.steps.remote.ok || !report.steps.worktree.ok || !report.steps.branch.ok;
 				ctx.ui.notify(describeCleanupReport(report), failed ? "warning" : "info");
@@ -422,8 +559,19 @@ export default function (pi: ExtensionAPI) {
 
 			ctx.ui.notify("Closing session.", "info");
 
-			// Give the notification a moment on screen before the TUI exits.
-			setTimeout(() => ctx.shutdown(), SHUTDOWN_DELAY_MS);
+			// Give the notification a moment on screen before the TUI exits, then close
+			// the workspace last. Its panes, including this one, die with the close.
+			setTimeout(() => {
+				try {
+					const workspace = closeWorkspace(facts, herdr);
+					if (!workspace.ok || workspace.reason !== undefined) {
+						ctx.ui.notify(describeWorkspaceStep(workspace), "warning");
+					}
+				} catch (error) {
+					ctx.ui.notify(`Herdr workspace not closed: ${errorMessage(error)}`, "warning");
+				}
+				ctx.shutdown();
+			}, SHUTDOWN_DELAY_MS);
 		},
 	});
 }
