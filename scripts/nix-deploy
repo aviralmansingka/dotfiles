@@ -32,8 +32,8 @@ usage() {
 usage: scripts/nix-deploy <profile> <target> [--dry-run]
 
   profile  remote | macbook
-  target   homelab | devbox | mac   (aliases: homelab, devbox, mac,
-                                    macbook, local, and this host's name)
+  target   a name from `just targets`, or `local` for this machine
+           (`just deploy <profile>` fills in `local` for you)
 USAGE
   exit 2
 }
@@ -141,6 +141,11 @@ if [ -z "$TARGETS_JSON" ]; then
 fi
 
 HOST="$(resolve_target "$TARGET" "$TARGETS_JSON" "$(this_hostname)")"
+if [ -z "$HOST" ] && [ "$TARGET" = "local" ]; then
+  echo "nix-deploy: this host '$(this_hostname)' matches no target; name one explicitly:" >&2
+  echo "            $(printf '%s' "$TARGETS_JSON" | python3 -c 'import json,sys; print(" ".join(sorted(json.load(sys.stdin))))')" >&2
+  exit 3
+fi
 if [ -z "$HOST" ]; then
   echo "nix-deploy: unknown target '$TARGET'; known: $(printf '%s' "$TARGETS_JSON" | python3 -c 'import json,sys; print(" ".join(sorted(json.load(sys.stdin))))')" >&2
   exit 3
