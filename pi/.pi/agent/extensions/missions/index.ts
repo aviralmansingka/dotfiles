@@ -42,8 +42,8 @@ export default function missions(pi: ExtensionAPI, options = {}) {
       await bridge.flush(ctx);
       const c = await bridge.current(ctx);
       return { message: { customType: "mission-context", display: false, content: c?.attempt ?
-        `Mission ${bridge.hint.handle}, step ${c.attempt.step}, attempt ${c.attempt.id}.\n${c.attempt.brief_snapshot}\nWrite the artifact at ${bridge.vault}/6_missions/${bridge.hint.handle}/${c.attempt.artifact}. Report progress with the mission tool. Explicitly report finish/fail; turn end alone does not complete work. Stay in this worktree. Human reviews require the user.` :
-        `Mission ${bridge.hint.handle} is ${c?.record.state.status}. Inspect status. Start another step only with mission action=next after reviews are decided. Do not modify code while no step is active.` } };
+        `Mission ${bridge.hint.handle}, step ${c.attempt.step}, attempt ${c.attempt.id}.\n${c.attempt.brief_snapshot}\nYou are the driver of this attempt, not its worker: send the step work to one work subagent with this brief, then send the verification to one judge subagent (mission action=judge). Write no artifact yourself. Answer the human's status and admin prompts here with mission action=status and the existing commands. Report finish only after a judge records a pass; turn end alone does not complete work. Stay in this worktree. Human reviews require the user.` :
+        `Mission ${bridge.hint.handle} is ${c?.record.state.status}. Inspect status and answer the human's status and admin prompts here. Start another step only with mission action=next after reviews are decided. Do not modify code while no step is active.` } };
     } catch (e: any) { bridge.error = e.message; return { message: { customType: "mission-context", display: false, content: "Mission tracking failed: " + e.message + ". Restore tracking before making changes." } }; }
   });
   pi.on("tool_call", async (event, ctx) => {
@@ -95,11 +95,12 @@ export default function missions(pi: ExtensionAPI, options = {}) {
     name: "mission", label: "Mission", exposure: "deferred",
     description: "Create, inspect, launch, or attach vault missions. Record structured progress and request verified step completion. One repository workspace, one persistent worktree and Pi owner per mission.",
     parameters: Type.Object({
-      action: Type.Union(["list", "create", "steps", "edit", "status", "start", "attach", "next", "progress", "verify", "finish", "fail"].map(v => Type.Literal(v))),
+      action: Type.Union(["list", "create", "steps", "edit", "status", "start", "attach", "next", "progress", "judge", "verify", "finish", "fail", "retry"].map(v => Type.Literal(v))),
       handle: Type.Optional(Type.String()), repo: Type.Optional(Type.String()), title: Type.Optional(Type.String()), goal: Type.Optional(Type.String()),
       kind: Type.Optional(Type.Union([Type.Literal("research"), Type.Literal("implementation")])), steps: Type.Optional(Type.Array(Type.String())),
       step: Type.Optional(Type.String()), instructions: Type.Optional(Type.String()), acceptance: Type.Optional(Type.String()),
       checks: Type.Optional(Type.Array(Type.String())), output: Type.Optional(Type.String()), agent: Type.Optional(Type.String()), launch_id: Type.Optional(Type.String()),
+      revision: Type.Optional(Type.Integer()),
       status: Type.Optional(Type.Union(["working", "blocked", "needs-input", "ready"].map(v => Type.Literal(v)))),
       summary: Type.Optional(Type.String()), next: Type.Optional(Type.String()), blocker: Type.Optional(Type.String()),
       evidence: Type.Optional(Type.Array(Type.String())), event_id: Type.Optional(Type.String()),
