@@ -121,6 +121,7 @@ func execute(argv []string) int {
 		}
 	}
 	vault := platform.Fallback(a.Get("vault"), platform.Fallback(os.Getenv("MISSION_VAULT"), "~/vault"))
+	writer = writeVerb(cmd, a)
 	if cmd == "demo" && !a.Has("vault") {
 		return emit(nil, mission.Problem("usage", "demo requires an explicit --vault pointing to an isolated directory"))
 	}

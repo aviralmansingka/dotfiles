@@ -13,6 +13,15 @@ attachment, launch intent deduplication, structured progress and evidence hashes
 hook retries, transcript copies, checkpoint pauses, and verified completion.
 They check that a normal turn without a completion report keeps its owner.
 They also check that an interrupted turn cannot settle a completion report.
+
+Four Go cases pin the ledger commit point. A save of a record read before a claim
+is refused with `revision_conflict`. Two actors with different lock directories
+(`Store.LockDir`, a second `TMPDIR`) reproduce the lost-claim incident through
+`mutate`, and the same compare-and-swap stops it. The journal names every writer,
+refused saves included. `mission repair` re-admits an orphaned
+`attempts/NNN.md` projection, restores the owning attempt and step, and keeps a
+passed step passed. The extension tests pin the gate: a tracking record that
+fails degrades read and bash-class tools to a warning and keeps blocking edits.
 One Go case pins the mission identity: branch `mission/<slug>`, a linked checkout
 under the worktree root, the `branch.<name>.missionOwner` marker, reuse on reland,
 and refusal of an unmarked `mission/<slug>` branch. The extension cases stub

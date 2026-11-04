@@ -13,7 +13,12 @@ import (
 	"mission.local/prototype/internal/domain/mission"
 )
 
-type Store struct{ Vault string }
+type Store struct {
+	Vault string
+	// LockDir overrides the machine-wide lock directory. Tests use it to show
+	// two actors whose locks do not meet.
+	LockDir string
+}
 
 var slugRE = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
@@ -127,7 +132,10 @@ func parseMarkdown(b []byte, v any) (string, error) {
 }
 func (s *Store) locked(fn func() error) error {
 	// ponytail: one local lock per real vault path; Git sync is not a distributed mutex.
-	d := filepath.Join(os.TempDir(), "mission-cli-locks")
+	d := s.LockDir
+	if d == "" {
+		d = filepath.Join(os.TempDir(), "mission-cli-locks")
+	}
 	if e := os.MkdirAll(d, 0700); e != nil {
 		return e
 	}

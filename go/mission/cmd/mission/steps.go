@@ -6,6 +6,8 @@ import (
 	"go.yaml.in/yaml/v3"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 
 	"mission.local/prototype/internal/domain/mission"
@@ -212,8 +214,11 @@ func (s *Store) applyEdit(tx pendingEdit) (mission.Record, error) {
 	if e = atomicWrite(filepath.Join(d, "mission.md"), b); e != nil {
 		return r, e
 	}
-	if e = s.save(&r); e != nil {
-		return r, e
+	// A replay that meets its own new revision has nothing left to write.
+	if !newState {
+		if e = s.save(&r); e != nil {
+			return r, e
+		}
 	}
 	p, e := s.editPath(r.Handle)
 	if e != nil {
@@ -221,9 +226,13 @@ func (s *Store) applyEdit(tx pendingEdit) (mission.Record, error) {
 	}
 	return r, os.Remove(p)
 }
+
+// repair replays an interrupted step edit, re-admits attempt projections the
+// ledger lost, and rewrites the commit point.
 func (s *Store) repair(h string) (mission.Record, error) {
 	var r mission.Record
 	e := s.locked(func() error {
+		replayed := false
 		p, e := s.editPath(h)
 		if e != nil {
 			return e
@@ -240,20 +249,115 @@ func (s *Store) repair(h string) (mission.Record, error) {
 			if tx.Handle != h {
 				return mission.Problem("identity_mismatch", "edit journal belongs to another mission")
 			}
-			r, e = s.applyEdit(tx)
+			if r, e = s.applyEdit(tx); e != nil {
+				return e
+			}
+			replayed = true
+		} else if os.IsNotExist(e) {
+			if r, e = s.load(h); e != nil {
+				return e
+			}
+		} else {
 			return e
 		}
-		if !os.IsNotExist(e) {
-			return e
-		}
-		r, e = s.load(h)
+		adopted, e := s.adoptOrphans(&r)
 		if e != nil {
 			return e
+		}
+		if replayed && adopted == 0 {
+			return nil
 		}
 		r.State.Revision++
 		return s.save(&r)
 	})
 	return r, e
+}
+
+// adoptOrphans re-admits attempt projections that the ledger no longer lists.
+// A claim saves state.md before its projection, so a projection without a
+// ledger entry is an attempt that a stale writer dropped.
+func (s *Store) adoptOrphans(r *mission.Record) (int, error) {
+	d, e := s.dir(r.Handle)
+	if e != nil {
+		return 0, e
+	}
+	ents, e := os.ReadDir(filepath.Join(d, "attempts"))
+	if os.IsNotExist(e) {
+		return 0, nil
+	}
+	if e != nil {
+		return 0, e
+	}
+	known := map[int]bool{}
+	for _, a := range r.State.Attempts {
+		known[a.Sequence] = true
+	}
+	adopted := 0
+	for _, ent := range ents {
+		name := ent.Name()
+		if ent.IsDir() || !strings.HasSuffix(name, ".md") {
+			continue
+		}
+		seq, e := strconv.Atoi(strings.TrimSuffix(name, ".md"))
+		if e != nil || seq <= 0 || known[seq] {
+			continue
+		}
+		b, e := os.ReadFile(filepath.Join(d, "attempts", name))
+		if e != nil {
+			return adopted, e
+		}
+		var a mission.Attempt
+		if _, e = parseMarkdown(b, &a); e != nil {
+			return adopted, mission.Problem("invalid_note", "attempt projection %s cannot be read: %v", name, e)
+		}
+		if a.Sequence != seq || a.ID == "" {
+			return adopted, mission.Problem("identity_mismatch", "attempt projection %s does not describe itself", name)
+		}
+		r.State.Attempts = append(r.State.Attempts, a)
+		known[seq] = true
+		adopted++
+	}
+	if adopted == 0 {
+		return 0, nil
+	}
+	sort.Slice(r.State.Attempts, func(i, j int) bool { return r.State.Attempts[i].Sequence < r.State.Attempts[j].Sequence })
+	// A re-admitted attempt that passed its checks restores its step, so a
+	// completed step is not replayed.
+	for _, a := range r.State.Attempts {
+		if a.Status != "succeeded" || len(a.Verifications) == 0 || r.State.Steps[a.Step].Status == "passed" {
+			continue
+		}
+		if allPassed(a.Verifications[len(a.Verifications)-1], attemptDefinition(*r, a)) {
+			r.State.Steps[a.Step] = mission.StepState{Status: "passed", Attempt: a.ID, Evidence: a.Artifact}
+		}
+	}
+	// The newest open attempt owns the mission again; any other open attempt
+	// lost the ledger and cannot own it. A passed step keeps its passed status.
+	owner := ""
+	for i := len(r.State.Attempts) - 1; i >= 0; i-- {
+		a := r.State.Attempts[i]
+		if !mission.Active(a) {
+			continue
+		}
+		owner = a.ID
+		r.State.Active = a.ID
+		r.State.Current = a.Step
+		r.State.Status = "running"
+		r.State.Steps[a.Step] = mission.StepState{Status: "running", Attempt: a.ID}
+		break
+	}
+	for i := range r.State.Attempts {
+		a := &r.State.Attempts[i]
+		if !mission.Active(*a) || a.ID == owner || r.State.Steps[a.Step].Status == "passed" {
+			continue
+		}
+		a.Status = "interrupted"
+		a.Ended, a.Updated = mission.Now(), mission.Now()
+		a.Events = append(a.Events, mission.Event{ID: mission.UID("event-"), Type: "note", At: mission.Now(),
+			Summary: "Repair closed this attempt: attempt " + owner + " owns the ledger"})
+		r.State.Steps[a.Step] = mission.StepState{Status: "failed", Attempt: a.ID}
+	}
+	return adopted, nil
 }
 func assignedBrief(m mission.Mission, st mission.Step) string {
 	return fmt.Sprintf("# Assigned step: %s — %s\n\n%s\n\n## Acceptance criteria\n%s\n\n## Required checks\n%s\n\nWrite the result to MISSION_ARTIFACT. Work only on this step.\n\n## Shared mission context\n%s\n", st.ID, st.Title, platform.Fallback(st.Instructions, st.Title), platform.Fallback(st.Acceptance, "Produce a useful result that satisfies this step and the mission goal."), strings.Join(mission.StepChecks(st), ", "), m.Body)
