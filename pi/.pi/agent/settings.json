@@ -4,7 +4,8 @@
   "defaultThinkingLevel": "max",
   "defaultTools": [
     "+tool_search",
-    "+worktree"
+    "+worktree",
+    "+mission"
   ],
   "packages": [
     "npm:pi-mcp-adapter"
