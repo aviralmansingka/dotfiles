@@ -13,6 +13,7 @@
   "extensions": [
     "+extensions/cleanup.ts",
     "+extensions/opengateway.ts",
+    "+extensions/program-status.ts",
     "+extensions/python.ts",
     "+extensions/rounded-bar-footer.ts",
     "+extensions/thinking-title.ts",
